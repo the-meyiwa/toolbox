@@ -930,13 +930,35 @@ const showTips = () => {
       'To request a new feature, use the <strong>Ask for a tool</strong> button.'
     ];
   } else if (currentPage === 'tool' && currentToolObj) {
+    let usage = [];
+    switch (currentToolObj.category) {
+      case 'Developer Tools':
+        usage = ['Paste your code or data into the input fields.', 'The output will automatically generate or update as you type.'];
+        break;
+      case 'Text & Content':
+        usage = ['Type or paste your text into the main text area.', 'Use the controls to manipulate, format, or analyze the text instantly.'];
+        break;
+      case 'Converters':
+        usage = ['Enter the value you want to convert.', 'The converted results will instantly appear below.'];
+        break;
+      case 'Finance & Math':
+        usage = ['Input your numerical data into the fields.', 'The tool will automatically calculate and display the results.'];
+        break;
+      case 'Internet':
+      case 'Internet & Web':
+        usage = ['Enter the IP, Domain, or URL you want to analyze.', 'Click the action button to fetch the network information.'];
+        break;
+      case 'Artificial Intelligence':
+        usage = ['Provide the text or image for the AI to analyze.', 'Wait for the model to process your request (it runs entirely offline in your browser!).', 'Models may take a moment to download the first time you use them.'];
+        break;
+      default:
+        usage = ['Follow the on-screen inputs to use this tool. All processing happens instantly in your browser.'];
+    }
+
     tips = [
       `<strong>${currentToolObj.name}:</strong> ${currentToolObj.description}.`,
-      'Follow the on-screen inputs to use this tool. All processing happens instantly in your browser.'
+      ...usage
     ];
-    if (currentToolObj.category === 'Artificial Intelligence') {
-      tips.push('AI models may take a moment to download the first time, but will run instantly offline afterwards.');
-    }
   } else { // tools
     tips = [
       'Type in the search bar above to quickly filter tools by name or keyword.',
