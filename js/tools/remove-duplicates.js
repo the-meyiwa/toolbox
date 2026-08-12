@@ -23,7 +23,7 @@ export default {
     `;
 
     function process() {
-      const lines = container.querySelector('#rd-input').value.split('\\n');
+      const lines = container.querySelector('#rd-input').value.split('\n');
       const ci = container.querySelector('#rd-case').checked;
       const trim = container.querySelector('#rd-trim').checked;
       const seen = new Set();
@@ -34,7 +34,7 @@ export default {
         if (ci) key = key.toLowerCase();
         if (!seen.has(key)) { seen.add(key); unique.push(line); }
       }
-      container.querySelector('#rd-result').textContent = unique.join('\\n');
+      container.querySelector('#rd-result').textContent = unique.join('\n');
       const removed = lines.length - unique.length;
       container.querySelector('#rd-stats').textContent = removed + ' duplicate' + (removed !== 1 ? 's' : '') + ' removed · ' + unique.length + ' unique lines';
     }
