@@ -86,9 +86,11 @@ export default {
         dlContainer.style.display = 'block';
         btn.disabled = true;
       } else if (status === 'progress') {
-        if (data && data.progress) {
+        if (data && typeof data.progress === 'number') {
           dlBar.style.width = `${data.progress}%`;
-          statusDiv.textContent = `Downloading Model (${Math.round(data.progress)}%)`;
+          statusDiv.textContent = `Downloading ${data.file || 'Model'} (${Math.round(data.progress)}%)`;
+        } else if (data && data.status === 'initiate') {
+          statusDiv.textContent = `Initiating download: ${data.file || 'Model'}`;
         }
       } else if (status === 'inferring') {
         dlContainer.style.display = 'none';

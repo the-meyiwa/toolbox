@@ -1179,7 +1179,7 @@ mark.regex-match {
   .tool-section .btn { width: 100% !important; flex: none !important; margin-top: 4px !important; }
   
   /* FAB Positioning */
-  #tips-fab { bottom: 90px !important; right: 16px !important; }
+  #tips-fab { display: none !important; }
   
   .hide-mobile { display: none; }
 }

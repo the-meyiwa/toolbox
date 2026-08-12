@@ -1,4 +1,4 @@
-import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+import { pipeline, env } from '@xenova/transformers';
 
 // We rely entirely on the Hugging Face hub (remote models)
 env.allowLocalModels = false;
