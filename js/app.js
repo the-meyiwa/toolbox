@@ -656,8 +656,9 @@ const toolModules = import.meta.glob('./tools/*.js');
 
 // --------------- STATE ---------------
 let currentToolId       = null;
-let currentToolInstance  = null;
-let currentPage          = 'home';
+let currentToolInstance = null;
+let currentToolObj      = null;
+let currentPage         = 'home';
 
 // --------------- DOM REFS ---------------
 const homeView        = document.getElementById('home-view');
@@ -795,6 +796,9 @@ async function openTool(id) {
   viewport.classList.add('fade-in');
 
   navLinks.forEach(link => link.classList.toggle('active', link.dataset.page === 'tools'));
+
+  currentPage = 'tool';
+  currentToolObj = tool;
 
   const path = `./tools/${id}.js`;
   try {
