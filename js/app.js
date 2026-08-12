@@ -550,7 +550,7 @@ const TOOLS = [
     description: 'Get a random piece of advice.',
     icon: svg('<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>'),
     keywords: ['advice', 'random', 'quote', 'life', 'help']
-  }
+  },
   {
     id: 'net-google-search',
     name: 'Google Search Dorks',
