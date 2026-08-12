@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Toolbox — Practical Tools for Everyday Problems</title>
+  <meta name="description" content="A curated collection of simple, practical tools for everyday problems. Created by Meyiwa-Meyigbene Nifemi Edun.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Pixelify+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%23000'/><text x='7' y='24' font-family='sans-serif' font-size='22' font-weight='bold' fill='%23fff'>T</text></svg>">
+</head>
+<body>
+  <div id="app">
+    <header id="app-header">
+      <a href="#home" class="logo" id="logo">Toolbox</a>
+      <nav class="nav-links" id="nav-links">
+        <a href="#home" class="nav-link active" data-page="home">Home</a>
+        <a href="#tools" class="nav-link" data-page="tools">Tools</a>
+        <a href="#support" class="nav-link" data-page="support">Support</a>
+      </nav>
+      <div class="header-actions" id="header-actions">
+        <div class="search-wrapper" id="search-wrapper">
+          <svg class="search-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="7"/>
+            <path d="M21 21l-4.35-4.35"/>
+          </svg>
+          <input type="text" id="search" placeholder="Search tools..." autocomplete="off" spellcheck="false">
+          <kbd id="search-kbd">/</kbd>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- HOME -->
+      <div id="home-view" class="page-view">
+        <div class="home-hero">
+          <p class="home-eyebrow">20+ tools · runs in your browser · no signup</p>
+          <h1 class="home-title">Practical tools for<br>everyday problems.</h1>
+          <p class="home-desc">A curated collection of simple, useful tools that absorb<br class="hide-mobile"> complexity so you don't have to. Open, use, done.</p>
+          <a href="#tools" class="btn btn-primary home-cta">Browse Tools →</a>
+        </div>
+        <div class="home-features">
+          <div class="home-feature">
+            <div class="home-feature-num" id="home-tool-count">20+</div>
+            <h3 class="home-feature-title">Tools</h3>
+            <p class="home-feature-desc">Text, developer, generator, and converter tools — ready to use.</p>
+          </div>
+          <div class="home-feature">
+            <div class="home-feature-num">0</div>
+            <h3 class="home-feature-title">Setup</h3>
+            <p class="home-feature-desc">Every tool works immediately. No accounts, no configuration.</p>
+          </div>
+          <div class="home-feature">
+            <div class="home-feature-num">0</div>
+            <h3 class="home-feature-title">Tracking</h3>
+            <p class="home-feature-desc">No accounts, no analytics, no ads. Built with a strict privacy-first architecture.</p>
+          </div>
+        </div>
+
+        <div class="home-creator-card">
+          <img src="/assets/profile.jpg" alt="Meyiwa-Meyigbene Nifemi Edun" class="creator-avatar">
+          <div class="creator-info">
+            <div class="creator-label">Created By</div>
+            <div class="creator-name">Meyiwa-Meyigbene Nifemi Edun</div>
+            <div class="creator-bio">Designer & Software Engineer building clean and intentional software.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TOOLS GRID -->
+      <div id="tools-view" class="page-view hidden">
+        <div id="tool-grid"></div>
+      </div>
+
+      <!-- TOOL VIEWPORT -->
+      <div id="tool-viewport" class="page-view hidden">
+        <div class="viewport-header">
+          <button id="back-btn" aria-label="Back to all tools">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            <span>All Tools</span>
+          </button>
+          <h2 id="viewport-title"></h2>
+        </div>
+        <div id="viewport-content"></div>
+      </div>
+
+      <!-- SUPPORT -->
+      <div id="support-view" class="page-view hidden">
+        <div class="support-content">
+          <h1 class="support-title">Support</h1>
+
+          <section class="support-section">
+            <h2 class="support-heading">Feature Request</h2>
+            <p style="margin-bottom:16px;">Have an idea for a tool that would make your life easier? Let me know!</p>
+            <a href="mailto:meyigbenee@icloud.com?subject=Toolbox Feature Request" class="buymeacoffee-btn" style="display:inline-flex; align-items:center; justify-content:center; gap:8px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+              Ask for a tool
+            </a>
+            <p style="margin-top:12px; font-size:0.75rem; color:var(--g400); font-style:italic;">I might be tony stark ;D</p>
+          </section>
+
+          <section class="support-section">
+            <h2 class="support-heading">Created By</h2>
+            <div class="creator-card-full">
+              <img src="/assets/profile.jpg" alt="Meyiwa-Meyigbene Nifemi Edun" class="creator-avatar" style="width:84px; height:84px;">
+              <div class="creator-info">
+                <div class="creator-name" style="font-size:1.15rem;">Meyiwa-Meyigbene Nifemi Edun</div>
+                <div class="creator-bio" style="font-size:0.85rem; margin-top:4px;">Designer & Software Engineer building clean and intentional software.</div>
+                <div style="margin-top:8px; font-size:0.82rem; font-family:var(--mono);">
+                  <a href="mailto:meyigbenee@icloud.com" style="color:var(--black); text-decoration:underline;">meyigbenee@icloud.com</a>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="support-section">
+            <h2 class="support-heading">Keyboard Shortcuts</h2>
+            <div class="shortcut-list">
+              <div class="shortcut-item">
+                <kbd>/</kbd>
+                <span>Focus search (on Tools page)</span>
+              </div>
+              <div class="shortcut-item">
+                <kbd>Escape</kbd>
+                <span>Go back / clear search</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="support-section">
+            <h2 class="support-heading">About Toolbox</h2>
+            <p>Toolbox is a collection of simple, practical tools for solving everyday problems. The vast majority of these tools run entirely offline in your browser, meaning your data never leaves your machine. A select few AI tools use free public APIs to bring you powerful capabilities without the need for subscriptions.</p>
+            <p style="margin-top:12px;">The core principle: <strong>many capabilities, few concepts, no manual required.</strong></p>
+          </section>
+
+          <section class="support-section">
+            <h2 class="support-heading">Contact</h2>
+            <p>Have a question, bug report, or feature request?</p>
+            <p style="margin-top:4px;">Email Meyiwa directly at <a href="mailto:meyigbenee@icloud.com" style="color:var(--black); font-weight:500;">meyigbenee@icloud.com</a></p>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- FLOATING TIPS BUTTON & MODAL -->
+  <button id="tips-fab" aria-label="Show Tips" title="Page Tips" style="position:fixed; bottom:24px; right:24px; width:56px; height:56px; border-radius:28px; background:var(--black); color:var(--white); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(0,0,0,0.15); z-index:900; transition:transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+      <polyline points="16 17 21 12 16 7"></polyline>
+      <line x1="21" y1="12" x2="9" y2="12"></line>
+    </svg>
+  </button>
+
+  <div id="tips-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(255,255,255,0.8); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); z-index:1000; align-items:center; justify-content:center; opacity:0; transition:opacity 0.2s ease;">
+    <div style="background:var(--white); padding:32px; border-radius:16px; box-shadow:var(--shadow-lg); border:1px solid var(--g200); max-width:400px; width:90%; position:relative; transform:translateY(20px); transition:transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+      <button id="close-tips" style="position:absolute; top:16px; right:16px; background:none; border:none; cursor:pointer; color:var(--g500); padding:4px;" aria-label="Close Tips">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+        <div style="background:var(--black); color:var(--white); width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+        </div>
+        <h3 style="font-family:var(--pixel); font-size:1.5rem; margin:0;">Pro Tips</h3>
+      </div>
+      <ul id="tips-content" style="margin:0; padding-left:20px; color:var(--g700); font-size:0.95rem; line-height:1.6; display:flex; flex-direction:column; gap:12px;">
+        <!-- Dynamically injected tips -->
+      </ul>
+    </div>
+  </div>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
