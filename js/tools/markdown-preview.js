@@ -44,11 +44,11 @@ Write **markdown** on the left, see it rendered on the right.
 
 ## Code Example
 
-\```javascript
+\`\`\`javascript
 function hello() {
   console.log("Hello, world!");
 }
-\```
+\`\`\`
 
 > "Simplicity is the ultimate sophistication." — Leonardo da Vinci
 
