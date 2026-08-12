@@ -419,14 +419,6 @@ const TOOLS = [
     icon: svg('<line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="10" y2="18"/>'),
     keywords: ['ai', 'summarize', 'summary', 'tldr', 'condense', 'shorten', 'text']
   },
-  {
-    id: 'ai-semantic-search',
-    name: 'Semantic Similarity',
-    category: 'Artificial Intelligence',
-    description: 'Compare two texts to see if they mean the same thing conceptually',
-    icon: svg('<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'),
-    keywords: ['ai', 'semantic', 'similarity', 'compare', 'nlp', 'embedding', 'match']
-  },
   
   // ------------------------------------------------------------
   // INTERNET & WEB
@@ -929,29 +921,26 @@ const showTips = () => {
   
   if (currentPage === 'home') {
     tips = [
-      'Press <strong>/</strong> to instantly jump to the Tools page and start searching.',
-      'None of these tools require server processing. It all happens directly in your browser!',
-      'Click the <strong>Browse Tools</strong> button to get started.'
+      'Welcome to Toolbox!',
+      'Click the <strong>Browse Tools</strong> button to see the full collection of available tools.'
     ];
   } else if (currentPage === 'support') {
     tips = [
-      'You can email the creator directly by clicking the link above.',
-      'Use the "Ask for a tool" button to request a feature.'
+      'If you encounter a bug, use the <strong>Complain about a tool</strong> button to send a report.',
+      'To request a new feature, use the <strong>Ask for a tool</strong> button.'
     ];
   } else if (currentPage === 'tool' && currentToolObj) {
     tips = [
-      `You are using the <strong>${currentToolObj.name}</strong> tool.`,
-      'Press <strong>Escape</strong> to quickly go back to the tool selection grid.',
-      'This tool runs completely offline and locally on your machine.'
+      `<strong>${currentToolObj.name}:</strong> ${currentToolObj.description}.`,
+      'Follow the on-screen inputs to use this tool. All processing happens instantly in your browser.'
     ];
     if (currentToolObj.category === 'Artificial Intelligence') {
-      tips.push('AI models are cached locally. The first time you use them they download, but afterwards they run instantly without internet!');
+      tips.push('AI models may take a moment to download the first time, but will run instantly offline afterwards.');
     }
   } else { // tools
     tips = [
-      'Type in the search bar to filter tools by name or keyword.',
-      'Press <strong>Escape</strong> to clear your search query quickly.',
-      'Hover over any tool card to see its description.'
+      'Type in the search bar above to quickly filter tools by name or keyword.',
+      'Click on any tool card to open it.'
     ];
   }
 
