@@ -11,6 +11,8 @@
    no code is ever sent anywhere — execution is entirely local.
    ============================================================ */
 
+import { EXTRA_LANGUAGES } from './runtimes-extra.js';
+
 const PYODIDE_VERSION = '0.28.3';
 const PYODIDE_BASE    = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
 const SQLJS_BASE      = 'https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/';
@@ -276,7 +278,7 @@ export async function transpileTypeScript(source) {
 
 /* ---------------- language registry ---------------- */
 
-export const LANGUAGES = {
+const BASE_LANGUAGES = {
   javascript: {
     name: 'JavaScript',
     mono: 'js',
@@ -394,6 +396,10 @@ ORDER BY pct_of_budget DESC;`,
   },
 };
 
+/** Locally-run languages: the three original runtimes plus Lua and the
+    web sandbox. Everything here executes on the device. */
+export const LANGUAGES = { ...BASE_LANGUAGES, ...EXTRA_LANGUAGES };
+
 /* ---------------- worker lifecycle ---------------- */
 
 const blobUrls = new Map();
@@ -403,7 +409,11 @@ export function makeWorker(languageId) {
   if (!blobUrls.has(languageId)) {
     blobUrls.set(languageId, URL.createObjectURL(new Blob([lang.worker], { type: 'text/javascript' })));
   }
-  return new Worker(blobUrls.get(languageId));
+  // wasmoon ships as an ES module, so its worker must be a module
+  // worker; the others stay classic so importScripts keeps working.
+  return lang.moduleWorker
+    ? new Worker(blobUrls.get(languageId), { type: 'module' })
+    : new Worker(blobUrls.get(languageId));
 }
 
 export function releaseWorkers() {

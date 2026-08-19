@@ -7,12 +7,31 @@
    ============================================================ */
 
 import { LANGUAGES, makeWorker, transpileTypeScript } from '../lib/code-runtimes.js';
+import { WEB_FRAMEWORKS, buildPreviewDocument } from '../lib/runtimes-extra.js';
+import { REMOTE_LANGUAGES, compileRemote } from '../lib/remote-compile.js';
+
+/* Every language the playground offers. Local ones run on the device;
+   remote ones are compiled by a server because no browser can host a
+   C or Swift toolchain. Which is which is never hidden from the user. */
+const ALL = { ...LANGUAGES, ...REMOTE_LANGUAGES };
+const isRemote = (id) => Object.hasOwn(REMOTE_LANGUAGES, id);
+const isPreview = (id) => !!LANGUAGES[id]?.preview;
 
 const STORAGE_KEY = 'toolbox.playground';
-const RUN_TIMEOUT_MS = { javascript: 10000, typescript: 10000, python: 60000, sql: 20000 };
+/* Per-language run limits. A missing entry used to fall through as
+   `undefined`, which made setTimeout fire immediately and report
+   "Stopped after NaN seconds" — so Lua failed the moment it was added
+   rather than when it misbehaved. DEFAULT_TIMEOUT_MS backstops every
+   language, present or future. */
+const RUN_TIMEOUT_MS = {
+  javascript: 10000, typescript: 10000, python: 60000, sql: 20000,
+  // Lua downloads its runtime on the first run.
+  lua: 30000,
+};
+const DEFAULT_TIMEOUT_MS = 30000;
 
 export default {
-  render(container) {
+  render(container, { analytics } = {}) {
     this._alive = true;
     this._workers = {};
 
@@ -22,8 +41,10 @@ export default {
     try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { /* corrupt, ignore */ }
 
     const state = {
-      lang: LANGUAGES[saved.lang] ? saved.lang : 'javascript',
-      code: { ...Object.fromEntries(Object.entries(LANGUAGES).map(([k, v]) => [k, v.sample])), ...(saved.code || {}) },
+      lang: ALL[saved.lang] ? saved.lang : 'javascript',
+      code: { ...Object.fromEntries(Object.entries(ALL).map(([k, v]) => [k, v.sample])), ...(saved.code || {}) },
+      framework: WEB_FRAMEWORKS[saved.framework] ? saved.framework : 'bootstrap',
+      stdin: saved.stdin || '',
       running: false,
     };
 
@@ -32,10 +53,20 @@ export default {
     container.innerHTML = `
       <div class="cpg">
         <div class="cpg-bar">
-          <div class="btn-group t3d-seg cpg-langs" id="cpg-langs">
-            ${Object.entries(LANGUAGES).map(([id, l]) =>
-              `<button class="btn btn-sm${id === state.lang ? ' is-active' : ''}" data-lang="${id}">${l.name}</button>`).join('')}
-          </div>
+          <select class="tool-select cpg-lang-select" id="cpg-langs" aria-label="Language">
+            <optgroup label="Runs on your device">
+              ${Object.entries(LANGUAGES).map(([id, l]) =>
+                `<option value="${id}"${id === state.lang ? ' selected' : ''}>${l.name}</option>`).join('')}
+            </optgroup>
+            <optgroup label="Compiled on a server">
+              ${Object.entries(REMOTE_LANGUAGES).map(([id, l]) =>
+                `<option value="${id}"${id === state.lang ? ' selected' : ''}>${l.name}</option>`).join('')}
+            </optgroup>
+          </select>
+          <select class="tool-select cpg-fw" id="cpg-fw" hidden aria-label="CSS framework">
+            ${Object.entries(WEB_FRAMEWORKS).map(([id, f]) =>
+              `<option value="${id}"${id === state.framework ? ' selected' : ''}>${f.name}</option>`).join('')}
+          </select>
           <div class="cpg-bar-right">
             <button class="btn btn-sm" id="cpg-sample">Load example</button>
             <button class="btn btn-sm" id="cpg-clear">Clear output</button>
@@ -45,6 +76,11 @@ export default {
         </div>
 
         <p class="cpg-note" id="cpg-note"></p>
+        <details class="cpg-stdin" id="cpg-stdin-wrap" hidden>
+          <summary>Standard input</summary>
+          <textarea class="tool-textarea" id="cpg-stdin" rows="3" spellcheck="false"
+                    placeholder="Anything typed here is piped to the program as stdin."></textarea>
+        </details>
 
         <div class="cpg-split">
           <div class="cpg-editor-wrap">
@@ -55,6 +91,8 @@ export default {
           </div>
 
           <div class="cpg-console-wrap">
+            <iframe class="cpg-preview" id="cpg-preview" hidden title="Preview"
+                    sandbox="allow-scripts allow-modals allow-popups allow-forms"></iframe>
             <div class="cpg-console-head">
               <span>Output</span>
               <span class="cpg-timing" id="cpg-timing"></span>
@@ -70,6 +108,10 @@ export default {
     const timingEl  = container.querySelector('#cpg-timing');
     const runBtn    = container.querySelector('#cpg-run');
     const noteEl    = container.querySelector('#cpg-note');
+    const previewEl = container.querySelector('#cpg-preview');
+    const fwEl      = container.querySelector('#cpg-fw');
+    const stdinWrap = container.querySelector('#cpg-stdin-wrap');
+    const stdinEl   = container.querySelector('#cpg-stdin');
 
     /* ---------------- editor behaviour ---------------- */
 
@@ -138,7 +180,10 @@ export default {
 
     function persist() {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ lang: state.lang, code: state.code }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          lang: state.lang, code: state.code,
+          framework: state.framework, stdin: state.stdin,
+        }));
       } catch { /* private mode or quota — not worth interrupting the user */ }
     }
 
@@ -213,7 +258,13 @@ export default {
     }
 
     async function run() {
-      if (state.running) { abort('Stopped.'); return; }
+      if (state.running) {
+        // A remote compile is cancelled through its own controller;
+        // local runs are killed by terminating the worker.
+        if (self_._remote) { self_._remote.abort(); self_._remote = null; }
+        else abort('Stopped.');
+        return;
+      }
 
       clearConsole();
       state.running = true;
@@ -224,6 +275,50 @@ export default {
       let source = codeEl.value;
 
       if (!source.trim()) { line('muted', 'Nothing to run.'); idle(); return; }
+
+      /* Web code is a page, not a program: render it and stop. */
+      if (isPreview(lang)) {
+        previewEl.srcdoc = buildPreviewDocument(source, state.framework);
+        line('muted', 'Preview updated.');
+        timingEl.textContent = WEB_FRAMEWORKS[state.framework].name;
+        idle();
+        analytics?.completed({ outputKind: 'html' });
+        return;
+      }
+
+      /* Compiled languages go to a server, because no browser hosts a
+         C or Swift toolchain. The console says so every time. */
+      if (isRemote(lang)) {
+        const meta = REMOTE_LANGUAGES[lang];
+        line('muted', `Sending to the compiler — ${meta.name} ${meta.version}. This code leaves your device.`);
+        self_._remote = new AbortController();
+        try {
+          const res = await compileRemote(lang, source, {
+            stdin: stdinEl.value,
+            signal: self_._remote.signal,
+          });
+          if (!self_._alive) return;
+          clearConsole();
+          if (res.compileError) {
+            for (const l of res.compileError.split('\n')) line(res.ok ? 'muted' : 'error', l);
+          }
+          if (res.output) for (const l of res.output.split('\n')) line('log', l);
+          if (res.runtimeError) for (const l of res.runtimeError.split('\n')) line('error', l);
+          if (!res.output && !res.compileError && !res.runtimeError) line('muted', 'No output.');
+          if (!res.ok) line('muted', `Exited with status ${res.status}${res.signal ? ' (' + res.signal + ')' : ''}.`);
+          timingEl.textContent = `${meta.name} · ${res.ms} ms`;
+          if (res.ok) analytics?.completed({ durationMs: res.ms, outputKind: 'text' });
+          else analytics?.error('compile_failed');
+        } catch (err) {
+          if (!self_._alive) return;
+          if (err.name === 'AbortError') line('muted', 'Stopped.');
+          else { line('error', err.message); analytics?.error('remote_unreachable'); }
+        } finally {
+          self_._remote = null;
+          idle();
+        }
+        return;
+      }
 
       // TypeScript is compiled on the main thread, then the emitted
       // JavaScript is handed to the JS worker.
@@ -260,7 +355,7 @@ export default {
         abort(err.message || 'The runtime failed to start.');
       };
 
-      const limit = RUN_TIMEOUT_MS[lang];
+      const limit = RUN_TIMEOUT_MS[lang] ?? DEFAULT_TIMEOUT_MS;
       self_._timer = setTimeout(() => {
         abort(`Stopped after ${limit / 1000} seconds — the program was still running.`);
       }, limit);
@@ -294,36 +389,59 @@ export default {
 
     function applyLanguage(id) {
       state.lang = id;
-      codeEl.value = state.code[id] ?? LANGUAGES[id].sample;
-      codeEl.dataset.lang = LANGUAGES[id].mono;
-      const l = LANGUAGES[id];
-      noteEl.innerHTML = `${l.note}${l.weight ? ` <span class="cpg-weight">${l.weight}</span>` : ''}`;
+      codeEl.value = state.code[id] ?? ALL[id].sample;
+      codeEl.dataset.lang = ALL[id].mono;
+      const l = ALL[id];
+
+      const remote = isRemote(id);
+      const preview = isPreview(id);
+
+      noteEl.innerHTML = remote
+        ? `Compiled with <strong>${l.compiler}</strong> on a public build server, because a browser cannot host this toolchain. <span class="cpg-warn">Your code is sent off your device to run.</span>`
+        : `${l.note}${l.weight ? ` <span class="cpg-weight">${l.weight}</span>` : ''}`;
+      noteEl.classList.toggle('is-remote', remote);
+
+      previewEl.hidden = !preview;
+      consoleEl.parentElement.querySelector('.cpg-console-head').hidden = preview;
+      consoleEl.hidden = preview;
+      fwEl.hidden = !preview;
+      stdinWrap.hidden = !remote;
+      resetBtn.hidden = id !== 'sql';
+
       renderGutter();
       clearConsole();
       idle();
-      resetBtn.hidden = id !== 'sql';
+      timingEl.textContent = '';
+      if (preview) previewEl.srcdoc = buildPreviewDocument(codeEl.value, state.framework);
       persist();
     }
 
-    container.querySelector('#cpg-langs').addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-lang]');
-      if (!btn || btn.dataset.lang === state.lang) return;
-      for (const b of container.querySelectorAll('#cpg-langs .btn')) b.classList.toggle('is-active', b === btn);
-      applyLanguage(btn.dataset.lang);
+    container.querySelector('#cpg-langs').addEventListener('change', (e) => {
+      applyLanguage(e.target.value);
     });
 
+    fwEl.addEventListener('change', () => {
+      state.framework = fwEl.value;
+      if (isPreview(state.lang)) previewEl.srcdoc = buildPreviewDocument(codeEl.value, state.framework);
+      persist();
+    });
+
+    stdinEl.addEventListener('input', () => { state.stdin = stdinEl.value; persist(); });
+
     container.querySelector('#cpg-sample').addEventListener('click', () => {
-      state.code[state.lang] = LANGUAGES[state.lang].sample;
-      codeEl.value = LANGUAGES[state.lang].sample;
+      state.code[state.lang] = ALL[state.lang].sample;
+      codeEl.value = ALL[state.lang].sample;
       renderGutter();
       persist();
     });
 
+    stdinEl.value = state.stdin;
     applyLanguage(state.lang);
   },
 
   destroy() {
     this._alive = false;
+    this._remote?.abort();
     for (const w of Object.values(this._workers || {})) w.terminate();
     this._workers = {};
     clearTimeout(this._timer);

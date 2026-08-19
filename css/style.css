@@ -3184,3 +3184,188 @@ input, select, textarea {
 @media (max-width: 600px) {
   .viewport-desc { font-size: 0.78rem; }
 }
+
+/* --- Code playground: language picker, preview, remote notice --- */
+.cpg-lang-select { min-width: 190px; height: 34px; font-size: 0.82rem; }
+.cpg-fw { min-width: 150px; height: 34px; font-size: 0.82rem; margin-left: 8px; }
+.cpg-note.is-remote { color: var(--g700); }
+.cpg-warn {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  color: #a8321f;
+  background: #a8321f14;
+  padding: 1px 7px;
+  border-radius: 3px;
+  margin-left: 4px;
+}
+.cpg-preview {
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+  border: none;
+  background: #fff;
+  display: block;
+}
+.cpg-stdin { margin: 0 0 10px; }
+.cpg-stdin summary {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--g500);
+  cursor: pointer;
+  padding: 6px 0;
+}
+.cpg-stdin .tool-textarea { font-family: var(--mono); font-size: 0.8rem; }
+
+@media (max-width: 700px) {
+  .cpg-lang-select, .cpg-fw { width: 100%; margin-left: 0; }
+  .cpg-fw { margin-top: 8px; }
+}
+
+/* ============================================================
+   ALGORITHM LAB
+   ============================================================ */
+.alab { display: flex; flex-direction: column; gap: 16px; }
+.alab-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.alab-bar .tool-select { min-width: 180px; height: 36px; }
+.alab-bar-right { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+.alab-target { flex-direction: row; align-items: center; gap: 8px; }
+.alab-target .tool-input { width: 90px; height: 36px; }
+
+.alab-stage {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 300px;
+  padding: 14px 14px 0;
+  background: var(--g50);
+  border: 1px solid var(--g150);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.alab-bar-item {
+  flex: 1;
+  min-width: 3px;
+  background: var(--g400);
+  border-radius: 2px 2px 0 0;
+  position: relative;
+  transition: height 90ms linear, background 90ms linear;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+.alab-bar-item span {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--white);
+  padding-top: 3px;
+  pointer-events: none;
+}
+.alab-bar-item.is-compare { background: #b8860b; }
+.alab-bar-item.is-swap    { background: #a8321f; }
+.alab-bar-item.is-pivot   { background: #1d3f6b; }
+.alab-bar-item.is-sorted  { background: #1d6640; }
+.alab-bar-item.is-dim     { opacity: 0.28; }
+
+.alab-note {
+  font-size: 0.86rem;
+  color: var(--g700);
+  min-height: 2.6em;
+  line-height: 1.5;
+}
+
+.alab-transport { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.alab-transport .btn.is-stop { background: var(--g700); }
+.alab-scrub { flex: 1; min-width: 140px; }
+.alab-count {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--g500);
+  font-variant-numeric: tabular-nums;
+  min-width: 74px;
+  text-align: right;
+}
+.alab-speed { flex-direction: row; align-items: center; gap: 8px; min-width: 150px; }
+.alab-speed .tool-range { width: 90px; }
+
+.alab-about { font-size: 0.87rem; color: var(--g700); max-width: 70ch; margin-bottom: 12px; }
+.alab-complexity {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 1px;
+  background: var(--g150);
+  border: 1px solid var(--g150);
+  border-radius: 9px;
+  overflow: hidden;
+}
+.alab-complexity div {
+  background: var(--white);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.alab-complexity span {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--g500);
+}
+.alab-complexity b { font-family: var(--mono); font-size: 0.85rem; }
+
+/* ============================================================
+   UML DIAGRAM
+   ============================================================ */
+.uml { display: flex; flex-direction: column; gap: 14px; }
+.uml-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.uml-bar .tool-select { min-width: 190px; height: 36px; }
+.uml-bar-right { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+
+.uml-split {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 14px;
+  min-height: 460px;
+}
+.uml-editor-wrap { display: flex; min-width: 0; }
+.uml-editor { width: 100%; min-height: 460px; border-radius: 10px; }
+
+.uml-preview-wrap {
+  position: relative;
+  border: 1px solid var(--g150);
+  border-radius: 10px;
+  background: var(--white);
+  overflow: auto;
+  min-width: 0;
+}
+.uml-preview {
+  padding: 18px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 100%;
+}
+.uml-preview svg { max-width: 100%; height: auto; }
+.uml-error {
+  position: sticky;
+  bottom: 0;
+  margin: 0;
+  padding: 9px 14px;
+  background: #a8321f;
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 860px) {
+  .uml-split { grid-template-columns: 1fr; min-height: 0; }
+  .uml-editor, .uml-editor-wrap { min-height: 260px; }
+  .uml-preview-wrap { min-height: 320px; }
+  .alab-stage { height: 220px; }
+  .alab-bar-right, .uml-bar-right { margin-left: 0; width: 100%; }
+}
