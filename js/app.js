@@ -262,7 +262,7 @@ const TOOLS = [
   {
     id: 'compound-interest',
     name: 'Compound Interest',
-    category: 'Finance & Money',
+    category: 'Business & Finance',
     description: 'Calculate investment growth over time with monthly contributions',
     icon: svg('<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'),
     keywords: ['finance', 'compound', 'interest', 'investment', 'growth', 'calculator', 'money', 'stock', 'returns', 'yield', 'savings']
@@ -270,7 +270,7 @@ const TOOLS = [
   {
     id: 'salary-converter',
     name: 'Salary Converter',
-    category: 'Finance & Money',
+    category: 'Business & Finance',
     description: 'Convert between hourly wages and annual salaries instantly',
     icon: svg('<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M12 12h.01M17 12h.01M7 12h.01"/>'),
     keywords: ['salary', 'hourly', 'wage', 'income', 'pay', 'paycheck', 'converter', 'money', 'job', 'work', 'annual']
@@ -278,7 +278,7 @@ const TOOLS = [
   {
     id: 'loan-calculator',
     name: 'Loan Calculator',
-    category: 'Finance & Money',
+    category: 'Business & Finance',
     description: 'Calculate EMI, total interest, and payments for mortgages/loans',
     icon: svg('<path d="M3 21v-8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8M3 13V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8M10 21V11M14 21V11"/>'),
     keywords: ['loan', 'mortgage', 'emi', 'interest', 'debt', 'payment', 'calculator', 'finance', 'auto loan', 'car loan', 'house']
@@ -286,7 +286,7 @@ const TOOLS = [
   {
     id: 'subscription-analyzer',
     name: 'Cost Analyzer',
-    category: 'Finance & Money',
+    category: 'Business & Finance',
     description: 'See how much recurring expenses drain from you over a decade',
     icon: svg('<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>'),
     keywords: ['subscription', 'cost', 'recurring', 'expense', 'analyzer', 'finance', 'money', 'drain', 'coffee', 'netflix', 'budget']
@@ -294,7 +294,7 @@ const TOOLS = [
   {
     id: 'financial-analyzer',
     name: 'Financial Analyzer',
-    category: 'Finance & Money',
+    category: 'Business & Finance',
     description: 'A plain-English spreadsheet for analyzing transactions without formulas',
     icon: svg('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>'),
     keywords: ['spreadsheet', 'excel', 'finance', 'table', 'grid', 'analyzer', 'dashboard', 'transactions', 'money', 'csv']
@@ -314,7 +314,7 @@ const TOOLS = [
   {
     id: 'currency-exchange',
     name: 'Currency Exchange',
-    category: 'Internet',
+    category: 'Business & Finance',
     description: 'Real-time global currency exchange rates',
     icon: svg('<circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/>'),
     keywords: ['currency', 'money', 'exchange', 'forex', 'rates', 'usd', 'eur', 'ngn', 'conversion', 'realtime']
@@ -347,202 +347,10 @@ const TOOLS = [
   // ------------------------------------------------------------
   // ARTIFICIAL INTELLIGENCE
   // ------------------------------------------------------------
-  {
-    id: 'ai-sentiment',
-    name: 'Sentiment Analyzer',
-    category: 'Artificial Intelligence',
-    description: 'In-browser AI classifies text as Positive, Negative, or Neutral',
-    icon: svg('<path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M8 15h8"/><path d="M9 9h.01"/><path d="M15 9h.01"/>'),
-    keywords: ['ai', 'sentiment', 'emotion', 'positive', 'negative', 'neutral', 'classifier', 'machine learning']
-  },
-  {
-    id: 'ai-image-classifier',
-    name: 'Image Classifier',
-    category: 'Artificial Intelligence',
-    description: 'Local Vision AI identifies objects and subjects in your images',
-    icon: svg('<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>'),
-    keywords: ['ai', 'image', 'classifier', 'vision', 'identify', 'recognition', 'machine learning', 'photo']
-  },
-  {
-    id: 'ai-object-detection',
-    name: 'Object Detection',
-    category: 'Artificial Intelligence',
-    description: 'AI draws bounding boxes around detected objects in images',
-    icon: svg('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 3v18"/><path d="M16 3v18"/><path d="M3 8h18"/><path d="M3 16h18"/>'),
-    keywords: ['ai', 'object', 'detection', 'bounding box', 'vision', 'yolo', 'machine learning']
-  },
-  {
-    id: 'ai-toxicity',
-    name: 'Toxicity Filter',
-    category: 'Artificial Intelligence',
-    description: 'AI analyzes text for toxic, hateful, or insulting content',
-    icon: svg('<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'),
-    keywords: ['ai', 'toxic', 'filter', 'hate speech', 'moderation', 'classifier', 'nsfw', 'insult']
-  },
-  {
-    id: 'ai-translator',
-    name: 'Language Translator',
-    category: 'Artificial Intelligence',
-    description: 'Translate text between 50+ languages instantly for free',
-    icon: svg('<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>'),
-    keywords: ['ai', 'translate', 'translator', 'language', 'dictionary', 'multilingual', 'mymemory']
-  },
-  {
-    id: 'ai-grammar',
-    name: 'Grammar Checker',
-    category: 'Artificial Intelligence',
-    description: 'AI-powered spell check and grammar correction',
-    icon: svg('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><polyline points="9 10 12 13 16 7"/>'),
-    keywords: ['ai', 'grammar', 'spell', 'checker', 'correction', 'proofread', 'languagetool']
-  },
-  {
-    id: 'ai-fill-mask',
-    name: 'AI Auto-Complete',
-    category: 'Artificial Intelligence',
-    description: 'Use the [MASK] token and AI will guess the missing word!',
-    icon: svg('<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>'),
-    keywords: ['ai', 'fill', 'mask', 'auto', 'complete', 'guess', 'nlp']
-  },
-  {
-    id: 'ai-language-detector',
-    name: 'Language Detector',
-    category: 'Artificial Intelligence',
-    description: 'Instantly identifies the language of any given text',
-    icon: svg('<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>'),
-    keywords: ['ai', 'language', 'detect', 'identifier', 'translation', 'locale']
-  },
-  {
-    id: 'ai-summarizer',
-    name: 'Text Summarizer',
-    category: 'Artificial Intelligence',
-    description: 'Automatically condense long articles into short summaries',
-    icon: svg('<line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="10" y2="18"/>'),
-    keywords: ['ai', 'summarize', 'summary', 'tldr', 'condense', 'shorten', 'text']
-  },
   
   // ------------------------------------------------------------
   // INTERNET & WEB
   // ------------------------------------------------------------
-  {
-    id: 'inet-weather',
-    name: 'Weather Dashboard',
-    category: 'Internet & Web',
-    description: 'Get the current weather for any city instantly.',
-    icon: svg('<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>'),
-    keywords: ['weather', 'forecast', 'climate', 'temperature', 'city', 'open-meteo']
-  },
-  {
-    id: 'inet-ip-lookup',
-    name: 'IP & Geolocation',
-    category: 'Internet & Web',
-    description: 'Find physical location and details about an IP address.',
-    icon: svg('<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>'),
-    keywords: ['ip', 'address', 'geolocation', 'location', 'tracker', 'network']
-  },
-  {
-    id: 'inet-qr-generator',
-    name: 'QR Code Generator',
-    category: 'Internet & Web',
-    description: 'Generate high-quality QR codes for URLs and text.',
-    icon: svg('<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><rect x="7" y="7" width="3" height="3"/><rect x="14" y="7" width="3" height="3"/><rect x="7" y="14" width="3" height="3"/><rect x="14" y="14" width="3" height="3"/>'),
-    keywords: ['qr', 'code', 'barcode', 'generator', 'scan', 'link']
-  },
-  {
-    id: 'inet-url-shortener',
-    name: 'URL Shortener',
-    category: 'Internet & Web',
-    description: 'Shorten long, ugly links using a free API.',
-    icon: svg('<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>'),
-    keywords: ['url', 'shorten', 'link', 'is.gd', 'tinyurl', 'web']
-  },
-  {
-    id: 'inet-base64',
-    name: 'Base64 Encoder',
-    category: 'Internet & Web',
-    description: 'Encode or decode text to Base64 format locally.',
-    icon: svg('<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>'),
-    keywords: ['base64', 'encode', 'decode', 'string', 'text', 'format']
-  },
-  {
-    id: 'inet-jwt',
-    name: 'JWT Decoder',
-    category: 'Internet & Web',
-    description: 'Decode and inspect JSON Web Tokens locally.',
-    icon: svg('<rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="16" r="1"/>'),
-    keywords: ['jwt', 'token', 'auth', 'bearer', 'decode', 'json']
-  },
-  {
-    id: 'inet-http-status',
-    name: 'HTTP Status Guide',
-    category: 'Internet & Web',
-    description: 'Quick reference for common HTTP status codes.',
-    icon: svg('<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>'),
-    keywords: ['http', 'status', 'code', 'error', '404', '200', 'reference']
-  },
-  {
-    id: 'inet-password',
-    name: 'Password Generator',
-    category: 'Internet & Web',
-    description: 'Generate highly secure random passwords instantly.',
-    icon: svg('<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>'),
-    keywords: ['password', 'secure', 'generator', 'random', 'auth']
-  },
-  {
-    id: 'inet-uuid',
-    name: 'UUID Generator',
-    category: 'Internet & Web',
-    description: 'Generate secure Version 4 UUIDs.',
-    icon: svg('<circle cx="12" cy="12" r="10"/><polyline points="12 16 16 12 12 8"/><line x1="8" y1="12" x2="16" y2="12"/>'),
-    keywords: ['uuid', 'guid', 'generator', 'random', 'unique', 'id']
-  },
-  {
-    id: 'inet-color-extractor',
-    name: 'Color Picker',
-    category: 'Internet & Web',
-    description: 'Visual color picker to copy HEX and RGB values.',
-    icon: svg('<circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10c0 5.5-4.5 10-10 10S2 17.5 2 12 7.5 2 12 2Z"/><path d="M12 2a10 10 0 0 0 0 20"/>'),
-    keywords: ['color', 'picker', 'hex', 'rgb', 'palette', 'css']
-  },
-  {
-    id: 'inet-box-shadow',
-    name: 'Box Shadow Generator',
-    category: 'Internet & Web',
-    description: 'Visually generate CSS box-shadow code.',
-    icon: svg('<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M21 12H3"/>'),
-    keywords: ['css', 'box', 'shadow', 'generator', 'style', 'design']
-  },
-  {
-    id: 'inet-meta-tags',
-    name: 'Meta Tag Generator',
-    category: 'Internet & Web',
-    description: 'Generate SEO and Social Media HTML meta tags.',
-    icon: svg('<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>'),
-    keywords: ['meta', 'tags', 'seo', 'social', 'html', 'head']
-  },
-  {
-    id: 'inet-regex',
-    name: 'Regex Tester',
-    category: 'Internet & Web',
-    description: 'Test regular expressions against text strings.',
-    icon: svg('<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'),
-    keywords: ['regex', 'regular', 'expression', 'test', 'match', 'pattern']
-  },
-  {
-    id: 'inet-json-format',
-    name: 'JSON Formatter',
-    category: 'Internet & Web',
-    description: 'Prettify and validate JSON data instantly.',
-    icon: svg('<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>'),
-    keywords: ['json', 'format', 'prettify', 'validate', 'data']
-  },
-  {
-    id: 'inet-advice',
-    name: 'Random Advice',
-    category: 'Internet & Web',
-    description: 'Get a random piece of advice.',
-    icon: svg('<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>'),
-    keywords: ['advice', 'random', 'quote', 'life', 'help']
-  },
   {
     id: 'net-google-search',
     name: 'Google Search Dorks',
@@ -646,10 +454,199 @@ const TOOLS = [
     description: 'Quickly view a site\'s robots.txt directives and search for sitemaps.',
     icon: svg('<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>'),
     keywords: ['sitemap', 'robots.txt', 'seo', 'spider', 'crawler', 'viewer']
+  },
+
+  // ------------------------------------------------------------
+  // MODELING & 3D
+  // ------------------------------------------------------------
+  {
+    id: 'anatomy-explorer',
+    name: 'Anatomy Explorer',
+    category: 'Modeling & 3D',
+    description: 'Interactive 3D human body — isolate systems, click structures, slice through planes',
+    icon: svg('<circle cx="12" cy="4.5" r="2.5"/><path d="M12 7v7"/><path d="M8 9h8"/><path d="M12 14l-2.5 7"/><path d="M12 14l2.5 7"/>'),
+    keywords: ['anatomy', 'human body', 'body', 'medical', 'med school', 'medicine', 'skeleton', 'bones', 'organs', 'muscles', 'circulatory', 'nervous', 'respiratory', 'digestive', 'anatomical', '3d', 'model', 'modeler', 'physiology', 'biology', 'study', 'heart', 'lungs', 'brain', 'liver', 'kidney', 'ribcage', 'spine', 'skull']
+  },
+  {
+    id: 'container-planner',
+    name: 'Container & Cabin Planner',
+    category: 'Modeling & 3D',
+    description: 'Lay out a shipping container or portacabin in 3D — doors, windows, walls, and a printable spec sheet',
+    icon: svg('<rect x="2" y="7" width="20" height="11" rx="1"/><path d="M6 7v11"/><path d="M10 7v11"/><path d="M14 7v11"/><path d="M18 7v11"/>'),
+    keywords: ['container', 'portacabin', 'porta cabin', 'portakabin', 'shipping container', 'cabin', 'conex', 'iso container', 'site office', 'modular', 'prefab', 'layout', 'floor plan', 'floorplan', 'planner', 'modeler', '3d', 'building', 'construction', 'office', '20ft', '40ft', 'high cube', 'conversion', 'cabin design']
+  },
+
+  // ------------------------------------------------------------
+  // CODE & COMPILERS
+  // ------------------------------------------------------------
+  {
+    id: 'code-playground',
+    name: 'Code Playground',
+    category: 'Developer Utilities',
+    description: 'Write and run JavaScript, TypeScript, Python, and SQL — no install, runs in your browser',
+    icon: svg('<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>'),
+    keywords: ['code', 'compiler', 'interpreter', 'run code', 'playground', 'repl', 'ide', 'editor', 'javascript', 'js', 'typescript', 'ts', 'python', 'py', 'sql', 'sqlite', 'execute', 'compile', 'programming', 'coding', 'sandbox', 'online compiler', 'student', 'practice', 'exercise', 'script']
+  },
+
+  // ------------------------------------------------------------
+  // BUSINESS & FINANCE — ACCOUNTING & TAX
+  // ------------------------------------------------------------
+  {
+    id: 'invoice-generator',
+    name: 'Invoice Generator',
+    category: 'Business & Finance',
+    description: 'Build a professional invoice with line items and tax, then print or save as PDF',
+    icon: svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/>'),
+    keywords: ['invoice', 'bill', 'billing', 'receipt', 'quote', 'estimate', 'line items', 'client', 'freelance', 'accounting', 'pdf', 'print', 'tax', 'vat', 'payment', 'due', 'business']
+  },
+  {
+    id: 'depreciation-calculator',
+    name: 'Depreciation Schedule',
+    category: 'Business & Finance',
+    description: 'Straight-line, declining balance, and sum-of-years depreciation with a full yearly table',
+    icon: svg('<path d="M3 3v18h18"/><polyline points="7 8 11 12 15 9 21 15"/>'),
+    keywords: ['depreciation', 'asset', 'assets', 'straight line', 'declining balance', 'double declining', 'sum of years', 'syd', 'book value', 'salvage', 'useful life', 'accounting', 'fixed assets', 'capex', 'writedown', 'amortize', 'tax']
+  },
+  {
+    id: 'vat-calculator',
+    name: 'VAT & Sales Tax',
+    category: 'Business & Finance',
+    description: 'Add or strip tax from any amount, with reverse calculation and multi-rate support',
+    icon: svg('<path d="M9 14l6-6"/><circle cx="9.5" cy="8.5" r="1.5"/><circle cx="14.5" cy="14.5" r="1.5"/><rect x="3" y="3" width="18" height="18" rx="3"/>'),
+    keywords: ['vat', 'sales tax', 'tax', 'gst', 'hst', 'value added tax', 'add tax', 'remove tax', 'net', 'gross', 'inclusive', 'exclusive', 'reverse vat', 'percentage', 'accounting']
+  },
+  {
+    id: 'break-even',
+    name: 'Break-Even Analysis',
+    category: 'Business & Finance',
+    description: 'Find the units and revenue where you stop losing money, with a visual break-even chart',
+    icon: svg('<path d="M3 3v18h18"/><path d="M6 18L20 6"/><path d="M6 8l14 10"/>'),
+    keywords: ['break even', 'breakeven', 'break-even', 'fixed costs', 'variable costs', 'contribution margin', 'units', 'profit', 'loss', 'analysis', 'pricing', 'business plan', 'startup', 'margin of safety']
+  },
+  {
+    id: 'amortization-schedule',
+    name: 'Amortization Schedule',
+    category: 'Business & Finance',
+    description: 'Full payment-by-payment loan breakdown with extra payments and interest saved',
+    icon: svg('<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 10h18"/><path d="M8 4V2"/><path d="M16 4V2"/><path d="M8 14h3"/><path d="M8 18h3"/>'),
+    keywords: ['amortization', 'amortisation', 'schedule', 'loan', 'mortgage', 'payment', 'principal', 'interest', 'table', 'extra payment', 'payoff', 'balance', 'monthly payment', 'debt']
+  },
+
+  // ------------------------------------------------------------
+  // BUSINESS & FINANCE — EXEC & STRATEGY
+  // ------------------------------------------------------------
+  {
+    id: 'runway-calculator',
+    name: 'Runway & Burn Rate',
+    category: 'Business & Finance',
+    description: 'How many months of cash you have left, with growth and hiring factored in',
+    icon: svg('<path d="M12 2l3 6 6 .9-4.5 4.2 1.1 6-5.6-3-5.6 3 1.1-6L3 8.9 9 8z"/>'),
+    keywords: ['runway', 'burn rate', 'burn', 'cash', 'months left', 'startup', 'founder', 'ceo', 'out of money', 'fundraising', 'net burn', 'gross burn', 'mrr', 'growth', 'hiring', 'cash flow']
+  },
+  {
+    id: 'cap-table',
+    name: 'Cap Table & Dilution',
+    category: 'Business & Finance',
+    description: 'Model ownership across funding rounds and see exactly who gets diluted',
+    icon: svg('<circle cx="12" cy="12" r="9"/><path d="M12 3v9l7 4.5"/>'),
+    keywords: ['cap table', 'capitalization table', 'equity', 'dilution', 'shares', 'ownership', 'founder', 'investor', 'seed', 'series a', 'safe', 'convertible', 'option pool', 'esop', 'valuation', 'startup', 'ceo', 'stake']
+  },
+  {
+    id: 'npv-irr',
+    name: 'NPV, IRR & Payback',
+    category: 'Business & Finance',
+    description: 'Evaluate an investment: net present value, internal rate of return, and payback period',
+    icon: svg('<path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'),
+    keywords: ['npv', 'irr', 'payback', 'net present value', 'internal rate of return', 'discount rate', 'cash flow', 'investment', 'roi', 'capital budgeting', 'project', 'valuation', 'finance', 'wacc', 'dcf']
+  },
+  {
+    id: 'unit-economics',
+    name: 'Unit Economics',
+    category: 'Business & Finance',
+    description: 'CAC, LTV, payback period and the ratios investors will ask you about',
+    icon: svg('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/>'),
+    keywords: ['unit economics', 'cac', 'ltv', 'clv', 'customer acquisition cost', 'lifetime value', 'churn', 'retention', 'arpu', 'payback', 'saas', 'metrics', 'growth', 'ceo', 'startup', 'ratio']
+  },
+  {
+    id: 'margin-markup',
+    name: 'Margin & Markup',
+    category: 'Business & Finance',
+    description: 'Convert between cost, price, margin and markup — and price a product properly',
+    icon: svg('<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>'),
+    keywords: ['margin', 'markup', 'gross margin', 'profit margin', 'cost', 'price', 'pricing', 'selling price', 'discount', 'retail', 'wholesale', 'profit', 'sales', 'accounting']
+  },
+
+  // ------------------------------------------------------------
+  // BUSINESS & FINANCE — OPS & PEOPLE
+  // ------------------------------------------------------------
+  {
+    id: 'payroll-cost',
+    name: 'Employee Cost Calculator',
+    category: 'Business & Finance',
+    description: 'What a hire actually costs you once taxes, benefits and overhead are added',
+    icon: svg('<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>'),
+    keywords: ['payroll', 'employee cost', 'salary', 'hire', 'hiring', 'benefits', 'employer tax', 'ni', 'national insurance', 'pension', 'overhead', 'fully loaded', 'headcount', 'hr', 'budget', 'total cost']
+  },
+  {
+    id: 'meeting-cost',
+    name: 'Meeting Cost Calculator',
+    category: 'Business & Finance',
+    description: 'Live counter showing what this meeting is costing the company right now',
+    icon: svg('<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'),
+    keywords: ['meeting', 'cost', 'time', 'salary', 'waste', 'productivity', 'attendees', 'hourly rate', 'timer', 'stopwatch', 'burn', 'office', 'corporate', 'ceo', 'manager']
+  },
+  {
+    id: 'timesheet',
+    name: 'Timesheet & Billables',
+    category: 'Business & Finance',
+    description: 'Log hours by task and rate, then total up what to invoice',
+    icon: svg('<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 10h18"/><path d="M8 4V2"/><path d="M16 4V2"/><path d="M12 14v3"/><path d="M12 14h3"/>'),
+    keywords: ['timesheet', 'time sheet', 'billable', 'hours', 'tracking', 'consultant', 'freelance', 'rate', 'invoice', 'logging', 'work', 'project', 'client', 'timekeeping', 'utilization']
+  },
+  {
+    id: 'pto-accrual',
+    name: 'PTO & Leave Tracker',
+    category: 'Business & Finance',
+    description: 'Track accrued holiday, days taken, and what balance is left',
+    icon: svg('<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 10h18"/><path d="M8 4V2"/><path d="M16 4V2"/><polyline points="9 15 11 17 15 13"/>'),
+    keywords: ['pto', 'paid time off', 'holiday', 'vacation', 'leave', 'accrual', 'annual leave', 'days off', 'balance', 'hr', 'sick days', 'carryover', 'entitlement', 'tracker']
+  },
+  {
+    id: 'business-days',
+    name: 'Business Days Calculator',
+    category: 'Business & Finance',
+    description: 'Count working days between dates, or find a deadline N working days out',
+    icon: svg('<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 10h18"/><path d="M8 4V2"/><path d="M16 4V2"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/>'),
+    keywords: ['business days', 'working days', 'weekdays', 'deadline', 'date', 'calculator', 'sla', 'due date', 'holidays', 'workdays', 'between dates', 'project', 'schedule', 'delivery']
+  },
+  {
+    id: 'email-signature',
+    name: 'Email Signature Builder',
+    category: 'Business & Finance',
+    description: 'Design a clean corporate email signature and copy it straight into your mail client',
+    icon: svg('<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/>'),
+    keywords: ['email signature', 'signature', 'sign off', 'outlook', 'gmail', 'html signature', 'corporate', 'branding', 'contact', 'footer', 'professional', 'business card', 'builder']
   }
 ];
 
-const CATEGORY_ORDER = ['Artificial Intelligence', 'Text & Content', 'Finance & Money', 'Developer Utilities', 'Math & Measurements', 'Design & Media', 'Internet'];
+// Preferred display order. Any category present on a tool but missing here is
+// appended automatically, so a new category can never silently vanish from the grid.
+const PREFERRED_ORDER = [
+  'Modeling & 3D',
+  'Business & Finance',
+  'Developer Utilities',
+  'Text & Content',
+  'Math & Measurements',
+  'Design & Media',
+  'Internet',
+];
+
+function categoryOrder(toolList) {
+  const present = [...new Set(toolList.map(t => t.category || 'Miscellaneous'))];
+  const ordered = PREFERRED_ORDER.filter(c => present.includes(c));
+  const extras  = present.filter(c => !PREFERRED_ORDER.includes(c)).sort();
+  return [...ordered, ...extras];
+}
 
 // Lazy-load tool modules
 const toolModules = import.meta.glob('./tools/*.js');
@@ -675,7 +672,10 @@ const grid            = document.getElementById('tool-grid');
 const navLinks        = document.querySelectorAll('.nav-link');
 const homeToolCount   = document.getElementById('home-tool-count');
 
+// Counts are derived, never hand-maintained — adding a tool updates the copy.
 if (homeToolCount) homeToolCount.textContent = `${TOOLS.length}`;
+const homeEyebrowCount = document.getElementById('home-eyebrow-count');
+if (homeEyebrowCount) homeEyebrowCount.textContent = `${TOOLS.length}`;
 
 const VIEWS = {
   home:    homeView,
@@ -719,9 +719,9 @@ function matchScore(query, tool) {
   }
 
   // 2. Word prefix match
-  const qWords = q.split(/\\s+/);
+  const qWords = q.split(/\s+/);
   for (const t of targets) {
-    const tWords = t.split(/\\s+/);
+    const tWords = t.split(/\s+/);
     if (qWords.every(qw => tWords.some(tw => tw.startsWith(qw)))) {
       return 80;
     }
@@ -730,7 +730,7 @@ function matchScore(query, tool) {
   // 3. Typo / Levenshtein fuzzy match
   let maxFuzzy = 0;
   for (const t of targets) {
-    const tWords = t.split(/\\s+/);
+    const tWords = t.split(/\s+/);
     for (const tw of tWords) {
       if (Math.abs(tw.length - q.length) <= 3) {
         const dist = levenshtein(q, tw);
@@ -832,7 +832,7 @@ function renderGrid(toolList) {
     byCat[cat].push(tool);
   }
 
-  for (const category of CATEGORY_ORDER) {
+  for (const category of categoryOrder(toolList)) {
     const tools = byCat[category];
     if (!tools || tools.length === 0) continue;
 
@@ -919,62 +919,77 @@ const closeTipsBtn = document.getElementById('close-tips');
 const tipsContent = document.getElementById('tips-content');
 const modalInner = tipsModal.querySelector('div');
 
+// Usage hints keyed by the category strings actually used in the registry.
+// Keep these in sync with PREFERRED_ORDER — an unknown category falls back to GENERIC_TIPS.
+const CATEGORY_TIPS = {
+  'Modeling & 3D': [
+    'Drag with the left mouse button to rotate the model, and scroll to zoom in and out.',
+    'Use the panel on the left to show or hide parts, then click any part to read about it.',
+  ],
+  'Business & Finance': [
+    'Fill in the numbers you know — results recalculate the moment you stop typing.',
+    'Every figure stays on your device. Nothing is uploaded, saved, or sent anywhere.',
+  ],
+  'Developer Utilities': [
+    'Paste your code or data into the input field.',
+    'Output updates as you type, and the copy button grabs the whole result.',
+  ],
+  'Text & Content': [
+    'Type or paste your text into the main text area.',
+    'Use the controls to reformat, analyse, or transform it instantly.',
+  ],
+  'Math & Measurements': [
+    'Enter a value and the conversions or calculations appear immediately.',
+    'Units and bases can be swapped without retyping your input.',
+  ],
+  'Design & Media': [
+    'Adjust the inputs and the preview updates live.',
+    'Generated values can be copied straight into your stylesheet or design file.',
+  ],
+  'Internet': [
+    'Enter the IP, domain, or URL you want to look up.',
+    'This tool queries a public service, so it needs an internet connection — unlike most of Toolbox.',
+  ],
+};
+
+const GENERIC_TIPS = [
+  'Follow the on-screen inputs to use this tool. Everything runs in your browser.',
+];
+
+const PAGE_TIPS = {
+  home: [
+    'Welcome to Toolbox.',
+    'Hit <strong>Browse Tools</strong> to see the full collection.',
+  ],
+  tools: [
+    'Type in the search bar to filter by name, keyword, or what you are trying to do.',
+    'Search tolerates typos, so <em>calender</em> still finds the calendar tools.',
+    'Press <kbd>/</kbd> to jump straight to search.',
+  ],
+  support: [
+    'Found a bug? Use <strong>Complain about a tool</strong> to send a report.',
+    'Want something built? Use <strong>Ask for a tool</strong>.',
+  ],
+};
+
 const showTips = () => {
   tipsContent.innerHTML = '';
-  let tips = [];
-  
-  if (currentPage === 'home') {
-    tips = [
-      'Welcome to Toolbox!',
-      'Click the <strong>Browse Tools</strong> button to see the full collection of available tools.'
-    ];
-  } else if (currentPage === 'support') {
-    tips = [
-      'If you encounter a bug, use the <strong>Complain about a tool</strong> button to send a report.',
-      'To request a new feature, use the <strong>Ask for a tool</strong> button.'
-    ];
-  } else if (currentPage === 'tool' && currentToolObj) {
-    let usage = [];
-    switch (currentToolObj.category) {
-      case 'Developer Tools':
-        usage = ['Paste your code or data into the input fields.', 'The output will automatically generate or update as you type.'];
-        break;
-      case 'Text & Content':
-        usage = ['Type or paste your text into the main text area.', 'Use the controls to manipulate, format, or analyze the text instantly.'];
-        break;
-      case 'Converters':
-        usage = ['Enter the value you want to convert.', 'The converted results will instantly appear below.'];
-        break;
-      case 'Finance & Math':
-        usage = ['Input your numerical data into the fields.', 'The tool will automatically calculate and display the results.'];
-        break;
-      case 'Internet':
-      case 'Internet & Web':
-        usage = ['Enter the IP, Domain, or URL you want to analyze.', 'Click the action button to fetch the network information.'];
-        break;
-      case 'Artificial Intelligence':
-        usage = ['Provide the text or image for the AI to analyze.', 'Wait for the model to process your request (it runs entirely offline in your browser!).', 'Models may take a moment to download the first time you use them.'];
-        break;
-      default:
-        usage = ['Follow the on-screen inputs to use this tool. All processing happens instantly in your browser.'];
-    }
+  let tips;
 
-    tips = [
-      `<strong>${currentToolObj.name}:</strong> ${currentToolObj.description}.`,
-      ...usage
-    ];
-  } else { // tools
-    tips = [
-      'Type in the search bar above to quickly filter tools by name or keyword.',
-      'Click on any tool card to open it.'
-    ];
+  if (currentPage === 'tool' && currentToolObj) {
+    const usage = currentToolObj.tips
+      || CATEGORY_TIPS[currentToolObj.category]
+      || GENERIC_TIPS;
+    tips = [`<strong>${currentToolObj.name}</strong> — ${currentToolObj.description}.`, ...usage];
+  } else {
+    tips = PAGE_TIPS[currentPage] || PAGE_TIPS.tools;
   }
 
-  tips.forEach(tip => {
+  for (const tip of tips) {
     const li = document.createElement('li');
     li.innerHTML = tip;
     tipsContent.appendChild(li);
-  });
+  }
 
   tipsModal.style.display = 'flex';
   requestAnimationFrame(() => {
