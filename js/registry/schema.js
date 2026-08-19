@@ -13,7 +13,7 @@
 
 /**
  * @typedef {'text'|'developer'|'images-files'|'numbers'|'business'|'design'
- *          |'security'|'networking'|'modeling'|'music'|'everyday'} CategoryId
+ *          |'security'|'networking'|'modeling'|'reference'|'music'|'everyday'} CategoryId
  *
  * @typedef {'text'|'number'|'file'|'image'|'pdf'|'url'|'json'|'csv'|'color'|'date'|'code'|'none'} IOKind
  *
@@ -51,8 +51,9 @@ export const CATEGORIES = /** @type {Category[]} */ ([
   { id: 'security',     label: 'Security & Privacy',    order: 7, blurb: 'Generate secrets and strip what you did not mean to share.' },
   { id: 'networking',   label: 'Networking',     order: 8, blurb: 'Look up what is behind a domain or an address.' },
   { id: 'modeling',     label: '3D & Modeling',  order: 9, blurb: 'Interactive models you can measure and quote from.' },
-  { id: 'music',        label: 'Music',          order: 10, blurb: 'Keep time, find the note, and work out what fits.' },
-  { id: 'everyday',     label: 'Everyday',       order: 11, blurb: 'Small things worth a bookmark.' },
+  { id: 'reference',    label: 'Reference',      order: 10, blurb: 'Look something up — words, scripture, and the sum of human knowledge.' },
+  { id: 'music',        label: 'Music',          order: 11, blurb: 'Keep time, find the note, and work out what fits.' },
+  { id: 'everyday',     label: 'Everyday',       order: 12, blurb: 'Small things worth a bookmark.' },
 ]);
 
 export const CATEGORY_IDS = new Set(CATEGORIES.map(c => c.id));
