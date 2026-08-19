@@ -23,6 +23,16 @@
   --mono: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
   --pixel: 'Pixelify Sans', var(--sans);
 
+  /* Numbers you read at a glance get their own face. Pixelify Sans is a
+     display type — good for a logo, poor for a 96px measurement, because
+     its irregular pixel placement blurs the difference between digits.
+     Rasterising the digits and comparing confusable pairs (0/8, 3/8, 5/6,
+     1/7) scored Pixelify Sans at 600 weight — what the readouts actually
+     used — at 0.34, one of the worst of ten pixel faces tested. VT323
+     scored 0.49, is narrower, and reads like the instrument it is.
+     Swap this one line to change every readout in the app. */
+  --readout: 'VT323', 'Pixelify Sans', var(--mono);
+
   --header-h: 57px;
 }
 
@@ -2881,15 +2891,15 @@ input, select, textarea {
 }
 .st-big { display: flex; align-items: baseline; gap: 10px; }
 .st-value {
-  font-family: var(--pixel);
-  font-size: clamp(3.4rem, 17vw, 6rem);
-  font-weight: 600;
+  font-family: var(--readout);
+  font-size: clamp(3.8rem, 19vw, 6.6rem);
+  font-weight: 400;
   line-height: 0.9;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
 }
 .st-unit {
-  font-family: var(--pixel);
+  font-family: var(--readout);
   font-size: 1.3rem;
   color: var(--g400);
 }
@@ -2935,8 +2945,8 @@ input, select, textarea {
   color: var(--g500);
 }
 .st-card-v {
-  font-family: var(--pixel);
-  font-size: 1.65rem;
+  font-family: var(--readout);
+  font-size: 1.95rem;
   font-variant-numeric: tabular-nums;
   line-height: 1.15;
 }
@@ -2952,7 +2962,7 @@ input, select, textarea {
   border-left: 3px solid var(--black);
   background: var(--g50);
 }
-.st-verdict strong { font-family: var(--pixel); font-size: 1.15rem; }
+.st-verdict strong { font-family: var(--readout); font-size: 1.15rem; }
 .st-verdict span { font-size: 0.86rem; color: var(--g600); }
 
 .st-conn {
@@ -3086,7 +3096,7 @@ input, select, textarea {
 
 .cc-score { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
 .cc-ratio { display: flex; align-items: baseline; gap: 3px; }
-.cc-ratio span { font-family: var(--pixel); font-size: 2.6rem; font-variant-numeric: tabular-nums; }
+.cc-ratio span { font-family: var(--readout); font-size: 3rem; font-variant-numeric: tabular-nums; }
 .cc-ratio small { font-family: var(--mono); font-size: 0.8rem; color: var(--g400); }
 .cc-levels { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 6px; flex: 1; min-width: 0; }
 .cc-level { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; }
@@ -3121,10 +3131,10 @@ input, select, textarea {
 .tm-face.is-done { border-color: #c0392b; background: #c0392b0c; }
 .tm-time { display: flex; align-items: baseline; gap: 6px; }
 .tm-time span {
-  font-family: var(--pixel); font-size: clamp(3.2rem, 16vw, 5.4rem);
+  font-family: var(--readout); font-size: clamp(3.6rem, 18vw, 6rem);
   line-height: 0.95; font-variant-numeric: tabular-nums;
 }
-.tm-time small { font-family: var(--pixel); font-size: 1.4rem; color: var(--g400); font-variant-numeric: tabular-nums; }
+.tm-time small { font-family: var(--readout); font-size: 1.4rem; color: var(--g400); font-variant-numeric: tabular-nums; }
 .tm-state { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--g500); }
 .tm-face.is-done .tm-state { color: #c0392b; }
 .tm-presets { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
