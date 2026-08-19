@@ -34,13 +34,20 @@ export default {
         
         const numHosts = (broadcastLong - networkLong - 1) >>> 0;
         
+        // IPv4-mapped IPv6, absorbed from the old standalone converter
+        // so that merge lost nothing.
+        const hex = ip.split('.').map(p => parseInt(p, 10).toString(16).padStart(2, '0'));
+        const mapped = `::ffff:${hex[0]}${hex[1]}:${hex[2]}${hex[3]}`;
+
         res.textContent = `IP Address:      ${ip}
 Subnet Mask:     ${long2ip(maskLong)}
 Network Address: ${long2ip(networkLong)}
 Broadcast Addr:  ${long2ip(broadcastLong)}
 First Host:      ${numHosts > 0 ? long2ip(networkLong + 1) : 'N/A'}
 Last Host:       ${numHosts > 0 ? long2ip(broadcastLong - 1) : 'N/A'}
-Total Hosts:     ${Math.max(0, numHosts)}`;
+Total Hosts:     ${Math.max(0, numHosts)}
+Wildcard Mask:   ${long2ip(~maskLong >>> 0)}
+IPv4-mapped v6:  ${mapped}`;
       } catch(e) {
         res.textContent = 'Invalid IP format.';
       }

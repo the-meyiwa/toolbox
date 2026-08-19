@@ -1,4 +1,4 @@
-import { SpreadsheetEngine } from '../spreadsheet-engine.js';
+import { SpreadsheetEngine } from '../lib/spreadsheet-engine.js';
 
 export default {
   render(container) {

@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "marked": "^15.0.0",
+    "pdf-lib": "^1.17.1",
     "qrcode": "^1.5.4",
     "three": "^0.185.1"
   },
