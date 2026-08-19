@@ -2727,3 +2727,266 @@ mark.regex-match {
   .fz-controls { gap: 12px; }
   .fz-ctl { min-width: 110px; }
 }
+
+/* ============================================================
+   MOBILE HARDENING
+
+   Most sideways-scroll bugs on this app came from one thing: grid and
+   flex children default to `min-width: auto`, which means an element
+   refuses to shrink below its own min-content width. A text input's
+   intrinsic size then pushes its whole column past the viewport — that
+   is why the NPV tool rendered a 463px column inside a 343px screen on
+   a 375px phone. Containing that centrally fixes the class of bug
+   rather than the instances.
+   ============================================================ */
+
+.tool-split > *,
+.tool-row > *,
+.t3d > *,
+.t3d-panel,
+.t3d-stage,
+.cq > *,
+.cq-spec > *,
+.cq-bottom > *,
+.biz-grid > *,
+.fz-row > *,
+.category-tools > *,
+.home-features > * {
+  min-width: 0;
+}
+
+/* Form controls must never be wider than what holds them. */
+.tool-input, .tool-select, .tool-textarea,
+input, select, textarea {
+  max-width: 100%;
+}
+
+/* Long unbroken strings — URLs, hashes, base64 — are the other cause. */
+.tool-output, .biz-explain, .fz-name strong, .cq-line-name, .an-item-name {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 768px) {
+  /* Tap targets. Apple asks for 44px; the header was giving 24–40px. */
+  .logo { min-height: 44px; display: inline-flex; align-items: center; }
+  .nav-link { min-height: 44px; }
+  .btn, .btn-sm { min-height: 40px; }
+  .tool-input, .tool-select { min-height: 44px; }
+  #search { height: 44px; }
+
+  /* iOS zooms the page when a focused control is under 16px. Keeping
+     text-entry controls at 16px stops the viewport lurching on tap. */
+  input[type="text"], input[type="number"], input[type="url"],
+  input[type="email"], input[type="date"], input[type="search"],
+  select, textarea, .tool-input, .tool-select, .tool-textarea {
+    font-size: 16px;
+  }
+
+  /* Panels that were side-by-side stack, and stop dictating width. */
+  .cq-spec { grid-template-columns: 1fr; }
+  .cq-bottom { grid-template-columns: 1fr; }
+  .cq-meta { grid-template-columns: 1fr 1fr; }
+
+  /* Wide data always scrolls inside its own box, never the page. */
+  .biz-table-wrap, .scroller, .cq-group, #cq-rates-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* The 3D panel is a list of toggles, not a fixed sidebar. */
+  .t3d-panel { width: 100%; max-width: 100%; }
+  .t3d-toggle { flex-wrap: wrap; }
+  .t3d-toggle-name { min-width: 0; overflow-wrap: anywhere; }
+  .t3d-count { flex-shrink: 0; }
+  .t3d-seg { flex-wrap: wrap; }
+
+  /* File tools: the row becomes a card. */
+  .fz-controls { gap: 14px; }
+  .fz-ctl { flex: 1 1 140px; }
+  .fz-summary { gap: 16px; }
+}
+
+@media (max-width: 600px) {
+  /* The bottom bar is a real nav bar, so give it real targets and keep
+     content clear of the home indicator on notched phones. */
+  .nav-link { min-height: 48px; flex: 1; justify-content: center; }
+  #main { padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+
+  .viewport-header { flex-wrap: wrap; gap: 10px; }
+  #viewport-title { font-size: 1.15rem; }
+
+  .cq-meta { grid-template-columns: 1fr; }
+  .cq-tabs { gap: 0; }
+  .cq-tab { flex: 1; padding: 12px 8px; font-size: 0.78rem; text-align: center; }
+
+  .home-quick { gap: 6px; }
+  .home-quick-item { font-size: 0.74rem; padding: 8px 12px; }
+
+  .fz-summary { gap: 14px; }
+  .fz-stat-v { font-size: 0.95rem; }
+
+  /* Related tools stack rather than squeeze into two dead columns. */
+  .related-list { grid-template-columns: 1fr; }
+}
+
+/* Coarse pointers get bigger hit areas regardless of viewport width. */
+@media (pointer: coarse) {
+  .cp-swatch { width: 34px; height: 34px; }
+  .pdf-actions .btn { min-width: 40px; min-height: 40px; }
+  .ct-del, .pdf-rotate { min-width: 36px; min-height: 36px; }
+  .pdf-rotate { opacity: 1; }
+}
+
+/* Catch-all containment for tool content on phones.
+
+   Enumerating every layout class was already missing new ones (the
+   invoice form's own grid slipped past the list above). On a phone
+   nothing inside a tool has any business insisting on being wider than
+   the thing that holds it, so the rule is stated once, generally.
+   Tables are excluded — they size to their content by design and live
+   inside their own horizontal scrollers. */
+@media (max-width: 768px) {
+  #viewport-content :is(div, section, aside, label, form, p, ul, ol) {
+    min-width: 0;
+  }
+  .inv-layout { grid-template-columns: 1fr; }
+  .inv-grid-2 { grid-template-columns: 1fr 1fr; }
+}
+
+/* ============================================================
+   SPEED TEST
+   The readout uses the app's pixel display face — this is the one
+   tool whose whole point is a number you glance at from a distance.
+   ============================================================ */
+
+.st { display: flex; flex-direction: column; gap: 26px; }
+
+.st-readout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 40px 20px 30px;
+  border: 1px solid var(--g150);
+  border-radius: 14px;
+  background: var(--g50);
+  text-align: center;
+}
+.st-phase {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--g500);
+}
+.st-big { display: flex; align-items: baseline; gap: 10px; }
+.st-value {
+  font-family: var(--pixel);
+  font-size: clamp(3.4rem, 17vw, 6rem);
+  font-weight: 600;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.st-unit {
+  font-family: var(--pixel);
+  font-size: 1.3rem;
+  color: var(--g400);
+}
+.st-sub { font-size: 0.8rem; color: var(--g500); max-width: 42ch; }
+
+.st-meter {
+  width: 100%;
+  max-width: 420px;
+  height: 4px;
+  background: var(--g200);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 14px;
+}
+.st-meter i {
+  display: block;
+  height: 100%;
+  background: var(--black);
+  transition: width 220ms linear;
+}
+
+.st-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.st-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 16px 10px;
+  border: 1px solid var(--g150);
+  border-radius: 11px;
+  transition: border-color 200ms, background 200ms;
+}
+.st-card.is-live { border-color: var(--black); background: var(--g50); }
+.st-card-l {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--g500);
+}
+.st-card-v {
+  font-family: var(--pixel);
+  font-size: 1.65rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+.st-card-u { font-family: var(--mono); font-size: 0.6rem; color: var(--g400); }
+
+.st-actions { align-items: center; gap: 14px; }
+
+.st-verdict {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+  border-left: 3px solid var(--black);
+  background: var(--g50);
+}
+.st-verdict strong { font-family: var(--pixel); font-size: 1.15rem; }
+.st-verdict span { font-size: 0.86rem; color: var(--g600); }
+
+.st-conn {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--g150);
+  border: 1px solid var(--g150);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.st-conn-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 15px;
+  background: var(--white);
+  font-size: 0.82rem;
+}
+.st-conn-row span { color: var(--g500); }
+.st-conn-row b { font-weight: 500; text-align: right; overflow-wrap: anywhere; }
+.st-conn-note {
+  background: var(--white);
+  padding: 11px 15px;
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--g600);
+  line-height: 1.5;
+}
+
+.st-note { font-size: 0.76rem; color: var(--g400); line-height: 1.6; max-width: 62ch; }
+
+@media (max-width: 560px) {
+  .st-grid { grid-template-columns: repeat(2, 1fr); }
+  .st-readout { padding: 30px 14px 24px; }
+  .st-card-v { font-size: 1.4rem; }
+}
