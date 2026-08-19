@@ -2,8 +2,6 @@ export default {
   render(container) {
     container.innerHTML = `
       <div class="tool-content">
-        <h2 class="tool-title" style="font-family:var(--pixel);">DNS Lookup</h2>
-        <p class="tool-desc">Query DNS records (A, MX, TXT) for any domain.</p>
         <div class="tool-section">
           <div style="display:flex; gap:12px;">
             <input type="text" id="dns-input" class="tool-input" placeholder="example.com" style="flex:1;">

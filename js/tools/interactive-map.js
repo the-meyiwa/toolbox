@@ -4,16 +4,14 @@ export default {
   async render(container) {
     container.innerHTML = `
       <div class="tool-content" style="display:flex; flex-direction:column; height: 100%; min-height: 500px;">
-        <h2 class="tool-title" style="font-family:var(--pixel);">Interactive Map</h2>
-        <p class="tool-desc">Search, pan, and zoom across the globe instantly.</p>
         
         <div class="tool-section" style="display:flex; gap:8px; margin-bottom:12px;">
-          <input type="text" class="tool-input" id="map-search-input" placeholder="Search for a city, address, or landmark..." style="flex:1;">
+          <input type="text" class="tool-input" id="map-search-input" placeholder="Search for a city, address, or landmark…" style="flex:1;">
           <button class="btn btn-primary" id="map-search-btn">Find</button>
         </div>
 
         <div id="map-loading" style="text-align:center; padding:40px; color:var(--g500);">
-          Loading map engine...
+          Loading map engine…
         </div>
 
         <div id="map-container" style="flex:1; width:100%; min-height: 400px; border-radius:8px; border:2px solid var(--black); display:none; z-index:1;"></div>

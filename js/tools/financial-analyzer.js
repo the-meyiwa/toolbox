@@ -156,7 +156,7 @@ export default {
 
       <div class="sheet-wrapper">
         <div class="selection-banner" id="sel-banner">
-          <span id="sel-text">Select range...</span>
+          <span id="sel-text">Select range…</span>
           <div style="display:flex; gap:8px;">
             <button class="btn btn-secondary btn-sm" id="btn-cancel-sel" style="background:var(--white); color:var(--black);">Cancel</button>
             <button class="btn btn-primary btn-sm" id="btn-confirm-sel" style="background:var(--white); color:var(--black);">Confirm</button>
@@ -169,14 +169,14 @@ export default {
           <tbody id="sheet-body"></tbody>
         </table>
         <div class="op-menu" id="op-menu">
-          <div class="op-item" data-op="sum">Add numbers from...</div>
-          <div class="op-item" data-op="subtract">Subtract numbers from...</div>
-          <div class="op-item" data-op="avg">Calculate the average of...</div>
-          <div class="op-item" data-op="count">Count values from...</div>
-          <div class="op-item" data-op="max">Find the highest value in...</div>
-          <div class="op-item" data-op="min">Find the lowest value in...</div>
-          <div class="op-item" data-op="percentage">Calculate the percentage of...</div>
-          <div class="op-item" data-op="compare">Compare with...</div>
+          <div class="op-item" data-op="sum">Add numbers from…</div>
+          <div class="op-item" data-op="subtract">Subtract numbers from…</div>
+          <div class="op-item" data-op="avg">Calculate the average of…</div>
+          <div class="op-item" data-op="count">Count values from…</div>
+          <div class="op-item" data-op="max">Find the highest value in…</div>
+          <div class="op-item" data-op="min">Find the lowest value in…</div>
+          <div class="op-item" data-op="percentage">Calculate the percentage of…</div>
+          <div class="op-item" data-op="compare">Compare with…</div>
           <hr style="border:none; border-top:1px solid var(--g150); margin:4px 0;">
           <div class="op-item" data-op="clear" style="color:#D32F2F;">Clear operation</div>
         </div>

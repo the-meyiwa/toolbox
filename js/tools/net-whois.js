@@ -2,8 +2,6 @@ export default {
   render(container) {
     container.innerHTML = `
       <div class="tool-content">
-        <h2 class="tool-title" style="font-family:var(--pixel);">WHOIS Lookup</h2>
-        <p class="tool-desc">Find domain registration details (registrar, dates, contacts).</p>
         <div class="tool-section">
           <div style="display:flex; gap:12px;">
             <input type="text" id="w-input" class="tool-input" placeholder="example.com" style="flex:1;">

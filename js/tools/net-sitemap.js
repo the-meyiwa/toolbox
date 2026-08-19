@@ -2,8 +2,6 @@ export default {
   render(container) {
     container.innerHTML = `
       <div class="tool-content">
-        <h2 class="tool-title" style="font-family:var(--pixel);">Sitemap & Robots.txt</h2>
-        <p class="tool-desc">Quickly view a site's robots.txt directives.</p>
         <div class="tool-section">
           <div style="display:flex; gap:12px;">
             <input type="url" id="sm-input" class="tool-input" placeholder="https://example.com" style="flex:1;">

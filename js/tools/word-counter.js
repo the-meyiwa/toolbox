@@ -3,7 +3,7 @@ export default {
     container.innerHTML = `
       <div class="tool-section">
         <label class="tool-label" for="wc-input">Your Text</label>
-        <textarea class="tool-textarea" id="wc-input" placeholder="Start typing or paste your text here..." rows="10"></textarea>
+        <textarea class="tool-textarea" id="wc-input" placeholder="Start typing or paste your text here…" rows="10"></textarea>
       </div>
       <div class="tool-stats-grid">
         <div class="tool-stat"><span class="tool-stat-value" id="wc-words">0</span><span class="tool-stat-label">Words</span></div>

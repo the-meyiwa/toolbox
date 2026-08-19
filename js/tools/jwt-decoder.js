@@ -16,7 +16,7 @@ export default {
     container.innerHTML = `
       <div class="tool-section">
         <label class="tool-label">JWT Token</label>
-        <textarea class="tool-textarea" id="jwt-input" placeholder="Paste your JWT token here..." rows="4" style="min-height:100px;"></textarea>
+        <textarea class="tool-textarea" id="jwt-input" placeholder="Paste your JWT token here…" rows="4" style="min-height:100px;"></textarea>
       </div>
       <div class="tool-split" style="margin-top:16px;">
         <div class="tool-section">

@@ -5,7 +5,7 @@ export default {
     container.innerHTML = `
       <div class="tool-section">
         <label class="tool-label">Input</label>
-        <textarea class="tool-textarea" id="sl-input" placeholder="Enter text with multiple lines..." rows="8"></textarea>
+        <textarea class="tool-textarea" id="sl-input" placeholder="Enter text with multiple lines…" rows="8"></textarea>
       </div>
       <div class="tool-controls">
         <button class="btn btn-primary btn-sm" data-action="az">A → Z</button>

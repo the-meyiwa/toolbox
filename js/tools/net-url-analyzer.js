@@ -2,8 +2,6 @@ export default {
   render(container) {
     container.innerHTML = `
       <div class="tool-content">
-        <h2 class="tool-title" style="font-family:var(--pixel);">URL Analyzer</h2>
-        <p class="tool-desc">Parse and break down a URL into its components completely offline.</p>
         <div class="tool-section">
           <input type="url" id="u-input" class="tool-input" placeholder="https://example.com:8080/path?query=1#hash">
           <pre id="u-res" class="tool-output" style="margin-top:16px; min-height:150px; font-size:0.9rem;"></pre>

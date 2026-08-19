@@ -5,7 +5,7 @@ export default {
     container.innerHTML = `
       <div class="tool-section">
         <label class="tool-label">Text or URL</label>
-        <textarea class="tool-textarea" id="qr-input" placeholder="Enter text or URL to encode..." rows="3" style="min-height:80px;"></textarea>
+        <textarea class="tool-textarea" id="qr-input" placeholder="Enter text or URL to encode…" rows="3" style="min-height:80px;"></textarea>
       </div>
       <div class="tool-section">
         <div class="qr-output" id="qr-output">

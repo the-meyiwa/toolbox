@@ -2,8 +2,6 @@ export default {
   render(container) {
     container.innerHTML = `
       <div class="tool-content">
-        <h2 class="tool-title" style="font-family:var(--pixel);">Subnet Calculator</h2>
-        <p class="tool-desc">Calculate Network, Broadcast, and Host Range from an IP/CIDR completely offline.</p>
         <div class="tool-section">
           <div style="display:flex; gap:12px; margin-bottom:12px;">
             <input type="text" id="sn-ip" class="tool-input" placeholder="IP Address (e.g. 192.168.1.1)" style="flex:2;">

@@ -15,7 +15,7 @@ export default {
     container.innerHTML = `
       <div class="tool-section">
         <label class="tool-label">Input</label>
-        <textarea class="tool-textarea" id="hash-input" placeholder="Enter text to hash..." rows="5"></textarea>
+        <textarea class="tool-textarea" id="hash-input" placeholder="Enter text to hash…" rows="5"></textarea>
       </div>
       <div class="tool-section">
         <label class="tool-label">Hashes</label>

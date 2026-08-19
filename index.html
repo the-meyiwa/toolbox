@@ -32,7 +32,7 @@
             <circle cx="11" cy="11" r="7"/>
             <path d="M21 21l-4.35-4.35"/>
           </svg>
-          <input type="text" id="search" placeholder="Search tools..." autocomplete="off" spellcheck="false">
+          <input type="text" id="search" placeholder="Search tools…" autocomplete="off" spellcheck="false">
           <kbd id="search-kbd">/</kbd>
         </div>
       </div>
@@ -90,7 +90,10 @@
             </svg>
             <span>All Tools</span>
           </button>
-          <h2 id="viewport-title"></h2>
+          <div class="viewport-heading">
+            <h2 id="viewport-title"></h2>
+            <p id="viewport-desc" class="viewport-desc"></p>
+          </div>
         </div>
         <div id="viewport-content"></div>
         <aside class="tool-related" id="tool-related" hidden></aside>
@@ -120,7 +123,7 @@
                 Complain about a tool
               </a>
             </div>
-            <p style="margin-top:12px; font-size:0.75rem; color:var(--g400); font-style:italic;">I might be tony stark ;D</p>
+            <p style="margin-top:12px; font-size:0.75rem; color:var(--g400);">Every message is read by one person. Tool requests that describe the actual problem tend to get built first.</p>
           </section>
 
           <section class="support-section">

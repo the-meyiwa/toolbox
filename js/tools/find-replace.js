@@ -5,16 +5,16 @@ export default {
     container.innerHTML = `
       <div class="tool-section">
         <label class="tool-label">Text</label>
-        <textarea class="tool-textarea" id="fr-input" placeholder="Enter your text..." rows="8"></textarea>
+        <textarea class="tool-textarea" id="fr-input" placeholder="Enter your text…" rows="8"></textarea>
       </div>
       <div class="tool-row" style="margin-bottom:16px; gap:8px;">
         <div style="flex:1;">
           <label class="tool-label">Find</label>
-          <input type="text" class="tool-input" id="fr-find" placeholder="Search term..." style="height:36px;">
+          <input type="text" class="tool-input" id="fr-find" placeholder="Search term…" style="height:36px;">
         </div>
         <div style="flex:1;">
           <label class="tool-label">Replace with</label>
-          <input type="text" class="tool-input" id="fr-replace" placeholder="Replacement..." style="height:36px;">
+          <input type="text" class="tool-input" id="fr-replace" placeholder="Replacement…" style="height:36px;">
         </div>
       </div>
       <div class="tool-controls">

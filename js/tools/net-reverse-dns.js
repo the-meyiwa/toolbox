@@ -2,8 +2,6 @@ export default {
   render(container) {
     container.innerHTML = `
       <div class="tool-content">
-        <h2 class="tool-title" style="font-family:var(--pixel);">Reverse DNS Lookup</h2>
-        <p class="tool-desc">Resolve an IP address back to its hostname.</p>
         <div class="tool-section">
           <div style="display:flex; gap:12px;">
             <input type="text" id="rd-input" class="tool-input" placeholder="e.g. 8.8.8.8" style="flex:1;">

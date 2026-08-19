@@ -6,7 +6,7 @@ export default {
       <div class="tool-split">
         <div class="tool-section">
           <label class="tool-label">Text / URL</label>
-          <textarea class="tool-textarea" id="url-input" placeholder="Enter text or URL-encoded string..." rows="8"></textarea>
+          <textarea class="tool-textarea" id="url-input" placeholder="Enter text or URL-encoded string…" rows="8"></textarea>
         </div>
         <div class="tool-section">
           <label class="tool-label">Result</label>

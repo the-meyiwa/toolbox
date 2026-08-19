@@ -27,6 +27,7 @@ const toolsView = $('tools-view');
 const viewport = $('tool-viewport');
 const supportView = $('support-view');
 const viewportTitle = $('viewport-title');
+const viewportDesc = $('viewport-desc');
 let viewportContent = $('viewport-content');
 const relatedBar = $('tool-related');
 const backBtn = $('back-btn');
@@ -164,6 +165,9 @@ async function openTool(id) {
   searchWrapper.style.display = 'none';
 
   viewportTitle.textContent = tool.name;
+  // Name and description both come from the registry, so a tool can
+  // never describe itself differently here than on its card.
+  if (viewportDesc) viewportDesc.textContent = tool.description;
 
   // Swap in a fresh container rather than clearing the old one.
   // 17 tools bind input/change listeners to the container itself (biz.js

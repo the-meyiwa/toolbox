@@ -12,7 +12,7 @@ export default {
       </div>
       <div class="tool-section">
         <label class="tool-label">Test String</label>
-        <textarea class="tool-textarea" id="rx-test" placeholder="Enter text to test against..." rows="5"></textarea>
+        <textarea class="tool-textarea" id="rx-test" placeholder="Enter text to test against…" rows="5"></textarea>
       </div>
       <div class="tool-section">
         <label class="tool-label">Matches</label>

@@ -5,7 +5,7 @@ export default {
     container.innerHTML = `
       <div class="tool-section">
         <label class="tool-label">Input</label>
-        <textarea class="tool-textarea" id="rd-input" placeholder="Paste text with duplicate lines..." rows="8"></textarea>
+        <textarea class="tool-textarea" id="rd-input" placeholder="Paste text with duplicate lines…" rows="8"></textarea>
       </div>
       <div class="tool-controls">
         <button class="btn btn-primary btn-sm" id="rd-process">Remove Duplicates</button>

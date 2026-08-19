@@ -12,7 +12,7 @@ export default {
     container.innerHTML = `
       <div class="tool-section">
         <label class="tool-label">Input</label>
-        <input type="text" class="tool-input" id="nb-input" placeholder="Enter a number..." style="font-size:1rem;">
+        <input type="text" class="tool-input" id="nb-input" placeholder="Enter a number…" style="font-size:1rem;">
       </div>
       <div class="tool-controls">
         <label class="tool-label" style="margin:0 8px 0 0;">Input Base</label>

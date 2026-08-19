@@ -2,8 +2,6 @@ export default {
   render(container) {
     container.innerHTML = `
       <div class="tool-content">
-        <h2 class="tool-title" style="font-family:var(--pixel);">Currency Exchange</h2>
-        <p class="tool-desc">Real-time global currency exchange rates.</p>
         
         <div class="tool-section">
           <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px; flex-wrap:wrap;">
@@ -48,7 +46,7 @@ export default {
           
           <div class="tool-stat" style="background:var(--black); color:var(--white); padding:24px; text-align:center;">
             <div class="tool-stat-label" style="color:var(--g400); margin-bottom:8px;">Converted Amount</div>
-            <div class="tool-stat-value" id="ex-result" style="font-family:var(--pixel); font-size:3rem; word-break:break-all;">Loading...</div>
+            <div class="tool-stat-value" id="ex-result" style="font-family:var(--pixel); font-size:3rem; word-break:break-all;">Loading…</div>
             <div style="margin-top:12px; font-size:0.85rem; color:var(--g500);" id="ex-rate-info"></div>
           </div>
         </div>

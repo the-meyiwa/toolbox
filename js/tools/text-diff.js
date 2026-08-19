@@ -6,11 +6,11 @@ export default {
       <div class="tool-split">
         <div class="tool-section">
           <label class="tool-label">Original</label>
-          <textarea class="tool-textarea" id="diff-a" placeholder="Paste original text..." rows="14"></textarea>
+          <textarea class="tool-textarea" id="diff-a" placeholder="Paste original text…" rows="14"></textarea>
         </div>
         <div class="tool-section">
           <label class="tool-label">Modified</label>
-          <textarea class="tool-textarea" id="diff-b" placeholder="Paste modified text..." rows="14"></textarea>
+          <textarea class="tool-textarea" id="diff-b" placeholder="Paste modified text…" rows="14"></textarea>
         </div>
       </div>
       <div class="tool-controls" style="margin-top:16px;">

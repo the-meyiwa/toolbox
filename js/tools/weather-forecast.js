@@ -2,8 +2,6 @@ export default {
   render(container) {
     container.innerHTML = `
       <div class="tool-content">
-        <h2 class="tool-title" style="font-family:var(--pixel);">Weather Forecast</h2>
-        <p class="tool-desc">Current conditions and 3-day forecast anywhere in the world.</p>
         
         <div class="tool-section">
           <label class="tool-label">Search Location</label>
@@ -21,7 +19,7 @@ export default {
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;">
             <div class="tool-stat" style="background:var(--black); color:var(--white);">
               <div class="tool-stat-value" id="current-temp" style="font-family:var(--pixel); font-size:2.5rem;">--°C</div>
-              <div class="tool-stat-label" id="current-desc" style="color:var(--g400);">Loading...</div>
+              <div class="tool-stat-label" id="current-desc" style="color:var(--g400);">Loading…</div>
             </div>
             <div class="tool-stat">
               <div class="tool-stat-value" id="current-wind" style="font-family:var(--pixel); font-size:1.5rem;">-- km/h</div>
@@ -57,7 +55,7 @@ export default {
     async function searchCity() {
       const q = cityInput.value.trim();
       if (!q) return;
-      resultsDiv.innerHTML = '<span style="color:var(--g500);">Searching...</span>';
+      resultsDiv.innerHTML = '<span style="color:var(--g500);">Searching…</span>';
       displayDiv.style.display = 'none';
 
       try {

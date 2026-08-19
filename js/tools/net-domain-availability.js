@@ -2,8 +2,6 @@ export default {
   render(container) {
     container.innerHTML = `
       <div class="tool-content">
-        <h2 class="tool-title" style="font-family:var(--pixel);">Domain Availability</h2>
-        <p class="tool-desc">Check if a domain name is available for registration.</p>
         <div class="tool-section">
           <div style="display:flex; gap:12px;">
             <input type="text" id="da-input" class="tool-input" placeholder="example.com" style="flex:1;">

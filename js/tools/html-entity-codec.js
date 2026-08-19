@@ -6,7 +6,7 @@ export default {
       <div class="tool-split">
         <div class="tool-section">
           <label class="tool-label">Raw Text / HTML Entities</label>
-          <textarea class="tool-textarea" id="html-input" placeholder="Enter text or HTML entities (e.g. &lt;div&gt; &amp; &quot;test&quot;)..." rows="10"></textarea>
+          <textarea class="tool-textarea" id="html-input" placeholder="Enter text or HTML entities (e.g. &lt;div&gt; &amp; &quot;test&quot;)…" rows="10"></textarea>
         </div>
         <div class="tool-section">
           <label class="tool-label">Result</label>

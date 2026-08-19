@@ -9,7 +9,7 @@ export default {
       <div class="tool-split">
         <div class="tool-section">
           <label class="tool-label">Markdown</label>
-          <textarea class="tool-textarea" id="md-input" placeholder="# Hello World\n\nStart writing markdown..." style="min-height:400px; font-size:0.82rem;"></textarea>
+          <textarea class="tool-textarea" id="md-input" placeholder="# Hello World\n\nStart writing markdown…" style="min-height:400px; font-size:0.82rem;"></textarea>
         </div>
         <div class="tool-section">
           <label class="tool-label">Preview</label>

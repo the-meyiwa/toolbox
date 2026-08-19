@@ -2,8 +2,6 @@ export default {
   render(container) {
     container.innerHTML = `
       <div class="tool-content">
-        <h2 class="tool-title" style="font-family:var(--pixel);">IP Lookup</h2>
-        <p class="tool-desc">Instantly find details about your public IP address or search any IP.</p>
         
         <div class="tool-section">
           <label class="tool-label">Lookup Custom IP (Leave blank for yours)</label>
@@ -12,7 +10,7 @@ export default {
             <button class="btn btn-primary" id="ip-btn">Lookup</button>
           </div>
           
-          <div id="ip-loading" style="display:none; margin-top:16px; color:var(--g500);">Fetching details...</div>
+          <div id="ip-loading" style="display:none; margin-top:16px; color:var(--g500);">Fetching details…</div>
           <div id="ip-error" style="display:none; margin-top:16px; color:#D32F2F;"></div>
 
           <div id="ip-results" style="display:none; margin-top:24px;">

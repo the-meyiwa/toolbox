@@ -6,7 +6,7 @@ export default {
       <div class="tool-split">
         <div class="tool-section">
           <label class="tool-label">Text / Base64</label>
-          <textarea class="tool-textarea" id="b64-input" placeholder="Enter text or Base64 string..." rows="10"></textarea>
+          <textarea class="tool-textarea" id="b64-input" placeholder="Enter text or Base64 string…" rows="10"></textarea>
         </div>
         <div class="tool-section">
           <label class="tool-label">Result</label>

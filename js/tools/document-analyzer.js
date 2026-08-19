@@ -2,8 +2,6 @@ export default {
   render(container) {
     container.innerHTML = `
       <div class="tool-content">
-        <h2 class="tool-title" style="font-family:var(--pixel);">Document Analyzer</h2>
-        <p class="tool-desc">Analyze text files securely in your browser. No data leaves your device.</p>
         
         <div class="tool-section">
           <div id="doc-dropzone" style="border: 2px dashed var(--g300); border-radius: 8px; padding: 40px 20px; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--g50);">

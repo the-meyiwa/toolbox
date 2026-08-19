@@ -35,7 +35,7 @@ export default {
     container.innerHTML = `
       <div class="tool-section">
         <label class="tool-label">Input</label>
-        <textarea class="tool-textarea" id="cc-input" placeholder="Enter text to convert..." rows="6"></textarea>
+        <textarea class="tool-textarea" id="cc-input" placeholder="Enter text to convert…" rows="6"></textarea>
       </div>
       <div class="tool-controls" id="cc-buttons">
         ${CASES.map((c, i) => `<button class="btn btn-secondary btn-sm" data-idx="${i}">${c.label}</button>`).join('')}

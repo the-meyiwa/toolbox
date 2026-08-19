@@ -2,8 +2,6 @@ export default {
   render(container) {
     container.innerHTML = `
       <div class="tool-content">
-        <h2 class="tool-title" style="font-family:var(--pixel);">SSL Certificate Viewer</h2>
-        <p class="tool-desc">View SSL/TLS certificate details (issuer, expiry, validity).</p>
         <div class="tool-section">
           <div style="display:flex; gap:12px;">
             <input type="text" id="s-input" class="tool-input" placeholder="example.com" style="flex:1;">

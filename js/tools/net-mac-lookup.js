@@ -2,8 +2,6 @@ export default {
   render(container) {
     container.innerHTML = `
       <div class="tool-content">
-        <h2 class="tool-title" style="font-family:var(--pixel);">MAC Address Lookup</h2>
-        <p class="tool-desc">Identify the manufacturer/vendor of a MAC Address.</p>
         <div class="tool-section">
           <div style="display:flex; gap:12px;">
             <input type="text" id="m-input" class="tool-input" placeholder="e.g. 00:1A:2B:3C:4D:5E" style="flex:1;">
