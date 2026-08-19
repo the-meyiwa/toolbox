@@ -13,13 +13,14 @@
 import { money, num, parseNum, escapeHtml, downloadCSV } from '../lib/biz.js';
 import {
   ELEMENTS, SERVICES, LOGISTICS, UNITS, COMMERCIAL_DEFAULTS,
-  RATES_REVISED, defaultRateBook,
+  RATES_REVISED, defaultRateBook, elementsWith, CUSTOM_TARGETS,
 } from '../lib/container-catalog.js';
 import { buildQuote, groupLines } from '../lib/container-quote.js';
 
 const M_PER_FT = 0.3048;
 const LS_RATES   = 'toolbox.container.rates';
 const LS_COMPANY = 'toolbox.container.company';
+const LS_MATERIALS = 'toolbox.container.materials';
 
 /* ---------------- presets (metres, internal usable size) ---------------- */
 
@@ -150,6 +151,13 @@ export default {
       },
       services: {}, logistics: {},
       overrides: {}, removed: [], customLines: [],
+
+      // Materials the user added themselves. These behave exactly like
+      // catalogue entries: same dropdowns, same pricing, same export.
+      customMaterials: (() => {
+        try { return JSON.parse(localStorage.getItem(LS_MATERIALS) || '[]'); }
+        catch { return []; }
+      })(),
       commercial: { ...COMMERCIAL_DEFAULTS, discount: 0 },
 
       company: saved(LS_COMPANY, {
@@ -170,6 +178,7 @@ export default {
       try {
         localStorage.setItem(LS_RATES, JSON.stringify(state.rates));
         localStorage.setItem(LS_COMPANY, JSON.stringify(state.company));
+        localStorage.setItem(LS_MATERIALS, JSON.stringify(state.customMaterials));
       } catch { /* private mode — not worth interrupting the user */ }
     };
 
@@ -347,7 +356,46 @@ export default {
               <input type="file" id="cq-rates-file" accept="application/json" hidden>
             </div>
           </div>
-          <input type="text" class="tool-input" id="cq-rates-filter" placeholder="Filter rates…" style="max-width:340px; margin-bottom:16px;">
+          <div class="cq-materials">
+            <div class="cq-mat-head">
+              <div>
+                <h3 class="cq-h">Your own materials</h3>
+                <p class="biz-hint">Anything the catalogue does not carry — your supplier's board, a finish
+                  you use often. Added materials show up in the specification dropdowns and price like any other.</p>
+              </div>
+              <button class="btn btn-primary btn-sm" id="cq-mat-add">Add a material</button>
+            </div>
+            <form class="cq-mat-form" id="cq-mat-form" hidden>
+              <div class="cq-mat-grid">
+                <label class="cp-field"><span>What is it called?</span>
+                  <input type="text" class="tool-input" id="mat-name" placeholder="e.g. 18 mm birch ply" required></label>
+                <label class="cp-field"><span>Where does it go?</span>
+                  <select class="tool-select" id="mat-element">
+                    ${CUSTOM_TARGETS.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
+                  </select></label>
+                <label class="cp-field"><span>Sold by</span>
+                  <select class="tool-select" id="mat-unit">
+                    ${Object.entries(UNITS).map(([k, v]) => `<option value="${k}"${k === 'area' ? ' selected' : ''}>${v.label}</option>`).join('')}
+                  </select></label>
+                <label class="cp-field" id="mat-cov-wrap" hidden><span>Covers (m² per sheet)</span>
+                  <input type="number" class="tool-input" id="mat-coverage" value="2.98" step="0.01" min="0.01"></label>
+                <label class="cp-field"><span>Material cost per unit</span>
+                  <input type="number" class="tool-input" id="mat-rate" value="0" min="0" step="100"></label>
+                <label class="cp-field"><span>Labour per unit</span>
+                  <input type="number" class="tool-input" id="mat-labour" value="0" min="0" step="100"></label>
+                <label class="cp-field"><span>Wastage %</span>
+                  <input type="number" class="tool-input" id="mat-wastage" value="10" min="0" max="60" step="1"></label>
+              </div>
+              <div class="tool-controls">
+                <button type="submit" class="btn btn-primary btn-sm">Save material</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="cq-mat-cancel">Cancel</button>
+              </div>
+            </form>
+            <div id="cq-mat-list"></div>
+          </div>
+
+          <h3 class="cq-h" style="margin-top:34px;">Catalogue rates</h3>
+          <input type="text" class="tool-input" id="cq-rates-filter" placeholder="Filter rates…" style="max-width:340px; margin:10px 0 16px;">
           <div id="cq-rates-table"></div>
         </section>
       </div>
@@ -753,7 +801,7 @@ export default {
     const logisticsEl = container.querySelector('#cq-logistics');
 
     function renderSpec() {
-      elementsEl.innerHTML = ELEMENTS.map(el => `
+      elementsEl.innerHTML = elementsWith(state.customMaterials).map(el => `
         <div class="cq-spec-row">
           <label class="tool-label" for="spec-${el.id}">${el.name}</label>
           <select class="tool-select" id="spec-${el.id}" data-spec="${el.id}">
@@ -927,7 +975,7 @@ export default {
     const ratesTableEl = container.querySelector('#cq-rates-table');
 
     function renderRates() {
-      const book = { ...defaultRateBook(), ...state.rates };
+      const book = { ...defaultRateBook(state.customMaterials), ...state.rates };
       const q = (container.querySelector('#cq-rates-filter').value || '').toLowerCase();
       const cur = state.currency;
 
@@ -960,11 +1008,82 @@ export default {
         </div>`).join('') || `<p class="cp-empty">Nothing matches that.</p>`;
     }
 
+    /* ---------------- user-defined materials ---------------- */
+
+    const matListEl = container.querySelector('#cq-mat-list');
+    const matForm   = container.querySelector('#cq-mat-form');
+    const matUnit   = container.querySelector('#mat-unit');
+
+    function renderMaterials() {
+      if (!state.customMaterials.length) {
+        matListEl.innerHTML = '<p class="cp-empty">No materials of your own yet.</p>';
+        return;
+      }
+      const byElement = new Map(CUSTOM_TARGETS.map(t => [t.id, t.name]));
+      matListEl.innerHTML = state.customMaterials.map(m => `
+        <div class="cq-mat-row">
+          <div class="fz-name">
+            <strong>${escapeHtml(m.name)}</strong>
+            <span class="fz-meta">${escapeHtml(byElement.get(m.element) ?? m.element)} ·
+              ${money(m.rate, state.currency)} + ${money(m.labour, state.currency)} labour per ${UNITS[m.unit]?.label ?? m.unit}
+              ${m.wastage ? '· ' + m.wastage + '% wastage' : ''}</span>
+          </div>
+          <button class="btn btn-sm ct-del" data-mat-remove="${escapeHtml(m.id)}" aria-label="Remove ${escapeHtml(m.name)}">×</button>
+        </div>`).join('');
+    }
+
+    // A sheet needs to know what area it covers; nothing else does.
+    const syncMatUnit = () => {
+      container.querySelector('#mat-cov-wrap').hidden = matUnit.value !== 'sheet';
+    };
+    matUnit.addEventListener('change', syncMatUnit);
+
+    container.querySelector('#cq-mat-add').addEventListener('click', () => {
+      matForm.hidden = !matForm.hidden;
+      if (!matForm.hidden) container.querySelector('#mat-name').focus();
+    });
+    container.querySelector('#cq-mat-cancel').addEventListener('click', () => { matForm.hidden = true; });
+
+    matForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = container.querySelector('#mat-name').value.trim();
+      if (!name) return;
+      const unit = matUnit.value;
+      state.customMaterials.push({
+        // Prefixed so a user material can never collide with a catalogue id.
+        id: `mine-${Date.now().toString(36)}`,
+        element: container.querySelector('#mat-element').value,
+        name,
+        unit,
+        coverage: unit === 'sheet' ? parseNum(container.querySelector('#mat-coverage')) : null,
+        rate: parseNum(container.querySelector('#mat-rate')),
+        labour: parseNum(container.querySelector('#mat-labour')),
+        wastage: parseNum(container.querySelector('#mat-wastage')),
+      });
+      persist();
+      matForm.reset();
+      matForm.hidden = true;
+      syncMatUnit();
+      renderMaterials();
+      renderSpec();
+      renderRates();
+    });
+
+    matListEl.addEventListener('click', (e) => {
+      const id = e.target.dataset.matRemove;
+      if (!id) return;
+      state.customMaterials = state.customMaterials.filter(m => m.id !== id);
+      // Any element still pointing at the deleted material falls back.
+      for (const [k, v] of Object.entries(state.spec)) if (v === id) state.spec[k] = 'none';
+      persist();
+      renderMaterials(); renderSpec(); renderRates(); renderLines(); renderTotals();
+    });
+
     ratesTableEl.addEventListener('input', (e) => {
       const f = e.target.dataset.r;
       if (!f) return;
       const key = e.target.closest('[data-rate]').dataset.rate;
-      const book = defaultRateBook();
+      const book = defaultRateBook(state.customMaterials);
       state.rates[key] = { ...book[key], ...state.rates[key], [f]: parseNum(e.target) };
       persist();
     });
@@ -972,7 +1091,12 @@ export default {
     container.querySelector('#cq-rates-filter').addEventListener('input', renderRates);
 
     container.querySelector('#cq-rates-export').addEventListener('click', () => {
-      const payload = { exported: new Date().toISOString(), currency: state.currency, rates: { ...defaultRateBook(), ...state.rates } };
+      const payload = {
+        exported: new Date().toISOString(),
+        currency: state.currency,
+        materials: state.customMaterials,
+        rates: { ...defaultRateBook(state.customMaterials), ...state.rates },
+      };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -989,7 +1113,8 @@ export default {
       try {
         const data = JSON.parse(await file.text());
         state.rates = data.rates || data;
-        persist(); renderRates(); renderLines(); renderTotals();
+        if (Array.isArray(data.materials)) state.customMaterials = data.materials;
+        persist(); renderMaterials(); renderRates(); renderSpec(); renderLines(); renderTotals();
       } catch {
         alert('That file could not be read as a rate book.');
       }
@@ -997,6 +1122,8 @@ export default {
     });
 
     container.querySelector('#cq-rates-reset').addEventListener('click', () => {
+      // Only seed rates are restored. Materials the user typed in are
+      // their work, not a setting, so resetting must not wipe them.
       state.rates = {};
       persist(); renderRates(); renderLines(); renderTotals();
     });
@@ -1147,7 +1274,7 @@ export default {
       if (state.tab === 'layout') viewer.resize();
       if (state.tab === 'spec')   renderQuoteDependents();
       if (state.tab === 'quote')  { renderLines(); renderTotals(); }
-      if (state.tab === 'rates')  renderRates();
+      if (state.tab === 'rates')  { renderMaterials(); renderRates(); }
     });
 
     /* ---------------- go ---------------- */
@@ -1165,6 +1292,7 @@ export default {
     syncCustomInputs();
     refreshLayout();
     frameShell();
+    renderMaterials();
     renderRates();
   },
 

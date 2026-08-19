@@ -264,17 +264,64 @@ export const COMMERCIAL_DEFAULTS = {
   depositPct: 70,
 };
 
+/* ------------------------------------------------------------
+   USER-DEFINED MATERIALS
+
+   The catalogue can never be complete — every fabricator has a supplier,
+   an offcut, a finish nobody else uses. Rather than pretend otherwise,
+   the user's own materials are first-class: they appear in the same
+   dropdowns, price through the same engine, and export with the rate
+   book. They live in the browser, so nothing has to be signed up for.
+
+   A custom material is a normal catalogue option carrying the element it
+   belongs to.
+   @typedef {object} CustomMaterial
+   @property {string} id        unique, generated
+   @property {string} element   which ELEMENTS entry it belongs to
+   @property {string} name
+   @property {string} unit      key of UNITS
+   @property {number|null} coverage  m² per sheet, when unit is 'sheet'
+   @property {number} rate
+   @property {number} labour
+   @property {number} wastage
+   ------------------------------------------------------------ */
+
+/** Elements a user-defined material can be filed under. */
+export const CUSTOM_TARGETS = ELEMENTS.map(el => ({ id: el.id, name: el.name, driver: el.driver }));
+
+/** Merge user materials into the catalogue so they appear as options. */
+export function elementsWith(custom = []) {
+  if (!custom.length) return ELEMENTS;
+  return ELEMENTS.map(el => {
+    const mine = custom.filter(c => c.element === el.id);
+    if (!mine.length) return el;
+    return {
+      ...el,
+      options: [
+        // User materials sit above "none" but below the stock list, so a
+        // familiar catalogue does not suddenly reorder itself.
+        ...el.options.filter(o => o.id !== 'none'),
+        ...mine.map(c => ({
+          id: c.id, name: c.name, unit: c.unit, coverage: c.coverage ?? undefined,
+          rate: c.rate, labour: c.labour, wastage: c.wastage, custom: true,
+        })),
+        ...el.options.filter(o => o.id === 'none'),
+      ],
+    };
+  });
+}
+
 /* Build the full default rate book, keyed by a stable line id, so the
    user's edits can be stored as a flat override map. */
-export function defaultRateBook() {
+export function defaultRateBook(custom = []) {
   const book = {};
 
-  for (const el of ELEMENTS) {
+  for (const el of elementsWith(custom)) {
     for (const opt of el.options) {
       book[`${el.id}:${opt.id}`] = {
         name: opt.name, unit: opt.unit, coverage: opt.coverage ?? null,
         rate: opt.rate, labour: opt.labour, wastage: opt.wastage,
-        group: el.name,
+        group: el.name, custom: !!opt.custom,
       };
     }
   }

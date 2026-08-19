@@ -11,8 +11,8 @@
    ============================================================ */
 
 import {
-  ELEMENTS, OPENING_RATES, OPENING_REINFORCEMENT, FITTING_RATES,
-  SERVICES, LOGISTICS, defaultRateBook,
+  OPENING_RATES, OPENING_REINFORCEMENT, FITTING_RATES,
+  SERVICES, LOGISTICS, defaultRateBook, elementsWith,
 } from './container-catalog.js';
 
 const STUD_CENTRES = 0.6;   // metres
@@ -101,7 +101,9 @@ function quantityFor(entry, area) {
 
 export function buildQuote(state, rateBook, opts = {}) {
   const q = deriveQuantities(state);
-  const book = { ...defaultRateBook(), ...rateBook };
+  // User-defined materials are part of the catalogue for this quote.
+  const elements = elementsWith(state.customMaterials ?? []);
+  const book = { ...defaultRateBook(state.customMaterials ?? []), ...rateBook };
   const spec = state.spec || {};
   const overrides = opts.overrides || {};
   const removed = new Set(opts.removed || []);
@@ -133,7 +135,7 @@ export function buildQuote(state, rateBook, opts = {}) {
   };
 
   /* --- specified elements --- */
-  for (const el of ELEMENTS) {
+  for (const el of elements) {
     const chosen = spec[el.id];
     if (!chosen || chosen === 'none') continue;
     const key = `${el.id}:${chosen}`;

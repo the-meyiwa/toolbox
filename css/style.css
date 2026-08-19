@@ -2990,3 +2990,48 @@ input, select, textarea {
   .st-readout { padding: 30px 14px 24px; }
   .st-card-v { font-size: 1.4rem; }
 }
+
+/* --- Container: user-defined materials --- */
+.cq-materials {
+  border: 1px solid var(--g150);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 10px;
+  background: var(--g50);
+}
+.cq-mat-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.cq-mat-head .biz-hint { max-width: 56ch; }
+.cq-mat-form {
+  border-top: 1px solid var(--g200);
+  padding-top: 16px;
+  margin-bottom: 16px;
+}
+.cq-mat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.cq-mat-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 13px;
+  background: var(--white);
+  border: 1px solid var(--g150);
+  border-radius: 9px;
+  margin-bottom: 7px;
+}
+.cq-mat-row:last-child { margin-bottom: 0; }
+
+@media (max-width: 600px) {
+  .cq-mat-head { flex-direction: column; gap: 12px; }
+  .cq-mat-head .btn { width: 100%; }
+}
