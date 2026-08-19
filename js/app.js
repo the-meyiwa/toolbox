@@ -463,17 +463,17 @@ const TOOLS = [
     id: 'anatomy-explorer',
     name: 'Anatomy Explorer',
     category: 'Modeling & 3D',
-    description: 'Interactive 3D human body — isolate systems, click structures, slice through planes',
+    description: '517 real anatomical structures in 3D — isolate systems, click to identify, slice through planes',
     icon: svg('<circle cx="12" cy="4.5" r="2.5"/><path d="M12 7v7"/><path d="M8 9h8"/><path d="M12 14l-2.5 7"/><path d="M12 14l2.5 7"/>'),
-    keywords: ['anatomy', 'human body', 'body', 'medical', 'med school', 'medicine', 'skeleton', 'bones', 'organs', 'muscles', 'circulatory', 'nervous', 'respiratory', 'digestive', 'anatomical', '3d', 'model', 'modeler', 'physiology', 'biology', 'study', 'heart', 'lungs', 'brain', 'liver', 'kidney', 'ribcage', 'spine', 'skull']
+    keywords: ['anatomy', 'human body', 'body', 'medical', 'med school', 'medicine', 'skeleton', 'bones', 'organs', 'muscles', 'circulatory', 'nervous', 'respiratory', 'digestive', 'anatomical', '3d', 'model', 'modeler', 'physiology', 'biology', 'study', 'heart', 'lungs', 'brain', 'liver', 'kidney', 'ribcage', 'spine', 'skull', 'bodyparts3d', 'atlas', 'dissection', 'terminologia', 'fma', 'z-anatomy', 'cadaver', 'vertebra', 'femur', 'cerebellum', 'anatomy explorer']
   },
   {
     id: 'container-planner',
-    name: 'Container & Cabin Planner',
+    name: 'Container Quote Builder',
     category: 'Modeling & 3D',
-    description: 'Lay out a shipping container or portacabin in 3D — doors, windows, walls, and a printable spec sheet',
+    description: 'Model a container or portacabin in 3D, then price the conversion into a printable client quotation',
     icon: svg('<rect x="2" y="7" width="20" height="11" rx="1"/><path d="M6 7v11"/><path d="M10 7v11"/><path d="M14 7v11"/><path d="M18 7v11"/>'),
-    keywords: ['container', 'portacabin', 'porta cabin', 'portakabin', 'shipping container', 'cabin', 'conex', 'iso container', 'site office', 'modular', 'prefab', 'layout', 'floor plan', 'floorplan', 'planner', 'modeler', '3d', 'building', 'construction', 'office', '20ft', '40ft', 'high cube', 'conversion', 'cabin design']
+    keywords: ['container', 'portacabin', 'porta cabin', 'portakabin', 'shipping container', 'cabin', 'conex', 'iso container', 'site office', 'modular', 'prefab', 'layout', 'floor plan', 'floorplan', 'planner', 'modeler', '3d', 'building', 'construction', 'office', '20ft', '40ft', 'high cube', 'conversion', 'cabin design', 'quote', 'quotation', 'estimate', 'estimating', 'boq', 'bill of quantities', 'costing', 'takeoff', 'tender', 'pricing', 'sales', 'proposal', 'materials', 'cladding', 'insulation', 'sandwich panel', 'aluco', 'acp', 'plywood', 'gypsum', 'pvc', 'vinyl', 'rate book', 'neoterm']
   },
 
   // ------------------------------------------------------------

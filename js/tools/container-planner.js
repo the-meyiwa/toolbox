@@ -1,59 +1,66 @@
 /* ============================================================
-   Container & Cabin Planner
+   Container & Cabin Quote Builder
 
-   Lay out a shipping container or portacabin: pick a size, cut in
-   doors and windows, drop in partitions and furniture, print a spec.
+   Model the unit in 3D, specify what it is built from, and the bill of
+   quantities prices itself off the geometry. Every quantity, rate and
+   labour figure stays editable, because a quote the estimator cannot
+   overrule is useless.
 
-   Written for someone who does not use CAD. Every control is a plain
-   number or a big button, everything is named in ordinary words
-   ("Distance from the left corner", not "X offset"), and nothing has
-   to be dragged in 3D to work.
+   Rates live in the browser and can be exported, so the price book
+   survives a market that moves monthly.
    ============================================================ */
 
+import { money, num, parseNum, escapeHtml, downloadCSV } from '../lib/biz.js';
+import {
+  ELEMENTS, SERVICES, LOGISTICS, UNITS, COMMERCIAL_DEFAULTS,
+  RATES_REVISED, defaultRateBook,
+} from '../lib/container-catalog.js';
+import { buildQuote, groupLines } from '../lib/container-quote.js';
+
 const M_PER_FT = 0.3048;
+const LS_RATES   = 'toolbox.container.rates';
+const LS_COMPANY = 'toolbox.container.company';
 
 /* ---------------- presets (metres, internal usable size) ---------------- */
 
 const PRESETS = [
   { group: 'Shipping containers', items: [
-    { id: '10ft',    name: '10 ft container',        len: 2.831,  wid: 2.352, hgt: 2.393 },
-    { id: '20ft',    name: '20 ft container',        len: 5.898,  wid: 2.352, hgt: 2.393 },
-    { id: '40ft',    name: '40 ft container',        len: 12.032, wid: 2.352, hgt: 2.393 },
-    { id: '40hc',    name: '40 ft high cube',        len: 12.032, wid: 2.352, hgt: 2.698 },
-    { id: '45hc',    name: '45 ft high cube',        len: 13.556, wid: 2.352, hgt: 2.698 },
+    { id: '10ft', name: '10 ft container',   len: 2.831,  wid: 2.352, hgt: 2.393, shell: 'buy-20' },
+    { id: '20ft', name: '20 ft container',   len: 5.898,  wid: 2.352, hgt: 2.393, shell: 'buy-20' },
+    { id: '40ft', name: '40 ft container',   len: 12.032, wid: 2.352, hgt: 2.393, shell: 'buy-40' },
+    { id: '40hc', name: '40 ft high cube',   len: 12.032, wid: 2.352, hgt: 2.698, shell: 'buy-40hc' },
+    { id: '45hc', name: '45 ft high cube',   len: 13.556, wid: 2.352, hgt: 2.698, shell: 'buy-40hc' },
   ]},
   { group: 'Portacabins', items: [
-    { id: 'pc12',    name: '12 ft × 8 ft cabin',     len: 3.658,  wid: 2.438, hgt: 2.400 },
-    { id: 'pc16',    name: '16 ft × 8 ft cabin',     len: 4.877,  wid: 2.438, hgt: 2.400 },
-    { id: 'pc20',    name: '20 ft × 8 ft cabin',     len: 6.096,  wid: 2.438, hgt: 2.400 },
-    { id: 'pc24',    name: '24 ft × 9 ft cabin',     len: 7.315,  wid: 2.743, hgt: 2.500 },
-    { id: 'pc32',    name: '32 ft × 10 ft cabin',    len: 9.754,  wid: 3.048, hgt: 2.500 },
+    { id: 'pc12', name: '12 ft × 8 ft cabin',  len: 3.658, wid: 2.438, hgt: 2.400, shell: 'fabricate' },
+    { id: 'pc16', name: '16 ft × 8 ft cabin',  len: 4.877, wid: 2.438, hgt: 2.400, shell: 'fabricate' },
+    { id: 'pc20', name: '20 ft × 8 ft cabin',  len: 6.096, wid: 2.438, hgt: 2.400, shell: 'fabricate' },
+    { id: 'pc24', name: '24 ft × 9 ft cabin',  len: 7.315, wid: 2.743, hgt: 2.500, shell: 'fabricate' },
+    { id: 'pc32', name: '32 ft × 10 ft cabin', len: 9.754, wid: 3.048, hgt: 2.500, shell: 'fabricate' },
   ]},
 ];
 
-/* ---------------- catalogue of things you can add ---------------- */
-
 const OPENINGS = {
-  'personnel-door': { name: 'Door',         w: 0.90, h: 2.00, sill: 0,    color: 0x6b4c33 },
-  'double-door':    { name: 'Double door',  w: 1.80, h: 2.00, sill: 0,    color: 0x6b4c33 },
-  'roller-door':    { name: 'Roller shutter', w: 2.20, h: 2.10, sill: 0,  color: 0x9aa3a8 },
-  'window':         { name: 'Window',       w: 1.20, h: 1.00, sill: 0.95, color: 0x9fc6d8 },
-  'small-window':   { name: 'Small window', w: 0.60, h: 0.60, sill: 1.30, color: 0x9fc6d8 },
-  'vent':           { name: 'Air vent',     w: 0.30, h: 0.25, sill: 2.00, color: 0x8a9298 },
+  'personnel-door': { name: 'Door',            w: 0.90, h: 2.00, sill: 0,    color: 0x6b4c33 },
+  'double-door':    { name: 'Double door',     w: 1.80, h: 2.00, sill: 0,    color: 0x6b4c33 },
+  'roller-door':    { name: 'Roller shutter',  w: 2.20, h: 2.10, sill: 0,    color: 0x9aa3a8 },
+  'window':         { name: 'Window',          w: 1.20, h: 1.00, sill: 0.95, color: 0x9fc6d8 },
+  'small-window':   { name: 'Small window',    w: 0.60, h: 0.60, sill: 1.30, color: 0x9fc6d8 },
+  'vent':           { name: 'Air vent',        w: 0.30, h: 0.25, sill: 2.00, color: 0x8a9298 },
 };
 
 const FITTINGS = {
-  'partition':  { name: 'Partition wall', w: 0.10, d: 2.35, h: 2.30, color: 0xe4e0d8, isWall: true },
-  'desk':       { name: 'Desk',           w: 1.40, d: 0.70, h: 0.75, color: 0xb08d5f },
-  'chair':      { name: 'Chair',          w: 0.55, d: 0.55, h: 0.95, color: 0x555b60 },
-  'bed':        { name: 'Bed',            w: 0.90, d: 1.90, h: 0.55, color: 0x8f7f6a },
-  'bunk':       { name: 'Bunk beds',      w: 0.90, d: 1.90, h: 1.70, color: 0x8f7f6a },
-  'kitchen':    { name: 'Kitchen unit',   w: 1.80, d: 0.60, h: 0.90, color: 0xc9c4bb },
-  'toilet':     { name: 'Toilet cubicle', w: 0.90, d: 1.20, h: 2.10, color: 0xdfe3e6 },
-  'shower':     { name: 'Shower',         w: 0.90, d: 0.90, h: 2.10, color: 0xdfe3e6 },
-  'rack':       { name: 'Storage rack',   w: 1.80, d: 0.50, h: 2.00, color: 0x7d8388 },
-  'cabinet':    { name: 'Cabinet',        w: 0.80, d: 0.45, h: 1.80, color: 0xa89a86 },
-  'table':      { name: 'Table',          w: 1.60, d: 0.80, h: 0.75, color: 0xb08d5f },
+  partition: { name: 'Partition wall', w: 0.10, d: 2.35, h: 2.30, color: 0xe4e0d8, isWall: true },
+  desk:      { name: 'Desk',           w: 1.40, d: 0.70, h: 0.75, color: 0xb08d5f },
+  chair:     { name: 'Chair',          w: 0.55, d: 0.55, h: 0.95, color: 0x555b60 },
+  bed:       { name: 'Bed',            w: 0.90, d: 1.90, h: 0.55, color: 0x8f7f6a },
+  bunk:      { name: 'Bunk beds',      w: 0.90, d: 1.90, h: 1.70, color: 0x8f7f6a },
+  kitchen:   { name: 'Kitchen unit',   w: 1.80, d: 0.60, h: 0.90, color: 0xc9c4bb },
+  toilet:    { name: 'Toilet cubicle', w: 0.90, d: 1.20, h: 2.10, color: 0xdfe3e6 },
+  shower:    { name: 'Shower',         w: 0.90, d: 0.90, h: 2.10, color: 0xdfe3e6 },
+  rack:      { name: 'Storage rack',   w: 1.80, d: 0.50, h: 2.00, color: 0x7d8388 },
+  cabinet:   { name: 'Cabinet',        w: 0.80, d: 0.45, h: 1.80, color: 0xa89a86 },
+  table:     { name: 'Table',          w: 1.60, d: 0.80, h: 0.75, color: 0xb08d5f },
 };
 
 const WALLS = [
@@ -64,37 +71,26 @@ const WALLS = [
 ];
 
 const SHELL_COLORS = [
-  { id: 'green',  name: 'Green',  hex: 0x3f6b52 },
-  { id: 'blue',   name: 'Blue',   hex: 0x2f5f86 },
-  { id: 'red',    name: 'Red',    hex: 0x8d3a32 },
-  { id: 'grey',   name: 'Grey',   hex: 0x6f7479 },
-  { id: 'white',  name: 'White',  hex: 0xdedbd4 },
-  { id: 'sand',   name: 'Sand',   hex: 0xbfa87e },
+  { id: 'green', name: 'Green', hex: 0x3f6b52 }, { id: 'blue',  name: 'Blue',  hex: 0x2f5f86 },
+  { id: 'red',   name: 'Red',   hex: 0x8d3a32 }, { id: 'grey',  name: 'Grey',  hex: 0x6f7479 },
+  { id: 'white', name: 'White', hex: 0xdedbd4 }, { id: 'sand',  name: 'Sand',  hex: 0xbfa87e },
 ];
 
-/* ---------------- geometry helper: rectangle with holes ---------------- */
-
-/* Subtract a hole from a set of rectangles, splitting each overlapping
-   rectangle into up to four pieces. Lets a wall be built as flat panels
-   around its openings without needing CSG. */
+/* Subtract a hole from a set of rectangles so a wall can be built as
+   flat panels around its openings without needing CSG. */
 function subtractRect(rects, hole) {
   const out = [];
   for (const r of rects) {
     const overlaps = hole.x0 < r.x1 && hole.x1 > r.x0 && hole.y0 < r.y1 && hole.y1 > r.y0;
     if (!overlaps) { out.push(r); continue; }
-
     if (hole.y0 > r.y0) out.push({ x0: r.x0, x1: r.x1, y0: r.y0, y1: hole.y0 });
     if (hole.y1 < r.y1) out.push({ x0: r.x0, x1: r.x1, y0: hole.y1, y1: r.y1 });
-
-    const yLo = Math.max(r.y0, hole.y0);
-    const yHi = Math.min(r.y1, hole.y1);
+    const yLo = Math.max(r.y0, hole.y0), yHi = Math.min(r.y1, hole.y1);
     if (hole.x0 > r.x0) out.push({ x0: r.x0, x1: hole.x0, y0: yLo, y1: yHi });
     if (hole.x1 < r.x1) out.push({ x0: hole.x1, x1: r.x1, y0: yLo, y1: yHi });
   }
   return out.filter(r => r.x1 - r.x0 > 0.002 && r.y1 - r.y0 > 0.002);
 }
-
-/* ---------------- unit formatting ---------------- */
 
 function fmtLen(metres, unit) {
   if (unit === 'm') return `${metres.toFixed(2)} m`;
@@ -104,13 +100,16 @@ function fmtLen(metres, unit) {
   return inch === 12 ? `${ft + 1} ft` : inch ? `${ft} ft ${inch} in` : `${ft} ft`;
 }
 
-function fmtArea(m2, unit) {
-  return unit === 'm' ? `${m2.toFixed(1)} m²` : `${(m2 * 10.7639).toFixed(0)} sq ft`;
-}
+const fmtArea = (m2, u) => u === 'm' ? `${m2.toFixed(1)} m²` : `${(m2 * 10.7639).toFixed(0)} sq ft`;
+const fmtVol  = (m3, u) => u === 'm' ? `${m3.toFixed(1)} m³` : `${(m3 * 35.3147).toFixed(0)} cu ft`;
 
-function fmtVol(m3, unit) {
-  return unit === 'm' ? `${m3.toFixed(1)} m³` : `${(m3 * 35.3147).toFixed(0)} cu ft`;
-}
+const today = () => new Date().toISOString().slice(0, 10);
+const fmtDate = (iso) => {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(undefined,
+    { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+};
 
 /* ============================================================ */
 
@@ -118,15 +117,13 @@ export default {
   async render(container) {
     this._alive = true;
 
-    container.innerHTML = `
-      <div class="t3d-loading"><div class="t3d-spinner"></div><p>Getting the workspace ready…</p></div>`;
+    container.innerHTML = `<div class="t3d-loading"><div class="t3d-spinner"></div><p>Getting the workspace ready…</p></div>`;
 
     let THREE, Viewer3D;
     try {
       ({ Viewer3D, THREE } = await import('../lib/viewer3d.js'));
     } catch (err) {
-      container.innerHTML = `<div class="no-results">
-        <p class="no-results-title">Could not start the 3D view</p>
+      container.innerHTML = `<div class="no-results"><p class="no-results-title">Could not start the 3D view</p>
         <p class="no-results-text">${err.message}</p></div>`;
       return;
     }
@@ -134,111 +131,235 @@ export default {
 
     /* ---------------- state ---------------- */
 
+    const saved = (key, fallback) => {
+      try { return { ...fallback, ...JSON.parse(localStorage.getItem(key) || '{}') }; }
+      catch { return { ...fallback }; }
+    };
+
     const state = {
       preset: '20ft',
       len: 5.898, wid: 2.352, hgt: 2.393,
-      unit: 'ft',
-      color: 'green',
+      unit: 'ft', currency: 'NGN', color: 'green',
       showRoof: false,
-      items: [],          // { key, kind: 'opening'|'fitting', type, wall?, along?, x?, z?, rot?, w, h, sill? }
-      selected: null,
-      nextKey: 1,
+      items: [], selected: null, nextKey: 1,
+
+      spec: {
+        shell: 'buy-20', prep: 'full', exterior: 'paint', insulation: 'pu25',
+        framing: 'steel40', interior: 'ply9', ceiling: 'pvc', floor: 'vinyl',
+        subfloor: 'marine18', paint: 'emulsion',
+      },
+      services: {}, logistics: {},
+      overrides: {}, removed: [], customLines: [],
+      commercial: { ...COMMERCIAL_DEFAULTS, discount: 0 },
+
+      company: saved(LS_COMPANY, {
+        name: 'Neoterm Projects',
+        address: '35 Ladipo Labinjo Crescent, Surulere, Lagos',
+        phone: '', email: '', regNo: '',
+        client: '', clientAddress: '',
+        quoteNo: `NP-${new Date().getFullYear()}-001`,
+        date: today(),
+        scope: 'Supply and conversion of a shipping container into a fitted office unit.',
+        terms: 'Prices valid for 30 days. 70% deposit on order, balance on delivery.\nLead time 3–4 weeks from receipt of deposit.\nPrices subject to change if material costs move before order confirmation.',
+      }),
+      rates: saved(LS_RATES, {}),
+      tab: 'layout',
     };
 
-    /* ---------------- markup ---------------- */
+    const persist = () => {
+      try {
+        localStorage.setItem(LS_RATES, JSON.stringify(state.rates));
+        localStorage.setItem(LS_COMPANY, JSON.stringify(state.company));
+      } catch { /* private mode — not worth interrupting the user */ }
+    };
+
+    /* ---------------- shell markup ---------------- */
 
     const presetOptions = PRESETS.map(g =>
-      `<optgroup label="${g.group}">${g.items.map(p =>
-        `<option value="${p.id}">${p.name}</option>`).join('')}</optgroup>`).join('')
-      + `<optgroup label="Other"><option value="custom">Custom size…</option></optgroup>`;
+      `<optgroup label="${g.group}">${g.items.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}</optgroup>`
+    ).join('') + `<optgroup label="Other"><option value="custom">Custom size…</option></optgroup>`;
 
     container.innerHTML = `
-      <div class="cp">
-        <aside class="cp-panel">
+      <div class="cq">
+        <nav class="cq-tabs" id="cq-tabs" role="tablist">
+          <button class="cq-tab is-active" data-tab="layout">1 · Layout</button>
+          <button class="cq-tab" data-tab="spec">2 · Specification</button>
+          <button class="cq-tab" data-tab="quote">3 · Quote</button>
+          <button class="cq-tab" data-tab="rates">4 · Rates</button>
+        </nav>
 
-          <section class="cp-step">
-            <h3 class="cp-step-h"><span class="cp-num">1</span> Choose the unit</h3>
-            <select id="cp-preset" class="tool-select cp-big">${presetOptions}</select>
+        <!-- ============ LAYOUT ============ -->
+        <section class="cq-panel" data-panel="layout">
+          <div class="cp">
+            <aside class="cp-panel">
+              <section class="cp-step">
+                <h3 class="cp-step-h"><span class="cp-num">1</span> Choose the unit</h3>
+                <select id="cp-preset" class="tool-select cp-big">${presetOptions}</select>
+                <div id="cp-custom" class="cp-custom" hidden>
+                  <label class="cp-field"><span>Length</span><input type="number" id="cp-len" class="tool-input" step="0.1" min="1"></label>
+                  <label class="cp-field"><span>Width</span><input type="number" id="cp-wid" class="tool-input" step="0.1" min="1"></label>
+                  <label class="cp-field"><span>Height</span><input type="number" id="cp-hgt" class="tool-input" step="0.1" min="1.5"></label>
+                </div>
+                <div class="cp-row">
+                  <span class="cp-row-label">Measure in</span>
+                  <div class="btn-group t3d-seg" id="cp-unit">
+                    <button class="btn btn-sm is-active" data-unit="ft">Feet</button>
+                    <button class="btn btn-sm" data-unit="m">Metres</button>
+                  </div>
+                </div>
+                <div class="cp-row">
+                  <span class="cp-row-label">Colour</span>
+                  <div class="cp-swatches" id="cp-colors">
+                    ${SHELL_COLORS.map(c => `<button class="cp-swatch${c.id === 'green' ? ' is-active' : ''}" data-color="${c.id}"
+                       title="${c.name}" aria-label="${c.name}" style="background:#${c.hex.toString(16).padStart(6, '0')}"></button>`).join('')}
+                  </div>
+                </div>
+              </section>
 
-            <div id="cp-custom" class="cp-custom" hidden>
-              <label class="cp-field"><span>Length</span>
-                <input type="number" id="cp-len" class="tool-input" step="0.1" min="1"></label>
-              <label class="cp-field"><span>Width</span>
-                <input type="number" id="cp-wid" class="tool-input" step="0.1" min="1"></label>
-              <label class="cp-field"><span>Height</span>
-                <input type="number" id="cp-hgt" class="tool-input" step="0.1" min="1.5"></label>
-            </div>
+              <section class="cp-step">
+                <h3 class="cp-step-h"><span class="cp-num">2</span> Doors &amp; windows</h3>
+                <div class="cp-add-grid" id="cp-add-openings">
+                  ${Object.entries(OPENINGS).map(([k, v]) => `<button class="cp-add" data-opening="${k}">+ ${v.name}</button>`).join('')}
+                </div>
+              </section>
 
-            <div class="cp-row">
-              <span class="cp-row-label">Measure in</span>
-              <div class="btn-group t3d-seg" id="cp-unit">
-                <button class="btn btn-sm is-active" data-unit="ft">Feet</button>
-                <button class="btn btn-sm" data-unit="m">Metres</button>
+              <section class="cp-step">
+                <h3 class="cp-step-h"><span class="cp-num">3</span> Walls &amp; furniture</h3>
+                <div class="cp-add-grid" id="cp-add-fittings">
+                  ${Object.entries(FITTINGS).map(([k, v]) => `<button class="cp-add" data-fitting="${k}">+ ${v.name}</button>`).join('')}
+                </div>
+              </section>
+
+              <section class="cp-step">
+                <h3 class="cp-step-h"><span class="cp-num">4</span> What you have added</h3>
+                <div id="cp-items" class="cp-items"></div>
+              </section>
+            </aside>
+
+            <div class="t3d-stage">
+              <div class="t3d-canvas" id="cp-canvas"></div>
+              <div class="t3d-toolbar">
+                <div class="btn-group t3d-seg" id="cp-views">
+                  <button class="btn btn-sm is-active" data-view="iso">3D view</button>
+                  <button class="btn btn-sm" data-view="top">Floor plan</button>
+                  <button class="btn btn-sm" data-view="front">Front</button>
+                  <button class="btn btn-sm" data-view="left">Side</button>
+                </div>
+                <div class="t3d-toolbar-right">
+                  <label class="tool-checkbox"><input type="checkbox" id="cp-roof"> <span>Show roof</span></label>
+                </div>
               </div>
-            </div>
-
-            <div class="cp-row">
-              <span class="cp-row-label">Colour</span>
-              <div class="cp-swatches" id="cp-colors">
-                ${SHELL_COLORS.map(c => `<button class="cp-swatch${c.id === 'green' ? ' is-active' : ''}"
-                   data-color="${c.id}" title="${c.name}" aria-label="${c.name}"
-                   style="background:#${c.hex.toString(16).padStart(6, '0')}"></button>`).join('')}
-              </div>
-            </div>
-          </section>
-
-          <section class="cp-step">
-            <h3 class="cp-step-h"><span class="cp-num">2</span> Add doors &amp; windows</h3>
-            <div class="cp-add-grid" id="cp-add-openings">
-              ${Object.entries(OPENINGS).map(([k, v]) =>
-                `<button class="cp-add" data-opening="${k}">+ ${v.name}</button>`).join('')}
-            </div>
-          </section>
-
-          <section class="cp-step">
-            <h3 class="cp-step-h"><span class="cp-num">3</span> Add walls &amp; furniture</h3>
-            <div class="cp-add-grid" id="cp-add-fittings">
-              ${Object.entries(FITTINGS).map(([k, v]) =>
-                `<button class="cp-add" data-fitting="${k}">+ ${v.name}</button>`).join('')}
-            </div>
-          </section>
-
-          <section class="cp-step">
-            <h3 class="cp-step-h"><span class="cp-num">4</span> What you have added</h3>
-            <div id="cp-items" class="cp-items"></div>
-          </section>
-
-        </aside>
-
-        <div class="t3d-stage">
-          <div class="t3d-canvas" id="cp-canvas"></div>
-
-          <div class="t3d-toolbar">
-            <div class="btn-group t3d-seg" id="cp-views">
-              <button class="btn btn-sm is-active" data-view="iso">3D view</button>
-              <button class="btn btn-sm" data-view="top">Floor plan</button>
-              <button class="btn btn-sm" data-view="front">Front</button>
-              <button class="btn btn-sm" data-view="left">Side</button>
-            </div>
-            <div class="t3d-toolbar-right">
-              <label class="tool-checkbox"><input type="checkbox" id="cp-roof"> <span>Show roof</span></label>
-              <button class="btn btn-sm" id="cp-print">Print the plan</button>
+              <div class="cp-summary" id="cp-summary"></div>
+              <div class="cp-editor" id="cp-editor" hidden></div>
             </div>
           </div>
+        </section>
 
-          <div class="cp-summary" id="cp-summary"></div>
+        <!-- ============ SPECIFICATION ============ -->
+        <section class="cq-panel" data-panel="spec" hidden>
+          <div class="cq-spec">
+            <div>
+              <h3 class="cq-h">Build-up</h3>
+              <p class="biz-hint" style="margin-bottom:18px;">Choose what each part is made from. Quantities come off the model automatically.</p>
+              <div id="cq-elements"></div>
+            </div>
+            <div>
+              <h3 class="cq-h">Services &amp; installations</h3>
+              <p class="biz-hint" style="margin-bottom:18px;">Suggested from the floor area. Change any figure to suit the job.</p>
+              <div id="cq-services"></div>
 
-          <div class="cp-editor" id="cp-editor" hidden></div>
-        </div>
+              <h3 class="cq-h" style="margin-top:28px;">Logistics</h3>
+              <div id="cq-logistics"></div>
+            </div>
+          </div>
+          <div id="cq-takeoff" class="cq-takeoff"></div>
+        </section>
+
+        <!-- ============ QUOTE ============ -->
+        <section class="cq-panel" data-panel="quote" hidden>
+          <div class="cq-meta">
+            <div class="biz-field"><label class="tool-label" for="cq-currency">Currency</label>
+              <select class="tool-select" id="cq-currency">
+                <option value="NGN">NGN — Nigerian Naira (₦)</option>
+                <option value="USD">USD — US Dollar ($)</option>
+                <option value="GBP">GBP — British Pound (£)</option>
+                <option value="EUR">EUR — Euro (€)</option>
+                <option value="GHS">GHS — Ghanaian Cedi (₵)</option>
+                <option value="ZAR">ZAR — South African Rand (R)</option>
+              </select></div>
+            <div class="biz-field"><label class="tool-label" for="cq-quoteno">Quote number</label>
+              <input type="text" class="tool-input" id="cq-quoteno"></div>
+            <div class="biz-field"><label class="tool-label" for="cq-date">Date</label>
+              <input type="date" class="tool-input" id="cq-date"></div>
+            <div class="biz-field"><label class="tool-label" for="cq-client">Client</label>
+              <input type="text" class="tool-input" id="cq-client" placeholder="Client name"></div>
+          </div>
+
+          <div id="cq-lines"></div>
+
+          <div class="cq-bottom">
+            <div class="cq-commercial">
+              <h3 class="cq-h">Mark-ups</h3>
+              <div class="cq-comm-grid">
+                <label class="cp-field"><span>Overheads %</span><input type="number" class="tool-input" data-comm="overheadPct" step="0.5" min="0"></label>
+                <label class="cp-field"><span>Contingency %</span><input type="number" class="tool-input" data-comm="contingencyPct" step="0.5" min="0"></label>
+                <label class="cp-field"><span>Profit %</span><input type="number" class="tool-input" data-comm="profitPct" step="0.5" min="0"></label>
+                <label class="cp-field"><span>VAT %</span><input type="number" class="tool-input" data-comm="vatPct" step="0.5" min="0"></label>
+                <label class="cp-field"><span>Discount</span><input type="number" class="tool-input" data-comm="discount" step="1000" min="0"></label>
+              </div>
+              <div class="tool-controls" style="margin-top:16px;">
+                <button class="btn btn-secondary btn-sm" id="cq-add-line">Add a line</button>
+                <button class="btn btn-secondary btn-sm" id="cq-csv">Download CSV</button>
+                <button class="btn btn-primary btn-sm" id="cq-print">Print / save as PDF</button>
+              </div>
+            </div>
+            <div class="cq-totals" id="cq-totals"></div>
+          </div>
+
+          <details class="cq-details">
+            <summary>Company &amp; terms shown on the printed quote</summary>
+            <div class="cq-company-grid">
+              <div class="biz-field"><label class="tool-label" for="co-name">Your company</label><input type="text" class="tool-input" id="co-name"></div>
+              <div class="biz-field"><label class="tool-label" for="co-phone">Phone</label><input type="text" class="tool-input" id="co-phone"></div>
+              <div class="biz-field"><label class="tool-label" for="co-email">Email</label><input type="text" class="tool-input" id="co-email"></div>
+              <div class="biz-field"><label class="tool-label" for="co-regno">RC / VAT number</label><input type="text" class="tool-input" id="co-regno"></div>
+              <div class="biz-field cq-wide"><label class="tool-label" for="co-address">Your address</label><input type="text" class="tool-input" id="co-address"></div>
+              <div class="biz-field cq-wide"><label class="tool-label" for="co-clientaddress">Client address</label><input type="text" class="tool-input" id="co-clientaddress"></div>
+              <div class="biz-field cq-wide"><label class="tool-label" for="co-scope">Scope of works</label><textarea class="tool-textarea" id="co-scope" rows="2"></textarea></div>
+              <div class="biz-field cq-wide"><label class="tool-label" for="co-terms">Terms</label><textarea class="tool-textarea" id="co-terms" rows="4"></textarea></div>
+            </div>
+          </details>
+        </section>
+
+        <!-- ============ RATES ============ -->
+        <section class="cq-panel" data-panel="rates" hidden>
+          <div class="cq-rates-head">
+            <div>
+              <h3 class="cq-h">Rate book</h3>
+              <p class="biz-hint">Seed rates were last reviewed <strong>${fmtDate(RATES_REVISED)}</strong>.
+                Prices move — edit anything here and it is saved in this browser.
+                Export the file to back it up or share it with someone else.</p>
+            </div>
+            <div class="tool-controls">
+              <button class="btn btn-secondary btn-sm" id="cq-rates-export">Export rates</button>
+              <button class="btn btn-secondary btn-sm" id="cq-rates-import">Import rates</button>
+              <button class="btn btn-secondary btn-sm" id="cq-rates-reset">Reset to defaults</button>
+              <input type="file" id="cq-rates-file" accept="application/json" hidden>
+            </div>
+          </div>
+          <input type="text" class="tool-input" id="cq-rates-filter" placeholder="Filter rates…" style="max-width:340px; margin-bottom:16px;">
+          <div id="cq-rates-table"></div>
+        </section>
       </div>
 
-      <div class="cp-sheet" id="cp-sheet" aria-hidden="true"></div>`;
+      <div class="cq-sheet" id="cq-sheet" aria-hidden="true"></div>`;
 
-    /* ---------------- scene ---------------- */
+    /* ---------------- 3D scene ---------------- */
 
     const mount  = container.querySelector('#cp-canvas');
     const viewer = new Viewer3D(mount, { background: 0xeceae6, ground: true, groundSize: 24, fov: 40 });
     this._viewer = viewer;
+    viewer.controls.maxPolarAngle = Math.PI / 2 - 0.02;
 
     const shell = new THREE.Group();
     viewer.scene.add(shell);
@@ -249,16 +370,13 @@ export default {
       if (!matCache.has(key)) {
         matCache.set(key, new THREE.MeshStandardMaterial({
           color, roughness: opts.rough ?? 0.78, metalness: opts.metal ?? 0.06,
-          transparent: (opts.opacity ?? 1) < 1, opacity: opts.opacity ?? 1,
-          side: THREE.DoubleSide,
+          transparent: (opts.opacity ?? 1) < 1, opacity: opts.opacity ?? 1, side: THREE.DoubleSide,
         }));
       }
       return matCache.get(key);
     };
 
-    const WALL_T = 0.06;   // wall thickness, metres
-
-    /* ---------------- geometry rebuild ---------------- */
+    const WALL_T = 0.06;
 
     function clearGroup(g) {
       for (let i = g.children.length - 1; i >= 0; i--) {
@@ -268,30 +386,17 @@ export default {
       }
     }
 
-    // Openings on a given wall, expressed in that wall's own 2D frame:
-    // x runs along the wall from its left corner, y runs up from the floor.
-    function holesFor(wallId) {
-      return state.items
-        .filter(it => it.kind === 'opening' && it.wall === wallId)
-        .map(it => ({
-          x0: it.along - it.w / 2, x1: it.along + it.w / 2,
-          y0: it.sill, y1: it.sill + it.h,
-        }));
-    }
+    const wallSpan = (id) => (id === 'front' || id === 'back') ? state.wid : state.len;
 
-    function wallSpan(wallId) {
-      return (wallId === 'front' || wallId === 'back') ? state.wid : state.len;
-    }
+    const holesFor = (wallId) => state.items
+      .filter(it => it.kind === 'opening' && it.wall === wallId)
+      .map(it => ({ x0: it.along - it.w / 2, x1: it.along + it.w / 2, y0: it.sill, y1: it.sill + it.h }));
 
-    // Place a panel described in wall-space into world space.
     function placePanel(wallId, r, thickness, material) {
-      const { len, wid, hgt } = state;
-      const w = r.x1 - r.x0;
-      const h = r.y1 - r.y0;
-      const cx = (r.x0 + r.x1) / 2;
-      const cy = (r.y0 + r.y1) / 2;
+      const { len, wid } = state;
+      const w = r.x1 - r.x0, h = r.y1 - r.y0;
+      const cx = (r.x0 + r.x1) / 2, cy = (r.y0 + r.y1) / 2;
       let mesh;
-
       if (wallId === 'front' || wallId === 'back') {
         mesh = new THREE.Mesh(new THREE.BoxGeometry(thickness, h, w), material);
         const sign = wallId === 'front' ? 1 : -1;
@@ -301,55 +406,37 @@ export default {
         const sign = wallId === 'left' ? -1 : 1;
         mesh.position.set(-(cx - len / 2) * sign, cy, sign * (wid / 2 + thickness / 2));
       }
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
+      mesh.castShadow = true; mesh.receiveShadow = true;
       return mesh;
     }
 
     function buildShell() {
       clearGroup(shell);
       viewer.pickables.length = 0;
-
       const { len, wid, hgt } = state;
       const shellHex = SHELL_COLORS.find(c => c.id === state.color).hex;
 
-      // --- Floor ---
-      const floor = new THREE.Mesh(
-        new THREE.BoxGeometry(len + WALL_T * 2, 0.08, wid + WALL_T * 2),
-        M(0x8b8378, { rough: 0.95 })
-      );
-      floor.position.y = -0.04;
-      floor.receiveShadow = true;
-      floor.name = '__floor';
+      const floor = new THREE.Mesh(new THREE.BoxGeometry(len + WALL_T * 2, 0.08, wid + WALL_T * 2), M(0x8b8378, { rough: 0.95 }));
+      floor.position.y = -0.04; floor.receiveShadow = true; floor.name = '__floor';
       shell.add(floor);
 
       const inner = new THREE.Mesh(new THREE.PlaneGeometry(len, wid), M(0xb9ac97, { rough: 1 }));
-      inner.rotation.x = -Math.PI / 2;
-      inner.position.y = 0.002;
-      inner.receiveShadow = true;
-      inner.name = '__floorface';
+      inner.rotation.x = -Math.PI / 2; inner.position.y = 0.002;
+      inner.receiveShadow = true; inner.name = '__floorface';
       shell.add(inner);
 
-      // --- Walls, cut around their openings ---
       for (const wall of WALLS) {
         let rects = [{ x0: 0, x1: wallSpan(wall.id), y0: 0, y1: hgt }];
         for (const hole of holesFor(wall.id)) rects = subtractRect(rects, hole);
         for (const r of rects) shell.add(placePanel(wall.id, r, WALL_T, M(shellHex)));
       }
 
-      // --- Roof ---
       if (state.showRoof) {
-        const roof = new THREE.Mesh(
-          new THREE.BoxGeometry(len + WALL_T * 2, 0.07, wid + WALL_T * 2),
-          M(shellHex, { rough: 0.7 })
-        );
-        roof.position.y = hgt + 0.035;
-        roof.castShadow = true;
-        roof.name = '__roof';
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(len + WALL_T * 2, 0.07, wid + WALL_T * 2), M(shellHex, { rough: 0.7 }));
+        roof.position.y = hgt + 0.035; roof.castShadow = true; roof.name = '__roof';
         shell.add(roof);
       }
 
-      // --- Corner castings, the detail that makes it read as a container ---
       for (const sx of [-1, 1]) for (const sz of [-1, 1]) for (const sy of [0, 1]) {
         const c = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.16, 0.17), M(0x4a4d50, { metal: 0.4, rough: 0.5 }));
         c.position.set(sx * (len / 2 + WALL_T - 0.06), sy ? hgt - 0.06 : 0.06, sz * (wid / 2 + WALL_T - 0.06));
@@ -368,12 +455,9 @@ export default {
 
         if (it.kind === 'opening') {
           const spec = OPENINGS[it.type];
-          // A thin panel filling the hole: glass for windows, a leaf for doors.
           const isGlass = it.type.includes('window');
-          const panel = new THREE.Mesh(
-            new THREE.BoxGeometry(0.03, it.h, it.w),
-            M(spec.color, isGlass ? { opacity: 0.42, rough: 0.15, metal: 0.1 } : { rough: 0.6 })
-          );
+          const panel = new THREE.Mesh(new THREE.BoxGeometry(0.03, it.h, it.w),
+            M(spec.color, isGlass ? { opacity: 0.42, rough: 0.15, metal: 0.1 } : { rough: 0.6 }));
           const { len, wid } = state;
           if (it.wall === 'front' || it.wall === 'back') {
             const sign = it.wall === 'front' ? 1 : -1;
@@ -393,8 +477,7 @@ export default {
           const h = spec.isWall ? Math.min(spec.h, state.hgt) : spec.h;
           const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), M(spec.color, { rough: 0.85 }));
           body.position.set(it.x - state.len / 2, h / 2, it.z - state.wid / 2);
-          body.castShadow = true;
-          body.receiveShadow = true;
+          body.castShadow = true; body.receiveShadow = true;
           group.add(body);
         }
 
@@ -402,53 +485,32 @@ export default {
         viewer.registerPickable(group);
       }
 
-      // Re-apply the selection highlight after a rebuild.
-      const sel = state.selected != null
-        ? shell.children.find(c => c.userData.item?.key === state.selected)
-        : null;
+      const sel = state.selected != null ? shell.children.find(c => c.userData.item?.key === state.selected) : null;
       viewer.selected = null;
       viewer.select(sel || null);
     }
 
-    /* ---------------- summary ---------------- */
+    /* ---------------- layout summary & item editing ---------------- */
 
     const summaryEl = container.querySelector('#cp-summary');
+    const itemsEl   = container.querySelector('#cp-items');
+    const editorEl  = container.querySelector('#cp-editor');
 
-    function usableArea() {
-      const gross = state.len * state.wid;
-      const taken = state.items
-        .filter(it => it.kind === 'fitting')
-        .reduce((sum, it) => {
-          const s = FITTINGS[it.type];
-          return sum + s.w * s.d;
-        }, 0);
-      return { gross, taken, free: Math.max(gross - taken, 0) };
-    }
+    const itemName = (it) => it.kind === 'opening' ? OPENINGS[it.type].name : FITTINGS[it.type].name;
 
     function updateSummary() {
       const u = state.unit;
-      const { gross, free } = usableArea();
+      const gross = state.len * state.wid;
       const doors   = state.items.filter(i => i.kind === 'opening' && i.type.includes('door')).length;
       const windows = state.items.filter(i => i.kind === 'opening' && i.type.includes('window')).length;
-
       summaryEl.innerHTML = `
         <div class="cp-stat"><span class="cp-stat-v">${fmtLen(state.len, u)}</span><span class="cp-stat-l">Length</span></div>
         <div class="cp-stat"><span class="cp-stat-v">${fmtLen(state.wid, u)}</span><span class="cp-stat-l">Width</span></div>
         <div class="cp-stat"><span class="cp-stat-v">${fmtLen(state.hgt, u)}</span><span class="cp-stat-l">Height</span></div>
         <div class="cp-stat"><span class="cp-stat-v">${fmtArea(gross, u)}</span><span class="cp-stat-l">Floor area</span></div>
-        <div class="cp-stat"><span class="cp-stat-v">${fmtArea(free, u)}</span><span class="cp-stat-l">Floor left</span></div>
         <div class="cp-stat"><span class="cp-stat-v">${fmtVol(gross * state.hgt, u)}</span><span class="cp-stat-l">Volume</span></div>
         <div class="cp-stat"><span class="cp-stat-v">${doors}</span><span class="cp-stat-l">Doors</span></div>
         <div class="cp-stat"><span class="cp-stat-v">${windows}</span><span class="cp-stat-l">Windows</span></div>`;
-    }
-
-    /* ---------------- item list & editor ---------------- */
-
-    const itemsEl  = container.querySelector('#cp-items');
-    const editorEl = container.querySelector('#cp-editor');
-
-    function itemName(it) {
-      return it.kind === 'opening' ? OPENINGS[it.type].name : FITTINGS[it.type].name;
     }
 
     function renderItems() {
@@ -469,27 +531,22 @@ export default {
       const it = state.items.find(i => i.key === state.selected);
       if (!it) { editorEl.hidden = true; editorEl.innerHTML = ''; return; }
       editorEl.hidden = false;
-
       const u = state.unit;
       const toDisplay = (m) => u === 'm' ? m.toFixed(2) : (m / M_PER_FT).toFixed(2);
       const step = u === 'm' ? 0.05 : 0.25;
       const unitWord = u === 'm' ? 'metres' : 'feet';
 
       if (it.kind === 'opening') {
-        const span = wallSpan(it.wall);
         editorEl.innerHTML = `
-          <div class="cp-editor-head">
-            <h4>${itemName(it)}</h4>
-            <button class="btn btn-sm cp-delete" id="cp-del">Remove this</button>
-          </div>
+          <div class="cp-editor-head"><h4>${itemName(it)}</h4>
+            <button class="btn btn-sm cp-delete" id="cp-del">Remove this</button></div>
           <div class="cp-editor-grid">
             <label class="cp-field"><span>Which wall</span>
               <select class="tool-select" data-prop="wall">
                 ${WALLS.map(w => `<option value="${w.id}"${w.id === it.wall ? ' selected' : ''}>${w.name}</option>`).join('')}
               </select></label>
             <label class="cp-field"><span>Distance from the left corner (${unitWord})</span>
-              <input type="number" class="tool-input" data-prop="along" step="${step}" min="0"
-                     max="${toDisplay(span)}" value="${toDisplay(it.along)}"></label>
+              <input type="number" class="tool-input" data-prop="along" step="${step}" min="0" max="${toDisplay(wallSpan(it.wall))}" value="${toDisplay(it.along)}"></label>
             <label class="cp-field"><span>Width (${unitWord})</span>
               <input type="number" class="tool-input" data-prop="w" step="${step}" min="0.1" value="${toDisplay(it.w)}"></label>
             <label class="cp-field"><span>Height (${unitWord})</span>
@@ -497,35 +554,32 @@ export default {
             <label class="cp-field"><span>Height off the floor (${unitWord})</span>
               <input type="number" class="tool-input" data-prop="sill" step="${step}" min="0" value="${toDisplay(it.sill)}"></label>
           </div>
-          <p class="cp-hint">The opening is measured from the left-hand corner as you look at that wall from outside.</p>`;
+          <p class="cp-hint">Measured from the left-hand corner as you look at that wall from outside.</p>`;
       } else {
         editorEl.innerHTML = `
-          <div class="cp-editor-head">
-            <h4>${itemName(it)}</h4>
+          <div class="cp-editor-head"><h4>${itemName(it)}</h4>
             <div class="cp-editor-actions">
               <button class="btn btn-sm" id="cp-rotate">Turn 90°</button>
               <button class="btn btn-sm cp-delete" id="cp-del">Remove this</button>
-            </div>
-          </div>
+            </div></div>
           <div class="cp-editor-grid">
             <label class="cp-field"><span>Distance from the back end (${unitWord})</span>
-              <input type="number" class="tool-input" data-prop="x" step="${step}" min="0"
-                     max="${toDisplay(state.len)}" value="${toDisplay(it.x)}"></label>
+              <input type="number" class="tool-input" data-prop="x" step="${step}" min="0" max="${toDisplay(state.len)}" value="${toDisplay(it.x)}"></label>
             <label class="cp-field"><span>Distance from the left side (${unitWord})</span>
-              <input type="number" class="tool-input" data-prop="z" step="${step}" min="0"
-                     max="${toDisplay(state.wid)}" value="${toDisplay(it.z)}"></label>
+              <input type="number" class="tool-input" data-prop="z" step="${step}" min="0" max="${toDisplay(state.wid)}" value="${toDisplay(it.z)}"></label>
           </div>
           <p class="cp-hint">Measured to the centre of the item.</p>`;
       }
     }
 
-    function refresh({ geometry = true } = {}) {
+    function refreshLayout({ geometry = true } = {}) {
       if (geometry) buildShell(); else updateSummary();
       renderItems();
       renderEditor();
+      renderQuoteDependents();
     }
 
-    /* ---------------- adding ---------------- */
+    /* ---------------- adding items ---------------- */
 
     function addOpening(type) {
       const spec = OPENINGS[type];
@@ -540,7 +594,7 @@ export default {
       };
       state.items.push(it);
       state.selected = it.key;
-      refresh();
+      refreshLayout();
     }
 
     function addFitting(type) {
@@ -552,36 +606,26 @@ export default {
       };
       state.items.push(it);
       state.selected = it.key;
-      refresh();
+      refreshLayout();
     }
 
     container.querySelector('#cp-add-openings').addEventListener('click', (e) => {
-      const b = e.target.closest('[data-opening]');
-      if (b) addOpening(b.dataset.opening);
+      const b = e.target.closest('[data-opening]'); if (b) addOpening(b.dataset.opening);
     });
-
     container.querySelector('#cp-add-fittings').addEventListener('click', (e) => {
-      const b = e.target.closest('[data-fitting]');
-      if (b) addFitting(b.dataset.fitting);
+      const b = e.target.closest('[data-fitting]'); if (b) addFitting(b.dataset.fitting);
     });
-
-    /* ---------------- editing ---------------- */
 
     itemsEl.addEventListener('click', (e) => {
-      const b = e.target.closest('[data-key]');
-      if (!b) return;
+      const b = e.target.closest('[data-key]'); if (!b) return;
       state.selected = Number(b.dataset.key);
-      refresh({ geometry: false });
-      const sel = shell.children.find(c => c.userData.item?.key === state.selected);
-      viewer.select(sel || null);
+      refreshLayout({ geometry: false });
+      viewer.select(shell.children.find(c => c.userData.item?.key === state.selected) || null);
     });
 
     editorEl.addEventListener('input', (e) => {
-      const prop = e.target.dataset.prop;
-      if (!prop) return;
-      const it = state.items.find(i => i.key === state.selected);
-      if (!it) return;
-
+      const prop = e.target.dataset.prop; if (!prop) return;
+      const it = state.items.find(i => i.key === state.selected); if (!it) return;
       if (prop === 'wall') {
         it.wall = e.target.value;
         it.along = Math.min(it.along, wallSpan(it.wall) - it.w / 2);
@@ -590,30 +634,27 @@ export default {
         if (!Number.isFinite(raw)) return;
         it[prop] = state.unit === 'm' ? raw : raw * M_PER_FT;
       }
-      buildShell();
-      renderItems();
+      buildShell(); renderItems(); renderQuoteDependents();
     });
 
     editorEl.addEventListener('click', (e) => {
-      const it = state.items.find(i => i.key === state.selected);
-      if (!it) return;
+      const it = state.items.find(i => i.key === state.selected); if (!it) return;
       if (e.target.id === 'cp-del') {
         state.items = state.items.filter(i => i.key !== it.key);
         state.selected = null;
-        refresh();
+        refreshLayout();
       } else if (e.target.id === 'cp-rotate') {
         it.rot = (it.rot + 1) % 4;
-        refresh();
+        refreshLayout();
       }
     });
 
     viewer.onSelect((obj) => {
       state.selected = obj?.userData.item?.key ?? null;
-      renderItems();
-      renderEditor();
+      renderItems(); renderEditor();
     });
 
-    /* ---------------- size, unit, colour ---------------- */
+    /* ---------------- size / unit / colour ---------------- */
 
     const presetSel = container.querySelector('#cp-preset');
     const customBox = container.querySelector('#cp-custom');
@@ -626,15 +667,11 @@ export default {
       lenIn.value = (state.len * f).toFixed(2);
       widIn.value = (state.wid * f).toFixed(2);
       hgtIn.value = (state.hgt * f).toFixed(2);
-      for (const el of [lenIn, widIn, hgtIn]) {
-        el.previousElementSibling; // labels already carry the unit word
-      }
       customBox.querySelectorAll('.cp-field > span').forEach((s, i) => {
         s.textContent = ['Length', 'Width', 'Height'][i] + (state.unit === 'm' ? ' (metres)' : ' (feet)');
       });
     }
 
-    // Keep every item inside the shell after a resize.
     function clampItems() {
       for (const it of state.items) {
         if (it.kind === 'opening') {
@@ -650,58 +687,6 @@ export default {
       }
     }
 
-    presetSel.addEventListener('change', () => {
-      state.preset = presetSel.value;
-      if (state.preset === 'custom') {
-        customBox.hidden = false;
-      } else {
-        customBox.hidden = true;
-        const p = PRESETS.flatMap(g => g.items).find(p => p.id === state.preset);
-        Object.assign(state, { len: p.len, wid: p.wid, hgt: p.hgt });
-      }
-      syncCustomInputs();
-      clampItems();
-      refresh();
-      frameShell();
-    });
-
-    for (const el of [lenIn, widIn, hgtIn]) {
-      el.addEventListener('input', () => {
-        const f = state.unit === 'm' ? 1 : M_PER_FT;
-        const v = { [el.id]: parseFloat(el.value) };
-        if (!Number.isFinite(Object.values(v)[0])) return;
-        if (el === lenIn) state.len = Math.max(parseFloat(el.value) * f, 1);
-        if (el === widIn) state.wid = Math.max(parseFloat(el.value) * f, 1);
-        if (el === hgtIn) state.hgt = Math.max(parseFloat(el.value) * f, 1.5);
-        clampItems();
-        refresh();
-      });
-    }
-
-    container.querySelector('#cp-unit').addEventListener('click', (e) => {
-      const b = e.target.closest('[data-unit]');
-      if (!b) return;
-      for (const x of container.querySelectorAll('#cp-unit .btn')) x.classList.toggle('is-active', x === b);
-      state.unit = b.dataset.unit;
-      syncCustomInputs();
-      refresh({ geometry: false });
-    });
-
-    container.querySelector('#cp-colors').addEventListener('click', (e) => {
-      const b = e.target.closest('[data-color]');
-      if (!b) return;
-      for (const x of container.querySelectorAll('.cp-swatch')) x.classList.toggle('is-active', x === b);
-      state.color = b.dataset.color;
-      buildShell();
-    });
-
-    container.querySelector('#cp-roof').addEventListener('change', (e) => {
-      state.showRoof = e.target.checked;
-      buildShell();
-    });
-
-    /* ---------------- views ---------------- */
-
     function frameShell() {
       const span = Math.max(state.len, state.wid, state.hgt);
       viewer.controls.target.set(0, state.hgt / 2, 0);
@@ -710,81 +695,477 @@ export default {
       viewer.frame(shell, 1.25);
     }
 
-    container.querySelector('#cp-views').addEventListener('click', (e) => {
-      const b = e.target.closest('[data-view]');
-      if (!b) return;
-      for (const x of container.querySelectorAll('#cp-views .btn')) x.classList.toggle('is-active', x === b);
-      const v = b.dataset.view;
-      if (v === 'iso') { frameShell(); return; }
-      viewer.setView(v, shell);
+    presetSel.addEventListener('change', () => {
+      state.preset = presetSel.value;
+      if (state.preset === 'custom') {
+        customBox.hidden = false;
+      } else {
+        customBox.hidden = true;
+        const p = PRESETS.flatMap(g => g.items).find(p => p.id === state.preset);
+        Object.assign(state, { len: p.len, wid: p.wid, hgt: p.hgt });
+        // Keep the shell line honest: a 40 ft model should not quote a 20 ft container.
+        state.spec.shell = p.shell;
+        renderSpec();
+      }
+      syncCustomInputs(); clampItems(); refreshLayout(); frameShell();
     });
 
-    /* ---------------- print ---------------- */
+    for (const el of [lenIn, widIn, hgtIn]) {
+      el.addEventListener('input', () => {
+        const f = state.unit === 'm' ? 1 : M_PER_FT;
+        const v = parseFloat(el.value);
+        if (!Number.isFinite(v)) return;
+        if (el === lenIn) state.len = Math.max(v * f, 1);
+        if (el === widIn) state.wid = Math.max(v * f, 1);
+        if (el === hgtIn) state.hgt = Math.max(v * f, 1.5);
+        clampItems(); refreshLayout();
+      });
+    }
 
-    const sheetEl = container.querySelector('#cp-sheet');
+    container.querySelector('#cp-unit').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-unit]'); if (!b) return;
+      for (const x of container.querySelectorAll('#cp-unit .btn')) x.classList.toggle('is-active', x === b);
+      state.unit = b.dataset.unit;
+      syncCustomInputs(); refreshLayout({ geometry: false });
+    });
 
-    container.querySelector('#cp-print').addEventListener('click', () => {
+    container.querySelector('#cp-colors').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-color]'); if (!b) return;
+      for (const x of container.querySelectorAll('.cp-swatch')) x.classList.toggle('is-active', x === b);
+      state.color = b.dataset.color;
+      buildShell();
+    });
+
+    container.querySelector('#cp-roof').addEventListener('change', (e) => {
+      state.showRoof = e.target.checked; buildShell();
+    });
+
+    container.querySelector('#cp-views').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-view]'); if (!b) return;
+      for (const x of container.querySelectorAll('#cp-views .btn')) x.classList.toggle('is-active', x === b);
+      if (b.dataset.view === 'iso') frameShell(); else viewer.setView(b.dataset.view, shell);
+    });
+
+    /* ---------------- specification panel ---------------- */
+
+    const elementsEl  = container.querySelector('#cq-elements');
+    const servicesEl  = container.querySelector('#cq-services');
+    const logisticsEl = container.querySelector('#cq-logistics');
+
+    function renderSpec() {
+      elementsEl.innerHTML = ELEMENTS.map(el => `
+        <div class="cq-spec-row">
+          <label class="tool-label" for="spec-${el.id}">${el.name}</label>
+          <select class="tool-select" id="spec-${el.id}" data-spec="${el.id}">
+            ${el.options.map(o => `<option value="${o.id}"${state.spec[el.id] === o.id ? ' selected' : ''}>${o.name}</option>`).join('')}
+          </select>
+          ${el.help ? `<p class="biz-hint">${el.help}</p>` : ''}
+        </div>`).join('');
+
+      const q = currentQuote().quantities;
+      servicesEl.innerHTML = SERVICES.map(s => {
+        const auto = state.services[s.id] !== undefined
+          ? state.services[s.id]
+          : (s.autoFrom ? (q[s.autoFrom] ?? 0) : (s.unit === 'area' ? q.floorArea : s.auto(q.floorArea)));
+        return `
+          <div class="cq-qty-row">
+            <span class="cq-qty-name">${s.name}</span>
+            <input type="number" class="tool-input" data-service="${s.id}" value="${Number(auto).toFixed(s.unit === 'area' || s.unit === 'length' ? 1 : 0)}" min="0" step="${s.unit === 'each' ? 1 : 0.5}">
+            <span class="cq-qty-unit">${UNITS[s.unit].label}</span>
+          </div>`;
+      }).join('');
+
+      logisticsEl.innerHTML = LOGISTICS.map(l => `
+        <div class="cq-qty-row">
+          <span class="cq-qty-name">${l.name}</span>
+          <input type="number" class="tool-input" data-logistics="${l.id}" value="${state.logistics[l.id] ?? l.qty}" min="0" step="1">
+          <span class="cq-qty-unit">${UNITS[l.unit].label}</span>
+        </div>`).join('');
+    }
+
+    function renderTakeoff() {
+      const q = currentQuote().quantities;
       const u = state.unit;
-      const { gross, free } = usableArea();
-      const presetName = state.preset === 'custom'
-        ? 'Custom size'
-        : PRESETS.flatMap(g => g.items).find(p => p.id === state.preset).name;
+      container.querySelector('#cq-takeoff').innerHTML = `
+        <h3 class="cq-h">Measured off the model</h3>
+        <div class="cp-summary">
+          <div class="cp-stat"><span class="cp-stat-v">${fmtArea(q.floorArea, u)}</span><span class="cp-stat-l">Floor / ceiling</span></div>
+          <div class="cp-stat"><span class="cp-stat-v">${fmtArea(q.interiorArea, u)}</span><span class="cp-stat-l">Interior lining</span></div>
+          <div class="cp-stat"><span class="cp-stat-v">${fmtArea(q.exteriorArea, u)}</span><span class="cp-stat-l">External cladding</span></div>
+          <div class="cp-stat"><span class="cp-stat-v">${fmtArea(q.envelopeArea, u)}</span><span class="cp-stat-l">Insulated envelope</span></div>
+          <div class="cp-stat"><span class="cp-stat-v">${fmtArea(q.openingArea, u)}</span><span class="cp-stat-l">Openings deducted</span></div>
+          <div class="cp-stat"><span class="cp-stat-v">${num(q.studLength, 0)} m</span><span class="cp-stat-l">Stud framing</span></div>
+          <div class="cp-stat"><span class="cp-stat-v">${num(q.perimeter, 1)} m</span><span class="cp-stat-l">Perimeter</span></div>
+        </div>`;
+    }
 
-      const openings = state.items.filter(i => i.kind === 'opening');
-      const fittings = state.items.filter(i => i.kind === 'fitting');
+    container.querySelector('[data-panel="spec"]').addEventListener('change', (e) => {
+      if (e.target.dataset.spec) { state.spec[e.target.dataset.spec] = e.target.value; renderQuoteDependents(); }
+    });
+    container.querySelector('[data-panel="spec"]').addEventListener('input', (e) => {
+      if (e.target.dataset.service)   { state.services[e.target.dataset.service] = parseNum(e.target); renderQuoteDependents({ keepSpec: true }); }
+      if (e.target.dataset.logistics) { state.logistics[e.target.dataset.logistics] = parseNum(e.target); renderQuoteDependents({ keepSpec: true }); }
+    });
+
+    /* ---------------- quote ---------------- */
+
+    const linesEl  = container.querySelector('#cq-lines');
+    const totalsEl = container.querySelector('#cq-totals');
+
+    const currentQuote = () => buildQuote(state, state.rates, { overrides: state.overrides, removed: state.removed });
+
+    function renderLines() {
+      const { lines } = currentQuote();
+      const cur = state.currency;
+
+      if (!lines.length) {
+        linesEl.innerHTML = `<div class="tool-output biz-explain">Nothing to price yet. Set a specification on the previous tab.</div>`;
+        return;
+      }
+
+      linesEl.innerHTML = groupLines(lines).map(group => `
+        <div class="cq-group">
+          <div class="cq-group-head"><h4>${group.name}</h4><span>${money(group.subtotal, cur)}</span></div>
+          <div class="cq-line cq-line-head">
+            <span>Material</span><span>Unit</span><span class="ta-right">Qty</span>
+            <span class="ta-right">Waste</span><span class="ta-right">Material</span>
+            <span class="ta-right">Labour</span><span class="ta-right">Total</span><span></span>
+          </div>
+          ${group.items.map(l => `
+            <div class="cq-line" data-line="${escapeHtml(l.id)}">
+              <span class="cq-line-name" title="${escapeHtml(l.name)}">${escapeHtml(l.name)}</span>
+              <span class="cq-line-unit">${UNITS[l.unit]?.label ?? l.unit}</span>
+              <input type="number" class="tool-input ta-right" data-f="qty" value="${l.qty.toFixed(l.unit === 'each' || l.unit === 'sheet' ? 0 : 1)}" min="0" step="0.5">
+              <input type="number" class="tool-input ta-right" data-f="wastage" value="${l.wastage}" min="0" max="60" step="1">
+              <span class="ta-right cq-cell" data-c="material">${money(l.materialCost, cur)}</span>
+              <span class="ta-right cq-cell" data-c="labour">${money(l.labourCost, cur)}</span>
+              <span class="ta-right cq-cell cq-line-total" data-c="total">${money(l.total, cur)}</span>
+              <button class="ct-del" data-remove="${escapeHtml(l.id)}" aria-label="Remove line">×</button>
+            </div>
+            <div class="cq-line cq-line-rates">
+              <span></span><span></span>
+              <label class="cq-rate-mini">rate <input type="number" class="tool-input" data-f="rate" value="${l.rate}" min="0" step="100"></label>
+              <label class="cq-rate-mini">labour <input type="number" class="tool-input" data-f="labour" value="${l.labour}" min="0" step="100"></label>
+              <span class="cq-line-note">${l.unit === 'sheet' && l.coverage ? `1 sheet ≈ ${l.coverage.toFixed(2)} m²` : ''}</span>
+              <span></span><span></span><span></span>
+            </div>`).join('')}
+        </div>`).join('');
+    }
+
+    function renderTotals() {
+      const { totals, lines } = currentQuote();
+      const cur = state.currency;
+      const area = state.len * state.wid;
+      totalsEl.innerHTML = `
+        <h3 class="cq-h">Quote summary</h3>
+        <div class="cq-total-rows">
+          <div><span>Materials</span><span>${money(totals.material, cur)}</span></div>
+          <div><span>Labour</span><span>${money(totals.labour, cur)}</span></div>
+          <div class="cq-sub"><span>Prime cost</span><span>${money(totals.prime, cur)}</span></div>
+          <div><span>Overheads</span><span>${money(totals.overhead, cur)}</span></div>
+          <div><span>Contingency</span><span>${money(totals.contingency, cur)}</span></div>
+          <div><span>Profit</span><span>${money(totals.profit, cur)}</span></div>
+          ${totals.discount ? `<div><span>Discount</span><span>−${money(totals.discount, cur)}</span></div>` : ''}
+          <div class="cq-sub"><span>Net total</span><span>${money(totals.netTotal, cur)}</span></div>
+          <div><span>VAT</span><span>${money(totals.vat, cur)}</span></div>
+          <div class="cq-grand"><span>Quoted price</span><span>${money(totals.grandTotal, cur)}</span></div>
+        </div>
+        <div class="cq-metrics">
+          <div><strong>${money(area > 0 ? totals.grandTotal / area : 0, cur)}</strong><span>per m² of floor</span></div>
+          <div><strong>${lines.length}</strong><span>priced lines</span></div>
+          <div><strong>${totals.prime > 0 ? (totals.labour / totals.prime * 100).toFixed(0) : 0}%</strong><span>is labour</span></div>
+        </div>`;
+    }
+
+    // Recompute just the money cells for one row, so typing never
+    // rebuilds the table and steals focus.
+    function repriceRow(rowEl, lineId) {
+      const { lines } = currentQuote();
+      const l = lines.find(x => x.id === lineId);
+      if (!l) { renderLines(); renderTotals(); return; }
+      const cur = state.currency;
+      rowEl.querySelector('[data-c="material"]').textContent = money(l.materialCost, cur);
+      rowEl.querySelector('[data-c="labour"]').textContent   = money(l.labourCost, cur);
+      rowEl.querySelector('[data-c="total"]').textContent    = money(l.total, cur);
+      renderTotals();
+    }
+
+    linesEl.addEventListener('input', (e) => {
+      const field = e.target.dataset.f;
+      if (!field) return;
+      const row = e.target.closest('[data-line]') || e.target.closest('.cq-line-rates')?.previousElementSibling;
+      if (!row) return;
+      const id = row.dataset.line;
+      state.overrides[id] = { ...state.overrides[id], [field]: parseNum(e.target) };
+      repriceRow(row, id);
+    });
+
+    linesEl.addEventListener('click', (e) => {
+      const id = e.target.dataset.remove;
+      if (!id) return;
+      state.removed.push(id);
+      renderLines(); renderTotals();
+    });
+
+    container.querySelector('.cq-commercial').addEventListener('input', (e) => {
+      const k = e.target.dataset.comm;
+      if (!k) return;
+      state.commercial[k] = parseNum(e.target);
+      renderTotals();
+    });
+
+    container.querySelector('#cq-add-line').addEventListener('click', () => {
+      state.customLines.push({
+        id: `custom:${Date.now()}`, name: 'New item', unit: 'each',
+        qty: 1, wastage: 0, rate: 0, labour: 0,
+      });
+      renderLines(); renderTotals();
+    });
+
+    /* ---------------- rate book ---------------- */
+
+    const ratesTableEl = container.querySelector('#cq-rates-table');
+
+    function renderRates() {
+      const book = { ...defaultRateBook(), ...state.rates };
+      const q = (container.querySelector('#cq-rates-filter').value || '').toLowerCase();
+      const cur = state.currency;
+
+      const rows = Object.entries(book)
+        .filter(([, v]) => !q || v.name.toLowerCase().includes(q) || (v.group || '').toLowerCase().includes(q));
+
+      const byGroup = new Map();
+      for (const [key, v] of rows) {
+        if (!byGroup.has(v.group)) byGroup.set(v.group, []);
+        byGroup.get(v.group).push([key, v]);
+      }
+
+      ratesTableEl.innerHTML = [...byGroup.entries()].map(([group, entries]) => `
+        <div class="cq-group">
+          <div class="cq-group-head"><h4>${escapeHtml(group || 'Other')}</h4><span>${entries.length} items</span></div>
+          <div class="cq-rate-row cq-rate-head">
+            <span>Item</span><span>Unit</span>
+            <span class="ta-right">Material rate (${cur})</span>
+            <span class="ta-right">Labour rate (${cur})</span>
+            <span class="ta-right">Waste %</span>
+          </div>
+          ${entries.map(([key, v]) => `
+            <div class="cq-rate-row" data-rate="${escapeHtml(key)}">
+              <span class="cq-line-name">${escapeHtml(v.name)}</span>
+              <span class="cq-line-unit">${UNITS[v.unit]?.label ?? v.unit}</span>
+              <input type="number" class="tool-input ta-right" data-r="rate" value="${v.rate}" min="0" step="500">
+              <input type="number" class="tool-input ta-right" data-r="labour" value="${v.labour}" min="0" step="500">
+              <input type="number" class="tool-input ta-right" data-r="wastage" value="${v.wastage}" min="0" max="60" step="1">
+            </div>`).join('')}
+        </div>`).join('') || `<p class="cp-empty">Nothing matches that.</p>`;
+    }
+
+    ratesTableEl.addEventListener('input', (e) => {
+      const f = e.target.dataset.r;
+      if (!f) return;
+      const key = e.target.closest('[data-rate]').dataset.rate;
+      const book = defaultRateBook();
+      state.rates[key] = { ...book[key], ...state.rates[key], [f]: parseNum(e.target) };
+      persist();
+    });
+
+    container.querySelector('#cq-rates-filter').addEventListener('input', renderRates);
+
+    container.querySelector('#cq-rates-export').addEventListener('click', () => {
+      const payload = { exported: new Date().toISOString(), currency: state.currency, rates: { ...defaultRateBook(), ...state.rates } };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `rate-book-${today()}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+
+    const fileInput = container.querySelector('#cq-rates-file');
+    container.querySelector('#cq-rates-import').addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+      try {
+        const data = JSON.parse(await file.text());
+        state.rates = data.rates || data;
+        persist(); renderRates(); renderLines(); renderTotals();
+      } catch {
+        alert('That file could not be read as a rate book.');
+      }
+      fileInput.value = '';
+    });
+
+    container.querySelector('#cq-rates-reset').addEventListener('click', () => {
+      state.rates = {};
+      persist(); renderRates(); renderLines(); renderTotals();
+    });
+
+    /* ---------------- company fields ---------------- */
+
+    const coFields = ['name', 'phone', 'email', 'regNo', 'address', 'clientAddress', 'scope', 'terms'];
+    const coIds = { name: 'co-name', phone: 'co-phone', email: 'co-email', regNo: 'co-regno',
+                    address: 'co-address', clientAddress: 'co-clientaddress', scope: 'co-scope', terms: 'co-terms' };
+    for (const f of coFields) container.querySelector(`#${coIds[f]}`).value = state.company[f] ?? '';
+    container.querySelector('#cq-quoteno').value = state.company.quoteNo;
+    container.querySelector('#cq-date').value    = state.company.date;
+    container.querySelector('#cq-client').value  = state.company.client;
+
+    container.querySelector('[data-panel="quote"]').addEventListener('input', (e) => {
+      for (const f of coFields) if (e.target.id === coIds[f]) { state.company[f] = e.target.value; persist(); }
+      if (e.target.id === 'cq-quoteno') { state.company.quoteNo = e.target.value; persist(); }
+      if (e.target.id === 'cq-date')    { state.company.date = e.target.value; persist(); }
+      if (e.target.id === 'cq-client')  { state.company.client = e.target.value; persist(); }
+    });
+
+    container.querySelector('#cq-currency').addEventListener('change', (e) => {
+      state.currency = e.target.value;
+      renderLines(); renderTotals(); renderRates();
+    });
+
+    /* ---------------- CSV & print ---------------- */
+
+    container.querySelector('#cq-csv').addEventListener('click', () => {
+      const { lines, totals } = currentQuote();
+      const cur = state.currency;
+      downloadCSV(`quote-${state.company.quoteNo || 'container'}`,
+        ['Group', 'Material', 'Unit', 'Quantity', 'Wastage %', 'Charged qty', `Rate (${cur})`,
+         `Material cost (${cur})`, `Labour (${cur})`, `Total (${cur})`],
+        [
+          ...lines.map(l => [l.group, l.name, UNITS[l.unit]?.label ?? l.unit, l.qty.toFixed(2), l.wastage,
+                             l.chargeQty.toFixed(2), l.rate.toFixed(2),
+                             l.materialCost.toFixed(2), l.labourCost.toFixed(2), l.total.toFixed(2)]),
+          ['', 'PRIME COST', '', '', '', '', '', totals.material.toFixed(2), totals.labour.toFixed(2), totals.prime.toFixed(2)],
+          ['', 'QUOTED PRICE (incl. VAT)', '', '', '', '', '', '', '', totals.grandTotal.toFixed(2)],
+        ]);
+    });
+
+    const sheetEl = container.querySelector('#cq-sheet');
+
+    container.querySelector('#cq-print').addEventListener('click', () => {
+      const { lines, totals, quantities } = currentQuote();
+      const cur = state.currency;
+      const co = state.company;
+      const u = state.unit;
+      const presetName = state.preset === 'custom' ? 'Custom unit'
+        : PRESETS.flatMap(g => g.items).find(p => p.id === state.preset)?.name ?? 'Unit';
 
       sheetEl.innerHTML = `
-        <h1>${presetName} — layout plan</h1>
-        <p class="cp-sheet-date">Prepared ${new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+        <header class="cqs-head">
+          <div>
+            <h1>${escapeHtml(co.name || 'Quotation')}</h1>
+            <div class="cqs-sub">${escapeHtml(co.address || '')}</div>
+            <div class="cqs-sub">${[co.phone, co.email, co.regNo && `RC ${co.regNo}`].filter(Boolean).map(escapeHtml).join(' · ')}</div>
+          </div>
+          <div class="cqs-badge">
+            <span>Quotation</span>
+            <strong>${escapeHtml(co.quoteNo || '')}</strong>
+            <span>${fmtDate(co.date)}</span>
+          </div>
+        </header>
 
-        <h2>Overall size</h2>
-        <table>
-          <tr><th>Length</th><td>${fmtLen(state.len, u)}</td>
-              <th>Width</th><td>${fmtLen(state.wid, u)}</td></tr>
-          <tr><th>Height</th><td>${fmtLen(state.hgt, u)}</td>
-              <th>Floor area</th><td>${fmtArea(gross, u)}</td></tr>
-          <tr><th>Volume</th><td>${fmtVol(gross * state.hgt, u)}</td>
-              <th>Free floor</th><td>${fmtArea(free, u)}</td></tr>
-        </table>
+        <section class="cqs-parties">
+          <div><h3>Prepared for</h3>
+            <div>${escapeHtml(co.client || '—')}</div>
+            <div>${escapeHtml(co.clientAddress || '')}</div></div>
+          <div><h3>Unit</h3>
+            <div>${escapeHtml(presetName)}</div>
+            <div>${fmtLen(state.len, u)} × ${fmtLen(state.wid, u)} × ${fmtLen(state.hgt, u)}</div>
+            <div>${fmtArea(quantities.floorArea, u)} floor area</div></div>
+          <div><h3>Validity</h3>
+            <div>${COMMERCIAL_DEFAULTS.validityDays} days from ${fmtDate(co.date)}</div></div>
+        </section>
 
-        <h2>Doors, windows and vents (${openings.length})</h2>
-        ${openings.length ? `<table class="cp-sheet-list">
-          <tr><th>Item</th><th>Wall</th><th>From left corner</th><th>Width</th><th>Height</th><th>Off floor</th></tr>
-          ${openings.map(o => `<tr>
-            <td>${OPENINGS[o.type].name}</td>
-            <td>${WALLS.find(w => w.id === o.wall).name}</td>
-            <td>${fmtLen(o.along, u)}</td>
-            <td>${fmtLen(o.w, u)}</td>
-            <td>${fmtLen(o.h, u)}</td>
-            <td>${fmtLen(o.sill, u)}</td></tr>`).join('')}
-        </table>` : '<p>None.</p>'}
+        ${co.scope ? `<section class="cqs-scope"><h3>Scope of works</h3><p>${escapeHtml(co.scope)}</p></section>` : ''}
 
-        <h2>Walls and furniture (${fittings.length})</h2>
-        ${fittings.length ? `<table class="cp-sheet-list">
-          <tr><th>Item</th><th>From back end</th><th>From left side</th><th>Size</th><th>Turned</th></tr>
-          ${fittings.map(f => {
-            const s = FITTINGS[f.type];
-            return `<tr>
-              <td>${s.name}</td>
-              <td>${fmtLen(f.x, u)}</td>
-              <td>${fmtLen(f.z, u)}</td>
-              <td>${fmtLen(s.w, u)} × ${fmtLen(s.d, u)}</td>
-              <td>${f.rot * 90}°</td></tr>`;
-          }).join('')}
-        </table>` : '<p>None.</p>'}
+        ${groupLines(lines).map(group => `
+          <table class="cqs-table">
+            <thead>
+              <tr><th colspan="7" class="cqs-group">${escapeHtml(group.name)}</th></tr>
+              <tr>
+                <th>Material</th><th>Unit</th><th class="ta-right">Qty</th><th class="ta-right">Waste</th>
+                <th class="ta-right">Material</th><th class="ta-right">Labour</th><th class="ta-right">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${group.items.map(l => `<tr>
+                <td>${escapeHtml(l.name)}</td>
+                <td>${UNITS[l.unit]?.label ?? l.unit}</td>
+                <td class="ta-right">${num(l.qty, l.unit === 'each' || l.unit === 'sheet' ? 0 : 1)}</td>
+                <td class="ta-right">${l.wastage ? l.wastage + '%' : '—'}</td>
+                <td class="ta-right">${money(l.materialCost, cur)}</td>
+                <td class="ta-right">${money(l.labourCost, cur)}</td>
+                <td class="ta-right">${money(l.total, cur)}</td>
+              </tr>`).join('')}
+              <tr class="cqs-subtotal">
+                <td colspan="6">${escapeHtml(group.name)} subtotal</td>
+                <td class="ta-right">${money(group.subtotal, cur)}</td>
+              </tr>
+            </tbody>
+          </table>`).join('')}
 
-        <p class="cp-sheet-foot">All measurements are to the centre of each item unless stated.
-        Made with Toolbox.</p>`;
+        <section class="cqs-totals">
+          <div><span>Materials</span><span>${money(totals.material, cur)}</span></div>
+          <div><span>Labour</span><span>${money(totals.labour, cur)}</span></div>
+          <div class="cqs-line"><span>Prime cost</span><span>${money(totals.prime, cur)}</span></div>
+          <div><span>Overheads &amp; contingency</span><span>${money(totals.overhead + totals.contingency, cur)}</span></div>
+          <div><span>Profit</span><span>${money(totals.profit, cur)}</span></div>
+          ${totals.discount ? `<div><span>Discount</span><span>−${money(totals.discount, cur)}</span></div>` : ''}
+          <div class="cqs-line"><span>Net total</span><span>${money(totals.netTotal, cur)}</span></div>
+          <div><span>VAT @ ${num(state.commercial.vatPct, 1)}%</span><span>${money(totals.vat, cur)}</span></div>
+          <div class="cqs-grand"><span>Total quoted price</span><span>${money(totals.grandTotal, cur)}</span></div>
+        </section>
+
+        ${co.terms ? `<section class="cqs-terms"><h3>Terms</h3>${escapeHtml(co.terms).split('\n').map(l => `<p>${l}</p>`).join('')}</section>` : ''}
+
+        <section class="cqs-sign">
+          <div><span>For ${escapeHtml(co.name || '')}</span><div class="cqs-rule"></div></div>
+          <div><span>Accepted by the client</span><div class="cqs-rule"></div></div>
+        </section>
+
+        <p class="cqs-foot">Quantities measured from the modelled unit. Material rates include a wastage
+        allowance; labour is charged on net measured quantity. Prepared with Toolbox.</p>`;
 
       window.print();
     });
 
+    /* ---------------- tabs ---------------- */
+
+    function renderQuoteDependents({ keepSpec = false } = {}) {
+      if (!keepSpec) renderSpec();
+      renderTakeoff();
+      renderLines();
+      renderTotals();
+    }
+
+    container.querySelector('#cq-tabs').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-tab]');
+      if (!btn) return;
+      state.tab = btn.dataset.tab;
+      for (const b of container.querySelectorAll('.cq-tab')) b.classList.toggle('is-active', b === btn);
+      for (const p of container.querySelectorAll('.cq-panel')) p.hidden = p.dataset.panel !== state.tab;
+      if (state.tab === 'layout') viewer.resize();
+      if (state.tab === 'spec')   renderQuoteDependents();
+      if (state.tab === 'quote')  { renderLines(); renderTotals(); }
+      if (state.tab === 'rates')  renderRates();
+    });
+
     /* ---------------- go ---------------- */
 
+    for (const [k, v] of Object.entries(state.commercial)) {
+      const el = container.querySelector(`[data-comm="${k}"]`);
+      if (el) el.value = v;
+    }
+    container.querySelector('#cq-currency').value = state.currency;
+
+    // A realistic opening layout beats an empty box.
+    addOpening('personnel-door');
+    addOpening('window');
+
     syncCustomInputs();
-    refresh();
+    refreshLayout();
     frameShell();
-    viewer.controls.maxPolarAngle = Math.PI / 2 - 0.02;   // never look up from below ground
+    renderRates();
   },
 
   destroy() {
