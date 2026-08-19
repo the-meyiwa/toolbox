@@ -3369,3 +3369,109 @@ input, select, textarea {
   .alab-stage { height: 220px; }
   .alab-bar-right, .uml-bar-right { margin-left: 0; width: 100%; }
 }
+
+/* ============================================================
+   LOGIC LAB
+   ============================================================ */
+.lgl { display: flex; flex-direction: column; gap: 14px; }
+.lgl-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.lgl-bar .tool-select { min-width: 190px; height: 36px; }
+.lgl-palette { display: flex; gap: 4px; flex-wrap: wrap; }
+.lgl-palette .btn { padding: 5px 9px; font-size: 0.72rem; }
+.lgl-bar-right { margin-left: auto; display: flex; gap: 6px; }
+.lgl-about { font-size: 0.85rem; color: var(--g600); max-width: 72ch; }
+
+.lgl-canvas-wrap {
+  border: 1px solid var(--g150);
+  border-radius: 12px;
+  background: var(--g50);
+  overflow: hidden;
+}
+.lgl-canvas { width: 100%; height: auto; display: block; touch-action: none; user-select: none; }
+.lgl-hint {
+  margin: 0;
+  padding: 8px 14px;
+  border-top: 1px solid var(--g150);
+  background: var(--white);
+  font-size: 0.76rem;
+  color: var(--g500);
+}
+
+.lgl-wire { fill: none; stroke: var(--g400); stroke-width: 2.5; }
+.lgl-wire.is-on { stroke: #1d6640; stroke-width: 3; }
+.lgl-wire.is-unknown { stroke: #c0392b; stroke-dasharray: 5 4; }
+.lgl-ghost { fill: none; stroke: var(--black); stroke-width: 2; stroke-dasharray: 4 4; pointer-events: none; }
+
+.lgl-node { cursor: grab; }
+.lgl-node.is-selected .lgl-box { stroke: var(--black); stroke-width: 2.5; }
+.lgl-box { fill: var(--white); stroke: var(--g300); stroke-width: 1.5; }
+.lgl-box.is-on { fill: #1d6640; stroke: #1d6640; }
+.lgl-gate { fill: var(--white); }
+.lgl-label {
+  font-family: var(--mono); font-size: 12px; font-weight: 500;
+  text-anchor: middle; fill: var(--g800); pointer-events: none;
+}
+.lgl-box.is-on + .lgl-label, .lgl-io .lgl-box.is-on ~ .lgl-label { fill: var(--white); }
+.lgl-bit {
+  font-family: var(--mono); font-size: 11px; text-anchor: middle;
+  fill: var(--g500); pointer-events: none;
+}
+.lgl-port { fill: var(--white); stroke: var(--g600); stroke-width: 1.5; cursor: crosshair; }
+.lgl-port:hover { fill: var(--black); stroke: var(--black); }
+.lgl-out { fill: var(--g600); }
+
+.lgl-results { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+.lgl-expr-row {
+  display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap;
+  padding: 8px 0; border-bottom: 1px solid var(--g100);
+}
+.lgl-expr-row code { font-size: 0.85rem; overflow-wrap: anywhere; }
+.lgl-expr-name {
+  font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--g500); min-width: 96px;
+}
+.lgl-sop code { color: var(--g600); font-size: 0.78rem; }
+.lgl-table-wrap { max-height: 340px; overflow: auto; }
+.lgl-out-col { background: var(--g50); font-weight: 500; }
+
+/* ============================================================
+   RESISTOR COLOUR CODE
+   ============================================================ */
+.rc { display: flex; flex-direction: column; gap: 16px; }
+.rc-body { width: 100%; max-width: 380px; height: auto; align-self: center; }
+.rc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 14px; }
+.rc-swatches { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+.rc-sw {
+  width: 26px; height: 26px; border-radius: 5px;
+  border: 1px solid var(--g200); cursor: pointer; padding: 0;
+  transition: transform 120ms, box-shadow 120ms;
+}
+.rc-sw:hover { transform: translateY(-1px); }
+.rc-sw.is-on { box-shadow: 0 0 0 2px var(--black); }
+.rc-result { margin-top: 12px; }
+.rc-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.rc-chip {
+  font-family: var(--mono); font-size: 0.7rem; padding: 4px 10px;
+  border-radius: 999px; border: 1px solid var(--g200);
+}
+
+/* ============================================================
+   ENGINEERING CHECKS
+   ============================================================ */
+.bm-check {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 14px 16px; margin: 16px 0;
+  border-left: 3px solid var(--g300); background: var(--g50);
+}
+.bm-check strong { font-size: 0.94rem; }
+.bm-check span { font-size: 0.83rem; color: var(--g600); }
+.bm-check.is-pass { border-left-color: #1d6640; background: #1d66400c; }
+.bm-check.is-pass strong { color: #1d6640; }
+.bm-check.is-fail { border-left-color: #a8321f; background: #a8321f0c; }
+.bm-check.is-fail strong { color: #a8321f; }
+
+@media (max-width: 860px) {
+  .lgl-results { grid-template-columns: 1fr; }
+  .lgl-bar-right { margin-left: 0; }
+  .rc-grid { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
+}
