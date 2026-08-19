@@ -3035,3 +3035,129 @@ input, select, textarea {
   .cq-mat-head { flex-direction: column; gap: 12px; }
   .cq-mat-head .btn { width: 100%; }
 }
+
+/* ============================================================
+   FILE CHECKSUM
+   ============================================================ */
+.fh-hashes { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+.fh-row {
+  display: grid;
+  grid-template-columns: 76px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 13px;
+  border: 1px solid var(--g150);
+  border-radius: 9px;
+}
+.fh-row.is-active { border-color: var(--black); background: var(--g50); }
+.fh-algo { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.06em; color: var(--g500); }
+.fh-value { font-family: var(--mono); font-size: 0.72rem; overflow-wrap: anywhere; line-height: 1.5; }
+.fh-verdict {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 14px 16px; margin: 14px 0; border-left: 3px solid var(--g300);
+}
+.fh-verdict strong { font-size: 1rem; }
+.fh-verdict span { font-size: 0.85rem; color: var(--g600); }
+.fh-ok { border-left-color: #2e7d32; background: #2e7d3210; }
+.fh-ok strong { color: #2e7d32; }
+.fh-no { border-left-color: #c0392b; background: #c0392b10; }
+.fh-no strong { color: #c0392b; }
+
+/* ============================================================
+   CONTRAST CHECKER
+   ============================================================ */
+.cc { display: flex; flex-direction: column; gap: 20px; }
+.cc-controls { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+.cc-field { flex: 1 1 200px; min-width: 0; }
+.cc-input-row { display: flex; gap: 8px; align-items: center; }
+.cc-input-row input[type="color"] {
+  width: 44px; height: 44px; padding: 2px; flex-shrink: 0;
+  border: 1px solid var(--g200); border-radius: 8px; background: none; cursor: pointer;
+}
+#cc-swap { align-self: flex-end; margin-bottom: 1px; }
+
+.cc-preview {
+  padding: 26px 22px; border-radius: 12px; border: 1px solid var(--g150);
+  display: flex; flex-direction: column; gap: 10px;
+  transition: background 160ms, color 160ms;
+}
+.cc-sample-lg { font-size: 24px; font-weight: 600; margin: 0; }
+.cc-sample { font-size: 15px; margin: 0; }
+
+.cc-score { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+.cc-ratio { display: flex; align-items: baseline; gap: 3px; }
+.cc-ratio span { font-family: var(--pixel); font-size: 2.6rem; font-variant-numeric: tabular-nums; }
+.cc-ratio small { font-family: var(--mono); font-size: 0.8rem; color: var(--g400); }
+.cc-levels { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 6px; flex: 1; min-width: 0; }
+.cc-level { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; }
+.cc-level-mark { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; flex-shrink: 0; }
+.cc-level.is-pass .cc-level-mark { background: #2e7d3218; color: #2e7d32; }
+.cc-level.is-fail .cc-level-mark { background: #c0392b18; color: #c0392b; }
+.cc-level-name { flex: 1; min-width: 0; }
+.cc-level-need { font-family: var(--mono); font-size: 0.68rem; color: var(--g400); }
+.cc-invalid { font-size: 0.82rem; color: var(--g500); }
+
+.cc-suggest {
+  display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 15px 17px; border: 1px solid var(--g200); border-radius: 11px; background: var(--g50);
+}
+.cc-suggest strong { display: block; font-size: 0.9rem; }
+.cc-suggest span { font-size: 0.82rem; color: var(--g600); }
+.cc-suggest-actions { display: flex; align-items: center; gap: 8px; }
+.cc-chip { width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--g200); }
+
+/* ============================================================
+   TIMER & STOPWATCH
+   ============================================================ */
+.tm { display: flex; flex-direction: column; gap: 20px; align-items: center; }
+.tm-mode { align-self: center; }
+.tm-face {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 42px 30px; width: 100%;
+  border: 1px solid var(--g150); border-radius: 16px; background: var(--g50);
+  transition: border-color 200ms, background 200ms;
+}
+.tm-face.is-running { border-color: var(--black); }
+.tm-face.is-done { border-color: #c0392b; background: #c0392b0c; }
+.tm-time { display: flex; align-items: baseline; gap: 6px; }
+.tm-time span {
+  font-family: var(--pixel); font-size: clamp(3.2rem, 16vw, 5.4rem);
+  line-height: 0.95; font-variant-numeric: tabular-nums;
+}
+.tm-time small { font-family: var(--pixel); font-size: 1.4rem; color: var(--g400); font-variant-numeric: tabular-nums; }
+.tm-state { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--g500); }
+.tm-face.is-done .tm-state { color: #c0392b; }
+.tm-presets { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.tm-laps { width: 100%; display: flex; flex-direction: column; gap: 4px; }
+.tm-lap {
+  display: grid; grid-template-columns: 1fr auto auto; gap: 14px; align-items: baseline;
+  padding: 9px 13px; border-bottom: 1px solid var(--g100); font-size: 0.85rem;
+}
+.tm-lap b { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.tm-lap small { font-family: var(--mono); font-size: 0.72rem; color: var(--g400); }
+
+/* ============================================================
+   TEXT CLEANER
+   ============================================================ */
+.tc-fixes {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 4px;
+  margin: 18px 0; padding: 14px; border: 1px solid var(--g150); border-radius: 11px;
+}
+.tc-fix { display: flex; gap: 10px; align-items: flex-start; padding: 8px; cursor: pointer; border-radius: 7px; }
+.tc-fix:hover { background: var(--g50); }
+.tc-fix input { margin-top: 3px; flex-shrink: 0; }
+.tc-fix-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tc-fix-label { font-size: 0.85rem; font-weight: 500; }
+.tc-fix-hint { font-size: 0.73rem; color: var(--g500); line-height: 1.45; }
+.tc-count {
+  font-family: var(--mono); font-size: 0.66rem; font-weight: 400;
+  color: var(--g400); margin-left: 5px;
+}
+.tc-count.is-hot { color: #c0392b; }
+
+@media (max-width: 560px) {
+  .fh-row { grid-template-columns: 1fr auto; }
+  .fh-algo { grid-column: 1 / -1; }
+  .cc-score { gap: 14px; }
+  .cc-suggest { flex-direction: column; align-items: flex-start; }
+}
