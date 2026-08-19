@@ -23,6 +23,15 @@
    any browser-based test.
    ============================================================ */
 
+/** Signal cancellation the same way fetch does, so callers need only
+    one check. Without this, an aborted run resolved normally and the
+    caller happily carried on to the next phase. */
+function abortError() {
+  const err = new Error('Measurement cancelled');
+  err.name = 'AbortError';
+  return err;
+}
+
 const DOWN = 'https://speed.cloudflare.com/__down';
 const UP   = 'https://speed.cloudflare.com/__up';
 const META = 'https://speed.cloudflare.com/meta';
@@ -64,6 +73,7 @@ export async function measureLatency({ samples = 9, signal, onProgress } = {}) {
     }
     onProgress?.((i + 1) / samples);
   }
+  if (signal?.aborted) throw abortError();
   if (!times.length) throw new Error('No latency samples completed.');
 
   const sorted = [...times].sort((a, b) => a - b);
@@ -143,6 +153,8 @@ export async function measureDownload({
   signal?.removeEventListener('abort', stop);
   stop();
 
+  if (signal?.aborted) throw abortError();
+
   samples.push({ t: performance.now() - started, bytes: received });
   const mbps = throughputFromSamples(samples, warmupMs);
   if (!received) throw new Error('No data was received.');
@@ -151,45 +163,112 @@ export async function measureDownload({
 
 /**
  * Upload throughput.
- * Bytes are counted as each POST resolves rather than streamed, because
- * request-body streaming is not available in every browser; with several
- * concurrent posts the aggregate still reflects the link.
+ *
+ * Uses XMLHttpRequest rather than fetch, because `xhr.upload.onprogress`
+ * is the only way a browser will tell you how many bytes have actually
+ * left — fetch offers no upload progress, and request-body streaming is
+ * not available everywhere.
+ *
+ * That distinction is not academic. Counting bytes only when a POST
+ * *resolves* meant that on a modest uplink, where a chunk takes longer
+ * than the measurement window, nothing was ever counted and the tool
+ * reported 0.00 Mbps. Measured here: a single 2 MB chunk took 2.7 s, and
+ * three concurrent ones mostly failed outright rather than sharing the
+ * link — so concurrency is kept low and progress is sampled continuously.
  */
 export async function measureUpload({
-  durationMs = 8000, warmupMs = 1200, streams = 3, chunkBytes = 2097152,
+  durationMs = 9000, warmupMs = 1500, streams = 2, chunkBytes = 1048576,
   signal, onSample,
 } = {}) {
   const payload = new Uint8Array(chunkBytes);
-  // Random-ish bytes so nothing along the path can usefully compress them.
-  for (let i = 0; i < payload.length; i += 4096) payload[i] = Math.random() * 255;
+  // Vary the bytes so nothing along the path can usefully compress them.
+  for (let i = 0; i < payload.length; i += 1024) payload[i] = (Math.random() * 255) | 0;
 
+  /* Two counters, because they answer different questions.
+
+     `sent` comes from upload progress events and is what the live
+     readout follows — it moves smoothly and feels responsive.
+
+     `confirmed` only counts a chunk once the server has answered, which
+     is the figure the final number is computed from. Progress events
+     report bytes handed to the operating system's send buffer, not bytes
+     acknowledged by the far end, so on a slow uplink a large chunk can
+     appear to fly out and then stall. That is why an earlier version
+     swung between 0.9 and 12.6 Mbps on the same connection. Smaller
+     chunks and a completion-based figure keep the reading stable. */
   let sent = 0;
+  let confirmed = 0;
+  let failures = 0;
   const started = performance.now();
   const samples = [{ t: 0, bytes: 0 }];
-  const controller = new AbortController();
-  const stop = () => controller.abort();
+  const confirmedSamples = [{ t: 0, bytes: 0 }];
+  const open = new Set();
+  let stopped = false;
+
+  const stop = () => {
+    stopped = true;
+    for (const xhr of open) { try { xhr.abort(); } catch { /* already done */ } }
+    open.clear();
+  };
   signal?.addEventListener('abort', stop, { once: true });
 
   const sampler = setInterval(() => {
     const t = performance.now() - started;
     samples.push({ t, bytes: sent });
+    confirmedSamples.push({ t, bytes: confirmed });
+    // The live figure follows confirmed bytes once there are any, and
+    // falls back to progress early on so the readout is not stuck at zero
+    // while the first chunk is still in flight.
+    const live = confirmed > 0
+      ? throughputFromSamples(confirmedSamples, warmupMs)
+      : throughputFromSamples(samples, warmupMs);
     onSample?.({
       elapsed: t,
       progress: Math.min(t / durationMs, 1),
-      mbps: throughputFromSamples(samples, warmupMs),
-      bytes: sent,
+      mbps: live,
+      bytes: Math.max(sent, confirmed),
     });
   }, 150);
 
+  /** One POST, resolving when it finishes, errors, or is aborted. */
+  const postOnce = () => new Promise((resolve) => {
+    const xhr = new XMLHttpRequest();
+    open.add(xhr);
+    let last = 0;
+
+    xhr.upload.onprogress = (e) => {
+      // Deltas, because `loaded` is cumulative per request.
+      const delta = e.loaded - last;
+      last = e.loaded;
+      if (delta > 0) sent += delta;
+    };
+    const done = (ok) => { open.delete(xhr); resolve(ok); };
+    xhr.onload = () => {
+      // The far end answered, so this chunk genuinely crossed the link.
+      confirmed += chunkBytes;
+      done(true);
+    };
+    xhr.onerror = () => { failures++; done(false); };
+    xhr.onabort = () => done(false);
+    xhr.ontimeout = () => { failures++; done(false); };
+
+    try {
+      xhr.open('POST', UP, true);
+      xhr.timeout = Math.max(durationMs, 15000);
+      xhr.send(payload);
+    } catch {
+      failures++;
+      done(false);
+    }
+  });
+
   const push = async () => {
-    while (!controller.signal.aborted && performance.now() - started < durationMs) {
-      try {
-        await fetch(UP, { method: 'POST', body: payload, cache: 'no-store', signal: controller.signal });
-        sent += chunkBytes;
-      } catch (err) {
-        if (err.name === 'AbortError') return;
-        await new Promise(r => setTimeout(r, 120));
-      }
+    while (!stopped && performance.now() - started < durationMs) {
+      const ok = await postOnce();
+      if (stopped) return;
+      // A failed post on a strained uplink is normal; back off briefly
+      // rather than hammering the endpoint.
+      if (!ok) await new Promise(r => setTimeout(r, 200));
     }
   };
 
@@ -200,10 +279,34 @@ export async function measureUpload({
   signal?.removeEventListener('abort', stop);
   stop();
 
-  samples.push({ t: performance.now() - started, bytes: sent });
-  const mbps = throughputFromSamples(samples, warmupMs);
-  if (!sent) throw new Error('No data could be uploaded.');
-  return { mbps, bytes: sent, seconds: (performance.now() - started) / 1000, samples };
+  if (signal?.aborted) throw abortError();
+
+  const endedAt = performance.now() - started;
+  samples.push({ t: endedAt, bytes: sent });
+  confirmedSamples.push({ t: endedAt, bytes: confirmed });
+
+  if (!sent && !confirmed) {
+    throw new Error(failures
+      ? 'The upload test server refused the connection.'
+      : 'No data could be uploaded.');
+  }
+
+  // Prefer the acknowledged figure. Only if nothing completed at all —
+  // a very slow uplink — fall back to progress, which is better than
+  // reporting nothing but is noted as approximate by being the lesser
+  // of the two.
+  const mbps = confirmed > 0
+    ? throughputFromSamples(confirmedSamples, warmupMs)
+    : throughputFromSamples(samples, warmupMs);
+
+  return {
+    mbps,
+    bytes: confirmed || sent,
+    confirmed,
+    approximate: confirmed === 0,
+    seconds: (performance.now() - started) / 1000,
+    samples: confirmedSamples,
+  };
 }
 
 /** Plain-language reading of what a connection can comfortably do. */

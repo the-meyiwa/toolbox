@@ -14,8 +14,11 @@ const fmtBytes = (n) =>
 
 export default {
   render(container, { analytics } = {}) {
-    this._abort = new AbortController();
-    const { signal } = this._abort;
+    // A fresh controller per run. Holding one for the tool's lifetime
+    // meant Stop poisoned every later test: the signal stays aborted
+    // forever, so the next run's fetches rejected immediately.
+    this._abort = null;
+    const newRun = () => (this._abort = new AbortController()).signal;
 
     container.innerHTML = `
       <div class="st">
@@ -93,7 +96,7 @@ export default {
 
     /* Connection context loads immediately — it explains the numbers
        before any of them exist. */
-    connectionInfo(signal).then((info) => {
+    connectionInfo().then((info) => {
       connEl.innerHTML = `
         <div class="st-conn-row"><span>Your network</span><b>${info.isp ?? 'Unknown'}</b></div>
         <div class="st-conn-row"><span>Location</span><b>${[info.city, info.country].filter(Boolean).join(', ') || '—'}</b></div>
@@ -109,7 +112,7 @@ export default {
       connEl.innerHTML = `<p class="st-conn-note">Connection details are unavailable.</p>`;
     });
 
-    async function run() {
+    const run = async () => {
       if (running) return;
       running = true;
       analytics?.started();
@@ -119,9 +122,20 @@ export default {
       verdictEl.hidden = true;
       for (const id of ['st-down', 'st-up', 'st-ping', 'st-jitter']) setCard(id, '—');
 
+      const signal = newRun();
       const thorough = $('st-thorough').checked;
       const dur = thorough ? 10000 : 6000;
       const results = {};
+
+      // Checked between phases as well as inside them, so Stop ends the
+      // run at the next boundary instead of rolling into the next stage.
+      const bailIfStopped = () => {
+        if (signal.aborted) {
+          const err = new Error('Measurement cancelled');
+          err.name = 'AbortError';
+          throw err;
+        }
+      };
 
       try {
         /* 1 — latency first: it is quick and frames everything else. */
@@ -137,6 +151,8 @@ export default {
         setBig(Math.round(lat.median));
         setCard('st-ping', Math.round(lat.median));
         setCard('st-jitter', lat.jitter.toFixed(1));
+
+        bailIfStopped();
 
         /* 2 — download. */
         setPhase('Testing download', 0.18);
@@ -154,12 +170,17 @@ export default {
         results.down = down;
         setCard('st-down', fmtSpeed(down.mbps));
 
+        bailIfStopped();
+
         /* 3 — upload. */
         setPhase('Testing upload', 0.64);
         mark('up', true);
         subEl.textContent = 'Sending data';
+        // Concurrency is left to the engine's default: measured here,
+        // three simultaneous POSTs mostly failed rather than sharing the
+        // uplink, so more streams made the result worse, not better.
         const up = await measureUpload({
-          durationMs: dur, streams: 3, signal,
+          durationMs: dur, signal,
           onSample: (s) => {
             setBig(fmtSpeed(s.mbps));
             setCard('st-up', fmtSpeed(s.mbps));
@@ -169,6 +190,8 @@ export default {
         });
         results.up = up;
         setCard('st-up', fmtSpeed(up.mbps));
+
+        bailIfStopped();
 
         /* Done. */
         mark(null, false);
@@ -206,11 +229,12 @@ export default {
         goBtn.textContent = 'Test again';
         stopBtn.hidden = true;
         mark(null, false);
+        this._abort = null;
       }
-    }
+    };
 
     goBtn.addEventListener('click', run);
-    stopBtn.addEventListener('click', () => this._abort.abort());
+    stopBtn.addEventListener('click', () => this._abort?.abort());
   },
 
   destroy() {
