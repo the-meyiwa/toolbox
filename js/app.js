@@ -13,6 +13,7 @@ import * as artifacts from './lib/artifacts.js';
 import { mountArtifactStrip, incomingBanner } from './lib/artifact-ui.js';
 import { installPalette, openPalette } from './lib/palette.js';
 import { renderSaved } from './views/saved.js';
+import { renderSpaces } from './views/spaces.js';
 import { kindLabel } from './registry/kinds.js';
 import { copyText } from './utils.js';
 
@@ -27,6 +28,8 @@ let currentPage = 'home';
 let unmountArtifacts = null;
 /** Teardown for the saved-work view. */
 let unmountSaved = null;
+/** Teardown for the spaces view. */
+let unmountSpaces = null;
 
 /* --------------- DOM --------------- */
 
@@ -49,8 +52,9 @@ const navLinks = document.querySelectorAll('.nav-link');
 
 const savedView = $('saved-view');
 const navSaved = $('nav-saved');
+const spacesView = $('spaces-view');
 
-const VIEWS = { home: homeView, tools: toolsView, support: supportView, saved: savedView, tool: viewport };
+const VIEWS = { home: homeView, tools: toolsView, support: supportView, saved: savedView, spaces: spacesView, tool: viewport };
 
 const toolModules = import.meta.glob('./tools/*.js');
 
@@ -159,6 +163,8 @@ function teardownTool() {
   unmountArtifacts = null;
   unmountSaved?.();
   unmountSaved = null;
+  unmountSpaces?.();
+  unmountSpaces = null;
   currentSession?.dispose();
   currentSession = null;
   try { currentToolInstance?.destroy?.(); }
@@ -267,6 +273,13 @@ function handleHash() {
     return;
   }
 
+  // #spaces, or #spaces/<code> to join via a shared link.
+  if (raw === 'spaces' || raw.startsWith('spaces/')) {
+    showPage('spaces');
+    unmountSpaces = renderSpaces(spacesView, raw.slice(7) || null);
+    return;
+  }
+
   const { id, redirected } = resolveId(raw);
   if (!id) return showPage('home');
   if (redirected) {
@@ -331,6 +344,7 @@ const PAGE_TIPS = {
     '<strong>Export all</strong> writes one file you can import again later, or on another machine.',
   ],
   support: ['Found a bug? Use <strong>Complain about a tool</strong>.', 'Want something built? Use <strong>Ask for a tool</strong>.'],
+  spaces: ['No account needed — just a display name.', 'Share the room code or link to invite others.', 'Everything stays between participants — nothing is stored.'],
 };
 
 function showTips() {

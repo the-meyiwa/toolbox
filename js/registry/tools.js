@@ -445,6 +445,18 @@ export const TOOLS = [
     icon: svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 15h8"/>'),
   },
   {
+    id: 'pdf-editor',
+    name: 'PDF Editor',
+    description: 'Annotate, highlight, draw on and convert PDFs — add text, images and shapes',
+    category: 'images-files',
+    keywords: ['pdf', 'editor', 'edit', 'annotate', 'annotation', 'highlight', 'draw', 'text', 'sign', 'markup', 'redact', 'comment', 'convert', 'docx', 'word', 'excel', 'pptx', 'powerpoint'],
+    synonyms: ['pdf annotator', 'pdf markup', 'edit pdf', 'pdf converter'],
+    intents: ['edit a pdf', 'annotate a pdf', 'add text to pdf', 'highlight pdf', 'draw on pdf', 'convert pdf to word', 'pdf to docx', 'pdf to excel', 'pdf to powerpoint', 'pdf to pptx', 'sign a pdf'],
+    related: ['pdf-merge', 'pdf-split', 'image-to-pdf'],
+    weight: 92,
+    icon: svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>'),
+  },
+  {
     id: 'percentage-calculator',
     name: 'Percentage Calculator',
     description: 'Calculate percentages, increases, and decreases easily',
