@@ -6,16 +6,15 @@
    tools that declare `getArtifact()` — so a person who came to count
    words never sees a single word about saving, workspaces or files.
 
-   The strip pulls from the tool rather than the tool pushing to it:
-   nothing is read until the user actually asks for Save, Download or
-   Open in. That keeps the coupling to one optional method.
+   "Local by default. Shared by intention."
    ============================================================ */
 
 import * as store from './artifacts.js';
 import { kindLabel, kindExt } from '../registry/kinds.js';
 import { toolsAccepting } from '../registry/index.js';
+import { listJoinedSpaces, SpaceEngine, getUserProfile } from './space-engine.js';
 
-const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) =>
+const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /**
@@ -32,9 +31,7 @@ export function mountArtifactStrip(host, { tool, instance, incoming }) {
   const produces = tool.produces ?? [];
   if (!produces.length) return () => {};
 
-  /* The id of the saved artifact this strip is currently attached to.
-     Set when the tool was opened from saved work, or after a first save,
-     so Save updates in place instead of piling up copies. */
+  /* The id of the saved artifact this strip is currently attached to. */
   let boundId = incoming?.id ?? null;
   let boundName = incoming?.name ?? '';
 
@@ -48,12 +45,14 @@ export function mountArtifactStrip(host, { tool, instance, incoming }) {
       <div class="art-actions">
         <button class="btn btn-primary btn-sm" data-act="save">Save</button>
         <button class="btn btn-secondary btn-sm" data-act="export">Download</button>
+        <button class="btn btn-secondary btn-sm" data-act="share-space">Share to Space</button>
         <div class="art-menu-wrap">
           <button class="btn btn-secondary btn-sm" data-act="open-in" aria-haspopup="true" aria-expanded="false">Open in…</button>
           <div class="art-menu" hidden></div>
         </div>
       </div>
     </div>
+    <div class="art-space-modal" id="art-space-modal" hidden></div>
     <p class="art-note" id="art-note"></p>`;
 
   host.appendChild(strip);
@@ -62,15 +61,18 @@ export function mountArtifactStrip(host, { tool, instance, incoming }) {
   const note = strip.querySelector('#art-note');
   const menu = strip.querySelector('.art-menu');
   const openInBtn = strip.querySelector('[data-act="open-in"]');
+  const spaceModal = strip.querySelector('#art-space-modal');
 
-  /* The strip is the one place that has to be straight with people about
-     whether saving actually keeps anything in this browser. */
   const baseNote = store.persistent
     ? 'Saved work stays in this browser. Download it to keep a copy anywhere else.'
     : 'This browser will not keep saved work — private mode, or storage is switched off. Download it to a file instead.';
 
   function say(message, tone = '') {
-    note.textContent = message || baseNote;
+    if (message && message.includes('<a')) {
+      note.innerHTML = message;
+    } else {
+      note.textContent = message || baseNote;
+    }
     note.className = `art-note${tone ? ` is-${tone}` : ''}`;
   }
   say();
@@ -142,10 +144,101 @@ export function mountArtifactStrip(host, { tool, instance, incoming }) {
     openInBtn.setAttribute('aria-expanded', 'false');
   }
 
+  function toggleSpaceModal() {
+    if (!spaceModal.hidden) {
+      spaceModal.hidden = true;
+      return;
+    }
+    const art = pull();
+    if (!art) return;
+
+    const spaces = listJoinedSpaces();
+    spaceModal.innerHTML = `
+      <div class="art-space-box">
+        <div class="art-space-head">
+          <h4>Share to Space</h4>
+          <button class="art-space-close" data-act="close-space-modal">✕</button>
+        </div>
+        <p class="art-space-blurb">Copies <strong>${escapeHtml(art.name)}</strong> into a shared space for all members to view, download, or open.</p>
+
+        ${spaces.length ? `
+          <div class="art-space-list">
+            <label class="sp-form-label">Choose a Space:</label>
+            ${spaces.map(s => `
+              <button class="art-space-item" data-share-code="${s.id}" data-space-name="${escapeHtml(s.name)}">
+                <strong>${escapeHtml(s.name)}</strong>
+                <span class="sp-code-pill">${s.id}</span>
+              </button>
+            `).join('')}
+          </div>
+        ` : ''}
+
+        <div class="art-space-custom">
+          <label class="sp-form-label">Or enter room code:</label>
+          <div style="display:flex; gap:6px;">
+            <input type="text" class="tool-input art-space-code-input" placeholder="6-char code" maxlength="6" style="text-transform:uppercase; font-family:var(--mono);">
+            <button class="btn btn-primary btn-sm" data-act="share-code-submit">Share</button>
+          </div>
+        </div>
+      </div>
+    `;
+    spaceModal.hidden = false;
+  }
+
+  async function executeShare(code, spaceName = '') {
+    const art = pull();
+    if (!art) return;
+    spaceModal.hidden = true;
+    say(`Connecting to space ${code}…`, 'warn');
+
+    try {
+      const profile = getUserProfile();
+      const eng = new SpaceEngine();
+      await eng.join({ roomCode: code, displayName: profile.name || 'Toolbox User' });
+
+      // Allow awareness and state to settle
+      setTimeout(() => {
+        eng.shareArtifact({
+          name: art.name,
+          kind: art.kind,
+          text: art.text,
+          from: tool.name || tool.id,
+        });
+
+        say(`Shared "${escapeHtml(art.name)}" to ${escapeHtml(spaceName || code)}. <a href="#spaces/${code}/artifacts" style="color:inherit; font-weight:600; text-decoration:underline;">Open in Space →</a>`, 'good');
+
+        setTimeout(() => eng.leave(), 2000);
+      }, 500);
+    } catch (err) {
+      console.error('Failed to share artifact to space', err);
+      say(`Could not share to space ${code}.`, 'bad');
+    }
+  }
+
   strip.addEventListener('click', (e) => {
     const act = e.target.closest('[data-act]')?.dataset.act;
     if (act === 'save') return doSave();
     if (act === 'export') return doExport();
+    if (act === 'share-space') return toggleSpaceModal();
+    if (act === 'close-space-modal') { spaceModal.hidden = true; return; }
+
+    if (act === 'share-code-submit') {
+      const input = spaceModal.querySelector('.art-space-code-input');
+      const code = input?.value.trim().toUpperCase();
+      if (code && code.length >= 4) {
+        executeShare(code);
+      }
+      return;
+    }
+
+    const shareItem = e.target.closest('[data-share-code]');
+    if (shareItem) {
+      const code = shareItem.dataset.shareCode;
+      const spaceName = shareItem.dataset.spaceName;
+      executeShare(code, spaceName);
+      return;
+    }
+
     if (act === 'open-in') {
       if (!menu.hidden) return closeMenu();
       if (!buildMenu()) return;
@@ -159,15 +252,23 @@ export function mountArtifactStrip(host, { tool, instance, incoming }) {
       const art = pull();
       closeMenu();
       if (!art) return;
-      // Handed over in memory, not saved: sending is a navigation, not a
-      // decision to keep something.
       store.handOff({ ...art, from: tool.id });
       window.location.hash = `#${to}`;
     }
   });
 
-  const onOutside = (e) => { if (!strip.contains(e.target)) closeMenu(); };
-  const onEscape = (e) => { if (e.key === 'Escape' && !menu.hidden) closeMenu(); };
+  const onOutside = (e) => {
+    if (!strip.contains(e.target)) {
+      closeMenu();
+      spaceModal.hidden = true;
+    }
+  };
+  const onEscape = (e) => {
+    if (e.key === 'Escape') {
+      if (!menu.hidden) closeMenu();
+      spaceModal.hidden = true;
+    }
+  };
   document.addEventListener('click', onOutside);
   document.addEventListener('keydown', onEscape);
 
@@ -179,14 +280,12 @@ export function mountArtifactStrip(host, { tool, instance, incoming }) {
 }
 
 /**
- * A quiet line above the tool saying what it was handed and where it came
- * from, so an unexpectedly full input is never a mystery.
+ * A quiet line above the tool saying what it was handed and where it came from.
  */
 export function incomingBanner(artifact, fromTool) {
   const el = document.createElement('p');
   el.className = 'art-incoming';
-  el.innerHTML = `Opened <strong>${escapeHtml(artifact.name)}</strong>`
-    + (fromTool ? ` from ${escapeHtml(fromTool.name)}` : '')
-    + ` · <a href="#saved">saved work</a>`;
+  const fromText = fromTool ? ` from ${escapeHtml(fromTool.name)}` : (artifact.from === 'spaces' ? ' from Shared Space' : '');
+  el.innerHTML = `Opened <strong>${escapeHtml(artifact.name)}</strong>${fromText} · <a href="#saved">saved work</a>`;
   return el;
 }
