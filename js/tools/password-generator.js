@@ -25,13 +25,13 @@ function calcStrength(password) {
   if (/[a-z]/.test(password)) pool += 26;
   if (/[A-Z]/.test(password)) pool += 26;
   if (/[0-9]/.test(password)) pool += 10;
-  if (/[^a-zA-Z0-9]/.test(password)) pool += 33;
+  if (/[^a-zA-Z0-9]/.test(password)) pool += CHARSETS.symbols.length;
   const entropy = password.length * Math.log2(pool || 1);
 
   if (entropy < 30)  return { label: 'Weak',        pct: 20 };
   if (entropy < 50)  return { label: 'Fair',         pct: 40 };
   if (entropy < 70)  return { label: 'Strong',       pct: 70 };
-  return                     { label: 'Very Strong',  pct: 100 };
+  return                     { label: 'Very strong', pct: 100 };
 }
 
 export default {
@@ -59,7 +59,7 @@ export default {
         <div class="strength-label" id="pw-strength-label"></div>
       </div>
       <div class="tool-controls" style="margin-top:16px;">
-        <button class="btn btn-primary btn-sm" id="pw-generate">Generate New</button>
+        <button class="btn btn-primary btn-sm" id="pw-generate">Generate a new one</button>
       </div>
     `;
 
@@ -81,12 +81,17 @@ export default {
     function generate() {
       const len = parseInt(lengthSlider.value);
       lenVal.textContent = len;
-      const password = generatePassword(len, getOptions());
+      const options = getOptions();
+      const password = generatePassword(len, options);
       result.textContent = password;
 
       const strength = calcStrength(password);
       strengthFill.style.width = strength.pct + '%';
-      strengthLbl.textContent = strength.label;
+      // Turning every set off silently fell back to lowercase, which looks
+      // like a working password but is a far weaker one. Say so.
+      strengthLbl.textContent = Object.values(options).some(Boolean)
+        ? strength.label
+        : `${strength.label}, but lowercase only — tick a box to widen the alphabet`;
     }
 
     lengthSlider.addEventListener('input', generate);

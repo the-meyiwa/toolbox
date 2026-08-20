@@ -1,4 +1,4 @@
-import { currencySelect, field, statGrid, dataTable, money, num, pct, months, parseNum, liveCompute } from '../lib/biz.js';
+import { currencySelect, field, statGrid, dataTable, money, pct, months, parseNum, liveCompute } from '../lib/biz.js';
 
 export default {
   render(container) {

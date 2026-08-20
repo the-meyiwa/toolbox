@@ -129,7 +129,7 @@ export default {
       errorEl.hidden = true;
       if (!items.length) {
         errorEl.hidden = false;
-        errorEl.textContent = 'Add at least one image.';
+        errorEl.textContent = 'Add at least one image first.';
         return;
       }
       try {

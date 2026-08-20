@@ -2,16 +2,16 @@ export default {
   render(container) {
     container.innerHTML = `
       <div class="tool-section">
-        <label class="tool-label" for="wc-input">Your Text</label>
+        <label class="tool-label" for="wc-input">Your text</label>
         <textarea class="tool-textarea" id="wc-input" placeholder="Start typing or paste your text here…" rows="10"></textarea>
       </div>
       <div class="tool-stats-grid">
         <div class="tool-stat"><span class="tool-stat-value" id="wc-words">0</span><span class="tool-stat-label">Words</span></div>
         <div class="tool-stat"><span class="tool-stat-value" id="wc-chars">0</span><span class="tool-stat-label">Characters</span></div>
-        <div class="tool-stat"><span class="tool-stat-value" id="wc-nospace">0</span><span class="tool-stat-label">No Spaces</span></div>
+        <div class="tool-stat"><span class="tool-stat-value" id="wc-nospace">0</span><span class="tool-stat-label">No spaces</span></div>
         <div class="tool-stat"><span class="tool-stat-value" id="wc-sentences">0</span><span class="tool-stat-label">Sentences</span></div>
         <div class="tool-stat"><span class="tool-stat-value" id="wc-paragraphs">0</span><span class="tool-stat-label">Paragraphs</span></div>
-        <div class="tool-stat"><span class="tool-stat-value" id="wc-reading">0m</span><span class="tool-stat-label">Read Time</span></div>
+        <div class="tool-stat"><span class="tool-stat-value" id="wc-reading">0m</span><span class="tool-stat-label">Read time</span></div>
       </div>
     `;
 
@@ -38,7 +38,12 @@ export default {
 
     input.addEventListener('input', update);
     input.focus();
+
+    this._write = (text) => { input.value = text; update(); };
   },
 
-  destroy() {}
+  /* Counting is a dead end by design: it reads work, it does not make any. */
+  setArtifact(a) { this._write?.(a.text); },
+
+  destroy() { this._write = null; }
 };

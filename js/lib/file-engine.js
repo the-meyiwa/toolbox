@@ -378,6 +378,13 @@ export function attachFileInput(zone, input, onFiles, { accept = /^image\// } = 
     input.value = '';
   };
   const onClick = (e) => { if (!e.target.closest('button, a, input')) input.click(); };
+  // The zone behaves like a button, so it has to answer to a keyboard too.
+  const onKeydown = (e) => {
+    if (e.target !== zone) return;
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    input.click();
+  };
   const onPaste = (e) => {
     const files = filter(e.clipboardData?.files ?? []);
     if (files.length) onFiles(files);
@@ -387,6 +394,7 @@ export function attachFileInput(zone, input, onFiles, { accept = /^image\// } = 
   zone.addEventListener('dragover', onDragOver);
   zone.addEventListener('dragleave', onDragLeave);
   zone.addEventListener('click', onClick);
+  zone.addEventListener('keydown', onKeydown);
   input.addEventListener('change', onChange);
   window.addEventListener('paste', onPaste);
 
@@ -395,6 +403,7 @@ export function attachFileInput(zone, input, onFiles, { accept = /^image\// } = 
     zone.removeEventListener('dragover', onDragOver);
     zone.removeEventListener('dragleave', onDragLeave);
     zone.removeEventListener('click', onClick);
+    zone.removeEventListener('keydown', onKeydown);
     input.removeEventListener('change', onChange);
     window.removeEventListener('paste', onPaste);
   };
@@ -403,7 +412,7 @@ export function attachFileInput(zone, input, onFiles, { accept = /^image\// } = 
 /** Standard drop-zone markup so every file tool looks and behaves alike. */
 export function dropZone(id, { label = 'Drop files here', hint = 'or click to choose · you can also paste', accept = 'image/*', multiple = true } = {}) {
   return `
-    <div class="fz" id="${id}">
+    <div class="fz" id="${id}" role="button" tabindex="0" aria-label="${label}">
       <input type="file" id="${id}-input" accept="${accept}" ${multiple ? 'multiple' : ''} hidden>
       <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="16"/>

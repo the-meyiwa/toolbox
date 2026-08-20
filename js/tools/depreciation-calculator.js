@@ -20,7 +20,7 @@ export default {
           ${field('Purchase cost', 'dep-cost', 50000, { min: 0 })}
           ${field('Salvage value at the end', 'dep-salvage', 5000, { min: 0, hint: 'What you expect it to still be worth when you are finished with it.' })}
           ${field('Useful life', 'dep-life', 5, { min: 1, step: 1, suffix: 'years' })}
-          <div id="dep-rate-f">${field('Declining balance factor', 'dep-factor', 2, { min: 1, max: 4, step: 0.25, hint: '2 is "double declining", the most common choice.' })}</div>
+          <div id="dep-rate-f">${field('Declining balance factor', 'dep-factor', 2, { min: 1, max: 4, step: 0.25, hint: '2 is “double declining”, the most common choice.' })}</div>
           <div id="dep-units-f" hidden>
             ${field('Total units over its life', 'dep-total-units', 100000, { min: 1, step: 1 })}
             ${field('Units used per year', 'dep-units-year', 20000, { min: 0, step: 1 })}

@@ -19,7 +19,7 @@ export default {
       let domain = input.value.trim().replace(/^https?:\/\//, '').split('/')[0];
       if (!domain) return;
       res.style.display = 'block';
-      res.textContent = 'Querying DNS...';
+      res.textContent = 'Querying DNS…';
       try {
         const req = await fetch('https://networkcalc.com/api/dns/lookup/' + encodeURIComponent(domain));
         const data = await req.json();

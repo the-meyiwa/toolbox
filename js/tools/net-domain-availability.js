@@ -18,20 +18,21 @@ export default {
     btn.addEventListener('click', async () => {
       let domain = input.value.trim().replace(/^https?:\/\//, '').split('/')[0];
       if (!domain) return;
-      res.textContent = 'Checking...';
-      res.style.color = 'var(--g700)';
+      res.textContent = 'Checking…';
+      res.className = '';
       try {
         const req = await fetch('https://networkcalc.com/api/dns/whois/' + encodeURIComponent(domain));
         const data = await req.json();
-        if (data.status === 'OK' && Object.keys(data.whois).length > 0 && data.whois.registrar) {
-          res.textContent = '❌ Domain is Registered';
-          res.style.color = 'var(--red)';
+        const registered = data.status === 'OK' && data.whois && Object.keys(data.whois).length > 0 && data.whois.registrar;
+        if (registered) {
+          res.textContent = `${domain} is registered to ${data.whois.registrar}.`;
+          res.className = 'biz-neg';
         } else {
-          res.textContent = '✅ Domain is likely Available!';
-          res.style.color = 'var(--green)';
+          res.textContent = `No registration found for ${domain}. It may be free to take — confirm with a registrar before you rely on it.`;
+          res.className = 'biz-pos';
         }
-      } catch(e) {
-        res.textContent = 'Error checking domain.';
+      } catch {
+        res.textContent = 'That check could not be completed. Check your connection and try again.';
       }
     });
   },

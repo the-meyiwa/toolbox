@@ -11,7 +11,7 @@ export default {
         </div>
       </div>
       <div class="tool-section">
-        <label class="tool-label">Test String</label>
+        <label class="tool-label">Test string</label>
         <textarea class="tool-textarea" id="rx-test" placeholder="Enter text to test against…" rows="5"></textarea>
       </div>
       <div class="tool-section">

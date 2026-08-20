@@ -24,6 +24,9 @@
       <nav class="nav-links" id="nav-links">
         <a href="#home" class="nav-link active" data-page="home">Home</a>
         <a href="#tools" class="nav-link" data-page="tools">Tools</a>
+        <!-- Saved appears only once there is something in it. Nobody who came
+             to format some JSON should meet a workspace. -->
+        <a href="#saved" class="nav-link" data-page="saved" id="nav-saved" hidden>Saved</a>
         <a href="#support" class="nav-link" data-page="support">Support</a>
       </nav>
       <div class="header-actions" id="header-actions">
@@ -43,16 +46,29 @@
       <div id="home-view" class="page-view">
         <div class="home-hero">
           <p class="home-eyebrow"><span id="home-eyebrow-count">70+</span> tools · runs in your browser · no signup</p>
-          <h1 class="home-title">Practical tools for<br>everyday problems.</h1>
-          <p class="home-desc">A curated collection of simple, useful tools that absorb<br class="hide-mobile"> complexity so you don't have to. Open, use, done.</p>
-          <a href="#tools" class="btn btn-primary home-cta">Browse Tools →</a>
+          <h1 class="home-title">What do you<br>need to do?</h1>
+          <p class="home-desc">Describe the job, not the tool. Open it, do the thing, close the tab.<br class="hide-mobile"> Nothing to set up and nothing to sign into.</p>
+
+          <button class="home-search" id="home-search" aria-label="Search tools and saved work">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>
+            </svg>
+            <span>compress a photo · convert to PDF · work out a margin</span>
+            <kbd>/</kbd>
+          </button>
+
           <div class="home-quick" id="home-quick"></div>
         </div>
+
+        <!-- Saved work, shown only when the user has actually saved something. -->
+        <section class="home-saved" id="home-saved" hidden></section>
+
+        <section class="home-tasks" id="home-tasks"></section>
         <div class="home-features">
           <div class="home-feature">
             <div class="home-feature-num" id="home-tool-count">70+</div>
             <h3 class="home-feature-title">Tools</h3>
-            <p class="home-feature-desc">3D modelling, business and finance, code, text, developer and converter tools — ready to use.</p>
+            <p class="home-feature-desc">Images, text, numbers and money, look-ups, design, code — and a few everyday things. All ready to use.</p>
           </div>
           <div class="home-feature">
             <div class="home-feature-num">0</div>
@@ -62,7 +78,7 @@
           <div class="home-feature">
             <div class="home-feature-num">0</div>
             <h3 class="home-feature-title">Tracking</h3>
-            <p class="home-feature-desc">No accounts, no analytics, no ads. Nothing you type or upload is sent anywhere.</p>
+            <p class="home-feature-desc">No accounts, no analytics, no ads. Your files and text stay on your device — only the <span id="home-online-count">few</span> tools marked <strong>online</strong> look anything up.</p>
           </div>
         </div>
 
@@ -98,6 +114,9 @@
         <div id="viewport-content"></div>
         <aside class="tool-related" id="tool-related" hidden></aside>
       </div>
+
+      <!-- SAVED WORK -->
+      <div id="saved-view" class="page-view hidden"></div>
 
       <!-- SUPPORT -->
       <div id="support-view" class="page-view hidden">
@@ -144,12 +163,16 @@
             <h2 class="support-heading">Keyboard Shortcuts</h2>
             <div class="shortcut-list">
               <div class="shortcut-item">
+                <kbd>Ctrl</kbd> <kbd>K</kbd>
+                <span>Search tools and saved work, from anywhere</span>
+              </div>
+              <div class="shortcut-item">
                 <kbd>/</kbd>
-                <span>Focus search (on Tools page)</span>
+                <span>The same thing, one key</span>
               </div>
               <div class="shortcut-item">
                 <kbd>Escape</kbd>
-                <span>Go back / clear search</span>
+                <span>Close the search, or leave the tool</span>
               </div>
               <div class="shortcut-item">
                 <kbd>Ctrl</kbd> <kbd>Enter</kbd>
@@ -160,10 +183,19 @@
 
           <section class="support-section">
             <h2 class="support-heading">About Toolbox</h2>
-            <p>Toolbox is a collection of practical tools for everyday problems. Almost every tool runs entirely in your browser, so your files and text never leave your device. A small number — marked <strong>online</strong> on their card — query a public API because they have to look something up.</p>
-            <p style="margin-top:12px;">The exceptions are the tools under <strong>Internet</strong>, which by their nature have to ask a public service about a domain, an IP address or the weather. Those are the only tools that send anything anywhere, and they are grouped together so you always know which is which.</p>
-            <p style="margin-top:12px;">The <strong>Code Playground</strong> downloads a language runtime the first time you use it — Python, SQLite or the TypeScript compiler — and then caches it. Your code itself is never uploaded; it runs on your own machine.</p>
+            <p>Toolbox is a collection of practical tools for everyday problems. Almost every tool runs entirely in your browser, so your files and text never leave your device. A small number — marked <strong>online</strong> on their card — have to ask a public service something, and those are the only ones that send anything anywhere.</p>
+            <p style="margin-top:12px;">They are the tools under <strong>Networking</strong>, which look up a domain, an address or a certificate; the <strong>Reference</strong> tools, which fetch the article, definition or passage you asked for; and a handful elsewhere — the weather, a map search and today's exchange rates. What leaves your device is the thing you typed into that tool, and nothing else.</p>
+            <p style="margin-top:12px;">The <strong>Code Playground</strong> downloads a language runtime the first time you use it — Python, SQLite, Lua or the TypeScript compiler — and then caches it. Code in those languages runs on your own machine and is never uploaded. The compiled languages are the exception: no browser can host a C or Swift toolchain, so that code is sent to a public build server to run, and the tool tells you before you press Run.</p>
             <p style="margin-top:12px;">The core principle: <strong>many capabilities, few concepts, no manual required.</strong></p>
+          </section>
+
+          <section class="support-section">
+            <h2 class="support-heading">Saving and moving your work</h2>
+            <p>Most tools are a one-shot job: open, do the thing, close the tab. Nothing is kept and nothing needs to be.</p>
+            <p style="margin-top:12px;">Some tools make something worth keeping — a tidied-up document, a converted file, a diagram, some code. Those show a <strong>Save</strong> button underneath. Saving puts a copy in <strong>this browser</strong>, on <strong>this device</strong>, and nowhere else. It is not an account and it is not a backup: clearing your browsing data removes it, and it will not appear in another browser or on your phone. Anything you would be sorry to lose should be downloaded as a real file.</p>
+            <p style="margin-top:12px;">The same strip offers <strong>Open in…</strong>, which hands what you are looking at straight to another tool that can take it — a CSV into the JSON formatter, a diagram into the code runner. Nothing is saved when you do that; it is a handover, not a filing decision.</p>
+            <p style="margin-top:12px;">Everything you have saved lives under <strong>Saved</strong>, which only appears once there is something in it. From there you can rename things, download one item or all of them as a single file, and open that file again later or on another machine.</p>
+            <p style="margin-top:12px;">In private browsing, or where storage is switched off, saving cannot keep anything past the tab. Toolbox says so at the point you try rather than pretending otherwise.</p>
           </section>
 
           <section class="support-section">

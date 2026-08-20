@@ -8,13 +8,9 @@ import {
 export default {
   async render(container, { analytics } = {}) {
     this._cleanup = [];
-    // Closure-scoped: `this` is undefined inside the plain function
-
-    // declarations below, so these must not go through `this`.
-
+    // Object-URL bookkeeping stays in the closure: the plain function
+    // declarations below have no `this` of their own to reach it through.
     const urls = [];
-
-    this._urls = urls;
 
     const outputs = await supportedOutputs();
     const LABEL = { [MIME.png]: 'PNG', [MIME.jpeg]: 'JPEG', [MIME.webp]: 'WebP', [MIME.avif]: 'AVIF' };

@@ -15,7 +15,7 @@ export default {
         <input type="text" class="tool-input" id="nb-input" placeholder="Enter a number…" style="font-size:1rem;">
       </div>
       <div class="tool-controls">
-        <label class="tool-label" style="margin:0 8px 0 0;">Input Base</label>
+        <label class="tool-label" style="margin:0 8px 0 0;">Input base</label>
         <div class="btn-group" id="nb-base-btns">
           ${BASES.map((b, i) => `<button class="btn btn-sm${i === 2 ? ' active' : ''}" data-radix="${b.radix}">${b.label}</button>`).join('')}
         </div>
@@ -39,24 +39,43 @@ export default {
     const status = container.querySelector('#nb-status');
     let inputRadix = 10;
 
+    const DIGITS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+    function blank() {
+      BASES.forEach(b => {
+        container.querySelector(`#nb-out-${b.radix}`).textContent = b.prefix + '0';
+      });
+    }
+
     function convert() {
       const raw = input.value.trim().replace(/^0[bBxXoO]/, ''); // strip any prefix
       if (!raw) {
-        BASES.forEach(b => {
-          container.querySelector(`#nb-out-${b.radix}`).textContent = b.prefix + '0';
-        });
+        blank();
         status.textContent = '';
         return;
       }
 
-      const value = parseInt(raw, inputRadix);
-      if (isNaN(value)) {
-        status.textContent = '✗ Invalid number for base ' + inputRadix;
+      if (raw.startsWith('-')) {
+        blank();
+        status.textContent = 'Negative numbers are not supported.';
         return;
       }
 
-      if (value < 0) {
-        status.textContent = '✗ Negative numbers not supported';
+      // parseInt stops at the first character it cannot use, so "1012" in
+      // binary would quietly become 5. Every digit is checked instead.
+      const allowed = DIGITS.slice(0, inputRadix);
+      const bad = [...raw.toUpperCase()].find(c => !allowed.includes(c));
+      if (bad !== undefined) {
+        blank();
+        const label = BASES.find(b => b.radix === inputRadix)?.label.toLowerCase() ?? `base ${inputRadix}`;
+        status.textContent = `“${bad}” is not a ${label} digit — use ${allowed.length > 10 ? `0–9 and A–${allowed.slice(-1)}` : `0–${allowed.slice(-1)}`}.`;
+        return;
+      }
+
+      const value = parseInt(raw, inputRadix);
+      if (!Number.isSafeInteger(value)) {
+        blank();
+        status.textContent = 'That number is too large to convert exactly.';
         return;
       }
 

@@ -7,8 +7,9 @@
 
 import { TOOLS } from './tools.js';
 import { CATEGORIES, ALIASES, validateRegistry } from './schema.js';
+import { TASKS, byTask, taskOf } from './kinds.js';
 
-export { TOOLS, CATEGORIES, ALIASES };
+export { TOOLS, CATEGORIES, ALIASES, TASKS, byTask, taskOf };
 
 /** @type {Map<string, import('./schema.js').Tool>} */
 export const BY_ID = new Map(TOOLS.map(t => [t.id, t]));
@@ -57,6 +58,32 @@ export function resolveId(rawId) {
 
 /** Tools that never touch the network — the ones safe to use offline. */
 export const OFFLINE_TOOLS = TOOLS.filter(t => t.offline !== false);
+
+/* ---------------- capability index ----------------
+
+   Built once from `accepts` / `produces`. This is the whole of the
+   interop story: a tool declares the kinds of work it can take and the
+   kinds it can hand on, and the shell matches them up. No tool ever
+   names another tool, so adding one never means editing another. */
+
+/** @type {Map<string, import('./schema.js').Tool[]>} */
+const ACCEPTS = new Map();
+for (const tool of TOOLS) {
+  for (const kind of tool.accepts ?? []) {
+    if (!ACCEPTS.has(kind)) ACCEPTS.set(kind, []);
+    ACCEPTS.get(kind).push(tool);
+  }
+}
+
+/** Tools that can be handed an artifact of this kind, heaviest first. */
+export function toolsAccepting(kind, { exclude } = {}) {
+  return (ACCEPTS.get(kind) ?? [])
+    .filter(t => t.id !== exclude)
+    .sort((a, b) => (b.weight ?? 50) - (a.weight ?? 50));
+}
+
+/** Every kind any tool can open. Used to decide whether an import is useful. */
+export const OPENABLE_KINDS = new Set(ACCEPTS.keys());
 
 /* Structural problems surface loudly in dev and quietly in production:
    a malformed entry should never take the whole app down. */

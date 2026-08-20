@@ -4,7 +4,7 @@ export default {
       <div class="tool-content">
         
         <div class="tool-section">
-          <label class="tool-label">Lookup Custom IP (Leave blank for yours)</label>
+          <label class="tool-label">An IP address — or leave it blank for your own</label>
           <div style="display:flex; gap:8px;">
             <input type="text" class="tool-input" id="ip-input" placeholder="e.g. 8.8.8.8" style="flex:1;">
             <button class="btn btn-primary" id="ip-btn">Lookup</button>
@@ -15,7 +15,7 @@ export default {
 
           <div id="ip-results" style="display:none; margin-top:24px;">
             <div class="tool-stat" style="background:var(--black); color:var(--white); padding:24px; text-align:center; margin-bottom:24px;">
-              <div class="tool-stat-label" style="color:var(--g400); margin-bottom:8px;">IP Address</div>
+              <div class="tool-stat-label" style="color:var(--g400); margin-bottom:8px;">IP address</div>
               <div class="tool-stat-value" id="res-ip" style="font-family:var(--pixel); font-size:3rem; word-break:break-all;"></div>
             </div>
 
@@ -25,7 +25,7 @@ export default {
                 <div class="tool-stat-value" id="res-loc" style="font-size:1.15rem;"></div>
               </div>
               <div class="tool-stat" style="padding:16px;">
-                <div class="tool-stat-label" style="margin-bottom:4px;">ISP / Organization</div>
+                <div class="tool-stat-label" style="margin-bottom:4px;">ISP or organisation</div>
                 <div class="tool-stat-value" id="res-isp" style="font-size:1.15rem;"></div>
               </div>
               <div class="tool-stat" style="padding:16px;">
@@ -63,7 +63,7 @@ export default {
         loading.style.display = 'none';
         
         if (data.error) {
-          err.textContent = data.reason || 'Invalid IP or rate limit reached.';
+          err.textContent = data.reason || 'That address could not be looked up, or the free service is rate limiting.';
           err.style.display = 'block';
           return;
         }
@@ -78,7 +78,7 @@ export default {
 
       } catch (e) {
         loading.style.display = 'none';
-        err.textContent = 'Error connecting to IP service.';
+        err.textContent = 'The lookup service could not be reached. Check your connection and try again.';
         err.style.display = 'block';
       }
     }

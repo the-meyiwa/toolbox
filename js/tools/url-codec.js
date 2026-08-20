@@ -5,7 +5,7 @@ export default {
     container.innerHTML = `
       <div class="tool-split">
         <div class="tool-section">
-          <label class="tool-label">Text / URL</label>
+          <label class="tool-label">Text or URL</label>
           <textarea class="tool-textarea" id="url-input" placeholder="Enter text or URL-encoded string…" rows="8"></textarea>
         </div>
         <div class="tool-section">
@@ -47,7 +47,13 @@ export default {
     });
 
     input.focus();
+
+    this._read = () => result.textContent || input.value;
+    this._write = (text) => { input.value = text; result.textContent = ''; };
   },
 
-  destroy() {}
+  getArtifact() { return { kind: 'text', text: this._read?.() ?? '' }; },
+  setArtifact(a) { this._write?.(a.text); },
+
+  destroy() { this._read = this._write = null; }
 };

@@ -4,11 +4,11 @@ export default {
       <div class="tool-content">
         
         <div class="tool-section">
-          <div id="doc-dropzone" style="border: 2px dashed var(--g300); border-radius: 8px; padding: 40px 20px; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--g50);">
+          <div id="doc-dropzone" role="button" tabindex="0" aria-label="Choose a text file to analyse" style="border: 2px dashed var(--g300); border-radius: 8px; padding: 40px 20px; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--g50);">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--g400)" stroke-width="2" style="margin-bottom:12px;">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
             </svg>
-            <div style="font-weight: 600; color: var(--black); margin-bottom: 4px;">Click or Drag & Drop a .txt or .md file here</div>
+            <div style="font-weight: 600; color: var(--black); margin-bottom: 4px;">Drop a text file here, or click to choose</div>
             <div style="font-size: 0.85rem; color: var(--g500);">Files are processed entirely on your device</div>
             <input type="file" id="doc-file-input" accept=".txt,.md,.csv,.json" style="display:none;">
           </div>
@@ -20,11 +20,11 @@ export default {
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;">
             <div class="tool-stat" style="background:var(--black); color:var(--white);">
               <div class="tool-stat-value" id="doc-words" style="font-family:var(--pixel); font-size:2.5rem;">0</div>
-              <div class="tool-stat-label" style="color:var(--g400);">Total Words</div>
+              <div class="tool-stat-label" style="color:var(--g400);">Words</div>
             </div>
             <div class="tool-stat">
               <div class="tool-stat-value" id="doc-time" style="font-family:var(--pixel); font-size:1.5rem;">0m</div>
-              <div class="tool-stat-label">Reading Time (225 wpm)</div>
+              <div class="tool-stat-label">Reading time, at 225 wpm</div>
             </div>
           </div>
           
@@ -39,7 +39,7 @@ export default {
             </div>
           </div>
 
-          <h4 style="font-family:var(--pixel); margin-bottom:12px; border-bottom:1px solid var(--g200); padding-bottom:4px;">Top Keywords (3+ letters)</h4>
+          <h4 style="font-family:var(--pixel); margin-bottom:12px; border-bottom:1px solid var(--g200); padding-bottom:4px;">Most used words</h4>
           <div id="doc-keywords" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
         </div>
       </div>
@@ -64,18 +64,24 @@ export default {
     });
 
     dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      fileInput.click();
+    });
     fileInput.addEventListener('change', (e) => {
       if (e.target.files.length > 0) processFile(e.target.files[0]);
     });
 
     function processFile(file) {
       container.querySelector('#doc-filename').textContent = file.name;
-      
+
       const reader = new FileReader();
-      reader.onload = (e) => {
-        analyzeText(e.target.result);
+      reader.onload = (e) => analyzeText(e.target.result);
+      reader.onerror = () => {
+        resultsDiv.style.display = 'none';
+        container.querySelector('#doc-filename').textContent = `${file.name} could not be read.`;
       };
-      reader.onerror = () => alert('Error reading file');
       reader.readAsText(file);
     }
 

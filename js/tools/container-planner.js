@@ -12,8 +12,14 @@
 
 import { money, num, parseNum, escapeHtml, downloadCSV } from '../lib/biz.js';
 import {
-  ELEMENTS, SERVICES, LOGISTICS, UNITS, COMMERCIAL_DEFAULTS,
-  RATES_REVISED, defaultRateBook, elementsWith, CUSTOM_TARGETS,
+  SERVICES,
+  LOGISTICS,
+  UNITS,
+  COMMERCIAL_DEFAULTS,
+  RATES_REVISED,
+  defaultRateBook,
+  elementsWith,
+  CUSTOM_TARGETS,
 } from '../lib/container-catalog.js';
 import { buildQuote, groupLines } from '../lib/container-quote.js';
 

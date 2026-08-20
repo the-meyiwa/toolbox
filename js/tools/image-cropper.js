@@ -1,8 +1,14 @@
 /* Image Cropper — drag a selection, or lock it to a ratio. */
 
 import {
-  MIME, EXT_FOR, transformImage, decodeImage, humanBytes,
-  downloadBlob, renameExt, attachFileInput, dropZone,
+  MIME,
+  EXT_FOR,
+  transformImage,
+  decodeImage,
+  downloadBlob,
+  renameExt,
+  attachFileInput,
+  dropZone,
 } from '../lib/file-engine.js';
 
 const RATIOS = [

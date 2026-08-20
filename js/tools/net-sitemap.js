@@ -22,17 +22,17 @@ export default {
       try {
         const parsed = new URL(url);
         res.style.display = 'block';
-        res.textContent = 'Fetching robots.txt...';
+        res.textContent = 'Fetching robots.txt…';
         
         const req = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(parsed.origin + '/robots.txt')}`);
         const data = await req.json();
         if (data.contents) {
           res.textContent = data.contents;
         } else {
-          res.textContent = 'Could not find or fetch robots.txt.';
+          res.textContent = 'No robots.txt was found at that address.';
         }
       } catch(e) {
-        res.textContent = 'Invalid URL or fetch failed.';
+        res.textContent = 'That address could not be read. Check it and try again.';
       }
     });
   },

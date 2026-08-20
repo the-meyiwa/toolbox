@@ -6,9 +6,14 @@
    js/lib/search.js, so adding a tool never means editing the shell.
    ============================================================ */
 
-import { TOOLS, CATEGORIES, CATEGORY_LABELS, categorised, popular, resolveId, BY_ID } from './registry/index.js';
+import { TOOLS, CATEGORY_LABELS, OFFLINE_TOOLS, categorised, byTask, popular, resolveId, BY_ID } from './registry/index.js';
 import { search, relatedTools } from './lib/search.js';
 import { track, toolSession } from './lib/analytics.js';
+import * as artifacts from './lib/artifacts.js';
+import { mountArtifactStrip, incomingBanner } from './lib/artifact-ui.js';
+import { installPalette, openPalette } from './lib/palette.js';
+import { renderSaved } from './views/saved.js';
+import { kindLabel } from './registry/kinds.js';
 
 /* --------------- state --------------- */
 
@@ -17,6 +22,10 @@ let currentToolInstance = null;
 let currentToolObj = null;
 let currentSession = null;
 let currentPage = 'home';
+/** Teardown for whatever the artifact layer mounted around the open tool. */
+let unmountArtifacts = null;
+/** Teardown for the saved-work view. */
+let unmountSaved = null;
 
 /* --------------- DOM --------------- */
 
@@ -37,7 +46,10 @@ const logo = $('logo');
 const grid = $('tool-grid');
 const navLinks = document.querySelectorAll('.nav-link');
 
-const VIEWS = { home: homeView, tools: toolsView, support: supportView, tool: viewport };
+const savedView = $('saved-view');
+const navSaved = $('nav-saved');
+
+const VIEWS = { home: homeView, tools: toolsView, support: supportView, saved: savedView, tool: viewport };
 
 const toolModules = import.meta.glob('./tools/*.js');
 
@@ -142,6 +154,10 @@ function showPage(page) {
 }
 
 function teardownTool() {
+  unmountArtifacts?.();
+  unmountArtifacts = null;
+  unmountSaved?.();
+  unmountSaved = null;
   currentSession?.dispose();
   currentSession = null;
   try { currentToolInstance?.destroy?.(); }
@@ -196,6 +212,9 @@ async function openTool(id) {
   currentSession = session;
   session.viewed();
 
+  // Anything another tool (or the saved list) handed over, collected once.
+  const incoming = artifacts.takeHandoff();
+
   try {
     const loader = toolModules[`./tools/${id}.js`];
     if (!loader) throw new Error(`No module for "${id}"`);
@@ -203,7 +222,24 @@ async function openTool(id) {
     // Guard against a fast back-navigation resolving into a dead viewport.
     if (currentToolId !== id) return;
     currentToolInstance = module.default;
-    await currentToolInstance.render(viewportContent, { analytics: session, tool });
+    await currentToolInstance.render(viewportContent, { analytics: session, tool, artifact: incoming });
+    if (currentToolId !== id) return;
+
+    /* The artifact layer wraps the tool rather than living inside it: a tool
+       that declares neither hook gets nothing, sees nothing, and is
+       completely unaffected by any of this. */
+    if (incoming && typeof currentToolInstance.setArtifact === 'function') {
+      try {
+        currentToolInstance.setArtifact(incoming);
+        viewportContent.prepend(incomingBanner(incoming, BY_ID.get(incoming.from)));
+      } catch (err) {
+        console.error('tool could not accept the artifact', err);
+      }
+    }
+    unmountArtifacts = mountArtifactStrip(viewportContent, {
+      tool, instance: currentToolInstance, incoming,
+    });
+
     renderRelated(tool);
   } catch (err) {
     console.error(err);
@@ -222,6 +258,13 @@ function handleHash() {
   if (raw === '' || raw === 'home') return showPage('home');
   if (raw === 'tools') { showPage('tools'); return; }
   if (raw === 'support') return showPage('support');
+
+  // #saved, or #saved/<artifact id> to land on one directly.
+  if (raw === 'saved' || raw.startsWith('saved/')) {
+    showPage('saved');
+    unmountSaved = renderSaved(savedView, raw.slice(6) || null);
+    return;
+  }
 
   const { id, redirected } = resolveId(raw);
   if (!id) return showPage('home');
@@ -272,11 +315,19 @@ const CATEGORY_TIPS = {
 };
 
 const PAGE_TIPS = {
-  home: ['Welcome to Toolbox.', 'Hit <strong>Browse Tools</strong>, or press <kbd>/</kbd> anywhere to search.'],
+  home: [
+    'Press <kbd>/</kbd> or <kbd>Ctrl</kbd> <kbd>K</kbd> anywhere to search every tool and anything you have saved.',
+    'Describe the job rather than the tool — “compress photo”, “format json”.',
+  ],
   tools: [
     'Search by <em>what you want to do</em>, not the tool name — “compress photo”, “png to webp”, “format json” all work.',
     'Typos are fine.',
-    'Press <kbd>/</kbd> to jump to search.',
+    'Press <kbd>/</kbd> to search from anywhere.',
+  ],
+  saved: [
+    'Everything here lives in this browser only. <strong>Export</strong> anything you would be sorry to lose.',
+    '<strong>Open in</strong> hands a file straight to another tool that can take it.',
+    '<strong>Export all</strong> writes one file you can import again later, or on another machine.',
   ],
   support: ['Found a bug? Use <strong>Complain about a tool</strong>.', 'Want something built? Use <strong>Ask for a tool</strong>.'],
 };
@@ -315,12 +366,12 @@ function hideTips() {
 
 /* --------------- bindings --------------- */
 
+/* `/` and ⌘K both open the palette, which is the one way in from anywhere.
+   The Tools page keeps its own filter box: that one narrows a grid you are
+   already looking at, which is a different job from going somewhere. */
+installPalette();
+
 document.addEventListener('keydown', (e) => {
-  if (e.key === '/' && !e.ctrlKey && !e.metaKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName)) {
-    e.preventDefault();
-    if (currentPage !== 'tools') window.location.hash = '#tools';
-    setTimeout(() => searchInput.focus(), 60);
-  }
   if (e.key === 'Escape') {
     if (document.activeElement === searchInput) {
       searchInput.blur();
@@ -343,6 +394,8 @@ logo.addEventListener('click', (e) => { e.preventDefault(); window.location.hash
 window.addEventListener('hashchange', handleHash);
 window.addEventListener('pagehide', () => currentSession?.dispose());
 
+$('home-search')?.addEventListener('click', () => openPalette());
+
 const tipsFab = $('tips-fab');
 if (tipsFab) {
   tipsFab.addEventListener('click', showTips);
@@ -359,6 +412,11 @@ for (const id of ['home-tool-count', 'home-eyebrow-count']) {
   if (el) el.textContent = `${TOOLS.length}`;
 }
 
+// The privacy claim is counted, not asserted: mark one more tool `offline:
+// false` and the sentence on the home page corrects itself.
+const onlineCount = $('home-online-count');
+if (onlineCount) onlineCount.textContent = `${TOOLS.length - OFFLINE_TOOLS.length}`;
+
 const quickRow = $('home-quick');
 if (quickRow) {
   quickRow.innerHTML = popular(6).map(t => `
@@ -367,6 +425,55 @@ if (quickRow) {
       <span>${escapeHtml(t.name)}</span>
     </a>`).join('');
 }
+
+/* The task lens. Categories answer "what subject is this?"; the home page
+   has to answer "what am I trying to do?", which is a different question
+   and the only one a first-time visitor is actually asking. */
+const taskGrid = $('home-tasks');
+if (taskGrid) {
+  taskGrid.innerHTML = byTask(TOOLS).map(task => `
+    <section class="home-task">
+      <h2 class="home-task-label">${escapeHtml(task.label)}</h2>
+      <p class="home-task-blurb">${escapeHtml(task.blurb)}</p>
+      <div class="home-task-tools">
+        ${task.tools.slice(0, 6).map(t => `
+          <a class="home-task-tool" href="#${t.id}">
+            <span class="home-task-icon">${t.icon}</span>
+            <span>${escapeHtml(t.name)}</span>
+          </a>`).join('')}
+      </div>
+      <a class="home-task-more" href="#tools">All ${task.tools.length} →</a>
+    </section>`).join('');
+}
+
+/* Saved work is surfaced only once it exists. Until then the home page and
+   the navigation carry no trace of it, which is the whole point: the
+   product must not look like a workspace to somebody who does not want one. */
+function reflectSavedWork() {
+  const items = artifacts.list();
+  if (navSaved) navSaved.hidden = items.length === 0;
+
+  const strip = $('home-saved');
+  if (!strip) return;
+  strip.hidden = items.length === 0;
+  if (!items.length) return;
+
+  strip.innerHTML = `
+    <div class="home-saved-head">
+      <h2 class="home-task-label">Your saved work</h2>
+      <a class="home-task-more" href="#saved">Open all ${items.length} →</a>
+    </div>
+    <div class="home-task-tools">
+      ${items.slice(0, 5).map(m => `
+        <a class="home-task-tool" href="#saved/${m.id}">
+          <span>${escapeHtml(m.name)}</span>
+          <em>${escapeHtml(kindLabel(m.kind))}</em>
+        </a>`).join('')}
+    </div>`;
+}
+
+artifacts.onChange(reflectSavedWork);
+reflectSavedWork();
 
 renderGrid(TOOLS);
 handleHash();

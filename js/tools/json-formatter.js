@@ -11,7 +11,7 @@ export default {
       <div class="tool-split">
         <div class="tool-section">
           <label class="tool-label">Input</label>
-          <textarea class="tool-textarea" id="jf-input" placeholder='Paste JSON here...\n\n{"key": "value"}' style="min-height:340px;"></textarea>
+          <textarea class="tool-textarea" id="jf-input" placeholder='Paste JSON here…\n\n{"key": "value"}' style="min-height:340px;"></textarea>
         </div>
         <div class="tool-section">
           <label class="tool-label">Output</label>
@@ -85,7 +85,16 @@ export default {
     });
 
     input.focus();
+
+    // Handed to the artifact strip, which is the only thing that reads these.
+    this._read = () => result.textContent || input.value;
+    this._write = (text) => { input.value = text; format(); };
   },
 
-  destroy() {}
+  /* The formatted output when there is one, otherwise whatever was typed —
+     so Save after a glance at invalid JSON still keeps the person's work. */
+  getArtifact() { return { kind: 'json', text: this._read?.() ?? '' }; },
+  setArtifact(a) { this._write?.(a.text); },
+
+  destroy() { this._read = this._write = null; }
 };

@@ -8,7 +8,7 @@ export default {
         <textarea class="tool-textarea" id="rd-input" placeholder="Paste text with duplicate lines…" rows="8"></textarea>
       </div>
       <div class="tool-controls">
-        <button class="btn btn-primary btn-sm" id="rd-process">Remove Duplicates</button>
+        <button class="btn btn-primary btn-sm" id="rd-process">Remove duplicates</button>
         <label class="tool-checkbox" style="margin-left:12px;"><input type="checkbox" id="rd-case"> Case insensitive</label>
         <label class="tool-checkbox"><input type="checkbox" id="rd-trim" checked> Trim whitespace</label>
       </div>
@@ -44,6 +44,14 @@ export default {
       const t = container.querySelector('#rd-result').textContent;
       if (t) copyText(t, e.currentTarget);
     });
+
+    const input = container.querySelector('#rd-input');
+    this._read = () => container.querySelector('#rd-result').textContent || input.value;
+    this._write = (text) => { input.value = text; process(); };
   },
-  destroy() {}
+
+  getArtifact() { return { kind: 'text', text: this._read?.() ?? '' }; },
+  setArtifact(a) { this._write?.(a.text); },
+
+  destroy() { this._read = this._write = null; }
 };

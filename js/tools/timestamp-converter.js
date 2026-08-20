@@ -17,16 +17,16 @@ function relativeTime(date) {
   const minutes = Math.floor(seconds / 60);
   const hours   = Math.floor(minutes / 60);
   const days    = Math.floor(hours / 24);
-  const months  = Math.floor(days / 30);
-  const years   = Math.floor(days / 365);
 
   if (seconds < 5) return 'just now';
   if (seconds < 60) return `${prefix}${seconds}s${suffix}`;
   if (minutes < 60) return `${prefix}${minutes}m${suffix}`;
   if (hours < 24)   return `${prefix}${hours}h${suffix}`;
   if (days < 30)    return `${prefix}${days}d${suffix}`;
-  if (months < 12)  return `${prefix}${months}mo${suffix}`;
-  return `${prefix}${years}y${suffix}`;
+  // Each step is bounded by the same unit it reports, so a date 364 days out
+  // reads as 11 months rather than falling through to "0y".
+  if (days < 365)   return `${prefix}${Math.floor(days / 30.44)}mo${suffix}`;
+  return `${prefix}${Math.max(1, Math.floor(days / 365.25))}y${suffix}`;
 }
 
 let interval = null;
@@ -35,7 +35,7 @@ export default {
   render(container) {
     container.innerHTML = `
       <div class="tool-section">
-        <label class="tool-label">Unix Timestamp (seconds)</label>
+        <label class="tool-label">Unix timestamp, in seconds</label>
         <div class="tool-row">
           <input type="text" class="tool-input" id="ts-unix" placeholder="e.g. 1700000000" style="flex:1;">
           <button class="btn btn-secondary btn-sm" id="ts-now">Now</button>
@@ -44,7 +44,7 @@ export default {
       </div>
 
       <div class="tool-section">
-        <label class="tool-label">Date & Time</label>
+        <label class="tool-label">Date and time</label>
         <div class="tool-row">
           <input type="text" class="tool-input" id="ts-date" placeholder="YYYY-MM-DD HH:MM:SS" style="flex:1;">
           <button class="copy-btn" id="ts-copy-date">Copy</button>
@@ -60,7 +60,7 @@ export default {
       </div>
 
       <div class="tool-section" style="margin-top:20px;">
-        <label class="tool-label">Current Time</label>
+        <label class="tool-label">Right now</label>
         <div class="tool-output" id="ts-current" style="min-height:auto; padding:12px; text-align:center; font-size:1rem; font-weight:500;"></div>
       </div>
     `;

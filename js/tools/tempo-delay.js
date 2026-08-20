@@ -6,7 +6,7 @@
    want, plus tap tempo for working out a track's BPM by ear. */
 
 import { NOTE_VALUES, noteMs, tempoMark } from '../lib/music.js';
-import { statGrid, dataTable, num, escapeHtml } from '../lib/biz.js';
+import { statGrid, dataTable, num } from '../lib/biz.js';
 
 export default {
   render(container, { analytics } = {}) {

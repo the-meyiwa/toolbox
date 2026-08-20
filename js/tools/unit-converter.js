@@ -1,22 +1,40 @@
 import { copyText } from '../utils.js';
 
+/* Every unit is expressed as "how many of me are in one base unit", so a
+   conversion is one division and one multiplication. Temperature is the
+   exception — it has an offset as well as a scale — so it carries a pair of
+   functions instead of a ratio. */
 const UNITS = {
   length: {
     name: 'Length',
-    base: 'm',
     rates: { m: 1, km: 0.001, cm: 100, mm: 1000, mi: 0.000621371, yd: 1.09361, ft: 3.28084, in: 39.3701 }
   },
   weight: {
-    name: 'Weight / Mass',
-    base: 'kg',
-    rates: { kg: 1, g: 1000, mg: 1000000, lb: 2.20462, oz: 35.274 }
+    name: 'Weight and mass',
+    rates: { kg: 1, g: 1000, mg: 1000000, t: 0.001, st: 0.157473, lb: 2.20462, oz: 35.274 }
+  },
+  temperature: {
+    name: 'Temperature',
+    // Base is degrees Celsius.
+    scales: {
+      '°C': { toBase: (v) => v, fromBase: (v) => v },
+      '°F': { toBase: (v) => (v - 32) * 5 / 9, fromBase: (v) => v * 9 / 5 + 32 },
+      K:    { toBase: (v) => v - 273.15, fromBase: (v) => v + 273.15 },
+    },
   },
   digital: {
-    name: 'Digital Storage',
-    base: 'B',
+    name: 'Digital storage',
     rates: { B: 1, KB: 1/1024, MB: 1/1048576, GB: 1/1073741824, TB: 1/1099511627776 }
   }
 };
+
+/** Unit keys for a category, whichever form it stores them in. */
+const unitsOf = (cat) => Object.keys(cat.scales ?? cat.rates);
+
+export function convertValue(cat, value, from, to) {
+  if (cat.scales) return cat.scales[to].fromBase(cat.scales[from].toBase(value));
+  return (value / cat.rates[from]) * cat.rates[to];
+}
 
 export default {
   render(container) {
@@ -24,9 +42,7 @@ export default {
       <div class="tool-controls">
         <label class="tool-label" style="margin:0 8px 0 0;">Category</label>
         <select class="tool-select" id="unit-cat">
-          <option value="length">Length</option>
-          <option value="weight">Weight / Mass</option>
-          <option value="digital">Digital Storage</option>
+          ${Object.entries(UNITS).map(([id, c]) => `<option value="${id}">${c.name}</option>`).join('')}
         </select>
       </div>
       <div class="tool-split" style="margin-top:16px;">
@@ -62,11 +78,19 @@ export default {
     const result = container.querySelector('#unit-result');
 
     function populateUnits() {
-      const cat = UNITS[catSel.value];
-      const keys = Object.keys(cat.rates);
+      const keys = unitsOf(UNITS[catSel.value]);
       fromUnit.innerHTML = keys.map(k => `<option value="${k}">${k}</option>`).join('');
-      toUnit.innerHTML = keys.map((k, i) => `<option value="${k}" ${i===1?'selected':''}>${k}</option>`).join('');
+      toUnit.innerHTML = keys.map((k, i) => `<option value="${k}"${i === 1 ? ' selected' : ''}>${k}</option>`).join('');
       convert();
+    }
+
+    /* Six decimal places, with the trailing zeros trimmed off, keeps
+       millimetres readable without turning 1/3 into 0.333333333333. */
+    function tidy(n) {
+      if (!Number.isFinite(n)) return '—';
+      if (Number.isInteger(n)) return String(n);
+      const fixed = n.toFixed(6);
+      return fixed.includes('.') ? fixed.replace(/0+$/, '').replace(/\.$/, '') : fixed;
     }
 
     function convert() {
@@ -76,10 +100,7 @@ export default {
       const u2 = toUnit.value;
 
       if (!u1 || !u2) return;
-      const baseVal = val / cat.rates[u1];
-      const finalVal = baseVal * cat.rates[u2];
-
-      const formatted = Number.isInteger(finalVal) ? finalVal.toString() : finalVal.toFixed(6).replace(/\.?0+$/, '');
+      const formatted = tidy(convertValue(cat, val, u1, u2));
       toVal.value = formatted;
       result.textContent = `${val} ${u1} = ${formatted} ${u2}`;
     }

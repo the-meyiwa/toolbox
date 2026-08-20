@@ -11,8 +11,10 @@
    ============================================================ */
 
 import {
-  OPENING_RATES, OPENING_REINFORCEMENT, FITTING_RATES,
-  SERVICES, LOGISTICS, defaultRateBook, elementsWith,
+  SERVICES,
+  LOGISTICS,
+  defaultRateBook,
+  elementsWith,
 } from './container-catalog.js';
 
 const STUD_CENTRES = 0.6;   // metres

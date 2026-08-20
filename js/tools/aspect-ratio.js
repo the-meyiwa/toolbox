@@ -8,7 +8,7 @@ export default {
   render(container) {
     container.innerHTML = `
       <div class="tool-section">
-        <label class="tool-label">Known Dimensions</label>
+        <label class="tool-label">Known dimensions</label>
         <div class="tool-row" style="gap:12px;">
           <div style="flex:1;">
             <label class="tool-label">Width (W1)</label>
@@ -21,21 +21,21 @@ export default {
         </div>
       </div>
       <div class="tool-section">
-        <label class="tool-label">Calculated Ratio</label>
+        <label class="tool-label">Calculated ratio</label>
         <div class="tool-output" id="ar-ratio-out" style="min-height:auto; padding:14px; font-size:1.2rem; font-weight:600; text-align:center;">
-          <button class="copy-btn" id="ar-copy">Copy Ratio</button>
+          <button class="copy-btn" id="ar-copy">Copy ratio</button>
           <span id="ar-ratio">16:9</span>
         </div>
       </div>
       <div class="tool-section">
-        <label class="tool-label">Calculate New Dimension</label>
+        <label class="tool-label">Calculate a new dimension</label>
         <div class="tool-row" style="gap:12px;">
           <div style="flex:1;">
-            <label class="tool-label">New Width (W2)</label>
+            <label class="tool-label">New width (W2)</label>
             <input type="number" class="tool-input" id="ar-w2" placeholder="e.g. 1280">
           </div>
           <div style="flex:1;">
-            <label class="tool-label">New Height (H2)</label>
+            <label class="tool-label">New height (H2)</label>
             <input type="number" class="tool-input" id="ar-h2" placeholder="e.g. 720">
           </div>
         </div>

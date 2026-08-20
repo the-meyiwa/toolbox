@@ -9,8 +9,12 @@
 import { NODE_TYPES, DATA_TYPES, LANGUAGES, EXAMPLES, makeNode, generateCode } from '../lib/flowchart.js';
 import { escapeHtml } from '../lib/biz.js';
 import { copyText } from '../utils.js';
+import { handOff } from '../lib/artifacts.js';
 
 const STORE = 'toolbox.flowchart';
+
+/* File extension per generated language, for naming what gets handed on. */
+const EXT = { javascript: 'js', python: 'py', c: 'c', java: 'java', csharp: 'cs' };
 
 export default {
   render(container, { analytics } = {}) {
@@ -321,12 +325,16 @@ export default {
         setTimeout(() => container.querySelector('.flw-note')?.remove(), 4000);
         return;
       }
-      try {
-        const store = JSON.parse(localStorage.getItem('toolbox.playground') || '{}');
-        store.lang = target;
-        store.code = { ...(store.code || {}), [target]: $('fl-code').textContent };
-        localStorage.setItem('toolbox.playground', JSON.stringify(store));
-      } catch { /* private mode — the playground will just open empty */ }
+      // Handed over through the artifact layer. This used to write straight
+      // into the playground's own storage key, which meant one tool had to
+      // know another tool's internals; now neither knows the other exists.
+      handOff({
+        kind: 'code',
+        name: `${state.example}.${EXT[target] ?? 'txt'}`,
+        text: $('fl-code').textContent,
+        from: 'flowchart',
+        lang: target,
+      });
       window.location.hash = '#code-playground';
     });
 
@@ -342,7 +350,11 @@ export default {
     $('fl-about').textContent = EXAMPLES.fizzbuzz.about;
     commit();
     analytics?.started();
+
+    this._read = () => $('fl-code').textContent;
   },
 
-  destroy() {},
+  getArtifact() { return { kind: 'code', text: this._read?.() ?? '' }; },
+
+  destroy() { this._read = null; },
 };

@@ -47,7 +47,7 @@ Total Hosts:     ${Math.max(0, numHosts)}
 Wildcard Mask:   ${long2ip(~maskLong >>> 0)}
 IPv4-mapped v6:  ${mapped}`;
       } catch(e) {
-        res.textContent = 'Invalid IP format.';
+        res.textContent = 'That is not a valid IPv4 address.';
       }
     });
   },

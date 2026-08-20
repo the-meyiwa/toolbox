@@ -18,7 +18,7 @@ export default {
         </div>
       </div>
       <div class="tool-controls" style="margin-top:16px;">
-        <button class="btn btn-primary" id="rand-generate">Generate Number(s)</button>
+        <button class="btn btn-primary" id="rand-generate">Generate</button>
         <label class="tool-checkbox" style="margin-left:12px;">
           <input type="checkbox" id="rand-unique"> Unique only
         </label>
@@ -45,14 +45,15 @@ export default {
       const unique = uniqueCheck.checked;
 
       if (min > max) {
-        result.textContent = 'Min must be <= Max';
+        result.textContent = 'The minimum must not be greater than the maximum.';
         return;
       }
 
-      if (count > 10000) count = 10000;
-      
+      count = Math.max(1, Math.min(1000, count));   // the same ceiling the field allows
+
+
       if (unique && count > (max - min + 1)) {
-        result.textContent = 'Count cannot exceed range for unique numbers';
+        result.textContent = 'There are not that many distinct numbers in this range.';
         return;
       }
 

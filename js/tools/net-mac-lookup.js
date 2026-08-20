@@ -18,14 +18,14 @@ export default {
     btn.addEventListener('click', async () => {
       let mac = input.value.trim();
       if (!mac) return;
-      res.textContent = 'Searching...';
+      res.textContent = 'Searching…';
       try {
         const req = await fetch('https://api.macvendors.com/' + encodeURIComponent(mac));
-        if (!req.ok) throw new Error('Not Found');
+        if (!req.ok) throw new Error('Not found');
         const text = await req.text();
         res.textContent = 'Vendor: ' + text;
       } catch(e) {
-        res.textContent = 'Vendor not found or invalid MAC address.';
+        res.textContent = 'No vendor is registered to that address — check the MAC and try again.';
       }
     });
   },

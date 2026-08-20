@@ -165,7 +165,7 @@ export default {
           { value: DAY_NAMES[cursor.getUTCDay()], label: 'Lands on a' },
         ]);
 
-        const preview = count >= 0 ? landed.slice(0, 12) : landed.slice(0, 12);
+        const preview = landed.slice(0, 12);
         container.querySelector('#bd-detail').innerHTML = dataTable(
           ['#', 'Date', 'Day'],
           preview.map((d, i) => ({

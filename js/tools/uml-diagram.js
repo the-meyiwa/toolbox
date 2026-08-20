@@ -301,8 +301,15 @@ export default {
     });
 
     codeEl.value = TEMPLATES.class.code;
+
+    this._read = () => codeEl.value;
+    this._write = (text) => { codeEl.value = text; drawBound(); };
+
     await drawBound();
   },
 
-  destroy() { this._alive = false; },
+  getArtifact() { return { kind: 'uml', text: this._read?.() ?? '' }; },
+  setArtifact(a) { this._write?.(a.text); },
+
+  destroy() { this._alive = false; this._read = this._write = null; },
 };

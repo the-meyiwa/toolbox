@@ -5,7 +5,7 @@
    pasting. Here every verse is selectable, and what you copy comes out
    formatted the way people actually quote scripture. */
 
-import { BOOKS, TRANSLATIONS, parseReference, formatReference, findBook, SUGGESTED } from '../lib/bible-data.js';
+import { BOOKS, TRANSLATIONS, parseReference, formatReference } from '../lib/bible-data.js';
 import { escapeHtml } from '../lib/biz.js';
 import { copyText } from '../utils.js';
 

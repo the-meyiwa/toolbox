@@ -92,7 +92,11 @@ export default {
 
     // Auto-generate on load
     generate();
+
+    this._read = () => result.textContent;
   },
 
-  destroy() {}
+  getArtifact() { return { kind: 'text', text: this._read?.() ?? '' }; },
+
+  destroy() { this._read = null; }
 };

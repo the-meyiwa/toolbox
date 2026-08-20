@@ -3,10 +3,13 @@ import { copyText } from '../utils.js';
 function decodeJWT(token) {
   const parts = token.trim().split('.');
   if (parts.length !== 3) throw new Error('Invalid JWT: expected 3 parts, got ' + parts.length);
+  // JWT segments are base64url, and the payload is UTF-8 JSON, so the bytes
+  // have to be decoded properly rather than read as Latin-1.
   const decode = (str) => {
-    str = str.replace(/-/g, '+').replace(/_/g, '/');
-    while (str.length % 4) str += '=';
-    return JSON.parse(decodeURIComponent(escape(atob(str))));
+    let padded = str.replace(/-/g, '+').replace(/_/g, '/');
+    while (padded.length % 4) padded += '=';
+    const bytes = Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes));
   };
   return { header: decode(parts[0]), payload: decode(parts[1]), signature: parts[2] };
 }
@@ -15,8 +18,8 @@ export default {
   render(container) {
     container.innerHTML = `
       <div class="tool-section">
-        <label class="tool-label">JWT Token</label>
-        <textarea class="tool-textarea" id="jwt-input" placeholder="Paste your JWT token here…" rows="4" style="min-height:100px;"></textarea>
+        <label class="tool-label">JWT</label>
+        <textarea class="tool-textarea" id="jwt-input" placeholder="Paste a JWT here…" rows="4" style="min-height:100px;"></textarea>
       </div>
       <div class="tool-split" style="margin-top:16px;">
         <div class="tool-section">

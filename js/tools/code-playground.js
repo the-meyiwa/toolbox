@@ -178,6 +178,22 @@ export default {
     };
     document.addEventListener('keydown', this._onKey);
 
+    /* The artifact hooks. Language travels with the code when a tool that
+       generated it knew which one it wrote, so arriving from the Flowchart
+       lands in the right runtime rather than the last one used. */
+    this._read = () => codeEl.value;
+    this._write = (art) => {
+      const sel = container.querySelector('#cpg-langs');
+      if (art.lang && ALL[art.lang] && sel) {
+        sel.value = art.lang;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      state.code[state.lang] = art.text;
+      codeEl.value = art.text;
+      renderGutter();
+      persist();
+    };
+
     function persist() {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -439,6 +455,9 @@ export default {
     applyLanguage(state.lang);
   },
 
+  getArtifact() { return { kind: 'code', text: this._read?.() ?? '' }; },
+  setArtifact(a) { this._write?.(a); },
+
   destroy() {
     this._alive = false;
     this._remote?.abort();
@@ -446,5 +465,6 @@ export default {
     this._workers = {};
     clearTimeout(this._timer);
     document.removeEventListener('keydown', this._onKey);
+    this._read = this._write = null;
   },
 };

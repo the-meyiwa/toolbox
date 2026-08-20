@@ -1,5 +1,3 @@
-import { copyText } from '../utils.js';
-
 export default {
   render(container) {
     container.innerHTML = `
@@ -41,7 +39,7 @@ export default {
       const y = parseFloat(container.querySelector('#pc-y1').value);
       const x = parseFloat(container.querySelector('#pc-x1').value);
       const r = container.querySelector('#pc-r1');
-      if (!isNaN(y) && !isNaN(x)) r.textContent = ((y / 100) * x).toLocaleString('en-US', {maximumFractionDigits: 4});
+      if (!isNaN(y) && !isNaN(x)) r.textContent = ((y / 100) * x).toLocaleString(undefined, {maximumFractionDigits: 4});
       else r.textContent = '';
     }
 
@@ -49,7 +47,7 @@ export default {
       const x = parseFloat(container.querySelector('#pc-x2').value);
       const y = parseFloat(container.querySelector('#pc-y2').value);
       const r = container.querySelector('#pc-r2');
-      if (!isNaN(x) && !isNaN(y) && y !== 0) r.textContent = ((x / y) * 100).toLocaleString('en-US', {maximumFractionDigits: 4}) + '%';
+      if (!isNaN(x) && !isNaN(y) && y !== 0) r.textContent = ((x / y) * 100).toLocaleString(undefined, {maximumFractionDigits: 4}) + '%';
       else r.textContent = '';
     }
 
@@ -61,7 +59,7 @@ export default {
         const diff = y - x;
         const perc = (diff / x) * 100;
         let prefix = perc > 0 ? '+' : '';
-        r.textContent = prefix + perc.toLocaleString('en-US', {maximumFractionDigits: 4}) + '%';
+        r.textContent = prefix + perc.toLocaleString(undefined, {maximumFractionDigits: 4}) + '%';
       }
       else r.textContent = '';
     }

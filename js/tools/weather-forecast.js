@@ -4,7 +4,7 @@ export default {
       <div class="tool-content">
         
         <div class="tool-section">
-          <label class="tool-label">Search Location</label>
+          <label class="tool-label">Where?</label>
           <div style="display:flex; gap:8px;">
             <input type="text" class="tool-input" id="weather-city" placeholder="e.g. Tokyo, Paris, New York" style="flex:1;">
             <button class="btn btn-primary" id="weather-search">Search</button>
@@ -23,12 +23,15 @@ export default {
             </div>
             <div class="tool-stat">
               <div class="tool-stat-value" id="current-wind" style="font-family:var(--pixel); font-size:1.5rem;">-- km/h</div>
-              <div class="tool-stat-label">Wind Speed</div>
+              <div class="tool-stat-label">Wind speed</div>
             </div>
           </div>
           
-          <h4 style="font-family:var(--pixel); margin-bottom:12px; border-bottom:1px solid var(--g200); padding-bottom:4px;">3-Day Forecast</h4>
+          <h4 style="font-family:var(--pixel); margin-bottom:12px; border-bottom:1px solid var(--g200); padding-bottom:4px;">The next three days</h4>
           <div id="forecast-container" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;"></div>
+
+          <p class="biz-hint" style="margin-top:16px;">Forecast and place names from
+            <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>.</p>
         </div>
       </div>
     `;
@@ -40,17 +43,26 @@ export default {
     const locName = container.querySelector('#weather-location-name');
     const forecastContainer = container.querySelector('#forecast-container');
 
+    /* The full WMO interpretation table the forecast API returns. Showers and
+       freezing rain were missing before, so the commonest British weather of
+       all came back as "Unknown". */
     const weatherCodes = {
       0: 'Clear sky',
       1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
-      45: 'Fog', 48: 'Depositing rime fog',
+      45: 'Fog', 48: 'Freezing fog',
       51: 'Light drizzle', 53: 'Moderate drizzle', 55: 'Dense drizzle',
+      56: 'Light freezing drizzle', 57: 'Dense freezing drizzle',
       61: 'Slight rain', 63: 'Moderate rain', 65: 'Heavy rain',
+      66: 'Light freezing rain', 67: 'Heavy freezing rain',
       71: 'Slight snow', 73: 'Moderate snow', 75: 'Heavy snow',
-      95: 'Thunderstorm', 96: 'Thunderstorm with hail'
+      77: 'Snow grains',
+      80: 'Slight showers', 81: 'Moderate showers', 82: 'Violent showers',
+      85: 'Slight snow showers', 86: 'Heavy snow showers',
+      95: 'Thunderstorm',
+      96: 'Thunderstorm with slight hail', 99: 'Thunderstorm with heavy hail',
     };
 
-    const getDesc = (code) => weatherCodes[code] || 'Unknown';
+    const getDesc = (code) => weatherCodes[code] ?? 'Not reported';
 
     async function searchCity() {
       const q = cityInput.value.trim();
@@ -77,7 +89,7 @@ export default {
           resultsDiv.appendChild(btn);
         });
       } catch (e) {
-        resultsDiv.innerHTML = '<span style="color:var(--g500);">Error fetching location.</span>';
+        resultsDiv.innerHTML = '<span style="color:var(--g500);">That search could not be completed. Check your connection and try again.</span>';
       }
     }
 
@@ -88,7 +100,7 @@ export default {
       locName.textContent = `${loc.name}, ${loc.country}`;
       
       container.querySelector('#current-temp').textContent = '--°C';
-      container.querySelector('#current-desc').textContent = 'Loading...';
+      container.querySelector('#current-desc').textContent = 'Loading…';
       forecastContainer.innerHTML = '';
 
       try {
@@ -104,7 +116,7 @@ export default {
         let html = '';
         for (let i = 1; i <= 3; i++) { // Next 3 days
           const date = new Date(daily.time[i]);
-          const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+          const dayName = date.toLocaleDateString(undefined, { weekday: 'short' });
           html += `
             <div style="background:var(--g50); padding:12px; border-radius:8px; text-align:center;">
               <div style="font-family:var(--pixel); font-size:1.1rem; margin-bottom:8px;">${dayName}</div>
@@ -121,12 +133,12 @@ export default {
         forecastContainer.innerHTML = html;
 
       } catch (e) {
-        container.querySelector('#current-desc').textContent = 'Error loading data';
+        container.querySelector('#current-desc').textContent = 'Forecast unavailable';
       }
     }
 
     searchBtn.addEventListener('click', searchCity);
-    cityInput.addEventListener('keypress', e => e.key === 'Enter' && searchCity());
+    cityInput.addEventListener('keydown', e => { if (e.key === 'Enter') searchCity(); });
   },
   destroy() {}
 };

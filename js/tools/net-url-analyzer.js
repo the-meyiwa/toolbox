@@ -29,7 +29,7 @@ export default {
           QueryParams: searchParams
         }, null, 2);
       } catch(e) {
-        res.textContent = 'Invalid URL format.';
+        res.textContent = 'That is not a URL this can read.';
       }
     });
   },

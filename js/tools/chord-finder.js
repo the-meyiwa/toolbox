@@ -6,8 +6,15 @@
    kinds of understanding. */
 
 import {
-  SHARP_NAMES, FLAT_NAMES, SCALES, CHORDS, spellChord, spellScale,
-  chordsInKey, TUNINGS, midiToFreq, midiToName,
+  SHARP_NAMES,
+  FLAT_NAMES,
+  SCALES,
+  CHORDS,
+  spellChord,
+  spellScale,
+  chordsInKey,
+  TUNINGS,
+  midiToFreq,
 } from '../lib/music.js';
 import { escapeHtml } from '../lib/biz.js';
 

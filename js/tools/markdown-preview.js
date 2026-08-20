@@ -61,7 +61,13 @@ function hello() {
     update();
     input.focus();
     input.setSelectionRange(0, 0);
+
+    this._read = () => input.value;
+    this._write = (text) => { input.value = text; update(); input.setSelectionRange(0, 0); };
   },
 
-  destroy() {}
+  getArtifact() { return { kind: 'markdown', text: this._read?.() ?? '' }; },
+  setArtifact(a) { this._write?.(a.text); },
+
+  destroy() { this._read = this._write = null; }
 };

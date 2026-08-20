@@ -45,7 +45,7 @@ export default {
           </div>
           
           <div class="tool-stat" style="background:var(--black); color:var(--white); padding:24px; text-align:center;">
-            <div class="tool-stat-label" style="color:var(--g400); margin-bottom:8px;">Converted Amount</div>
+            <div class="tool-stat-label" style="color:var(--g400); margin-bottom:8px;">Converted amount</div>
             <div class="tool-stat-value" id="ex-result" style="font-family:var(--pixel); font-size:3rem; word-break:break-all;">Loading…</div>
             <div style="margin-top:12px; font-size:0.85rem; color:var(--g500);" id="ex-rate-info"></div>
           </div>
@@ -73,7 +73,7 @@ export default {
           calculate();
         }
       } catch (e) {
-        resultDiv.textContent = 'Error loading rates';
+        resultDiv.textContent = 'Rates unavailable';
       }
     }
 
@@ -113,7 +113,7 @@ export default {
       const toRate = rates[to];
 
       if (!fromRate || !toRate) {
-        resultDiv.textContent = 'Invalid Currency';
+        resultDiv.textContent = 'Rate unavailable';
         return;
       }
 
@@ -121,7 +121,7 @@ export default {
       const usdAmount = amt / fromRate;
       const finalAmount = usdAmount * toRate;
 
-      const format = (num, curr) => new Intl.NumberFormat('en-US', { style: 'currency', currency: curr, maximumFractionDigits: 4 }).format(num);
+      const format = (num, curr) => new Intl.NumberFormat(undefined, { style: 'currency', currency: curr, maximumFractionDigits: 4 }).format(num);
 
       resultDiv.textContent = format(finalAmount, to);
       

@@ -10,10 +10,10 @@ export default {
       <div class="tool-controls">
         <button class="btn btn-primary btn-sm" data-action="az">A → Z</button>
         <button class="btn btn-secondary btn-sm" data-action="za">Z → A</button>
-        <button class="btn btn-secondary btn-sm" data-action="length">By Length</button>
+        <button class="btn btn-secondary btn-sm" data-action="length">By length</button>
         <button class="btn btn-secondary btn-sm" data-action="reverse">Reverse</button>
         <button class="btn btn-secondary btn-sm" data-action="shuffle">Shuffle</button>
-        <button class="btn btn-secondary btn-sm" data-action="empty">Remove Empty</button>
+        <button class="btn btn-secondary btn-sm" data-action="empty">Remove empty lines</button>
       </div>
       <div class="tool-section">
         <label class="tool-label">Output</label>
@@ -54,6 +54,13 @@ export default {
     });
 
     input.focus();
+
+    this._read = () => result.textContent || input.value;
+    this._write = (text) => { input.value = text; result.textContent = ''; stats.textContent = ''; };
   },
-  destroy() {}
+
+  getArtifact() { return { kind: 'text', text: this._read?.() ?? '' }; },
+  setArtifact(a) { this._write?.(a.text); },
+
+  destroy() { this._read = this._write = null; }
 };

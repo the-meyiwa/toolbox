@@ -19,11 +19,11 @@ export default {
       let ip = input.value.trim();
       if (!ip) return;
       res.style.display = 'block';
-      res.textContent = 'Resolving...';
+      res.textContent = 'Resolving…';
       try {
         const req = await fetch('https://networkcalc.com/api/dns/lookup/' + encodeURIComponent(ip));
         const data = await req.json();
-        res.textContent = JSON.stringify(data.records || 'No reverse record found.', null, 2);
+        res.textContent = JSON.stringify(data.records || 'No reverse record is published for that address.', null, 2);
       } catch(e) {
         res.textContent = 'Error: ' + e.message;
       }

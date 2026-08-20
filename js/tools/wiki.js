@@ -7,8 +7,14 @@
    because this is a lens on Wikimedia, not a replacement for it. */
 
 import {
-  LANGUAGES, searchWikipedia, getSummary, getArticle, getLastModified,
-  getRandomArticle, getRelatedArticles, getWikidataEntity, stripTags,
+  LANGUAGES,
+  searchWikipedia,
+  getSummary,
+  getArticle,
+  getLastModified,
+  getRandomArticle,
+  getRelatedArticles,
+  getWikidataEntity,
 } from '../lib/wiki-api.js';
 import { escapeHtml } from '../lib/biz.js';
 import { copyText } from '../utils.js';

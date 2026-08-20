@@ -79,7 +79,13 @@ export default {
     });
 
     input.focus();
+
+    this._read = () => result.textContent || input.value;
+    this._write = (text) => { input.value = text; if (activeIdx !== null) convert(activeIdx); };
   },
 
-  destroy() {}
+  getArtifact() { return { kind: 'text', text: this._read?.() ?? '' }; },
+  setArtifact(a) { this._write?.(a.text); },
+
+  destroy() { this._read = this._write = null; }
 };

@@ -15,7 +15,7 @@
  * @typedef {'text'|'developer'|'images-files'|'numbers'|'business'|'design'
  *          |'security'|'networking'|'modeling'|'reference'|'music'|'everyday'} CategoryId
  *
- * @typedef {'text'|'number'|'file'|'image'|'pdf'|'url'|'json'|'csv'|'color'|'date'|'code'|'none'} IOKind
+ * @typedef {import('./kinds.js').ArtifactKind} ArtifactKind
  *
  * @typedef {object} Tool
  * @property {string}       id            Stable slug. Also the module filename and the URL hash.
@@ -26,8 +26,9 @@
  * @property {string[]}     keywords      Literal words a user might type. Includes abbreviations and misspellings.
  * @property {string[]}     [synonyms]    Other names for the same tool ("plasterboard" for gypsum).
  * @property {string[]}     [intents]     Natural-language tasks: "compress photo", "png to webp".
- * @property {IOKind[]}     [inputs]      What it accepts.
- * @property {IOKind[]}     [outputs]     What it produces.
+ * @property {ArtifactKind[]} [accepts]   Artifact kinds this tool can be handed. Drives "Open in…".
+ * @property {ArtifactKind[]} [produces]  Artifact kinds this tool can hand on. Drives "Send to…".
+ * @property {string}       [task]        Overrides the category→task mapping for the home page.
  * @property {string[]}     [related]     Ids of tools worth showing alongside. Must resolve.
  * @property {number}       [weight]      Search/popularity bias, 0–100. Default 50.
  * @property {boolean}      [offline]     True when it never touches the network. Default true.
@@ -39,6 +40,8 @@
  * @property {string}     blurb     Shown under the category heading.
  * @property {number}     order
  */
+
+import { KIND_IDS, TASK_IDS, unmappedCategories } from './kinds.js';
 
 /** Display order is deliberate: everyday utility first, specialist last. */
 export const CATEGORIES = /** @type {Category[]} */ ([
@@ -70,6 +73,13 @@ export function validateRegistry(tools) {
   const seen = new Set();
   const ids = new Set(tools.map(t => t.id));
 
+  /* Every category must belong to a home-page group. Seven tools once fell
+     through this gap — a metronome, a timer, the weather — and were
+     reachable only by search. Nothing silently drops off the front page. */
+  for (const c of unmappedCategories(CATEGORY_IDS)) {
+    problems.push(`category "${c}" is in no home-page group, so its tools would not appear on the home page`);
+  }
+
   for (const t of tools) {
     const where = `tool "${t.id || '(missing id)'}"`;
 
@@ -89,6 +99,17 @@ export function validateRegistry(tools) {
     }
 
     if (!t.keywords?.length) problems.push(`${where}: no keywords`);
+
+    /* Capability metadata is what lets one tool pick up another's output
+       without either knowing the other exists, so a typo in it silently
+       breaks interop rather than anything visible. Check it here. */
+    for (const field of ['accepts', 'produces']) {
+      for (const k of t[field] ?? []) {
+        if (!KIND_IDS.has(k)) problems.push(`${where}: unknown artifact kind "${k}" in ${field}`);
+      }
+    }
+    if (t.task && !TASK_IDS.has(t.task)) problems.push(`${where}: unknown task "${t.task}"`);
+
     for (const r of t.related ?? []) {
       if (!ids.has(r)) problems.push(`${where}: related tool "${r}" does not exist`);
       if (r === t.id) problems.push(`${where}: lists itself as related`);

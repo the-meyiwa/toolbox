@@ -1,5 +1,3 @@
-import { copyText } from '../utils.js';
-
 export default {
   render(container) {
     container.innerHTML = `
@@ -7,29 +5,29 @@ export default {
         <div class="tool-section">
           <label class="tool-label">Currency</label>
           <select class="tool-select" id="ci-currency" style="width:100%; margin-bottom:16px;">
-            <option value="USD" selected>USD - US Dollar ($)</option>
-            <option value="NGN">NGN - Nigerian Naira (₦)</option>
-            <option value="EUR">EUR - Euro (€)</option>
-            <option value="GBP">GBP - British Pound (£)</option>
-            <option value="JPY">JPY - Japanese Yen (¥)</option>
-            <option value="CAD">CAD - Canadian Dollar ($)</option>
-            <option value="AUD">AUD - Australian Dollar ($)</option>
-            <option value="INR">INR - Indian Rupee (₹)</option>
+            <option value="USD" selected>USD — US Dollar ($)</option>
+            <option value="NGN">NGN — Nigerian Naira (₦)</option>
+            <option value="EUR">EUR — Euro (€)</option>
+            <option value="GBP">GBP — British Pound (£)</option>
+            <option value="JPY">JPY — Japanese Yen (¥)</option>
+            <option value="CAD">CAD — Canadian Dollar ($)</option>
+            <option value="AUD">AUD — Australian Dollar ($)</option>
+            <option value="INR">INR — Indian Rupee (₹)</option>
           </select>
           
-          <label class="tool-label">Initial Investment</label>
+          <label class="tool-label">Initial investment</label>
           <input type="number" class="tool-input" id="ci-principal" value="10000" min="0" step="100">
           
-          <label class="tool-label" style="margin-top:16px;">Monthly Contribution</label>
+          <label class="tool-label" style="margin-top:16px;">Monthly contribution</label>
           <input type="number" class="tool-input" id="ci-monthly" value="500" min="0" step="50">
           
-          <label class="tool-label" style="margin-top:16px;">Estimated Annual Interest Rate (%)</label>
+          <label class="tool-label" style="margin-top:16px;">Estimated annual interest rate (%)</label>
           <input type="number" class="tool-input" id="ci-rate" value="7" min="0" max="100" step="0.1">
           
-          <label class="tool-label" style="margin-top:16px;">Years to Grow</label>
+          <label class="tool-label" style="margin-top:16px;">Years to grow</label>
           <input type="number" class="tool-input" id="ci-years" value="10" min="1" max="100" step="1">
           
-          <label class="tool-label" style="margin-top:16px;">Compounding Frequency</label>
+          <label class="tool-label" style="margin-top:16px;">Compounding frequency</label>
           <select class="tool-select" id="ci-freq" style="width:100%;">
             <option value="12" selected>Monthly (12/yr)</option>
             <option value="1">Annually (1/yr)</option>
@@ -39,21 +37,21 @@ export default {
         </div>
         
         <div class="tool-section">
-          <label class="tool-label">Future Value Projection</label>
+          <label class="tool-label">Projected value</label>
           <div class="tool-stats-grid" style="grid-template-columns: 1fr; gap: 16px;">
             <div class="tool-stat" style="background:var(--black); color:var(--white);">
               <div class="tool-stat-value" id="ci-total" style="font-size:2.4rem;">0</div>
-              <div class="tool-stat-label" style="color:var(--g400);">Final Balance</div>
+              <div class="tool-stat-label" style="color:var(--g400);">Final balance</div>
             </div>
             
             <div style="display:flex; gap:16px;">
               <div class="tool-stat" style="flex:1;">
                 <div class="tool-stat-value" id="ci-principal-total" style="font-size:1.3rem;">0</div>
-                <div class="tool-stat-label">Total Principal</div>
+                <div class="tool-stat-label">Total principal</div>
               </div>
               <div class="tool-stat" style="flex:1;">
                 <div class="tool-stat-value" id="ci-interest-total" style="font-size:1.3rem; color:#2E7D32;">0</div>
-                <div class="tool-stat-label">Total Interest</div>
+                <div class="tool-stat-label">Total interest</div>
               </div>
             </div>
           </div>
@@ -107,13 +105,13 @@ export default {
       const totalInterest = totalBalance - totalPrincipal;
       
       const currCode = currSel.value;
-      const format = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: currCode, maximumFractionDigits: 0 }).format(num);
+      const format = (num) => new Intl.NumberFormat(undefined, { style: 'currency', currency: currCode, maximumFractionDigits: 0 }).format(num);
 
       totalEl.textContent = format(totalBalance);
       pTotalEl.textContent = format(totalPrincipal);
       iTotalEl.textContent = format(totalInterest);
       
-      summaryEl.innerHTML = `In <strong>${t} years</strong>, your investment will grow to <strong>${format(totalBalance)}</strong>. You will have contributed <strong>${format(totalPrincipal)}</strong>, and earned <strong>${format(totalInterest)}</strong> in compound interest.`;
+      summaryEl.innerHTML = `In <strong>${t} year${t === 1 ? '' : 's'}</strong>, your investment will grow to <strong>${format(totalBalance)}</strong>. You will have contributed <strong>${format(totalPrincipal)}</strong>, and earned <strong>${format(totalInterest)}</strong> in compound interest.`;
     }
 
     inputs.forEach(el => el.addEventListener('input', calculate));

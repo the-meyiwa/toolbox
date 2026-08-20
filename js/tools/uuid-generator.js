@@ -20,7 +20,7 @@ export default {
           <label class="tool-label" style="margin:0;">Count</label>
           <input type="number" class="tool-input" id="uuid-count" value="5" min="1" max="100" style="width:70px; height:28px; text-align:center; font-size:0.78rem;">
         </div>
-        <button class="btn btn-secondary btn-sm" id="uuid-copy-all" style="margin-left:auto;">Copy All</button>
+        <button class="btn btn-secondary btn-sm" id="uuid-copy-all" style="margin-left:auto;">Copy all</button>
       </div>
       <div class="tool-section">
         <ul class="output-list" id="uuid-list"></ul>

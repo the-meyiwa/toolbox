@@ -97,7 +97,7 @@ export default {
           </div>
 
           <button class="btn btn-primary" id="inv-print" style="margin-top:14px; width:100%;">Print or save as PDF</button>
-          <p class="biz-hint">Choose "Save as PDF" as the destination in the print dialogue.</p>
+          <p class="biz-hint">Choose “Save as PDF” as the destination in the print dialogue.</p>
         </aside>
 
         <div class="inv-preview-wrap">

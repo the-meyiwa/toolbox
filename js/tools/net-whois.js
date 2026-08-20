@@ -19,7 +19,7 @@ export default {
       let domain = input.value.trim().replace(/^https?:\/\//, '').split('/')[0];
       if (!domain) return;
       res.style.display = 'block';
-      res.textContent = 'Querying WHOIS...';
+      res.textContent = 'Querying WHOIS…';
       try {
         const req = await fetch('https://networkcalc.com/api/dns/whois/' + encodeURIComponent(domain));
         const data = await req.json();

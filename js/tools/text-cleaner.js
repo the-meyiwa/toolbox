@@ -164,7 +164,13 @@ export default {
 
     inEl.focus();
     run();
+
+    this._read = () => outEl.value || inEl.value;
+    this._write = (text) => { inEl.value = text; run(); };
   },
 
-  destroy() {},
+  getArtifact() { return { kind: 'text', text: this._read?.() ?? '' }; },
+  setArtifact(a) { this._write?.(a.text); },
+
+  destroy() { this._read = this._write = null; },
 };
