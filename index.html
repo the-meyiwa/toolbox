@@ -141,6 +141,32 @@
                 </svg>
                 Complain about a tool
               </a>
+
+              <!-- The one button in the whole product allowed to show off. -->
+              <!-- The visible label turns into a thank-you once opened, which
+                   is charming to look at and useless to a screen reader, so the
+                   accessible name is set separately and always says what the
+                   button actually does. -->
+              <button type="button" class="surprise" id="surprise-btn"
+                      aria-expanded="false" aria-controls="surprise-reveal"
+                      aria-label="Surprise me — show details for tipping the creator">
+                <span class="surprise-label">Surprise Me</span>
+              </button>
+            </div>
+
+            <div class="surprise-reveal" id="surprise-reveal" hidden>
+              <p class="surprise-kicker">You came all this way</p>
+              <p class="surprise-line">If a tool here saved you an afternoon, the coffee fund is open.</p>
+              <dl class="surprise-details">
+                <div><dt>Bank</dt><dd>Access Bank</dd></div>
+                <div><dt>Account name</dt><dd>MEYIWA-MEYIGBENE NIFEMI EDUN</dd></div>
+                <div class="surprise-number-row">
+                  <dt>Account number</dt>
+                  <dd><span id="surprise-number">1909349540</span></dd>
+                </div>
+              </dl>
+              <button type="button" class="btn btn-primary btn-sm" id="surprise-copy">Copy account number</button>
+              <p class="surprise-footnote">Entirely optional. Every tool stays free either way.</p>
             </div>
             <p style="margin-top:12px; font-size:0.75rem; color:var(--g400);">Every message is read by one person. Tool requests that describe the actual problem tend to get built first.</p>
           </section>
