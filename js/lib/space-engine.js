@@ -135,6 +135,7 @@ export class SpaceEngine {
 
     this.provider = new WebrtcProvider(roomName, this.doc, {
       signaling: [
+        'wss://toolbox-signaling.onrender.com',
         'wss://signaling.yjs.dev',
         'wss://y-webrtc-signaling-eu.herokuapp.com',
         'wss://y-webrtc-signaling-us.herokuapp.com',
