@@ -144,7 +144,32 @@ export default {
       }
     });
 
+    this._state = state;
+    this._getCur = () => container.querySelector('#ts-cur')?.value || 'USD';
     refresh();
   },
-  destroy() {},
+
+  getArtifact() {
+    if (!this._state?.entries) return null;
+    const cur = this._getCur?.() || 'USD';
+    const rows = [
+      ['Date', 'Client', 'Task', 'Hours', `Rate (${cur})`, 'Billable', `Amount (${cur})`],
+      ...this._state.entries.map(x => [
+        x.date, x.client, x.task, x.hours, x.rate,
+        x.billable ? 'yes' : 'no',
+        (x.billable ? x.hours * x.rate : 0).toFixed(2)
+      ])
+    ];
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    return {
+      kind: 'csv',
+      name: 'timesheet.csv',
+      text: csv,
+    };
+  },
+
+  destroy() {
+    this._state = null;
+    this._getCur = null;
+  },
 };

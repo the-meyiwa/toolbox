@@ -127,8 +127,59 @@ export default {
         });
       }
 
+      this._lastAnalysis = {
+        name: container.querySelector('#doc-filename').textContent || 'document',
+        wordCount,
+        charCount,
+        paragraphs,
+        readingMinutes,
+        keywords: sortedKeywords,
+      };
+
       resultsDiv.style.display = 'block';
     }
+
+    this._analyzeText = analyzeText;
+    this._setFilename = (name) => {
+      container.querySelector('#doc-filename').textContent = name;
+    };
+
+    this._getArtifact = () => {
+      if (!this._lastAnalysis) return null;
+      const a = this._lastAnalysis;
+      let md = `# Document Analysis: ${a.name}\n\n`;
+      md += `- **Words**: ${a.wordCount.toLocaleString()}\n`;
+      md += `- **Characters**: ${a.charCount.toLocaleString()}\n`;
+      md += `- **Paragraphs**: ${a.paragraphs.toLocaleString()}\n`;
+      md += `- **Estimated Reading Time**: ${a.readingMinutes} min\n\n`;
+      if (a.keywords?.length) {
+        md += `### Top Keywords\n`;
+        a.keywords.forEach(([word, count]) => {
+          md += `- **${word}**: ${count}\n`;
+        });
+      }
+      return {
+        kind: 'markdown',
+        name: `${a.name.replace(/\.[^.]+$/, '')}-analysis.md`,
+        text: md,
+      };
+    };
   },
-  destroy() {}
+
+  getArtifact() {
+    return this._getArtifact?.() || null;
+  },
+
+  setArtifact(incoming) {
+    if (incoming?.text) {
+      this._setFilename?.(incoming.name || 'Incoming Document');
+      this._analyzeText?.(incoming.text);
+    }
+  },
+
+  destroy() {
+    this._getArtifact = null;
+    this._analyzeText = null;
+    this._setFilename = null;
+  }
 };

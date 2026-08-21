@@ -329,10 +329,34 @@ export default {
       parse();
     });
 
+    this._read = () => {
+      const exp = input.value.trim();
+      const desc = descEl.textContent;
+      if (!exp) return '';
+      return `# Cron Schedule: ${exp}\n\n**Description**: ${desc}\n\n### Upcoming Executions\n${nextEl.textContent.trim() || 'None'}\n`;
+    };
+    this._write = (text) => {
+      input.value = text.trim();
+      parse();
+    };
+
     input.addEventListener('input', parse);
     parse();
     input.focus();
   },
 
-  destroy() {},
+  getArtifact() {
+    return { kind: 'text', text: this._read?.() ?? '', name: 'cron-schedule.txt' };
+  },
+
+  setArtifact(incoming) {
+    if (incoming?.text) {
+      this._write?.(incoming.text);
+    }
+  },
+
+  destroy() {
+    this._read = null;
+    this._write = null;
+  },
 };

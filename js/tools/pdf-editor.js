@@ -3,6 +3,7 @@
 import { attachFileInput, dropZone, downloadBlob } from '../lib/file-engine.js';
 import { loadPdfLib, pdfBlob } from '../lib/pdf-engine.js';
 import { loadPdfJs, renderPageToCanvas, renderPageThumbnail, flattenAnnotations, convertToDocx, convertToPptx, convertToXlsx } from '../lib/pdf-editor-engine.js';
+import { handOff } from '../lib/artifacts.js';
 
 export default {
   async render(container, { analytics } = {}) {
@@ -46,6 +47,10 @@ export default {
             <button class="btn btn-secondary pde-convert-btn" id="pe-to-word">Convert to Word</button>
             <button class="btn btn-secondary pde-convert-btn" id="pe-to-excel">Convert to Excel</button>
             <button class="btn btn-secondary pde-convert-btn" id="pe-to-ppt">Convert to PPT</button>
+            <div class="pde-tool-sep"></div>
+            <button class="btn btn-secondary pde-convert-btn" id="pe-send-analyzer" title="Analyze document text and structure">Send to Analyzer</button>
+            <button class="btn btn-secondary pde-convert-btn" id="pe-send-split" title="Split or extract pages from this PDF">Send to Split</button>
+            <button class="btn btn-secondary pde-convert-btn" id="pe-send-merge" title="Combine this PDF with other files">Send to Merge</button>
           </div>
           <p class="fz-err" id="pe-error" hidden></p>
         </div>
@@ -445,10 +450,93 @@ export default {
         setBusy(false);
       }
     });
+
+    /* --------------- "Send To" Actions --------------- */
+
+    container.querySelector('#pe-send-analyzer')?.addEventListener('click', async () => {
+      if (!pdfJsDoc) return;
+      setBusy(true, 'Extracting text for Analyzer…');
+      await yieldPaint();
+      try {
+        let fullText = `# ${getBaseName()}\n\n`;
+        fullText += `**Pages**: ${numPages}\n**Annotations**: ${annotations.length}\n\n---\n\n`;
+        for (let i = 1; i <= numPages; i++) {
+          if (deletedPages.has(i - 1)) continue;
+          const p = await pdfJsDoc.getPage(i);
+          const content = await p.getTextContent();
+          const pageStr = content.items.map(it => it.str).join(' ');
+          fullText += `### Page ${i}\n\n${pageStr}\n\n`;
+        }
+        handOff({
+          kind: 'markdown',
+          name: `${getBaseName()}-analysis.md`,
+          text: fullText,
+          from: 'pdf-editor',
+        });
+        window.location.hash = '#document-analyzer';
+      } catch (err) {
+        errorEl.textContent = 'Could not extract text: ' + err.message;
+        errorEl.hidden = false;
+      } finally {
+        setBusy(false);
+      }
+    });
+
+    container.querySelector('#pe-send-split')?.addEventListener('click', async () => {
+      if (!pdfBytes) return;
+      handOff({
+        kind: 'text',
+        name: `${getBaseName()}.pdf`,
+        text: `PDF Document: ${getBaseName()} (${numPages} pages)`,
+        from: 'pdf-editor',
+      });
+      window.location.hash = '#pdf-split';
+    });
+
+    container.querySelector('#pe-send-merge')?.addEventListener('click', async () => {
+      if (!pdfBytes) return;
+      handOff({
+        kind: 'text',
+        name: `${getBaseName()}.pdf`,
+        text: `PDF Document: ${getBaseName()} (${numPages} pages)`,
+        from: 'pdf-editor',
+      });
+      window.location.hash = '#pdf-merge';
+    });
+
+    this._getArtifact = () => {
+      if (!pdfJsDoc) return null;
+      let text = `# ${getBaseName()}\n\n`;
+      text += `- Total Pages: ${numPages}\n`;
+      text += `- Active Pages: ${numPages - deletedPages.size}\n`;
+      text += `- Annotations: ${annotations.length}\n\n`;
+      if (annotations.length) {
+        text += `## Annotations List\n`;
+        annotations.forEach((a, idx) => {
+          text += `${idx + 1}. [Page ${a.page + 1}] Type: ${a.type} ${a.text ? `("${a.text}")` : ''}\n`;
+        });
+      }
+      return {
+        kind: 'markdown',
+        name: `${getBaseName()}-summary.md`,
+        text,
+      };
+    };
+  },
+
+  getArtifact() {
+    return this._getArtifact?.() || null;
+  },
+
+  setArtifact(incoming) {
+    if (incoming?.text) {
+      this._incomingText = incoming.text;
+    }
   },
 
   destroy() {
     for (const fn of this._cleanup ?? []) fn();
     this._cleanup = [];
+    this._getArtifact = null;
   },
 };

@@ -63,9 +63,40 @@ export default {
     }
 
     input.addEventListener('input', decode);
-    container.querySelector('#jwt-ch').addEventListener('click', (e) => { const t = headerEl.textContent; if (t && t !== '—') copyText(t, e.currentTarget); });
-    container.querySelector('#jwt-cp').addEventListener('click', (e) => { const t = payloadEl.textContent; if (t && t !== '—') copyText(t, e.currentTarget); });
+    container.querySelector('#jwt-ch').addEventListener('click', () => copyText(headerEl.textContent));
+    container.querySelector('#jwt-cp').addEventListener('click', () => copyText(payloadEl.textContent));
     input.focus();
+
+    this._read = () => {
+      const p = payloadEl.textContent;
+      if (!p || p === '—') return '';
+      try {
+        return JSON.stringify({
+          header: headerEl.textContent !== '—' ? JSON.parse(headerEl.textContent) : {},
+          payload: JSON.parse(p),
+        }, null, 2);
+      } catch {
+        return p;
+      }
+    };
+    this._write = (text) => {
+      input.value = text;
+      decode();
+    };
   },
-  destroy() {}
+
+  getArtifact() {
+    return { kind: 'json', text: this._read?.() ?? '' };
+  },
+
+  setArtifact(incoming) {
+    if (incoming?.text) {
+      this._write?.(incoming.text);
+    }
+  },
+
+  destroy() {
+    this._read = null;
+    this._write = null;
+  }
 };

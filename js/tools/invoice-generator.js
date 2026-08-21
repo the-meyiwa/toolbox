@@ -222,7 +222,36 @@ export default {
       }
     });
 
+    this._state = state;
+    this._refresh = refresh;
     refresh({ lines: true });
   },
-  destroy() {},
+
+  getArtifact() {
+    if (!this._state) return null;
+    return {
+      kind: 'json',
+      name: `${this._state.number || 'invoice'}.json`,
+      text: JSON.stringify(this._state, null, 2),
+    };
+  },
+
+  setArtifact(incoming) {
+    if (incoming?.text) {
+      try {
+        const data = JSON.parse(incoming.text);
+        if (data && typeof data === 'object' && this._state) {
+          Object.assign(this._state, data);
+          this._refresh?.({ lines: true });
+        }
+      } catch (err) {
+        console.warn('Could not parse incoming invoice data', err);
+      }
+    }
+  },
+
+  destroy() {
+    this._state = null;
+    this._refresh = null;
+  },
 };
