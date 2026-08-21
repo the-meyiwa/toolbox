@@ -215,17 +215,20 @@ export function mountArtifactStrip(host, { tool, instance, incoming }) {
     }
   }
 
-  strip.addEventListener('click', (e) => {
+  const yieldPaint = () => new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
+
+  strip.addEventListener('click', async (e) => {
     const act = e.target.closest('[data-act]')?.dataset.act;
-    if (act === 'save') return doSave();
-    if (act === 'export') return doExport();
-    if (act === 'share-space') return toggleSpaceModal();
+    if (act === 'save') { await yieldPaint(); return doSave(); }
+    if (act === 'export') { await yieldPaint(); return doExport(); }
+    if (act === 'share-space') { await yieldPaint(); return toggleSpaceModal(); }
     if (act === 'close-space-modal') { spaceModal.hidden = true; return; }
 
     if (act === 'share-code-submit') {
       const input = spaceModal.querySelector('.art-space-code-input');
       const code = input?.value.trim().toUpperCase();
       if (code && code.length >= 4) {
+        await yieldPaint();
         executeShare(code);
       }
       return;
@@ -235,12 +238,14 @@ export function mountArtifactStrip(host, { tool, instance, incoming }) {
     if (shareItem) {
       const code = shareItem.dataset.shareCode;
       const spaceName = shareItem.dataset.spaceName;
+      await yieldPaint();
       executeShare(code, spaceName);
       return;
     }
 
     if (act === 'open-in') {
       if (!menu.hidden) return closeMenu();
+      await yieldPaint();
       if (!buildMenu()) return;
       menu.hidden = false;
       openInBtn.setAttribute('aria-expanded', 'true');

@@ -9,14 +9,29 @@
 let yjsPromise = null;
 let ywebrtcPromise = null;
 
-function loadYjs() {
+export function loadYjs() {
   yjsPromise ??= import('yjs');
   return yjsPromise;
 }
 
-function loadYWebRTC() {
+export function loadYWebRTC() {
   ywebrtcPromise ??= import('y-webrtc');
   return ywebrtcPromise;
+}
+
+// Prefetch in background during idle time so click interactions are instantaneous (<16ms INP)
+if (typeof window !== 'undefined') {
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(() => {
+      loadYjs();
+      loadYWebRTC();
+    }, { timeout: 4000 });
+  } else {
+    setTimeout(() => {
+      loadYjs();
+      loadYWebRTC();
+    }, 2000);
+  }
 }
 
 const COLORS = [

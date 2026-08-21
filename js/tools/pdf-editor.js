@@ -359,9 +359,12 @@ export default {
       }
     };
 
+    const yieldPaint = () => new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
+
     container.querySelector('#pe-save').addEventListener('click', async () => {
+      setBusy(true, 'Saving PDF…');
+      await yieldPaint();
       try {
-        setBusy(true, 'Saving PDF…');
         const { PDFDocument, degrees } = await loadPdfLib();
         const src = await PDFDocument.load(pdfBytes);
         const out = await PDFDocument.create();
@@ -395,8 +398,9 @@ export default {
     });
 
     container.querySelector('#pe-to-word').addEventListener('click', async () => {
+      setBusy(true, 'Converting to Word…');
+      await yieldPaint();
       try {
-        setBusy(true, 'Converting to Word…');
         const blob = await convertToDocx(pdfJsDoc, numPages);
         downloadBlob(blob, getBaseName() + '.docx');
         analytics?.completed();
@@ -409,8 +413,9 @@ export default {
     });
 
     container.querySelector('#pe-to-ppt').addEventListener('click', async () => {
+      setBusy(true, 'Converting to PowerPoint…');
+      await yieldPaint();
       try {
-        setBusy(true, 'Converting to PowerPoint…');
         const blob = await convertToPptx(pdfJsDoc, numPages, async (i) => {
           const c = document.createElement('canvas');
           await renderPageToCanvas(pdfJsDoc, i, c, 2);
@@ -427,8 +432,9 @@ export default {
     });
 
     container.querySelector('#pe-to-excel').addEventListener('click', async () => {
+      setBusy(true, 'Converting to Excel…');
+      await yieldPaint();
       try {
-        setBusy(true, 'Converting to Excel…');
         const blob = await convertToXlsx(pdfJsDoc, numPages);
         downloadBlob(blob, getBaseName() + '.xlsx');
         analytics?.completed();
