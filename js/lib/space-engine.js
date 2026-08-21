@@ -158,14 +158,9 @@ export class SpaceEngine {
     this.doc = new Y.Doc();
     const roomName = `toolbox-space-${this.roomCode}`;
 
-    // Use fast multi-region signaling with public STUN servers for instant mobile NAT traversal
+    // All peers must connect to the exact same dedicated signaling server on Render
     this.provider = new WebrtcProvider(roomName, this.doc, {
-      signaling: [
-        'wss://signaling.yjs.dev',
-        'wss://toolbox-signaling.onrender.com',
-        'wss://y-webrtc-signaling-eu.herokuapp.com',
-        'wss://y-webrtc-signaling-us.herokuapp.com',
-      ],
+      signaling: ['wss://toolbox-signaling.onrender.com'],
       peerOpts: {
         config: {
           iceServers: [
@@ -178,7 +173,7 @@ export class SpaceEngine {
           ],
         },
       },
-      maxConns: 25,
+      maxConns: 30,
       filterBcConns: true,
     });
 
@@ -195,6 +190,7 @@ export class SpaceEngine {
     awareness.on('change', () => {
       this._updateMembersMap();
       this._emit('peer-update');
+      this._emit('members-update');
     });
 
     this.provider.on('status', event => {
@@ -203,6 +199,39 @@ export class SpaceEngine {
       } else if (event.status === 'disconnected') {
         this._emit('disconnected');
       }
+    });
+
+    this.provider.on('synced', () => {
+      this._emit('sync-update');
+      this._emit('meta-update');
+      this._emit('peer-update');
+      this._emit('chat-update');
+      this._emit('tasks-update');
+      this._emit('artifacts-update');
+      this._emit('activity-update');
+    });
+
+    // When remote CRDT updates arrive over WebRTC, trigger all relevant UI updates
+    this.doc.on('update', () => {
+      const name = this.metadata?.get('spaceName');
+      if (name) {
+        saveJoinedSpace({
+          id: this.roomCode,
+          name,
+          description: this.spaceDescription,
+          role: this.role,
+        });
+      }
+      this._emit('meta-update');
+      this._emit('chat-update');
+      this._emit('artifacts-update');
+      this._emit('files-update');
+      this._emit('tasks-update');
+      this._emit('poll-update');
+      this._emit('challenges-update');
+      this._emit('activity-update');
+      this._emit('notepad-update');
+      this._emit('members-update');
     });
 
     // Wire CRDT observers
@@ -354,7 +383,13 @@ export class SpaceEngine {
   get polls() { return this.doc?.getMap('polls'); }
   get notepad() { return this.doc?.getText('notepad'); }
 
-  get spaceName() { return this.metadata?.get('spaceName') || 'Untitled Space'; }
+  get spaceName() {
+    const metaName = this.metadata?.get('spaceName');
+    if (metaName && typeof metaName === 'string' && metaName.trim()) return metaName.trim();
+    const saved = getJoinedSpace(this.roomCode);
+    if (saved && saved.name) return saved.name;
+    return this.roomCode ? `Space ${this.roomCode}` : 'Space Desk';
+  }
   get spaceDescription() { return this.metadata?.get('description') || ''; }
   get isPublic() { return this.metadata?.get('isPublic') ?? true; }
   get ownerId() { return this.metadata?.get('ownerId') || ''; }
