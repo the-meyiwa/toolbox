@@ -4800,10 +4800,22 @@ input, select, textarea {
   .pde { grid-template-columns: 120px 1fr; }
   .pde-sidebar { max-height: 400px; }
 
-  .sp-desk-grid { grid-template-columns: 1fr; }
+  .sp-desk-grid { grid-template-columns: 1fr; gap: 20px; }
 }
 
 @media (max-width: 600px) {
+  /* Prevent iOS Safari 16px auto-zoom on input focus */
+  .tool-input,
+  .sp-input-code,
+  .sp-chat-input,
+  .sp-notepad-area,
+  input[type="text"],
+  input[type="date"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
   .home-tasks { grid-template-columns: 1fr; }
   .art-strip-main { align-items: stretch; }
   .art-name { max-width: none; }
@@ -4822,14 +4834,70 @@ input, select, textarea {
   .pde-thumb { flex-shrink: 0; width: 80px; }
   .pde-toolbar { overflow-x: auto; flex-wrap: nowrap; }
 
+  /* Spaces Mobile Layout */
+  .sp-directory { padding: 12px 0 40px; }
+  .sp-dir-hero { margin-bottom: 24px; padding-top: 16px; }
   .sp-dir-title { font-size: 2.2rem; }
-  .sp-dir-actions { width: 100%; }
-  .sp-dir-actions button { flex: 1; }
-  .sp-desk-summary { flex-direction: column; align-items: stretch; }
-  .sp-desk-stats { justify-content: space-between; }
-  .sp-stat-item { min-width: auto; flex: 1; }
-  .sp-chat { height: 460px; }
-  .sp-chat-msg { max-width: 85%; }
-  .sp-room-header { flex-direction: column; align-items: stretch; gap: 12px; }
-  .sp-room-header-actions { justify-content: flex-start; }
+  .sp-dir-sub { font-size: 0.95rem; margin-bottom: 20px; }
+  .sp-dir-actions { flex-direction: column; width: 100%; }
+  .sp-dir-actions button { width: 100%; justify-content: center; height: 44px; }
+  .sp-privacy-card { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px 16px; }
+  .sp-spaces-grid { grid-template-columns: 1fr; }
+
+  .sp-landing { margin: 16px auto 40px; padding: 0 10px; }
+  .sp-form-card { padding: 22px 18px; border-radius: 14px; }
+
+  /* Room Topbar & Navigation */
+  .sp-room-header { flex-direction: column; align-items: stretch; gap: 12px; padding: 10px 0 14px; }
+  .sp-title-row { flex-wrap: wrap; gap: 8px; }
+  .sp-room-title { font-size: 1.4rem; }
+  .sp-room-header-actions { display: flex; width: 100%; gap: 8px; }
+  .sp-room-header-actions button { flex: 1; justify-content: center; height: 38px; }
+
+  .sp-room-nav { gap: 2px; padding-top: 6px; -webkit-overflow-scrolling: touch; scrollbar-width: none; ms-overflow-style: none; }
+  .sp-room-nav::-webkit-scrollbar { display: none; }
+  .sp-nav-tab { padding: 7px 11px; font-size: 0.8rem; }
+  .sp-tab-icon { font-size: 0.88rem; }
+  .sp-room-content { padding: 16px 0 40px; }
+
+  /* Desk Overview */
+  .sp-desk { gap: 20px; }
+  .sp-desk-summary { padding: 16px; flex-direction: column; align-items: stretch; gap: 16px; }
+  .sp-desk-name { font-size: 1.25rem; }
+  .sp-desk-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
+  .sp-stat-item { min-width: auto; padding: 8px 10px; }
+  .sp-stat-num { font-size: 1.15rem; }
+  .sp-stat-label { font-size: 0.68rem; }
+
+  .sp-act-row { padding: 8px 10px; font-size: 0.82rem; }
+  .sp-act-icon { width: 24px; height: 24px; font-size: 0.95rem; }
+  .sp-act-time { font-size: 0.68rem; }
+
+  /* Artifacts */
+  .sp-artifacts-grid { grid-template-columns: 1fr; gap: 12px; }
+  .sp-filter-bar { padding-bottom: 6px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .sp-filter-bar::-webkit-scrollbar { display: none; }
+  .sp-art-card { padding: 14px; }
+  .sp-art-actions button { flex: 1; }
+
+  /* Chat */
+  .sp-chat { height: 68vh; min-height: 380px; max-height: 520px; border-radius: 12px; }
+  .sp-chat-messages { padding: 12px; gap: 10px; }
+  .sp-chat-msg { max-width: 86%; font-size: 0.86rem; padding: 8px 12px; }
+  .sp-chat-input-row { padding: 10px 12px; gap: 6px; }
+  .sp-chat-send { padding: 0 14px; height: 38px; }
+
+  /* Notepad & Polls */
+  .sp-sub-tabs { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .sp-notepad-area { height: 320px; padding: 14px; }
+  .sp-poll { padding: 14px; }
+
+  /* Tasks */
+  .sp-task-card { padding: 12px 14px; gap: 10px; }
+  .sp-task-check { width: 26px; height: 26px; }
+
+  /* Challenges & Members */
+  .sp-challenge-card { padding: 16px; }
+  .sp-invite-banner { padding: 16px; flex-direction: column; align-items: stretch; }
+  .sp-code-pill-wrap { justify-content: space-between; width: 100%; }
 }

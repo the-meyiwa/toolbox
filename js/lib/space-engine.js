@@ -19,18 +19,26 @@ export function loadYWebRTC() {
   return ywebrtcPromise;
 }
 
+export function prewarmSignaling() {
+  try {
+    fetch('https://toolbox-signaling.onrender.com/health', { mode: 'no-cors' }).catch(() => {});
+  } catch { /* ignore */ }
+}
+
 // Prefetch in background during idle time so click interactions are instantaneous (<16ms INP)
 if (typeof window !== 'undefined') {
   if ('requestIdleCallback' in window) {
     window.requestIdleCallback(() => {
       loadYjs();
       loadYWebRTC();
-    }, { timeout: 4000 });
+      prewarmSignaling();
+    }, { timeout: 3000 });
   } else {
     setTimeout(() => {
       loadYjs();
       loadYWebRTC();
-    }, 2000);
+      prewarmSignaling();
+    }, 1500);
   }
 }
 
@@ -55,33 +63,36 @@ export function getUserProfile() {
     name: '',
     color: COLORS[Math.floor(Math.random() * COLORS.length)],
   };
+  try {
+    localStorage.setItem(USER_KEY, JSON.stringify(defaultUser));
+  } catch { /* ignore */ }
   return defaultUser;
 }
 
-export function saveUserProfile(profile) {
-  try {
-    const current = getUserProfile();
-    const updated = { ...current, ...profile };
-    localStorage.setItem(USER_KEY, JSON.stringify(updated));
-    return updated;
-  } catch {
-    return profile;
+export function saveUserProfile(patch) {
+  const current = getUserProfile();
+  const updated = { ...current, ...patch };
+  if (!updated.color) {
+    updated.color = COLORS[Math.floor(Math.random() * COLORS.length)];
   }
+  try {
+    localStorage.setItem(USER_KEY, JSON.stringify(updated));
+  } catch { /* ignore */ }
+  return updated;
 }
 
 /* ---------------- Local Spaces Registry ---------------- */
 
 export function listJoinedSpaces() {
   try {
-    const list = JSON.parse(localStorage.getItem(SPACES_KEY) || '[]');
-    return Array.isArray(list) ? list.sort((a, b) => (b.lastActive || 0) - (a.lastActive || 0)) : [];
+    const raw = localStorage.getItem(SPACES_KEY);
+    return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
 }
 
 export function getJoinedSpace(code) {
-  if (!code) return null;
   const upper = code.toUpperCase();
   return listJoinedSpaces().find(s => s.id === upper) || null;
 }
@@ -89,14 +100,13 @@ export function getJoinedSpace(code) {
 export function saveJoinedSpace(summary) {
   try {
     const list = listJoinedSpaces();
-    const upperId = summary.id.toUpperCase();
-    const existingIdx = list.findIndex(s => s.id === upperId);
+    const upper = summary.id.toUpperCase();
+    const existingIdx = list.findIndex(s => s.id === upper);
     const item = {
-      id: upperId,
-      name: summary.name || 'Untitled Space',
+      id: upper,
+      name: summary.name || 'Space ' + upper,
       description: summary.description || '',
       role: summary.role || 'member',
-      joinedAt: summary.joinedAt || Date.now(),
       lastActive: Date.now(),
       isPublic: summary.isPublic ?? true,
       ownerName: summary.ownerName || '',
@@ -148,13 +158,28 @@ export class SpaceEngine {
     this.doc = new Y.Doc();
     const roomName = `toolbox-space-${this.roomCode}`;
 
+    // Use fast multi-region signaling with public STUN servers for instant mobile NAT traversal
     this.provider = new WebrtcProvider(roomName, this.doc, {
       signaling: [
-        'wss://toolbox-signaling.onrender.com',
         'wss://signaling.yjs.dev',
+        'wss://toolbox-signaling.onrender.com',
         'wss://y-webrtc-signaling-eu.herokuapp.com',
         'wss://y-webrtc-signaling-us.herokuapp.com',
       ],
+      peerOpts: {
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' },
+            { urls: 'stun:stun.cloudflare.com:3478' },
+          ],
+        },
+      },
+      maxConns: 25,
+      filterBcConns: true,
     });
 
     const awareness = this.provider.awareness;

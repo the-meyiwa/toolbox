@@ -6,7 +6,7 @@
    and the Space Desk workspace.
    ============================================================ */
 
-import { SpaceEngine, listJoinedSpaces, removeJoinedSpace, getUserProfile, saveUserProfile } from '../lib/space-engine.js';
+import { SpaceEngine, listJoinedSpaces, removeJoinedSpace, getUserProfile, saveUserProfile, prewarmSignaling } from '../lib/space-engine.js';
 import {
   mountDeskOverview,
   mountArtifactsView,
@@ -26,6 +26,7 @@ const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
  * @returns {() => void} teardown
  */
 export function renderSpaces(host, rawPath = null) {
+  prewarmSignaling();
   let engine = new SpaceEngine();
   let currentTab = 'desk'; // 'desk' | 'artifacts' | 'discussion' | 'tasks' | 'live' | 'challenges' | 'members'
   let unmountActivity = null;
@@ -470,6 +471,21 @@ export function renderSpaces(host, rawPath = null) {
 
   host.addEventListener('click', onClick);
   host.addEventListener('submit', onSubmit);
+
+  const updateHeaderInfo = () => {
+    if (viewState === 'room') {
+      const titleEl = host.querySelector('.sp-room-title');
+      if (titleEl && engine.spaceName) titleEl.textContent = engine.spaceName;
+      const tagEl = host.querySelector('.sp-online-tag');
+      if (tagEl) {
+        const count = engine.onlineMembers.size;
+        tagEl.innerHTML = `<span class="sp-dot-live"></span> ${count} active peer${count === 1 ? '' : 's'}`;
+      }
+    }
+  };
+
+  engine.on('meta-update', updateHeaderInfo);
+  engine.on('peer-update', updateHeaderInfo);
 
   engine.on('disconnected', () => {
     if (viewState === 'room') {
