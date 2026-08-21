@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node server.js"
   },
   "devDependencies": {
     "@gltf-transform/core": "^4.4.2",
@@ -19,12 +20,14 @@
   "dependencies": {
     "docx": "^9.7.1",
     "exceljs": "^4.4.0",
+    "lib0": "^0.2.117",
     "marked": "^15.0.0",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.2.108",
     "pptxgenjs": "^4.0.1",
     "qrcode": "^1.5.4",
     "three": "^0.185.1",
+    "ws": "^8.21.3",
     "y-webrtc": "^10.3.0",
     "yjs": "^13.6.32"
   },
