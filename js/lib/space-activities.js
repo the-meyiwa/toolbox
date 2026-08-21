@@ -82,17 +82,24 @@ export function mountDeskOverview(container, engine) {
 
             <div class="sp-activity-stream">
               ${activityList.length ? activityList.slice(0, 15).map(act => {
-                let icon = '📌';
-                if (act.type === 'artifact_shared') icon = '📄';
-                else if (act.type === 'file_shared') icon = '📁';
-                else if (act.type === 'member_joined') icon = '👋';
-                else if (act.type === 'task_created' || act.type === 'task_status') icon = '📋';
-                else if (act.type === 'poll_created') icon = '📊';
-                else if (act.type === 'challenge_created' || act.type === 'challenge_submission') icon = '🎯';
+                let iconSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle></svg>';
+                if (act.type === 'artifact_shared') {
+                  iconSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>';
+                } else if (act.type === 'file_shared') {
+                  iconSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>';
+                } else if (act.type === 'member_joined') {
+                  iconSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>';
+                } else if (act.type === 'task_created' || act.type === 'task_status') {
+                  iconSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>';
+                } else if (act.type === 'poll_created') {
+                  iconSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>';
+                } else if (act.type === 'challenge_created' || act.type === 'challenge_submission') {
+                  iconSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>';
+                }
 
                 return `
                   <div class="sp-act-row">
-                    <div class="sp-act-icon">${icon}</div>
+                    <div class="sp-act-icon">${iconSvg}</div>
                     <div class="sp-act-content">
                       <span class="sp-act-actor">${escapeHtml(act.actorName)}</span>
                       <span class="sp-act-text">${escapeHtml(act.text)}</span>
@@ -102,7 +109,9 @@ export function mountDeskOverview(container, engine) {
                 `;
               }).join('') : `
                 <div class="sp-empty-stream">
-                  <div class="sp-empty-icon">⏳</div>
+                  <div class="sp-empty-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  </div>
                   <p>No activity yet. Share an artifact from any tool, create a task, or start a discussion.</p>
                 </div>
               `}
@@ -117,7 +126,9 @@ export function mountDeskOverview(container, engine) {
 
             <div class="sp-quick-actions">
               <a href="#tools" class="sp-quick-link">
-                <span class="sp-quick-icon">🔨</span>
+                <span class="sp-quick-icon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                </span>
                 <div class="sp-quick-info">
                   <strong>Open a Tool</strong>
                   <p>Create work and click "Share to Space"</p>
@@ -125,7 +136,9 @@ export function mountDeskOverview(container, engine) {
                 <span class="sp-quick-arr">→</span>
               </a>
               <button class="sp-quick-link" data-go-tab="live">
-                <span class="sp-quick-icon">📝</span>
+                <span class="sp-quick-icon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </span>
                 <div class="sp-quick-info">
                   <strong>Shared Notepad</strong>
                   <p>Real-time collaborative text editor</p>
@@ -133,7 +146,9 @@ export function mountDeskOverview(container, engine) {
                 <span class="sp-quick-arr">→</span>
               </button>
               <button class="sp-quick-link" data-go-tab="tasks">
-                <span class="sp-quick-icon">📋</span>
+                <span class="sp-quick-icon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                </span>
                 <div class="sp-quick-info">
                   <strong>Task Board</strong>
                   <p>Track team goals &amp; deliverables</p>
@@ -297,7 +312,9 @@ export function mountArtifactsView(container, engine) {
 
         ${!artifacts.length && !rawFiles.length ? `
           <div class="sp-empty-pane">
-            <div class="sp-empty-icon">📁</div>
+            <div class="sp-empty-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            </div>
             <p class="sp-empty-title">No artifacts in this space yet</p>
             <p class="sp-empty-desc">Use any Toolbox tool (Markdown, JSON, Code, Diagrams), click <strong>"Share to Space"</strong> on the artifact strip, and it will appear here for all members.</p>
             <a href="#tools" class="btn btn-primary btn-sm">Explore Tools →</a>
@@ -451,7 +468,9 @@ export function mountDiscussionView(container, engine) {
     if (!msgs.length) {
       messagesDiv.innerHTML = `
         <div class="sp-empty-chat">
-          <div class="sp-empty-icon">💬</div>
+          <div class="sp-empty-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          </div>
           <p>This is the start of the discussion for <strong>${escapeHtml(engine.spaceName)}</strong>.</p>
         </div>
       `;
@@ -593,8 +612,18 @@ export function mountTasksView(container, engine) {
                 ${t.description ? `<div class="sp-task-desc">${escapeHtml(t.description)}</div>` : ''}
                 <div class="sp-task-meta">
                   <span class="sp-status-badge is-${t.status}">${t.status === 'done' ? 'Done' : (t.status === 'doing' ? 'In Progress' : 'To Do')}</span>
-                  ${t.assigneeName ? `<span class="sp-task-assignee">👤 ${escapeHtml(t.assigneeName)}</span>` : ''}
-                  ${t.dueDate ? `<span class="sp-task-due">📅 ${t.dueDate}</span>` : ''}
+                  ${t.assigneeName ? `
+                    <span class="sp-task-assignee">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                      ${escapeHtml(t.assigneeName)}
+                    </span>
+                  ` : ''}
+                  ${t.dueDate ? `
+                    <span class="sp-task-due">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                      ${t.dueDate}
+                    </span>
+                  ` : ''}
                   <span class="sp-task-creator">by ${escapeHtml(t.createdBy)}</span>
                 </div>
               </div>
@@ -695,10 +724,12 @@ export function mountLiveSessionsView(container, engine) {
       <div class="sp-sessions-pane fade-in">
         <div class="sp-sub-tabs">
           <button class="sp-sub-tab ${subTab === 'notepad' ? 'is-active' : ''}" data-sub="notepad">
-            📝 Shared Notepad
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:4px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            Shared Notepad
           </button>
           <button class="sp-sub-tab ${subTab === 'polls' ? 'is-active' : ''}" data-sub="polls">
-            📊 Live Polls
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:4px;"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            Live Polls
           </button>
         </div>
         <div class="sp-session-body"></div>

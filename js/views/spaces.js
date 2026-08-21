@@ -138,7 +138,9 @@ export function renderSpaces(host, rawPath = null) {
           </div>
         ` : `
           <div class="sp-empty-directory">
-            <div class="sp-empty-icon">🗂️</div>
+            <div class="sp-empty-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            </div>
             <h3 class="sp-empty-title">No spaces joined yet</h3>
             <p class="sp-empty-desc">Create a space for your team or study group, or enter a room code from a colleague to get started.</p>
             <div style="display:flex; gap:10px; margin-top:8px;">
@@ -269,25 +271,46 @@ export function renderSpaces(host, rawPath = null) {
         <!-- Navigation Tabs (Segmented Bar) -->
         <nav class="sp-room-nav">
           <button class="sp-nav-tab ${currentTab === 'desk' ? 'is-active' : ''}" data-tab="desk">
-            <span class="sp-tab-icon">🖥️</span> Desk
+            <span class="sp-tab-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            </span>
+            Desk
           </button>
           <button class="sp-nav-tab ${currentTab === 'artifacts' ? 'is-active' : ''}" data-tab="artifacts">
-            <span class="sp-tab-icon">📁</span> Artifacts &amp; Files
+            <span class="sp-tab-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            </span>
+            Artifacts &amp; Files
           </button>
           <button class="sp-nav-tab ${currentTab === 'discussion' ? 'is-active' : ''}" data-tab="discussion">
-            <span class="sp-tab-icon">💬</span> Discussion
+            <span class="sp-tab-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            </span>
+            Discussion
           </button>
           <button class="sp-nav-tab ${currentTab === 'tasks' ? 'is-active' : ''}" data-tab="tasks">
-            <span class="sp-tab-icon">📋</span> Tasks
+            <span class="sp-tab-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+            </span>
+            Tasks
           </button>
           <button class="sp-nav-tab ${currentTab === 'live' ? 'is-active' : ''}" data-tab="live">
-            <span class="sp-tab-icon">📝</span> Live Sessions
+            <span class="sp-tab-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            </span>
+            Live Sessions
           </button>
           <button class="sp-nav-tab ${currentTab === 'challenges' ? 'is-active' : ''}" data-tab="challenges">
-            <span class="sp-tab-icon">🎯</span> Challenges
+            <span class="sp-tab-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+            </span>
+            Challenges
           </button>
           <button class="sp-nav-tab ${currentTab === 'members' ? 'is-active' : ''}" data-tab="members">
-            <span class="sp-tab-icon">👥</span> Members
+            <span class="sp-tab-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            </span>
+            Members
           </button>
         </nav>
 
