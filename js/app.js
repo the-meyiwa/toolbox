@@ -321,6 +321,7 @@ const CATEGORY_TIPS = {
   'developer': ['Paste your code or data into the input.', 'Output updates live, and everything runs locally.'],
   'numbers': ['Enter a value and the conversions appear immediately.'],
   'business': ['Fill in what you know — results recalculate as you type.', 'Figures stay on your device.'],
+  'law': ['Paste or upload legal judgments, contracts or statutes — everything stays private on your device.', 'Export structured briefs, digests, or Bates-numbered PDF bundles.'],
   'design': ['Adjust the inputs and the preview updates live.'],
   'security': ['Generated secrets never leave your browser and are never logged.'],
   'networking': ['Enter the IP, domain or URL to look up.', 'These tools query a public service, so they need a connection.'],

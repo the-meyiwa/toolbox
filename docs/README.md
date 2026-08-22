@@ -1,22 +1,26 @@
-# Toolbox Documentation & Implementation Guides
+# Toolbox & Voltix Canonical Product & Engineering Documentation
 
-Welcome to the technical documentation and developer guides for **Toolbox** and the **Voltix** ecosystem.
-
-## Documentation Index
-
-- **[Architecture Guide](ARCHITECTURE.md)**: High-level system architecture, design philosophy (*"Local by default. Shared by intention."*), core subsystems (Shell, Registry, Artifacts, Spaces, 3D Viewer), and state management.
-- **[Tool Implementation Guide](IMPLEMENTATION_GUIDE.md)**: Step-by-step developer guide for adding and extending tools, UI patterns, canvas & image engines, WebRTC workflows, and performance rules.
-- **[Voltix Integration Guide](VOLTIX_INTEGRATION_GUIDE.md)**: Architectural alignment, shared data contracts, cross-platform integrations, design language consistency, and long-term maintainability standards.
+Welcome to the canonical engineering guide, architectural blueprint, and complete product reference for **Toolbox** and the **Voltix** application suite.
 
 ---
 
-## Core Philosophy
+## Documentation Structure
 
-1. **Local by default. Shared by intention.**
-   Every tool runs directly on the user's device in standard Web APIs (Canvas, WebGL, Web Audio, WebAssembly, WebRTC). Zero personal data is sent to external servers unless the user explicitly collaborates via Spaces.
+| Guide | Scope & Content |
+| :--- | :--- |
+| **[Architecture Guide](ARCHITECTURE.md)** | Core system architecture, SPA shell, ESM code splitting, hash router, state management, 3D WebGL pipeline, P2P WebRTC Spaces engine, privacy and security model. |
+| **[Implementation & Tool Reference](IMPLEMENTATION_GUIDE.md)** | Exhaustive technical directory of all 75+ tools, algorithms, input/output kinds, UI paradigms, shared file/PDF engines, and extension guide. |
+| **[Voltix Integration Guide](VOLTIX_INTEGRATION_GUIDE.md)** | Ecosystem alignment, shared data contracts (JSON schemas, artifacts), cross-platform workflows, WebRTC signaling protocols, and maintainability standards. |
 
-2. **Many capabilities, few concepts, no manual required.**
-   No signup, no tracking, no multi-step wizard setups. Open the tool, perform the task, download or share the result, close the tab.
+---
 
-3. **Restrained, Swiss-inspired design language.**
-   High contrast, intentional typography (`Inter`, `JetBrains Mono`, `Pixelify Sans`), clear visual hierarchies, and fast 60 FPS interactions.
+## Core Product Principles
+
+### 1. Local by Default. Shared by Intention.
+All computing tasks — whether image inpainting, PDF pagination/redaction, 3D mesh rendering, text sanitization, or financial modeling — execute entirely on the user's device utilizing modern browser standards (`Canvas`, `WebGL`, `WebAssembly`, `Web Workers`, `Web Audio`). Zero personal files or pasted texts leave the client machine unless explicitly shared into collaborative WebRTC Spaces.
+
+### 2. Many Capabilities, Few Concepts, No Manual Required.
+Zero mandatory onboarding, zero paywalls, zero account registrations. The product philosophy favors immediate utility: open the tool, complete the task, save or hand off the artifact, and exit.
+
+### 3. Restrained Swiss Design & 60 FPS Performance.
+Clean, intentional typography (`Inter`, `JetBrains Mono`, `Pixelify Sans`), high contrast ratios (WCAG AAA compliant), responsive mobile-first layouts, and non-blocking asynchronous processing loops.

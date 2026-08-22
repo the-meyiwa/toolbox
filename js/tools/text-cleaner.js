@@ -1,169 +1,252 @@
-/* Text Cleaner — strip what came along for the ride.
+/* ============================================================
+   Clean Text — Invisible Character & Unicode Sanitizer.
 
-   Text copied out of Word, a PDF or a chat window arrives carrying smart
-   quotes, non-breaking spaces, soft hyphens and zero-width characters
-   that break search, code and CSVs while looking completely normal.
-   This finds them, says what it found, and removes them. */
+   Detects and strips zero-width characters, invisible markers,
+   unusual Unicode whitespaces, and hidden formatting artifacts.
+   Normalizes text for reliable searching, coding, parsing & storage.
+   Positions as text sanitization & hygiene, not AI detection bypass.
+   ============================================================ */
 
 import { copyText } from '../utils.js';
+import { dropZone, attachFileInput, downloadBlob } from '../lib/file-engine.js';
 
-/* Each fix reports how many times it fired, so the tool can tell you
-   what was actually wrong rather than silently rewriting your text. */
-const FIXES = [
+const SANITIZATION_RULES = [
   {
     id: 'invisible',
-    label: 'Invisible characters',
-    hint: 'Zero-width spaces and joiners, byte-order marks, soft hyphens',
+    label: 'Zero-Width & Invisible Characters',
+    hint: 'Removes ZWSP (\\u200B), ZWJ, ZWNJ, BOM (\\uFEFF), soft hyphens (\\u00AD), LTR/RTL marks, and invisible separators',
     on: true,
-    apply: (t) => t.replace(/[​-‍⁠﻿­]/g, ''),
+    apply: (t) => t.replace(/[\u200B-\u200D\uFEFF\u00AD\u200E\u200F\u2060-\u2064\u206A-\u206F\uFFF9-\uFFFB]/g, ''),
+    countMatch: (t) => (t.match(/[\u200B-\u200D\uFEFF\u00AD\u200E\u200F\u2060-\u2064\u206A-\u206F\uFFF9-\uFFFB]/g) || []).length,
   },
   {
-    id: 'nbsp',
-    label: 'Non-breaking spaces',
-    hint: 'Look like spaces, behave differently, break code and CSV parsing',
+    id: 'control',
+    label: 'Non-Printable Control Characters',
+    hint: 'Strips null bytes and unprintable ASCII control characters (\\u0000-\\u0008, \\u000B, \\u000C, \\u000E-\\u001F)',
     on: true,
-    apply: (t) => t.replace(/[   ]/g, ' '),
+    apply: (t) => t.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, ''),
+    countMatch: (t) => (t.match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g) || []).length,
   },
   {
-    id: 'quotes',
-    label: 'Smart quotes and dashes',
-    hint: 'Curly quotes, en and em dashes, ellipses to plain equivalents',
+    id: 'unicode-spaces',
+    label: 'Unusual Unicode Whitespaces',
+    hint: 'Normalizes NBSP (\\u00A0), en-space, em-space, thin space, hair space, and ideographic spaces into standard space',
+    on: true,
+    apply: (t) => t.replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' '),
+    countMatch: (t) => (t.match(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g) || []).length,
+  },
+  {
+    id: 'quotes-dashes',
+    label: 'Smart Quotes, Dashes & Ellipses',
+    hint: 'Converts curly quotes (‘’ “”), backticks/primes, en/em dashes (– —), and ellipses (…) to plain ASCII equivalents',
     on: true,
     apply: (t) => t
-      .replace(/[‘’‚‛]/g, "'")
+      .replace(/[‘’‚‛`]/g, "'")
       .replace(/[“”„‟]/g, '"')
       .replace(/[–—―]/g, '-')
       .replace(/…/g, '...'),
+    countMatch: (t) => (t.match(/[‘’‚‛`“”„‟–—―…]/g) || []).length,
   },
   {
-    id: 'spaces',
-    label: 'Repeated spaces',
-    hint: 'Collapses runs of spaces and tabs into one',
+    id: 'repeated-spaces',
+    label: 'Repeated Spaces & Tabs',
+    hint: 'Collapses consecutive space and tab runs into a single clean space',
     on: true,
     apply: (t) => t.replace(/[ \t]{2,}/g, ' '),
+    countMatch: (t) => {
+      const matches = t.match(/[ \t]{2,}/g) || [];
+      return matches.reduce((acc, m) => acc + (m.length - 1), 0);
+    },
   },
   {
-    id: 'trailing',
-    label: 'Trailing whitespace',
-    hint: 'Spaces left at the end of lines',
+    id: 'trailing-space',
+    label: 'Trailing Line Whitespace',
+    hint: 'Removes unnecessary whitespace at the end of lines',
     on: true,
     apply: (t) => t.replace(/[ \t]+$/gm, ''),
+    countMatch: (t) => (t.match(/[ \t]+$/gm) || []).length,
   },
   {
-    id: 'blanklines',
-    label: 'Extra blank lines',
-    hint: 'More than one empty line in a row',
-    on: false,
-    apply: (t) => t.replace(/\n{3,}/g, '\n\n'),
-  },
-  {
-    id: 'linebreaks',
-    label: 'Line breaks inside paragraphs',
-    hint: 'Rejoins text that was hard-wrapped by a PDF or email client',
-    on: false,
-    apply: (t) => t.replace(/([^\n])\n(?!\n)([^\n\s])/g, '$1 $2'),
-  },
-  {
-    id: 'crlf',
-    label: 'Windows line endings',
-    hint: 'Converts CRLF to LF',
+    id: 'line-endings',
+    label: 'Normalize Line Endings (CRLF → LF)',
+    hint: 'Standardizes Windows \\r\\n line endings to standard Unix \\n line feeds',
     on: true,
     apply: (t) => t.replace(/\r\n?/g, '\n'),
+    countMatch: (t) => (t.match(/\r\n?/g) || []).length,
   },
   {
-    id: 'emoji',
-    label: 'Emoji and pictographs',
-    hint: 'Off by default — only when you need plain text',
+    id: 'extra-blank-lines',
+    label: 'Excessive Blank Lines',
+    hint: 'Collapses more than 2 consecutive blank lines into one',
     on: false,
-    apply: (t) => t.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{1F1E6}-\u{1F1FF}]/gu, ''),
+    apply: (t) => t.replace(/\n{3,}/g, '\n\n'),
+    countMatch: (t) => (t.match(/\n{3,}/g) || []).length,
   },
 ];
 
 export default {
-  render(container, { analytics } = {}) {
+  render(container, { analytics, artifact } = {}) {
+    this._cleanup = [];
+
     container.innerHTML = `
-      <div class="tool-section">
-        <label class="tool-label" for="tc-in">Paste your text</label>
-        <textarea class="tool-textarea" id="tc-in" rows="8" spellcheck="false"
-          placeholder="Paste from Word, a PDF, an email — anywhere text picks up hidden characters."></textarea>
+      <!-- Notice Strip -->
+      <div class="biz-explain" style="margin-bottom:14px; font-size:0.82rem; display:flex; align-items:center; gap:8px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>Text Sanitization &amp; Clipboard Hygiene: Strips invisible Unicode artifacts that corrupt search, CSVs, code, and databases.</span>
       </div>
 
-      <div class="tc-fixes" id="tc-fixes">
-        ${FIXES.map(f => `
+      <!-- Upload / Paste Section -->
+      <div class="tool-section">
+        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+          <label class="tool-label" for="tc-in" style="margin:0;">Source Text or File</label>
+          <span style="font-size:0.78rem; color:var(--g600);">Paste text or drop .txt, .md, .csv, .json</span>
+        </div>
+        ${dropZone('tc-zone', { label: 'Drop a text file to clean (.txt, .md, .csv, .json, .log)', accept: '.txt,.md,.csv,.json,.log,.text' })}
+        <textarea class="tool-textarea" id="tc-in" rows="7" spellcheck="false"
+          placeholder="Paste text from PDFs, Word documents, emails, or chat windows..." style="margin-top:8px; font-family:var(--mono); font-size:0.84rem;"></textarea>
+      </div>
+
+      <!-- Sanitization Rules Toggles -->
+      <div class="tc-fixes" id="tc-fixes" style="margin-top:12px;">
+        ${SANITIZATION_RULES.map(r => `
           <label class="tc-fix">
-            <input type="checkbox" data-fix="${f.id}"${f.on ? ' checked' : ''}>
+            <input type="checkbox" data-fix="${r.id}"${r.on ? ' checked' : ''}>
             <span class="tc-fix-body">
-              <span class="tc-fix-label">${f.label}<b class="tc-count" data-count="${f.id}"></b></span>
-              <span class="tc-fix-hint">${f.hint}</span>
+              <span class="tc-fix-label">${r.label}<b class="tc-count" data-count="${r.id}"></b></span>
+              <span class="tc-fix-hint">${r.hint}</span>
             </span>
           </label>`).join('')}
       </div>
 
-      <div class="tool-section">
-        <div class="tool-row" style="justify-content:space-between; align-items:baseline;">
-          <label class="tool-label" for="tc-out">Cleaned</label>
-          <span class="fz-meta" id="tc-summary"></span>
-        </div>
-        <textarea class="tool-textarea" id="tc-out" rows="8" readonly spellcheck="false"></textarea>
+      <!-- Stats Summary Strip -->
+      <div id="tc-stats-strip" style="margin-top:14px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <span id="tc-summary" class="fz-meta" style="font-weight:600; font-size:0.84rem; color:var(--g800);"></span>
+        <div id="tc-pills" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
       </div>
 
-      <div class="tool-controls">
-        <button class="btn btn-primary" id="tc-copy">Copy cleaned text</button>
-        <button class="btn btn-secondary btn-sm" id="tc-replace">Replace input with result</button>
-        <button class="btn btn-secondary btn-sm" id="tc-clear">Clear</button>
-      </div>`;
+      <!-- Output Section -->
+      <div class="tool-section" style="margin-top:14px;">
+        <div class="tool-row" style="justify-content:space-between; align-items:baseline; margin-bottom:6px;">
+          <label class="tool-label" for="tc-out" style="margin:0;">Cleaned Text</label>
+          <span id="tc-out-meta" style="font-size:0.78rem; color:var(--g600); font-family:var(--mono);"></span>
+        </div>
+        <textarea class="tool-textarea" id="tc-out" rows="7" readonly spellcheck="false" style="font-family:var(--mono); font-size:0.84rem;"></textarea>
+      </div>
 
-    const $ = (id) => container.querySelector('#' + id);
-    const inEl = $('tc-in'), outEl = $('tc-out');
+      <!-- Action Controls -->
+      <div class="tool-controls" style="justify-content:space-between; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-primary" id="tc-copy">Copy Cleaned Text</button>
+          <button class="btn btn-secondary btn-sm" id="tc-download">Download File</button>
+          <button class="btn btn-secondary btn-sm" id="tc-replace">Replace Input with Result</button>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="tc-clear">Clear</button>
+      </div>
+    `;
+
+    const zone      = container.querySelector('#tc-zone');
+    const inputZone = container.querySelector('#tc-zone-input');
+    const inEl      = container.querySelector('#tc-in');
+    const outEl     = container.querySelector('#tc-out');
+    const fixesEl   = container.querySelector('#tc-fixes');
+    const summaryEl = container.querySelector('#tc-summary');
+    const pillsEl   = container.querySelector('#tc-pills');
+    const outMetaEl = container.querySelector('#tc-out-meta');
+    const copyBtn   = container.querySelector('#tc-copy');
+    const downloadBtn = container.querySelector('#tc-download');
+    const replaceBtn= container.querySelector('#tc-replace');
+    const clearBtn  = container.querySelector('#tc-clear');
+
+    let currentFileName = 'cleaned_text.txt';
     let started = false;
+
+    this._cleanup.push(attachFileInput(zone, inputZone, (files) => {
+      if (files[0]) {
+        currentFileName = `cleaned_${files[0].name}`;
+        files[0].text().then(t => {
+          inEl.value = t;
+          run();
+        });
+      }
+    }));
 
     function run() {
       const source = inEl.value;
       let text = source;
-      let totalChanges = 0;
+      let totalModifications = 0;
+      const statPills = [];
 
-      for (const fix of FIXES) {
-        const box = container.querySelector(`[data-fix="${fix.id}"]`);
-        const countEl = container.querySelector(`[data-count="${fix.id}"]`);
+      for (const rule of SANITIZATION_RULES) {
+        const box = fixesEl.querySelector(`[data-fix="${rule.id}"]`);
+        const countEl = fixesEl.querySelector(`[data-count="${rule.id}"]`);
 
-        // Count what this fix would change even when it is switched off,
-        // so the label tells you the text has a problem you are ignoring.
-        const probe = fix.apply(text);
-        const changed = probe === text ? 0 : Math.abs(text.length - probe.length) || 1;
-        countEl.textContent = changed ? ` ${changed}` : '';
-        countEl.classList.toggle('is-hot', changed > 0 && !box.checked);
+        const detectedCount = rule.countMatch(text);
+        countEl.textContent = detectedCount ? ` ${detectedCount}` : '';
+        countEl.classList.toggle('is-hot', detectedCount > 0 && !box.checked);
 
-        if (box.checked && probe !== text) {
-          text = probe;
-          totalChanges += changed;
+        if (detectedCount > 0) {
+          statPills.push({ label: rule.label.split(' ')[0], count: detectedCount, active: box.checked });
+        }
+
+        if (box.checked) {
+          const applied = rule.apply(text);
+          if (applied !== text) {
+            totalModifications += detectedCount || 1;
+            text = applied;
+          }
         }
       }
 
       outEl.value = text;
 
-      const removed = source.length - text.length;
-      $('tc-summary').textContent = source
-        ? (removed === 0 && totalChanges === 0
-            ? 'Nothing to clean — this text is already plain'
-            : `${source.length.toLocaleString()} → ${text.length.toLocaleString()} characters${removed > 0 ? ` · ${removed.toLocaleString()} removed` : ''}`)
-        : '';
+      const charDiff = source.length - text.length;
+      if (!source) {
+        summaryEl.textContent = '';
+        pillsEl.innerHTML = '';
+        outMetaEl.textContent = '';
+      } else if (charDiff === 0 && totalModifications === 0) {
+        summaryEl.textContent = '✨ Clean — no invisible characters or formatting artifacts found';
+        pillsEl.innerHTML = '';
+        outMetaEl.textContent = `${text.length.toLocaleString()} chars`;
+      } else {
+        summaryEl.textContent = `${source.length.toLocaleString()} → ${text.length.toLocaleString()} chars (${charDiff >= 0 ? `${charDiff.toLocaleString()} removed` : `${Math.abs(charDiff)} normalized`})`;
+        outMetaEl.textContent = `${text.length.toLocaleString()} chars`;
+        pillsEl.innerHTML = statPills.map(p => `
+          <span style="font-size:0.74rem; font-weight:600; padding:2px 7px; border-radius:999px; background:${p.active ? 'var(--g100)' : '#fef3c7'}; color:${p.active ? 'var(--g800)' : '#92400e'}; border:1px solid ${p.active ? 'var(--g200)' : '#fde68a'};">
+            ${p.count} ${p.label}
+          </span>
+        `).join('');
+      }
 
       if (source && !started) { started = true; analytics?.started(); }
-      if (source && totalChanges) analytics?.completed({ resultCount: totalChanges });
+      if (source && totalModifications) analytics?.completed({ resultCount: totalModifications });
     }
 
     inEl.addEventListener('input', run);
-    $('tc-fixes').addEventListener('change', run);
-    $('tc-copy').addEventListener('click', (e) => {
+    fixesEl.addEventListener('change', run);
+
+    copyBtn.addEventListener('click', (e) => {
       if (!outEl.value) return;
       copyText(outEl.value, e.target);
       analytics?.copied({ outputKind: 'text' });
     });
-    $('tc-replace').addEventListener('click', () => { inEl.value = outEl.value; run(); });
-    $('tc-clear').addEventListener('click', () => { inEl.value = ''; run(); inEl.focus(); });
+
+    downloadBtn.addEventListener('click', () => {
+      if (!outEl.value) return;
+      downloadBlob(new Blob([outEl.value], { type: 'text/plain;charset=utf-8' }), currentFileName);
+      analytics?.downloaded({ fileCount: 1 });
+    });
+
+    replaceBtn.addEventListener('click', () => { inEl.value = outEl.value; run(); });
+    clearBtn.addEventListener('click', () => { inEl.value = ''; run(); inEl.focus(); });
 
     inEl.focus();
     run();
+
+    if (artifact?.text) {
+      inEl.value = artifact.text;
+      run();
+    }
 
     this._read = () => outEl.value || inEl.value;
     this._write = (text) => { inEl.value = text; run(); };
@@ -172,5 +255,9 @@ export default {
   getArtifact() { return { kind: 'text', text: this._read?.() ?? '' }; },
   setArtifact(a) { this._write?.(a.text); },
 
-  destroy() { this._read = this._write = null; },
+  destroy() {
+    for (const fn of this._cleanup ?? []) fn();
+    this._read = this._write = null;
+    this._cleanup = [];
+  },
 };

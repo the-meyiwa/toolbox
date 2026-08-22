@@ -100,6 +100,12 @@ export const TASKS = [
     categories: ['design', 'modeling'],
   },
   {
+    id: 'law',
+    label: 'Law & legal practice',
+    blurb: 'Digest judgments, compare precedents, analyze contracts, and bundle legal PDFs.',
+    categories: ['law'],
+  },
+  {
     id: 'code',
     label: 'Code & data',
     blurb: 'Formatters, encoders, diagrams and a place to run code.',
