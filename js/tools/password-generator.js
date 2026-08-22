@@ -105,12 +105,7 @@ export default {
       if (result.textContent) copyText(result.textContent, e.currentTarget);
     });
 
-    this._read = () => result.textContent || '';
     generate();
-  },
-
-  getArtifact() {
-    return { kind: 'text', text: this._read?.() ?? '', name: 'password.txt' };
   },
 
   destroy() {

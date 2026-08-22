@@ -441,6 +441,14 @@ if (tipsFab) {
   $('tips-modal').addEventListener('click', (e) => { if (e.target === $('tips-modal')) hideTips(); });
 }
 
+/* Mailto link reliability on desktop & mobile */
+document.addEventListener('click', (e) => {
+  const mailAnchor = e.target.closest('a[href^="mailto:"]');
+  if (mailAnchor) {
+    mailAnchor.setAttribute('target', '_top');
+  }
+});
+
 /* --------------- init --------------- */
 
 // Both the hero eyebrow and the feature tile count come from the registry,

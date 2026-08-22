@@ -125,14 +125,29 @@ const NOTES = {
 
   /* ---------------- urinary & endocrine ---------------- */
   'kidney': 'Retroperitoneal, roughly T12–L3, the right slightly lower because of the liver. Together they filter about 180 litres of plasma a day and return over 99% of it, while regulating blood pressure, red cell production and vitamin D.',
+  'renal artery': 'Branches directly from abdominal aorta at L1–L2. Receives 20–25% of resting cardiac output. Renal artery stenosis is a classic cause of secondary renovascular hypertension.',
+  'renal cortex': 'Outer layer of the kidney containing glomeruli, proximal and distal convoluted tubules. Site of ultrafiltration and erythropoietin synthesis.',
+  'renal medulla': 'Inner region composed of renal pyramids and collecting ducts; establishes the hypertonic medullary gradient via countercurrent multiplication in the loops of Henle.',
   'ureter': 'A 25 cm muscular tube moving urine by peristalsis, not gravity. Three natural narrowings — pelviureteric junction, pelvic brim, vesicoureteric junction — are where stones lodge and cause colic.',
   'urinary bladder': 'A distensible reservoir behind the pubic symphysis holding 400–600 ml comfortably. When full it rises out of the pelvis and becomes palpable and percussible above the pubis.',
   'urethra': 'Conveys urine out of the bladder. The male urethra is around 20 cm with prostatic, membranous, bulbar and penile parts; the female is about 4 cm, which is why UTIs are far commoner in women.',
   'prostate': 'Surrounds the prostatic urethra just below the bladder. Benign hypertrophy affects the central zone and obstructs flow; carcinoma usually arises peripherally, which is why it is felt on rectal examination.',
   'thyroid gland': 'Produces T3 and T4 governing metabolic rate, and calcitonin. It moves on swallowing because it is bound to the larynx by pretracheal fascia — the classic bedside test for a neck lump.',
+  'parathyroid gland': 'Four tiny endocrine glands on the posterior thyroid capsule; secretes parathyroid hormone (PTH) to regulate serum calcium and phosphate balance.',
   'adrenal gland': 'Cortex makes aldosterone, cortisol and androgens (salt, sugar, sex — the deeper you go, the sweeter it gets); medulla makes adrenaline and is modified sympathetic nervous tissue.',
   'testis': 'Produces sperm and testosterone. It descends through the inguinal canal in development, dragging its blood supply from the abdominal aorta — which is why testicular pain refers to the abdomen.',
+  'epididymis': 'Coiled tube cap on the posterior testis where spermatozoa mature and gain motility over 10–14 days.',
+  'ovary': 'Female gonad suspended by the suspensory ligament (carrying ovarian vessels) and ovarian ligament. Site of oogenesis and estrogen/progesterone secretion.',
+  'fallopian tube': 'Uterine tube with fimbriae, infundibulum, ampulla, and isthmus. Fertilization normally occurs in the ampulla; commonest site of ectopic pregnancy.',
+  'uterus': 'Thick pear-shaped muscular organ in the female pelvis between bladder and rectum; composed of fundus, corpus, and cervix, lined by endometrium.',
   'thymus': 'Where T lymphocytes mature. Large in childhood, it involutes after puberty and is largely replaced by fat in adults.',
+  'circle of willis': 'Anastomotic arterial polygon at the skull base uniting carotid and vertebrobasilar supplies; commonest site of saccular (berry) aneurysms causing subarachnoid haemorrhage.',
+  'internal carotid artery': 'Enters the carotid canal of the petrous temporal bone, traverses the cavernous sinus (siphon), and supplies anterior cerebral circulation and the ophthalmic artery.',
+  'vertebral artery': 'Ascends through the transverse foramina of C6–C1, enters foramen magnum, and fuses to form the basilar artery supplying brainstem, cerebellum, and posterior cortex.',
+  'brachial plexus': 'Formed by anterior rami of C5–T1 roots, giving trunks (upper, middle, lower), divisions, cords (lateral, posterior, medial), and terminal branches (musculocutaneous, axillary, radial, median, ulnar).',
+  'sciatic nerve': 'The largest single nerve in the body (L4–S3), exiting the greater sciatic foramen below piriformis and dividing in the popliteal fossa into tibial and common fibular nerves.',
+  'femoral artery': 'Continuation of the external iliac artery beneath the midpoint of the inguinal ligament; the primary vascular access site for coronary and endovascular catheterization.',
+  'lymph node': 'Bean-shaped encapsulated lymphoid organ filtering lymph for foreign antigens; site of B and T cell activation and germinal centre proliferation in immune responses.'
 };
 
 /* Longest keys first so "upper lobe of right lung" beats "lung". */

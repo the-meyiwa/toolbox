@@ -220,35 +220,33 @@ export class Viewer3D {
 
   _applyEmphasis(root, on) {
     root.traverse(node => {
-      if (!node.isMesh || !node.material?.emissive) return;
+      if (!node.isMesh || !node.material?.emissive || node.userData._isSelected) return;
       if (on) {
         node.userData._emissiveWas ??= node.material.emissive.getHex();
-        node.material.emissive.setHex(0x333333);
+        node.material.emissive.setHex(0x404040);
       } else if (node.userData._emissiveWas !== undefined) {
         node.material.emissive.setHex(node.userData._emissiveWas);
+        delete node.userData._emissiveWas;
       }
     });
   }
 
   _applyOutline(root, on) {
     root.traverse(node => {
-      if (!node.isMesh) return;
+      if (!node.isMesh || !node.material) return;
       if (on) {
-        if (node.userData._outline) return;
-        const edges = new THREE.LineSegments(
-          new THREE.EdgesGeometry(node.geometry, 25),
-          new THREE.LineBasicMaterial({ color: 0x000000, depthTest: false, transparent: true, opacity: 0.85 })
-        );
-        edges.renderOrder = 999;
-        edges.name = '__outline';
-        edges.raycast = () => {};   // decoration only — must never intercept a pick
-        node.add(edges);
-        node.userData._outline = edges;
-      } else if (node.userData._outline) {
-        node.remove(node.userData._outline);
-        node.userData._outline.geometry.dispose();
-        node.userData._outline.material.dispose();
-        delete node.userData._outline;
+        if (node.userData._isSelected) return;
+        node.userData._isSelected = true;
+        if (node.material.emissive) {
+          node.userData._selEmissiveWas ??= node.material.emissive.getHex();
+          node.material.emissive.setHex(0x0ea5e9);
+        }
+      } else if (node.userData._isSelected) {
+        node.userData._isSelected = false;
+        if (node.userData._selEmissiveWas !== undefined && node.material.emissive) {
+          node.material.emissive.setHex(node.userData._selEmissiveWas);
+          delete node.userData._selEmissiveWas;
+        }
       }
     });
   }

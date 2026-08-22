@@ -200,22 +200,33 @@ export default {
 
     /* ---------------- appearance ---------------- */
 
+    let prevOpacity = 1;
     function applyAppearance() {
       const selId = viewer.selected?.userData.structure?.id ?? null;
+      const isTransparent = opacity < 1;
+      const opacityChanged = prevOpacity !== opacity;
+      prevOpacity = opacity;
+
       for (const [key, group] of loaded) {
         group.visible = visible[key];
+        if (!visible[key]) continue;
         for (const child of group.children) {
           const id = child.userData.structure?.id;
-          // Isolate hides everything else outright rather than fading it —
-          // on meshes this dense, fading just makes a fog.
-          child.visible = !hidden.has(id) && (!isolate || !selId || id === selId);
-          child.traverse(n => {
-            if (!n.isMesh) return;
-            n.material.transparent = opacity < 1;
-            n.material.opacity = opacity;
-            n.material.depthWrite = opacity > 0.85;
-            n.material.needsUpdate = true;
-          });
+          const shouldBeVisible = !hidden.has(id) && (!isolate || !selId || id === selId);
+          if (child.visible !== shouldBeVisible) {
+            child.visible = shouldBeVisible;
+          }
+          if (opacityChanged) {
+            child.traverse(n => {
+              if (!n.isMesh || !n.material) return;
+              if (n.material.transparent !== isTransparent) {
+                n.material.transparent = isTransparent;
+                n.material.depthWrite = opacity > 0.85;
+                n.material.needsUpdate = true;
+              }
+              n.material.opacity = opacity;
+            });
+          }
         }
       }
     }
@@ -313,13 +324,14 @@ export default {
     const filterEl = container.querySelector('#an-filter');
     container.querySelector('#an-count').textContent = `${index.structures.length}`;
 
+    let filterTimeout;
     function renderList() {
       const q = filterEl.value.trim().toLowerCase();
       // Search the whole catalogue, not only what is loaded — finding a
       // structure should tell you which system to switch on.
       const rows = index.structures
         .filter(s => !q || s.name.toLowerCase().includes(q))
-        .slice(0, 400);
+        .slice(0, 300);
 
       if (!rows.length) {
         listEl.innerHTML = `<p class="t3d-list-empty">Nothing matches that.</p>`;
@@ -353,7 +365,10 @@ export default {
       if (obj) { applyAppearance(); viewer.select(obj); focusOn(obj); }
     });
 
-    filterEl.addEventListener('input', renderList);
+    filterEl.addEventListener('input', () => {
+      clearTimeout(filterTimeout);
+      filterTimeout = setTimeout(renderList, 150);
+    });
 
     /* ---------------- info panel ---------------- */
 
