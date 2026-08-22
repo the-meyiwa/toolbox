@@ -123,15 +123,15 @@ export default {
 
     const revokeAll = () => { for (const u of urls.splice(0)) URL.revokeObjectURL(u); };
 
-    function initCanvases(bitmap) {
-      originalBitmap = bitmap;
-      mainCanvas.width = bitmap.width;
-      mainCanvas.height = bitmap.height;
-      maskCanvas.width = bitmap.width;
-      maskCanvas.height = bitmap.height;
+    function initCanvases(decoded) {
+      originalBitmap = decoded.bitmap;
+      mainCanvas.width = decoded.width;
+      mainCanvas.height = decoded.height;
+      maskCanvas.width = decoded.width;
+      maskCanvas.height = decoded.height;
 
       mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
-      mainCtx.drawImage(bitmap, 0, 0);
+      mainCtx.drawImage(decoded.bitmap, 0, 0);
 
       maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
       maskCtx.strokeStyle = 'rgba(239, 68, 68, 0.9)'; // Red highlight
@@ -143,7 +143,7 @@ export default {
       editAgainBtn.hidden = true;
       downloadBtn.disabled = true;
 
-      metaInfo.textContent = `${bitmap.width} × ${bitmap.height} px · ${currentFile ? humanBytes(currentFile.size) : ''}`;
+      metaInfo.textContent = `${decoded.width} × ${decoded.height} px · ${currentFile ? humanBytes(currentFile.size) : ''}`;
     }
 
     async function handleFile(file) {
@@ -153,8 +153,8 @@ export default {
       analytics?.started();
 
       try {
-        const bmp = await decodeImage(file);
-        initCanvases(bmp);
+        const decoded = await decodeImage(file);
+        initCanvases(decoded);
       } catch (err) {
         alert('Could not decode this image format: ' + err.message);
       }
@@ -458,6 +458,7 @@ export default {
 
     clearAllBtn.addEventListener('click', () => {
       revokeAll();
+      if (originalBitmap?.close) originalBitmap.close();
       currentFile = null;
       originalBitmap = null;
       processedBlob = null;

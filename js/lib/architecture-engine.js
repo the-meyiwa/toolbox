@@ -46,16 +46,17 @@ export async function loadFloorPlanSource(file) {
       pageCount: pdfDoc.numPages,
     };
   } else {
-    const bmp = await decodeImage(file);
+    const probe = await decodeImage(file);
     const canvas = document.createElement('canvas');
-    canvas.width = bmp.width;
-    canvas.height = bmp.height;
+    canvas.width = probe.width;
+    canvas.height = probe.height;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(bmp, 0, 0);
+    ctx.drawImage(probe.bitmap, 0, 0);
+    probe.close();
     return {
       type: 'image',
-      width: bmp.width,
-      height: bmp.height,
+      width: probe.width,
+      height: probe.height,
       canvas,
     };
   }
