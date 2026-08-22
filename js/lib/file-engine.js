@@ -355,26 +355,84 @@ export function renameExt(filename, ext, suffix = '') {
   return `${base}${suffix}.${ext}`;
 }
 
-/* ---------------- drop zone ---------------- */
+/* ---------------- drop zone & upload pipeline ---------------- */
+
+/**
+ * Builds a robust file filter predicate from a regex, MIME string, or file extensions list.
+ * Supports ".pdf,.txt,.doc", "image/*", /pdf/i, etc.
+ */
+export function buildAcceptFilter(accept) {
+  if (!accept) return () => true;
+  if (accept instanceof RegExp) {
+    return (f) => accept.test(f.type || '') || accept.test(f.name || '');
+  }
+  if (typeof accept === 'string') {
+    const tokens = accept.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+    if (!tokens.length || tokens.includes('*/*')) return () => true;
+    return (f) => {
+      const type = (f.type || '').toLowerCase();
+      const name = (f.name || '').toLowerCase();
+      return tokens.some(token => {
+        if (token.startsWith('.')) {
+          return name.endsWith(token);
+        }
+        if (token.endsWith('/*')) {
+          const prefix = token.slice(0, -1); // e.g. "image/"
+          return type.startsWith(prefix);
+        }
+        return type === token || name.endsWith(`.${token}`);
+      });
+    };
+  }
+  return () => true;
+}
 
 /**
  * Wire a drop zone, file picker and clipboard paste to one handler.
+ * Automatically infers accept filter from input.accept attribute if not explicitly passed.
  * Returns a teardown so tools can clean up in destroy().
  */
-export function attachFileInput(zone, input, onFiles, { accept = /^image\// } = {}) {
-  const filter = (list) => [...list].filter(f => !accept || accept.test(f.type) || accept.test(f.name));
+export function attachFileInput(zone, input, onFiles, options = {}) {
+  const acceptAttr = options.accept !== undefined ? options.accept : input?.getAttribute('accept');
+  const isAccepted = buildAcceptFilter(acceptAttr);
+
+  const filter = (list) => {
+    const all = [...list];
+    const matching = all.filter(isAccepted);
+    // If filter dropped everything but files were provided, warn or fallback to all files
+    if (all.length > 0 && matching.length === 0) {
+      console.warn(`[Toolbox Upload] Files dropped did not match filter "${acceptAttr}".`, all.map(f => `${f.name} (${f.type})`));
+    }
+    return matching.length > 0 ? matching : all;
+  };
+
+  const dispatch = async (files) => {
+    if (!files || !files.length) return;
+    try {
+      zone.classList.add('is-loading');
+      const result = onFiles(files);
+      if (result instanceof Promise) {
+        await result;
+      }
+    } catch (err) {
+      console.error('[Toolbox Upload Error]', err);
+      alert(`Could not process file: ${err.message || err}`);
+    } finally {
+      zone.classList.remove('is-loading');
+    }
+  };
 
   const onDrop = (e) => {
     e.preventDefault();
     zone.classList.remove('is-dragging');
     const files = filter(e.dataTransfer?.files ?? []);
-    if (files.length) onFiles(files);
+    if (files.length) dispatch(files);
   };
   const onDragOver = (e) => { e.preventDefault(); zone.classList.add('is-dragging'); };
   const onDragLeave = () => zone.classList.remove('is-dragging');
   const onChange = () => {
     const files = filter(input.files ?? []);
-    if (files.length) onFiles(files);
+    if (files.length) dispatch(files);
     input.value = '';
   };
   const onClick = (e) => { if (!e.target.closest('button, a, input')) input.click(); };
@@ -387,7 +445,7 @@ export function attachFileInput(zone, input, onFiles, { accept = /^image\// } = 
   };
   const onPaste = (e) => {
     const files = filter(e.clipboardData?.files ?? []);
-    if (files.length) onFiles(files);
+    if (files.length) dispatch(files);
   };
 
   zone.addEventListener('drop', onDrop);
@@ -395,7 +453,7 @@ export function attachFileInput(zone, input, onFiles, { accept = /^image\// } = 
   zone.addEventListener('dragleave', onDragLeave);
   zone.addEventListener('click', onClick);
   zone.addEventListener('keydown', onKeydown);
-  input.addEventListener('change', onChange);
+  if (input) input.addEventListener('change', onChange);
   window.addEventListener('paste', onPaste);
 
   return () => {
@@ -404,7 +462,7 @@ export function attachFileInput(zone, input, onFiles, { accept = /^image\// } = 
     zone.removeEventListener('dragleave', onDragLeave);
     zone.removeEventListener('click', onClick);
     zone.removeEventListener('keydown', onKeydown);
-    input.removeEventListener('change', onChange);
+    if (input) input.removeEventListener('change', onChange);
     window.removeEventListener('paste', onPaste);
   };
 }

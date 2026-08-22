@@ -109,9 +109,13 @@ export default {
     let pageCount = 0;
 
     async function handlePdf(file) {
-      if (!file || !file.name.endsWith('.pdf')) return;
+      if (!file || !(file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'))) {
+        alert('Please select a valid PDF file.');
+        return;
+      }
       currentFile = file;
       work.hidden = false;
+      metaEl.textContent = 'Loading PDF structure…';
       analytics?.started();
 
       try {
@@ -120,12 +124,14 @@ export default {
         pageCount = pdfDoc.getPageCount();
         metaEl.textContent = `${file.name} · ${pageCount} pages · ${humanBytes(file.size)}`;
       } catch (err) {
+        console.error('[Legal PDF Error]', err);
         alert('Could not read PDF structure: ' + err.message);
+        metaEl.textContent = 'Failed to load PDF';
       }
     }
 
-    this._cleanup.push(attachFileInput(zone, inputZone, (f) => {
-      if (f[0]) handlePdf(f[0]);
+    this._cleanup.push(attachFileInput(zone, inputZone, async (f) => {
+      if (f && f[0]) await handlePdf(f[0]);
     }));
 
     actionGrp.addEventListener('click', (e) => {

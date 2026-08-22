@@ -99,34 +99,54 @@ export default {
     const tableBody = container.querySelector('#cmp-table-body');
 
     async function loadPdfInto(file, targetEl) {
+      const origText = cmpBtn.textContent;
+      cmpBtn.disabled = true;
+      cmpBtn.textContent = 'Reading PDF…';
       try {
         const pdfjsLib = await loadPdfJs();
         const arrayBuffer = await file.arrayBuffer();
         const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
         let full = '';
-        const maxP = Math.min(pdfDoc.numPages, 30);
+        const maxP = Math.min(pdfDoc.numPages, 40);
         for (let i = 1; i <= maxP; i++) {
           const page = await pdfDoc.getPage(i);
           const c = await page.getTextContent();
           full += `\n` + c.items.map(it => it.str).join(' ');
         }
         targetEl.value = full.trim();
+        if (textA.value.trim() && textB.value.trim()) {
+          runComparison();
+        }
       } catch (err) {
+        console.error('[Case Comparator PDF Error]', err);
         alert('Could not read PDF: ' + err.message);
+      } finally {
+        cmpBtn.disabled = false;
+        cmpBtn.textContent = origText;
       }
     }
 
-    this._cleanup.push(attachFileInput(zoneA, inputA, (f) => {
-      if (f[0]) {
-        if (f[0].type === 'application/pdf') loadPdfInto(f[0], textA);
-        else f[0].text().then(t => { textA.value = t; });
+    this._cleanup.push(attachFileInput(zoneA, inputA, async (f) => {
+      if (!f || !f[0]) return;
+      const file = f[0];
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        await loadPdfInto(file, textA);
+      } else {
+        const t = await file.text();
+        textA.value = t;
+        if (textA.value.trim() && textB.value.trim()) runComparison();
       }
     }));
 
-    this._cleanup.push(attachFileInput(zoneB, inputB, (f) => {
-      if (f[0]) {
-        if (f[0].type === 'application/pdf') loadPdfInto(f[0], textB);
-        else f[0].text().then(t => { textB.value = t; });
+    this._cleanup.push(attachFileInput(zoneB, inputB, async (f) => {
+      if (!f || !f[0]) return;
+      const file = f[0];
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        await loadPdfInto(file, textB);
+      } else {
+        const t = await file.text();
+        textB.value = t;
+        if (textA.value.trim() && textB.value.trim()) runComparison();
       }
     }));
 

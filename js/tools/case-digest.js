@@ -86,12 +86,15 @@ export default {
     let currentDigest = null;
 
     async function handlePdfFile(file) {
+      const origText = genBtn.textContent;
+      genBtn.disabled = true;
+      genBtn.textContent = 'Extracting PDF text…';
       try {
         const pdfjsLib = await loadPdfJs();
         const arrayBuffer = await file.arrayBuffer();
         const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
         let fullText = '';
-        const maxPages = Math.min(pdfDoc.numPages, 40);
+        const maxPages = Math.min(pdfDoc.numPages, 50);
         for (let i = 1; i <= maxPages; i++) {
           const page = await pdfDoc.getPage(i);
           const content = await page.getTextContent();
@@ -101,19 +104,26 @@ export default {
         textInput.value = fullText.trim();
         parseAndRender();
       } catch (err) {
+        console.error('[Case Digest PDF Error]', err);
         alert('Could not parse PDF text: ' + err.message);
+      } finally {
+        genBtn.disabled = false;
+        genBtn.textContent = origText;
       }
     }
 
-    this._cleanup.push(attachFileInput(zone, inputZone, (files) => {
-      if (files[0]) {
-        if (files[0].type === 'application/pdf' || files[0].name.endsWith('.pdf')) {
-          handlePdfFile(files[0]);
-        } else {
-          files[0].text().then(t => {
-            textInput.value = t;
-            parseAndRender();
-          });
+    this._cleanup.push(attachFileInput(zone, inputZone, async (files) => {
+      if (!files || !files[0]) return;
+      const file = files[0];
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        await handlePdfFile(file);
+      } else {
+        try {
+          const text = await file.text();
+          textInput.value = text;
+          parseAndRender();
+        } catch (err) {
+          alert('Could not read text file: ' + err.message);
         }
       }
     }));

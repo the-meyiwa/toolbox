@@ -209,8 +209,8 @@ export default {
       }
     }
 
-    this._cleanup.push(attachFileInput(zone, input, (files) => {
-      if (files[0]) handleFile(files[0]);
+    this._cleanup.push(attachFileInput(zone, input, async (files) => {
+      if (files && files[0]) await handleFile(files[0]);
     }));
 
     dismissBtn.addEventListener('click', () => { banner.hidden = true; });

@@ -98,13 +98,18 @@ export default {
     let analysisData = null;
 
     async function handleFile(file) {
-      if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-        try {
+      if (!file) return;
+      const origText = analyzeBtn.textContent;
+      analyzeBtn.disabled = true;
+      analyzeBtn.textContent = 'Reading document…';
+
+      try {
+        if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
           const pdfjsLib = await loadPdfJs();
           const buf = await file.arrayBuffer();
           const pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
           let full = '';
-          const maxP = Math.min(pdfDoc.numPages, 40);
+          const maxP = Math.min(pdfDoc.numPages, 50);
           for (let i = 1; i <= maxP; i++) {
             const p = await pdfDoc.getPage(i);
             const c = await p.getTextContent();
@@ -112,19 +117,22 @@ export default {
           }
           textInput.value = full.trim();
           runAnalysis();
-        } catch (err) {
-          alert('Could not read PDF: ' + err.message);
-        }
-      } else {
-        file.text().then(t => {
+        } else {
+          const t = await file.text();
           textInput.value = t;
           runAnalysis();
-        });
+        }
+      } catch (err) {
+        console.error('[Legal Document Analyzer Error]', err);
+        alert('Could not read file: ' + err.message);
+      } finally {
+        analyzeBtn.disabled = false;
+        analyzeBtn.textContent = origText;
       }
     }
 
-    this._cleanup.push(attachFileInput(zone, inputZone, (f) => {
-      if (f[0]) handleFile(f[0]);
+    this._cleanup.push(attachFileInput(zone, inputZone, async (f) => {
+      if (f && f[0]) await handleFile(f[0]);
     }));
 
     function analyzeText(raw) {
