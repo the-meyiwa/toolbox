@@ -12,6 +12,11 @@ import {
   dropZone, attachFileInput, decodeImage, downloadBlob, humanBytes,
 } from '../lib/file-engine.js';
 
+const LAMA_MODEL_URL = 'https://huggingface.co/Carve/LaMa-ONNX/resolve/main/lama_fp32.onnx';
+const MODEL_SIZE = 512;
+const TILE_STEP = 384;
+let lamaSessionPromise = null;
+
 export default {
   async render(container, { analytics } = {}) {
     this._cleanup = [];
@@ -25,7 +30,7 @@ export default {
         <!-- Notice Strip -->
         <div class="biz-explain" style="margin-bottom:14px; font-size:0.82rem; display:flex; align-items:center; gap:8px;">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          <span>Privacy-first &amp; local: Images never leave your device. Designed for legitimate editing of content you own or have permission to modify.</span>
+          <span>Privacy-first &amp; local: Images never leave your device. The free AI model downloads once (about 200 MB) and is then cached by your browser. Designed for legitimate editing of content you own or have permission to modify.</span>
         </div>
 
         <!-- Controls Toolbar -->
@@ -45,10 +50,6 @@ export default {
           </div>
 
           <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-            <button class="btn btn-secondary btn-sm" id="wm-auto-detect" title="Detect candidate high-contrast watermark text">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
-              Auto-detect Text
-            </button>
             <button class="btn btn-secondary btn-sm" id="wm-clear-mask">Clear Mask</button>
             <button class="btn btn-primary btn-sm" id="wm-apply-btn">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
@@ -99,7 +100,6 @@ export default {
     const brushOut     = container.querySelector('#wm-brush-out');
     const modeGrp      = container.querySelector('#wm-mode-grp');
     const clearMaskBtn = container.querySelector('#wm-clear-mask');
-    const autoDetectBtn= container.querySelector('#wm-auto-detect');
     const applyBtn     = container.querySelector('#wm-apply-btn');
     const splitWrap    = container.querySelector('#wm-split-wrap');
     const afterImg     = container.querySelector('#wm-after-img');
@@ -248,47 +248,8 @@ export default {
       maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
     });
 
-    /* --- Auto-detect Text Watermarks --- */
-    autoDetectBtn.addEventListener('click', () => {
-      if (!originalBitmap) return;
-      const w = mainCanvas.width;
-      const h = mainCanvas.height;
-      const imgData = mainCtx.getImageData(0, 0, w, h);
-      const data = imgData.data;
-
-      const grad = new Float32Array(w * h);
-      for (let y = 1; y < h - 1; y++) {
-        for (let x = 1; x < w - 1; x++) {
-          const idx = (y * w + x) * 4;
-          const lumL = 0.299 * data[idx - 4] + 0.587 * data[idx - 3] + 0.114 * data[idx - 2];
-          const lumR = 0.299 * data[idx + 4] + 0.587 * data[idx + 5] + 0.114 * data[idx + 6];
-          const lumT = 0.299 * data[idx - w * 4] + 0.587 * data[idx - w * 4 + 1] + 0.114 * data[idx - w * 4 + 2];
-          const lumB = 0.299 * data[idx + w * 4] + 0.587 * data[idx + w * 4 + 1] + 0.114 * data[idx + w * 4 + 2];
-          grad[y * w + x] = Math.hypot(lumR - lumL, lumB - lumT);
-        }
-      }
-
-      const blockSize = 24;
-      for (let by = 0; by < h; by += blockSize) {
-        for (let bx = 0; bx < w; bx += blockSize) {
-          let highEdges = 0;
-          const bw = Math.min(blockSize, w - bx);
-          const bh = Math.min(blockSize, h - by);
-          for (let y = by; y < by + bh; y++) {
-            for (let x = bx; x < bx + bw; x++) {
-              if (grad[y * w + x] > 45) highEdges++;
-            }
-          }
-          const density = highEdges / (bw * bh);
-          if (density > 0.14 && density < 0.75) {
-            maskCtx.fillRect(bx, by, bw, bh);
-          }
-        }
-      }
-    });
-
     /* ============================================================
-       Multi-Scale PatchMatch Texture & Structure Inpainting Engine
+       Legacy PatchMatch implementation (not used for reconstruction).
        (Barnes et al. / Criminisi Inpainting Framework)
        
        1. Dilates mask to envelope anti-aliased subpixel text edges.
@@ -573,6 +534,153 @@ export default {
       return true;
     }
 
+    // GPT Image expects an alpha mask: transparent pixels are reconstructed and
+    // opaque pixels are preserved. Build it separately from the visible red
+    // overlay so the provider never receives a semi-transparent paint preview.
+    function buildInpaintMask() {
+      const w = mainCanvas.width;
+      const h = mainCanvas.height;
+      const selection = maskCtx.getImageData(0, 0, w, h).data;
+      const mask = new Uint8Array(w * h);
+      let selected = 0;
+
+      for (let i = 0; i < mask.length; i++) {
+        if (selection[i * 4 + 3] > 25) {
+          mask[i] = 1;
+          selected++;
+        }
+      }
+      if (!selected) return null;
+
+      // Include anti-aliased watermark fringes without turning the operation
+      // into a feathered blend. This is a binary, two-pixel safety margin.
+      const expanded = new Uint8Array(mask);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          if (!mask[y * w + x]) continue;
+          for (let dy = -2; dy <= 2; dy++) {
+            for (let dx = -2; dx <= 2; dx++) {
+              if (dx * dx + dy * dy > 4) continue;
+              const nx = x + dx, ny = y + dy;
+              if (nx >= 0 && nx < w && ny >= 0 && ny < h) expanded[ny * w + nx] = 1;
+            }
+          }
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      const data = ctx.createImageData(w, h);
+      for (let i = 0; i < expanded.length; i++) {
+        const p = i * 4;
+        data.data[p] = data.data[p + 1] = data.data[p + 2] = 255;
+        data.data[p + 3] = expanded[i] ? 0 : 255;
+      }
+      ctx.putImageData(data, 0, 0);
+      return { canvas, selected, pixels: expanded };
+    }
+
+    async function getLaMaSession() {
+      if (!lamaSessionPromise) {
+        lamaSessionPromise = (async () => {
+          // Keep the large runtime out of the tool's initial module so a stale
+          // Vite dependency cache cannot stop the editor from opening.
+          const ort = await import('onnxruntime-web');
+          // Single-threaded WASM works without cross-origin-isolation headers.
+          ort.env.wasm.numThreads = 1;
+          const session = await ort.InferenceSession.create(LAMA_MODEL_URL, {
+            executionProviders: ['wasm'],
+            graphOptimizationLevel: 'all',
+          });
+          return { ort, session };
+        })();
+      }
+      try {
+        return await lamaSessionPromise;
+      } catch (error) {
+        lamaSessionPromise = null;
+        throw new Error(`Could not load the local AI model. Check your connection for the one-time model download, then try again. (${error.message || 'unknown error'})`);
+      }
+    }
+
+    async function runLocalLaMa(onProgress) {
+      const builtMask = buildInpaintMask();
+      if (!builtMask) throw new Error('Select the watermark region before reconstructing it.');
+      const { ort, session } = await getLaMaSession();
+      const w = mainCanvas.width, h = mainCanvas.height;
+      const before = mainCtx.getImageData(0, 0, w, h);
+      const output = new ImageData(new Uint8ClampedArray(before.data), w, h);
+      let minX = w, minY = h, maxX = -1, maxY = -1;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        if (!builtMask.pixels[y * w + x]) continue;
+        minX = Math.min(minX, x); minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
+      }
+
+      const tiles = [];
+      for (let y = minY - 64; y <= maxY + 64; y += TILE_STEP) {
+        for (let x = minX - 64; x <= maxX + 64; x += TILE_STEP) {
+          let containsHole = false;
+          for (let ty = 0; ty < MODEL_SIZE && !containsHole; ty++) {
+            const iy = y + ty;
+            if (iy < 0 || iy >= h) continue;
+            for (let tx = 0; tx < MODEL_SIZE; tx++) {
+              const ix = x + tx;
+              if (ix >= 0 && ix < w && builtMask.pixels[iy * w + ix]) { containsHole = true; break; }
+            }
+          }
+          if (containsHole) tiles.push({ x, y });
+        }
+      }
+      if (!tiles.length || tiles.length > 48) {
+        throw new Error('The selected area is too large for local reconstruction. Process the watermark in smaller sections.');
+      }
+
+      for (let tileIndex = 0; tileIndex < tiles.length; tileIndex++) {
+        const { x: originX, y: originY } = tiles[tileIndex];
+        onProgress?.(tileIndex + 1, tiles.length);
+        const image = new Float32Array(3 * MODEL_SIZE * MODEL_SIZE);
+        const mask = new Float32Array(MODEL_SIZE * MODEL_SIZE);
+        for (let ty = 0; ty < MODEL_SIZE; ty++) for (let tx = 0; tx < MODEL_SIZE; tx++) {
+          const px = Math.max(0, Math.min(w - 1, originX + tx));
+          const py = Math.max(0, Math.min(h - 1, originY + ty));
+          const source = (py * w + px) * 4;
+          const target = ty * MODEL_SIZE + tx;
+          image[target] = before.data[source] / 255;
+          image[MODEL_SIZE * MODEL_SIZE + target] = before.data[source + 1] / 255;
+          image[2 * MODEL_SIZE * MODEL_SIZE + target] = before.data[source + 2] / 255;
+          mask[target] = builtMask.pixels[py * w + px] ? 1 : 0;
+        }
+        const result = await session.run({
+          image: new ort.Tensor('float32', image, [1, 3, MODEL_SIZE, MODEL_SIZE]),
+          mask: new ort.Tensor('float32', mask, [1, 1, MODEL_SIZE, MODEL_SIZE]),
+        });
+        const repaired = (result.output || Object.values(result)[0]).data;
+        for (let ty = 0; ty < MODEL_SIZE; ty++) for (let tx = 0; tx < MODEL_SIZE; tx++) {
+          const px = originX + tx, py = originY + ty;
+          if (px < 0 || px >= w || py < 0 || py >= h || !builtMask.pixels[py * w + px]) continue;
+          const source = ty * MODEL_SIZE + tx;
+          const target = (py * w + px) * 4;
+          output.data[target] = Math.max(0, Math.min(255, Math.round(repaired[source])));
+          output.data[target + 1] = Math.max(0, Math.min(255, Math.round(repaired[MODEL_SIZE * MODEL_SIZE + source])));
+          output.data[target + 2] = Math.max(0, Math.min(255, Math.round(repaired[2 * MODEL_SIZE * MODEL_SIZE + source])));
+        }
+      }
+
+      let changed = 0;
+      for (let i = 0; i < builtMask.pixels.length; i++) {
+        if (!builtMask.pixels[i]) continue;
+        const p = i * 4;
+        if ((Math.abs(before.data[p] - output.data[p]) + Math.abs(before.data[p + 1] - output.data[p + 1]) + Math.abs(before.data[p + 2] - output.data[p + 2])) > 6) changed++;
+      }
+      if (changed < Math.max(8, builtMask.selected * 0.002)) {
+        throw new Error('The local AI model produced an effectively unchanged result. Nothing was exported; adjust the selection and try again.');
+      }
+      return output;
+    }
+
     applyBtn.addEventListener('click', async () => {
       if (!originalBitmap) return;
       applyBtn.disabled = true;
@@ -582,21 +690,22 @@ export default {
 
       const w = mainCanvas.width;
       const h = mainCanvas.height;
-      const imgData = mainCtx.getImageData(0, 0, w, h);
-      const maskData = maskCtx.getImageData(0, 0, w, h);
-
       const t0 = performance.now();
-      const removed = inpaintPatchMatch(imgData, maskData, w, h);
-      const duration = Math.round(performance.now() - t0);
-
-      if (!removed) {
-        alert('Please brush or box-select the watermark region first.');
+      let reconstructed;
+      try {
+        reconstructed = await runLocalLaMa((current, total) => {
+          applyBtn.textContent = `Reconstructing ${current}/${total}…`;
+        });
+      } catch (err) {
+        console.error('[Watermark Reconstruction Error]', err);
+        alert(err.message || 'Image reconstruction failed. The original image has not been changed.');
         applyBtn.disabled = false;
         applyBtn.textContent = 'Remove Watermark';
         return;
       }
+      const duration = Math.round(performance.now() - t0);
 
-      mainCtx.putImageData(imgData, 0, 0);
+      mainCtx.putImageData(reconstructed, 0, 0);
 
       // Create before/after preview images
       const origCanvas = document.createElement('canvas');

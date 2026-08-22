@@ -22,6 +22,7 @@
     "exceljs": "^4.4.0",
     "lib0": "^0.2.117",
     "marked": "^15.0.0",
+    "onnxruntime-web": "^1.27.0",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.2.108",
     "pptxgenjs": "^4.0.1",
