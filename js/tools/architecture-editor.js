@@ -1,9 +1,9 @@
 /* ============================================================
-   Architecture Editor — simple, touch-first floor plan editing.
+   Architecture Editor — Interactive Touch & Mouse Floor Plan Editor.
 
-   Designed for non-technical and older users.
-   Upload architectural plan (PDF/Image) → auto-detect walls/doors/rooms
-   → drag-and-drop elements → "+ Add" menu → undo/redo → export PDF/Image.
+   Vector element modeling, clean background inpainting (zero residual ghosting),
+   cursor-centered mouse-wheel zoom, seamless 1-finger / mouse canvas pan,
+   multi-touch pinch-to-zoom, element drag transformations, and PDF export.
    ============================================================ */
 
 import {
@@ -26,7 +26,7 @@ export default {
         <div id="arch-detection-banner" class="biz-explain" style="margin-bottom:12px; font-size:0.84rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
           <div style="display:flex; align-items:center; gap:8px;">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-            <span id="arch-banner-text">Floor plan vectorized &amp; background cleaned. Tap any element to move or resize it without residual lines!</span>
+            <span id="arch-banner-text">Floor plan vectorized &amp; background cleaned. Drag elements to reposition · Pan canvas with mouse/fingers · Pinch/wheel to zoom freely.</span>
           </div>
           <button class="btn btn-secondary btn-sm" id="arch-dismiss-banner" style="font-size:0.75rem; padding:2px 8px;">Got it</button>
         </div>
@@ -44,22 +44,20 @@ export default {
             <button class="btn btn-sm btn-secondary" data-add="dimension" title="Add a Dimension Line">📏 Dimension</button>
           </div>
 
-          <!-- Undo / Redo & Zoom -->
+          <!-- Undo / Redo & Viewport Info -->
           <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
             <button class="btn btn-sm btn-secondary" id="arch-undo-btn" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
             <button class="btn btn-sm btn-secondary" id="arch-redo-btn" title="Redo (Ctrl+Y)" disabled>↷ Redo</button>
             <div style="display:inline-flex; align-items:center; gap:4px; margin-left:6px;">
-              <button class="btn btn-sm btn-secondary" id="arch-zoom-out" title="Zoom Out" style="padding:0 8px;">−</button>
-              <span id="arch-zoom-val" style="font-family:var(--mono); font-size:0.78rem; min-width:38px; text-align:center;">100%</span>
-              <button class="btn btn-sm btn-secondary" id="arch-zoom-in" title="Zoom In" style="padding:0 8px;">+</button>
-              <button class="btn btn-sm btn-secondary" id="arch-zoom-fit" title="Fit to Screen" style="padding:0 8px;">Fit</button>
+              <span id="arch-zoom-val" style="font-family:var(--mono); font-size:0.78rem; min-width:44px; text-align:center; background:var(--g100); padding:3px 8px; border-radius:4px;">100%</span>
+              <button class="btn btn-sm btn-secondary" id="arch-zoom-fit" title="Fit to Screen" style="padding:0 10px;">Fit View</button>
             </div>
           </div>
         </div>
 
         <!-- Canvas Stage -->
-        <div class="arch-stage" style="position:relative; width:100%; height:min(68vh, 620px); min-height:380px; background:var(--g50); border:1px solid var(--g150); border-radius:12px; overflow:hidden; touch-action:none; display:flex; align-items:center; justify-content:center;">
-          <canvas id="arch-canvas" style="display:block; cursor:default;"></canvas>
+        <div class="arch-stage" style="position:relative; width:100%; height:min(70vh, 640px); min-height:400px; background:var(--g50); border:1px solid var(--g150); border-radius:12px; overflow:hidden; touch-action:none; display:flex; align-items:center; justify-content:center;">
+          <canvas id="arch-canvas" style="display:block; cursor:grab;"></canvas>
 
           <!-- Floating Element Action Menu (when an element is selected) -->
           <div id="arch-floating-actions" hidden style="position:absolute; bottom:16px; left:50%; transform:translateX(-50%); background:var(--white); border:1px solid var(--g200); border-radius:999px; box-shadow:0 8px 24px rgba(0,0,0,0.14); padding:6px 14px; display:flex; align-items:center; gap:8px; z-index:10;">
@@ -102,8 +100,6 @@ export default {
     const delBtn       = container.querySelector('#arch-del-el');
     const undoBtn      = container.querySelector('#arch-undo-btn');
     const redoBtn      = container.querySelector('#arch-redo-btn');
-    const zoomInBtn    = container.querySelector('#arch-zoom-in');
-    const zoomOutBtn   = container.querySelector('#arch-zoom-out');
     const zoomFitBtn   = container.querySelector('#arch-zoom-fit');
     const zoomVal      = container.querySelector('#arch-zoom-val');
     const showBgCheck  = container.querySelector('#arch-show-bg');
@@ -201,23 +197,29 @@ export default {
         saveState();
 
         if (detected.length >= 2) {
-          bannerText.innerHTML = `✨ Automatically detected <strong>${detected.length} elements</strong> (walls, openings, rooms). Tap any to modify, or add new ones.`;
-        } else {
-          bannerText.innerHTML = `Floor plan loaded. Tap <strong>"+ Add"</strong> above to easily place walls, doors, windows, and rooms.`;
+          bannerText.innerHTML = `Identified <strong>${detected.length} structures</strong>. Background plate reconstructed. Drag elements to move · Pan canvas with mouse/fingers · Pinch/wheel to zoom.`;
         }
-        banner.hidden = false;
-
         fitToScreen();
       } catch (err) {
-        alert('Could not load plan: ' + err.message);
+        alert('Could not load architectural floor plan: ' + err.message);
       }
     }
 
-    this._cleanup.push(attachFileInput(zone, input, async (files) => {
-      if (files && files[0]) await handleFile(files[0]);
-    }));
+    attachFileInput(zone, input, (files) => handleFile(files[0]));
 
-    dismissBtn.addEventListener('click', () => { banner.hidden = true; });
+    dismissBtn.addEventListener('click', () => {
+      banner.hidden = true;
+    });
+
+    newBtn.addEventListener('click', () => {
+      work.hidden = true;
+      bgCanvas = null;
+      cleanBgCanvas = null;
+      elements = [];
+      selectedId = null;
+      undoStack.length = 0;
+      redoStack.length = 0;
+    });
 
     /* --- "+ Add" Toolbar Items --- */
     let nextId = 100;
@@ -226,7 +228,7 @@ export default {
         const type = btn.dataset.add;
         saveState();
 
-        const centerX = bgCanvas ? bgCanvas.width / 2 : 200;
+        const centerX = bgCanvas ? bgCanvas.width / 2 : 300;
         const centerY = bgCanvas ? bgCanvas.height / 2 : 200;
         const id = `${type}-${nextId++}`;
 
@@ -253,12 +255,13 @@ export default {
       });
     });
 
-    /* --- Direct Manipulation (Tap, Drag, Resize) --- */
+    /* --- High-Performance Mouse & Multi-Touch Gesture Navigation --- */
     let isDragging = false;
     let isPanning = false;
     let dragStart = { x: 0, y: 0 };
     let initialElementPos = null;
     let touchStartDist = 0;
+    let touchStartMid = { x: 0, y: 0 };
 
     function screenToWorld(sx, sy) {
       return {
@@ -268,63 +271,108 @@ export default {
     }
 
     function findHitElement(wx, wy) {
-      // Check in reverse order so top-most elements hit first
       for (let i = elements.length - 1; i >= 0; i--) {
         const el = elements[i];
         const bounds = getElementBounds(el);
-        if (wx >= bounds.x - 8 && wx <= bounds.x + bounds.w + 8 &&
-            wy >= bounds.y - 8 && wy <= bounds.y + bounds.h + 8) {
+        if (wx >= bounds.x - 10 && wx <= bounds.x + bounds.w + 10 &&
+            wy >= bounds.y - 10 && wy <= bounds.y + bounds.h + 10) {
           return el;
         }
       }
       return null;
     }
 
+    // Cursor-centered Mouse Wheel Zoom
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89;
+      const newZoom = Math.max(0.15, Math.min(5.0, zoom * zoomFactor));
+
+      panX = mouseX - (mouseX - panX) * (newZoom / zoom);
+      panY = mouseY - (mouseY - panY) * (newZoom / zoom);
+      zoom = newZoom;
+
+      zoomVal.textContent = `${Math.round(zoom * 100)}%`;
+      redraw();
+    }, { passive: false });
+
+    // Pointer Down (Mouse & Touch)
     const onPointerDown = (e) => {
       const rect = canvas.getBoundingClientRect();
+
+      // Handle 2-Finger Touch Gestures (Pinch-to-zoom and Dual-finger Pan)
+      if (e.touches && e.touches.length === 2) {
+        touchStartDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        touchStartMid = {
+          x: (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left,
+          y: (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top,
+        };
+        isPanning = true;
+        isDragging = false;
+        return;
+      }
+
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
       const sx = clientX - rect.left;
       const sy = clientY - rect.top;
 
-      if (e.touches && e.touches.length === 2) {
-        // Pinch to zoom initiation
-        touchStartDist = Math.hypot(
-          e.touches[0].clientX - e.touches[1].clientX,
-          e.touches[0].clientY - e.touches[1].clientY
-        );
-        isPanning = true;
-        return;
-      }
+      // Check if Middle Mouse button or Spacebar is held
+      const isMiddleOrRight = e.button === 1 || e.button === 2;
 
       const { x: wx, y: wy } = screenToWorld(sx, sy);
       const hit = findHitElement(wx, wy);
 
-      if (hit) {
+      if (hit && !isMiddleOrRight) {
         saveState();
         selectedId = hit.id;
         isDragging = true;
+        isPanning = false;
         dragStart = { x: wx, y: wy };
         initialElementPos = { ...hit };
+        canvas.style.cursor = 'move';
       } else {
         selectedId = null;
         isPanning = true;
+        isDragging = false;
         dragStart = { x: sx, y: sy };
+        canvas.style.cursor = 'grabbing';
       }
       redraw();
     };
 
+    // Pointer Move (Mouse Drag / Touch Drag)
     const onPointerMove = (e) => {
       const rect = canvas.getBoundingClientRect();
 
+      // Handle 2-Finger Touch Move (Pinch-to-zoom & Midpoint Pan)
       if (e.touches && e.touches.length === 2 && touchStartDist > 0) {
         const newDist = Math.hypot(
           e.touches[0].clientX - e.touches[1].clientX,
           e.touches[0].clientY - e.touches[1].clientY
         );
+        const newMid = {
+          x: (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left,
+          y: (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top,
+        };
+
         const factor = newDist / touchStartDist;
-        zoom = Math.max(0.2, Math.min(3.0, zoom * factor));
+        const newZoom = Math.max(0.15, Math.min(5.0, zoom * factor));
+
+        // Center zoom at touch midpoint
+        panX = newMid.x - (newMid.x - panX) * (newZoom / zoom) + (newMid.x - touchStartMid.x);
+        panY = newMid.y - (newMid.y - panY) * (newZoom / zoom) + (newMid.y - touchStartMid.y);
+        zoom = newZoom;
+
         touchStartDist = newDist;
+        touchStartMid = newMid;
         zoomVal.textContent = `${Math.round(zoom * 100)}%`;
         redraw();
         return;
@@ -353,6 +401,11 @@ export default {
         panY += (sy - dragStart.y);
         dragStart = { x: sx, y: sy };
         redraw();
+      } else {
+        // Hover cursor check
+        const { x: wx, y: wy } = screenToWorld(sx, sy);
+        const hit = findHitElement(wx, wy);
+        canvas.style.cursor = hit ? 'pointer' : 'grab';
       }
     };
 
@@ -361,6 +414,7 @@ export default {
       isPanning = false;
       touchStartDist = 0;
       initialElementPos = null;
+      canvas.style.cursor = 'grab';
     };
 
     canvas.addEventListener('mousedown', onPointerDown);
@@ -426,19 +480,6 @@ export default {
       redraw();
     });
 
-    /* --- Zoom Controls --- */
-    zoomInBtn.addEventListener('click', () => {
-      zoom = Math.min(3.0, zoom * 1.25);
-      zoomVal.textContent = `${Math.round(zoom * 100)}%`;
-      redraw();
-    });
-
-    zoomOutBtn.addEventListener('click', () => {
-      zoom = Math.max(0.2, zoom / 1.25);
-      zoomVal.textContent = `${Math.round(zoom * 100)}%`;
-      redraw();
-    });
-
     zoomFitBtn.addEventListener('click', fitToScreen);
     showBgCheck.addEventListener('change', redraw);
 
@@ -451,57 +492,48 @@ export default {
       exportCanvas.height = h;
       const expCtx = exportCanvas.getContext('2d');
 
-      renderArchitecturePlan(expCtx, elements, bgCanvas, {
+      const activePlate = cleanBgCanvas || bgCanvas;
+      renderArchitecturePlan(expCtx, elements, activePlate, {
         showBackground: showBgCheck.checked,
         selectedId: null,
-        zoom: 1.0,
+        zoom: 1,
         panX: 0,
         panY: 0,
       });
 
-      exportCanvas.toBlob(blob => {
-        downloadBlob(blob, `${(currentFile?.name || 'floor-plan').replace(/\.[^.]+$/, '')}-edited.png`);
-        analytics?.downloaded({ fileCount: 1 });
+      exportCanvas.toBlob((blob) => {
+        downloadBlob(blob, `floor_plan_${Date.now()}.png`);
+        analytics?.completed({ format: 'png', elements: elements.length });
       }, 'image/png');
     });
 
     exportPdfBtn.addEventListener('click', async () => {
-      const exportCanvas = document.createElement('canvas');
-      const w = bgCanvas ? bgCanvas.width : 1200;
-      const h = bgCanvas ? bgCanvas.height : 900;
-      exportCanvas.width = w;
-      exportCanvas.height = h;
-      const expCtx = exportCanvas.getContext('2d');
-
-      renderArchitecturePlan(expCtx, elements, bgCanvas, {
-        showBackground: showBgCheck.checked,
-        selectedId: null,
-        zoom: 1.0,
-        panX: 0,
-        panY: 0,
-      });
+      exportPdfBtn.disabled = true;
+      exportPdfBtn.textContent = 'Building PDF…';
 
       try {
-        const blob = await exportPlanToPdf(exportCanvas, currentFile?.name || 'Floor Plan');
-        downloadBlob(blob, `${(currentFile?.name || 'floor-plan').replace(/\.[^.]+$/, '')}-edited.pdf`);
-        analytics?.downloaded({ fileCount: 1 });
+        const activePlate = cleanBgCanvas || bgCanvas;
+        const pdfBlob = await exportPlanToPdf(elements, activePlate, {
+          showBackground: showBgCheck.checked,
+        });
+        downloadBlob(pdfBlob, `floor_plan_${Date.now()}.pdf`);
+        analytics?.completed({ format: 'pdf', elements: elements.length });
       } catch (err) {
-        alert('Could not generate PDF: ' + err.message);
+        alert('Could not export PDF: ' + err.message);
+      } finally {
+        exportPdfBtn.disabled = false;
+        exportPdfBtn.textContent = 'Download PDF';
       }
     });
 
-    newBtn.addEventListener('click', () => {
-      currentFile = null;
-      bgCanvas = null;
-      elements = [];
-      selectedId = null;
-      undoStack.length = 0;
-      redoStack.length = 0;
-      work.hidden = true;
-      input.value = '';
-    });
-
     window.addEventListener('resize', redraw);
+    this._cleanup.push(() => {
+      window.removeEventListener('mousemove', onPointerMove);
+      window.removeEventListener('mouseup', onPointerUp);
+      window.removeEventListener('touchmove', onPointerMove);
+      window.removeEventListener('touchend', onPointerUp);
+      window.removeEventListener('resize', redraw);
+    });
   },
 
   destroy() {
