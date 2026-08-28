@@ -188,6 +188,104 @@ export function detectFloorPlanElements(canvas) {
 }
 
 /**
+ * Inpaints and erases detected structural elements from the original raster canvas,
+ * returning a pristine background plate without residual walls/lines.
+ * @param {HTMLCanvasElement} canvas - Original floor plan raster canvas
+ * @param {ArchElement[]} elements - Extracted vector elements
+ * @returns {HTMLCanvasElement} Cleaned background canvas without ghost structures
+ */
+export function reconstructCleanBackground(canvas, elements) {
+  const w = canvas.width;
+  const h = canvas.height;
+  const cleanCanvas = document.createElement('canvas');
+  cleanCanvas.width = w;
+  cleanCanvas.height = h;
+  const ctx = cleanCanvas.getContext('2d');
+
+  // Copy original canvas
+  ctx.drawImage(canvas, 0, 0);
+
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const data = imgData.data;
+
+  // 1. Determine dominant background paper color (sample corner and border pixels)
+  let sumR = 0, sumG = 0, sumB = 0, count = 0;
+  for (let y = 0; y < h; y += Math.max(1, Math.floor(h / 30))) {
+    for (let x = 0; x < w; x += Math.max(1, Math.floor(w / 30))) {
+      const idx = (y * w + x) * 4;
+      const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+      if (lum > 140) { // Only sample light background/paper pixels
+        sumR += r; sumG += g; sumB += b;
+        count++;
+      }
+    }
+  }
+
+  const bgR = count > 0 ? Math.round(sumR / count) : 255;
+  const bgG = count > 0 ? Math.round(sumG / count) : 255;
+  const bgB = count > 0 ? Math.round(sumB / count) : 255;
+
+  // 2. Create inpaint mask over all detected elements with safety padding
+  const mask = new Uint8Array(w * h);
+
+  for (const el of elements) {
+    if (el.type === 'wall') {
+      const x1 = Math.min(el.x, el.x2 != null ? el.x2 : el.x + 80);
+      const x2 = Math.max(el.x, el.x2 != null ? el.x2 : el.x + 80);
+      const y1 = Math.min(el.y, el.y2 != null ? el.y2 : el.y);
+      const y2 = Math.max(el.y, el.y2 != null ? el.y2 : el.y);
+      const pad = (el.thickness || 8) + 6;
+
+      const minX = Math.max(0, Math.floor(x1 - pad));
+      const maxX = Math.min(w - 1, Math.ceil(x2 + pad));
+      const minY = Math.max(0, Math.floor(y1 - pad));
+      const maxY = Math.min(h - 1, Math.ceil(y2 + pad));
+
+      for (let py = minY; py <= maxY; py++) {
+        for (let px = minX; px <= maxX; px++) {
+          mask[py * w + px] = 1;
+        }
+      }
+    } else if (el.type === 'door' || el.type === 'window') {
+      const radius = (el.width || 40) + 10;
+      const minX = Math.max(0, Math.floor(el.x - radius));
+      const maxX = Math.min(w - 1, Math.ceil(el.x + radius));
+      const minY = Math.max(0, Math.floor(el.y - radius));
+      const maxY = Math.min(h - 1, Math.ceil(el.y + radius));
+
+      for (let py = minY; py <= maxY; py++) {
+        for (let px = minX; px <= maxX; px++) {
+          mask[py * w + px] = 1;
+        }
+      }
+    }
+  }
+
+  // 3. Inpaint masked dark pixels with smooth background synthesis
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      if (mask[i]) {
+        const idx = i * 4;
+        const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        // Erase dark structure strokes in mask region
+        if (lum < 200) {
+          data[idx] = bgR;
+          data[idx + 1] = bgG;
+          data[idx + 2] = bgB;
+          data[idx + 3] = 255;
+        }
+      }
+    }
+  }
+
+  ctx.putImageData(imgData, 0, 0);
+  return cleanCanvas;
+}
+
+/**
  * Render vector architectural elements to high-resolution canvas.
  */
 export function renderArchitecturePlan(ctx, elements, bgCanvas, options = {}) {

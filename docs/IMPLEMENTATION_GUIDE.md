@@ -123,26 +123,35 @@ export default {
 56. **`subscription-analyzer`**: Annualized recurring software and subscription expense tracker.
 57. **`timesheet`**: Employee time and attendance logger with CSV export.
 
-### F. Law & Legal Practice (`category: 'law'`)
+#### F. Law & Legal Practice (`category: 'law'`)
 58. **`case-digest`**: Structured case brief generator extracting Case, Court, Facts, Issues, Arguments, Holding, Ratio Decidendi, Authorities, and Timeline, featuring an "Explain Simply" layperson mode.
 59. **`case-comparator`**: Side-by-side comparative precedent matrix evaluating Facts, Holdings, Ratio Decidendi, and Precedential Relationships (Followed, Distinguished, Overruled).
 60. **`legal-document-analyzer`**: Extracts contracting parties, effective dates, key covenants, defined terms, liabilities, and termination clauses from agreements and statutes.
 61. **`legal-research`**: Structures legal research problems into primary/secondary issues, doctrinal tests, verified Boolean queries (LawPavilion, BAILII, CanLII), and authority matrices.
 62. **`legal-pdf`**: Court document bundling, sequential Bates stamping (e.g. `PAGE-001`), confidential text redaction, and court e-filing size optimization.
 
-### G. Design & Modeling (`category: 'design'`, `'modeling'`)
-63. **`color-converter`**: Live HEX, RGB, HSL, HSV, and CMYK color space converter.
-64. **`color-palette-generator`**: Random harmonic palette generator with lockable color swatches.
-65. **`aspect-ratio`**: Calculates dimensions, scaling, and standard display aspect ratios (16:9, 4:3, 21:9).
-66. **`contrast-checker`**: WCAG 2.1 AAA/AA color contrast compliance analyzer.
-67. **`container-planner`**: Interactive 3D shipping container and portacabin conversion planner with live BOQ pricing.
-68. **`anatomy-explorer`**: High-performance 3D anatomical atlas with DRACO models, cross-section clipping, and clinical notes.
-69. **`architecture-editor`**: Mobile-first architectural floor plan editor with automated wall/opening detection, touch handles, and PDF export.
+### G. Science & Chemistry (`category: 'science'`)
+63. **`periodic-table`**: Interactive scientific periodic table of all 118 elements with IUPAC data, electronegativity/density heatmaps, and electron configurations.
+64. **`chemical-equation-balancer`**: Exact mathematical null-space matrix solver for balancing chemical reactions, polyatomic ions, and hydrates.
+65. **`stoichiometry-calculator`**: Calculates theoretical reaction yields, identifies limiting reagents, analyzes excess reactants, and handles mole/mass/STP volume conversions.
+66. **`compound-database`**: Searchable chemical compound reference with IUPAC nomenclature, formula weights, CAS numbers, physical constants, and GHS safety data.
 
-### H. Security, Networking, Music & Everyday (`category: 'security'`, `'networking'`, `'music'`, `'everyday'`, `'reference'`)
-70. **`password-generator`**: High-entropy cryptographic password generator (runs strictly offline; no artifact export).
-71. **`file-hash`**: SHA-256, SHA-1, SHA-512, MD5 client-side file checksum verifier.
-72. **`hash-generator`**: Text hashing utility for cryptographic digests and HMACs.
+### H. Business & VolTix Payment Hub (`category: 'business'`)
+67. **`payment-hub`**: VolTix multi-rail money-receiving hub supporting Dedicated Virtual Bank Accounts, Cards, and Crypto/Lightning settlements with server-side HMAC verification.
+
+### I. Design & Modeling (`category: 'design'`, `'modeling'`)
+68. **`color-converter`**: Live HEX, RGB, HSL, HSV, and CMYK color space converter.
+69. **`color-palette-generator`**: Random harmonic palette generator with lockable color swatches.
+70. **`aspect-ratio`**: Calculates dimensions, scaling, and standard display aspect ratios (16:9, 4:3, 21:9).
+71. **`contrast-checker`**: WCAG 2.1 AAA/AA color contrast compliance analyzer.
+72. **`container-planner`**: Interactive 3D shipping container and portacabin conversion planner with live BOQ pricing.
+73. **`anatomy-explorer`**: High-performance 3D anatomical atlas with Draco models, fast BVH picking, and structured clinical ontology.
+74. **`architecture-editor`**: Mobile-first floor plan editor with vectorization, background inpainting/reconstruction, and clean element displacement.
+
+### J. Security, Networking, Music & Everyday (`category: 'security'`, `'networking'`, `'music'`, `'everyday'`, `'reference'`)
+75. **`password-generator`**: High-entropy cryptographic password generator (runs strictly offline; no artifact export).
+76. **`file-hash`**: SHA-256, SHA-1, SHA-512, MD5 client-side file checksum verifier.
+77. **`hash-generator`**: Text hashing utility for cryptographic digests and HMACs.
 73. **`uuid-generator`**: Generates RFC4122 v4 UUIDs, v1 UUIDs, and ULIDs.
 74. **`qr-generator`**: QR code generator and camera barcode scanner.
 75. **`email-signature`**: HTML email signature builder with live preview.

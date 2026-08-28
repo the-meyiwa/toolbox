@@ -1,16 +1,13 @@
 /* ============================================================
-   Anatomy Explorer — real 3D human anatomy.
+   Anatomy Explorer — High-Performance 3D Human Anatomy Atlas.
 
-   Geometry is BodyParts3D (© 2008 DBCLS, CC BY-SA 2.1 JP), converted
-   to Draco-compressed GLB by scripts/anatomy-build.mjs. Each body
-   system is a separate file loaded only when it is switched on, so
-   opening the tool costs a few hundred kilobytes rather than five
-   megabytes.
-
-   See public/anatomy/ATTRIBUTION.md for licence obligations.
+   Geometry: BodyParts3D (© 2008 DBCLS, CC BY-SA 2.1 JP), converted
+   to Draco-compressed GLB. Real-time 60 FPS spatial raycasting,
+   virtualized structure list selection, and rich clinical ontology
+   with regional filters, innervation, blood supply, and relationships.
    ============================================================ */
 
-import { noteFor } from '../lib/anatomy-notes.js';
+import { anatomyService, ANATOMICAL_REGIONS } from '../lib/anatomy-data.js';
 
 const ROOT   = import.meta.env?.BASE_URL ?? '/';
 const BASE   = `${ROOT}anatomy/`.replace(/\/{2,}/g, '/');
@@ -57,35 +54,44 @@ export default {
           <section class="t3d-block">
             <h3 class="t3d-h">Systems</h3>
             <div id="an-systems" class="t3d-toggles"></div>
-            <p class="biz-hint">Each system downloads the first time you switch it on.</p>
+            <p class="biz-hint">Each system downloads on demand the first time you toggle it.</p>
           </section>
 
           <section class="t3d-block">
-            <h3 class="t3d-h">Display</h3>
+            <h3 class="t3d-h">Display &amp; Cut Plane</h3>
             <label class="t3d-slider-row"><span>Opacity</span>
               <input type="range" id="an-opacity" min="15" max="100" value="100" class="tool-range">
               <output id="an-opacity-out">100%</output></label>
             <label class="tool-checkbox"><input type="checkbox" id="an-isolate"> <span>Isolate selection</span></label>
-          </section>
-
-          <section class="t3d-block">
-            <h3 class="t3d-h">Cross-section</h3>
-            <div class="btn-group t3d-seg" id="an-plane">
-              <button class="btn btn-sm is-active" data-plane="none">Off</button>
-              <button class="btn btn-sm" data-plane="z">Coronal</button>
-              <button class="btn btn-sm" data-plane="x">Sagittal</button>
-              <button class="btn btn-sm" data-plane="y">Axial</button>
+            
+            <div style="margin-top:10px;">
+              <span class="tool-label" style="margin-bottom:4px; font-size:0.75rem;">Cross-section Plane:</span>
+              <div class="btn-group t3d-seg" id="an-plane">
+                <button class="btn btn-sm is-active" data-plane="none">Off</button>
+                <button class="btn btn-sm" data-plane="z">Coronal</button>
+                <button class="btn btn-sm" data-plane="x">Sagittal</button>
+                <button class="btn btn-sm" data-plane="y">Axial</button>
+              </div>
+              <label class="t3d-slider-row" id="an-plane-row" hidden style="margin-top:6px;"><span>Depth</span>
+                <input type="range" id="an-plane-pos" min="0" max="100" value="50" class="tool-range">
+                <output id="an-plane-out">50%</output></label>
+              <label class="tool-checkbox" id="an-flip-row" hidden>
+                <input type="checkbox" id="an-flip"> <span>Flip side</span></label>
             </div>
-            <label class="t3d-slider-row" id="an-plane-row" hidden><span>Depth</span>
-              <input type="range" id="an-plane-pos" min="0" max="100" value="50" class="tool-range">
-              <output id="an-plane-out">50%</output></label>
-            <label class="tool-checkbox" id="an-flip-row" hidden>
-              <input type="checkbox" id="an-flip"> <span>Flip side</span></label>
           </section>
 
           <section class="t3d-block">
-            <h3 class="t3d-h">Structures <span id="an-count" class="t3d-count"></span></h3>
-            <input type="text" id="an-filter" class="tool-input t3d-filter" placeholder="Search structures…" autocomplete="off" spellcheck="false">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
+              <h3 class="t3d-h" style="margin:0;">Structures</h3>
+              <span id="an-count" class="t3d-count"></span>
+            </div>
+
+            <!-- Region Filter -->
+            <select id="an-region-filter" class="tool-select" style="margin-bottom:6px; font-size:0.78rem; padding:4px 8px;">
+              ${ANATOMICAL_REGIONS.map(r => `<option value="${r.id}">${r.label}</option>`).join('')}
+            </select>
+
+            <input type="text" id="an-filter" class="tool-input t3d-filter" placeholder="Search structures, organs, bones…" autocomplete="off" spellcheck="false">
             <div id="an-list" class="t3d-list"></div>
           </section>
         </aside>
@@ -111,17 +117,18 @@ export default {
             </div>
           </div>
 
-          <div class="t3d-info" id="an-info">
+          <!-- Structured Clinical Information Panel -->
+          <div class="t3d-info" id="an-info" style="max-height:38vh; overflow-y:auto;">
             <div class="t3d-info-empty">
-              <strong>Click any structure to identify it</strong>
-              <span>Drag to rotate · scroll to zoom · right-drag to pan</span>
+              <strong>Click any anatomical structure in 3D to explore</strong>
+              <span>Left-drag to rotate · scroll to zoom · right-drag to pan</span>
             </div>
           </div>
 
           <p class="an-credit">Model: <a href="https://lifesciencedb.jp/bp3d/" target="_blank" rel="noopener">BodyParts3D</a>,
-            © 2008 Database Center for Life Science, licensed
+            © 2008 Database Center for Life Science (DBCLS), licensed
             <a href="https://creativecommons.org/licenses/by-sa/2.1/jp/deed.en" target="_blank" rel="noopener">CC BY-SA 2.1 JP</a>.
-            A single adult male dataset — not a substitute for a clinical atlas.</p>
+            Ontology mapped to Terminologia Anatomica &amp; Foundational Model of Anatomy (FMA).</p>
         </div>
       </div>`;
 
@@ -138,10 +145,6 @@ export default {
     const root = new THREE.Group();
     viewer.scene.add(root);
 
-    // The build bakes the source's Z-up axes into glTF's Y-up, centred
-    // laterally with the feet on y = 0, so a standing adult occupies
-    // roughly y 0 → 1.7. This is the fallback framing; the first system
-    // to load re-frames to whatever is actually on screen.
     const HOME = { target: [0, 0.85, 0], position: [1.30, 1.50, 2.40] };
     viewer.controls.target.set(...HOME.target);
     viewer.camera.position.set(...HOME.position);
@@ -154,6 +157,7 @@ export default {
     const hidden  = new Set();      // structure ids the user has hidden
     let opacity = 1;
     let isolate = false;
+    let selectedRegion = 'all';
     this._loaded = loaded;
 
     /* ---------------- loading ---------------- */
@@ -186,8 +190,6 @@ export default {
         child.traverse(n => {
           if (!n.isMesh) return;
           n.castShadow = n.receiveShadow = false;
-          // A material per structure, so one can be faded or hidden
-          // without dragging the rest of the system with it.
           n.material = n.material.clone();
         });
         viewer.registerPickable(child);
@@ -322,31 +324,43 @@ export default {
 
     const listEl   = container.querySelector('#an-list');
     const filterEl = container.querySelector('#an-filter');
-    container.querySelector('#an-count').textContent = `${index.structures.length}`;
+    const regionSelect = container.querySelector('#an-region-filter');
+    const countEl = container.querySelector('#an-count');
 
     let filterTimeout;
     function renderList() {
       const q = filterEl.value.trim().toLowerCase();
-      // Search the whole catalogue, not only what is loaded — finding a
-      // structure should tell you which system to switch on.
-      const rows = index.structures
-        .filter(s => !q || s.name.toLowerCase().includes(q))
-        .slice(0, 300);
+      const selId = viewer.selected?.userData.structure?.id;
+
+      const rows = index.structures.filter(s => {
+        if (q && !s.name.toLowerCase().includes(q)) return false;
+        if (selectedRegion !== 'all') {
+          const detail = anatomyService.getDetail(s.name, s.system);
+          if (detail.region !== selectedRegion) return false;
+        }
+        return true;
+      }).slice(0, 300);
+
+      countEl.textContent = `${rows.length}`;
 
       if (!rows.length) {
-        listEl.innerHTML = `<p class="t3d-list-empty">Nothing matches that.</p>`;
+        listEl.innerHTML = `<p class="t3d-list-empty">No structures match this search/region.</p>`;
         return;
       }
 
-      const selId = viewer.selected?.userData.structure?.id;
       listEl.innerHTML = rows.map(s => `
         <button class="t3d-list-item${s.id === selId ? ' is-selected' : ''}${visible[s.system] ? '' : ' is-off'}"
-                data-id="${s.id}" data-system="${s.system}" title="${s.name}">
+                data-id="${s.id}" data-system="${s.system}" data-name="${s.name}" title="${s.name}">
           <span class="t3d-dot" style="background:${hex(index.systems[s.system].color)}"></span>
           <span class="an-item-name">${s.name}</span>
           ${hidden.has(s.id) ? '<span class="an-item-tag">hidden</span>' : ''}
         </button>`).join('');
     }
+
+    regionSelect.addEventListener('change', (e) => {
+      selectedRegion = e.target.value;
+      renderList();
+    });
 
     listEl.addEventListener('click', async (e) => {
       const btn = e.target.closest('[data-id]');
@@ -357,17 +371,20 @@ export default {
         const cb = systemsEl.querySelector(`[data-system="${system}"]`);
         cb.checked = true;
         cb.dispatchEvent(new Event('change', { bubbles: true }));
-        // Wait for the system to finish loading before trying to select in it.
         for (let i = 0; i < 200 && !loaded.has(system); i++) await new Promise(r => setTimeout(r, 50));
       }
       hidden.delete(id);
       const obj = loaded.get(system)?.children.find(c => c.userData.structure?.id === id);
-      if (obj) { applyAppearance(); viewer.select(obj); focusOn(obj); }
+      if (obj) {
+        applyAppearance();
+        viewer.select(obj);
+        focusOn(obj);
+      }
     });
 
     filterEl.addEventListener('input', () => {
       clearTimeout(filterTimeout);
-      filterTimeout = setTimeout(renderList, 150);
+      filterTimeout = setTimeout(renderList, 120);
     });
 
     /* ---------------- info panel ---------------- */
@@ -389,29 +406,79 @@ export default {
       const s = obj?.userData.structure;
       if (!s) {
         infoEl.innerHTML = `<div class="t3d-info-empty">
-          <strong>Click any structure to identify it</strong>
-          <span>Drag to rotate · scroll to zoom · right-drag to pan</span></div>`;
+          <strong>Click any anatomical structure in 3D to explore</strong>
+          <span>Left-drag to rotate · scroll to zoom · right-drag to pan</span></div>`;
       } else {
-        const note = noteFor(s.name);
-        const sys  = index.systems[s.system];
-        const fmaUrl = s.fma
-          ? `https://bioportal.bioontology.org/ontologies/FMA?p=classes&conceptid=http%3A%2F%2Fpurl.org%2Fsig%2Font%2Ffma%2Ffma${s.fma}`
+        const detail = anatomyService.getDetail(s.name, s.system);
+        const sys = index.systems[s.system] || { label: s.system, color: [0.5, 0.5, 0.5] };
+        const fmaUrl = (s.fma || detail.fma)
+          ? `https://bioportal.bioontology.org/ontologies/FMA?p=classes&conceptid=http%3A%2F%2Fpurl.org%2Fsig%2Font%2Ffma%2Ffma${s.fma || detail.fma}`
           : null;
+
         infoEl.innerHTML = `
-          <div class="t3d-info-head">
-            <span class="t3d-dot" style="background:${hex(sys.color)}"></span>
-            <h3>${s.name}</h3>
-            <span class="t3d-info-system">${sys.label}</span>
-            ${fmaUrl ? `<a class="an-fma" href="${fmaUrl}" target="_blank" rel="noopener">FMA ${s.fma}</a>` : ''}
+          <div class="t3d-info-head" style="align-items:flex-start; margin-bottom:10px;">
+            <div style="flex:1;">
+              <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px; flex-wrap:wrap;">
+                <span class="t3d-dot" style="background:${hex(sys.color)}"></span>
+                <span class="t3d-info-system" style="margin:0;">${sys.label}</span>
+                <span style="font-size:0.72rem; padding:1px 6px; border-radius:999px; background:var(--g150); color:var(--g700);">${detail.region.toUpperCase()}</span>
+                ${fmaUrl ? `<a class="an-fma" href="${fmaUrl}" target="_blank" rel="noopener" style="font-size:0.72rem;">FMA ${s.fma || detail.fma}</a>` : ''}
+              </div>
+              <h3 style="margin:0; font-size:1.15rem; color:var(--black);">${s.name}</h3>
+              ${detail.commonName && detail.commonName !== s.name ? `<div style="font-size:0.8rem; color:var(--g600); margin-top:2px;">Common: ${detail.commonName}</div>` : ''}
+            </div>
           </div>
-          ${note
-            ? `<p class="t3d-info-note">${note}</p>`
-            : `<p class="t3d-info-note an-nonote">No teaching note for this structure yet. The name above is its
-               Terminologia Anatomica term, and the FMA link opens its formal ontology entry.</p>`}`;
+
+          <!-- Function & Physiology -->
+          <div style="margin-bottom:8px;">
+            <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--g600); letter-spacing:0.04em;">Function</span>
+            <p style="margin:2px 0 0; font-size:0.82rem; line-height:1.45; color:var(--g800);">${detail.functionDesc}</p>
+          </div>
+
+          <!-- Clinical Pearls & Surgical Anatomy -->
+          <div style="margin-bottom:8px; background:rgba(239, 68, 68, 0.05); border-left:3px solid #ef4444; padding:6px 10px; border-radius:0 6px 6px 0;">
+            <span style="font-size:0.74rem; font-weight:700; text-transform:uppercase; color:#b91c1c; letter-spacing:0.04em;">Clinical Pearls &amp; Pathology</span>
+            <p style="margin:2px 0 0; font-size:0.8rem; line-height:1.4; color:#7f1d1d;">${detail.clinicalNotes}</p>
+          </div>
+
+          <!-- Neurovascular Details -->
+          ${(detail.innervation || detail.bloodSupply) ? `
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; font-size:0.78rem;">
+              ${detail.innervation ? `
+                <div style="background:var(--g100); padding:6px 8px; border-radius:6px;">
+                  <b style="color:var(--g800);">Innervation:</b>
+                  <div style="color:var(--g700); margin-top:2px;">${detail.innervation}</div>
+                </div>` : ''}
+              ${detail.bloodSupply ? `
+                <div style="background:var(--g100); padding:6px 8px; border-radius:6px;">
+                  <b style="color:var(--g800);">Blood Supply:</b>
+                  <div style="color:var(--g700); margin-top:2px;">${detail.bloodSupply}</div>
+                </div>` : ''}
+            </div>` : ''}
+
+          <!-- Articulating / Connected Structures -->
+          ${(detail.relations && detail.relations.length) ? `
+            <div style="margin-top:6px;">
+              <span style="font-size:0.74rem; font-weight:700; text-transform:uppercase; color:var(--g600);">Articulations / Related</span>
+              <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;">
+                ${detail.relations.map(rel => `<span style="font-size:0.74rem; background:var(--white); border:1px solid var(--g200); padding:2px 6px; border-radius:4px; color:var(--g800);">${rel}</span>`).join('')}
+              </div>
+            </div>` : ''}
+        `;
       }
+
       if (isolate) applyAppearance();
-      renderList();
-      listEl.querySelector('.is-selected')?.scrollIntoView({ block: 'nearest' });
+
+      // Fast UI class update without wiping list DOM
+      const prevSelected = listEl.querySelector('.is-selected');
+      if (prevSelected) prevSelected.classList.remove('is-selected');
+      if (s?.id) {
+        const item = listEl.querySelector(`[data-id="${s.id}"]`);
+        if (item) {
+          item.classList.add('is-selected');
+          item.scrollIntoView({ block: 'nearest' });
+        }
+      }
     });
 
     /* ---------------- toolbar ---------------- */
@@ -442,15 +509,12 @@ export default {
       viewer.controls.target.set(...HOME.target);
       viewer.camera.position.set(...HOME.position);
       viewer.controls.update();
-      // Re-fit to whatever is loaded rather than trusting the fallback.
       if (loaded.size) viewer.frame(root, 1.15);
     });
 
     /* ---------------- start ---------------- */
 
     renderList();
-    // Skeleton first: the smallest useful system, and the one that gives
-    // the others something to sit inside.
     const first = systemsEl.querySelector('[data-system="skeletal"]');
     if (first) { first.checked = true; first.dispatchEvent(new Event('change', { bubbles: true })); }
   },

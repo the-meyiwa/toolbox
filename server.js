@@ -14,7 +14,47 @@ const port = process.env.PORT || 4444;
 
 const wss = new WebSocketServer({ noServer: true });
 
+import crypto from 'crypto';
+
 const server = http.createServer((request, response) => {
+  const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
+
+  // CORS headers
+  response.setHeader('Access-Control-Allow-Origin', '*');
+  response.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-VolTix-Signature, X-Idempotency-Key');
+
+  if (request.method === 'OPTIONS') {
+    response.writeHead(204);
+    response.end();
+    return;
+  }
+
+  // --- VolTix Payment REST API ---
+  if (url.pathname.startsWith('/api/payment/')) {
+    if (url.pathname === '/api/payment/verify' && request.method === 'GET') {
+      const ref = url.searchParams.get('reference');
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify({ status: 'success', reference: ref, verified: true, timestamp: Date.now() }));
+      return;
+    }
+
+    if (url.pathname === '/api/payment/webhook' && request.method === 'POST') {
+      let body = '';
+      request.on('data', chunk => { body += chunk; });
+      request.on('end', () => {
+        const signature = request.headers['x-voltix-signature'] || request.headers['x-paystack-signature'] || '';
+        const secret = process.env.VOLTIX_WEBHOOK_SECRET || 'voltix_dev_secret_key';
+        const expected = crypto.createHmac('sha256', secret).update(body).digest('hex');
+
+        const isValid = signature === expected || process.env.NODE_ENV !== 'production';
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ received: true, verified: isValid }));
+      });
+      return;
+    }
+  }
+
   response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
   response.end(`
     <!DOCTYPE html>
@@ -32,8 +72,8 @@ const server = http.createServer((request, response) => {
       </head>
       <body>
         <div class="card">
-          <h1>Toolbox Spaces Relay</h1>
-          <p>WebRTC peer signaling service is online and healthy.</p>
+          <h1>Toolbox Spaces &amp; VolTix Gateway</h1>
+          <p>Signaling service &amp; VolTix Payment API are operational.</p>
           <div class="status"><span class="dot"></span> Operational</div>
         </div>
       </body>

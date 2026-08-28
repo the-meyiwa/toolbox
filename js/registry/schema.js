@@ -13,7 +13,7 @@
 
 /**
  * @typedef {'text'|'developer'|'images-files'|'numbers'|'business'|'design'
- *          |'security'|'networking'|'modeling'|'reference'|'music'|'everyday'|'law'} CategoryId
+ *          |'security'|'networking'|'modeling'|'reference'|'music'|'everyday'|'law'|'science'} CategoryId
  *
  * @typedef {import('./kinds.js').ArtifactKind} ArtifactKind
  *
@@ -49,15 +49,16 @@ export const CATEGORIES = /** @type {Category[]} */ ([
   { id: 'text',         label: 'Text',           order: 2, blurb: 'Clean, compare, count and reshape text.' },
   { id: 'developer',    label: 'Developer',      order: 3, blurb: 'Formatters, encoders, decoders and a code runner.' },
   { id: 'numbers',      label: 'Numbers & Calculators', order: 4, blurb: 'Everyday maths, units and dates.' },
-  { id: 'business',     label: 'Business & Finance',    order: 5, blurb: 'Pricing, payroll, projections and paperwork.' },
+  { id: 'business',     label: 'Business & Finance',    order: 5, blurb: 'Pricing, payroll, projections, money receiving and paperwork.' },
   { id: 'law',          label: 'Law & Legal Practice',  order: 6, blurb: 'Analyze judgments, compare precedents, digest case law, and structure legal research.' },
-  { id: 'design',       label: 'Design',         order: 7, blurb: 'Colour, ratios and codes.' },
-  { id: 'security',     label: 'Security & Privacy',    order: 8, blurb: 'Generate secrets and strip what you did not mean to share.' },
-  { id: 'networking',   label: 'Networking',     order: 9, blurb: 'Look up what is behind a domain or an address.' },
-  { id: 'modeling',     label: '3D & Modeling',  order: 10, blurb: 'Interactive models you can measure and quote from.' },
-  { id: 'reference',    label: 'Reference',      order: 11, blurb: 'Look something up — words, scripture, and the sum of human knowledge.' },
-  { id: 'music',        label: 'Music',          order: 12, blurb: 'Keep time, find the note, and work out what fits.' },
-  { id: 'everyday',     label: 'Everyday',       order: 13, blurb: 'Small things worth a bookmark.' },
+  { id: 'science',      label: 'Science & Chemistry',   order: 7, blurb: 'Explore the periodic table, balance chemical reactions, and compute stoichiometry.' },
+  { id: 'design',       label: 'Design',         order: 8, blurb: 'Colour, ratios and codes.' },
+  { id: 'security',     label: 'Security & Privacy',    order: 9, blurb: 'Generate secrets and strip what you did not mean to share.' },
+  { id: 'networking',   label: 'Networking',     order: 10, blurb: 'Look up what is behind a domain or an address.' },
+  { id: 'modeling',     label: '3D & Modeling',  order: 11, blurb: 'Interactive models you can measure and quote from.' },
+  { id: 'reference',    label: 'Reference',      order: 12, blurb: 'Look something up — words, scripture, and the sum of human knowledge.' },
+  { id: 'music',        label: 'Music',          order: 13, blurb: 'Keep time, find the note, and work out what fits.' },
+  { id: 'everyday',     label: 'Everyday',       order: 14, blurb: 'Small things worth a bookmark.' },
 ]);
 
 export const CATEGORY_IDS = new Set(CATEGORIES.map(c => c.id));

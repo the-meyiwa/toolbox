@@ -97,6 +97,10 @@ export default {
           </div>
 
           <button class="btn btn-primary" id="inv-print" style="margin-top:14px; width:100%;">Print or save as PDF</button>
+          <button class="btn btn-secondary btn-sm" id="inv-pay-link" style="margin-top:8px; width:100%; display:flex; align-items:center; justify-content:center; gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Generate VolTix Payment Link
+          </button>
           <p class="biz-hint">Choose “Save as PDF” as the destination in the print dialogue.</p>
         </aside>
 
@@ -219,6 +223,25 @@ export default {
         refresh({ lines: true });
       } else if (e.target.id === 'inv-print') {
         window.print();
+      } else if (e.target.closest('#inv-pay-link')) {
+        const subtotal = state.lines.reduce((s, l) => s + (l.qty * l.price), 0);
+        const tax = subtotal * (state.taxRate / 100);
+        const total = (subtotal + tax) * (1 - state.discount / 100);
+        import('../lib/payment-engine.js').then(async ({ paymentGateway }) => {
+          try {
+            const tx = await paymentGateway.initiate({
+              amount: total.toFixed(2),
+              currency: state.currency || 'USD',
+              customerEmail: 'client@example.com',
+              customerName: state.to.split('\n')[0],
+              description: `Payment for ${state.number}`,
+              rail: 'virtual-account',
+            });
+            window.location.hash = `#payment-hub?ref=${tx.reference}`;
+          } catch (err) {
+            alert('Could not create payment link: ' + err.message);
+          }
+        });
       }
     });
 

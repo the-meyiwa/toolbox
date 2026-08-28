@@ -10,8 +10,8 @@ import {
   dropZone, attachFileInput, downloadBlob, humanBytes,
 } from '../lib/file-engine.js';
 import {
-  loadFloorPlanSource, detectFloorPlanElements, renderArchitecturePlan,
-  getElementBounds, exportPlanToPdf,
+  loadFloorPlanSource, detectFloorPlanElements, reconstructCleanBackground,
+  renderArchitecturePlan, getElementBounds, exportPlanToPdf,
 } from '../lib/architecture-engine.js';
 
 export default {
@@ -26,7 +26,7 @@ export default {
         <div id="arch-detection-banner" class="biz-explain" style="margin-bottom:12px; font-size:0.84rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
           <div style="display:flex; align-items:center; gap:8px;">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-            <span id="arch-banner-text">Floor plan loaded. Tap any element to move or resize it, or tap <strong>"+ Add"</strong> below.</span>
+            <span id="arch-banner-text">Floor plan vectorized &amp; background cleaned. Tap any element to move or resize it without residual lines!</span>
           </div>
           <button class="btn btn-secondary btn-sm" id="arch-dismiss-banner" style="font-size:0.75rem; padding:2px 8px;">Got it</button>
         </div>
@@ -74,7 +74,7 @@ export default {
         <div style="margin-top:14px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
           <div style="display:flex; align-items:center; gap:12px; font-size:0.84rem;">
             <label class="tool-checkbox" style="margin:0;">
-              <input type="checkbox" id="arch-show-bg" checked> <span>Show original background drawing</span>
+              <input type="checkbox" id="arch-show-bg" checked> <span>Inpainted clean background</span>
             </label>
             <span id="arch-count-badge" style="color:var(--g500);">0 elements</span>
           </div>
@@ -116,6 +116,7 @@ export default {
 
     let currentFile = null;
     let bgCanvas = null;
+    let cleanBgCanvas = null;
     let elements = [];
     let selectedId = null;
 
@@ -147,7 +148,8 @@ export default {
       canvas.height = containerRect.height;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      renderArchitecturePlan(ctx, elements, bgCanvas, {
+      const activePlate = cleanBgCanvas || bgCanvas;
+      renderArchitecturePlan(ctx, elements, activePlate, {
         showBackground: showBgCheck.checked,
         selectedId,
         zoom,
@@ -193,6 +195,8 @@ export default {
 
         // Auto-detect architectural elements
         const detected = detectFloorPlanElements(bgCanvas);
+        // Reconstruct clean background plate by inpainting detected elements
+        cleanBgCanvas = reconstructCleanBackground(bgCanvas, detected);
         elements = detected;
         saveState();
 

@@ -75,6 +75,8 @@ export class Viewer3D {
     this.raycaster.params.Points.threshold = 0.001;
     this.pointer     = new THREE.Vector2();
     this.pickables   = [];
+    this._pickRootMap = new WeakMap();
+    this._rootMeshCache = new WeakMap();
     this.hovered     = null;
     this.selected    = null;
     this._pickHandlers = { hover: null, select: null };
@@ -161,42 +163,63 @@ export class Viewer3D {
       this._setHovered(null);
     };
 
-    el.addEventListener('pointermove', this._onMove);
-    el.addEventListener('pointerdown', this._onDown);
-    el.addEventListener('pointerup', this._onUp);
-    el.addEventListener('pointerleave', this._onLeave);
+    el.addEventListener('pointermove', this._onMove, { passive: true });
+    el.addEventListener('pointerdown', this._onDown, { passive: true });
+    el.addEventListener('pointerup', this._onUp, { passive: true });
+    el.addEventListener('pointerleave', this._onLeave, { passive: true });
   }
 
   _raycast() {
     if (!this.pickables.length) return null;
-    // World matrices are normally refreshed by render(). A pick can arrive
-    // before the first frame (or while rAF is throttled in a hidden tab),
-    // so refresh them here rather than raycasting against stale transforms.
     this.camera.updateMatrixWorld();
     this.scene.updateMatrixWorld();
     this.raycaster.setFromCamera(this.pointer, this.camera);
-    const visible = this.pickables.filter(o => o.visible && o.parent && o.userData.pickable !== false);
+
+    // Fast filter: only visible objects whose parent hierarchy is visible
+    const visible = [];
+    for (let i = 0; i < this.pickables.length; i++) {
+      const obj = this.pickables[i];
+      if (obj.visible && obj.parent?.visible !== false && obj.userData.pickable !== false) {
+        visible.push(obj);
+      }
+    }
+    if (!visible.length) return null;
+
     const hits = this.raycaster.intersectObjects(visible, true);
-    for (const hit of hits) {
-      const target = this._pickRoot(hit.object);
-      if (target) return { object: target, point: hit.point };
+    for (let i = 0; i < hits.length; i++) {
+      const target = this._pickRoot(hits[i].object);
+      if (target) return { object: target, point: hits[i].point };
     }
     return null;
   }
 
-  // Walk up to the nearest ancestor that was registered as pickable,
-  // so a multi-mesh part selects as one unit.
+  // Fast WeakMap-cached ancestor lookup
   _pickRoot(obj) {
+    if (!obj) return null;
+    if (this._pickRootMap.has(obj)) return this._pickRootMap.get(obj);
+
     let node = obj;
     while (node) {
-      if (this.pickables.includes(node)) return node;
+      if (this.pickables.includes(node)) {
+        this._pickRootMap.set(obj, node);
+        return node;
+      }
       node = node.parent;
     }
+    this._pickRootMap.set(obj, null);
     return null;
   }
 
   registerPickable(obj) {
-    if (!this.pickables.includes(obj)) this.pickables.push(obj);
+    if (!this.pickables.includes(obj)) {
+      this.pickables.push(obj);
+      // Pre-cache mesh descendants for instant emissive / outline updates
+      const meshes = [];
+      obj.traverse(n => {
+        if (n.isMesh) meshes.push(n);
+      });
+      this._rootMeshCache.set(obj, meshes);
+    }
   }
 
   onHover(fn)  { this._pickHandlers.hover = fn; }
@@ -212,6 +235,7 @@ export class Viewer3D {
   }
 
   select(obj) {
+    if (this.selected === obj) return;
     if (this.selected) this._applyOutline(this.selected, false);
     this.selected = obj;
     if (obj) this._applyOutline(obj, true);
@@ -219,8 +243,10 @@ export class Viewer3D {
   }
 
   _applyEmphasis(root, on) {
-    root.traverse(node => {
-      if (!node.isMesh || !node.material?.emissive || node.userData._isSelected) return;
+    const meshes = this._rootMeshCache.get(root) || [];
+    for (let i = 0; i < meshes.length; i++) {
+      const node = meshes[i];
+      if (!node.material?.emissive || node.userData._isSelected) continue;
       if (on) {
         node.userData._emissiveWas ??= node.material.emissive.getHex();
         node.material.emissive.setHex(0x404040);
@@ -228,14 +254,16 @@ export class Viewer3D {
         node.material.emissive.setHex(node.userData._emissiveWas);
         delete node.userData._emissiveWas;
       }
-    });
+    }
   }
 
   _applyOutline(root, on) {
-    root.traverse(node => {
-      if (!node.isMesh || !node.material) return;
+    const meshes = this._rootMeshCache.get(root) || [];
+    for (let i = 0; i < meshes.length; i++) {
+      const node = meshes[i];
+      if (!node.material) continue;
       if (on) {
-        if (node.userData._isSelected) return;
+        if (node.userData._isSelected) continue;
         node.userData._isSelected = true;
         if (node.material.emissive) {
           node.userData._selEmissiveWas ??= node.material.emissive.getHex();
@@ -248,7 +276,7 @@ export class Viewer3D {
           delete node.userData._selEmissiveWas;
         }
       }
-    });
+    }
   }
 
   /* ---------------- labels ---------------- */

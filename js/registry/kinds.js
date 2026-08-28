@@ -106,6 +106,12 @@ export const TASKS = [
     categories: ['law'],
   },
   {
+    id: 'science',
+    label: 'Science & chemistry',
+    blurb: 'Explore the periodic table, balance chemical equations, and calculate reaction stoichiometry.',
+    categories: ['science'],
+  },
+  {
     id: 'code',
     label: 'Code & data',
     blurb: 'Formatters, encoders, diagrams and a place to run code.',
