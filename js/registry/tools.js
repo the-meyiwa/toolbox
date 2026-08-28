@@ -1463,7 +1463,7 @@ export const TOOLS = [
     secondary: ['numbers', 'everyday'],
     keywords: ['payment', 'receive money', 'virtual account', 'bank transfer', 'card', 'crypto', 'lightning', 'invoice payment', 'checkout'],
     intents: ['receive money', 'accept payment', 'create payment link', 'virtual bank account'],
-    related: ['invoice-generator', 'container-quote', 'amortization-schedule'],
+    related: ['invoice-generator', 'container-planner', 'amortization-schedule'],
     weight: 88,
     offline: true,
     icon: svg('<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>'),

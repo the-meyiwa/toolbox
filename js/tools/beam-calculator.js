@@ -66,13 +66,14 @@ export default {
       const type = $('bm-type').value;
       const L = parseNum($('bm-l'));            // m
       const W = parseNum($('bm-w'));            // kN or kN/m
-      const mat = MATERIALS[$('bm-mat').value];
-      const secKey = $('bm-sec').value;
+      const mat = MATERIALS[$('bm-mat')?.value] || MATERIALS.steel;
+      const secKey = $('bm-sec')?.value || 'ipe-300';
       $('bm-custom').hidden = secKey !== 'custom';
 
-      const I = secKey === 'custom' ? parseNum($('bm-i')) * 1e4 : SECTIONS[secKey].I;   // mm⁴
-      const depth = secKey === 'custom' ? parseNum($('bm-d')) : SECTIONS[secKey].d;      // mm
-      const E = mat.E;                                                                   // N/mm²
+      const sec = SECTIONS[secKey] || SECTIONS['ipe-300'];
+      const I = secKey === 'custom' ? parseNum($('bm-i')) * 1e4 : (sec?.I ?? 0);   // mm⁴
+      const depth = secKey === 'custom' ? parseNum($('bm-d')) : (sec?.d ?? 0);      // mm
+      const E = mat.E;                                                              // N/mm²
 
       if (!(L > 0) || !(I > 0)) { $('bm-out').innerHTML = ''; return; }
 

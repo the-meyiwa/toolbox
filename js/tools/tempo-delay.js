@@ -92,7 +92,7 @@ export default {
               : `${num(secs, 2)} s`,
           ];
         }),
-        { caption: `In ${$('td-sig').selectedOptions[0].textContent}` },
+        { caption: `In ${$('td-sig')?.selectedOptions?.[0]?.textContent || $('td-sig')?.options?.[0]?.textContent || '4/4'}` },
       );
 
       analytics?.completed({ resultCount: 1 });

@@ -16,6 +16,9 @@ import { renderSaved } from './views/saved.js';
 import { renderSpaces } from './views/spaces.js';
 import { kindLabel } from './registry/kinds.js';
 import { copyText } from './utils.js';
+import { initTheme } from './lib/theme.js';
+import { installSettingsUI } from './lib/settings-ui.js';
+import { installHeaderMenu } from './lib/header-menu.js';
 
 /* --------------- state --------------- */
 
@@ -523,6 +526,10 @@ function reflectSavedWork() {
 
 artifacts.onChange(reflectSavedWork);
 reflectSavedWork();
+
+initTheme();
+installSettingsUI();
+installHeaderMenu();
 
 renderGrid(TOOLS);
 handleHash();

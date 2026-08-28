@@ -28,9 +28,10 @@ const DEFAULT_CURRENCY = 'USD';
 
 export function money(value, code = DEFAULT_CURRENCY, { compact = false, dp } = {}) {
   if (!Number.isFinite(value)) return '—';
+  const curr = (code && typeof code === 'string' && code.trim()) ? code.trim().toUpperCase() : DEFAULT_CURRENCY;
   return new Intl.NumberFormat(undefined, {
     style: 'currency',
-    currency: code,
+    currency: curr,
     notation: compact ? 'compact' : 'standard',
     maximumFractionDigits: dp ?? (compact ? 1 : (Math.abs(value) >= 1000 ? 0 : 2)),
     minimumFractionDigits: dp ?? 0,
@@ -57,8 +58,8 @@ export function parseNum(el, fallback = 0) {
 }
 
 export function months(n) {
-  if (!Number.isFinite(n)) return '—';
   if (n === Infinity) return 'indefinite';
+  if (!Number.isFinite(n)) return '—';
   const y = Math.floor(n / 12);
   const m = Math.round(n % 12);
   if (y && m) return `${y}y ${m}m`;

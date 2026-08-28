@@ -89,18 +89,18 @@ export default {
 
       if (!(gross > 0)) { $('ce-out').innerHTML = ''; return; }
 
-      const mix = MIXES[$('ce-mix').value];
+      const mix = MIXES[$('ce-mix')?.value] || MIXES['1:2:4'];
       const bagKg = Math.max(1, parseNum($('ce-bag'), 50));
-      const cementKg = gross * mix.cement;
+      const cementKg = gross * (mix?.cement ?? 320);
       const bags = Math.ceil(cementKg / bagKg);
-      const sand = gross * mix.sand;
-      const stone = gross * mix.stone;
+      const sand = gross * (mix?.sand ?? 0.50);
+      const stone = gross * (mix?.stone ?? 0.75);
       const water = cementKg * 0.5;      // w/c ratio 0.5, a sane default
 
       /* Rebar: a grid each way across the plan area. */
       const spacing = Math.max(0.05, parseNum($('ce-spacing')) / 1000);
       const layers = parseNum($('ce-layers'), 1);
-      const barKgPerM = BARS[$('ce-bar').value];
+      const barKgPerM = BARS[$('ce-bar')?.value] || BARS['12'] || 0.888;
       const barLen = Math.max(1, parseNum($('ce-barlen'), 12));
 
       const barsX = layers ? Math.ceil(Wd / spacing) + 1 : 0;
