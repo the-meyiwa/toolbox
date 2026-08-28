@@ -99,7 +99,7 @@ export default {
           <button class="btn btn-primary" id="inv-print" style="margin-top:14px; width:100%;">Print or save as PDF</button>
           <button class="btn btn-secondary btn-sm" id="inv-pay-link" style="margin-top:8px; width:100%; display:flex; align-items:center; justify-content:center; gap:6px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            Generate VolTix Payment Link
+            Generate Payment Link
           </button>
           <p class="biz-hint">Choose “Save as PDF” as the destination in the print dialogue.</p>
         </aside>

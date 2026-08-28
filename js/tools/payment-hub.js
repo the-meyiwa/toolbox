@@ -1,5 +1,5 @@
 /* ============================================================
-   Payment Hub (VolTix Receive Money) — Multi-Rail Payment Receiver.
+   Payment Hub (Receive Money) — Multi-Rail Payment Receiver.
 
    Generate payment links, create virtual bank accounts, process
    card checkouts, and accept crypto/lightning payments with live
@@ -17,7 +17,7 @@ export default {
     container.innerHTML = `
       <div class="biz-explain" style="margin-bottom:14px; font-size:0.84rem; display:flex; align-items:center; gap:8px;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-        <span>VolTix Money-Receiving Engine: Provider-agnostic payment receiving via Dedicated Virtual Bank Accounts, Cards &amp; Crypto rails.</span>
+        <span>Toolbox Money-Receiving Engine: Provider-agnostic payment receiving via Dedicated Virtual Bank Accounts, Cards &amp; Crypto rails.</span>
       </div>
 
       <div style="display:grid; grid-template-columns:minmax(320px, 1fr) minmax(360px, 1.2fr); gap:16px; align-items:start;" class="pay-hub-grid">
@@ -284,7 +284,7 @@ export default {
       if (receiptBtn) {
         receiptBtn.addEventListener('click', () => {
           const text = `========================================
-VOLTIX PAYMENT RECEIPT
+TOOLBOX PAYMENT RECEIPT
 ========================================
 Reference:   ${tx.reference}
 Date:        ${new Date(tx.paidAt || tx.createdAt).toUTCString()}

@@ -1,7 +1,7 @@
 /* ============================================================
-   VolTix Payment & Money-Receiving Architecture Engine.
+   Toolbox Payment & Money-Receiving Architecture Engine.
 
-   Provider-agnostic payment receiving rail abstraction.
+   Provider-agnostic payment receiving rail abstraction for Toolbox.
    Supports Virtual Bank Accounts, Cards (Stripe/Paystack), and
    Cryptocurrency/Lightning rails with deterministic transaction
    state machine, idempotency keys, and HMAC webhook verification.
@@ -111,7 +111,7 @@ export class VirtualAccountProvider extends PaymentProvider {
     const txId = `tx_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
     const bankNames = {
-      NGN: ['Wema Bank (VolTix)', 'Sterling Bank', 'Providus Bank'],
+      NGN: ['Wema Bank (Toolbox)', 'Sterling Bank', 'Providus Bank'],
       GBP: ['Barclays Bank UK', 'ClearBank'],
       EUR: ['BNP Paribas (SEPA)', 'Deutsche Bank'],
       USD: ['JPMorgan Chase (ACH)', 'Evolve Bank & Trust'],
@@ -133,7 +133,7 @@ export class VirtualAccountProvider extends PaymentProvider {
       description: req.description || 'Payment for Invoice',
       details: {
         bankName: chosenBank,
-        accountName: `VolTix / ${req.customerName || 'Receiving Account'}`,
+        accountName: `Toolbox / ${req.customerName || 'Receiving Account'}`,
         accountNumber: acctNumber,
         routingNumber: currency === 'USD' ? '021000021' : (currency === 'GBP' ? '20-00-00' : 'DE89370400440532013000'),
         referenceMemo: ref,
@@ -295,15 +295,15 @@ export class CryptoRailProvider extends PaymentProvider {
  */
 function saveTxLocal(tx) {
   try {
-    const all = JSON.parse(localStorage.getItem('voltix_transactions') || '{}');
+    const all = JSON.parse(localStorage.getItem('toolbox_transactions') || '{}');
     all[tx.reference] = tx;
-    localStorage.setItem('voltix_transactions', JSON.stringify(all));
+    localStorage.setItem('toolbox_transactions', JSON.stringify(all));
   } catch {}
 }
 
 function loadTxLocal(ref) {
   try {
-    const all = JSON.parse(localStorage.getItem('voltix_transactions') || '{}');
+    const all = JSON.parse(localStorage.getItem('toolbox_transactions') || '{}');
     return all[ref] || null;
   } catch {
     return null;
@@ -312,7 +312,7 @@ function loadTxLocal(ref) {
 
 export function getAllTransactions() {
   try {
-    const all = JSON.parse(localStorage.getItem('voltix_transactions') || '{}');
+    const all = JSON.parse(localStorage.getItem('toolbox_transactions') || '{}');
     return Object.values(all).sort((a, b) => b.createdAt - a.createdAt);
   } catch {
     return [];

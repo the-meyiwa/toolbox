@@ -136,8 +136,8 @@ export default {
 65. **`stoichiometry-calculator`**: Calculates theoretical reaction yields, identifies limiting reagents, analyzes excess reactants, and handles mole/mass/STP volume conversions.
 66. **`compound-database`**: Searchable chemical compound reference with IUPAC nomenclature, formula weights, CAS numbers, physical constants, and GHS safety data.
 
-### H. Business & VolTix Payment Hub (`category: 'business'`)
-67. **`payment-hub`**: VolTix multi-rail money-receiving hub supporting Dedicated Virtual Bank Accounts, Cards, and Crypto/Lightning settlements with server-side HMAC verification.
+### H. Business & Payment Hub (`category: 'business'`)
+67. **`payment-hub`**: Multi-rail money-receiving hub supporting Dedicated Virtual Bank Accounts, Cards, and Crypto/Lightning settlements with server-side HMAC verification.
 
 ### I. Design & Modeling (`category: 'design'`, `'modeling'`)
 68. **`color-converter`**: Live HEX, RGB, HSL, HSV, and CMYK color space converter.

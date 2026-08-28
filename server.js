@@ -22,7 +22,7 @@ const server = http.createServer((request, response) => {
   // CORS headers
   response.setHeader('Access-Control-Allow-Origin', '*');
   response.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-VolTix-Signature, X-Idempotency-Key');
+  response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Toolbox-Signature, X-Idempotency-Key');
 
   if (request.method === 'OPTIONS') {
     response.writeHead(204);
@@ -30,7 +30,7 @@ const server = http.createServer((request, response) => {
     return;
   }
 
-  // --- VolTix Payment REST API ---
+  // --- Toolbox Payment REST API ---
   if (url.pathname.startsWith('/api/payment/')) {
     if (url.pathname === '/api/payment/verify' && request.method === 'GET') {
       const ref = url.searchParams.get('reference');
@@ -43,8 +43,8 @@ const server = http.createServer((request, response) => {
       let body = '';
       request.on('data', chunk => { body += chunk; });
       request.on('end', () => {
-        const signature = request.headers['x-voltix-signature'] || request.headers['x-paystack-signature'] || '';
-        const secret = process.env.VOLTIX_WEBHOOK_SECRET || 'voltix_dev_secret_key';
+        const signature = request.headers['x-toolbox-signature'] || request.headers['x-paystack-signature'] || '';
+        const secret = process.env.TOOLBOX_WEBHOOK_SECRET || 'toolbox_dev_secret_key';
         const expected = crypto.createHmac('sha256', secret).update(body).digest('hex');
 
         const isValid = signature === expected || process.env.NODE_ENV !== 'production';
@@ -72,8 +72,8 @@ const server = http.createServer((request, response) => {
       </head>
       <body>
         <div class="card">
-          <h1>Toolbox Spaces &amp; VolTix Gateway</h1>
-          <p>Signaling service &amp; VolTix Payment API are operational.</p>
+          <h1>Toolbox Spaces &amp; Payment Gateway</h1>
+          <p>Signaling service &amp; Payment API are operational.</p>
           <div class="status"><span class="dot"></span> Operational</div>
         </div>
       </body>

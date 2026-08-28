@@ -1,17 +1,17 @@
-# Voltix & Toolbox Integration Architecture Guide
+# Platform & Ecosystem Integration Architecture Guide
 
-This guide defines the architectural bridge, shared protocols, data contracts, and maintainability standards between **Toolbox** and the **Voltix** application ecosystem.
+This guide defines the architectural bridge, shared protocols, data contracts, and maintainability standards for **Toolbox** within client applications and ecosystem workflows.
 
 ---
 
 ## 1. Ecosystem Relationship & Principles
 
-Toolbox functions as the core offline utility and algorithmic engine for the Voltix ecosystem:
+Toolbox functions as the core offline utility and algorithmic engine for desktop and web workspaces:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Voltix Application Suite                     │
-│    (Workspaces · Business Workflows · Analytics · ERP Hub)      │
+│                    Host Application / Workspace                 │
+│    (Workspaces · Business Workflows · Analytics · Document Hub) │
 └───────────────────────────────┬─────────────────────────────────┘
                                 │
         ┌───────────────────────┴───────────────────────┐
@@ -29,7 +29,7 @@ Toolbox functions as the core offline utility and algorithmic engine for the Vol
 
 ## 2. Standardized Artifact Data Contracts
 
-When integrating tools with Voltix workflows, data interchange follows standard JSON schemas:
+When integrating tools with client workflows, data interchange follows standard JSON schemas:
 
 ### A. Case Digests & Legal Briefs (`kind: 'markdown'` / `kind: 'json'`)
 ```json
@@ -80,7 +80,7 @@ When integrating tools with Voltix workflows, data interchange follows standard 
 
 ## 3. WebRTC Spaces Integration
 
-Voltix users can join collaborative Toolbox sessions via URL room codes:
+Users can join collaborative Toolbox sessions via URL room codes:
 - **URL Format**: `https://toolbox.domain/#spaces/<ROOM_CODE>`
 - **Direct Artifact Deep Link**: `https://toolbox.domain/#spaces/<ROOM_CODE>/artifacts`
 - **Signaling Compatibility**: Standard `y-webrtc` multi-room signaling matrix.

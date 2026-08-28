@@ -1,6 +1,6 @@
-# Toolbox & Voltix Canonical Product & Engineering Documentation
+# Toolbox Canonical Product & Engineering Documentation
 
-Welcome to the canonical engineering guide, architectural blueprint, and complete product reference for **Toolbox** and the **Voltix** application suite.
+Welcome to the canonical engineering guide, architectural blueprint, and complete product reference for **Toolbox**.
 
 ---
 
@@ -10,7 +10,7 @@ Welcome to the canonical engineering guide, architectural blueprint, and complet
 | :--- | :--- |
 | **[Architecture Guide](ARCHITECTURE.md)** | Core system architecture, SPA shell, ESM code splitting, hash router, state management, 3D WebGL pipeline, P2P WebRTC Spaces engine, privacy and security model. |
 | **[Implementation & Tool Reference](IMPLEMENTATION_GUIDE.md)** | Exhaustive technical directory of all 75+ tools, algorithms, input/output kinds, UI paradigms, shared file/PDF engines, and extension guide. |
-| **[Voltix Integration Guide](VOLTIX_INTEGRATION_GUIDE.md)** | Ecosystem alignment, shared data contracts (JSON schemas, artifacts), cross-platform workflows, WebRTC signaling protocols, and maintainability standards. |
+| **[Platform Integration Guide](INTEGRATION_GUIDE.md)** | Ecosystem alignment, shared data contracts (JSON schemas, artifacts), cross-platform workflows, WebRTC signaling protocols, and maintainability standards. |
 
 ---
 

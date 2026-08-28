@@ -1455,11 +1455,11 @@ export const TOOLS = [
   },
   {
     id: 'payment-hub',
-    name: 'VolTix Payment Hub & Receive Money',
+    name: 'Payment Hub & Receive Money',
     description: 'Accept payments and receive money via Dedicated Virtual Bank Accounts, Cards and Crypto rails with instant settlements',
     category: 'business',
     secondary: ['numbers', 'everyday'],
-    keywords: ['payment', 'receive money', 'voltix', 'virtual account', 'bank transfer', 'card', 'crypto', 'lightning', 'invoice payment', 'checkout'],
+    keywords: ['payment', 'receive money', 'virtual account', 'bank transfer', 'card', 'crypto', 'lightning', 'invoice payment', 'checkout'],
     intents: ['receive money', 'accept payment', 'create payment link', 'virtual bank account'],
     related: ['invoice-generator', 'container-quote', 'amortization-schedule'],
     weight: 88,
