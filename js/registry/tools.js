@@ -1443,16 +1443,18 @@ export const TOOLS = [
   {
     id: 'compound-database',
     name: 'Chemical Compound Database',
-    description: 'Search chemical formulas, IUPAC names, CAS numbers, physical constants, and GHS safety data',
+    description: 'Search 1,000+ chemical formulas, IUPAC names, pharmaceuticals, CAS numbers, physical constants, and GHS safety data',
+    badge: '1,000+ compounds',
     category: 'science',
     secondary: ['reference'],
-    keywords: ['compound', 'chemicals', 'cas number', 'iupac', 'molar mass', 'formula', 'density', 'safety'],
-    intents: ['look up compound', 'chemical formula lookup', 'cas search'],
+    keywords: ['compound', 'chemicals', 'cas number', 'iupac', 'molar mass', 'formula', 'density', 'safety', 'pharmaceutical', 'drug', 'medicine', 'biochemistry', 'organic', 'inorganic'],
+    intents: ['look up compound', 'chemical formula lookup', 'cas search', 'drug lookup', 'pharmaceutical database'],
     related: ['periodic-table', 'chemical-equation-balancer', 'stoichiometry-calculator'],
     weight: 75,
     offline: true,
     icon: svg('<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>'),
   },
+
   {
     id: 'payment-hub',
     name: 'Payment Hub & Receive Money',

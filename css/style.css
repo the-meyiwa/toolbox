@@ -446,7 +446,22 @@ body {
   margin-top: 2px;
 }
 
+.tool-card-badge {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--p100, #eff6ff);
+  color: var(--p700, #1d4ed8);
+  border: 1px solid var(--p200, #bfdbfe);
+  letter-spacing: 0.02em;
+}
+
 /* No results */
+
 .no-results {
   text-align: center;
   padding: 80px 24px;
