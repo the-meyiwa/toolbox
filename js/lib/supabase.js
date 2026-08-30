@@ -1,17 +1,66 @@
 /* ============================================================
    TOOLBOX — Supabase Integration & Dual Storage Engine
    Manages user authentication, cloud storage synchronization,
-   and persistent online storage alongside zero-latency local storage.
+   PostgreSQL database operations, and persistent online storage.
    ============================================================ */
 
 const STORAGE_MODE_KEY = 'toolbox_storage_mode'; // 'local' | 'supabase'
 const SUPABASE_SESSION_KEY = 'toolbox_supabase_session';
+const SUPABASE_CUSTOM_URL_KEY = 'toolbox_supabase_url';
+const SUPABASE_CUSTOM_KEY_KEY = 'toolbox_supabase_anon_key';
 
-// Configurable Supabase credentials (read from environment or local config)
-export const SUPABASE_CONFIG = {
-  url: import.meta.env?.VITE_SUPABASE_URL || 'https://xyzcompany.supabase.co',
-  anonKey: import.meta.env?.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy_anon_key'
-};
+/**
+ * Get active Supabase configuration
+ */
+export function getSupabaseConfig() {
+  const customUrl = (typeof localStorage !== 'undefined' && localStorage.getItem(SUPABASE_CUSTOM_URL_KEY)) || '';
+  const customKey = (typeof localStorage !== 'undefined' && localStorage.getItem(SUPABASE_CUSTOM_KEY_KEY)) || '';
+
+  const envUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
+  const envKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || '';
+
+  return {
+    url: customUrl || envUrl || '',
+    anonKey: customKey || envKey || ''
+  };
+}
+
+/**
+ * Save custom Supabase credentials from client UI
+ */
+export function saveSupabaseConfig(url, anonKey) {
+  if (typeof localStorage === 'undefined') return;
+  if (url) localStorage.setItem(SUPABASE_CUSTOM_URL_KEY, url.trim().replace(/\/$/, ''));
+  else localStorage.removeItem(SUPABASE_CUSTOM_URL_KEY);
+
+  if (anonKey) localStorage.setItem(SUPABASE_CUSTOM_KEY_KEY, anonKey.trim());
+  else localStorage.removeItem(SUPABASE_CUSTOM_KEY_KEY);
+
+  window.dispatchEvent(new CustomEvent('toolbox:supabaseconfigchange'));
+}
+
+/**
+ * Test connectivity to configured Supabase project
+ */
+export async function testSupabaseConnection() {
+  const config = getSupabaseConfig();
+  if (!config.url || !config.anonKey) {
+    return { connected: false, message: 'Supabase URL or Anon Key is missing.' };
+  }
+
+  try {
+    const res = await fetch(`${config.url}/auth/v1/settings`, {
+      headers: { 'apikey': config.anonKey }
+    });
+    if (res.ok) {
+      return { connected: true, message: 'Successfully connected to Supabase project!' };
+    }
+    const err = await res.json().catch(() => ({}));
+    return { connected: false, message: err.message || `HTTP ${res.status}` };
+  } catch (err) {
+    return { connected: false, message: err.message };
+  }
+}
 
 /**
  * Get current storage mode preference: 'local' (default) or 'supabase'
@@ -51,27 +100,29 @@ export function getCurrentUser() {
  * Sign in with email and password
  */
 export async function signInWithEmail(email, password) {
+  const config = getSupabaseConfig();
   try {
-    // If Supabase endpoint is live, send real request
-    if (SUPABASE_CONFIG.url && !SUPABASE_CONFIG.url.includes('xyzcompany')) {
-      const res = await fetch(`${SUPABASE_CONFIG.url}/auth/v1/token?grant_type=password`, {
+    if (config.url && config.anonKey) {
+      const res = await fetch(`${config.url}/auth/v1/token?grant_type=password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': SUPABASE_CONFIG.anonKey
+          'apikey': config.anonKey
         },
         body: JSON.stringify({ email, password })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error_description || data.message || 'Login failed');
-      
+
       const userSession = {
         id: data.user.id,
         email: data.user.email,
         token: data.access_token,
+        refreshToken: data.refresh_token,
         createdAt: data.user.created_at || new Date().toISOString()
       };
       localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
+      window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
       return { success: true, user: userSession };
     }
 
@@ -83,6 +134,7 @@ export async function signInWithEmail(email, password) {
       createdAt: new Date().toISOString()
     };
     localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
+    window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
     return { success: true, user: userSession };
   } catch (err) {
     return { success: false, error: err.message };
@@ -93,26 +145,29 @@ export async function signInWithEmail(email, password) {
  * Sign up with email and password
  */
 export async function signUpWithEmail(email, password) {
+  const config = getSupabaseConfig();
   try {
-    if (SUPABASE_CONFIG.url && !SUPABASE_CONFIG.url.includes('xyzcompany')) {
-      const res = await fetch(`${SUPABASE_CONFIG.url}/auth/v1/signup`, {
+    if (config.url && config.anonKey) {
+      const res = await fetch(`${config.url}/auth/v1/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': SUPABASE_CONFIG.anonKey
+          'apikey': config.anonKey
         },
         body: JSON.stringify({ email, password })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error_description || data.message || 'Sign up failed');
-      
+
       const userSession = {
         id: data.user?.id || `usr_${Date.now()}`,
         email,
         token: data.access_token || '',
+        refreshToken: data.refresh_token || '',
         createdAt: new Date().toISOString()
       };
       localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
+      window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
       return { success: true, user: userSession };
     }
 
@@ -124,6 +179,7 @@ export async function signUpWithEmail(email, password) {
       createdAt: new Date().toISOString()
     };
     localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
+    window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
     return { success: true, user: userSession };
   } catch (err) {
     return { success: false, error: err.message };
@@ -144,14 +200,15 @@ export function signOut() {
  * Upload file to Supabase Storage Bucket
  */
 export async function uploadToSupabaseStorage(bucketName, filePath, fileBlob) {
+  const config = getSupabaseConfig();
   const user = getCurrentUser();
   if (!user) throw new Error('You must be signed in to upload files to Supabase cloud storage.');
 
-  if (SUPABASE_CONFIG.url && !SUPABASE_CONFIG.url.includes('xyzcompany')) {
-    const res = await fetch(`${SUPABASE_CONFIG.url}/storage/v1/object/${bucketName}/${filePath}`, {
+  if (config.url && config.anonKey) {
+    const res = await fetch(`${config.url}/storage/v1/object/${bucketName}/${filePath}`, {
       method: 'POST',
       headers: {
-        'apikey': SUPABASE_CONFIG.anonKey,
+        'apikey': config.anonKey,
         'Authorization': `Bearer ${user.token}`
       },
       body: fileBlob
@@ -160,9 +217,62 @@ export async function uploadToSupabaseStorage(bucketName, filePath, fileBlob) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.message || 'Cloud storage upload failed.');
     }
-    return { path: filePath, url: `${SUPABASE_CONFIG.url}/storage/v1/object/public/${bucketName}/${filePath}` };
+    return { path: filePath, url: `${config.url}/storage/v1/object/public/${bucketName}/${filePath}` };
   }
 
-  // Fallback / mock storage URL
+  // Fallback storage URL
   return { path: filePath, url: `https://supabase-storage-mock.local/${bucketName}/${filePath}` };
+}
+
+/**
+ * Sync saved artifact to Supabase PostgreSQL table
+ */
+export async function syncArtifactToSupabase(artifact) {
+  const config = getSupabaseConfig();
+  const user = getCurrentUser();
+  if (!user || !config.url || !config.anonKey) return;
+
+  try {
+    await fetch(`${config.url}/rest/v1/saved_artifacts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': config.anonKey,
+        'Authorization': `Bearer ${user.token}`,
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({
+        id: artifact.id,
+        user_id: user.id,
+        name: artifact.name,
+        kind: artifact.kind,
+        from_tool: artifact.from || null,
+        payload: artifact,
+        updated_at: new Date().toISOString()
+      })
+    });
+  } catch {}
+}
+
+/**
+ * List saved artifacts from Supabase
+ */
+export async function listSupabaseArtifacts() {
+  const config = getSupabaseConfig();
+  const user = getCurrentUser();
+  if (!user || !config.url || !config.anonKey) return [];
+
+  try {
+    const res = await fetch(`${config.url}/rest/v1/saved_artifacts?user_id=eq.${user.id}&order=updated_at.desc`, {
+      headers: {
+        'apikey': config.anonKey,
+        'Authorization': `Bearer ${user.token}`
+      }
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.map(d => d.payload || d);
+  } catch {
+    return [];
+  }
 }

@@ -1,10 +1,20 @@
 /* ============================================================
    TOOLBOX — Account & Cloud Sync Modal
    Manages Supabase Auth, User Profile, Dual Storage Mode Switcher,
-   and live Quota & Rate Limit breakdowns.
+   Supabase Project Keys, and live Quota & Rate Limit breakdowns.
    ============================================================ */
 
-import { getCurrentUser, signInWithEmail, signUpWithEmail, signOut, getStorageMode, setStorageMode } from '../lib/supabase.js';
+import {
+  getCurrentUser,
+  signInWithEmail,
+  signUpWithEmail,
+  signOut,
+  getStorageMode,
+  setStorageMode,
+  getSupabaseConfig,
+  saveSupabaseConfig,
+  testSupabaseConnection
+} from '../lib/supabase.js';
 import { QuotaManager } from '../lib/quota-manager.js';
 
 let modalEl = null;
@@ -36,9 +46,10 @@ function renderModalContent() {
   const user = getCurrentUser();
   const storageMode = getStorageMode();
   const quota = QuotaManager.getQuotaSummary();
+  const supabaseConfig = getSupabaseConfig();
 
   modalEl.innerHTML = `
-    <div class="settings-modal-window" style="max-width:540px; border-radius:18px;">
+    <div class="settings-modal-window" style="max-width:560px; border-radius:18px;">
       <div class="sheet-drag-handle" aria-hidden="true"></div>
       
       <div class="settings-modal-header" style="padding-bottom:12px; border-bottom:1px solid var(--g200);">
@@ -62,7 +73,7 @@ function renderModalContent() {
         </button>
       </div>
 
-      <div class="settings-modal-body" style="padding:20px; display:flex; flex-direction:column; gap:20px;">
+      <div class="settings-modal-body" style="padding:20px; display:flex; flex-direction:column; gap:18px; max-height:calc(85vh - 80px); overflow-y:auto;">
         
         <!-- USER AUTH CARD -->
         <div style="background:var(--g50); border:1px solid var(--g200); border-radius:14px; padding:16px;">
@@ -113,6 +124,31 @@ function renderModalContent() {
           </div>
         </div>
 
+        <!-- SUPABASE PROJECT CONNECTION -->
+        <div style="background:var(--g50); border:1px solid var(--g200); border-radius:14px; padding:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="font-size:0.86rem; font-weight:700; color:var(--black);">Supabase Project Configuration</div>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-test-supabase" style="font-size:0.74rem;">Test Connection</button>
+          </div>
+          <p style="margin:0 0 10px; font-size:0.74rem; color:var(--g600); line-height:1.4;">
+            Provide your project URL and public Anon key from your Supabase Dashboard (<b>Project Settings &rarr; API</b>).
+          </p>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div>
+              <label style="font-size:0.72rem; font-weight:700; color:var(--g700); text-transform:uppercase;">Project URL</label>
+              <input type="text" id="supabase-url-input" class="tool-input" placeholder="https://your-project.supabase.co" value="${supabaseConfig.url || ''}" style="width:100%; padding:8px 12px; font-size:0.82rem; font-family:monospace; border-radius:8px;">
+            </div>
+            <div>
+              <label style="font-size:0.72rem; font-weight:700; color:var(--g700); text-transform:uppercase;">Public Anon Key</label>
+              <input type="password" id="supabase-key-input" class="tool-input" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." value="${supabaseConfig.anonKey || ''}" style="width:100%; padding:8px 12px; font-size:0.82rem; font-family:monospace; border-radius:8px;">
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
+              <button type="button" class="btn btn-primary btn-sm" id="btn-save-supabase-config" style="font-size:0.78rem;">Save Supabase Keys</button>
+              <span id="supabase-status-msg" style="font-size:0.75rem; font-weight:600;"></span>
+            </div>
+          </div>
+        </div>
+
         <!-- OPTIONAL API KEY OVERRIDE -->
         <div>
           <div style="font-size:0.86rem; font-weight:700; color:var(--black); margin-bottom:6px;">Google Gemini API Key (Custom Override)</div>
@@ -129,7 +165,7 @@ function renderModalContent() {
         <!-- QUOTA & RATE LIMITS SUMMARY -->
         <div style="background:var(--g50); border:1px solid var(--g200); border-radius:14px; padding:14px;">
           <div style="font-size:0.82rem; font-weight:700; color:var(--black); margin-bottom:8px; display:flex; justify-content:space-between;">
-            <span>AI Assistant Quotas &amp; Limits</span>
+            <span>Assistant Quotas &amp; Limits</span>
             <span style="color:#22c55e;">Active</span>
           </div>
           
@@ -217,7 +253,7 @@ function renderModalContent() {
     });
   }
 
-  // Storage cards
+  // Storage switcher
   modalEl.querySelector('#opt-storage-local').addEventListener('click', () => {
     setStorageMode('local');
     renderModalContent();
@@ -228,6 +264,39 @@ function renderModalContent() {
     renderModalContent();
   });
 
+  // Supabase Project Keys
+  const btnSaveSupabase = modalEl.querySelector('#btn-save-supabase-config');
+  const urlIn = modalEl.querySelector('#supabase-url-input');
+  const keyIn = modalEl.querySelector('#supabase-key-input');
+  const statusMsg = modalEl.querySelector('#supabase-status-msg');
+  const btnTestSupabase = modalEl.querySelector('#btn-test-supabase');
+
+  if (btnSaveSupabase && urlIn && keyIn) {
+    btnSaveSupabase.addEventListener('click', () => {
+      saveSupabaseConfig(urlIn.value, keyIn.value);
+      statusMsg.style.color = '#22c55e';
+      statusMsg.textContent = 'Keys saved!';
+      setTimeout(() => { statusMsg.textContent = ''; }, 2500);
+    });
+  }
+
+  if (btnTestSupabase) {
+    btnTestSupabase.addEventListener('click', async () => {
+      statusMsg.style.color = 'var(--g600)';
+      statusMsg.textContent = 'Testing connection...';
+      saveSupabaseConfig(urlIn.value, keyIn.value);
+      const res = await testSupabaseConnection();
+      if (res.connected) {
+        statusMsg.style.color = '#22c55e';
+        statusMsg.textContent = '✓ Connected!';
+      } else {
+        statusMsg.style.color = '#ef4444';
+        statusMsg.textContent = '✗ ' + res.message;
+      }
+    });
+  }
+
+  // Gemini API Key
   const btnSaveKey = modalEl.querySelector('#btn-save-api-key');
   const keyInput = modalEl.querySelector('#custom-api-key-input');
   const keyMsg = modalEl.querySelector('#api-key-save-msg');
