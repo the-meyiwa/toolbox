@@ -21,7 +21,7 @@ export default {
     this._abortCtrl = null;
 
     let provider = localStorage.getItem(STORAGE_PROVIDER) || 'gemini';
-    let apiKey = localStorage.getItem(STORAGE_API_KEY) || '';
+    let apiKey = localStorage.getItem(STORAGE_API_KEY) || 'AIzaSyB1MDvomi9iWJ3CuZ7_Wvm7TST6RE7SBVI';
     let model = localStorage.getItem(STORAGE_MODEL) || 'gemini-1.5-flash';
     let keepContext = localStorage.getItem(STORAGE_KEEP_CONTEXT) !== 'false';
 

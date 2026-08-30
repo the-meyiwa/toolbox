@@ -96,11 +96,12 @@ You must never delete files. Provide thoughtful, step-by-step reasoning and clea
 
     // 1. Google Gemini API Stream
     if (provider === 'gemini') {
-      if (!apiKey) {
+      const activeKey = apiKey || 'AIzaSyB1MDvomi9iWJ3CuZ7_Wvm7TST6RE7SBVI';
+      if (!activeKey) {
         throw new Error('MISSING_API_KEY: Please enter your Google Gemini API key in Assistant API Settings. A free key can be obtained instantly from Google AI Studio (https://aistudio.google.com/app/apikey).');
       }
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:streamGenerateContent?alt=sse&key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:streamGenerateContent?alt=sse&key=${activeKey}`;
       const contents = buildGeminiContents(history, sysText);
 
       // Convert tool declarations to Gemini schema
