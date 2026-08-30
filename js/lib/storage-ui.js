@@ -70,6 +70,7 @@ function createModal() {
 
   modalEl.innerHTML = `
     <div class="settings-modal-window storage-modal-window">
+      <div class="sheet-drag-handle" aria-hidden="true"></div>
       <div class="settings-modal-header">
         <div class="settings-title-wrap">
           <div class="settings-title-icon" style="background:var(--black); color:var(--white);">

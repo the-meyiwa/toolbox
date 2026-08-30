@@ -142,6 +142,24 @@
 
       <!-- TOOLS GRID -->
       <div id="tools-view" class="page-view hidden">
+        <div class="category-chip-bar" id="category-chip-bar" aria-label="Tool categories">
+          <button type="button" class="category-chip active" data-cat="all">All</button>
+          <button type="button" class="category-chip" data-cat="popular">Popular</button>
+          <button type="button" class="category-chip" data-cat="images-files">Images & Files</button>
+          <button type="button" class="category-chip" data-cat="text">Text</button>
+          <button type="button" class="category-chip" data-cat="developer">Developer</button>
+          <button type="button" class="category-chip" data-cat="numbers">Calculators</button>
+          <button type="button" class="category-chip" data-cat="business">Business</button>
+          <button type="button" class="category-chip" data-cat="law">Law</button>
+          <button type="button" class="category-chip" data-cat="science">Science</button>
+          <button type="button" class="category-chip" data-cat="design">Design</button>
+          <button type="button" class="category-chip" data-cat="security">Security</button>
+          <button type="button" class="category-chip" data-cat="networking">Networking</button>
+          <button type="button" class="category-chip" data-cat="modeling">3D Models</button>
+          <button type="button" class="category-chip" data-cat="reference">Reference</button>
+          <button type="button" class="category-chip" data-cat="music">Music</button>
+          <button type="button" class="category-chip" data-cat="everyday">Engineering</button>
+        </div>
         <div id="tool-grid"></div>
       </div>
 
@@ -384,8 +402,9 @@
       </div>
     </main>
 
-    <!-- MOBILE BOTTOM NAVIGATION -->
+    <!-- MOBILE BOTTOM NAVIGATION (FLOATING PILL ISLAND) -->
     <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile Bottom Navigation">
+      <div class="mob-nav-pill-indicator" id="mob-nav-indicator"></div>
       <a href="#home" class="nav-link mob-nav-item active" data-page="home">
         <svg class="mob-nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
@@ -438,7 +457,8 @@
   </button>
 
   <div id="tips-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); z-index:1000; align-items:center; justify-content:center; opacity:0; transition:opacity 0.2s ease;">
-    <div style="background:var(--white); color:var(--black); padding:32px; border-radius:16px; box-shadow:var(--shadow-lg); border:1px solid var(--g200); max-width:400px; width:90%; position:relative; transform:translateY(20px); transition:transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+    <div class="settings-modal-window" style="background:var(--white); color:var(--black); padding:32px; border-radius:16px; box-shadow:var(--shadow-lg); border:1px solid var(--g200); max-width:400px; width:90%; position:relative;">
+      <div class="sheet-drag-handle" aria-hidden="true"></div>
       <button id="close-tips" style="position:absolute; top:16px; right:16px; background:none; border:none; cursor:pointer; color:var(--g500); padding:4px;" aria-label="Close Tips">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"></line>

@@ -24,6 +24,7 @@ function createPreferencesModal() {
 
   prefModalEl.innerHTML = `
     <div class="settings-modal-window" style="max-width: 580px;">
+      <div class="sheet-drag-handle" aria-hidden="true"></div>
       <div class="settings-modal-header">
         <div class="settings-title-wrap">
           <div class="settings-title-icon" style="background:var(--black); color:var(--white);">

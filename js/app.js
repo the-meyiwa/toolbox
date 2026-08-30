@@ -116,19 +116,69 @@ function renderGrid(list, { query = '', noResult = false } = {}) {
   }
 
   const sections = [
-    `<section class="grid-category fade-in">
+    `<section class="grid-category fade-in" id="cat-popular">
        <h2 class="category-label">Popular</h2>
        <p class="category-blurb">What people open most.</p>
        <div class="category-tools">${popular(8).map(t => toolCard(t)).join('')}</div>
      </section>`,
     ...categorised(list).map(c => `
-      <section class="grid-category fade-in">
+      <section class="grid-category fade-in" id="cat-${c.id}">
         <h2 class="category-label">${escapeHtml(c.label)}</h2>
         <p class="category-blurb">${escapeHtml(c.blurb)}</p>
         <div class="category-tools">${c.tools.map(t => toolCard(t)).join('')}</div>
       </section>`),
   ];
   grid.innerHTML = sections.join('');
+}
+
+export function updateMobileNavIndicator() {
+  const nav = document.getElementById('mobile-nav');
+  const indicator = document.getElementById('mob-nav-indicator');
+  if (!nav || !indicator) return;
+  const activeItem = nav.querySelector('.mob-nav-item.active');
+  if (!activeItem || activeItem.offsetParent === null) {
+    indicator.style.opacity = '0';
+    return;
+  }
+  const navRect = nav.getBoundingClientRect();
+  const itemRect = activeItem.getBoundingClientRect();
+  const left = itemRect.left - navRect.left;
+  const width = itemRect.width;
+  indicator.style.opacity = '1';
+  indicator.style.transform = `translate3d(${left}px, 0, 0)`;
+  indicator.style.width = `${width}px`;
+}
+
+function installCategoryChips() {
+  const chipBar = document.getElementById('category-chip-bar');
+  if (!chipBar) return;
+  const chips = chipBar.querySelectorAll('.category-chip');
+
+  chips.forEach(chip => {
+    chip.addEventListener('click', (e) => {
+      e.preventDefault();
+      try { navigator.vibrate?.(6); } catch (err) {}
+      chips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+
+      const catId = chip.dataset.cat;
+      if (catId === 'all') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      const targetEl = document.getElementById(`cat-${catId}`);
+      if (targetEl) {
+        const headerOffset = 70;
+        const elementPosition = targetEl.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      }
+    });
+  });
 }
 
 function renderRelated(tool) {
@@ -161,6 +211,7 @@ function showPage(page) {
   currentPage = page;
   for (const link of navLinks) link.classList.toggle('active', link.dataset.page === page);
   searchWrapper.style.display = page === 'tools' ? '' : 'none';
+  requestAnimationFrame(updateMobileNavIndicator);
 }
 
 function teardownTool() {
@@ -213,6 +264,7 @@ async function openTool(id) {
   viewport.classList.add('fade-in');
 
   for (const link of navLinks) link.classList.toggle('active', link.dataset.page === 'tools');
+  requestAnimationFrame(updateMobileNavIndicator);
 
   currentPage = 'tool';
   currentToolObj = tool;
@@ -534,4 +586,15 @@ installSettingsUI();
 installHeaderMenu();
 
 renderGrid(TOOLS);
+installCategoryChips();
 handleHash();
+
+// Mobile Nav Indicator & Micro-haptics
+window.addEventListener('resize', updateMobileNavIndicator, { passive: true });
+document.getElementById('mobile-nav')?.addEventListener('click', (e) => {
+  if (e.target.closest('.mob-nav-item')) {
+    try { navigator.vibrate?.(6); } catch (err) {}
+    setTimeout(updateMobileNavIndicator, 50);
+  }
+});
+requestAnimationFrame(updateMobileNavIndicator);
