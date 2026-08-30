@@ -136,18 +136,50 @@ async function runLocalAssistantFallback({
     toolResults.push(res);
     responseMarkdown = `Here is the solution executed in the browser Web Worker:\n\n\`\`\`javascript\n${code}\n\`\`\`\n\n**Output**:\n\`\`\`\n${res.stdout || '[2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]'}\n\`\`\``;
   }
-  // 5. General question or tool lookup
+  // 5. General question or capability inquiry
   else {
-    const matched = TOOLS.filter(t => 
-      t.name.toLowerCase().includes(lower) || 
-      t.description.toLowerCase().includes(lower) ||
-      t.keywords.some(k => lower.includes(k.toLowerCase()))
-    ).slice(0, 3);
+    if (lower.includes('what can you do') || lower.includes('help') || lower.includes('features') || lower.includes('capabilities') || lower.includes('who are you') || lower.includes('how to use')) {
+      responseMarkdown = `I am **Assistant**, the intelligent AI operating layer of Toolbox.
 
-    if (matched.length) {
-      responseMarkdown = `I found relevant tools for your request:\n\n${matched.map(m => `- **[${m.name}](#${m.id})**: ${m.description}`).join('\n')}\n\nYou can click any of these tools directly or ask me to process your files right here.`;
+### Key Capabilities & Workflows:
+
+1. **Image & File Operations** *(Private & Local)*:
+   - Convert images to **WebP, PNG, JPEG, or AVIF**
+   - Resize to exact pixel dimensions, crop borders, and optimize compression
+   - Remove watermarks and unwanted border padding
+
+2. **Data & Statistics**:
+   - Parse and analyze **CSV / JSON datasets**
+   - Generate summary statistical metrics and clean tabular output
+
+3. **Client-Side Code Execution**:
+   - Run **JavaScript, Python, and C++** client-side in sandboxed browser workers
+   - Generate algorithms, format code, and debug scripts
+
+4. **Financial & Business Math**:
+   - Compute loan amortization, compound interest growth, and break-even points
+   - Calculate unit economics (LTV, CAC, payback period)
+
+5. **Chemistry & Science**:
+   - Compute molar mass and stoichiometry for chemical formulas
+   - Balance chemical equations and search 5,995+ compounds
+
+6. **100+ Integrated Browser Tools**:
+   - Seamless workflow handoffs to PDF tools, cryptography, audio cleaners, QR tools, and network diagnostics.
+
+Attach a file or ask me to perform any calculation or code task to begin!`;
     } else {
-      responseMarkdown = `I understand your request: **"${prompt}"**.\n\nAs the Assistant operating layer, I can:\n- Convert, crop, resize, and compress images\n- Analyze CSV/JSON datasets with statistical charts\n- Execute Python, JavaScript, and C++ code client-side\n- Calculate loan amortization, compound interest, and break-even points\n- Solve chemical equations and search 5,995+ compounds\n\nAttach a file or specify a task to begin.`;
+      const matched = TOOLS.filter(t => 
+        t.name.toLowerCase().includes(lower) || 
+        t.description.toLowerCase().includes(lower) ||
+        t.keywords.some(k => lower.includes(k.toLowerCase()))
+      ).slice(0, 3);
+
+      if (matched.length) {
+        responseMarkdown = `I found relevant tools for your request:\n\n${matched.map(m => `- **[${m.name}](#${m.id})**: ${m.description}`).join('\n')}\n\nYou can click any of these tools directly or ask me to process your files right here.`;
+      } else {
+        responseMarkdown = `I understand your request: **"${prompt}"**.\n\nAs the Assistant operating layer, I can:\n- Convert, crop, resize, and compress images\n- Analyze CSV/JSON datasets with statistical charts\n- Execute Python, JavaScript, and C++ code client-side\n- Calculate loan amortization, compound interest, and break-even points\n- Solve chemical equations and search 5,995+ compounds\n\nAttach a file or specify a task to begin.`;
+      }
     }
   }
 
@@ -160,7 +192,7 @@ async function runLocalAssistantFallback({
   for (let i = 0; i < words.length; i++) {
     const chunk = (i === 0 ? '' : ' ') + words[i];
     onToken(chunk);
-    await new Promise(r => setTimeout(r, 20));
+    await new Promise(r => setTimeout(r, 15));
   }
 
   return { text: responseMarkdown, taskState, toolResults };
@@ -209,13 +241,15 @@ Never delete files. Provide thoughtful, step-by-step reasoning and clear answers
   }];
 
   let res = null;
-  let backendAttempted = false;
+  let accumulatedFinalText = '';
+  let pendingFunctionCalls = [];
+  const executedToolResults = [];
 
-  // 1. Attempt Backend Proxy with fast timeout
+  // 1. Attempt Backend Proxy
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
-    res = await fetch('/api/assistant/chat', {
+    const timeoutId = setTimeout(() => controller.abort(), 1500);
+    const backendRes = await fetch('/api/assistant/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -227,16 +261,19 @@ Never delete files. Provide thoughtful, step-by-step reasoning and clear answers
       signal: controller.signal
     });
     clearTimeout(timeoutId);
-    if (res.ok) backendAttempted = true;
+    const contentType = backendRes.headers.get('content-type') || '';
+    if (backendRes.ok && !contentType.includes('text/html') && (contentType.includes('event-stream') || contentType.includes('json') || contentType.includes('text/plain'))) {
+      res = backendRes;
+    }
   } catch (e) {}
 
-  // 2. Direct Gemini Fallback across candidate models with fast timeout
+  // 2. Direct Gemini Call across candidate models
   if (!res || !res.ok) {
     for (const candModel of CANDIDATE_GEMINI_MODELS) {
       try {
-        const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${candModel}:streamGenerateContent?alt=sse&key=${activeKey}`;
+        const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${candModel}:generateContent?key=${activeKey}`;
         const candController = new AbortController();
-        const candTimeout = setTimeout(() => candController.abort(), 2000);
+        const candTimeout = setTimeout(() => candController.abort(), 3000);
         const candidateRes = await fetch(directUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -254,76 +291,80 @@ Never delete files. Provide thoughtful, step-by-step reasoning and clear answers
         clearTimeout(candTimeout);
 
         if (candidateRes.ok) {
-          res = candidateRes;
-          break;
+          const data = await candidateRes.json();
+          const candidate = data.candidates?.[0];
+          if (candidate) {
+            const parts = candidate.content?.parts || [];
+            for (const part of parts) {
+              if (part.text) {
+                accumulatedFinalText += part.text;
+              }
+              if (part.functionCall) {
+                pendingFunctionCalls.push(part.functionCall);
+              }
+            }
+            if (accumulatedFinalText || pendingFunctionCalls.length) {
+              res = candidateRes;
+              break;
+            }
+          }
         }
       } catch (err) {}
     }
   }
 
-  // 3. If cloud endpoints are unavailable / key is leaked or revoked, run smart local fallback
-  if (!res || !res.ok) {
-    const notice = customKey
-      ? 'Generated via Assistant execution engine.'
-      : 'Operating via Assistant local engine. You can enter a personal Google Gemini key in Account Settings.';
-    return await runLocalAssistantFallback({
-      history,
-      currentFile,
-      taskState,
-      onToken,
-      onToolCallStart,
-      onToolCallResult,
-      notice
-    });
-  }
+  // 3. If SSE stream from backend proxy
+  if (res && res.headers.get('content-type')?.includes('event-stream')) {
+    try {
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
 
-  // 4. Stream response from live SSE endpoint
-  let accumulatedFinalText = '';
-  let pendingFunctionCalls = [];
-  const executedToolResults = [];
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
 
-  try {
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder('utf-8');
-    let buffer = '';
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
 
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data: ')) continue;
+          const jsonStr = trimmed.slice(6);
+          if (jsonStr === '[DONE]') continue;
 
-      const lines = buffer.split('\n');
-      buffer = lines.pop();
+          try {
+            const data = JSON.parse(jsonStr);
+            const parsed = Array.isArray(data) ? data[0] : data;
+            const candidate = parsed?.candidates?.[0];
+            if (!candidate) continue;
 
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith('data: ')) continue;
-        const jsonStr = trimmed.slice(6);
-        if (jsonStr === '[DONE]') continue;
-
-        try {
-          const data = JSON.parse(jsonStr);
-          const candidate = data.candidates?.[0];
-          if (!candidate) continue;
-
-          const parts = candidate.content?.parts || [];
-          for (const part of parts) {
-            if (part.text) {
-              accumulatedFinalText += part.text;
-              onToken(part.text);
+            const parts = candidate.content?.parts || [];
+            for (const part of parts) {
+              if (part.text) {
+                accumulatedFinalText += part.text;
+                onToken(part.text);
+              }
+              if (part.functionCall) {
+                pendingFunctionCalls.push(part.functionCall);
+              }
             }
-            if (part.functionCall) {
-              pendingFunctionCalls.push(part.functionCall);
-            }
-          }
-        } catch (e) {}
+          } catch (e) {}
+        }
       }
+    } catch (err) {}
+  } else if (accumulatedFinalText) {
+    // Smooth token streaming for direct generateContent
+    const words = accumulatedFinalText.split(' ');
+    for (let i = 0; i < words.length; i++) {
+      const chunk = (i === 0 ? '' : ' ') + words[i];
+      onToken(chunk);
+      await new Promise(r => setTimeout(r, 12));
     }
-  } catch (err) {
-    console.warn('Stream parse notice:', err);
   }
 
-  // Handle function calls
+  // Handle function calls if any
   for (const fc of pendingFunctionCalls) {
     if (fc.name === 'csv_analyze_and_chart' || fc.name === 'image_remove_watermark') {
       const heavyCheck = QuotaManager.canRunHeavyTask();
@@ -350,7 +391,8 @@ Never delete files. Provide thoughtful, step-by-step reasoning and clear answers
       taskState,
       onToken,
       onToolCallStart,
-      onToolCallResult
+      onToolCallResult,
+      notice: customKey ? '' : 'Operating via Assistant local intelligence engine.'
     });
   }
 
