@@ -1457,7 +1457,6 @@ export const TOOLS = [
     id: 'compound-database',
     name: 'Chemical Compound Database',
     description: 'Search 4,000+ chemical formulas, IUPAC names, pharmaceuticals, CAS numbers, physical constants, and GHS safety data',
-    badge: '4,000+ compounds',
     category: 'science',
     secondary: ['reference'],
     keywords: ['compound', 'chemicals', 'cas number', 'iupac', 'molar mass', 'formula', 'density', 'safety', 'pharmaceutical', 'drug', 'medicine', 'biochemistry', 'organic', 'inorganic'],
@@ -1606,6 +1605,20 @@ export const TOOLS = [
     weight: 98,
     offline: true,
     icon: svg('<path d="M12 2v10M12 12l4-4M12 12l-4-4"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><path d="M16 16l4 4 4-4M4 20h16"/>'),
+  },
+  {
+    id: 'assistant',
+    name: 'Assistant',
+    description: 'Intelligent AI assistant capable of multi-turn conversation, in-chat file processing, and browser tool execution',
+    category: 'developer',
+    secondary: ['everyday', 'text'],
+    keywords: ['assistant', 'ai', 'chatbot', 'voltix', 'gemini', 'groq', 'chat', 'copilot', 'smart tool', 'file assistant'],
+    synonyms: ['ai assistant', 'toolbox assistant', 'voltix assistant', 'ai copilot'],
+    intents: ['ask ai', 'chat with assistant', 'help with files', 'ai tool runner', 'remove watermark with ai'],
+    related: ['data-bot', 'code-playground', 'notes'],
+    weight: 99,
+    offline: true,
+    icon: svg('<circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>'),
   },
 ];
 

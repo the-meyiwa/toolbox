@@ -683,9 +683,9 @@ body {
   justify-content: center;
   gap: 8px;
   height: 44px;
-  padding: 0 20px;
+  padding: 0 22px;
   border: 1px solid var(--black);
-  border-radius: 12px;
+  border-radius: 9999px;
   font-family: var(--sans);
   font-size: 0.85rem;
   font-weight: 500;
@@ -703,7 +703,7 @@ body {
 .btn-secondary:hover { background: var(--white); border-color: var(--black); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.06); }
 .btn-secondary:active { transform: translateY(0); box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
 
-.btn-sm { height: 32px; padding: 0 14px; font-size: 0.78rem; border-radius: 8px; }
+.btn-sm { height: 32px; padding: 0 16px; font-size: 0.78rem; border-radius: 9999px; }
 
 .btn.active { background: var(--black); color: var(--white); }
 

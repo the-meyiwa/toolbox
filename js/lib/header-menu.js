@@ -237,6 +237,14 @@ export function installHeaderMenu() {
   }
 
   // Handle menu item actions
+  const itemAssistant = document.getElementById('menu-item-assistant');
+  if (itemAssistant) {
+    itemAssistant.addEventListener('click', () => {
+      closeHeaderMenu();
+      window.location.hash = '#assistant';
+    });
+  }
+
   const itemTheme = document.getElementById('menu-item-theme');
   if (itemTheme) {
     itemTheme.addEventListener('click', () => {

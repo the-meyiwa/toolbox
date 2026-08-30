@@ -35,6 +35,7 @@
         <!-- Saved appears only once there is something in it. Nobody who came
              to format some JSON should meet a workspace. -->
         <a href="#saved" class="nav-link" data-page="saved" id="nav-saved" hidden>Saved</a>
+        <a href="#assistant" class="nav-link" data-page="assistant" id="nav-assistant">Assistant</a>
         <a href="#support" class="nav-link" data-page="support">Support</a>
         <a href="#spaces" class="nav-link" data-page="spaces">Spaces</a>
       </nav>
@@ -56,6 +57,13 @@
             </svg>
           </button>
           <div class="header-dropdown-menu" id="header-dropdown-menu" role="menu" aria-label="Toolbox options">
+            <button type="button" class="dropdown-item" id="menu-item-assistant" role="menuitem">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+              </svg>
+              <span>Assistant</span>
+            </button>
             <button type="button" class="dropdown-item" id="menu-item-theme" role="menuitem">
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10"></circle>
@@ -325,6 +333,13 @@
           <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
         </svg>
         <span class="mob-nav-label">Spaces</span>
+      </a>
+      <a href="#assistant" class="nav-link mob-nav-item" data-page="assistant" id="nav-assistant-mob">
+        <svg class="mob-nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+        </svg>
+        <span class="mob-nav-label">Assistant</span>
       </a>
       <a href="#support" class="nav-link mob-nav-item" data-page="support">
         <svg class="mob-nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
