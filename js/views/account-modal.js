@@ -149,49 +149,51 @@ function renderModalContent() {
           </div>
         </div>
 
-        <!-- OPTIONAL API KEY OVERRIDE -->
-        <div>
-          <div style="font-size:0.86rem; font-weight:700; color:var(--black); margin-bottom:6px;">Google Gemini API Key (Custom Override)</div>
-          <p style="margin:0 0 8px; font-size:0.75rem; color:var(--g600); line-height:1.4;">
-            Toolbox includes backend proxy AI capabilities out-of-the-box. You can also provide your own personal key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style="color:var(--black); font-weight:700; text-decoration:underline;">Google AI Studio</a>.
-          </p>
-          <div style="display:flex; gap:8px;">
-            <input type="password" id="custom-api-key-input" class="tool-input" placeholder="AIzaSy..." value="${localStorage.getItem('toolbox_assistant_api_key') || ''}" style="flex:1; padding:8px 12px; font-size:0.84rem; font-family:monospace; border-radius:8px;">
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-save-api-key">Save Key</button>
+        ${user ? `
+          <!-- OPTIONAL API KEY OVERRIDE -->
+          <div>
+            <div style="font-size:0.86rem; font-weight:700; color:var(--black); margin-bottom:6px;">Google Gemini API Key (Custom Override)</div>
+            <p style="margin:0 0 8px; font-size:0.75rem; color:var(--g600); line-height:1.4;">
+              Toolbox includes backend AI proxy capabilities out-of-the-box. You can also provide your own personal key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style="color:var(--black); font-weight:700; text-decoration:underline;">Google AI Studio</a>.
+            </p>
+            <div style="display:flex; gap:8px;">
+              <input type="password" id="custom-api-key-input" class="tool-input" placeholder="AIzaSy..." value="${localStorage.getItem('toolbox_assistant_api_key') || ''}" style="flex:1; padding:8px 12px; font-size:0.84rem; font-family:monospace; border-radius:8px;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-save-api-key">Save Key</button>
+            </div>
+            <div id="api-key-save-msg" style="font-size:0.75rem; color:#22c55e; margin-top:4px; display:none;">Saved!</div>
           </div>
-          <div id="api-key-save-msg" style="font-size:0.75rem; color:#22c55e; margin-top:4px; display:none;">Saved!</div>
-        </div>
 
-        <!-- QUOTA & RATE LIMITS SUMMARY -->
-        <div style="background:var(--g50); border:1px solid var(--g200); border-radius:14px; padding:14px;">
-          <div style="font-size:0.82rem; font-weight:700; color:var(--black); margin-bottom:8px; display:flex; justify-content:space-between;">
-            <span>Assistant Quotas &amp; Limits</span>
-            <span style="color:#22c55e;">Active</span>
+          <!-- QUOTA & RATE LIMITS SUMMARY -->
+          <div style="background:var(--g50); border:1px solid var(--g200); border-radius:14px; padding:14px;">
+            <div style="font-size:0.82rem; font-weight:700; color:var(--black); margin-bottom:8px; display:flex; justify-content:space-between;">
+              <span>Account Quotas &amp; Limits</span>
+              <span style="color:#22c55e;">Active</span>
+            </div>
+            
+            <div style="display:flex; flex-direction:column; gap:8px; font-size:0.78rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="color:var(--g700);">Daily Messages</span>
+                <span style="font-weight:700; font-family:monospace;">${quota.messagesUsed} / ${quota.messagesLimit} (${quota.messagesRemaining} remaining)</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="color:var(--g700);">Burst Rate Limit</span>
+                <span style="font-weight:700; font-family:monospace;">${quota.burstLimit} msgs / min</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="color:var(--g700);">Max Tokens per Request</span>
+                <span style="font-weight:700; font-family:monospace;">${quota.maxOutputTokens} tokens</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="color:var(--g700);">Heavy Tool Tasks</span>
+                <span style="font-weight:700; font-family:monospace;">${quota.heavyTasksUsed} / ${quota.heavyTasksLimit} today</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="color:var(--g700);">Large File Analyses</span>
+                <span style="font-weight:700; font-family:monospace;">${quota.largeFilesUsed} / ${quota.largeFilesLimit} today</span>
+              </div>
+            </div>
           </div>
-          
-          <div style="display:flex; flex-direction:column; gap:8px; font-size:0.78rem;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="color:var(--g700);">Daily Messages</span>
-              <span style="font-weight:700; font-family:monospace;">${quota.messagesUsed} / ${quota.messagesLimit} (${quota.messagesRemaining} remaining)</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="color:var(--g700);">Burst Rate Limit</span>
-              <span style="font-weight:700; font-family:monospace;">${quota.burstLimit} msgs / min</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="color:var(--g700);">Max Tokens per Request</span>
-              <span style="font-weight:700; font-family:monospace;">${quota.maxOutputTokens} tokens</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="color:var(--g700);">Heavy Tool Tasks</span>
-              <span style="font-weight:700; font-family:monospace;">${quota.heavyTasksUsed} / ${quota.heavyTasksLimit} today</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="color:var(--g700);">Large File Analyses</span>
-              <span style="font-weight:700; font-family:monospace;">${quota.largeFilesUsed} / ${quota.largeFilesLimit} today</span>
-            </div>
-          </div>
-        </div>
+        ` : ''}
 
       </div>
     </div>

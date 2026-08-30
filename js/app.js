@@ -85,6 +85,10 @@ function toolCard(tool, { compact = false } = {}) {
 
 function renderGrid(list, { query = '', noResult = false } = {}) {
   grid.innerHTML = '';
+  const user = getCurrentUser();
+  if (!user) {
+    list = list.filter(t => t.id !== 'assistant');
+  }
 
   // A weak best match is still a miss. Showing one barely-related card with
   // no explanation is worse than saying plainly that nothing fits, so the
@@ -472,6 +476,20 @@ const homeHeroInput = $('home-hero-input');
 const homeHeroDropdown = $('home-hero-dropdown');
 const homeHeroSubmitBtn = $('home-hero-submit-btn');
 
+function updateSearchPlaceholder() {
+  if (!homeHeroInput) return;
+  const user = getCurrentUser();
+  homeHeroInput.placeholder = user
+    ? 'Search 100+ tools or prompt Assistant…'
+    : 'Search 100+ tools (e.g. compress photo, convert to PDF)…';
+}
+
+updateSearchPlaceholder();
+window.addEventListener('toolbox:authchange', () => {
+  updateSearchPlaceholder();
+  renderGrid(TOOLS);
+});
+
 if (homeHeroInput && homeHeroDropdown) {
   function renderHomeHeroResults() {
     const q = homeHeroInput.value.trim();
@@ -480,28 +498,29 @@ if (homeHeroInput && homeHeroDropdown) {
       return;
     }
 
-    const isAi = detectAiIntent(q);
-    const searchRes = search(q, TOOLS, { labels: CATEGORY_LABELS }).results.map(r => r.tool).slice(0, 5);
+    const user = getCurrentUser();
+    const availableTools = user ? TOOLS : TOOLS.filter(t => t.id !== 'assistant');
+    const isAi = user ? detectAiIntent(q) : false;
+    const searchRes = search(q, availableTools, { labels: CATEGORY_LABELS }).results.map(r => r.tool).slice(0, 6);
 
     let html = '';
 
-    const user = getCurrentUser();
-    const aiHtml = `
+    const aiHtml = user ? `
       <div class="home-hero-ai-row" style="padding:10px 14px; background:var(--g100); border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; border:1px solid var(--g300);" data-ai-prompt="${escapeHtml(q)}">
         <div style="display:flex; align-items:center; gap:10px;">
           <div style="width:28px; height:28px; border-radius:50%; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
           </div>
           <div>
-            <div style="font-size:0.86rem; font-weight:700; color:var(--black);">${user ? `Ask Assistant: “${escapeHtml(q)}”` : `🔒 Sign in to Ask Assistant: “${escapeHtml(q)}”`}</div>
-            <div style="font-size:0.72rem; color:var(--g600);">${user ? 'Let Assistant write code, analyze data, or execute tools for you' : 'Sign in or create an account to unlock Assistant features'}</div>
+            <div style="font-size:0.86rem; font-weight:700; color:var(--black);">Ask Assistant: “${escapeHtml(q)}”</div>
+            <div style="font-size:0.72rem; color:var(--g600);">Let Assistant write code, analyze data, or execute tools for you</div>
           </div>
         </div>
-        <kbd style="font-size:0.7rem; padding:2px 6px; border-radius:4px; background:var(--white); border:1px solid var(--g300);">${user ? 'Enter ↵' : 'Sign in ↵'}</kbd>
+        <kbd style="font-size:0.7rem; padding:2px 6px; border-radius:4px; background:var(--white); border:1px solid var(--g300);">Enter ↵</kbd>
       </div>
-    `;
+    ` : '';
 
-    if (isAi) {
+    if (user && isAi && aiHtml) {
       html += aiHtml;
     }
 
@@ -518,9 +537,11 @@ if (homeHeroInput && homeHeroDropdown) {
           </a>
         `;
       }
+    } else if (!user) {
+      html += `<div style="padding:10px; font-size:0.82rem; color:var(--g500); text-align:center;">No matching tools found.</div>`;
     }
 
-    if (!isAi) {
+    if (user && !isAi && aiHtml) {
       html += `<div style="margin-top:6px;">${aiHtml}</div>`;
     }
 
@@ -531,14 +552,20 @@ if (homeHeroInput && homeHeroDropdown) {
   function submitHomeHero() {
     const q = homeHeroInput.value.trim();
     if (!q) return;
-    const isAi = detectAiIntent(q);
-    const searchRes = search(q, TOOLS, { labels: CATEGORY_LABELS }).results;
+    const user = getCurrentUser();
+    const availableTools = user ? TOOLS : TOOLS.filter(t => t.id !== 'assistant');
+    const isAi = user ? detectAiIntent(q) : false;
+    const searchRes = search(q, availableTools, { labels: CATEGORY_LABELS }).results;
 
-    if (!isAi && searchRes.length && searchRes[0].score >= 80) {
+    if (!isAi && searchRes.length && searchRes[0].score >= 60) {
       window.location.hash = `#${searchRes[0].tool.id}`;
-    } else {
+    } else if (user) {
       sessionStorage.setItem('toolbox_pending_prompt', q);
       window.location.hash = '#assistant';
+    } else if (searchRes.length) {
+      window.location.hash = `#${searchRes[0].tool.id}`;
+    } else {
+      window.location.hash = '#tools';
     }
     homeHeroDropdown.style.display = 'none';
   }

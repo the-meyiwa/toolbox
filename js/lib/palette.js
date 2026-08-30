@@ -105,9 +105,12 @@ function collect(query) {
     go: () => { window.location.hash = `#saved/${m.id}`; },
   }));
 
+  const user = getCurrentUser();
+  const availableTools = user ? TOOLS : TOOLS.filter(t => t.id !== 'assistant');
+
   const toolRows = (q
-    ? search(q, TOOLS, { labels: CATEGORY_LABELS }).results.map(r => r.tool)
-    : popular(6)
+    ? search(q, availableTools, { labels: CATEGORY_LABELS }).results.map(r => r.tool)
+    : popular(6).filter(t => user || t.id !== 'assistant')
   ).slice(0, 8).map(t => ({
     group: q ? 'Tools' : 'Most used',
     title: t.name,
@@ -120,12 +123,11 @@ function collect(query) {
     .filter(c => !q || c.label.toLowerCase().includes(q.toLowerCase()))
     .map(c => ({ group: 'Go to', title: c.label, hint: c.hint, icon: '', go: c.go }));
 
-  const isAi = detectAiIntent(q);
-  const user = getCurrentUser();
-  const aiRow = q ? {
-    group: isAi ? (user ? 'Assistant (Recommended)' : 'Assistant (Sign in required)') : 'Assistant',
-    title: user ? `Ask Assistant: “${q}”` : `🔒 Sign in to Ask Assistant: “${q}”`,
-    hint: user ? 'Let Assistant process files, generate code, or execute tools for you' : 'Sign in to your account to use Assistant',
+  const isAi = user ? detectAiIntent(q) : false;
+  const aiRow = (user && q) ? {
+    group: isAi ? 'Assistant (Recommended)' : 'Assistant',
+    title: `Ask Assistant: “${q}”`,
+    hint: 'Let Assistant process files, generate code, or execute tools for you',
     icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>',
     go: () => {
       sessionStorage.setItem('toolbox_pending_prompt', query.trim());

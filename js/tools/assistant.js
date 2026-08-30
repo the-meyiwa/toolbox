@@ -30,9 +30,9 @@ export default {
               <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
             </svg>
           </div>
-          <h2 style="font-size:1.35rem; font-weight:800; color:var(--black); margin:0 0 8px; letter-spacing:-0.01em;">Sign in to access Assistant</h2>
+          <h2 style="font-size:1.35rem; font-weight:800; color:var(--black); margin:0 0 8px; letter-spacing:-0.01em;">Sign in to Toolbox</h2>
           <p style="font-size:0.86rem; color:var(--g600); margin:0 0 24px; line-height:1.5;">
-            Assistant is the AI layer of Toolbox. Sign in or create an account to chat, analyze files, and execute browser tools.
+            Sign in or create an account to unlock cloud synchronization, persistent storage, and workspace features.
           </p>
 
           <div style="display:flex; flex-direction:column; gap:12px; text-align:left;" id="gate-auth-form">
