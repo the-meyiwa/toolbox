@@ -97,27 +97,47 @@ try {
             return;
           }
 
-          const model = body.model || 'gemini-1.5-flash';
-          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
+          const candidateModels = [body.model, 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-1.5-pro'].filter(Boolean);
+          const uniqueModels = [...new Set(candidateModels)];
 
-          const fetchRes = await fetch(geminiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: body.contents || [],
-              systemInstruction: body.systemInstruction,
-              tools: body.tools,
-              generationConfig: {
-                temperature: 0.4,
-                maxOutputTokens: 2000
+          let fetchRes = null;
+          let lastErrMessage = '';
+
+          for (const model of uniqueModels) {
+            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
+            try {
+              fetchRes = await fetch(geminiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  contents: body.contents || [],
+                  systemInstruction: body.systemInstruction,
+                  tools: body.tools,
+                  generationConfig: {
+                    temperature: 0.4,
+                    maxOutputTokens: 2000
+                  }
+                })
+              });
+
+              if (fetchRes.ok) break;
+
+              const errJson = await fetchRes.json().catch(() => ({}));
+              lastErrMessage = errJson.error?.message || `HTTP ${fetchRes.status}`;
+
+              // If key is reported leaked/revoked, no need to retry other models with same revoked key
+              if (lastErrMessage.toLowerCase().includes('leaked') || lastErrMessage.toLowerCase().includes('permission_denied')) {
+                lastErrMessage = 'Google AI reported this API key as leaked/revoked. Please generate a fresh free key at https://aistudio.google.com/app/apikey and save it in Account Settings or your .env file.';
+                break;
               }
-            })
-          });
+            } catch (err) {
+              lastErrMessage = err.message;
+            }
+          }
 
-          if (!fetchRes.ok) {
-            const errJson = await fetchRes.json().catch(() => ({}));
-            response.writeHead(fetchRes.status, { 'Content-Type': 'application/json' });
-            response.end(JSON.stringify({ error: errJson.error?.message || `Gemini API returned ${fetchRes.status}` }));
+          if (!fetchRes || !fetchRes.ok) {
+            response.writeHead(400, { 'Content-Type': 'application/json' });
+            response.end(JSON.stringify({ error: lastErrMessage || 'Failed to connect to Google Gemini API.' }));
             return;
           }
 

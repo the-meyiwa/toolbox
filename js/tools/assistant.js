@@ -502,6 +502,17 @@ export default {
     }
 
     renderMessageList();
+
+    // Check for pending prompt passed from Home page search bar
+    const pendingPrompt = sessionStorage.getItem('toolbox_pending_prompt');
+    if (pendingPrompt) {
+      sessionStorage.removeItem('toolbox_pending_prompt');
+      userInput.value = pendingPrompt;
+      handleAutoResize();
+      setTimeout(() => {
+        handleSend();
+      }, 100);
+    }
   },
 
   destroy() {

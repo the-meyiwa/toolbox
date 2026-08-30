@@ -11,7 +11,7 @@ import { search, relatedTools } from './lib/search.js';
 import { track, toolSession } from './lib/analytics.js';
 import * as artifacts from './lib/artifacts.js';
 import { mountArtifactStrip, incomingBanner } from './lib/artifact-ui.js';
-import { installPalette, openPalette } from './lib/palette.js';
+import { installPalette, openPalette, detectAiIntent } from './lib/palette.js';
 import { renderSaved } from './views/saved.js';
 import { renderSpaces } from './views/spaces.js';
 import { kindLabel } from './registry/kinds.js';
@@ -466,7 +466,108 @@ logo.addEventListener('click', (e) => { e.preventDefault(); window.location.hash
 window.addEventListener('hashchange', handleHash);
 window.addEventListener('pagehide', () => currentSession?.dispose());
 
-$('home-search')?.addEventListener('click', () => openPalette());
+// Central Search & AI Prompt Box on Home Page
+const homeHeroInput = $('home-hero-input');
+const homeHeroDropdown = $('home-hero-dropdown');
+const homeHeroSubmitBtn = $('home-hero-submit-btn');
+
+if (homeHeroInput && homeHeroDropdown) {
+  function renderHomeHeroResults() {
+    const q = homeHeroInput.value.trim();
+    if (!q) {
+      homeHeroDropdown.style.display = 'none';
+      return;
+    }
+
+    const isAi = detectAiIntent(q);
+    const searchRes = search(q, TOOLS, { labels: CATEGORY_LABELS }).results.map(r => r.tool).slice(0, 5);
+
+    let html = '';
+
+    const aiHtml = `
+      <div class="home-hero-ai-row" style="padding:10px 14px; background:var(--g100); border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; border:1px solid var(--g300);" data-ai-prompt="${escapeHtml(q)}">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:28px; height:28px; border-radius:50%; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+          </div>
+          <div>
+            <div style="font-size:0.86rem; font-weight:700; color:var(--black);">Ask Voltix AI: “${escapeHtml(q)}”</div>
+            <div style="font-size:0.72rem; color:var(--g600);">Let AI write code, analyze data, or execute tools for you</div>
+          </div>
+        </div>
+        <kbd style="font-size:0.7rem; padding:2px 6px; border-radius:4px; background:var(--white); border:1px solid var(--g300);">Enter ↵</kbd>
+      </div>
+    `;
+
+    if (isAi) {
+      html += aiHtml;
+    }
+
+    if (searchRes.length) {
+      html += `<div style="font-size:0.72rem; font-weight:700; color:var(--g500); padding:4px 8px; text-transform:uppercase; letter-spacing:0.04em;">Matched Tools</div>`;
+      for (const t of searchRes) {
+        html += `
+          <a href="#${t.id}" class="home-hero-tool-row" style="display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; text-decoration:none; color:var(--black); transition:background 0.15s;">
+            <span style="font-size:1.1rem;">${t.icon}</span>
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:0.86rem; font-weight:600;">${escapeHtml(t.name)}</div>
+              <div style="font-size:0.72rem; color:var(--g500); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(t.description)}</div>
+            </div>
+          </a>
+        `;
+      }
+    }
+
+    if (!isAi) {
+      html += `<div style="margin-top:6px;">${aiHtml}</div>`;
+    }
+
+    homeHeroDropdown.innerHTML = html;
+    homeHeroDropdown.style.display = 'block';
+  }
+
+  function submitHomeHero() {
+    const q = homeHeroInput.value.trim();
+    if (!q) return;
+    const isAi = detectAiIntent(q);
+    const searchRes = search(q, TOOLS, { labels: CATEGORY_LABELS }).results;
+
+    if (!isAi && searchRes.length && searchRes[0].score >= 80) {
+      window.location.hash = `#${searchRes[0].tool.id}`;
+    } else {
+      sessionStorage.setItem('toolbox_pending_prompt', q);
+      window.location.hash = '#assistant';
+    }
+    homeHeroDropdown.style.display = 'none';
+  }
+
+  homeHeroInput.addEventListener('input', renderHomeHeroResults);
+  homeHeroInput.addEventListener('focus', renderHomeHeroResults);
+  homeHeroInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      submitHomeHero();
+    }
+  });
+
+  homeHeroSubmitBtn?.addEventListener('click', submitHomeHero);
+
+  homeHeroDropdown.addEventListener('click', (e) => {
+    const aiRow = e.target.closest('.home-hero-ai-row');
+    if (aiRow) {
+      const p = aiRow.dataset.aiPrompt || homeHeroInput.value.trim();
+      sessionStorage.setItem('toolbox_pending_prompt', p);
+      window.location.hash = '#assistant';
+      homeHeroDropdown.style.display = 'none';
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#home-search-wrap')) {
+      homeHeroDropdown.style.display = 'none';
+    }
+  });
+}
 
 
 const tipsFab = $('tips-fab');

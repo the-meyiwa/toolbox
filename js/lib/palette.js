@@ -68,6 +68,25 @@ function build() {
   });
 }
 
+export function detectAiIntent(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return false;
+  const words = q.split(/\s+/);
+  
+  const promptStarters = [
+    'how', 'what', 'why', 'who', 'where', 'when', 'which',
+    'can you', 'could you', 'please', 'tell me', 'write', 'create',
+    'generate', 'summarize', 'explain', 'convert this', 'analyze',
+    'help me', 'solve', 'calculate', 'code a', 'make a', 'fix',
+    'translate', 'describe', 'find out', 'build', 'give me'
+  ];
+
+  if (promptStarters.some(s => q.startsWith(s))) return true;
+  if (q.endsWith('?')) return true;
+  if (words.length >= 4) return true;
+  return false;
+}
+
 /* ---------------- results ---------------- */
 
 function collect(query) {
@@ -100,7 +119,22 @@ function collect(query) {
     .filter(c => !q || c.label.toLowerCase().includes(q.toLowerCase()))
     .map(c => ({ group: 'Go to', title: c.label, hint: c.hint, icon: '', go: c.go }));
 
-  return [...savedRows, ...toolRows, ...cmdRows];
+  const isAi = detectAiIntent(q);
+  const aiRow = q ? {
+    group: isAi ? 'Voltix Assistant (Recommended)' : 'Voltix Assistant',
+    title: `Ask Voltix AI: “${q}”`,
+    hint: 'Let Voltix Assistant process files, generate code, or execute tools for you',
+    icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>',
+    go: () => {
+      sessionStorage.setItem('toolbox_pending_prompt', query.trim());
+      window.location.hash = '#assistant';
+    }
+  } : null;
+
+  if (isAi && aiRow) {
+    return [aiRow, ...toolRows, ...savedRows, ...cmdRows];
+  }
+  return [...savedRows, ...toolRows, ...(aiRow ? [aiRow] : []), ...cmdRows];
 }
 
 function render() {
