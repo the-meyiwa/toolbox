@@ -55,6 +55,17 @@ const server = http.createServer((request, response) => {
     }
   }
 
+  // --- Voltix AI Assistant Proxy API ---
+  if (url.pathname.startsWith('/api/assistant/')) {
+    if (url.pathname === '/api/assistant/status' && request.method === 'GET') {
+      const hasGeminiKey = !!process.env.GEMINI_API_KEY;
+      const hasGroqKey = !!process.env.GROQ_API_KEY;
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify({ status: 'ready', hasGeminiKey, hasGroqKey, timestamp: Date.now() }));
+      return;
+    }
+  }
+
   response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
   response.end(`
     <!DOCTYPE html>

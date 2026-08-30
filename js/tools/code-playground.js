@@ -327,6 +327,17 @@ export default {
     themeSelect.addEventListener('change', () => applyTheme(themeSelect.value));
     applyTheme(state.theme);
 
+    // Synchronize with global Toolbox theme
+    this._onThemeChange = (e) => {
+      const gTheme = e.detail?.theme;
+      if (gTheme === 'neon-tokyo' || gTheme === 'cyber-neon') applyTheme('cyber-matrix');
+      else if (gTheme === 'solar-blue') applyTheme('tokyo-night');
+      else if (gTheme === 'white-on-black') applyTheme('monokai');
+      else if (gTheme === 'default' || gTheme === 'cozy-pink') applyTheme('github-light');
+      themeSelect.value = state.theme;
+    };
+    window.addEventListener('toolbox:themechange', this._onThemeChange);
+
     // Fullscreen Toggle
     fullscreenBtn.addEventListener('click', () => {
       state.isFullscreen = !state.isFullscreen;
@@ -822,6 +833,7 @@ export default {
   destroy() {
     this._alive = false;
     this._remote?.abort();
+    if (this._onThemeChange) window.removeEventListener('toolbox:themechange', this._onThemeChange);
     for (const w of Object.values(this._workers || {})) w.terminate();
     this._workers = {};
     clearTimeout(this._timer);
