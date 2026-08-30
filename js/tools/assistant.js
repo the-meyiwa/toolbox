@@ -9,6 +9,7 @@ import { streamChatCompletion } from '../lib/ai-provider.js';
 import { BY_ID } from '../registry/index.js';
 import { QuotaManager } from '../lib/quota-manager.js';
 import { openAccountModal } from '../views/account-modal.js';
+import { getCurrentUser, signInWithEmail, signUpWithEmail } from '../lib/supabase.js';
 
 const STORAGE_SPLASH_SEEN = 'voltix_assistant_splash_seen_v2';
 const STORAGE_KEEP_CONTEXT = 'toolbox_assistant_keep_context';
@@ -18,6 +19,89 @@ export default {
   render(container, { tool, currentToolId } = {}) {
     this._alive = true;
     this._abortCtrl = null;
+
+    const user = getCurrentUser();
+    if (!user) {
+      container.innerHTML = `
+        <div class="assistant-auth-gate" style="max-width:480px; margin:40px auto; padding:36px 30px; background:var(--white); border:1px solid var(--g200); border-radius:20px; box-shadow:0 16px 48px rgba(0,0,0,0.06); text-align:center; font-family:var(--sans);">
+          <div style="width:56px; height:56px; border-radius:50%; background:var(--black); color:var(--white); margin:0 auto 16px; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(0,0,0,0.15);">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          <h2 style="font-size:1.35rem; font-weight:800; color:var(--black); margin:0 0 8px; letter-spacing:-0.01em;">Sign in to access Assistant</h2>
+          <p style="font-size:0.86rem; color:var(--g600); margin:0 0 24px; line-height:1.5;">
+            Assistant is the AI layer of Toolbox. Sign in or create an account to chat, analyze files, and execute browser tools.
+          </p>
+
+          <div style="display:flex; flex-direction:column; gap:12px; text-align:left;" id="gate-auth-form">
+            <div>
+              <label style="font-size:0.75rem; font-weight:700; color:var(--g700); text-transform:uppercase;">Email address</label>
+              <input type="email" id="gate-email-input" class="tool-input" placeholder="name@example.com" style="width:100%; padding:10px 14px; font-size:0.9rem; border-radius:10px; margin-top:4px;">
+            </div>
+            <div>
+              <label style="font-size:0.75rem; font-weight:700; color:var(--g700); text-transform:uppercase;">Password</label>
+              <input type="password" id="gate-pwd-input" class="tool-input" placeholder="••••••••" style="width:100%; padding:10px 14px; font-size:0.9rem; border-radius:10px; margin-top:4px;">
+            </div>
+            <div style="display:flex; gap:10px; margin-top:4px;">
+              <button type="button" class="btn btn-primary" id="gate-btn-signin" style="flex:1; padding:10px 0; font-size:0.88rem; font-weight:700;">Sign In</button>
+              <button type="button" class="btn btn-secondary" id="gate-btn-signup" style="flex:1; padding:10px 0; font-size:0.88rem; font-weight:700;">Create Account</button>
+            </div>
+            <div id="gate-auth-msg" style="font-size:0.78rem; color:#ef4444; margin-top:4px; display:none;"></div>
+          </div>
+        </div>
+      `;
+
+      const emailIn = container.querySelector('#gate-email-input');
+      const pwdIn = container.querySelector('#gate-pwd-input');
+      const msgEl = container.querySelector('#gate-auth-msg');
+
+      container.querySelector('#gate-btn-signin').addEventListener('click', async () => {
+        const email = emailIn.value.trim();
+        const pwd = pwdIn.value.trim();
+        if (!email || !pwd) {
+          msgEl.style.display = 'block';
+          msgEl.textContent = 'Please enter your email and password.';
+          return;
+        }
+        msgEl.style.display = 'none';
+        const res = await signInWithEmail(email, pwd);
+        if (res.success) {
+          this.render(container, { tool, currentToolId });
+        } else {
+          msgEl.style.display = 'block';
+          msgEl.textContent = res.error;
+        }
+      });
+
+      container.querySelector('#gate-btn-signup').addEventListener('click', async () => {
+        const email = emailIn.value.trim();
+        const pwd = pwdIn.value.trim();
+        if (!email || !pwd) {
+          msgEl.style.display = 'block';
+          msgEl.textContent = 'Please enter your email and password.';
+          return;
+        }
+        msgEl.style.display = 'none';
+        const res = await signUpWithEmail(email, pwd);
+        if (res.success) {
+          this.render(container, { tool, currentToolId });
+        } else {
+          msgEl.style.display = 'block';
+          msgEl.textContent = res.error;
+        }
+      });
+
+      const onAuthChange = () => {
+        if (getCurrentUser()) {
+          window.removeEventListener('toolbox:authchange', onAuthChange);
+          this.render(container, { tool, currentToolId });
+        }
+      };
+      window.addEventListener('toolbox:authchange', onAuthChange);
+      return;
+    }
 
     let keepContext = localStorage.getItem(STORAGE_KEEP_CONTEXT) !== 'false';
     let history = [];

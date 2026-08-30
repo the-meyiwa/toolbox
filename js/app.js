@@ -19,6 +19,7 @@ import { copyText } from './utils.js';
 import { initTheme } from './lib/theme.js';
 import { installSettingsUI } from './lib/settings-ui.js';
 import { installHeaderMenu } from './lib/header-menu.js';
+import { getCurrentUser } from './lib/supabase.js';
 
 /* --------------- state --------------- */
 
@@ -484,6 +485,7 @@ if (homeHeroInput && homeHeroDropdown) {
 
     let html = '';
 
+    const user = getCurrentUser();
     const aiHtml = `
       <div class="home-hero-ai-row" style="padding:10px 14px; background:var(--g100); border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; border:1px solid var(--g300);" data-ai-prompt="${escapeHtml(q)}">
         <div style="display:flex; align-items:center; gap:10px;">
@@ -491,11 +493,11 @@ if (homeHeroInput && homeHeroDropdown) {
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
           </div>
           <div>
-            <div style="font-size:0.86rem; font-weight:700; color:var(--black);">Ask Assistant: “${escapeHtml(q)}”</div>
-            <div style="font-size:0.72rem; color:var(--g600);">Let Assistant write code, analyze data, or execute tools for you</div>
+            <div style="font-size:0.86rem; font-weight:700; color:var(--black);">${user ? `Ask Assistant: “${escapeHtml(q)}”` : `🔒 Sign in to Ask Assistant: “${escapeHtml(q)}”`}</div>
+            <div style="font-size:0.72rem; color:var(--g600);">${user ? 'Let Assistant write code, analyze data, or execute tools for you' : 'Sign in or create an account to unlock Assistant features'}</div>
           </div>
         </div>
-        <kbd style="font-size:0.7rem; padding:2px 6px; border-radius:4px; background:var(--white); border:1px solid var(--g300);">Enter ↵</kbd>
+        <kbd style="font-size:0.7rem; padding:2px 6px; border-radius:4px; background:var(--white); border:1px solid var(--g300);">${user ? 'Enter ↵' : 'Sign in ↵'}</kbd>
       </div>
     `;
 

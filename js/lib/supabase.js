@@ -20,8 +20,8 @@ export function getSupabaseConfig() {
   const envKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || '';
 
   return {
-    url: customUrl || envUrl || '',
-    anonKey: customKey || envKey || ''
+    url: customUrl || envUrl || 'https://ssoruyruzbvgyondxlgj.supabase.co',
+    anonKey: customKey || envKey || 'sb_publishable_iZcbpvF209tCXSuqNm4Ckw_xOFFMM-S'
   };
 }
 
