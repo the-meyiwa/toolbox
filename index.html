@@ -29,7 +29,7 @@
   <div id="app">
     <header id="app-header">
       <a href="#home" class="logo" id="logo">Toolbox</a>
-      <nav class="nav-links" id="nav-links">
+      <nav class="nav-links desktop-nav" id="desktop-nav-links">
         <a href="#home" class="nav-link active" data-page="home">Home</a>
         <a href="#tools" class="nav-link" data-page="tools">Tools</a>
         <!-- Saved appears only once there is something in it. Nobody who came
@@ -383,6 +383,49 @@
         </div>
       </div>
     </main>
+
+    <!-- MOBILE BOTTOM NAVIGATION -->
+    <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile Bottom Navigation">
+      <a href="#home" class="nav-link mob-nav-item active" data-page="home">
+        <svg class="mob-nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        <span class="mob-nav-label">Home</span>
+      </a>
+      <a href="#tools" class="nav-link mob-nav-item" data-page="tools">
+        <svg class="mob-nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+        <span class="mob-nav-label">Tools</span>
+      </a>
+      <a href="#saved" class="nav-link mob-nav-item" data-page="saved" id="nav-saved-mob" hidden>
+        <svg class="mob-nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <span class="mob-nav-label">Saved</span>
+      </a>
+      <a href="#spaces" class="nav-link mob-nav-item" data-page="spaces">
+        <svg class="mob-nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+        <span class="mob-nav-label">Spaces</span>
+      </a>
+      <a href="#support" class="nav-link mob-nav-item" data-page="support">
+        <svg class="mob-nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <span class="mob-nav-label">Support</span>
+      </a>
+    </nav>
   </div>
 
   <!-- FLOATING TIPS BUTTON & MODAL -->

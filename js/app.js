@@ -503,7 +503,9 @@ if (taskGrid) {
    product must not look like a workspace to somebody who does not want one. */
 function reflectSavedWork() {
   const items = artifacts.list();
-  if (navSaved) navSaved.hidden = items.length === 0;
+  document.querySelectorAll('[data-page="saved"]').forEach(el => {
+    el.hidden = items.length === 0;
+  });
 
   const strip = $('home-saved');
   if (!strip) return;
