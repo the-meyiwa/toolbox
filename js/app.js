@@ -20,6 +20,7 @@ import { initTheme } from './lib/theme.js';
 import { installSettingsUI } from './lib/settings-ui.js';
 import { installHeaderMenu } from './lib/header-menu.js';
 import { getCurrentUser } from './lib/supabase.js';
+import { openAccountModal } from './views/account-modal.js';
 
 /* --------------- state --------------- */
 
@@ -235,6 +236,11 @@ function teardownTool() {
 }
 
 async function openTool(id) {
+  if (id === 'assistant' && !getCurrentUser()) {
+    openAccountModal();
+    return showPage('home');
+  }
+
   const tool = BY_ID.get(id);
   if (!tool) return showPage('home');
 
@@ -484,10 +490,67 @@ function updateSearchPlaceholder() {
     : 'Search 100+ tools (e.g. compress photo, convert to PDF)…';
 }
 
+export function renderHomeAssistantBanner() {
+  const bannerEl = $('home-assistant-banner');
+  if (!bannerEl) return;
+
+  const user = getCurrentUser();
+  if (!user) {
+    bannerEl.innerHTML = `
+      <div class="home-assistant-card" style="padding:20px 24px; background:var(--g50); border:1px solid var(--g200); border-radius:18px; display:flex; align-items:center; justify-content:space-between; gap:16px; box-shadow:0 6px 20px rgba(0,0,0,0.03);">
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div style="width:42px; height:42px; border-radius:50%; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+          </div>
+          <div>
+            <h3 style="margin:0 0 2px; font-size:1.02rem; font-weight:800; color:var(--black); letter-spacing:-0.01em;">Sign in to use Assistant</h3>
+            <p style="margin:0; font-size:0.82rem; color:var(--g600); line-height:1.4;">Unlock intelligent workflow automation, multi-tool scripting, and cloud sync.</p>
+          </div>
+        </div>
+        <button type="button" class="btn btn-primary" id="btn-banner-signin" style="padding:9px 20px; font-size:0.86rem; font-weight:700; border-radius:9999px; white-space:nowrap; flex-shrink:0;">
+          Sign In
+        </button>
+      </div>
+    `;
+
+    bannerEl.querySelector('#btn-banner-signin')?.addEventListener('click', () => {
+      openAccountModal();
+    });
+  } else {
+    bannerEl.innerHTML = `
+      <div class="home-assistant-card" style="padding:20px 24px; background:var(--g100); border:1px solid var(--g300); border-radius:18px; display:flex; align-items:center; justify-content:space-between; gap:16px; box-shadow:0 6px 20px rgba(0,0,0,0.03);">
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div style="width:42px; height:42px; border-radius:50%; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+          </div>
+          <div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <h3 style="margin:0; font-size:1.02rem; font-weight:800; color:var(--black); letter-spacing:-0.01em;">Assistant is Ready</h3>
+              <span style="font-size:0.68rem; font-weight:700; background:#22c55e; color:#fff; padding:1px 7px; border-radius:9999px;">Active</span>
+            </div>
+            <p style="margin:2px 0 0; font-size:0.82rem; color:var(--g600); line-height:1.4;">Ask Assistant from the search bar above or launch the dedicated workspace.</p>
+          </div>
+        </div>
+        <a href="#assistant" class="btn btn-primary" style="padding:9px 20px; font-size:0.86rem; font-weight:700; border-radius:9999px; white-space:nowrap; text-decoration:none; flex-shrink:0;">
+          Open Assistant &rarr;
+        </a>
+      </div>
+    `;
+  }
+}
+
 updateSearchPlaceholder();
+renderHomeAssistantBanner();
 window.addEventListener('toolbox:authchange', () => {
   updateSearchPlaceholder();
   renderGrid(TOOLS);
+  renderHomeAssistantBanner();
 });
 
 if (homeHeroInput && homeHeroDropdown) {
