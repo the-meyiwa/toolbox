@@ -121,9 +121,9 @@ function collect(query) {
 
   const isAi = detectAiIntent(q);
   const aiRow = q ? {
-    group: isAi ? 'Voltix Assistant (Recommended)' : 'Voltix Assistant',
-    title: `Ask Voltix AI: “${q}”`,
-    hint: 'Let Voltix Assistant process files, generate code, or execute tools for you',
+    group: isAi ? 'Assistant (Recommended)' : 'Assistant',
+    title: `Ask Assistant: “${q}”`,
+    hint: 'Let Assistant process files, generate code, or execute tools for you',
     icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>',
     go: () => {
       sessionStorage.setItem('toolbox_pending_prompt', query.trim());

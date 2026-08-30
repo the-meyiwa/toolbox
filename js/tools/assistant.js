@@ -52,7 +52,7 @@ export default {
               </div>
               <div>
                 <div style="display:flex; align-items:center; gap:6px;">
-                  <span style="font-size:0.96rem; font-weight:800; color:var(--black); letter-spacing:-0.01em;">Voltix Assistant</span>
+                  <span style="font-size:0.96rem; font-weight:800; color:var(--black); letter-spacing:-0.01em;">Assistant</span>
                   <span style="font-size:0.68rem; font-weight:700; background:#22c55e; color:#fff; padding:1px 7px; border-radius:9999px;">AI Layer</span>
                 </div>
                 <div style="font-size:0.72rem; color:var(--g500); display:flex; align-items:center; gap:4px;" id="ast-context-indicator">
@@ -112,7 +112,7 @@ export default {
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
           </button>
 
-          <textarea id="ast-user-input" rows="1" placeholder="Ask Voltix Assistant to analyze files, run code, or execute tools..." style="flex:1; border:1px solid var(--g300); border-radius:22px; padding:11px 18px; font-family:var(--sans); font-size:0.9rem; outline:none; resize:none; max-height:140px; line-height:1.45; transition:border-color 0.2s;"></textarea>
+          <textarea id="ast-user-input" rows="1" placeholder="Ask Assistant to analyze files, run code, or execute tools..." style="flex:1; border:1px solid var(--g300); border-radius:22px; padding:11px 18px; font-family:var(--sans); font-size:0.9rem; outline:none; resize:none; max-height:140px; line-height:1.45; transition:border-color 0.2s;"></textarea>
 
           <button type="button" class="btn btn-primary" id="ast-send-btn" style="width:42px; height:42px; padding:0; border-radius:50%; flex-shrink:0;" title="Send Message">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -128,12 +128,12 @@ export default {
                 <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
               </svg>
             </div>
-            <h3 style="margin:0 0 8px; font-size:1.4rem; font-weight:800; color:var(--black); letter-spacing:-0.02em;">Meet Voltix Assistant</h3>
+            <h3 style="margin:0 0 8px; font-size:1.4rem; font-weight:800; color:var(--black); letter-spacing:-0.02em;">Meet Assistant</h3>
             <p style="margin:0 0 16px; font-size:0.95rem; font-weight:600; color:var(--g800);">
               Assistant also powers Voltix.
             </p>
             <p style="margin:0 0 20px; font-size:0.86rem; color:var(--g600); line-height:1.5;">
-              The AI layer of Toolbox capable of understanding user requests, processing files, running code, and executing client-side browser tools.
+              The AI operating layer of Toolbox capable of understanding user requests, processing files, running code, and executing client-side browser tools.
             </p>
             <div style="margin-bottom:24px; padding:12px; background:var(--g100); border-radius:12px; font-size:0.82rem; color:var(--g700); display:flex; align-items:center; justify-content:center; gap:8px;">
               <span>Explore the flagship ecosystem:</span>
@@ -287,7 +287,7 @@ export default {
                 <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
               </svg>
             </div>
-            <h4 style="margin:0 0 6px; font-size:1.05rem; font-weight:700; color:var(--black);">How can Voltix Assistant help you?</h4>
+            <h4 style="margin:0 0 6px; font-size:1.05rem; font-weight:700; color:var(--black);">How can Assistant help you?</h4>
             <p style="margin:0; font-size:0.84rem; max-width:440px; margin:0 auto; line-height:1.5;">
               I can convert and compress images, analyze data tables, run Python/C++ code, calculate finances, and solve chemistry equations client-side.
             </p>
