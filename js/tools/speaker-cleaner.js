@@ -169,7 +169,7 @@ export default {
           speakerIcon.style.transform = timeLeft % 2 === 0 ? 'scale(1.08)' : 'scale(0.95)';
           if (timeLeft <= 0) {
             stopSound();
-            timerLbl.textContent = 'Cleaning cycle complete! 🎉';
+            timerLbl.textContent = 'Cleaning cycle complete.';
           }
         }, 1000);
       } catch (err) {

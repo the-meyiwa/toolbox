@@ -1,13 +1,13 @@
 /* ============================================================
-   TOOLBOX — Notes (Apple Notes Style)
-   Full offline notes app with folder organization, rich formatting,
+   TOOLBOX — Notes
+   Full offline notes application with folder organization, rich formatting,
    interactive checklists with tap-to-complete, paper styles (lined, grid),
-   search, pinned notes, passcode lock, and multi-format export.
+   search, pinned notes, and multi-format export.
    ============================================================ */
 
 export default {
   render(container) {
-    const STORAGE_KEY = 'toolbox_apple_notes_v1';
+    const STORAGE_KEY = 'toolbox_notes_v1';
     let notes = loadNotes();
     let activeNoteId = notes.length ? notes[0].id : null;
     let activeFolder = 'all';
@@ -30,11 +30,11 @@ export default {
             </div>
             
             <div class="notes-folder-list" style="display:flex; flex-direction:column; gap:4px;">
-              <button type="button" class="notes-folder-btn active" data-folder="all">📁 All Notes</button>
-              <button type="button" class="notes-folder-btn" data-folder="quick">⚡ Quick Notes</button>
-              <button type="button" class="notes-folder-btn" data-folder="work">💼 Work</button>
-              <button type="button" class="notes-folder-btn" data-folder="personal">🏠 Personal</button>
-              <button type="button" class="notes-folder-btn" data-folder="archive">📦 Archive</button>
+              <button type="button" class="notes-folder-btn active" data-folder="all">All Notes</button>
+              <button type="button" class="notes-folder-btn" data-folder="quick">Quick Notes</button>
+              <button type="button" class="notes-folder-btn" data-folder="work">Work</button>
+              <button type="button" class="notes-folder-btn" data-folder="personal">Personal</button>
+              <button type="button" class="notes-folder-btn" data-folder="archive">Archive</button>
             </div>
           </div>
 
@@ -48,7 +48,7 @@ export default {
           <!-- Top Bar with Search & New Note -->
           <div style="padding:12px; border-bottom:1px solid var(--g150); display:flex; gap:8px; align-items:center;">
             <input type="text" id="notes-search-input" class="tool-input" placeholder="Search notes..." style="flex:1; font-size:0.8rem; padding:6px 10px;">
-            <button type="button" class="btn btn-primary btn-sm" id="notes-add-btn" title="Create New Note" style="padding:6px 10px; font-weight:700;">+ ✏️</button>
+            <button type="button" class="btn btn-primary btn-sm" id="notes-add-btn" title="Create New Note" style="padding:6px 12px; font-weight:600;">+ New</button>
           </div>
 
           <!-- Note Cards Scroll List -->
@@ -63,8 +63,8 @@ export default {
               <button type="button" class="notes-tool-btn" id="tool-bold" title="Bold"><strong>B</strong></button>
               <button type="button" class="notes-tool-btn" id="tool-italic" title="Italic"><em>I</em></button>
               <button type="button" class="notes-tool-btn" id="tool-heading" title="Heading"><strong>H</strong></button>
-              <button type="button" class="notes-tool-btn" id="tool-checklist" title="Interactive Checklist">☑️ Checklist</button>
-              <button type="button" class="notes-tool-btn" id="tool-bullet" title="Bullet List">• List</button>
+              <button type="button" class="notes-tool-btn" id="tool-checklist" title="Interactive Checklist">Checklist</button>
+              <button type="button" class="notes-tool-btn" id="tool-bullet" title="Bullet List">Bullet List</button>
             </div>
 
             <!-- Paper Background Style & Export Dropdown -->
@@ -75,9 +75,9 @@ export default {
                 <option value="grid">Grid Paper</option>
                 <option value="dot">Dot Matrix</option>
               </select>
-              <button type="button" class="btn btn-secondary btn-sm" id="notes-pin-btn" title="Pin Note">📌 Pin</button>
-              <button type="button" class="btn btn-secondary btn-sm" id="notes-export-btn" title="Export Note">Export ▾</button>
-              <button type="button" class="btn btn-secondary btn-sm" id="notes-delete-btn" title="Delete Note" style="color:#ef4444;">🗑️</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="notes-pin-btn" title="Pin Note">Pin</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="notes-export-btn" title="Export Note">Export</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="notes-delete-btn" title="Delete Note" style="color:#ef4444;">Delete</button>
             </div>
           </div>
 
@@ -113,7 +113,6 @@ export default {
     const deleteBtn = container.querySelector('#notes-delete-btn');
     const exportBtn = container.querySelector('#notes-export-btn');
 
-    // Add styles for folders & paper
     injectNotesCSS();
 
     function loadNotes() {
@@ -124,8 +123,8 @@ export default {
       return [
         {
           id: 'welcome-note',
-          title: 'Welcome to Apple Notes',
-          body: 'This is your clean, 100% offline note space with full checklist support, pinned notes, paper textures, and folder organization.\n\n☑️ Try tapping this checklist item!\n☑️ Add ideas and thoughts\n☑️ Switch to Ruled or Grid paper background\n\nAll notes are automatically saved to your browser with zero tracking.',
+          title: 'Notes & Checklists',
+          body: 'This is a clean, 100% offline note space with checklist support, pinned notes, paper textures, and folder organization.\n\n[x] Completed checklist task\n[ ] Tap to complete task\n[ ] Switch paper background to Ruled or Grid\n\nAll notes are automatically saved to local storage.',
           folder: 'quick',
           pinned: true,
           updatedAt: Date.now()
@@ -164,7 +163,7 @@ export default {
         <div class="note-card-item ${note.id === activeNoteId ? 'active' : ''}" data-id="${note.id}" style="padding:12px 14px; border-bottom:1px solid var(--g150); cursor:pointer; transition:background 0.15s;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
             <strong style="font-size:0.88rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:80%;">${note.title || 'New Note'}</strong>
-            ${note.pinned ? '<span style="font-size:0.75rem;">📌</span>' : ''}
+            ${note.pinned ? '<span style="font-size:0.72rem; font-weight:700; color:var(--g600); border:1px solid var(--g300); padding:1px 5px; border-radius:4px;">PINNED</span>' : ''}
           </div>
           <div style="font-size:0.75rem; color:var(--g500); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:4px;">
             ${(note.body || 'No additional text').replace(/<[^>]*>?/gm, '').slice(0, 60)}
@@ -196,14 +195,13 @@ export default {
       titleInput.value = note.title;
       bodyEditor.innerHTML = formatBodyForDisplay(note.body);
       metaLine.textContent = `Last modified: ${new Date(note.updatedAt).toLocaleString()}`;
-      pinBtn.textContent = note.pinned ? '📌 Pinned' : 'Pin';
+      pinBtn.textContent = note.pinned ? 'Pinned' : 'Pin';
       updateCounts();
     }
 
     function formatBodyForDisplay(body) {
       if (!body) return '';
-      // Convert [ ] and [x] or ☑️ into clickable checkboxes
-      let html = body.replace(/☑️|\[x\]/gi, '<input type="checkbox" checked class="note-chk"> ')
+      let html = body.replace(/\[x\]/gi, '<input type="checkbox" checked class="note-chk"> ')
                      .replace(/\[ \]/g, '<input type="checkbox" class="note-chk"> ');
       return html;
     }
@@ -269,7 +267,7 @@ export default {
       const note = getActiveNote();
       if (note) {
         note.pinned = !note.pinned;
-        pinBtn.textContent = note.pinned ? '📌 Pinned' : 'Pin';
+        pinBtn.textContent = note.pinned ? 'Pinned' : 'Pin';
         saveNotes();
         renderNoteList();
       }

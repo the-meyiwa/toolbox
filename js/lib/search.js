@@ -40,18 +40,25 @@ const EXPANSIONS = new Map(Object.entries({
   regexp: 'regex', re: 'regex',
   ts: 'timestamp', epoch: 'timestamp',
   hex: 'hexadecimal', bin: 'binary', dec: 'decimal', oct: 'octal',
-  calc: 'calculate', calculator: 'calculate',
+  calc: 'calculate', calculator: 'calculate', math: 'calculate', arithmetic: 'calculate',
   convert: 'convert', converter: 'convert', conversion: 'convert',
-  compress: 'compress', compressor: 'compress', compression: 'compress', shrink: 'compress', reduce: 'compress',
+  compress: 'compress', compressor: 'compress', compression: 'compress', shrink: 'compress', reduce: 'compress', zip: 'compress', tar: 'compress',
+  unzip: 'decompress', untar: 'decompress', extract: 'decompress', unpack: 'decompress',
   resize: 'resize', resizer: 'resize', scale: 'resize',
   gen: 'generate', generator: 'generate', generation: 'generate',
   fmt: 'format', formatter: 'format', beautify: 'format', prettify: 'format', pretty: 'format',
   minify: 'minify', uglify: 'minify',
-  metadata: 'metadata', exif: 'metadata',
+  metadata: 'metadata', exif: 'metadata', id3: 'metadata', tag: 'metadata',
   qr: 'qr', qrcode: 'qr',
   ip: 'ip', ipaddress: 'ip',
   vat: 'vat', tax: 'tax',
-  cash: 'money', currency: 'money',
+  cash: 'money', currency: 'money', payment: 'money', pay: 'money',
+  sfx: 'sound', soundboard: 'sound', audio: 'sound', foley: 'sound',
+  speaker: 'speaker', clean: 'clean', eject: 'eject',
+  ide: 'playground', code: 'playground', editor: 'playground', sublime: 'playground',
+  dataset: 'data', charts: 'data', graph: 'data', stats: 'data',
+  chem: 'chemistry', chemical: 'chemistry', drug: 'compound', medicine: 'compound',
+  note: 'notes', notepad: 'notes', memo: 'notes', todo: 'notes', checklist: 'notes',
 }));
 
 export function normalise(text) {
@@ -217,6 +224,9 @@ export function scoreTool(tool, q, categoryLabel = '') {
   if (desc.includes(q.text)) add(TIER.description, 'description');
   else if (q.tokens.length > 1 && q.tokens.every(t => desc.includes(t))) add(TIER.description - 25, 'description');
   if (cat && (cat.includes(q.text) || q.tokens.some(t => cat.includes(t)))) add(TIER.category, 'category');
+  if (tool.secondary?.some(sec => normalise(sec).includes(q.text))) add(TIER.category - 15, 'category');
+  if (tool.task && normalise(tool.task).includes(q.text)) add(TIER.category, 'task');
+  if (tool.badge && normalise(tool.badge).includes(q.text)) add(TIER.keywordPartial, 'badge');
 
   /* Conversion queries: "png to webp", "json to csv", "image to pdf" */
   if (q.conversion) {

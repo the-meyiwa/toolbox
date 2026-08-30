@@ -81,9 +81,15 @@ export default {
           <div id="db-view-insights" style="display:none; margin-top:16px;">
             <div style="background:var(--white); border:1px solid var(--g200); border-radius:14px; padding:20px; display:flex; flex-direction:column; gap:16px;">
               <div style="display:flex; align-items:center; gap:10px;">
-                <span style="font-size:1.4rem;">🤖</span>
+                <div style="width:36px; height:36px; border-radius:8px; background:var(--g100); display:flex; align-items:center; justify-content:center; color:var(--g700);">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                  </svg>
+                </div>
                 <div>
-                  <h3 style="margin:0; font-size:1.05rem; font-weight:700;">Executive Data Bot Summary</h3>
+                  <h3 style="margin:0; font-size:1.05rem; font-weight:700;">Executive Data Summary</h3>
                   <p style="margin:0; font-size:0.8rem; color:var(--g500);">Automated natural language analysis and key data patterns</p>
                 </div>
               </div>
@@ -432,7 +438,7 @@ Asia Pacific,Q1,Audio Accessories,2100,252000,103320,96`;
           </ul>
         </div>
         ${categoryInsights.join('')}
-        <p style="font-size:0.84rem; color:var(--g600);">💡 <em>Data Bot automatically detected ${numCols.length} numerical metrics and ${catCols.length} categorical dimensions across ${dataset.length} records.</em></p>
+        <p style="font-size:0.84rem; color:var(--g600); margin-top:10px;"><em>Analysis automatically evaluated ${numCols.length} numerical metrics and ${catCols.length} categorical dimensions across ${dataset.length} records.</em></p>
       `;
     }
 
