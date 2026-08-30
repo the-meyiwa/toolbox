@@ -6032,13 +6032,36 @@ input, select, textarea {
 [data-theme="neon-tokyo"] body,
 [data-theme="cyber-neon"] body {
   background: radial-gradient(ellipse at 50% 0%, #1c0838 0%, #090514 100%);
+  font-family: 'Silkscreen', 'Courier New', 'VT323', monospace;
+  -webkit-font-smoothing: none;
+  image-rendering: pixelated;
+  letter-spacing: -0.01em;
+}
+[data-theme="neon-tokyo"] h1,
+[data-theme="neon-tokyo"] h2,
+[data-theme="neon-tokyo"] h3,
+[data-theme="neon-tokyo"] .tool-card-name,
+[data-theme="neon-tokyo"] .nav-link,
+[data-theme="neon-tokyo"] .mob-nav-item,
+[data-theme="neon-tokyo"] .btn,
+[data-theme="neon-tokyo"] .category-chip,
+[data-theme="cyber-neon"] h1,
+[data-theme="cyber-neon"] h2,
+[data-theme="cyber-neon"] h3,
+[data-theme="cyber-neon"] .tool-card-name,
+[data-theme="cyber-neon"] .nav-link,
+[data-theme="cyber-neon"] .mob-nav-item,
+[data-theme="cyber-neon"] .btn,
+[data-theme="cyber-neon"] .category-chip {
+  font-family: 'Silkscreen', 'Courier New', monospace;
+  letter-spacing: 0.02em;
 }
 [data-theme="neon-tokyo"] #app-header,
 [data-theme="cyber-neon"] #app-header {
-  background: rgba(14, 7, 30, 0.88);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid rgba(255, 0, 127, 0.35);
+  background: rgba(18, 9, 36, 0.72) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  border-bottom: 1px solid rgba(255, 0, 127, 0.35) !important;
 }
 [data-theme="neon-tokyo"] .tool-card,
 [data-theme="cyber-neon"] .tool-card {
@@ -6061,7 +6084,7 @@ input, select, textarea {
 }
 [data-theme="neon-tokyo"] .btn-primary,
 [data-theme="cyber-neon"] .btn-primary {
-  background: linear-gradient(135deg, #ff007f 0%, #b8005c 100%);
+  background: #ff007f;
   color: #ffffff;
   border: 1px solid #ff4da6;
   box-shadow: 0 0 16px rgba(255, 0, 127, 0.45);
@@ -6077,10 +6100,10 @@ input, select, textarea {
   background: linear-gradient(180deg, #06140b 0%, #020804 100%);
 }
 [data-theme="cyber-matrix"] #app-header {
-  background: rgba(6, 20, 11, 0.95);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(0, 255, 102, 0.3);
+  background: rgba(6, 20, 11, 0.75) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  border-bottom: 1px solid rgba(0, 255, 102, 0.3) !important;
 }
 [data-theme="cyber-matrix"] .tool-card {
   background: rgba(10, 28, 16, 0.85);
@@ -6112,10 +6135,10 @@ input, select, textarea {
   background: linear-gradient(180deg, #180d12 0%, #0a0507 100%);
 }
 [data-theme="akira-crimson"] #app-header {
-  background: rgba(24, 13, 18, 0.95);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 42, 42, 0.3);
+  background: rgba(24, 8, 14, 0.75) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  border-bottom: 1px solid rgba(255, 42, 42, 0.35) !important;
 }
 [data-theme="akira-crimson"] .tool-card {
   background: rgba(28, 16, 22, 0.85);
@@ -6148,10 +6171,10 @@ input, select, textarea {
   background: linear-gradient(180deg, #0a1829 0%, #040a12 100%);
 }
 [data-theme="cyber-cyan"] #app-header {
-  background: rgba(10, 24, 41, 0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(0, 229, 255, 0.25);
+  background: rgba(6, 18, 28, 0.75) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  border-bottom: 1px solid rgba(0, 229, 255, 0.3) !important;
 }
 [data-theme="cyber-cyan"] .tool-card {
   background: rgba(14, 32, 56, 0.8);
@@ -6185,8 +6208,10 @@ input, select, textarea {
   background: #181e24;
 }
 [data-theme="nordic-slate"] #app-header {
-  background: #181e24;
-  border-bottom: 1px solid #28343f;
+  background: rgba(27, 34, 46, 0.78) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  border-bottom: 1px solid rgba(136, 192, 208, 0.3) !important;
 }
 [data-theme="nordic-slate"] .tool-card {
   background: #222b34;
@@ -6208,10 +6233,10 @@ input, select, textarea {
   background: linear-gradient(180deg, #201124 0%, #100813 100%);
 }
 [data-theme="sunset-ember"] #app-header {
-  background: rgba(32, 17, 36, 0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(249, 115, 22, 0.25);
+  background: rgba(28, 12, 16, 0.75) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  border-bottom: 1px solid rgba(255, 107, 53, 0.35) !important;
 }
 [data-theme="sunset-ember"] .tool-card {
   background: rgba(38, 20, 44, 0.8);
@@ -6234,8 +6259,22 @@ input, select, textarea {
   background: #f4eedb;
 }
 [data-theme="paper-ink"] #app-header {
+  background: rgba(240, 235, 217, 0.82) !important;
+  backdrop-filter: blur(16px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(150%) !important;
+  border-bottom: 1px solid rgba(222, 211, 184, 0.8) !important;
+}
+[data-theme="paper-ink"] .tool-card {
   background: #faf6ec;
-  border-bottom: 1px solid #ded3b8;
+  border: 1px solid #ded3b8;
+  box-shadow: 0 4px 14px rgba(40, 30, 20, 0.05);
+}
+[data-theme="paper-ink"] .tool-card:hover {
+  border-color: #c2593f;
+  box-shadow: 0 10px 25px rgba(194, 89, 63, 0.12);
+}
+[data-theme="paper-ink"] .btn-primary {
+  background: #c2593f;
 }
 [data-theme="paper-ink"] .tool-card {
   background: #faf6ec;
@@ -7432,6 +7471,35 @@ input, select, textarea {
   font-family: var(--mono);
   font-size: 0.74rem;
   color: var(--g600);
+}
+
+/* ============================================================
+   NEW TOOLS STYLES (Compressor, Decompressor, Audio Tag, Player, Data Bot, Speaker Cleaner, Notes)
+   ============================================================ */
+.compressor-dropzone {
+  border: 2px dashed var(--g300);
+  border-radius: 14px;
+  background: var(--white);
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.compressor-dropzone:hover {
+  border-color: var(--black);
+  background: var(--g50);
+}
+
+@media (max-width: 768px) {
+  .notes-app-wrapper {
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+    min-height: 600px !important;
+  }
 }
 
 /* ============================================================
@@ -8686,13 +8754,15 @@ input, select, textarea {
   [data-theme="neon-tokyo"] #mobile-nav,
   [data-theme="cyber-neon"] .mobile-nav,
   [data-theme="cyber-neon"] #mobile-nav {
-    background: #140929 !important;
+    background: rgba(20, 9, 41, 0.78) !important;
+    backdrop-filter: blur(16px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
     border: 1px solid rgba(255, 0, 127, 0.45) !important;
     box-shadow: 0 12px 36px rgba(12, 3, 28, 0.9), 0 0 20px rgba(255, 0, 127, 0.25) !important;
   }
   [data-theme="neon-tokyo"] .mob-nav-pill-indicator,
   [data-theme="cyber-neon"] .mob-nav-pill-indicator {
-    background: linear-gradient(135deg, #ff007f 0%, #00fff2 100%) !important;
+    background: #ff007f !important;
     box-shadow: 0 2px 14px rgba(255, 0, 127, 0.5) !important;
   }
   [data-theme="neon-tokyo"] .mob-nav-item.active,
@@ -8712,7 +8782,7 @@ input, select, textarea {
   }
   [data-theme="neon-tokyo"] .category-chip.active,
   [data-theme="cyber-neon"] .category-chip.active {
-    background: linear-gradient(135deg, #ff007f, #00fff2);
+    background: #ff007f;
     color: #ffffff;
     border-color: #ff007f;
   }
@@ -8720,7 +8790,9 @@ input, select, textarea {
   /* 10. Cyber Matrix */
   [data-theme="cyber-matrix"] .mobile-nav,
   [data-theme="cyber-matrix"] #mobile-nav {
-    background: #081a0e !important;
+    background: rgba(8, 26, 14, 0.78) !important;
+    backdrop-filter: blur(16px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
     border: 1px solid rgba(0, 255, 102, 0.4) !important;
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.9), 0 0 16px rgba(0, 255, 102, 0.2) !important;
   }
@@ -8749,7 +8821,9 @@ input, select, textarea {
   /* 11. Akira Crimson */
   [data-theme="akira-crimson"] .mobile-nav,
   [data-theme="akira-crimson"] #mobile-nav {
-    background: #1c0a12 !important;
+    background: rgba(28, 10, 18, 0.78) !important;
+    backdrop-filter: blur(16px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
     border: 1px solid rgba(255, 42, 42, 0.4) !important;
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.9), 0 0 16px rgba(255, 42, 42, 0.2) !important;
   }
@@ -8778,7 +8852,9 @@ input, select, textarea {
   /* 12. Cyber Cyan */
   [data-theme="cyber-cyan"] .mobile-nav,
   [data-theme="cyber-cyan"] #mobile-nav {
-    background: #0a1c30 !important;
+    background: rgba(10, 28, 48, 0.78) !important;
+    backdrop-filter: blur(16px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
     border: 1px solid rgba(0, 229, 255, 0.35) !important;
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.8), 0 0 16px rgba(0, 229, 255, 0.25) !important;
   }
@@ -8807,7 +8883,9 @@ input, select, textarea {
   /* 13. Nordic Slate */
   [data-theme="nordic-slate"] .mobile-nav,
   [data-theme="nordic-slate"] #mobile-nav {
-    background: #1e262e !important;
+    background: rgba(30, 38, 46, 0.8) !important;
+    backdrop-filter: blur(16px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
     border: 1px solid #32404e !important;
     box-shadow: 0 12px 36px rgba(10, 15, 20, 0.8) !important;
   }
@@ -8835,12 +8913,14 @@ input, select, textarea {
   /* 14. Sunset Ember */
   [data-theme="sunset-ember"] .mobile-nav,
   [data-theme="sunset-ember"] #mobile-nav {
-    background: #241129 !important;
+    background: rgba(36, 17, 41, 0.78) !important;
+    backdrop-filter: blur(16px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
     border: 1px solid rgba(249, 115, 22, 0.35) !important;
     box-shadow: 0 12px 36px rgba(15, 5, 20, 0.8) !important;
   }
   [data-theme="sunset-ember"] .mob-nav-pill-indicator {
-    background: linear-gradient(135deg, #f97316 0%, #ec4899 100%) !important;
+    background: #f97316 !important;
     box-shadow: 0 2px 12px rgba(249, 115, 22, 0.4) !important;
   }
   [data-theme="sunset-ember"] .mob-nav-item.active {
@@ -8856,7 +8936,7 @@ input, select, textarea {
     color: #fdba74;
   }
   [data-theme="sunset-ember"] .category-chip.active {
-    background: linear-gradient(135deg, #f97316, #ec4899);
+    background: #f97316;
     color: #ffffff;
     border-color: #f97316;
   }
@@ -8864,7 +8944,9 @@ input, select, textarea {
   /* 15. Paper & Ink */
   [data-theme="paper-ink"] .mobile-nav,
   [data-theme="paper-ink"] #mobile-nav {
-    background: #faf6ec !important;
+    background: rgba(250, 246, 236, 0.85) !important;
+    backdrop-filter: blur(16px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(150%) !important;
     border: 1px solid #ded3b8 !important;
     box-shadow: 0 12px 36px rgba(40, 30, 20, 0.12) !important;
   }

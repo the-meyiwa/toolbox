@@ -13,10 +13,9 @@ function escapeHtml(s) {
 
 function renderThemeCard(theme, currentId) {
   const isActive = theme.id === currentId;
-  const isExperimental = theme.experimental;
 
   return `
-    <button type="button" class="theme-card ${isActive ? 'is-active' : ''} ${isExperimental ? 'is-experimental' : ''}" data-theme-id="${theme.id}" role="radio" aria-checked="${isActive}">
+    <button type="button" class="theme-card ${isActive ? 'is-active' : ''}" data-theme-id="${theme.id}" role="radio" aria-checked="${isActive}">
       <div class="theme-card-preview" style="background: ${theme.preview.bg}; border-color: ${theme.preview.accent}44;">
         <div class="theme-card-preview-bar" style="background: ${theme.preview.card};">
           <span class="theme-preview-dot" style="background: ${theme.preview.accent};"></span>
@@ -30,7 +29,6 @@ function renderThemeCard(theme, currentId) {
       <div class="theme-card-meta">
         <div class="theme-card-header">
           <span class="theme-card-name">${escapeHtml(theme.name)}</span>
-          ${isExperimental ? '<span class="theme-badge-exp">Experimental</span>' : ''}
         </div>
         <p class="theme-card-desc">${escapeHtml(theme.description)}</p>
       </div>
@@ -89,20 +87,6 @@ function createModal() {
             <!-- Rendered dynamically -->
           </div>
         </section>
-
-        <section class="settings-section" style="margin-top: 24px;">
-          <div class="settings-section-header">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <h3 class="settings-section-title">Experimental UI Themes</h3>
-              <span class="theme-badge-exp" style="font-size:0.68rem;">Experimental</span>
-            </div>
-            <span class="settings-section-hint">High-aesthetic glass, synthwave & parchment layouts</span>
-          </div>
-
-          <div class="theme-grid" id="theme-grid-experimental">
-            <!-- Rendered dynamically -->
-          </div>
-        </section>
       </div>
     </div>
   `;
@@ -121,13 +105,8 @@ function createModal() {
 function updateThemeList() {
   const currentId = getStoredTheme();
   const standardGrid = modalEl.querySelector('#theme-grid-standard');
-  const experimentalGrid = modalEl.querySelector('#theme-grid-experimental');
 
-  const standards = THEMES.filter(t => !t.experimental);
-  const experimentals = THEMES.filter(t => t.experimental);
-
-  standardGrid.innerHTML = standards.map(t => renderThemeCard(t, currentId)).join('');
-  experimentalGrid.innerHTML = experimentals.map(t => renderThemeCard(t, currentId)).join('');
+  standardGrid.innerHTML = THEMES.map(t => renderThemeCard(t, currentId)).join('');
 
   modalEl.querySelectorAll('.theme-card').forEach(card => {
     card.addEventListener('click', () => {

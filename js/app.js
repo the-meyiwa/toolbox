@@ -468,28 +468,6 @@ window.addEventListener('pagehide', () => currentSession?.dispose());
 
 $('home-search')?.addEventListener('click', () => openPalette());
 
-/* Surprise Me. Toggles the reveal and keeps aria-expanded honest, so a
-   screen reader is told the panel exists rather than left guessing. */
-const surpriseBtn = $('surprise-btn');
-if (surpriseBtn) {
-  const reveal = $('surprise-reveal');
-  const label = surpriseBtn.querySelector('.surprise-label');
-
-  surpriseBtn.addEventListener('click', () => {
-    const open = reveal.hidden;
-    reveal.hidden = !open;
-    surpriseBtn.setAttribute('aria-expanded', String(open));
-    label.textContent = open ? 'Much appreciated 🖤' : 'Surprise Me';
-    surpriseBtn.setAttribute('aria-label', open
-      ? 'Hide the details for tipping the creator'
-      : 'Surprise me — show details for tipping the creator');
-    if (open) reveal.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  });
-
-  $('surprise-copy')?.addEventListener('click', (e) => {
-    copyText($('surprise-number').textContent.trim(), e.currentTarget);
-  });
-}
 
 const tipsFab = $('tips-fab');
 if (tipsFab) {

@@ -261,17 +261,7 @@ export function installHeaderMenu() {
     });
   }
 
-  const itemCredits = document.getElementById('menu-item-credits');
-  if (itemCredits) {
-    itemCredits.addEventListener('click', () => {
-      closeHeaderMenu();
-      window.location.hash = '#support';
-      const creditsEl = document.getElementById('support-credits');
-      if (creditsEl) {
-        creditsEl.scrollIntoView({ behavior: 'smooth' });
-      }
-    });
-  }
+
 
   // Outside click listener
   window.addEventListener('click', (e) => {
