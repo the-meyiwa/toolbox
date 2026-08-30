@@ -1,17 +1,16 @@
 /* ============================================================
    TOOLBOX — Voltix AI Assistant
-   Real generative-AI assistant powered by live LLM API (Google Gemini,
-   Groq, OpenRouter) with token streaming, multi-turn persistent context,
-   real function/tool calling across 100+ browser tools, and safe file transformations.
+   Real generative-AI assistant powered by live backend proxy & LLM
+   with token streaming, multi-turn persistent context, real function/tool
+   calling across 100+ browser tools, and safe file transformations.
    ============================================================ */
 
 import { streamChatCompletion } from '../lib/ai-provider.js';
 import { BY_ID } from '../registry/index.js';
+import { QuotaManager } from '../lib/quota-manager.js';
+import { openAccountModal } from '../views/account-modal.js';
 
 const STORAGE_SPLASH_SEEN = 'voltix_assistant_splash_seen_v2';
-const STORAGE_API_KEY = 'toolbox_assistant_api_key';
-const STORAGE_PROVIDER = 'toolbox_assistant_provider';
-const STORAGE_MODEL = 'toolbox_assistant_model';
 const STORAGE_KEEP_CONTEXT = 'toolbox_assistant_keep_context';
 const STORAGE_HISTORY = 'toolbox_assistant_history_v2';
 
@@ -20,11 +19,7 @@ export default {
     this._alive = true;
     this._abortCtrl = null;
 
-    let provider = localStorage.getItem(STORAGE_PROVIDER) || 'gemini';
-    let apiKey = localStorage.getItem(STORAGE_API_KEY) || 'AIzaSyB1MDvomi9iWJ3CuZ7_Wvm7TST6RE7SBVI';
-    let model = localStorage.getItem(STORAGE_MODEL) || 'gemini-1.5-flash';
     let keepContext = localStorage.getItem(STORAGE_KEEP_CONTEXT) !== 'false';
-
     let history = [];
     try {
       if (keepContext) {
@@ -38,6 +33,8 @@ export default {
       lastCsvText: null,
       attachedFiles: []
     };
+
+    const quota = QuotaManager.getQuotaSummary();
 
     container.innerHTML = `
       <div class="voltix-assistant-root" style="max-width:1040px; margin:0 auto; display:flex; flex-direction:column; height:760px; background:var(--white); border:1px solid var(--g200); border-radius:18px; overflow:hidden; box-shadow:0 16px 48px rgba(0,0,0,0.08); position:relative; font-family:var(--sans);">
@@ -73,13 +70,14 @@ export default {
             </label>
           </div>
 
-          <!-- Right: About/Splash, API Settings, Clear -->
+          <!-- Right: Quota Badge, About, Account, Clear -->
           <div style="display:flex; align-items:center; gap:8px;">
-            <button type="button" class="btn btn-secondary btn-sm" id="ast-btn-splash" style="font-size:0.74rem;">About</button>
-            <button type="button" class="btn btn-secondary btn-sm" id="ast-btn-config" style="font-size:0.74rem; display:flex; align-items:center; gap:5px;">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-              <span>API Settings</span>
+            <button type="button" class="btn btn-secondary btn-sm" id="ast-btn-quota" style="font-size:0.74rem; font-family:monospace; display:flex; align-items:center; gap:4px;" title="View daily quota & storage">
+              <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#22c55e;"></span>
+              <span id="ast-quota-label">${quota.messagesRemaining} / ${quota.messagesLimit} msgs</span>
             </button>
+            <button type="button" class="btn btn-secondary btn-sm" id="ast-btn-splash" style="font-size:0.74rem;">About</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="ast-btn-account" style="font-size:0.74rem;">Account</button>
             <button type="button" class="btn btn-secondary btn-sm" id="ast-btn-clear" style="font-size:0.74rem; color:#ef4444;" title="Clear Conversation">Clear</button>
           </div>
         </div>
@@ -121,237 +119,153 @@ export default {
           </button>
         </div>
 
-        <!-- SPLASH SCREEN MODAL (FIRST TIME) -->
-        <div id="ast-splash-modal" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); z-index:100; align-items:center; justify-content:center; padding:20px;">
-          <div style="background:var(--white); border-radius:24px; padding:36px; max-width:500px; width:100%; box-shadow:0 24px 60px rgba(0,0,0,0.4); text-align:center; position:relative;">
-            
-            <div style="width:68px; height:68px; border-radius:50%; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; margin:0 auto 16px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
-              <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2">
+        <!-- FIRST-TIME / ABOUT SPLASH SCREEN OVERLAY -->
+        <div id="ast-splash-modal" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); z-index:100; align-items:center; justify-content:center; padding:20px;">
+          <div style="background:var(--white); border-radius:20px; padding:36px 32px; max-width:480px; width:100%; box-shadow:0 24px 64px rgba(0,0,0,0.25); text-align:center; position:relative; border:1px solid var(--g200);">
+            <div style="width:56px; height:56px; border-radius:50%; background:var(--black); color:var(--white); margin:0 auto 16px; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(0,0,0,0.2);">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="3"/>
                 <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
               </svg>
             </div>
-
-            <h2 style="margin:0 0 8px; font-size:1.45rem; font-weight:800; color:var(--black);">Meet Voltix Assistant</h2>
-            
-            <!-- Voltix Callout -->
-            <div style="background:var(--g100); border:1px solid var(--g200); border-radius:14px; padding:14px 18px; margin:16px 0; font-size:0.9rem; color:var(--g800); text-align:left;">
-              <div style="font-weight:700; color:var(--black); font-size:0.95rem; margin-bottom:4px;">Assistant also powers Voltix.</div>
-              <div style="font-size:0.84rem; color:var(--g600);">
-                Experience the Voltix intelligent interface at <a href="https://voltix-rho.vercel.app" target="_blank" rel="noopener noreferrer" style="color:#2563eb; font-weight:700; text-decoration:underline;">https://voltix-rho.vercel.app</a>
-              </div>
+            <h3 style="margin:0 0 8px; font-size:1.4rem; font-weight:800; color:var(--black); letter-spacing:-0.02em;">Meet Voltix Assistant</h3>
+            <p style="margin:0 0 16px; font-size:0.95rem; font-weight:600; color:var(--g800);">
+              Assistant also powers Voltix.
+            </p>
+            <p style="margin:0 0 20px; font-size:0.86rem; color:var(--g600); line-height:1.5;">
+              The AI layer of Toolbox capable of understanding user requests, processing files, running code, and executing client-side browser tools.
+            </p>
+            <div style="margin-bottom:24px; padding:12px; background:var(--g100); border-radius:12px; font-size:0.82rem; color:var(--g700); display:flex; align-items:center; justify-content:center; gap:8px;">
+              <span>Explore the flagship ecosystem:</span>
+              <a href="https://voltix-rho.vercel.app" target="_blank" rel="noopener noreferrer" style="font-weight:700; color:var(--black); text-decoration:underline;">voltix-rho.vercel.app &nearr;</a>
             </div>
-
-            <div style="text-align:left; font-size:0.84rem; color:var(--g700); margin-bottom:24px; display:flex; flex-direction:column; gap:10px;">
-              <div style="display:flex; align-items:center; gap:10px;">
-                <span style="color:#22c55e; font-weight:800;">✓</span> <strong>Real LLM Intelligence</strong>: Powered by Google Gemini & Groq
-              </div>
-              <div style="display:flex; align-items:center; gap:10px;">
-                <span style="color:#22c55e; font-weight:800;">✓</span> <strong>Tool & Function Calling</strong>: Automatically executes Toolbox tools
-              </div>
-              <div style="display:flex; align-items:center; gap:10px;">
-                <span style="color:#22c55e; font-weight:800;">✓</span> <strong>Safe File Transforms</strong>: Never deletes your files or notes
-              </div>
-              <div style="display:flex; align-items:center; gap:10px;">
-                <span style="color:#22c55e; font-weight:800;">✓</span> <strong>Persistent Context</strong>: Retains multi-turn conversation memory
-              </div>
-            </div>
-
-            <button type="button" class="btn btn-primary" id="ast-splash-continue" style="width:100%; border-radius:9999px; height:46px; font-weight:700; font-size:0.95rem;">
-              Continue to Assistant
+            <button type="button" class="btn btn-primary" id="ast-splash-continue-btn" style="width:100%; padding:10px 0; font-size:0.92rem; font-weight:700;">
+              Get Started
             </button>
-          </div>
-        </div>
-
-        <!-- API CONFIG MODAL -->
-        <div id="ast-config-modal" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(10px); z-index:100; align-items:center; justify-content:center; padding:20px;">
-          <div style="background:var(--white); border-radius:20px; padding:30px; max-width:480px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,0.3); text-align:left; position:relative;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-              <h3 style="margin:0; font-size:1.15rem; font-weight:800;">AI Engine & API Settings</h3>
-              <button type="button" id="ast-config-close" style="background:none; border:none; font-size:1.3rem; cursor:pointer; color:var(--g500);">&times;</button>
-            </div>
-
-            <div style="margin-bottom:16px;">
-              <label class="calc-label" style="font-weight:700; font-size:0.8rem;">LLM Provider</label>
-              <select id="ast-provider-select" class="tool-input" style="width:100%; padding:9px 12px; font-size:0.86rem; border-radius:8px;">
-                <option value="gemini" ${provider === 'gemini' ? 'selected' : ''}>Google Gemini (Recommended · Free Tier on Google AI Studio)</option>
-                <option value="groq" ${provider === 'groq' ? 'selected' : ''}>Groq (Llama 3.3 70B · Fast Free Tier)</option>
-                <option value="openrouter" ${provider === 'openrouter' ? 'selected' : ''}>OpenRouter (Free Models)</option>
-              </select>
-            </div>
-
-            <div style="margin-bottom:16px;">
-              <label class="calc-label" style="font-weight:700; font-size:0.8rem;">Model</label>
-              <input type="text" id="ast-model-input" class="tool-input" value="${model}" style="width:100%; padding:9px 12px; font-size:0.86rem; font-family:monospace; border-radius:8px;">
-              <div style="font-size:0.72rem; color:var(--g500); margin-top:4px;">
-                Default: <code>gemini-1.5-flash</code> (Gemini) or <code>llama-3.3-70b-versatile</code> (Groq).
-              </div>
-            </div>
-
-            <div id="ast-key-wrap" style="margin-bottom:20px;">
-              <label class="calc-label" style="font-weight:700; font-size:0.8rem;">API Key</label>
-              <input type="password" id="ast-key-input" class="tool-input" placeholder="Paste your API key..." value="${apiKey}" style="width:100%; padding:9px 12px; font-size:0.86rem; font-family:monospace; border-radius:8px;">
-              <div style="font-size:0.74rem; color:var(--g600); margin-top:6px; line-height:1.4;">
-                Get a free key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:#2563eb; font-weight:700; text-decoration:underline;">Google AI Studio</a>. Keys are stored safely in local browser storage only.
-              </div>
-            </div>
-
-            <div style="display:flex; justify-content:flex-end; gap:10px;">
-              <button type="button" class="btn btn-secondary btn-sm" id="ast-config-cancel">Cancel</button>
-              <button type="button" class="btn btn-primary btn-sm" id="ast-config-save">Save & Connect</button>
-            </div>
           </div>
         </div>
 
       </div>
     `;
 
+    // DOM Elements
     const messagesEl = container.querySelector('#ast-messages');
     const userInput = container.querySelector('#ast-user-input');
     const sendBtn = container.querySelector('#ast-send-btn');
-    const attachBtn = container.querySelector('#ast-attach-btn');
     const fileInput = container.querySelector('#ast-file-input');
+    const attachBtn = container.querySelector('#ast-attach-btn');
     const attachedBar = container.querySelector('#ast-attached-bar');
     const attachedName = container.querySelector('#ast-attached-name');
     const attachedSize = container.querySelector('#ast-attached-size');
     const attachedRemove = container.querySelector('#ast-attached-remove');
-    const contextChk = container.querySelector('#ast-chk-context');
     const splashModal = container.querySelector('#ast-splash-modal');
-    const splashBtn = container.querySelector('#ast-btn-splash');
-    const splashContinue = container.querySelector('#ast-splash-continue');
-    const configBtn = container.querySelector('#ast-btn-config');
-    const configModal = container.querySelector('#ast-config-modal');
-    const configClose = container.querySelector('#ast-config-close');
-    const configCancel = container.querySelector('#ast-config-cancel');
-    const configSave = container.querySelector('#ast-config-save');
-    const providerSelect = container.querySelector('#ast-provider-select');
-    const modelInput = container.querySelector('#ast-model-input');
-    const keyInput = container.querySelector('#ast-key-input');
-    const clearBtn = container.querySelector('#ast-btn-clear');
-    const chips = container.querySelectorAll('.ast-chip');
+    const splashContinueBtn = container.querySelector('#ast-splash-continue-btn');
+    const btnSplash = container.querySelector('#ast-btn-splash');
+    const btnAccount = container.querySelector('#ast-btn-account');
+    const btnQuota = container.querySelector('#ast-btn-quota');
+    const quotaLabel = container.querySelector('#ast-quota-label');
+    const btnClear = container.querySelector('#ast-btn-clear');
+    const chkContext = container.querySelector('#ast-chk-context');
+    const chipsWrap = container.querySelector('#ast-chips');
 
     let currentAttachedFile = null;
 
-    // Check splash screen
-    if (!localStorage.getItem(STORAGE_SPLASH_SEEN)) {
+    function updateQuotaDisplay() {
+      const q = QuotaManager.getQuotaSummary();
+      if (quotaLabel) quotaLabel.textContent = `${q.messagesRemaining} / ${q.messagesLimit} msgs`;
+    }
+
+    // Show splash screen on first launch
+    const splashSeen = localStorage.getItem(STORAGE_SPLASH_SEEN);
+    if (!splashSeen) {
       splashModal.style.display = 'flex';
     }
 
-    splashContinue.addEventListener('click', () => {
+    splashContinueBtn.addEventListener('click', () => {
       localStorage.setItem(STORAGE_SPLASH_SEEN, 'true');
       splashModal.style.display = 'none';
     });
 
-    splashBtn.addEventListener('click', () => {
+    btnSplash.addEventListener('click', () => {
       splashModal.style.display = 'flex';
     });
 
-    // API Config handlers
-    configBtn.addEventListener('click', () => { configModal.style.display = 'flex'; });
-    configClose.addEventListener('click', () => { configModal.style.display = 'none'; });
-    configCancel.addEventListener('click', () => { configModal.style.display = 'none'; });
-    providerSelect.addEventListener('change', () => {
-      if (providerSelect.value === 'groq') modelInput.value = 'llama-3.3-70b-versatile';
-      else if (providerSelect.value === 'gemini') modelInput.value = 'gemini-1.5-flash';
-      else if (providerSelect.value === 'openrouter') modelInput.value = 'google/gemini-2.0-flash-exp:free';
+    btnAccount.addEventListener('click', openAccountModal);
+    btnQuota.addEventListener('click', openAccountModal);
+
+    // Clear Conversation
+    btnClear.addEventListener('click', () => {
+      if (confirm('Clear current conversation history?')) {
+        history = [];
+        localStorage.removeItem(STORAGE_HISTORY);
+        renderMessageList();
+      }
     });
 
-    configSave.addEventListener('click', () => {
-      provider = providerSelect.value;
-      model = modelInput.value.trim() || (provider === 'groq' ? 'llama-3.3-70b-versatile' : 'gemini-1.5-flash');
-      apiKey = keyInput.value.trim();
-      localStorage.setItem(STORAGE_PROVIDER, provider);
-      localStorage.setItem(STORAGE_MODEL, model);
-      localStorage.setItem(STORAGE_API_KEY, apiKey);
-      configModal.style.display = 'none';
-      renderMessageList();
-    });
-
-    // Context toggle
-    contextChk.addEventListener('change', () => {
-      keepContext = contextChk.checked;
+    // Toggle Keep Context
+    chkContext.addEventListener('change', (e) => {
+      keepContext = e.target.checked;
       localStorage.setItem(STORAGE_KEEP_CONTEXT, keepContext ? 'true' : 'false');
       if (!keepContext) {
-        history = [];
         localStorage.removeItem(STORAGE_HISTORY);
       }
     });
 
-    // Clear history
-    clearBtn.addEventListener('click', () => {
-      history = [];
-      localStorage.removeItem(STORAGE_HISTORY);
-      taskState.lastProcessedImage = null;
-      taskState.lastCsvText = null;
-      renderMessageList();
+    // File Attachment handlers
+    attachBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      handleFileSelected(file);
     });
 
-    // Attached file remove
     attachedRemove.addEventListener('click', () => {
       currentAttachedFile = null;
       attachedBar.style.display = 'none';
       fileInput.value = '';
     });
 
-    // File input change
-    attachBtn.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', async () => {
-      if (!fileInput.files?.length) return;
-      const file = fileInput.files[0];
-      await handleFileAttachment(file);
-    });
-
-    async function handleFileAttachment(file) {
-      const isImg = file.type.startsWith('image/');
-      const isText = file.type.includes('text') || file.name.endsWith('.csv') || file.name.endsWith('.json') || file.name.endsWith('.cpp') || file.name.endsWith('.js') || file.name.endsWith('.py');
-
-      let dataUrl = null;
-      let textContent = null;
-      let base64 = null;
-
-      if (isImg) {
-        dataUrl = await readFileAsDataUrl(file);
-        base64 = dataUrl.split(',')[1];
-      } else if (isText) {
-        textContent = await file.text();
-      }
-
-      currentAttachedFile = {
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        dataUrl,
-        base64,
-        text: textContent
+    function handleFileSelected(file) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const raw = evt.target.result;
+        const base64 = typeof raw === 'string' && raw.includes(',') ? raw.split(',')[1] : null;
+        currentAttachedFile = {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          dataUrl: raw,
+          base64: base64,
+          text: typeof raw === 'string' && !raw.startsWith('data:') ? raw : null
+        };
+        attachedName.textContent = file.name;
+        attachedSize.textContent = `(${(file.size / 1024).toFixed(1)} KB)`;
+        attachedBar.style.display = 'flex';
       };
 
-      attachedName.textContent = file.name;
-      attachedSize.textContent = `(${(file.size / 1024).toFixed(1)} KB)`;
-      attachedBar.style.display = 'flex';
-    }
-
-    function readFileAsDataUrl(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
+      if (file.type.startsWith('image/')) {
         reader.readAsDataURL(file);
-      });
+      } else {
+        reader.readAsText(file);
+      }
     }
 
-    // Chips
-    chips.forEach(chip => {
-      chip.addEventListener('click', () => {
-        userInput.value = chip.textContent;
-        handleSend();
-      });
+    // Quick prompt chips
+    chipsWrap.addEventListener('click', (e) => {
+      const chip = e.target.closest('.ast-chip');
+      if (chip) {
+        userInput.value = chip.textContent.trim();
+        userInput.focus();
+        handleAutoResize();
+      }
     });
 
-    // Textarea resize & enter
-    userInput.addEventListener('input', () => {
+    // Input auto-resize
+    function handleAutoResize() {
       userInput.style.height = 'auto';
-      userInput.style.height = `${Math.min(140, userInput.scrollHeight)}px`;
-    });
+      userInput.style.height = Math.min(userInput.scrollHeight, 140) + 'px';
+    }
+    userInput.addEventListener('input', handleAutoResize);
 
     userInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -362,147 +276,120 @@ export default {
 
     sendBtn.addEventListener('click', handleSend);
 
-    function formatMarkdown(text) {
-      if (!text) return '';
-      return text
-        .replace(/```([a-zA-Z]*)\n([\s\S]*?)```/g, '<pre style="background:#1e1e1e; color:#fff; padding:12px; border-radius:8px; overflow-x:auto; font-family:monospace; font-size:0.82rem;"><code>$2</code></pre>')
-        .replace(/`([^`]+)`/g, '<code style="background:rgba(0,0,0,0.06); padding:2px 6px; border-radius:4px; font-family:monospace; font-size:0.84rem;">$1</code>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/\n/g, '<br>');
-    }
-
     function renderMessageList() {
       messagesEl.innerHTML = '';
-
-      if (!apiKey && provider === 'gemini') {
-        const keyNotice = document.createElement('div');
-        keyNotice.className = 'ast-msg ast-msg-ai';
-        keyNotice.style.display = 'flex';
-        keyNotice.style.gap = '14px';
-        keyNotice.style.maxWidth = '90%';
-        keyNotice.innerHTML = `
-          <div style="width:34px; height:34px; border-radius:50%; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-          </div>
-          <div style="background:var(--g100); padding:16px 20px; border-radius:16px; font-size:0.9rem; line-height:1.6; color:var(--black); border-left:4px solid #3b82f6;">
-            <div style="font-weight:700; margin-bottom:6px;">Connect your free Google Gemini API Key</div>
-            <div>Voltix Assistant connects directly to Google Gemini or Groq to perform real LLM reasoning and client-side tool execution.</div>
-            <div style="margin-top:12px; display:flex; gap:10px; align-items:center;">
-              <button type="button" class="btn btn-primary btn-sm" id="ast-open-config-btn" style="border-radius:9999px;">Enter Free API Key</button>
-              <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="font-size:0.8rem; color:#2563eb; text-decoration:underline;">Get Free Key at Google AI Studio &rarr;</a>
-            </div>
-          </div>
-        `;
-        keyNotice.querySelector('#ast-open-config-btn').addEventListener('click', () => configModal.style.display = 'flex');
-        messagesEl.appendChild(keyNotice);
-        return;
-      }
-
       if (!history.length) {
-        const welcome = document.createElement('div');
-        welcome.className = 'ast-msg ast-msg-ai';
-        welcome.style.display = 'flex';
-        welcome.style.gap = '14px';
-        welcome.style.maxWidth = '90%';
-        welcome.innerHTML = `
-          <div style="width:34px; height:34px; border-radius:50%; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-          </div>
-          <div style="background:var(--g100); padding:16px 20px; border-radius:16px; font-size:0.9rem; line-height:1.6; color:var(--black);">
-            <div style="font-weight:700; margin-bottom:6px;">Hello! I am Voltix Assistant.</div>
-            <div>I am connected to the live <strong>${provider === 'gemini' ? 'Google Gemini' : 'Groq Llama'}</strong> model with full access to Toolbox’s 100+ browser tools.</div>
-            <div style="margin-top:8px; font-size:0.84rem; color:var(--g600);">
-              You can chat naturally, attach images or datasets, and ask me to chain tools together (e.g. <em>"Convert this image to WebP, resize it to 1200px wide, and compress it"</em>).
+        messagesEl.innerHTML = `
+          <div style="text-align:center; padding:48px 20px; color:var(--g500);">
+            <div style="width:48px; height:48px; border-radius:50%; background:var(--g100); color:var(--black); margin:0 auto 14px; display:flex; align-items:center; justify-content:center;">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+              </svg>
             </div>
+            <h4 style="margin:0 0 6px; font-size:1.05rem; font-weight:700; color:var(--black);">How can Voltix Assistant help you?</h4>
+            <p style="margin:0; font-size:0.84rem; max-width:440px; margin:0 auto; line-height:1.5;">
+              I can convert and compress images, analyze data tables, run Python/C++ code, calculate finances, and solve chemistry equations client-side.
+            </p>
           </div>
         `;
-        messagesEl.appendChild(welcome);
         return;
       }
 
       for (const msg of history) {
-        if (msg.role === 'function') continue; // Tool responses are rendered inside assistant bubble
-        appendRenderedMessage(msg.role, msg.content, msg.toolResults, msg.filePreview);
+        if (msg.role === 'user') {
+          appendRenderedMessage('user', msg.content, [], msg.filePreview);
+        } else if (msg.role === 'assistant') {
+          appendRenderedMessage('assistant', msg.content, msg.toolResults || []);
+        }
       }
+      messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
-    function appendRenderedMessage(role, content, toolResults = [], filePreview = null) {
+    function appendRenderedMessage(role, text, toolResults = [], filePreview = null) {
       const msgDiv = document.createElement('div');
       msgDiv.className = `ast-msg ast-msg-${role}`;
       msgDiv.style.display = 'flex';
       msgDiv.style.gap = '12px';
-      msgDiv.style.maxWidth = role === 'user' ? '82%' : '90%';
+      msgDiv.style.maxWidth = '90%';
+
       if (role === 'user') {
-        msgDiv.style.marginLeft = 'auto';
+        msgDiv.style.alignSelf = 'flex-end';
         msgDiv.style.flexDirection = 'row-reverse';
-      }
-
-      const icon = role === 'user'
-        ? `<div style="width:34px; height:34px; border-radius:50%; background:var(--g300); color:var(--black); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:700; font-size:0.78rem;">YOU</div>`
-        : `<div style="width:34px; height:34px; border-radius:50%; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-           </div>`;
-
-      let toolsHtml = '';
-      if (toolResults?.length) {
-        toolsHtml = toolResults.map(tr => renderToolResultCard(tr)).join('');
-      }
-
-      let fileHtml = '';
-      if (filePreview) {
-        fileHtml = `
-          <div style="margin-bottom:8px; padding:6px 10px; background:rgba(255,255,255,0.2); border-radius:8px; font-size:0.78rem; display:inline-flex; align-items:center; gap:6px;">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-            <span>${filePreview.name}</span>
+        msgDiv.innerHTML = `
+          <div style="width:34px; height:34px; border-radius:50%; background:var(--g300); color:var(--black); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:700; font-size:0.8rem;">
+            You
+          </div>
+          <div style="background:var(--black); color:var(--white); padding:12px 16px; border-radius:16px; font-size:0.9rem; line-height:1.5; word-break:break-word;">
+            ${filePreview ? `
+              <div style="margin-bottom:8px; padding:6px 10px; background:rgba(255,255,255,0.15); border-radius:8px; font-size:0.78rem; display:flex; align-items:center; gap:6px;">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                <span>${filePreview.name}</span>
+                <span style="opacity:0.7;">(${(filePreview.size / 1024).toFixed(1)} KB)</span>
+              </div>
+            ` : ''}
+            <div>${escapeHtml(text)}</div>
+          </div>
+        `;
+      } else {
+        msgDiv.style.alignSelf = 'flex-start';
+        msgDiv.innerHTML = `
+          <div style="width:34px; height:34px; border-radius:50%; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+          </div>
+          <div style="background:var(--g100); color:var(--black); padding:14px 18px; border-radius:16px; font-size:0.9rem; line-height:1.6; word-break:break-word;">
+            <div class="ast-text-body">${formatMarkdown(text)}</div>
+            ${toolResults?.length ? `
+              <div style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
+                ${toolResults.map(r => renderToolResultCard(r)).join('')}
+              </div>
+            ` : ''}
           </div>
         `;
       }
-
-      msgDiv.innerHTML = `
-        ${icon}
-        <div style="background:${role === 'user' ? 'var(--black)' : 'var(--g100)'}; color:${role === 'user' ? 'var(--white)' : 'var(--black)'}; padding:14px 18px; border-radius:16px; font-size:0.9rem; line-height:1.6; word-break:break-word; min-width:60px;">
-          ${fileHtml}
-          <div class="ast-text-body">${formatMarkdown(content)}</div>
-          ${toolsHtml}
-        </div>
-      `;
 
       messagesEl.appendChild(msgDiv);
       messagesEl.scrollTop = messagesEl.scrollHeight;
-      return msgDiv;
     }
 
-    function renderToolResultCard(res) {
-      if (!res) return '';
-      if (res.dataUrl) {
+    function renderToolResultCard(result) {
+      if (result.dataUrl) {
         return `
-          <div style="margin-top:12px; padding:12px; background:var(--white); border:1px solid var(--g200); border-radius:12px;">
-            <div style="font-size:0.76rem; font-weight:700; color:var(--g600); margin-bottom:6px;">Output Artifact (${res.format?.toUpperCase()} · ${res.width}×${res.height}px)</div>
-            <img src="${res.dataUrl}" style="max-height:220px; width:auto; border-radius:8px; object-fit:contain; background:var(--g50); display:block; margin-bottom:10px;">
-            <a href="${res.dataUrl}" download="${res.filename}" class="btn btn-primary btn-sm" style="border-radius:9999px; font-size:0.76rem;">Download Processed File</a>
-          </div>
-        `;
-      }
-      if (res.numericStats) {
-        return `
-          <div style="margin-top:12px; padding:12px; background:var(--white); border:1px solid var(--g200); border-radius:12px;">
-            <div style="font-size:0.8rem; font-weight:700; margin-bottom:4px;">Dataset Analysis Summary</div>
-            <div style="font-size:0.75rem; color:var(--g600);">${res.totalRows} rows, ${res.totalColumns} attributes.</div>
+          <div style="padding:12px; background:var(--white); border:1px solid var(--g300); border-radius:12px;">
+            <div style="font-size:0.78rem; font-weight:700; color:var(--black); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+              <span>Generated Artifact</span>
+              <a href="${result.dataUrl}" download="${result.filename || 'processed-file'}" class="btn btn-primary btn-sm" style="font-size:0.72rem; padding:4px 10px;">
+                Download ${result.filename || 'File'}
+              </a>
+            </div>
+            <img src="${result.dataUrl}" style="max-width:100%; max-height:220px; border-radius:8px; display:block; object-fit:contain; background:#111;">
           </div>
         `;
       }
       return '';
     }
 
+    function escapeHtml(s) {
+      return String(s || '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
+    }
+
+    function formatMarkdown(text) {
+      if (!text) return '';
+      let html = escapeHtml(text);
+      // Bold
+      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      // Inline code
+      html = html.replace(/`([^`]+)`/g, '<code style="background:rgba(0,0,0,0.06); padding:2px 6px; border-radius:4px; font-family:monospace; font-size:0.85em;">$1</code>');
+      // Code blocks
+      html = html.replace(/```([a-z]*)\n([\s\S]*?)```/g, '<pre style="background:var(--black); color:var(--white); padding:12px; border-radius:8px; overflow-x:auto; font-size:0.82rem; margin:10px 0;"><code>$2</code></pre>');
+      // Line breaks
+      html = html.replace(/\n/g, '<br>');
+      return html;
+    }
+
     async function handleSend() {
       const text = userInput.value.trim();
       if (!text && !currentAttachedFile) return;
-
-      if (!apiKey && provider === 'gemini') {
-        configModal.style.display = 'flex';
-        return;
-      }
 
       userInput.value = '';
       userInput.style.height = 'auto';
@@ -555,9 +442,6 @@ export default {
 
       try {
         await streamChatCompletion({
-          provider,
-          apiKey,
-          model,
           history,
           systemInstruction: `User is in Toolbox workspace. Current active tool is: ${taskState.activeToolId || 'Home'}.`,
           currentFile: fileToProcess,
@@ -607,6 +491,8 @@ export default {
             localStorage.setItem(STORAGE_HISTORY, JSON.stringify(history.slice(-20)));
           } catch {}
         }
+
+        updateQuotaDisplay();
 
       } catch (err) {
         textBody.innerHTML = `<span style="color:#ef4444; font-weight:600;">Error: ${err.message}</span>`;

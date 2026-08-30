@@ -5,6 +5,7 @@
 
 import { openSettings } from './settings-ui.js';
 import { openStorageModal } from './storage-ui.js';
+import { openAccountModal } from '../views/account-modal.js';
 import { getSettings, updateSettings, exportSettings, importSettings } from './settings.js';
 
 let menuEl = null;
@@ -237,11 +238,11 @@ export function installHeaderMenu() {
   }
 
   // Handle menu item actions
-  const itemAssistant = document.getElementById('menu-item-assistant');
-  if (itemAssistant) {
-    itemAssistant.addEventListener('click', () => {
+  const itemAccount = document.getElementById('menu-item-account');
+  if (itemAccount) {
+    itemAccount.addEventListener('click', () => {
       closeHeaderMenu();
-      window.location.hash = '#assistant';
+      openAccountModal();
     });
   }
 

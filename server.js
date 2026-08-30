@@ -55,6 +55,25 @@ const server = http.createServer((request, response) => {
     }
   }
 
+import fs from 'fs';
+
+// Load .env if present
+try {
+  if (fs.existsSync('.env')) {
+    const envFile = fs.readFileSync('.env', 'utf-8');
+    for (const line of envFile.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const idx = trimmed.indexOf('=');
+      if (idx > 0) {
+        const key = trimmed.slice(0, idx).trim();
+        const val = trimmed.slice(idx + 1).trim().replace(/^["']|["']$/g, '');
+        if (!process.env[key]) process.env[key] = val;
+      }
+    }
+  }
+} catch (e) {}
+
   // --- Voltix AI Assistant Proxy API ---
   if (url.pathname.startsWith('/api/assistant/')) {
     if (url.pathname === '/api/assistant/status' && request.method === 'GET') {
@@ -62,6 +81,66 @@ const server = http.createServer((request, response) => {
       const hasGroqKey = !!process.env.GROQ_API_KEY;
       response.writeHead(200, { 'Content-Type': 'application/json' });
       response.end(JSON.stringify({ status: 'ready', hasGeminiKey, hasGroqKey, timestamp: Date.now() }));
+      return;
+    }
+
+    if (url.pathname === '/api/assistant/chat' && request.method === 'POST') {
+      let bodyStr = '';
+      request.on('data', chunk => { bodyStr += chunk; });
+      request.on('end', async () => {
+        try {
+          const body = JSON.parse(bodyStr || '{}');
+          const apiKey = process.env.GEMINI_API_KEY || body.apiKey;
+          if (!apiKey) {
+            response.writeHead(400, { 'Content-Type': 'application/json' });
+            response.end(JSON.stringify({ error: 'GEMINI_API_KEY is not configured on the backend.' }));
+            return;
+          }
+
+          const model = body.model || 'gemini-1.5-flash';
+          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
+
+          const fetchRes = await fetch(geminiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: body.contents || [],
+              systemInstruction: body.systemInstruction,
+              tools: body.tools,
+              generationConfig: {
+                temperature: 0.4,
+                maxOutputTokens: 2000
+              }
+            })
+          });
+
+          if (!fetchRes.ok) {
+            const errJson = await fetchRes.json().catch(() => ({}));
+            response.writeHead(fetchRes.status, { 'Content-Type': 'application/json' });
+            response.end(JSON.stringify({ error: errJson.error?.message || `Gemini API returned ${fetchRes.status}` }));
+            return;
+          }
+
+          response.writeHead(200, {
+            'Content-Type': 'text/event-stream; charset=utf-8',
+            'Cache-Control': 'no-cache, no-transform',
+            'Connection': 'keep-alive'
+          });
+
+          const reader = fetchRes.body.getReader();
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            response.write(value);
+          }
+          response.end();
+        } catch (err) {
+          if (!response.headersSent) {
+            response.writeHead(500, { 'Content-Type': 'application/json' });
+          }
+          response.end(JSON.stringify({ error: err.message }));
+        }
+      });
       return;
     }
   }

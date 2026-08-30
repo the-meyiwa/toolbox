@@ -35,7 +35,6 @@
         <!-- Saved appears only once there is something in it. Nobody who came
              to format some JSON should meet a workspace. -->
         <a href="#saved" class="nav-link" data-page="saved" id="nav-saved" hidden>Saved</a>
-        <a href="#assistant" class="nav-link" data-page="assistant" id="nav-assistant">Assistant</a>
         <a href="#support" class="nav-link" data-page="support">Support</a>
         <a href="#spaces" class="nav-link" data-page="spaces">Spaces</a>
       </nav>
@@ -57,12 +56,12 @@
             </svg>
           </button>
           <div class="header-dropdown-menu" id="header-dropdown-menu" role="menu" aria-label="Toolbox options">
-            <button type="button" class="dropdown-item" id="menu-item-assistant" role="menuitem">
+            <button type="button" class="dropdown-item" id="menu-item-account" role="menuitem">
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="3"></circle>
-                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
               </svg>
-              <span>Assistant</span>
+              <span>Account &amp; Cloud Sync</span>
             </button>
             <button type="button" class="dropdown-item" id="menu-item-theme" role="menuitem">
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -334,13 +333,6 @@
         </svg>
         <span class="mob-nav-label">Spaces</span>
       </a>
-      <a href="#assistant" class="nav-link mob-nav-item" data-page="assistant" id="nav-assistant-mob">
-        <svg class="mob-nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"></circle>
-          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
-        </svg>
-        <span class="mob-nav-label">Assistant</span>
-      </a>
       <a href="#support" class="nav-link mob-nav-item" data-page="support">
         <svg class="mob-nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
@@ -353,7 +345,7 @@
   </div>
 
   <!-- FLOATING TIPS BUTTON & MODAL -->
-  <button id="tips-fab" aria-label="Show Tips" title="Page Tips" style="position:fixed; bottom:24px; right:24px; width:56px; height:56px; border-radius:28px; background:var(--black); color:var(--white); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(0,0,0,0.15); z-index:900; transition:transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
+  <button id="tips-fab" aria-label="Show Tips" title="Page Tips" style="position:fixed; bottom:24px; right:24px; width:56px; height:56px; border-radius:28px; background:var(--black); color:var(--white); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(0,0,0,0.15); z-index:900; opacity:0; pointer-events:none; transform:translateY(10px); transition:opacity 0.3s ease, transform 0.3s ease;">
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="10"></circle>
       <line x1="12" y1="16" x2="12" y2="12"></line>

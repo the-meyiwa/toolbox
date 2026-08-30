@@ -1,10 +1,12 @@
 /* ============================================================
    TOOLBOX — Real Generative AI Provider Client & Tool Loop
-   Connects to Google Gemini API, Groq, or OpenRouter with real streaming,
-   multi-turn context persistence, and automated tool/function call execution.
+   Connects to Backend Proxy (/api/assistant/chat) & Google Gemini API
+   with real SSE streaming, multi-turn context persistence,
+   automated tool/function execution, and quota enforcement.
    ============================================================ */
 
 import { ASSISTANT_TOOL_DECLARATIONS, executeAssistantTool } from './assistant-tools.js';
+import { QuotaManager } from './quota-manager.js';
 
 const DEFAULT_GEMINI_MODEL = 'gemini-1.5-flash';
 const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile';
@@ -76,6 +78,13 @@ export async function streamChatCompletion({
   onToolCallResult = () => {},
   signal = null
 }) {
+  // Enforce quota limit before sending
+  const quotaCheck = QuotaManager.canSendMessage();
+  if (!quotaCheck.allowed) {
+    throw new Error(quotaCheck.reason);
+  }
+  QuotaManager.recordMessage();
+
   const selectedModel = model || (provider === 'groq' ? DEFAULT_GROQ_MODEL : DEFAULT_GEMINI_MODEL);
 
   // Default system instruction with Toolbox context awareness
@@ -94,14 +103,8 @@ You must never delete files. Provide thoughtful, step-by-step reasoning and clea
   while (currentStep < MAX_TOOL_STEPS) {
     currentStep++;
 
-    // 1. Google Gemini API Stream
+    // 1. Google Gemini API Stream (via backend proxy with fallback to direct endpoint)
     if (provider === 'gemini') {
-      const activeKey = apiKey || 'AIzaSyB1MDvomi9iWJ3CuZ7_Wvm7TST6RE7SBVI';
-      if (!activeKey) {
-        throw new Error('MISSING_API_KEY: Please enter your Google Gemini API key in Assistant API Settings. A free key can be obtained instantly from Google AI Studio (https://aistudio.google.com/app/apikey).');
-      }
-
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:streamGenerateContent?alt=sse&key=${activeKey}`;
       const contents = buildGeminiContents(history, sysText);
 
       // Convert tool declarations to Gemini schema
@@ -113,24 +116,44 @@ You must never delete files. Provide thoughtful, step-by-step reasoning and clea
         }))
       }];
 
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents,
-          systemInstruction: { parts: [{ text: sysText }] },
-          tools: toolsPayload,
-          generationConfig: {
-            temperature: 0.4,
-            maxOutputTokens: 2048
-          }
-        }),
-        signal
-      });
+      let res;
+      try {
+        // Try backend proxy endpoint first (where secret key is securely stored)
+        res = await fetch('/api/assistant/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents,
+            systemInstruction: { parts: [{ text: sysText }] },
+            tools: toolsPayload,
+            model: selectedModel
+          }),
+          signal
+        });
+        if (!res.ok) throw new Error('Proxy status ' + res.status);
+      } catch (proxyErr) {
+        // Fallback to direct Gemini API call
+        const activeKey = apiKey || 'AIzaSyB1MDvomi9iWJ3CuZ7_Wvm7TST6RE7SBVI';
+        const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:streamGenerateContent?alt=sse&key=${activeKey}`;
+        res = await fetch(directUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents,
+            systemInstruction: { parts: [{ text: sysText }] },
+            tools: toolsPayload,
+            generationConfig: {
+              temperature: 0.4,
+              maxOutputTokens: 2000
+            }
+          }),
+          signal
+        });
+      }
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error?.message || `Gemini API returned HTTP ${res.status}`);
+        throw new Error(errJson.error?.message || errJson.error || `Gemini API returned HTTP ${res.status}`);
       }
 
       const reader = res.body.getReader();
@@ -180,6 +203,15 @@ You must never delete files. Provide thoughtful, step-by-step reasoning and clea
 
       // Handle function calls
       for (const fc of pendingFunctionCalls) {
+        // Enforce heavy task / large file quotas if applicable
+        if (fc.name === 'csv_analyze_and_chart' || fc.name === 'image_remove_watermark') {
+          const heavyCheck = QuotaManager.canRunHeavyTask();
+          if (!heavyCheck.allowed) {
+            throw new Error(heavyCheck.reason);
+          }
+          QuotaManager.recordHeavyTask();
+        }
+
         onToolCallStart(fc.name, fc.args);
         
         // Add assistant model call to history
@@ -212,10 +244,6 @@ You must never delete files. Provide thoughtful, step-by-step reasoning and clea
 
     // 2. Groq / OpenAI-compatible API
     if (provider === 'groq' || provider === 'openrouter') {
-      if (!apiKey) {
-        throw new Error(`MISSING_API_KEY: Please enter your ${provider.toUpperCase()} API key in Assistant API Settings.`);
-      }
-
       const endpoint = provider === 'groq'
         ? 'https://api.groq.com/openai/v1/chat/completions'
         : 'https://openrouter.ai/api/v1/chat/completions';
@@ -239,6 +267,7 @@ You must never delete files. Provide thoughtful, step-by-step reasoning and clea
           model: selectedModel,
           messages,
           temperature: 0.4,
+          max_tokens: 2000,
           stream: true
         }),
         signal

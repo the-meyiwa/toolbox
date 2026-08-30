@@ -472,8 +472,21 @@ $('home-search')?.addEventListener('click', () => openPalette());
 const tipsFab = $('tips-fab');
 if (tipsFab) {
   tipsFab.addEventListener('click', showTips);
-  $('close-tips').addEventListener('click', hideTips);
-  $('tips-modal').addEventListener('click', (e) => { if (e.target === $('tips-modal')) hideTips(); });
+  $('close-tips')?.addEventListener('click', hideTips);
+  $('tips-modal')?.addEventListener('click', (e) => { if (e.target === $('tips-modal')) hideTips(); });
+
+  let scrollTimeout = null;
+  window.addEventListener('scroll', () => {
+    tipsFab.style.opacity = '1';
+    tipsFab.style.pointerEvents = 'auto';
+    tipsFab.style.transform = 'translateY(0)';
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      tipsFab.style.opacity = '0';
+      tipsFab.style.pointerEvents = 'none';
+      tipsFab.style.transform = 'translateY(10px)';
+    }, 1500);
+  }, { passive: true });
 }
 
 /* Mailto link reliability on desktop & mobile */
@@ -575,3 +588,4 @@ document.getElementById('mobile-nav')?.addEventListener('click', (e) => {
   }
 });
 requestAnimationFrame(updateMobileNavIndicator);
+
