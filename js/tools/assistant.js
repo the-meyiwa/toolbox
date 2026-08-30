@@ -525,7 +525,7 @@ export default {
       this._abortCtrl = new AbortController();
 
       try {
-        await streamChatCompletion({
+        const streamResult = await streamChatCompletion({
           history,
           systemInstruction: `User is in Toolbox workspace. Current active tool is: ${taskState.activeToolId || 'Home'}.`,
           currentFile: fileToProcess,
@@ -536,6 +536,9 @@ export default {
             messagesEl.scrollTop = messagesEl.scrollHeight;
           },
           onToolCallStart: (toolName, toolArgs) => {
+            if (textBody.innerHTML.includes('Thinking...')) {
+              textBody.innerHTML = `<span style="color:var(--g600); font-style:italic;">Processing request with ${toolName.replace(/_/g, ' ')}...</span>`;
+            }
             const statusCard = document.createElement('div');
             statusCard.style.padding = '6px 10px';
             statusCard.style.background = 'var(--white)';
@@ -563,10 +566,13 @@ export default {
           signal: this._abortCtrl.signal
         });
 
+        const finalText = accumulatedStreamText || streamResult?.text || 'I have completed your request.';
+        textBody.innerHTML = formatMarkdown(finalText);
+
         // Add assistant response to history
         history.push({
           role: 'assistant',
-          content: accumulatedStreamText,
+          content: finalText,
           toolResults: executedToolResults
         });
 

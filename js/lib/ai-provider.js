@@ -230,11 +230,13 @@ Never delete files. Provide thoughtful, step-by-step reasoning and clear answers
     if (res.ok) backendAttempted = true;
   } catch (e) {}
 
-  // 2. Direct Gemini Fallback across candidate models
+  // 2. Direct Gemini Fallback across candidate models with fast timeout
   if (!res || !res.ok) {
     for (const candModel of CANDIDATE_GEMINI_MODELS) {
       try {
         const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${candModel}:streamGenerateContent?alt=sse&key=${activeKey}`;
+        const candController = new AbortController();
+        const candTimeout = setTimeout(() => candController.abort(), 2000);
         const candidateRes = await fetch(directUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -247,8 +249,9 @@ Never delete files. Provide thoughtful, step-by-step reasoning and clear answers
               maxOutputTokens: 2000
             }
           }),
-          signal
+          signal: candController.signal
         });
+        clearTimeout(candTimeout);
 
         if (candidateRes.ok) {
           res = candidateRes;
@@ -262,7 +265,7 @@ Never delete files. Provide thoughtful, step-by-step reasoning and clear answers
   if (!res || !res.ok) {
     const notice = customKey
       ? 'Generated via Assistant execution engine.'
-      : 'Operating via Assistant local engine. You can enter a fresh personal Google Gemini key in Account Settings.';
+      : 'Operating via Assistant local engine. You can enter a personal Google Gemini key in Account Settings.';
     return await runLocalAssistantFallback({
       history,
       currentFile,
@@ -275,55 +278,49 @@ Never delete files. Provide thoughtful, step-by-step reasoning and clear answers
   }
 
   // 4. Stream response from live SSE endpoint
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder('utf-8');
-  let buffer = '';
   let accumulatedFinalText = '';
   let pendingFunctionCalls = [];
+  const executedToolResults = [];
 
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+  try {
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
 
-    const lines = buffer.split('\n');
-    buffer = lines.pop();
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
 
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith('data: ')) continue;
-      const jsonStr = trimmed.slice(6);
-      if (jsonStr === '[DONE]') continue;
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
 
-      try {
-        const data = JSON.parse(jsonStr);
-        const candidate = data.candidates?.[0];
-        if (!candidate) continue;
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data: ')) continue;
+        const jsonStr = trimmed.slice(6);
+        if (jsonStr === '[DONE]') continue;
 
-        const parts = candidate.content?.parts || [];
-        for (const part of parts) {
-          if (part.text) {
-            accumulatedFinalText += part.text;
-            onToken(part.text);
+        try {
+          const data = JSON.parse(jsonStr);
+          const candidate = data.candidates?.[0];
+          if (!candidate) continue;
+
+          const parts = candidate.content?.parts || [];
+          for (const part of parts) {
+            if (part.text) {
+              accumulatedFinalText += part.text;
+              onToken(part.text);
+            }
+            if (part.functionCall) {
+              pendingFunctionCalls.push(part.functionCall);
+            }
           }
-          if (part.functionCall) {
-            pendingFunctionCalls.push(part.functionCall);
-          }
-        }
-      } catch (e) {}
+        } catch (e) {}
+      }
     }
-  }
-
-  // If no text was streamed and no functions were called, run local fallback
-  if (!accumulatedFinalText && !pendingFunctionCalls.length) {
-    return await runLocalAssistantFallback({
-      history,
-      currentFile,
-      taskState,
-      onToken,
-      onToolCallStart,
-      onToolCallResult
-    });
+  } catch (err) {
+    console.warn('Stream parse notice:', err);
   }
 
   // Handle function calls
@@ -342,7 +339,27 @@ Never delete files. Provide thoughtful, step-by-step reasoning and clear answers
       toolResult = { status: 'error', error: err.message };
     }
     onToolCallResult(fc.name, toolResult);
+    executedToolResults.push(toolResult);
   }
 
-  return { text: accumulatedFinalText, taskState };
+  // If no text was streamed and no functions were called, run local fallback
+  if (!accumulatedFinalText && !pendingFunctionCalls.length) {
+    return await runLocalAssistantFallback({
+      history,
+      currentFile,
+      taskState,
+      onToken,
+      onToolCallStart,
+      onToolCallResult
+    });
+  }
+
+  // If function calls were executed but the model streamed no explanatory text, provide an instant summary
+  if (!accumulatedFinalText && pendingFunctionCalls.length) {
+    const summaryText = `I have executed the requested action (**${pendingFunctionCalls[0].name.replace(/_/g, ' ')}**) using Toolbox client tools. The resulting artifact and data are ready below.`;
+    accumulatedFinalText = summaryText;
+    onToken(summaryText);
+  }
+
+  return { text: accumulatedFinalText, taskState, toolResults: executedToolResults };
 }
