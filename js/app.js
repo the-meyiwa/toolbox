@@ -237,6 +237,7 @@ function teardownTool() {
 
 async function openTool(id) {
   if (id === 'assistant' && !getCurrentUser()) {
+    window.location.replace('#home');
     openAccountModal();
     return showPage('home');
   }
@@ -537,11 +538,17 @@ export function renderHomeAssistantBanner() {
             <p style="margin:2px 0 0; font-size:0.82rem; color:var(--g600); line-height:1.4;">Ask Assistant from the search bar above or launch the dedicated workspace.</p>
           </div>
         </div>
-        <a href="#assistant" class="btn btn-primary" style="padding:9px 20px; font-size:0.86rem; font-weight:700; border-radius:9999px; white-space:nowrap; text-decoration:none; flex-shrink:0;">
+        <button type="button" class="btn btn-primary" id="btn-open-assistant" style="padding:9px 20px; font-size:0.86rem; font-weight:700; border-radius:9999px; white-space:nowrap; flex-shrink:0; cursor:pointer;">
           Open Assistant &rarr;
-        </a>
+        </button>
       </div>
     `;
+
+    bannerEl.querySelector('#btn-open-assistant')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.location.hash = '#assistant';
+      openTool('assistant');
+    });
   }
 }
 
@@ -551,6 +558,9 @@ window.addEventListener('toolbox:authchange', () => {
   updateSearchPlaceholder();
   renderGrid(TOOLS);
   renderHomeAssistantBanner();
+  if (window.location.hash === '#assistant' && getCurrentUser()) {
+    openTool('assistant');
+  }
 });
 
 if (homeHeroInput && homeHeroDropdown) {

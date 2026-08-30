@@ -228,9 +228,11 @@ function renderModalContent() {
         authMsg.textContent = 'Please enter both email and password.';
         return;
       }
+      authMsg.style.display = 'none';
       const res = await signInWithEmail(email, pwd);
       if (res.success) {
-        renderModalContent();
+        closeAccountModal();
+        window.location.hash = '#assistant';
       } else {
         authMsg.style.display = 'block';
         authMsg.textContent = res.error;
@@ -245,9 +247,11 @@ function renderModalContent() {
         authMsg.textContent = 'Please enter both email and password.';
         return;
       }
+      authMsg.style.display = 'none';
       const res = await signUpWithEmail(email, pwd);
       if (res.success) {
-        renderModalContent();
+        closeAccountModal();
+        window.location.hash = '#assistant';
       } else {
         authMsg.style.display = 'block';
         authMsg.textContent = res.error;
