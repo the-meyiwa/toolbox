@@ -59,6 +59,7 @@ const EXPANSIONS = new Map(Object.entries({
   dataset: 'data', charts: 'data', graph: 'data', stats: 'data',
   chem: 'chemistry', chemical: 'chemistry', drug: 'compound', medicine: 'compound',
   note: 'notes', notepad: 'notes', memo: 'notes', todo: 'notes', checklist: 'notes',
+  airdrop: 'file-drop', snapdrop: 'file-drop', pairdrop: 'file-drop', sendtophone: 'file-drop',
 }));
 
 export function normalise(text) {

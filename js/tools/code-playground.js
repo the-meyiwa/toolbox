@@ -1,9 +1,9 @@
 /* ============================================================
-   TOOLBOX — Code Playground & Sublime IDE
-   Full-featured in-browser IDE inspired by Sublime Text with
-   multi-file project explorer, tabbed workspace, line numbers,
-   visual minimap, command palette, live sandbox preview,
-   integrated console, and Web Worker / compiler runtimes.
+   TOOLBOX — Code Playground
+   Multi-file in-browser IDE with project explorer, tabbed workspace,
+   line numbers gutter, visual minimap, command palette, live sandbox preview,
+   integrated terminal console, local Web Worker / JSCPP C++ runtimes,
+   and remote server compilers.
    ============================================================ */
 
 import { LANGUAGES, makeWorker, transpileTypeScript } from '../lib/code-runtimes.js';
@@ -14,9 +14,9 @@ const ALL = { ...LANGUAGES, ...REMOTE_LANGUAGES };
 const isRemote = (id) => Object.hasOwn(REMOTE_LANGUAGES, id);
 const isPreview = (id) => !!LANGUAGES[id]?.preview;
 
-const STORAGE_KEY = 'toolbox.sublime_playground_v2';
+const STORAGE_KEY = 'toolbox.code_playground_ide_v3';
 const RUN_TIMEOUT_MS = {
-  javascript: 10000, typescript: 10000, python: 60000, sql: 20000, lua: 30000,
+  javascript: 10000, typescript: 10000, python: 60000, cpp: 30000, sql: 20000, lua: 30000,
 };
 const DEFAULT_TIMEOUT_MS = 30000;
 
@@ -29,9 +29,10 @@ export default {
     try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch {}
 
     const defaultFiles = [
-      { id: 'f-1', name: 'main.js', lang: 'javascript', content: LANGUAGES.javascript?.sample || 'console.log("Hello, Sublime IDE!");' },
-      { id: 'f-2', name: 'index.html', lang: 'html', content: '<!DOCTYPE html>\n<html>\n<head>\n  <title>App</title>\n</head>\n<body>\n  <h1 style="font-family:sans-serif;">Welcome to Sublime IDE</h1>\n</body>\n</html>' },
-      { id: 'f-3', name: 'script.py', lang: 'python', content: LANGUAGES.python?.sample || 'print("Hello from Python in-browser!")' }
+      { id: 'f-1', name: 'main.js', lang: 'javascript', content: LANGUAGES.javascript?.sample || 'console.log("Hello, Code Playground!");' },
+      { id: 'f-2', name: 'index.html', lang: 'html', content: '<!DOCTYPE html>\n<html>\n<head>\n  <title>App</title>\n</head>\n<body>\n  <h1 style="font-family:sans-serif;">Welcome to Code Playground</h1>\n</body>\n</html>' },
+      { id: 'f-3', name: 'script.py', lang: 'python', content: LANGUAGES.python?.sample || 'print("Hello from Python in-browser!")' },
+      { id: 'f-4', name: 'program.cpp', lang: 'cpp', content: LANGUAGES.cpp?.sample || '#include <iostream>\nusing namespace std;\nint main() {\n    cout << "Hello from C++ in-browser!" << endl;\n    return 0;\n}' }
     ];
 
     const state = {
@@ -46,22 +47,22 @@ export default {
     };
 
     container.innerHTML = `
-      <div class="sublime-ide-root" style="display:flex; flex-direction:column; height:740px; background:#1e1e1e; border:1px solid #333; border-radius:14px; overflow:hidden; box-shadow:0 12px 40px rgba(0,0,0,0.4); color:#d4d4d4; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+      <div class="ide-root" style="display:flex; flex-direction:column; height:740px; background:#1e1e1e; border:1px solid #333; border-radius:14px; overflow:hidden; box-shadow:0 12px 40px rgba(0,0,0,0.4); color:#d4d4d4; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
         
         <!-- TOP TOOLBAR & CONTROLS -->
         <div style="background:#252526; border-bottom:1px solid #333; padding:6px 12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
           <!-- Left: Sidebar toggle, Language, Project Name -->
           <div style="display:flex; align-items:center; gap:8px;">
-            <button type="button" class="sublime-btn" id="cpg-toggle-sidebar" title="Toggle Sidebar (Ctrl+B)">
+            <button type="button" class="ide-btn" id="cpg-toggle-sidebar" title="Toggle Sidebar (Ctrl+B)">
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
             </button>
             <span style="font-weight:700; font-size:0.84rem; color:#fff; display:flex; align-items:center; gap:6px;">
-              <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f97316;"></span>
-              Sublime IDE
+              <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#3b82f6;"></span>
+              Code Playground
             </span>
 
-            <select class="sublime-select" id="cpg-langs" aria-label="Language Mode" style="font-size:0.78rem;">
-              <optgroup label="Runs on your device">
+            <select class="ide-select" id="cpg-langs" aria-label="Language Mode" style="font-size:0.78rem;">
+              <optgroup label="Runs on your device (Offline)">
                 ${Object.entries(LANGUAGES).map(([id, l]) =>
                   `<option value="${id}">${l.name}</option>`).join('')}
               </optgroup>
@@ -71,7 +72,7 @@ export default {
               </optgroup>
             </select>
 
-            <select class="sublime-select" id="cpg-fw" hidden aria-label="CSS framework" style="font-size:0.78rem;">
+            <select class="ide-select" id="cpg-fw" hidden aria-label="CSS framework" style="font-size:0.78rem;">
               ${Object.entries(WEB_FRAMEWORKS).map(([id, f]) =>
                 `<option value="${id}"${id === state.framework ? ' selected' : ''}>${f.name}</option>`).join('')}
             </select>
@@ -79,14 +80,14 @@ export default {
 
           <!-- Right: Command Palette, Layout, Clear, Run -->
           <div style="display:flex; align-items:center; gap:6px;">
-            <button type="button" class="sublime-btn" id="cpg-cmd-palette" title="Command Palette (Ctrl+Shift+P)">
+            <button type="button" class="ide-btn" id="cpg-cmd-palette" title="Command Palette (Ctrl+Shift+P)">
               <kbd style="font-size:0.68rem; background:#333; padding:2px 5px; border-radius:3px;">⌘⇧P</kbd> Palette
             </button>
-            <button type="button" class="sublime-btn" id="cpg-layout-btn" title="Toggle Layout Split">Split ▾</button>
-            <button type="button" class="sublime-btn" id="cpg-sample">Example</button>
-            <button type="button" class="sublime-btn" id="cpg-clear">Clear</button>
-            <button type="button" class="sublime-btn" id="cpg-reset" hidden>Reset DB</button>
-            <button type="button" class="sublime-btn sublime-btn-run" id="cpg-run" style="background:#22c55e; color:#000; font-weight:700;">
+            <button type="button" class="ide-btn" id="cpg-layout-btn" title="Toggle Layout Split">Split ▾</button>
+            <button type="button" class="ide-btn" id="cpg-sample">Example</button>
+            <button type="button" class="ide-btn" id="cpg-clear">Clear</button>
+            <button type="button" class="ide-btn" id="cpg-reset" hidden>Reset DB</button>
+            <button type="button" class="ide-btn ide-btn-run" id="cpg-run" style="background:#22c55e; color:#000; font-weight:700;">
               Run <kbd style="font-size:0.68rem; background:rgba(0,0,0,0.2); padding:1px 4px; border-radius:3px; margin-left:4px;">⌃↵</kbd>
             </button>
           </div>
@@ -99,16 +100,16 @@ export default {
           <div id="cpg-sidebar" style="width:200px; background:#252526; border-right:1px solid #333; display:flex; flex-direction:column; justify-content:space-between;">
             <div>
               <div style="padding:8px 12px; font-size:0.72rem; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:0.05em; display:flex; justify-content:space-between; align-items:center;">
-                <span>Folders</span>
+                <span>Project Files</span>
                 <button type="button" id="cpg-new-file" style="background:none; border:none; color:#bbb; cursor:pointer; font-size:1rem; padding:0 4px;" title="New File">+</button>
               </div>
               <div id="cpg-file-tree" style="display:flex; flex-direction:column;"></div>
             </div>
 
-            <!-- Stdin Box for remote runs -->
+            <!-- Stdin Box for remote runs / C++ stdin -->
             <div id="cpg-stdin-wrap" hidden style="padding:10px; border-top:1px solid #333; background:#1e1e1e;">
               <div style="font-size:0.7rem; color:#888; margin-bottom:4px; font-weight:600;">Standard Input (stdin)</div>
-              <textarea id="cpg-stdin" style="width:100%; height:50px; background:#2d2d2d; border:1px solid #444; color:#fff; font-family:monospace; font-size:0.74rem; padding:4px; resize:none; outline:none; border-radius:4px;"></textarea>
+              <textarea id="cpg-stdin" placeholder="cin input..." style="width:100%; height:50px; background:#2d2d2d; border:1px solid #444; color:#fff; font-family:monospace; font-size:0.74rem; padding:4px; resize:none; outline:none; border-radius:4px;"></textarea>
             </div>
           </div>
 
@@ -127,8 +128,8 @@ export default {
                 <textarea id="cpg-code" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" wrap="off" style="flex:1; background:#1e1e1e; color:#e6db74; font-family:'Fira Code', Consolas, Monaco, monospace; font-size:0.82rem; line-height:1.5; padding:12px; border:none; outline:none; resize:none; white-space:pre; overflow:auto;"></textarea>
               </div>
 
-              <!-- Sublime Visual Minimap -->
-              <div id="cpg-minimap" style="width:80px; background:#181818; border-left:1px solid #282828; padding:8px 4px; overflow:hidden; user-select:none; opacity:0.65; cursor:pointer;" title="Sublime Minimap">
+              <!-- Visual Minimap -->
+              <div id="cpg-minimap" style="width:80px; background:#181818; border-left:1px solid #282828; padding:8px 4px; overflow:hidden; user-select:none; opacity:0.65; cursor:pointer;" title="Visual Minimap">
                 <div id="cpg-minimap-content" style="font-size:3px; line-height:4px; color:#a6e22e; font-family:monospace; white-space:pre; pointer-events:none;"></div>
               </div>
 
@@ -151,7 +152,7 @@ export default {
 
         </div>
 
-        <!-- SUBLIME STATUS BAR -->
+        <!-- STATUS BAR -->
         <div style="background:#007acc; color:#fff; padding:3px 12px; font-size:0.72rem; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display:flex; justify-content:space-between; align-items:center;">
           <div style="display:flex; gap:14px;">
             <span id="cpg-status-pos">Line 1, Column 1</span>
@@ -164,7 +165,7 @@ export default {
           </div>
         </div>
 
-        <!-- SUBLIME COMMAND PALETTE MODAL (HIDDEN) -->
+        <!-- COMMAND PALETTE MODAL (HIDDEN) -->
         <div id="cpg-palette-modal" style="display:none; position:absolute; top:40px; left:50%; transform:translateX(-50%); width:480px; max-width:90%; background:#252526; border:1px solid #454545; border-radius:8px; box-shadow:0 16px 48px rgba(0,0,0,0.6); z-index:100; overflow:hidden;">
           <input type="text" id="cpg-palette-input" placeholder="Type a command or language..." style="width:100%; padding:10px 14px; background:#1e1e1e; border:none; border-bottom:1px solid #333; color:#fff; font-size:0.86rem; outline:none;">
           <div id="cpg-palette-list" style="max-height:240px; overflow-y:auto;"></div>
@@ -173,7 +174,7 @@ export default {
       </div>
     `;
 
-    injectSublimeStyles();
+    injectIdeStyles();
 
     const codeEl = container.querySelector('#cpg-code');
     const gutterEl = container.querySelector('#cpg-gutter');
@@ -211,15 +212,15 @@ export default {
 
     function renderTabs() {
       tabsBar.innerHTML = state.files.map(f => `
-        <div class="sublime-tab ${f.id === state.activeFileId ? 'active' : ''}" data-id="${f.id}" style="padding:6px 14px; font-size:0.78rem; font-family:monospace; background:${f.id === state.activeFileId ? '#1e1e1e' : '#2d2d2d'}; color:${f.id === state.activeFileId ? '#fff' : '#888'}; border-right:1px solid #1e1e1e; cursor:pointer; display:flex; align-items:center; gap:8px;">
+        <div class="ide-tab ${f.id === state.activeFileId ? 'active' : ''}" data-id="${f.id}" style="padding:6px 14px; font-size:0.78rem; font-family:monospace; background:${f.id === state.activeFileId ? '#1e1e1e' : '#2d2d2d'}; color:${f.id === state.activeFileId ? '#fff' : '#888'}; border-right:1px solid #1e1e1e; cursor:pointer; display:flex; align-items:center; gap:8px;">
           <span>${f.name}</span>
-          ${state.files.length > 1 ? `<span class="sublime-tab-close" data-id="${f.id}" style="color:#666; font-size:0.9rem; line-height:1;">&times;</span>` : ''}
+          ${state.files.length > 1 ? `<span class="ide-tab-close" data-id="${f.id}" style="color:#666; font-size:0.9rem; line-height:1;">&times;</span>` : ''}
         </div>
       `).join('');
 
-      tabsBar.querySelectorAll('.sublime-tab').forEach(tab => {
+      tabsBar.querySelectorAll('.ide-tab').forEach(tab => {
         tab.addEventListener('click', (e) => {
-          if (e.target.classList.contains('sublime-tab-close')) return;
+          if (e.target.classList.contains('ide-tab-close')) return;
           state.activeFileId = tab.dataset.id;
           loadFile();
           renderTabs();
@@ -227,7 +228,7 @@ export default {
         });
       });
 
-      tabsBar.querySelectorAll('.sublime-tab-close').forEach(closeBtn => {
+      tabsBar.querySelectorAll('.ide-tab-close').forEach(closeBtn => {
         closeBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           const id = closeBtn.dataset.id;
@@ -243,13 +244,13 @@ export default {
 
     function renderFileTree() {
       fileTree.innerHTML = state.files.map(f => `
-        <div class="sublime-tree-item ${f.id === state.activeFileId ? 'active' : ''}" data-id="${f.id}" style="padding:5px 14px; font-size:0.78rem; font-family:monospace; color:${f.id === state.activeFileId ? '#fff' : '#aaa'}; background:${f.id === state.activeFileId ? '#37373d' : 'transparent'}; cursor:pointer; display:flex; align-items:center; gap:6px;">
+        <div class="ide-tree-item ${f.id === state.activeFileId ? 'active' : ''}" data-id="${f.id}" style="padding:5px 14px; font-size:0.78rem; font-family:monospace; color:${f.id === state.activeFileId ? '#fff' : '#aaa'}; background:${f.id === state.activeFileId ? '#37373d' : 'transparent'}; cursor:pointer; display:flex; align-items:center; gap:6px;">
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
           <span>${f.name}</span>
         </div>
       `).join('');
 
-      fileTree.querySelectorAll('.sublime-tree-item').forEach(item => {
+      fileTree.querySelectorAll('.ide-tree-item').forEach(item => {
         item.addEventListener('click', () => {
           state.activeFileId = item.dataset.id;
           loadFile();
@@ -424,7 +425,7 @@ export default {
       { name: 'Toggle Word Wrap', action: () => { codeEl.wrap = codeEl.wrap === 'off' ? 'on' : 'off'; } },
       { name: 'Clear Terminal Output', action: () => clearConsole() },
       { name: 'New File', action: () => newFileBtn.click() },
-      { name: 'Export Project to ZIP', action: () => exportZip() },
+      { name: 'Export Project', action: () => exportProject() },
       ...Object.entries(ALL).map(([k, v]) => ({
         name: `Set Syntax: ${v.name}`,
         action: () => {
@@ -440,12 +441,12 @@ export default {
       const q = paletteInput.value.toLowerCase().trim();
       const filtered = PALETTE_COMMANDS.filter(c => c.name.toLowerCase().includes(q));
       paletteList.innerHTML = filtered.map((c, i) => `
-        <div class="sublime-palette-item" data-idx="${i}" style="padding:8px 14px; font-size:0.8rem; font-family:monospace; color:#ddd; cursor:pointer; border-bottom:1px solid #333;">
+        <div class="ide-palette-item" data-idx="${i}" style="padding:8px 14px; font-size:0.8rem; font-family:monospace; color:#ddd; cursor:pointer; border-bottom:1px solid #333;">
           ${c.name}
         </div>
       `).join('');
 
-      paletteList.querySelectorAll('.sublime-palette-item').forEach(item => {
+      paletteList.querySelectorAll('.ide-palette-item').forEach(item => {
         item.addEventListener('click', () => {
           filtered[parseInt(item.dataset.idx, 10)].action();
           paletteModal.style.display = 'none';
@@ -465,13 +466,12 @@ export default {
       } catch {}
     }
 
-    async function exportZip() {
-      // Export all project files
-      const blobParts = state.files.map(f => `${f.name}:\n${f.content}\n\n====================\n\n`).join('');
+    async function exportProject() {
+      const blobParts = state.files.map(f => `/* ==================== ${f.name} ==================== */\n\n${f.content}\n\n`).join('\n');
       const blob = new Blob([blobParts], { type: 'text/plain' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'sublime_project_export.txt';
+      a.download = 'project_export.txt';
       a.click();
     }
 
@@ -605,7 +605,7 @@ export default {
       worker.onerror = (err) => abort(err.message || 'Runtime execution failed.');
       const limit = RUN_TIMEOUT_MS[lang] ?? DEFAULT_TIMEOUT_MS;
       self_._timer = setTimeout(() => abort(`Execution timeout after ${limit / 1000}s.`), limit);
-      worker.postMessage({ code: source });
+      worker.postMessage({ code: source, stdin: stdinEl.value });
     }
 
     runBtn.addEventListener('click', run);
@@ -636,7 +636,7 @@ export default {
       previewEl.hidden = !preview;
       consoleEl.parentElement.hidden = preview && state.splitMode !== 'split';
       fwEl.hidden = !preview;
-      stdinWrap.hidden = !remote;
+      stdinWrap.hidden = !remote && id !== 'cpp';
       resetBtn.hidden = id !== 'sql';
 
       if (preview) previewEl.srcdoc = buildPreviewDocument(codeEl.value, state.framework);
@@ -676,12 +676,12 @@ export default {
   }
 };
 
-function injectSublimeStyles() {
-  if (document.getElementById('sublime-ide-styles')) return;
+function injectIdeStyles() {
+  if (document.getElementById('ide-editor-styles')) return;
   const style = document.createElement('style');
-  style.id = 'sublime-ide-styles';
+  style.id = 'ide-editor-styles';
   style.textContent = `
-    .sublime-btn {
+    .ide-btn {
       background: #333333;
       border: 1px solid #444444;
       color: #cccccc;
@@ -694,8 +694,8 @@ function injectSublimeStyles() {
       gap: 4px;
       transition: all 0.15s;
     }
-    .sublime-btn:hover { background: #444444; color: #ffffff; }
-    .sublime-select {
+    .ide-btn:hover { background: #444444; color: #ffffff; }
+    .ide-select {
       background: #1e1e1e;
       border: 1px solid #444;
       color: #ffffff;
@@ -703,9 +703,9 @@ function injectSublimeStyles() {
       border-radius: 4px;
       outline: none;
     }
-    .sublime-tab:hover { background: #37373d !important; color: #ffffff !important; }
-    .sublime-tree-item:hover { background: #2a2d2e !important; color: #ffffff !important; }
-    .sublime-palette-item:hover { background: #094771 !important; color: #ffffff !important; }
+    .ide-tab:hover { background: #37373d !important; color: #ffffff !important; }
+    .ide-tree-item:hover { background: #2a2d2e !important; color: #ffffff !important; }
+    .ide-palette-item:hover { background: #094771 !important; color: #ffffff !important; }
   `;
   document.head.appendChild(style);
 }

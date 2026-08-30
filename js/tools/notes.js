@@ -195,7 +195,7 @@ export default {
       titleInput.value = note.title;
       bodyEditor.innerHTML = formatBodyForDisplay(note.body);
       metaLine.textContent = `Last modified: ${new Date(note.updatedAt).toLocaleString()}`;
-      pinBtn.textContent = note.pinned ? 'Pinned' : 'Pin';
+      pinBtn.textContent = note.pinned ? 'Unpin' : 'Pin';
       updateCounts();
     }
 
@@ -267,7 +267,7 @@ export default {
       const note = getActiveNote();
       if (note) {
         note.pinned = !note.pinned;
-        pinBtn.textContent = note.pinned ? 'Pinned' : 'Pin';
+        pinBtn.textContent = note.pinned ? 'Unpin' : 'Pin';
         saveNotes();
         renderNoteList();
       }

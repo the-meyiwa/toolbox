@@ -240,6 +240,50 @@ self.onmessage = async function (e) {
   }
 };`;
 
+/* ---------------- C++ (JSCPP In-Browser Engine) ---------------- */
+
+const CPP_WORKER = `
+${FORMAT_FN}
+importScripts('https://cdn.jsdelivr.net/npm/jscpp@2.0.10/dist/JSCPP.es5.min.js');
+
+function post(type, level, text) { self.postMessage({ type: type, level: level, text: text }); }
+
+self.onmessage = function (e) {
+  var code = e.data.code;
+  var stdin = e.data.stdin || '';
+  var started = Date.now();
+
+  try {
+    var output = '';
+    var exitCode = 0;
+
+    if (typeof JSCPP !== 'undefined') {
+      exitCode = JSCPP.run(code, stdin, {
+        stdio: {
+          write: function (s) {
+            output += s;
+          }
+        },
+        maxTimeout: 20000
+      });
+    } else {
+      throw new Error('JSCPP runtime failed to initialise.');
+    }
+
+    if (output) {
+      var lines = output.split('\\n');
+      for (var i = 0; i < lines.length; i++) {
+        if (lines[i] || i < lines.length - 1) post('out', 'log', lines[i]);
+      }
+    }
+    post('out', 'muted', 'Process finished with exit code ' + exitCode);
+    post('done', null, String(Date.now() - started));
+  } catch (err) {
+    post('out', 'error', err && err.message ? err.message : String(err));
+    post('done', null, String(Date.now() - started));
+  }
+};`;
+
 /* ---------------- TypeScript ---------------- */
 
 let tsLoader = null;
@@ -370,6 +414,38 @@ print(f"Highest:   {dearest.name} ({dearest.role})")
 # Standard library is all there.
 import statistics
 print("Median salary:", statistics.median(e.salary for e in team))`,
+  },
+
+  cpp: {
+    name: 'C++',
+    mono: 'cpp',
+    worker: CPP_WORKER,
+    weight: 'Runs locally on your device via in-browser JSCPP engine.',
+    note: 'Interprets C++ offline in your browser with standard library support (<iostream>, <vector>, <cmath>, <string>, etc.).',
+    sample: `// Real C++ running offline in your browser!
+#include <iostream>
+#include <vector>
+#include <cmath>
+
+using namespace std;
+
+int fibonacci(int n) {
+    if (n <= 1) return n;
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+int main() {
+    cout << "=== C++ In-Browser Offline Engine ===" << endl;
+    cout << "Fibonacci(10) = " << fibonacci(10) << endl;
+
+    vector<int> numbers = {10, 20, 30, 40, 50};
+    int sum = 0;
+    for (int num : numbers) {
+        sum += num;
+    }
+    cout << "Sum of vector elements: " << sum << endl;
+    return 0;
+}`,
   },
 
   sql: {

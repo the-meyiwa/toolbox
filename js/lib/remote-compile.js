@@ -53,25 +53,6 @@ int main(void) {
     return 0;
 }`,
   },
-  cpp: {
-    name: 'C++', compiler: 'gcc-9.3.0', version: '9.3.0', mono: 'cpp', options: '-O2 -std=c++17',
-    sample: `#include <iostream>
-#include <vector>
-#include <algorithm>
-#include <numeric>
-
-int main() {
-    std::vector<int> marks{72, 58, 91, 64, 88};
-
-    std::sort(marks.begin(), marks.end(), std::greater<int>());
-    int total = std::accumulate(marks.begin(), marks.end(), 0);
-
-    std::cout << "sorted: ";
-    for (int m : marks) std::cout << m << ' ';
-    std::cout << "\\naverage: " << total / marks.size() << '\\n';
-    return 0;
-}`,
-  },
   swift: {
     name: 'Swift', compiler: 'swift-6.0.1', version: '6.0.1', mono: 'swift',
     sample: `struct Invoice {

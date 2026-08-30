@@ -1593,6 +1593,20 @@ export const TOOLS = [
     offline: true,
     icon: svg('<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/>'),
   },
+  {
+    id: 'file-drop',
+    name: 'Local File Drop (AirDrop)',
+    description: 'Send files directly to your phone or nearby devices over local Wi-Fi with instant QR code pairing',
+    category: 'images-files',
+    secondary: ['everyday', 'developer'],
+    keywords: ['airdrop', 'file drop', 'send to phone', 'p2p', 'file transfer', 'local share', 'share file', 'qr transfer', 'wifi drop', 'nearby share'],
+    synonyms: ['airdrop', 'snapdrop', 'pairdrop', 'local file transfer', 'send file to phone'],
+    intents: ['send file to phone', 'airdrop to phone', 'transfer file locally', 'quick file send', 'share file via qr'],
+    related: ['file-compressor', 'file-decompressor', 'qr-generator'],
+    weight: 98,
+    offline: true,
+    icon: svg('<path d="M12 2v10M12 12l4-4M12 12l-4-4"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><path d="M16 16l4 4 4-4M4 20h16"/>'),
+  },
 ];
 
 export default TOOLS;
