@@ -140,10 +140,9 @@ export function updateMobileNavIndicator() {
     indicator.style.opacity = '0';
     return;
   }
-  const navRect = nav.getBoundingClientRect();
-  const itemRect = activeItem.getBoundingClientRect();
-  const left = itemRect.left - navRect.left;
-  const width = itemRect.width;
+  const left = activeItem.offsetLeft;
+  const width = activeItem.offsetWidth;
+  if (!width) return;
   indicator.style.opacity = '1';
   indicator.style.transform = `translate3d(${left}px, 0, 0)`;
   indicator.style.width = `${width}px`;
