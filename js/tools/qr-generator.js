@@ -59,7 +59,7 @@ export default {
     });
 
     // Generate with default text
-    input.value = 'https://example.com';
+    input.value = 'https://toolbox-gold-six.vercel.app';
     generate();
     input.focus();
     input.select();

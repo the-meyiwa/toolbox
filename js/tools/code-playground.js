@@ -169,9 +169,7 @@ export default {
                 `<option value="${k}"${k === state.theme ? ' selected' : ''}>${t.name}</option>`).join('')}
             </select>
 
-            <button type="button" class="ide-btn" id="cpg-fullscreen-btn" title="Toggle Fullscreen">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
-            </button>
+
             <button type="button" class="ide-btn" id="cpg-cmd-palette" title="Command Palette (Ctrl+Shift+P)">
               <kbd style="font-size:0.68rem; background:#333; padding:2px 5px; border-radius:3px;">⌘⇧P</kbd>
             </button>
@@ -295,7 +293,7 @@ export default {
     const resetBtn = container.querySelector('#cpg-reset');
     const layoutBtn = container.querySelector('#cpg-layout-btn');
     const themeSelect = container.querySelector('#cpg-theme-select');
-    const fullscreenBtn = container.querySelector('#cpg-fullscreen-btn');
+
     const cmdPaletteBtn = container.querySelector('#cpg-cmd-palette');
     const paletteModal = container.querySelector('#cpg-palette-modal');
     const paletteInput = container.querySelector('#cpg-palette-input');
@@ -337,30 +335,6 @@ export default {
       themeSelect.value = state.theme;
     };
     window.addEventListener('toolbox:themechange', this._onThemeChange);
-
-    // Fullscreen Toggle
-    fullscreenBtn.addEventListener('click', () => {
-      state.isFullscreen = !state.isFullscreen;
-      if (state.isFullscreen) {
-        rootEl.style.position = 'fixed';
-        rootEl.style.top = '0';
-        rootEl.style.left = '0';
-        rootEl.style.width = '100vw';
-        rootEl.style.height = '100vh';
-        rootEl.style.zIndex = '99999';
-        rootEl.style.borderRadius = '0';
-        fullscreenBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>`;
-      } else {
-        rootEl.style.position = 'relative';
-        rootEl.style.top = '';
-        rootEl.style.left = '';
-        rootEl.style.width = '';
-        rootEl.style.height = '740px';
-        rootEl.style.zIndex = '';
-        rootEl.style.borderRadius = '14px';
-        fullscreenBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`;
-      }
-    });
 
     function getActiveFile() {
       return state.files.find(f => f.id === state.activeFileId) || state.files[0];
@@ -579,7 +553,7 @@ export default {
 
     const PALETTE_COMMANDS = [
       { name: 'Run Code / Compile Program', action: () => run() },
-      { name: 'Toggle Fullscreen', action: () => fullscreenBtn.click() },
+
       { name: 'Format / Beautify Code', action: () => formatCode() },
       { name: 'Toggle Minimap', action: () => { minimapEl.style.display = minimapEl.style.display === 'none' ? 'block' : 'none'; } },
       { name: 'Toggle Word Wrap', action: () => { codeEl.wrap = codeEl.wrap === 'off' ? 'on' : 'off'; } },

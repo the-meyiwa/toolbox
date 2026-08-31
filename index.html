@@ -92,9 +92,9 @@
       <!-- HOME -->
       <div id="home-view" class="page-view">
         <div class="home-hero">
-          <p class="home-eyebrow"><span id="home-eyebrow-count">100+</span> tools · runs in your browser · no signup</p>
+          <p class="home-eyebrow"><span id="home-eyebrow-count">100+</span> tools · runs in your browser · optional cloud sync</p>
           <h1 class="home-title">What do you<br>need to do?</h1>
-          <p class="home-desc">Describe the job, not the tool. Open it, do the thing, close the tab.<br class="hide-mobile"> Nothing to set up and nothing to sign into.</p>
+          <p class="home-desc">Describe the job, not the tool. Open it, do the thing, close the tab.<br class="hide-mobile"> Create an optional account only if you want to sync your saved files.</p>
 
           <div class="home-search-wrap" id="home-search-wrap" style="position:relative; width:100%; max-width:620px; margin:24px auto;">
             <div style="position:relative; display:flex; align-items:center;">
@@ -128,17 +128,27 @@
 
       <!-- TOOL VIEWPORT -->
       <div id="tool-viewport" class="page-view hidden">
-        <div class="viewport-header">
-          <button id="back-btn" aria-label="Back to all tools">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M19 12H5M12 19l-7-7 7-7"/>
-            </svg>
-            <span>All Tools</span>
-          </button>
-          <div class="viewport-heading">
-            <h2 id="viewport-title"></h2>
-            <p id="viewport-desc" class="viewport-desc"></p>
+        <div class="viewport-header" style="position:relative; display:flex; align-items:flex-start; justify-content:space-between; gap:16px;">
+          <div style="display:flex; align-items:flex-start; gap:16px;">
+            <button id="back-btn" aria-label="Back to all tools" style="margin-top:2px;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+              </svg>
+              <span>All Tools</span>
+            </button>
+            <div class="viewport-heading">
+              <h2 id="viewport-title" style="display:flex; align-items:center; gap:8px;"></h2>
+              <p id="viewport-desc" class="viewport-desc"></p>
+            </div>
           </div>
+          <button id="popout-btn" class="btn btn-secondary btn-sm" style="display:none; align-items:center; gap:6px; white-space:nowrap; flex-shrink:0;" title="Open in New Tab">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+            <span class="hide-mobile">Pop Out</span>
+          </button>
         </div>
         <div id="viewport-content"></div>
         <aside class="tool-related" id="tool-related" hidden></aside>
@@ -238,8 +248,8 @@
 
           <section class="support-section">
             <h2 class="support-heading">About Toolbox</h2>
-            <p>Toolbox is a collection of practical tools for everyday problems. Almost every tool runs entirely in your browser, so your files and text never leave your device. A small number — marked <strong>online</strong> on their card — have to ask a public service something, and those are the only ones that send anything anywhere.</p>
-            <p style="margin-top:12px;">They are the tools under <strong>Networking</strong>, which look up a domain, an address or a certificate; the <strong>Reference</strong> tools, which fetch the article, definition or passage you asked for; and a handful elsewhere — the weather, a map search and today's exchange rates. What leaves your device is the thing you typed into that tool, and nothing else.</p>
+            <p>Toolbox is a collection of over 100 practical tools for everyday problems. Most tools run entirely locally in your browser, so your files and text never leave your device. A small number — marked <strong>online</strong> on their card — require an internet connection to fetch real-time data.</p>
+            <p style="margin-top:12px;">This includes tools like the AI Assistant (which uses the Gemini API), Networking tools, Sound Effects (which fetches real audio from iTunes), and tools for checking the weather or exchange rates. In these cases, only the specific query you enter is sent securely to the necessary public service.</p>
             <p style="margin-top:12px;">The <strong>Code Playground</strong> downloads a language runtime the first time you use it — Python, SQLite, Lua or the TypeScript compiler — and then caches it. Code in those languages runs on your own machine and is never uploaded. The compiled languages are the exception: no browser can host a C or Swift toolchain, so that code is sent to a public build server to run, and the tool tells you before you press Run.</p>
             <p style="margin-top:12px;">The core principle: <strong>many capabilities, few concepts, no manual required.</strong></p>
           </section>
@@ -247,7 +257,7 @@
           <section class="support-section">
             <h2 class="support-heading">Saving and moving your work</h2>
             <p>Most tools are a one-shot job: open, do the thing, close the tab. Nothing is kept and nothing needs to be.</p>
-            <p style="margin-top:12px;">Some tools make something worth keeping — a tidied-up document, a converted file, a diagram, some code. Those show a <strong>Save</strong> button underneath. Saving puts a copy in <strong>this browser</strong>, on <strong>this device</strong>, and nowhere else. It is not an account and it is not a backup: clearing your browsing data removes it, and it will not appear in another browser or on your phone. Anything you would be sorry to lose should be downloaded as a real file.</p>
+            <p style="margin-top:12px;">Some tools make something worth keeping — a tidied-up document, a converted file, a diagram, some code. Those show a <strong>Save</strong> button underneath. By default, saving puts a copy only in your local browser storage. However, you can now link a cloud account from the main menu to enable <strong>Cloud Sync</strong>, which securely backs up your saved tools and settings across all your devices.</p>
             <p style="margin-top:12px;">The same strip offers <strong>Open in…</strong>, which hands what you are looking at straight to another tool that can take it — a CSV into the JSON formatter, a diagram into the code runner. Nothing is saved when you do that; it is a handover, not a filing decision.</p>
             <p style="margin-top:12px;">Everything you have saved lives under <strong>Saved</strong>, which only appears once there is something in it. From there you can rename things, download one item or all of them as a single file, and open that file again later or on another machine.</p>
             <p style="margin-top:12px;">In private browsing, or where storage is switched off, saving cannot keep anything past the tab. Toolbox says so at the point you try rather than pretending otherwise.</p>

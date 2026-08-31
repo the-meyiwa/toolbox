@@ -149,20 +149,22 @@ export default {
             </svg>
           </button>
 
-          <div style="flex:1; position:relative;">
-            <textarea
-              id="ast-user-input"
-              class="tool-input"
-              placeholder="Ask anything, drag & drop a file, request code, or trigger tools..."
-              rows="1"
-              style="width:100%; min-height:44px; max-height:140px; padding:11px 16px; resize:none; border-radius:24px; font-size:0.92rem; line-height:1.45; font-family:inherit; border:1px solid var(--g300); background:var(--white); box-sizing:border-box;"
-            ></textarea>
-          </div>
+          <div style="flex:1; display:flex; align-items:flex-end;">
+            <div style="flex:1; position:relative; display:flex;">
+              <textarea
+                id="ast-user-input"
+                class="tool-input"
+                placeholder="Ask anything, drag & drop a file, request code, or trigger tools..."
+                rows="1"
+                style="display:block; margin:0; width:100%; min-height:44px; max-height:140px; padding:11px 16px; resize:none; border-radius:24px 0 0 24px; font-size:0.92rem; line-height:1.45; font-family:inherit; border:1px solid var(--g300); border-right:none; background:var(--white); box-sizing:border-box;"
+              ></textarea>
+            </div>
 
-          <button type="button" class="btn btn-primary" id="ast-send-btn" style="height:44px; padding:0 22px; border-radius:9999px; font-weight:700; display:flex; align-items:center; gap:6px; flex-shrink:0;">
-            <span>Send</span>
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-          </button>
+            <button type="button" class="btn btn-primary" id="ast-send-btn" style="height:44px; padding:0 22px; border-radius:0 24px 24px 0; font-weight:700; display:flex; align-items:center; gap:6px; flex-shrink:0; border:1px solid var(--black); border-left:none; box-sizing:border-box; margin:0;">
+              <span>Send</span>
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+          </div>
         </div>
 
       </div>

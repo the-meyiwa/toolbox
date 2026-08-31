@@ -49,6 +49,7 @@ const viewportDesc = $('viewport-desc');
 let viewportContent = $('viewport-content');
 const relatedBar = $('tool-related');
 const backBtn = $('back-btn');
+const popoutBtn = $('popout-btn');
 const searchInput = $('search');
 const searchWrapper = $('search-wrapper');
 const logo = $('logo');
@@ -260,6 +261,7 @@ async function openTool(id) {
   viewportContent.replaceWith(freshContent);
   viewportContent = freshContent;
   if (relatedBar) relatedBar.hidden = true;
+  if (popoutBtn) popoutBtn.style.display = tool.standalone ? 'inline-flex' : 'none';
   viewport.classList.remove('hidden');
   void viewport.offsetWidth;
   viewport.classList.add('fade-in');
@@ -466,6 +468,14 @@ grid.addEventListener('click', (e) => {
   }
 });
 backBtn.addEventListener('click', () => { window.location.hash = '#tools'; });
+if (popoutBtn) {
+  popoutBtn.addEventListener('click', () => {
+    if (!currentToolId) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('standalone', 'true');
+    window.open(url.toString(), '_blank');
+  });
+}
 logo.addEventListener('click', (e) => { e.preventDefault(); window.location.hash = '#home'; });
 window.addEventListener('hashchange', handleHash);
 window.addEventListener('pagehide', () => currentSession?.dispose());
@@ -734,6 +744,11 @@ reflectSavedWork();
 initTheme();
 installSettingsUI();
 installHeaderMenu();
+
+const isStandalone = new URLSearchParams(window.location.search).get('standalone') === 'true';
+if (isStandalone) {
+  document.body.classList.add('standalone-mode');
+}
 
 renderGrid(TOOLS);
 installCategoryChips();

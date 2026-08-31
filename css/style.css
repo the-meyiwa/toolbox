@@ -41,6 +41,7 @@
 
 /* --- Reset --- */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+input, button, textarea, select { font-family: inherit; }
 
 html {
   font-size: 16px;
@@ -696,12 +697,12 @@ body {
 }
 
 .btn-primary { background: var(--black); color: var(--white); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-.btn-primary:hover { background: var(--g800); transform: translateY(-2px); box-shadow: 0 8px 16px rgba(0,0,0,0.15); }
-.btn-primary:active { transform: translateY(0); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.btn-primary:hover { background: var(--g800); box-shadow: 0 0 12px rgba(0,0,0,0.08); }
+.btn-primary:active { box-shadow: 0 0 12px rgba(0,0,0,0.08); }
 
 .btn-secondary { background: var(--white); color: var(--black); border-color: var(--g200); box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
-.btn-secondary:hover { background: var(--white); border-color: var(--black); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.06); }
-.btn-secondary:active { transform: translateY(0); box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
+.btn-secondary:hover { background: var(--white); border-color: var(--black); box-shadow: 0 0 12px rgba(0,0,0,0.08); }
+.btn-secondary:active { box-shadow: 0 0 12px rgba(0,0,0,0.08); }
 
 .btn-sm { height: 32px; padding: 0 16px; font-size: 0.78rem; border-radius: 9999px; }
 
@@ -808,7 +809,7 @@ body {
   user-select: none;
   box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
-.copy-btn:hover { border-color: var(--black); color: var(--black); transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.06); }
+.copy-btn:hover { border-color: var(--black); color: var(--black); box-shadow: 0 0 12px rgba(0,0,0,0.08); }
 .copy-btn.copied { background: var(--black); border-color: var(--black); color: var(--white); }
 
 /* Checkbox */
@@ -1620,7 +1621,7 @@ mark.regex-match {
   }
 }
 
-#tips-fab:hover { transform: scale(1.05); background: var(--g800) !important; }
+#tips-fab:hover { background: var(--g800) !important;  box-shadow: 0 0 12px rgba(0,0,0,0.08); }
 
 /* ============================================================
    3D TOOLS — shared layout for Anatomy Explorer & Container Planner
@@ -1936,7 +1937,7 @@ mark.regex-match {
   padding: 0;
   transition: transform 140ms, border-color 140ms;
 }
-.cp-swatch:hover { transform: scale(1.08); }
+.cp-swatch:hover {  box-shadow: 0 0 12px rgba(0,0,0,0.08); }
 .cp-swatch.is-active { border-color: var(--black); transform: scale(1.08); }
 
 .cp-add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
@@ -3855,7 +3856,7 @@ input, select, textarea {
   border: 1px solid var(--g200); cursor: pointer; padding: 0;
   transition: transform 120ms, box-shadow 120ms;
 }
-.rc-sw:hover { transform: translateY(-1px); }
+.rc-sw:hover {  box-shadow: 0 0 12px rgba(0,0,0,0.08); }
 .rc-sw.is-on { box-shadow: 0 0 0 2px var(--black); }
 .rc-result { margin-top: 12px; }
 .rc-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -4137,7 +4138,7 @@ input, select, textarea {
   background: var(--white); cursor: pointer; width: 100%;
   transition: border-color 140ms, transform 140ms;
 }
-.wk-card:hover { border-color: var(--black); transform: translateY(-1px); }
+.wk-card:hover { border-color: var(--black);  box-shadow: 0 0 12px rgba(0,0,0,0.08); }
 .wk-card-thumb {
   width: 72px; height: 72px; flex-shrink: 0; object-fit: cover;
   border-radius: 8px; background: var(--g100);
@@ -4472,7 +4473,7 @@ input, select, textarea {
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .home-search span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.home-search:hover { border-color: var(--g300); box-shadow: 0 8px 20px rgba(0,0,0,0.05); transform: translateY(-1px); }
+.home-search:hover { border-color: var(--g300); box-shadow: 0 0 12px rgba(0,0,0,0.08); }
 .home-search kbd { flex: none; }
 
 .home-tasks {
@@ -4775,8 +4776,8 @@ input, select, textarea {
   50%      { transform: translate(-22%, -34%) scale(1.34); }
 }
 
-.surprise:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(11, 25, 90, 0.35); }
-.surprise:active { transform: translateY(0); }
+.surprise:hover { box-shadow: 0 0 12px rgba(0,0,0,0.08); }
+.surprise:active { }
 .surprise[aria-expanded="true"] { box-shadow: 0 12px 26px rgba(11, 25, 90, 0.3); }
 
 /* ---- the reveal ---- */
@@ -4903,7 +4904,7 @@ input, select, textarea {
 
 .sp-spaces-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 16px; margin-top: 16px; }
 .sp-card { background: var(--white); border: 1px solid var(--g150); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 10px; transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, box-shadow 0.25s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
-.sp-card:hover { transform: translateY(-3px); border-color: var(--g300); box-shadow: 0 12px 28px rgba(0,0,0,0.06); }
+.sp-card:hover { border-color: var(--g300); box-shadow: 0 0 12px rgba(0,0,0,0.08); }
 .sp-card-top { display: flex; align-items: center; justify-content: space-between; }
 .sp-code-badge { font-family: var(--mono); font-size: 0.76rem; font-weight: 600; letter-spacing: 0.1em; background: var(--g50); color: var(--black); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--g150); }
 .sp-card-name { font-size: 1.05rem; font-weight: 600; letter-spacing: -0.02em; margin: 2px 0 0; color: var(--black); }
@@ -5007,7 +5008,7 @@ input, select, textarea {
 
 .sp-quick-actions { display: flex; flex-direction: column; gap: 8px; }
 .sp-quick-link { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--white); border: 1px solid var(--g150); border-radius: 12px; text-align: left; text-decoration: none; color: inherit; cursor: pointer; transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s ease, box-shadow 0.2s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
-.sp-quick-link:hover { transform: translateY(-2px); border-color: var(--g300); box-shadow: 0 8px 18px rgba(0,0,0,0.05); }
+.sp-quick-link:hover { border-color: var(--g300); box-shadow: 0 0 12px rgba(0,0,0,0.08); }
 .sp-quick-icon { flex-shrink: 0; width: 34px; height: 34px; background: var(--g50); border: 1px solid var(--g150); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--black); }
 .sp-quick-info { flex: 1; }
 .sp-quick-info strong { display: block; font-size: 0.86rem; font-weight: 600; margin-bottom: 2px; }
@@ -5037,7 +5038,7 @@ input, select, textarea {
 
 .sp-artifacts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 18px; }
 .sp-art-card { background: var(--white); border: 1px solid var(--g150); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease; }
-.sp-art-card:hover { transform: translateY(-3px); border-color: var(--g300); box-shadow: 0 12px 28px rgba(0,0,0,0.06); }
+.sp-art-card:hover { border-color: var(--g300); box-shadow: 0 0 12px rgba(0,0,0,0.08); }
 .sp-art-card-top { display: flex; align-items: center; justify-content: space-between; }
 .sp-art-title { font-size: 1rem; font-weight: 600; margin: 2px 0 0; word-break: break-all; }
 .sp-art-time { font-family: var(--mono); font-size: 0.72rem; color: var(--g400); }
@@ -9404,5 +9405,38 @@ input, select, textarea {
   border-radius: 18px;
 }
 
+/* ============================================================
+   STANDALONE MODE (Pop-out fullscreen tools)
+   ============================================================ */
+body.standalone-mode #app-header,
+body.standalone-mode #mobile-nav,
+body.standalone-mode .viewport-header,
+body.standalone-mode #tips-fab,
+body.standalone-mode #tool-related {
+  display: none !important;
+}
 
+body.standalone-mode #tool-viewport {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+}
 
+body.standalone-mode #viewport-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Ensure complex tools like the IDE and Notes fill the space without rounded corners */
+body.standalone-mode .ide-root,
+body.standalone-mode .notes-app-wrapper {
+  height: 100% !important;
+  border-radius: 0 !important;
+  border: none !important;
+}

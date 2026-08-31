@@ -141,24 +141,7 @@ function renderAiSettings() {
       <span class="settings-section-hint">Configure API keys, reasoning mode, and usage quotas</span>
     </div>
 
-    <!-- API KEY CARD -->
-    <div style="background:var(--g50); border:1px solid var(--g200); border-radius:14px; padding:16px; margin-bottom: 20px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-        <label style="font-size:0.86rem; font-weight:700; color:var(--black);">API Key</label>
-        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style="font-size:0.75rem; color:#2563eb; font-weight:600; text-decoration:underline;">
-          Get Free Key &rarr;
-        </a>
-      </div>
-      <p style="margin:0 0 10px; font-size:0.75rem; color:var(--g600); line-height:1.4;">
-        All Assistant reasoning, code generation, and multi-tool workflows run online with real-time streaming.
-      </p>
-      <div style="display:flex; gap:8px;">
-        <input type="password" id="modal-gemini-key-input" class="tool-input" placeholder="Enter API key..." value="${currentApiKey}" style="flex:1; padding:8px 12px; font-size:0.84rem; font-family:monospace; border-radius:8px; border:1px solid var(--g300);">
-        <button type="button" class="btn btn-primary btn-sm" id="modal-btn-save-key" style="padding:0 16px; font-weight:700;">Save Key</button>
-        <button type="button" class="btn btn-secondary btn-sm" id="modal-btn-test-key" style="padding:0 12px;">Test</button>
-      </div>
-      <div id="modal-key-feedback" style="font-size:0.76rem; margin-top:8px; display:none;"></div>
-    </div>
+
 
     <!-- MODE SELECTION CARDS -->
     <div style="margin-bottom: 20px;">
@@ -203,46 +186,7 @@ function renderAiSettings() {
     </div>
   `;
 
-  // Save Key
-  const saveKeyBtn = container.querySelector('#modal-btn-save-key');
-  const keyInput = container.querySelector('#modal-gemini-key-input');
-  const feedbackEl = container.querySelector('#modal-key-feedback');
 
-  saveKeyBtn?.addEventListener('click', () => {
-    const val = keyInput?.value?.trim() || '';
-    setGeminiApiKey(val);
-    if (feedbackEl) {
-      feedbackEl.style.display = 'block';
-      feedbackEl.style.color = '#16a34a';
-      feedbackEl.textContent = val ? '✓ API key saved successfully!' : 'API key cleared.';
-      setTimeout(() => { if (feedbackEl) feedbackEl.style.display = 'none'; }, 3000);
-    }
-  });
-
-  // Test Key
-  const testKeyBtn = container.querySelector('#modal-btn-test-key');
-  testKeyBtn?.addEventListener('click', async () => {
-    const val = keyInput?.value?.trim() || getGeminiApiKey();
-    if (!val) {
-      if (feedbackEl) {
-        feedbackEl.style.display = 'block';
-        feedbackEl.style.color = '#ef4444';
-        feedbackEl.textContent = 'Please enter an API key first.';
-      }
-      return;
-    }
-    if (feedbackEl) {
-      feedbackEl.style.display = 'block';
-      feedbackEl.style.color = 'var(--g600)';
-      feedbackEl.textContent = 'Testing connection...';
-    }
-    const res = await testAiProviderConnection('gemini', val);
-    if (feedbackEl) {
-      feedbackEl.style.display = 'block';
-      feedbackEl.style.color = res.success ? '#16a34a' : '#ef4444';
-      feedbackEl.textContent = res.success ? `✓ ${res.message} (${res.latencyMs}ms)` : `Error: ${res.message}`;
-    }
-  });
 
   // Mode Selection
   container.querySelectorAll('.ai-mode-card').forEach(card => {

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Assistant Stress Test - Zero Quota</title>
+  <style>
+    body { font-family: 'Courier New', monospace; background: #000; color: #fff; padding: 20px; max-width: 900px; margin: 0 auto; }
+    h1 { border-bottom: 2px solid #333; padding-bottom: 10px; }
+    .phase { margin-bottom: 24px; padding: 16px; border: 1px solid #333; border-radius: 8px; background: #111; }
+    .success { color: #4ade80; margin-top: 0; }
+    .error { color: #f87171; margin-top: 0; }
+    pre { background: #000; padding: 12px; overflow-x: auto; border: 1px solid #222; border-radius: 4px; font-size: 0.85rem; }
+    .running { color: #fbbf24; }
+  </style>
+</head>
+<body>
+  <h1>Assistant Feature Stress Test (0 Quota)</h1>
+  <p style="color:#aaa;">This harness directly tests the underlying JavaScript execution pipelines for the AI tools, completely bypassing the Gemini API to consume 0 quota.</p>
+  
+  <div id="log"></div>
+
+  <!-- Required for sound effects tool to not throw error -->
+  <audio id="sfx-player"></audio>
+
+  <script type="module">
+    import { executeAssistantTool } from './js/lib/assistant-tools.js';
+
+    const logDiv = document.getElementById('log');
+
+    function createLogEntry(phase, name) {
+      const div = document.createElement('div');
+      div.className = 'phase';
+      div.innerHTML = `<h3 class="running" id="title-${phase.replace(' ', '-')}">[RUNNING] ${phase}: ${name}</h3><pre id="pre-${phase.replace(' ', '-')}">...</pre>`;
+      logDiv.appendChild(div);
+      return div;
+    }
+
+    function completeLogEntry(phase, name, result, isError = false) {
+      const p = phase.replace(' ', '-');
+      document.getElementById(`title-${p}`).className = isError ? 'error' : 'success';
+      document.getElementById(`title-${p}`).innerHTML = `[${isError ? 'FAIL' : 'PASS'}] ${phase}: ${name}`;
+      document.getElementById(`pre-${p}`).textContent = JSON.stringify(result, null, 2);
+    }
+
+    const context = { taskState: {} };
+    
+    async function runTest() {
+      // 1. Basic
+      createLogEntry('Phase 1', 'generate_uuid');
+      try {
+        const r1 = await executeAssistantTool('generate_uuid', {}, context);
+        completeLogEntry('Phase 1', 'generate_uuid', r1);
+      } catch (e) { completeLogEntry('Phase 1', 'generate_uuid', e.stack || e.message, true); }
+
+      // 2. UI Navigation
+      createLogEntry('Phase 2', 'open_toolbox_tool (standalone)');
+      try {
+        // Intercept window.open so we don't actually pop tabs during automated test
+        const originalOpen = window.open;
+        let openedUrl = null;
+        window.open = (url) => { openedUrl = url; };
+        
+        const r2 = await executeAssistantTool('open_toolbox_tool', { toolId: 'code-playground', standalone: true }, context);
+        window.open = originalOpen; // restore
+        
+        r2.interceptedWindowOpenUrl = openedUrl;
+        completeLogEntry('Phase 2', 'open_toolbox_tool', r2);
+      } catch (e) { completeLogEntry('Phase 2', 'open_toolbox_tool', e.stack || e.message, true); }
+
+      // 3. Save Data (Notes)
+      createLogEntry('Phase 3', 'create_note');
+      try {
+        const r3 = await executeAssistantTool('create_note', { title: 'Stress Test Note', content: 'Testing offline notes.' }, context);
+        completeLogEntry('Phase 3', 'create_note', r3);
+      } catch (e) { completeLogEntry('Phase 3', 'create_note', e.stack || e.message, true); }
+
+      // 4. External API Fetch (Sound Effects)
+      createLogEntry('Phase 4', 'play_sound_effect');
+      try {
+        const r4 = await executeAssistantTool('play_sound_effect', { query: 'cat meow' }, context);
+        completeLogEntry('Phase 4', 'play_sound_effect', r4);
+      } catch (e) { completeLogEntry('Phase 4', 'play_sound_effect', e.stack || e.message, true); }
+
+      // 5. Complex Math
+      createLogEntry('Phase 5', 'evaluate_math_expression');
+      try {
+        const r5 = await executeAssistantTool('evaluate_math_expression', { expression: 'derivative of x^2 + 3x at x=2' }, context);
+        completeLogEntry('Phase 5', 'evaluate_math_expression', r5);
+      } catch (e) { completeLogEntry('Phase 5', 'evaluate_math_expression', e.stack || e.message, true); }
+
+      // 6. Networking
+      createLogEntry('Phase 6', 'dns_lookup');
+      try {
+        const r6 = await executeAssistantTool('dns_lookup', { domain: 'google.com', recordType: 'A' }, context);
+        completeLogEntry('Phase 6', 'dns_lookup', r6);
+      } catch (e) { completeLogEntry('Phase 6', 'dns_lookup', e.stack || e.message, true); }
+
+      // 7. Chemistry Engine
+      createLogEntry('Phase 7', 'balance_chemical_equation');
+      try {
+        const r7 = await executeAssistantTool('balance_chemical_equation', { equation: 'C6H12O6 + O2 = CO2 + H2O' }, context);
+        completeLogEntry('Phase 7', 'balance_chemical_equation', r7);
+      } catch (e) { completeLogEntry('Phase 7', 'balance_chemical_equation', e.stack || e.message, true); }
+
+      // 8. Sandboxed Code Execution
+      createLogEntry('Phase 8', 'run_code (Python)');
+      try {
+        const r8 = await executeAssistantTool('run_code', { language: 'python', code: 'def fib(n):\n    return n if n <= 1 else fib(n-1) + fib(n-2)\nprint("Fib(10) =", fib(10))' }, context);
+        completeLogEntry('Phase 8', 'run_code', r8);
+      } catch (e) { completeLogEntry('Phase 8', 'run_code', e.stack || e.message, true); }
+
+      // 9. Multi-Step Chained Simulation
+      createLogEntry('Phase 9', 'Chained Execution Simulation');
+      try {
+        const codeRes = await executeAssistantTool('run_code', { language: 'javascript', code: 'console.log("Multi-step success")' }, context);
+        const noteRes = await executeAssistantTool('create_note', { title: 'Chain Result', content: codeRes.output }, context);
+        
+        const originalHash = window.location.hash;
+        const openRes = await executeAssistantTool('open_toolbox_tool', { toolId: 'notes', standalone: false }, context);
+        const newHash = window.location.hash;
+        window.location.hash = originalHash; // Restore
+        
+        openRes.resultantHash = newHash;
+
+        completeLogEntry('Phase 9', 'Chained Execution Simulation', { step1: codeRes, step2: noteRes, step3: openRes });
+      } catch (e) { completeLogEntry('Phase 9', 'Chained Execution Simulation', e.stack || e.message, true); }
+    }
+
+    // Run tests sequentially
+    setTimeout(runTest, 500);
+  </script>
+</body>
+</html>

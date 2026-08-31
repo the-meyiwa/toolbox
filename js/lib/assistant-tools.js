@@ -6,6 +6,7 @@
    ============================================================ */
 
 import TOOLS from '../registry/tools.js';
+import { cleanText } from '../utils.js';
 import { LANGUAGES, makeWorker } from './code-runtimes.js';
 import { calculateMolarMass, balanceChemicalEquation, calculateStoichiometry } from './chemistry-engine.js';
 import { COMPOUNDS_DATA } from './compounds-dataset.js';
@@ -343,7 +344,7 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
   },
   {
     name: 'create_note',
-    description: 'Creates and saves a new note directly in the user\'s Notes workspace (supports title, multi-line body, checklists, and folder organization).',
+    description: 'Creates and saves a new note directly in the user\'s Notes workspace. ALWAYS creates a new pinned note; DO NOT attempt to edit or overwrite existing notes. The text is automatically cleaned before saving.',
     parameters: {
       type: 'OBJECT',
       properties: {
@@ -358,10 +359,6 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
         folder: {
           type: 'STRING',
           description: 'Optional folder: "quick", "work", "personal", "archive". Default "quick".'
-        },
-        pinned: {
-          type: 'BOOLEAN',
-          description: 'Whether to pin the note to the top (default false).'
         }
       },
       required: ['title', 'content']
@@ -411,9 +408,27 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
         toolId: {
           type: 'STRING',
           description: 'The tool ID to open (e.g. "code-playground", "periodic-table", "calculator", "notes", "file-drop", "speed-test").',
+        },
+        standalone: {
+          type: 'BOOLEAN',
+          description: 'If true, opens the tool in a full-screen standalone pop-out tab. Highly recommended for complex tools like code-playground and notes.'
         }
       },
       required: ['toolId']
+    }
+  },
+  {
+    name: 'play_sound_effect',
+    description: 'Searches for and plays a sound effect or audio clip directly in the browser using the iTunes API.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        query: {
+          type: 'STRING',
+          description: 'The sound effect to search for (e.g. "laser", "wilhelm scream", "applause").'
+        }
+      },
+      required: ['query']
     }
   }
 ];
@@ -1022,7 +1037,7 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
     }
 
     case 'create_note': {
-      const { title = 'Untitled Note', content = '', folder = 'quick', pinned = false } = args;
+      const { title = 'Untitled Note', content = '', folder = 'quick' } = args;
       const STORAGE_KEY = 'toolbox_notes_v1';
       let notes = [];
       try {
@@ -1033,9 +1048,9 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
       const newNote = {
         id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         title: title.trim(),
-        body: content,
+        body: cleanText(content),
         folder: folder || 'quick',
-        pinned: Boolean(pinned),
+        pinned: true, // Always pin new notes
         updatedAt: Date.now()
       };
 
@@ -1092,9 +1107,41 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
     }
 
     case 'open_toolbox_tool': {
-      const { toolId } = args;
-      window.location.hash = `#${toolId}`;
-      return { status: 'success', openedToolId: toolId, message: `Opened tool: #${toolId}` };
+      const { toolId, standalone } = args;
+      if (standalone) {
+        window.open(`/?standalone=true#${toolId}`, '_blank');
+        return { status: 'success', openedToolId: toolId, message: `Opened tool: #${toolId} in standalone fullscreen mode.` };
+      } else {
+        window.location.hash = `#${toolId}`;
+        return { status: 'success', openedToolId: toolId, message: `Opened tool: #${toolId}` };
+      }
+    }
+
+    case 'play_sound_effect': {
+      const query = args.query || 'sound effect';
+      try {
+        const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent('sound effect ' + query)}&entity=song&limit=5`);
+        const data = await res.json();
+        const tracks = data.results.filter(r => r.previewUrl);
+        
+        if (!tracks.length) {
+          return { status: 'error', message: `No sound effects found for "${query}".` };
+        }
+
+        const track = tracks[0];
+        const audio = new Audio(track.previewUrl);
+        audio.volume = 1.0;
+        audio.play().catch(() => {});
+
+        return { 
+          status: 'success', 
+          track: track.trackName, 
+          artist: track.artistName,
+          message: `Currently playing "${track.trackName}" by ${track.artistName}.`
+        };
+      } catch (err) {
+        return { status: 'error', message: `Failed to fetch sound effect: ${err.message}` };
+      }
     }
 
     default:
