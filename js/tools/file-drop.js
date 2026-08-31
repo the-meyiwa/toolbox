@@ -7,6 +7,7 @@
    ============================================================ */
 
 import QRCode from 'qrcode';
+import { sendP2PSignal, pollP2PSignals } from '../lib/supabase.js';
 
 export default {
   pc: null,
@@ -203,6 +204,9 @@ export default {
     const rxStatus = container.querySelector('#p2p-rx-status');
 
     const self_ = this;
+    const clientId = `client_${Math.random().toString(36).substr(2, 9)}`;
+    let lastPollTime = new Date().toISOString();
+    let pollInterval = null;
 
     // Render QR Code
     const renderQR = () => {
@@ -217,6 +221,127 @@ export default {
       });
     };
     renderQR();
+
+    // Start WebRTC DataChannel Setup
+    function setupWebRTC() {
+      if (self_.pc) self_.pc.close();
+      
+      self_.pc = new RTCPeerConnection({
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:global.stun.twilio.com:3478' }
+        ]
+      });
+
+      self_.pc.onicecandidate = (e) => {
+        if (e.candidate) {
+          sendSignal('ice', e.candidate);
+        }
+      };
+
+      self_.pc.ondatachannel = (e) => {
+        self_.dc = e.channel;
+        setupDataChannel();
+      };
+
+      self_.pc.onconnectionstatechange = () => {
+        if (self_.pc.connectionState === 'connected') {
+          peerStatusDot.style.background = '#22c55e';
+          peerStatusText.textContent = 'WebRTC DataChannel connected!';
+          rxStatus.textContent = 'Securely connected via P2P.';
+          isConnected = true;
+          
+          if (mode === 'send' && selectedFile) {
+            sendFileViaRTC();
+          }
+        }
+      };
+    }
+
+    function setupDataChannel() {
+      if (!self_.dc) return;
+      
+      self_.dc.binaryType = 'arraybuffer';
+      
+      self_.dc.onmessage = (e) => {
+        if (typeof e.data === 'string') {
+          try {
+            const msg = JSON.parse(e.data);
+            if (msg.type === 'file-info') {
+              incomingCard.style.display = 'block';
+              rxName.textContent = msg.file.name;
+              rxSize.textContent = formatBytes(msg.file.size);
+              self_.expectedFile = msg.file;
+              self_.fileChunks = [];
+              self_.receivedBytes = 0;
+              rxStatus.textContent = 'Receiving secure data stream...';
+            } else if (msg.type === 'file-done') {
+              assembleReceivedFile();
+            }
+          } catch {}
+        } else {
+          // Binary chunk
+          self_.fileChunks.push(e.data);
+          self_.receivedBytes += e.data.byteLength;
+          const pct = Math.min(100, Math.round((self_.receivedBytes / (self_.expectedFile?.size || 1)) * 100));
+          rxBar.style.width = `${pct}%`;
+        }
+      };
+    }
+
+    async function startAsSender() {
+      setupWebRTC();
+      self_.dc = self_.pc.createDataChannel('fileTransfer');
+      setupDataChannel();
+      
+      const offer = await self_.pc.createOffer();
+      await self_.pc.setLocalDescription(offer);
+      await sendSignal('offer', offer);
+    }
+
+    async function sendSignal(type, payload) {
+      await sendP2PSignal(roomCode, clientId, type, payload);
+      // Fallback local signaling
+      if (self_.bc) try { self_.bc.postMessage({ type, payload, senderId: clientId }); } catch {}
+      try { localStorage.setItem(`p2p_sig_${roomCode}`, JSON.stringify({ type, payload, senderId: clientId, time: Date.now() })); } catch {}
+    }
+
+    async function handleSignaling(msg) {
+      if (!msg || msg.senderId === clientId) return;
+
+      if (msg.type === 'peer-joined' && mode === 'send') {
+        peerStatusText.textContent = 'Phone seen! Negotiating connection...';
+        startAsSender();
+      } else if (msg.type === 'offer' && mode === 'receive') {
+        setupWebRTC();
+        await self_.pc.setRemoteDescription(new RTCSessionDescription(msg.payload));
+        const answer = await self_.pc.createAnswer();
+        await self_.pc.setLocalDescription(answer);
+        await sendSignal('answer', answer);
+      } else if (msg.type === 'answer' && mode === 'send') {
+        await self_.pc.setRemoteDescription(new RTCSessionDescription(msg.payload));
+      } else if (msg.type === 'ice') {
+        try {
+          if (self_.pc) await self_.pc.addIceCandidate(new RTCIceCandidate(msg.payload));
+        } catch {}
+      }
+    }
+
+    // Polling Supabase Database
+    const startPolling = () => {
+      if (pollInterval) clearInterval(pollInterval);
+      pollInterval = setInterval(async () => {
+        const signals = await pollP2PSignals(roomCode, lastPollTime);
+        if (signals.length) {
+          lastPollTime = signals[signals.length - 1].created_at;
+          signals.forEach(s => {
+            if (s.sender_id !== clientId) handleSignaling({ type: s.message_type, payload: s.payload, senderId: s.sender_id });
+          });
+        }
+      }, 2000);
+    };
+
+    startPolling();
 
     // BroadcastChannel for instant same-browser tab signaling
     try {
@@ -258,7 +383,8 @@ export default {
         self_.bc = new BroadcastChannel(`toolbox_filedrop_${roomCode}`);
         self_.bc.onmessage = (e) => handleSignaling(e.data);
         rxStatus.textContent = `Connected to room ${roomCode}. Waiting for sender...`;
-        broadcast({ type: 'peer-joined', room: roomCode });
+        sendSignal('peer-joined', {});
+        startPolling();
       }
     });
 
@@ -308,58 +434,9 @@ export default {
       progressBar.style.width = '0%';
       progressPct.textContent = '0%';
 
-      // Announce file ready to any connected peer
-      broadcast({
-        type: 'file-info',
-        room: roomCode,
-        file: { name: file.name, size: file.size, type: file.type }
-      });
-    }
-
-    function broadcast(msg) {
-      if (self_.bc) {
-        try { self_.bc.postMessage(msg); } catch {}
-      }
-      // Also store in localStorage as fallback signaling channel
-      try {
-        localStorage.setItem(`p2p_sig_${roomCode}`, JSON.stringify({ ...msg, time: Date.now() }));
-      } catch {}
-    }
-
-    // Handle incoming peer messages
-    function handleSignaling(msg) {
-      if (!msg || msg.room !== roomCode) return;
-
-      if (msg.type === 'peer-joined') {
-        peerStatusDot.style.background = '#22c55e';
-        peerStatusText.textContent = 'Phone connected via local link!';
-        if (selectedFile) {
-          sendFileDirectly();
-        }
-      } else if (msg.type === 'file-info') {
-        incomingCard.style.display = 'block';
-        rxName.textContent = msg.file.name;
-        rxSize.textContent = formatBytes(msg.file.size);
-        self_.expectedFile = msg.file;
-        self_.fileChunks = [];
-        self_.receivedBytes = 0;
-        rxStatus.textContent = 'Receiving file chunks from sender...';
-        // Send acknowledgement
-        broadcast({ type: 'ready-to-receive', room: roomCode });
-      } else if (msg.type === 'ready-to-receive') {
-        if (selectedFile) {
-          sendFileDirectly();
-        }
-      } else if (msg.type === 'file-chunk') {
-        // Collect chunk
-        self_.fileChunks.push(msg.chunk);
-        self_.receivedBytes += msg.chunk.length;
-        const pct = Math.min(100, Math.round((self_.receivedBytes / (self_.expectedFile?.size || 1)) * 100));
-        rxBar.style.width = `${pct}%`;
-
-        if (msg.done) {
-          assembleReceivedFile();
-        }
+      // If WebRTC is ready, send info right away
+      if (isConnected && self_.dc && self_.dc.readyState === 'open') {
+        sendFileViaRTC();
       }
     }
 
@@ -371,36 +448,41 @@ export default {
     };
     window.addEventListener('storage', storageHandler);
     this._cleanupStorage = () => window.removeEventListener('storage', storageHandler);
+    this._cleanupPoll = () => { if (pollInterval) clearInterval(pollInterval); };
 
-    // Chunked Sender
-    async function sendFileDirectly() {
-      if (!selectedFile || isTransferring) return;
+    // WebRTC Chunked Sender
+    async function sendFileViaRTC() {
+      if (!selectedFile || isTransferring || !self_.dc || self_.dc.readyState !== 'open') return;
       isTransferring = true;
-      progressLabel.textContent = `Streaming ${selectedFile.name} to phone...`;
-      peerStatusText.textContent = 'Streaming data...';
+      progressLabel.textContent = `Streaming ${selectedFile.name} over WebRTC...`;
+      
+      self_.dc.send(JSON.stringify({
+        type: 'file-info',
+        file: { name: selectedFile.name, size: selectedFile.size, type: selectedFile.type }
+      }));
 
-      const chunkSize = 64 * 1024; // 64 KB
+      const chunkSize = 16384; // 16 KB for reliable WebRTC transmission
       let offset = 0;
       const total = selectedFile.size;
       const startTime = Date.now();
 
       while (offset < total) {
+        if (self_.dc.bufferedAmount > chunkSize * 64) {
+          await new Promise(r => setTimeout(r, 50));
+          continue;
+        }
+
         const slice = selectedFile.slice(offset, offset + chunkSize);
         const arrayBuf = await slice.arrayBuffer();
-        // Convert to base64 for reliable universal signaling
-        const binary = String.fromCharCode.apply(null, new Uint8Array(arrayBuf));
-        const b64 = btoa(binary);
+        
+        try {
+          self_.dc.send(arrayBuf);
+        } catch (err) {
+          console.error('DataChannel error', err);
+          break;
+        }
 
         offset += arrayBuf.byteLength;
-        const isDone = offset >= total;
-
-        broadcast({
-          type: 'file-chunk',
-          room: roomCode,
-          chunk: b64,
-          done: isDone
-        });
-
         const pct = Math.min(100, Math.round((offset / total) * 100));
         progressBar.style.width = `${pct}%`;
         progressPct.textContent = `${pct}%`;
@@ -409,14 +491,13 @@ export default {
         const mbps = elapsedSec > 0 ? ((offset / (1024 * 1024)) / elapsedSec).toFixed(1) : '0.0';
         progressSpeed.textContent = `${mbps} MB/s · ${formatBytes(offset)} / ${formatBytes(total)}`;
 
-        // Tiny delay to prevent event queue starvation on large files
-        if (offset % (chunkSize * 4) === 0) {
-          await new Promise(r => setTimeout(r, 10));
+        if (offset % (chunkSize * 10) === 0) {
+          await new Promise(r => setTimeout(r, 5));
         }
       }
 
-      progressLabel.textContent = 'File successfully sent to phone!';
-      peerStatusText.textContent = 'Transfer completed!';
+      self_.dc.send(JSON.stringify({ type: 'file-done' }));
+      progressLabel.textContent = 'File successfully sent!';
       isTransferring = false;
     }
 
@@ -427,16 +508,7 @@ export default {
       rxBar.style.width = '100%';
 
       try {
-        const byteArrays = self_.fileChunks.map(b64 => {
-          const byteChars = atob(b64);
-          const byteNums = new Array(byteChars.length);
-          for (let i = 0; i < byteChars.length; i++) {
-            byteNums[i] = byteChars.charCodeAt(i);
-          }
-          return new Uint8Array(byteNums);
-        });
-
-        const blob = new Blob(byteArrays, { type: self_.expectedFile.type || 'application/octet-stream' });
+        const blob = new Blob(self_.fileChunks, { type: self_.expectedFile.type || 'application/octet-stream' });
         const downloadUrl = URL.createObjectURL(blob);
 
         rxDownloadBtn.style.display = 'inline-flex';
@@ -459,16 +531,25 @@ export default {
     // Auto-announce on receiver load
     if (isDirectReceiver) {
       setTimeout(() => {
-        broadcast({ type: 'peer-joined', room: roomCode });
+        sendSignal('peer-joined', {});
       }, 300);
     }
   },
 
   destroy() {
     if (this._cleanupStorage) this._cleanupStorage();
+    if (this._cleanupPoll) this._cleanupPoll();
     if (this.bc) {
       try { this.bc.close(); } catch {}
       this.bc = null;
+    }
+    if (this.dc) {
+      try { this.dc.close(); } catch {}
+      this.dc = null;
+    }
+    if (this.pc) {
+      try { this.pc.close(); } catch {}
+      this.pc = null;
     }
     this.fileChunks = [];
   }

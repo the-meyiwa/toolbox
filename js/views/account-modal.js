@@ -16,6 +16,7 @@ import {
   testSupabaseConnection
 } from '../lib/supabase.js';
 import { QuotaManager } from '../lib/quota-manager.js';
+import { openSettings } from '../lib/settings-ui.js';
 
 let modalEl = null;
 
@@ -108,7 +109,7 @@ function renderModalContent() {
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
             <div class="storage-card ${storageMode === 'local' ? 'active' : ''}" id="opt-storage-local" style="border:2px solid ${storageMode === 'local' ? 'var(--black)' : 'var(--g200)'}; background:${storageMode === 'local' ? 'var(--g100)' : 'var(--white)'}; border-radius:12px; padding:12px; cursor:pointer; transition:all 0.2s;">
               <div style="display:flex; align-items:center; gap:6px; font-weight:700; font-size:0.84rem; color:var(--black);">
-                <span>⚡ Local Device</span>
+                <span>Local Device</span>
                 ${storageMode === 'local' ? '<span style="font-size:0.65rem; background:var(--black); color:#fff; padding:1px 5px; border-radius:999px;">Active</span>' : ''}
               </div>
               <p style="margin:4px 0 0; font-size:0.74rem; color:var(--g600); line-height:1.4;">Zero latency, 100% offline, files stay in your browser disk.</p>
@@ -116,7 +117,7 @@ function renderModalContent() {
 
             <div class="storage-card ${storageMode === 'supabase' ? 'active' : ''}" id="opt-storage-supabase" style="border:2px solid ${storageMode === 'supabase' ? 'var(--black)' : 'var(--g200)'}; background:${storageMode === 'supabase' ? 'var(--g100)' : 'var(--white)'}; border-radius:12px; padding:12px; cursor:pointer; transition:all 0.2s;">
               <div style="display:flex; align-items:center; gap:6px; font-weight:700; font-size:0.84rem; color:var(--black);">
-                <span>☁️ Supabase Cloud</span>
+                <span>Supabase Cloud</span>
                 ${storageMode === 'supabase' ? '<span style="font-size:0.65rem; background:var(--black); color:#fff; padding:1px 5px; border-radius:999px;">Active</span>' : ''}
               </div>
               <p style="margin:4px 0 0; font-size:0.74rem; color:var(--g600); line-height:1.4;">Non-volatile, persistent, accessible across devices.</p>
@@ -124,76 +125,48 @@ function renderModalContent() {
           </div>
         </div>
 
-        <!-- SUPABASE PROJECT CONNECTION -->
-        <div style="background:var(--g50); border:1px solid var(--g200); border-radius:14px; padding:14px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <div style="font-size:0.86rem; font-weight:700; color:var(--black);">Supabase Project Configuration</div>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-test-supabase" style="font-size:0.74rem;">Test Connection</button>
+        <!-- AI ENGINE & PROVIDER QUICK ACCESS -->
+        <div style="background:var(--g50); border:1px solid var(--g200); border-radius:14px; padding:14px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:0.86rem; font-weight:700; color:var(--black);">Generative AI Provider &amp; Keys</div>
+            <div style="font-size:0.75rem; color:var(--g600); margin-top:2px;">Configure Google Gemini, Groq, OpenAI, Ollama, and test keys.</div>
           </div>
-          <p style="margin:0 0 10px; font-size:0.74rem; color:var(--g600); line-height:1.4;">
-            Provide your project URL and public Anon key from your Supabase Dashboard (<b>Project Settings &rarr; API</b>).
-          </p>
-          <div style="display:flex; flex-direction:column; gap:8px;">
-            <div>
-              <label style="font-size:0.72rem; font-weight:700; color:var(--g700); text-transform:uppercase;">Project URL</label>
-              <input type="text" id="supabase-url-input" class="tool-input" placeholder="https://your-project.supabase.co" value="${supabaseConfig.url || ''}" style="width:100%; padding:8px 12px; font-size:0.82rem; font-family:monospace; border-radius:8px;">
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-open-ai-settings-from-account" style="font-size:0.78rem; font-weight:700; display:flex; align-items:center; gap:5px;">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span>Manage AI Keys &rarr;</span>
+          </button>
+        </div>
+
+        <!-- QUOTA & RATE LIMITS SUMMARY -->
+        <div style="background:var(--g50); border:1px solid var(--g200); border-radius:14px; padding:14px;">
+          <div style="font-size:0.82rem; font-weight:700; color:var(--black); margin-bottom:8px; display:flex; justify-content:space-between;">
+            <span>Account Quotas &amp; Limits</span>
+            <span style="color:#22c55e;">Active</span>
+          </div>
+          
+          <div style="display:flex; flex-direction:column; gap:8px; font-size:0.78rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="color:var(--g700);">Daily Messages</span>
+              <span style="font-weight:700; font-family:monospace;">${quota.messagesUsed} / ${quota.messagesLimit} (${quota.messagesRemaining} remaining)</span>
             </div>
-            <div>
-              <label style="font-size:0.72rem; font-weight:700; color:var(--g700); text-transform:uppercase;">Public Anon Key</label>
-              <input type="password" id="supabase-key-input" class="tool-input" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." value="${supabaseConfig.anonKey || ''}" style="width:100%; padding:8px 12px; font-size:0.82rem; font-family:monospace; border-radius:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="color:var(--g700);">Burst Rate Limit</span>
+              <span style="font-weight:700; font-family:monospace;">${quota.burstLimit} msgs / min</span>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
-              <button type="button" class="btn btn-primary btn-sm" id="btn-save-supabase-config" style="font-size:0.78rem;">Save Supabase Keys</button>
-              <span id="supabase-status-msg" style="font-size:0.75rem; font-weight:600;"></span>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="color:var(--g700);">Max Tokens per Request</span>
+              <span style="font-weight:700; font-family:monospace;">${quota.maxOutputTokens} tokens</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="color:var(--g700);">Heavy Tool Tasks</span>
+              <span style="font-weight:700; font-family:monospace;">${quota.heavyTasksUsed} / ${quota.heavyTasksLimit} today</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="color:var(--g700);">Large File Analyses</span>
+              <span style="font-weight:700; font-family:monospace;">${quota.largeFilesUsed} / ${quota.largeFilesLimit} today</span>
             </div>
           </div>
         </div>
-
-        ${user ? `
-          <!-- OPTIONAL API KEY OVERRIDE -->
-          <div>
-            <div style="font-size:0.86rem; font-weight:700; color:var(--black); margin-bottom:6px;">Google Gemini API Key (Custom Override)</div>
-            <p style="margin:0 0 8px; font-size:0.75rem; color:var(--g600); line-height:1.4;">
-              Toolbox includes backend AI proxy capabilities out-of-the-box. You can also provide your own personal key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style="color:var(--black); font-weight:700; text-decoration:underline;">Google AI Studio</a>.
-            </p>
-            <div style="display:flex; gap:8px;">
-              <input type="password" id="custom-api-key-input" class="tool-input" placeholder="AIzaSy..." value="${localStorage.getItem('toolbox_assistant_api_key') || ''}" style="flex:1; padding:8px 12px; font-size:0.84rem; font-family:monospace; border-radius:8px;">
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-save-api-key">Save Key</button>
-            </div>
-            <div id="api-key-save-msg" style="font-size:0.75rem; color:#22c55e; margin-top:4px; display:none;">Saved!</div>
-          </div>
-
-          <!-- QUOTA & RATE LIMITS SUMMARY -->
-          <div style="background:var(--g50); border:1px solid var(--g200); border-radius:14px; padding:14px;">
-            <div style="font-size:0.82rem; font-weight:700; color:var(--black); margin-bottom:8px; display:flex; justify-content:space-between;">
-              <span>Account Quotas &amp; Limits</span>
-              <span style="color:#22c55e;">Active</span>
-            </div>
-            
-            <div style="display:flex; flex-direction:column; gap:8px; font-size:0.78rem;">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="color:var(--g700);">Daily Messages</span>
-                <span style="font-weight:700; font-family:monospace;">${quota.messagesUsed} / ${quota.messagesLimit} (${quota.messagesRemaining} remaining)</span>
-              </div>
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="color:var(--g700);">Burst Rate Limit</span>
-                <span style="font-weight:700; font-family:monospace;">${quota.burstLimit} msgs / min</span>
-              </div>
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="color:var(--g700);">Max Tokens per Request</span>
-                <span style="font-weight:700; font-family:monospace;">${quota.maxOutputTokens} tokens</span>
-              </div>
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="color:var(--g700);">Heavy Tool Tasks</span>
-                <span style="font-weight:700; font-family:monospace;">${quota.heavyTasksUsed} / ${quota.heavyTasksLimit} today</span>
-              </div>
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="color:var(--g700);">Large File Analyses</span>
-                <span style="font-weight:700; font-family:monospace;">${quota.largeFilesUsed} / ${quota.largeFilesLimit} today</span>
-              </div>
-            </div>
-          </div>
-        ` : ''}
 
       </div>
     </div>
@@ -270,52 +243,12 @@ function renderModalContent() {
     renderModalContent();
   });
 
-  // Supabase Project Keys
-  const btnSaveSupabase = modalEl.querySelector('#btn-save-supabase-config');
-  const urlIn = modalEl.querySelector('#supabase-url-input');
-  const keyIn = modalEl.querySelector('#supabase-key-input');
-  const statusMsg = modalEl.querySelector('#supabase-status-msg');
-  const btnTestSupabase = modalEl.querySelector('#btn-test-supabase');
-
-  if (btnSaveSupabase && urlIn && keyIn) {
-    btnSaveSupabase.addEventListener('click', () => {
-      saveSupabaseConfig(urlIn.value, keyIn.value);
-      statusMsg.style.color = '#22c55e';
-      statusMsg.textContent = 'Keys saved!';
-      setTimeout(() => { statusMsg.textContent = ''; }, 2500);
-    });
-  }
-
-  if (btnTestSupabase) {
-    btnTestSupabase.addEventListener('click', async () => {
-      statusMsg.style.color = 'var(--g600)';
-      statusMsg.textContent = 'Testing connection...';
-      saveSupabaseConfig(urlIn.value, keyIn.value);
-      const res = await testSupabaseConnection();
-      if (res.connected) {
-        statusMsg.style.color = '#22c55e';
-        statusMsg.textContent = '✓ Connected!';
-      } else {
-        statusMsg.style.color = '#ef4444';
-        statusMsg.textContent = '✗ ' + res.message;
-      }
-    });
-  }
-
-  // Gemini API Key
-  const btnSaveKey = modalEl.querySelector('#btn-save-api-key');
-  const keyInput = modalEl.querySelector('#custom-api-key-input');
-  const keyMsg = modalEl.querySelector('#api-key-save-msg');
-  if (btnSaveKey && keyInput) {
-    btnSaveKey.addEventListener('click', () => {
-      const val = keyInput.value.trim();
-      if (val) {
-        localStorage.setItem('toolbox_assistant_api_key', val);
-      } else {
-        localStorage.removeItem('toolbox_assistant_api_key');
-      }
-      keyMsg.style.display = 'block';
-      setTimeout(() => { keyMsg.style.display = 'none'; }, 2000);
+  // AI Settings
+  const btnOpenAi = modalEl.querySelector('#btn-open-ai-settings-from-account');
+  if (btnOpenAi) {
+    btnOpenAi.addEventListener('click', () => {
+      closeAccountModal();
+      openSettings();
     });
   }
 }

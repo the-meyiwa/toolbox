@@ -86,10 +86,6 @@ function toolCard(tool, { compact = false } = {}) {
 
 function renderGrid(list, { query = '', noResult = false } = {}) {
   grid.innerHTML = '';
-  const user = getCurrentUser();
-  if (!user) {
-    list = list.filter(t => t.id !== 'assistant');
-  }
 
   // A weak best match is still a miss. Showing one barely-related card with
   // no explanation is worse than saying plainly that nothing fits, so the
@@ -236,12 +232,6 @@ function teardownTool() {
 }
 
 async function openTool(id) {
-  if (id === 'assistant' && !getCurrentUser()) {
-    window.location.replace('#home');
-    openAccountModal();
-    return showPage('home');
-  }
-
   const tool = BY_ID.get(id);
   if (!tool) return showPage('home');
 
@@ -365,9 +355,11 @@ let lastLoggedQuery = '';
 
 function runSearch() {
   const q = searchInput.value.trim();
-  if (!q) { renderGrid(TOOLS); return; }
+  const filteredTools = TOOLS.filter(t => t.id !== 'assistant');
 
-  const { results, noResult } = search(q, TOOLS, { labels: CATEGORY_LABELS });
+  if (!q) { renderGrid(filteredTools); return; }
+
+  const { results, noResult } = search(q, filteredTools, { labels: CATEGORY_LABELS });
   renderGrid(results.map(r => r.tool), { query: q, noResult });
 
   // Debounced so a single search is logged, not every keystroke.
@@ -485,10 +477,7 @@ const homeHeroSubmitBtn = $('home-hero-submit-btn');
 
 function updateSearchPlaceholder() {
   if (!homeHeroInput) return;
-  const user = getCurrentUser();
-  homeHeroInput.placeholder = user
-    ? 'Search 100+ tools or prompt Assistant…'
-    : 'Search 100+ tools (e.g. compress photo, convert to PDF)…';
+  homeHeroInput.placeholder = 'Search 100+ tools or prompt Assistant…';
 }
 
 export function renderHomeAssistantBanner() {
@@ -496,60 +485,34 @@ export function renderHomeAssistantBanner() {
   if (!bannerEl) return;
 
   const user = getCurrentUser();
-  if (!user) {
-    bannerEl.innerHTML = `
-      <div class="home-assistant-card" style="padding:20px 24px; background:var(--g50); border:1px solid var(--g200); border-radius:18px; display:flex; align-items:center; justify-content:space-between; gap:16px; box-shadow:0 6px 20px rgba(0,0,0,0.03);">
-        <div style="display:flex; align-items:center; gap:14px;">
-          <div style="width:42px; height:42px; border-radius:50%; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-            </svg>
-          </div>
-          <div>
-            <h3 style="margin:0 0 2px; font-size:1.02rem; font-weight:800; color:var(--black); letter-spacing:-0.01em;">Sign in to use Assistant</h3>
-            <p style="margin:0; font-size:0.82rem; color:var(--g600); line-height:1.4;">Unlock intelligent workflow automation, multi-tool scripting, and cloud sync.</p>
-          </div>
+  bannerEl.innerHTML = `
+    <div class="home-assistant-card" style="padding:20px 24px; background:var(--g100); border:1px solid var(--g300); border-radius:18px; display:flex; align-items:center; justify-content:space-between; gap:16px; box-shadow:0 6px 20px rgba(0,0,0,0.03);">
+      <div style="display:flex; align-items:center; gap:14px;">
+        <div style="width:42px; height:42px; border-radius:50%; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
         </div>
-        <button type="button" class="btn btn-primary" id="btn-banner-signin" style="padding:9px 20px; font-size:0.86rem; font-weight:700; border-radius:9999px; white-space:nowrap; flex-shrink:0;">
-          Sign In
-        </button>
-      </div>
-    `;
-
-    bannerEl.querySelector('#btn-banner-signin')?.addEventListener('click', () => {
-      openAccountModal();
-    });
-  } else {
-    bannerEl.innerHTML = `
-      <div class="home-assistant-card" style="padding:20px 24px; background:var(--g100); border:1px solid var(--g300); border-radius:18px; display:flex; align-items:center; justify-content:space-between; gap:16px; box-shadow:0 6px 20px rgba(0,0,0,0.03);">
-        <div style="display:flex; align-items:center; gap:14px;">
-          <div style="width:42px; height:42px; border-radius:50%; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-            </svg>
+        <div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <h3 style="margin:0; font-size:1.02rem; font-weight:800; color:var(--black); letter-spacing:-0.01em;">Assistant is Ready</h3>
+            <span style="font-size:0.68rem; font-weight:700; background:#22c55e; color:#fff; padding:1px 7px; border-radius:9999px;">Active</span>
           </div>
-          <div>
-            <div style="display:flex; align-items:center; gap:6px;">
-              <h3 style="margin:0; font-size:1.02rem; font-weight:800; color:var(--black); letter-spacing:-0.01em;">Assistant is Ready</h3>
-              <span style="font-size:0.68rem; font-weight:700; background:#22c55e; color:#fff; padding:1px 7px; border-radius:9999px;">Active</span>
-            </div>
-            <p style="margin:2px 0 0; font-size:0.82rem; color:var(--g600); line-height:1.4;">Ask Assistant from the search bar above or launch the dedicated workspace.</p>
-          </div>
+          <p style="margin:2px 0 0; font-size:0.82rem; color:var(--g600); line-height:1.4;">Multi-model AI layer: write code, transform files, calculate math, and execute tools.</p>
         </div>
-        <button type="button" class="btn btn-primary" id="btn-open-assistant" style="padding:9px 20px; font-size:0.86rem; font-weight:700; border-radius:9999px; white-space:nowrap; flex-shrink:0; cursor:pointer;">
-          Open Assistant &rarr;
-        </button>
       </div>
-    `;
+      <button type="button" class="btn btn-primary" id="btn-open-assistant" style="padding:9px 20px; font-size:0.86rem; font-weight:700; border-radius:9999px; white-space:nowrap; flex-shrink:0; cursor:pointer;">
+        Open Assistant &rarr;
+      </button>
+    </div>
+  `;
 
-    bannerEl.querySelector('#btn-open-assistant')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      window.location.hash = '#assistant';
-      openTool('assistant');
-    });
-  }
+  bannerEl.querySelector('#btn-open-assistant')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.location.hash = '#assistant';
+    openTool('assistant');
+  });
 }
 
 updateSearchPlaceholder();
@@ -558,7 +521,7 @@ window.addEventListener('toolbox:authchange', () => {
   updateSearchPlaceholder();
   renderGrid(TOOLS);
   renderHomeAssistantBanner();
-  if (window.location.hash === '#assistant' && getCurrentUser()) {
+  if (window.location.hash === '#assistant') {
     openTool('assistant');
   }
 });
@@ -571,14 +534,13 @@ if (homeHeroInput && homeHeroDropdown) {
       return;
     }
 
-    const user = getCurrentUser();
-    const availableTools = user ? TOOLS : TOOLS.filter(t => t.id !== 'assistant');
-    const isAi = user ? detectAiIntent(q) : false;
+    const availableTools = TOOLS.filter(t => t.id !== 'assistant');
+    const isAi = detectAiIntent(q);
     const searchRes = search(q, availableTools, { labels: CATEGORY_LABELS }).results.map(r => r.tool).slice(0, 6);
 
     let html = '';
 
-    const aiHtml = user ? `
+    const aiHtml = `
       <div class="home-hero-ai-row" style="padding:10px 14px; background:var(--g100); border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; border:1px solid var(--g300);" data-ai-prompt="${escapeHtml(q)}">
         <div style="display:flex; align-items:center; gap:10px;">
           <div style="width:28px; height:28px; border-radius:50%; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
@@ -591,9 +553,9 @@ if (homeHeroInput && homeHeroDropdown) {
         </div>
         <kbd style="font-size:0.7rem; padding:2px 6px; border-radius:4px; background:var(--white); border:1px solid var(--g300);">Enter ↵</kbd>
       </div>
-    ` : '';
+    `;
 
-    if (user && isAi && aiHtml) {
+    if (isAi) {
       html += aiHtml;
     }
 
@@ -610,11 +572,11 @@ if (homeHeroInput && homeHeroDropdown) {
           </a>
         `;
       }
-    } else if (!user) {
-      html += `<div style="padding:10px; font-size:0.82rem; color:var(--g500); text-align:center;">No matching tools found.</div>`;
+    } else {
+      html += `<div style="padding:10px; font-size:0.82rem; color:var(--g500); text-align:center;">No direct matching tool. Press Enter to ask Assistant.</div>`;
     }
 
-    if (user && !isAi && aiHtml) {
+    if (!isAi) {
       html += `<div style="margin-top:6px;">${aiHtml}</div>`;
     }
 
@@ -625,20 +587,15 @@ if (homeHeroInput && homeHeroDropdown) {
   function submitHomeHero() {
     const q = homeHeroInput.value.trim();
     if (!q) return;
-    const user = getCurrentUser();
-    const availableTools = user ? TOOLS : TOOLS.filter(t => t.id !== 'assistant');
-    const isAi = user ? detectAiIntent(q) : false;
+    const availableTools = TOOLS.filter(t => t.id !== 'assistant');
+    const isAi = detectAiIntent(q);
     const searchRes = search(q, availableTools, { labels: CATEGORY_LABELS }).results;
 
     if (!isAi && searchRes.length && searchRes[0].score >= 60) {
       window.location.hash = `#${searchRes[0].tool.id}`;
-    } else if (user) {
+    } else {
       sessionStorage.setItem('toolbox_pending_prompt', q);
       window.location.hash = '#assistant';
-    } else if (searchRes.length) {
-      window.location.hash = `#${searchRes[0].tool.id}`;
-    } else {
-      window.location.hash = '#tools';
     }
     homeHeroDropdown.style.display = 'none';
   }

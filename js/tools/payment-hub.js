@@ -46,9 +46,9 @@ export default {
           <div class="biz-field" style="margin-bottom:14px;">
             <label class="tool-label">Payment Method Rail</label>
             <div class="btn-group t3d-seg" id="pay-rail-grp" style="width:100%;">
-              <button class="btn btn-sm is-active" data-rail="virtual-account" style="flex:1;">🏦 Virtual Account</button>
-              <button class="btn btn-sm" data-rail="card" style="flex:1;">💳 Card</button>
-              <button class="btn btn-sm" data-rail="crypto" style="flex:1;">⚡ Crypto / Lightning</button>
+              <button class="btn btn-sm is-active" data-rail="virtual-account" style="flex:1;"> Virtual Account</button>
+              <button class="btn btn-sm" data-rail="card" style="flex:1;"> Card</button>
+              <button class="btn btn-sm" data-rail="crypto" style="flex:1;"> Crypto / Lightning</button>
             </div>
           </div>
 
@@ -214,11 +214,11 @@ export default {
         <div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;">
           ${!isSuccess ? `
             <button class="btn btn-secondary btn-sm" id="pay-simulate-btn" style="background:#f0fdf4; border-color:#86efac; color:#166534;">
-              ⚡ Simulate Bank Inflow / Settlement
+               Simulate Bank Inflow / Settlement
             </button>
           ` : `
             <button class="btn btn-secondary btn-sm" id="pay-download-receipt">
-              📄 Download Receipt (PDF / Text)
+               Download Receipt (PDF / Text)
             </button>
           `}
           <button class="btn btn-secondary btn-sm" id="pay-copy-link">Copy Payment Link</button>

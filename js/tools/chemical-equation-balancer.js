@@ -58,7 +58,7 @@ export default {
             <div id="eq-balanced-str" style="font-family:var(--mono); font-size:1.4rem; font-weight:900; color:var(--black); margin:8px 0;"></div>
             <div style="display:flex; justify-content:center; gap:8px; margin-top:10px;">
               <button class="btn btn-secondary btn-sm" id="eq-copy-btn">Copy Equation</button>
-              <button class="btn btn-secondary btn-sm" id="eq-stoich-btn">Open in Stoichiometry Calculator ➔</button>
+              <button class="btn btn-secondary btn-sm" id="eq-stoich-btn">Open in Stoichiometry Calculator </button>
             </div>
           </div>
 

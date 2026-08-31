@@ -5,6 +5,8 @@
 import { WebSocketServer } from 'ws';
 import http from 'http';
 import * as map from 'lib0/map';
+import crypto from 'crypto';
+import fs from 'fs';
 
 const wsReadyStateConnecting = 0;
 const wsReadyStateOpen = 1;
@@ -14,7 +16,21 @@ const port = process.env.PORT || 4444;
 
 const wss = new WebSocketServer({ noServer: true });
 
-import crypto from 'crypto';
+try {
+  if (fs.existsSync('.env')) {
+    const envFile = fs.readFileSync('.env', 'utf-8');
+    for (const line of envFile.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const idx = trimmed.indexOf('=');
+      if (idx > 0) {
+        const key = trimmed.slice(0, idx).trim();
+        const val = trimmed.slice(idx + 1).trim().replace(/^["']|["']$/g, '');
+        if (!process.env[key]) process.env[key] = val;
+      }
+    }
+  }
+} catch (e) {}
 
 const server = http.createServer((request, response) => {
   const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
@@ -55,32 +71,85 @@ const server = http.createServer((request, response) => {
     }
   }
 
-import fs from 'fs';
-
-// Load .env if present
-try {
-  if (fs.existsSync('.env')) {
-    const envFile = fs.readFileSync('.env', 'utf-8');
-    for (const line of envFile.split('\n')) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) continue;
-      const idx = trimmed.indexOf('=');
-      if (idx > 0) {
-        const key = trimmed.slice(0, idx).trim();
-        const val = trimmed.slice(idx + 1).trim().replace(/^["']|["']$/g, '');
-        if (!process.env[key]) process.env[key] = val;
-      }
-    }
-  }
-} catch (e) {}
-
-  // --- Voltix AI Assistant Proxy API ---
+  // --- Assistant Proxy API ---
   if (url.pathname.startsWith('/api/assistant/')) {
     if (url.pathname === '/api/assistant/status' && request.method === 'GET') {
       const hasGeminiKey = !!process.env.GEMINI_API_KEY;
       const hasGroqKey = !!process.env.GROQ_API_KEY;
+      const hasOpenAiKey = !!process.env.OPENAI_API_KEY;
+      const hasOpenRouterKey = !!process.env.OPENROUTER_API_KEY;
+      const hasDeepSeekKey = !!process.env.DEEPSEEK_API_KEY;
       response.writeHead(200, { 'Content-Type': 'application/json' });
-      response.end(JSON.stringify({ status: 'ready', hasGeminiKey, hasGroqKey, timestamp: Date.now() }));
+      response.end(JSON.stringify({
+        status: 'ready',
+        hasGeminiKey,
+        hasGroqKey,
+        hasOpenAiKey,
+        hasOpenRouterKey,
+        hasDeepSeekKey,
+        supportedProviders: ['gemini', 'groq', 'openai', 'openrouter', 'deepseek', 'ollama', 'local'],
+        timestamp: Date.now()
+      }));
+      return;
+    }
+
+    if (url.pathname === '/api/assistant/test' && request.method === 'POST') {
+      let bodyStr = '';
+      request.on('data', chunk => { bodyStr += chunk; });
+      request.on('end', async () => {
+        try {
+          const body = JSON.parse(bodyStr || '{}');
+          const provider = body.provider || 'gemini';
+          const key = body.apiKey || (
+            provider === 'groq' ? process.env.GROQ_API_KEY :
+            provider === 'openai' ? process.env.OPENAI_API_KEY :
+            provider === 'openrouter' ? process.env.OPENROUTER_API_KEY :
+            provider === 'deepseek' ? process.env.DEEPSEEK_API_KEY :
+            process.env.GEMINI_API_KEY
+          );
+
+          if (!key) {
+            response.writeHead(400, { 'Content-Type': 'application/json' });
+            response.end(JSON.stringify({ success: false, message: `No API key configured for ${provider}.` }));
+            return;
+          }
+
+          const start = Date.now();
+          if (provider === 'gemini') {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash?key=${encodeURIComponent(key)}`);
+            if (res.ok) {
+              response.writeHead(200, { 'Content-Type': 'application/json' });
+              response.end(JSON.stringify({ success: true, latencyMs: Date.now() - start, message: 'Connected to Google Gemini!' }));
+              return;
+            }
+            const err = await res.json().catch(() => ({}));
+            response.writeHead(400, { 'Content-Type': 'application/json' });
+            response.end(JSON.stringify({ success: false, message: err.error?.message || `HTTP ${res.status}` }));
+            return;
+          }
+
+          if (provider === 'groq') {
+            const res = await fetch('https://api.groq.com/openai/v1/models', {
+              headers: { 'Authorization': `Bearer ${key}` }
+            });
+            if (res.ok) {
+              response.writeHead(200, { 'Content-Type': 'application/json' });
+              response.end(JSON.stringify({ success: true, latencyMs: Date.now() - start, message: 'Connected to Groq Cloud!' }));
+              return;
+            }
+            const err = await res.json().catch(() => ({}));
+            response.writeHead(400, { 'Content-Type': 'application/json' });
+            response.end(JSON.stringify({ success: false, message: err.error?.message || `HTTP ${res.status}` }));
+            return;
+          }
+
+          response.writeHead(200, { 'Content-Type': 'application/json' });
+          response.end(JSON.stringify({ success: true, latencyMs: Date.now() - start, message: 'Provider validated.' }));
+        } catch (err) {
+          response.writeHead(500, { 'Content-Type': 'application/json' });
+          response.end(JSON.stringify({ success: false, message: err.message }));
+        }
+      });
       return;
     }
 
@@ -90,14 +159,122 @@ try {
       request.on('end', async () => {
         try {
           const body = JSON.parse(bodyStr || '{}');
-          const apiKey = process.env.GEMINI_API_KEY || body.apiKey;
-          if (!apiKey) {
-            response.writeHead(400, { 'Content-Type': 'application/json' });
-            response.end(JSON.stringify({ error: 'GEMINI_API_KEY is not configured on the backend.' }));
+          const prov = body.provider || 'gemini';
+
+          // 1. Groq Cloud Proxy
+          if (prov === 'groq' || (!process.env.GEMINI_API_KEY && process.env.GROQ_API_KEY && !body.apiKey)) {
+            const groqKey = process.env.GROQ_API_KEY || body.apiKey;
+            if (!groqKey) {
+              response.writeHead(400, { 'Content-Type': 'application/json' });
+              response.end(JSON.stringify({ error: 'GROQ_API_KEY is not configured.' }));
+              return;
+            }
+
+            const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${groqKey}`
+              },
+              body: JSON.stringify({
+                model: body.model || 'llama-3.3-70b-versatile',
+                messages: body.messages || [{ role: 'user', content: 'Hello' }],
+                stream: true,
+                temperature: 0.4
+              })
+            });
+
+            if (!groqRes.ok) {
+              const errJson = await groqRes.json().catch(() => ({}));
+              response.writeHead(400, { 'Content-Type': 'application/json' });
+              response.end(JSON.stringify({ error: errJson.error?.message || `Groq HTTP ${groqRes.status}` }));
+              return;
+            }
+
+            response.writeHead(200, {
+              'Content-Type': 'text/event-stream; charset=utf-8',
+              'Cache-Control': 'no-cache, no-transform',
+              'Connection': 'keep-alive',
+              'x-ai-format': 'openai'
+            });
+
+            const reader = groqRes.body.getReader();
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              response.write(value);
+            }
+            response.end();
             return;
           }
 
-          const candidateModels = [body.model, 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-1.5-pro'].filter(Boolean);
+          // 2. OpenAI / OpenRouter Proxy
+          if (prov === 'openai' || prov === 'openrouter' || prov === 'deepseek') {
+            const apiKey = (
+              prov === 'openai' ? process.env.OPENAI_API_KEY :
+              prov === 'openrouter' ? process.env.OPENROUTER_API_KEY :
+              process.env.DEEPSEEK_API_KEY
+            ) || body.apiKey;
+
+            if (!apiKey) {
+              response.writeHead(400, { 'Content-Type': 'application/json' });
+              response.end(JSON.stringify({ error: `API key for ${prov} is not configured.` }));
+              return;
+            }
+
+            const targetUrl = (
+              prov === 'openai' ? 'https://api.openai.com/v1/chat/completions' :
+              prov === 'openrouter' ? 'https://openrouter.ai/api/v1/chat/completions' :
+              'https://api.deepseek.com/chat/completions'
+            );
+
+            const aiRes = await fetch(targetUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+              },
+              body: JSON.stringify({
+                model: body.model || (prov === 'openai' ? 'gpt-4o-mini' : 'deepseek-chat'),
+                messages: body.messages || [{ role: 'user', content: 'Hello' }],
+                stream: true,
+                temperature: 0.4
+              })
+            });
+
+            if (!aiRes.ok) {
+              const errJson = await aiRes.json().catch(() => ({}));
+              response.writeHead(400, { 'Content-Type': 'application/json' });
+              response.end(JSON.stringify({ error: errJson.error?.message || `${prov} HTTP ${aiRes.status}` }));
+              return;
+            }
+
+            response.writeHead(200, {
+              'Content-Type': 'text/event-stream; charset=utf-8',
+              'Cache-Control': 'no-cache, no-transform',
+              'Connection': 'keep-alive',
+              'x-ai-format': 'openai'
+            });
+
+            const reader = aiRes.body.getReader();
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              response.write(value);
+            }
+            response.end();
+            return;
+          }
+
+          // 3. Default: Google Gemini Proxy
+          const apiKey = process.env.GEMINI_API_KEY || body.apiKey;
+          if (!apiKey) {
+            response.writeHead(400, { 'Content-Type': 'application/json' });
+            response.end(JSON.stringify({ error: 'GEMINI_API_KEY is not configured on the backend. Please provide your API key in AI Settings.' }));
+            return;
+          }
+
+          const candidateModels = [body.model, 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.6-flash', 'gemini-3.7-flash'].filter(Boolean);
           const uniqueModels = [...new Set(candidateModels)];
 
           let fetchRes = null;
@@ -106,6 +283,8 @@ try {
           for (const model of uniqueModels) {
             const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
             try {
+              const geminiCtrl = new AbortController();
+              const geminiTimer = setTimeout(() => geminiCtrl.abort(), 6000);
               fetchRes = await fetch(geminiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -117,17 +296,18 @@ try {
                     temperature: 0.4,
                     maxOutputTokens: 2000
                   }
-                })
+                }),
+                signal: geminiCtrl.signal
               });
+              clearTimeout(geminiTimer);
 
               if (fetchRes.ok) break;
 
               const errJson = await fetchRes.json().catch(() => ({}));
               lastErrMessage = errJson.error?.message || `HTTP ${fetchRes.status}`;
 
-              // If key is reported leaked/revoked, no need to retry other models with same revoked key
               if (lastErrMessage.toLowerCase().includes('leaked') || lastErrMessage.toLowerCase().includes('permission_denied')) {
-                lastErrMessage = 'Google AI reported this API key as leaked/revoked. Please generate a fresh free key at https://aistudio.google.com/app/apikey and save it in Account Settings or your .env file.';
+                lastErrMessage = 'Google AI reported this API key as leaked/revoked. Please generate a fresh free key at https://aistudio.google.com/app/apikey and save it in AI Settings or your .env file.';
                 break;
               }
             } catch (err) {
@@ -144,7 +324,8 @@ try {
           response.writeHead(200, {
             'Content-Type': 'text/event-stream; charset=utf-8',
             'Cache-Control': 'no-cache, no-transform',
-            'Connection': 'keep-alive'
+            'Connection': 'keep-alive',
+            'x-ai-format': 'gemini'
           });
 
           const reader = fetchRes.body.getReader();

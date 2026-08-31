@@ -1,8 +1,17 @@
 /* ============================================================
-   TOOLBOX — Settings Menu & Theme Customizer Modal
+   TOOLBOX — Unified Settings Menu
    ============================================================ */
 
 import { THEMES, getStoredTheme, applyTheme } from './theme.js';
+import {
+  getActiveAiMode,
+  setActiveAiMode,
+  getGeminiApiKey,
+  setGeminiApiKey,
+  testAiProviderConnection,
+  AI_MODES
+} from './ai-provider.js';
+import { QuotaManager } from './quota-manager.js';
 
 let modalEl = null;
 let isOpen = false;
@@ -10,6 +19,14 @@ let isOpen = false;
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+
+const MODE_ICONS = {
+  auto: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>`,
+  reasoning: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/></svg>`,
+  code: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`,
+  science: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.31L4.15 19.3A2 2 0 0 0 5.86 22h12.28a2 2 0 0 0 1.71-2.7L14 9.31V2"/></svg>`,
+  files: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`
+};
 
 function renderThemeCard(theme, currentId) {
   const isActive = theme.id === currentId;
@@ -53,9 +70,9 @@ function createModal() {
   modalEl.style.display = 'none';
 
   modalEl.innerHTML = `
-    <div class="settings-modal-window">
+    <div class="settings-modal-window" style="max-width: 800px; width: 95%; height: 85vh; display: flex; flex-direction: column;">
       <div class="sheet-drag-handle" aria-hidden="true"></div>
-      <div class="settings-modal-header">
+      <div class="settings-modal-header" style="flex-shrink: 0;">
         <div class="settings-title-wrap">
           <div class="settings-title-icon">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -64,8 +81,8 @@ function createModal() {
             </svg>
           </div>
           <div>
-            <h2 id="settings-modal-title" class="settings-modal-title">Settings & Appearance</h2>
-            <p class="settings-modal-subtitle">Personalize your Toolbox workspace with custom curated themes.</p>
+            <h2 id="settings-modal-title" class="settings-modal-title">Toolbox Settings</h2>
+            <p class="settings-modal-subtitle">Appearance, Assistant Configuration, and Cloud Data</p>
           </div>
         </div>
         <button type="button" class="settings-modal-close" id="close-settings" aria-label="Close Settings">
@@ -76,16 +93,23 @@ function createModal() {
         </button>
       </div>
 
-      <div class="settings-modal-body">
+      <div class="settings-modal-body" style="flex: 1; overflow-y: auto; padding-bottom: 40px;">
+        <!-- APPEARANCE -->
         <section class="settings-section">
           <div class="settings-section-header">
             <h3 class="settings-section-title">Color Themes</h3>
             <span class="settings-section-hint">Applied instantly across all tools</span>
           </div>
-
           <div class="theme-grid" id="theme-grid-standard">
             <!-- Rendered dynamically -->
           </div>
+        </section>
+
+        <hr style="border: none; border-top: 1px solid var(--g200); margin: 30px 0;">
+
+        <!-- ASSISTANT / AI -->
+        <section class="settings-section" id="ai-settings-container">
+          <!-- Rendered dynamically -->
         </section>
       </div>
     </div>
@@ -100,6 +124,147 @@ function createModal() {
   });
 
   return modalEl;
+}
+
+function renderAiSettings() {
+  const currentMode = getActiveAiMode();
+  const currentApiKey = getGeminiApiKey();
+  const quota = QuotaManager.getQuotaSummary();
+  const isUnlimited = QuotaManager.isUserUnlimited();
+
+  const container = modalEl.querySelector('#ai-settings-container');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="settings-section-header">
+      <h3 class="settings-section-title">Assistant AI</h3>
+      <span class="settings-section-hint">Configure API keys, reasoning mode, and usage quotas</span>
+    </div>
+
+    <!-- API KEY CARD -->
+    <div style="background:var(--g50); border:1px solid var(--g200); border-radius:14px; padding:16px; margin-bottom: 20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <label style="font-size:0.86rem; font-weight:700; color:var(--black);">API Key</label>
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style="font-size:0.75rem; color:#2563eb; font-weight:600; text-decoration:underline;">
+          Get Free Key &rarr;
+        </a>
+      </div>
+      <p style="margin:0 0 10px; font-size:0.75rem; color:var(--g600); line-height:1.4;">
+        All Assistant reasoning, code generation, and multi-tool workflows run online with real-time streaming.
+      </p>
+      <div style="display:flex; gap:8px;">
+        <input type="password" id="modal-gemini-key-input" class="tool-input" placeholder="Enter API key..." value="${currentApiKey}" style="flex:1; padding:8px 12px; font-size:0.84rem; font-family:monospace; border-radius:8px; border:1px solid var(--g300);">
+        <button type="button" class="btn btn-primary btn-sm" id="modal-btn-save-key" style="padding:0 16px; font-weight:700;">Save Key</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="modal-btn-test-key" style="padding:0 12px;">Test</button>
+      </div>
+      <div id="modal-key-feedback" style="font-size:0.76rem; margin-top:8px; display:none;"></div>
+    </div>
+
+    <!-- MODE SELECTION CARDS -->
+    <div style="margin-bottom: 20px;">
+      <label style="font-size:0.75rem; font-weight:700; color:var(--g700); text-transform:uppercase; display:block; margin-bottom:8px;">
+        Reasoning Mode
+      </label>
+      <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap:12px;" id="ai-modes-list">
+        ${Object.values(AI_MODES).map(m => {
+          const isActive = m.id === currentMode;
+          const iconSvg = MODE_ICONS[m.id] || MODE_ICONS.auto;
+          return `
+            <div class="ai-mode-card ${isActive ? 'active' : ''}" data-mode="${m.id}" style="border:2px solid ${isActive ? 'var(--black)' : 'var(--g200)'}; background:${isActive ? 'var(--g100)' : 'var(--white)'}; border-radius:12px; padding:12px 14px; cursor:pointer; transition:all 0.15s; display:flex; align-items:flex-start; gap:12px;">
+              <div style="width:34px; height:34px; border-radius:8px; background:${isActive ? 'var(--black)' : 'var(--g200)'}; color:${isActive ? 'var(--white)' : 'var(--black)'}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                ${iconSvg}
+              </div>
+              <div style="flex: 1;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
+                  <span style="font-size:0.88rem; font-weight:700; color:var(--black);">${m.name}</span>
+                  ${isActive ? '<span style="font-size:0.62rem; background:var(--black); color:#fff; padding:1px 6px; border-radius:999px; font-weight:700;">Active</span>' : ''}
+                </div>
+                <div style="font-size:0.75rem; color:var(--g600); margin-top:4px; line-height:1.35;">${m.description}</div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- QUOTAS & RESET -->
+    <div style="background:var(--g50); border:1px solid var(--g200); border-radius:12px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <div style="font-size:0.8rem; font-weight:700; color:var(--black);">Daily Messages</div>
+        <div style="font-size:0.74rem; color:var(--g600); font-family:monospace; margin-top:2px;">
+          ${quota.messagesUsed} / ${quota.messagesLimit} used today
+        </div>
+      </div>
+      ${isUnlimited ? `
+      <button type="button" class="btn btn-secondary btn-sm" id="btn-reset-quota-modal" style="font-size:0.74rem; color:#ef4444;">
+        Reset Count
+      </button>
+      ` : ''}
+    </div>
+  `;
+
+  // Save Key
+  const saveKeyBtn = container.querySelector('#modal-btn-save-key');
+  const keyInput = container.querySelector('#modal-gemini-key-input');
+  const feedbackEl = container.querySelector('#modal-key-feedback');
+
+  saveKeyBtn?.addEventListener('click', () => {
+    const val = keyInput?.value?.trim() || '';
+    setGeminiApiKey(val);
+    if (feedbackEl) {
+      feedbackEl.style.display = 'block';
+      feedbackEl.style.color = '#16a34a';
+      feedbackEl.textContent = val ? '✓ API key saved successfully!' : 'API key cleared.';
+      setTimeout(() => { if (feedbackEl) feedbackEl.style.display = 'none'; }, 3000);
+    }
+  });
+
+  // Test Key
+  const testKeyBtn = container.querySelector('#modal-btn-test-key');
+  testKeyBtn?.addEventListener('click', async () => {
+    const val = keyInput?.value?.trim() || getGeminiApiKey();
+    if (!val) {
+      if (feedbackEl) {
+        feedbackEl.style.display = 'block';
+        feedbackEl.style.color = '#ef4444';
+        feedbackEl.textContent = 'Please enter an API key first.';
+      }
+      return;
+    }
+    if (feedbackEl) {
+      feedbackEl.style.display = 'block';
+      feedbackEl.style.color = 'var(--g600)';
+      feedbackEl.textContent = 'Testing connection...';
+    }
+    const res = await testAiProviderConnection('gemini', val);
+    if (feedbackEl) {
+      feedbackEl.style.display = 'block';
+      feedbackEl.style.color = res.success ? '#16a34a' : '#ef4444';
+      feedbackEl.textContent = res.success ? `✓ ${res.message} (${res.latencyMs}ms)` : `Error: ${res.message}`;
+    }
+  });
+
+  // Mode Selection
+  container.querySelectorAll('.ai-mode-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const mode = card.getAttribute('data-mode');
+      setActiveAiMode(mode);
+      renderAiSettings();
+    });
+  });
+
+  // Reset Quota
+  const resetBtn = container.querySelector('#btn-reset-quota-modal');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      try {
+        QuotaManager.resetQuotas();
+        renderAiSettings();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  }
 }
 
 function updateThemeList() {
@@ -120,6 +285,7 @@ function updateThemeList() {
 export function openSettings() {
   createModal();
   updateThemeList();
+  renderAiSettings();
   modalEl.style.display = 'flex';
   requestAnimationFrame(() => {
     modalEl.classList.add('is-open');

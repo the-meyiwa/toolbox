@@ -261,7 +261,7 @@ export function balanceChemicalEquation(equation) {
   const products = productFormulas.map((f, idx) => ({ formula: f, coeff: finalCoeffs[numReactants + idx] }));
 
   const formatSide = (arr) => arr.map(item => `${item.coeff === 1 ? '' : item.coeff + ' '}${item.formula}`).join(' + ');
-  const balancedString = `${formatSide(reactants)} ➔ ${formatSide(products)}`;
+  const balancedString = `${formatSide(reactants)}  ${formatSide(products)}`;
 
   return {
     balancedString,

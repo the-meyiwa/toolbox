@@ -36,12 +36,12 @@ export default {
           <!-- "+ Add" Menu -->
           <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
             <span class="tool-label" style="margin:0; font-weight:600; font-size:0.84rem;">+ Add:</span>
-            <button class="btn btn-sm btn-secondary" data-add="wall" title="Add a Wall">🧱 Wall</button>
-            <button class="btn btn-sm btn-secondary" data-add="door" title="Add a Door">🚪 Door</button>
+            <button class="btn btn-sm btn-secondary" data-add="wall" title="Add a Wall"> Wall</button>
+            <button class="btn btn-sm btn-secondary" data-add="door" title="Add a Door"> Door</button>
             <button class="btn btn-sm btn-secondary" data-add="window" title="Add a Window">🪟 Window</button>
-            <button class="btn btn-sm btn-secondary" data-add="room" title="Add a Room Area">🏠 Room</button>
-            <button class="btn btn-sm btn-secondary" data-add="text" title="Add a Text Label">📝 Text</button>
-            <button class="btn btn-sm btn-secondary" data-add="dimension" title="Add a Dimension Line">📏 Dimension</button>
+            <button class="btn btn-sm btn-secondary" data-add="room" title="Add a Room Area"> Room</button>
+            <button class="btn btn-sm btn-secondary" data-add="text" title="Add a Text Label"> Text</button>
+            <button class="btn btn-sm btn-secondary" data-add="dimension" title="Add a Dimension Line"> Dimension</button>
           </div>
 
           <!-- Undo / Redo & Viewport Info -->
@@ -63,8 +63,8 @@ export default {
           <div id="arch-floating-actions" hidden style="position:absolute; bottom:16px; left:50%; transform:translateX(-50%); background:var(--white); border:1px solid var(--g200); border-radius:999px; box-shadow:0 8px 24px rgba(0,0,0,0.14); padding:6px 14px; display:flex; align-items:center; gap:8px; z-index:10;">
             <span id="arch-selected-name" style="font-size:0.82rem; font-weight:600; color:var(--g800); margin-right:4px;">Wall</span>
             <button class="btn btn-sm btn-secondary" id="arch-rotate-el" title="Rotate element 45°">↻ Rotate</button>
-            <button class="btn btn-sm btn-secondary" id="arch-dup-el" title="Duplicate element">📋 Duplicate</button>
-            <button class="btn btn-sm btn-secondary" id="arch-del-el" title="Delete element" style="color:#ef4444;">🗑 Delete</button>
+            <button class="btn btn-sm btn-secondary" id="arch-dup-el" title="Duplicate element"> Duplicate</button>
+            <button class="btn btn-sm btn-secondary" id="arch-del-el" title="Delete element" style="color:#ef4444;"> Delete</button>
           </div>
         </div>
 

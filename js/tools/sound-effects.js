@@ -168,7 +168,7 @@ export default {
             <div style="font-size:0.72rem; color:var(--g500); font-family:var(--mono);">${s.duration} · ${s.category}</div>
           </div>
           <div style="display:flex; align-items:center; gap:4px;">
-            <button type="button" class="sfx-fav-btn" data-id="${s.id}" style="background:none; border:none; color:${favorites.has(s.id) ? '#eab308' : 'var(--g300)'}; cursor:pointer; font-size:1rem; padding:4px;" title="Favorite">★</button>
+            <button type="button" class="sfx-fav-btn" data-id="${s.id}" style="background:none; border:none; color:${favorites.has(s.id) ? '#eab308' : 'var(--g300)'}; cursor:pointer; font-size:1rem; padding:4px;" title="Favorite"></button>
             <button type="button" class="sfx-play-btn" data-id="${s.id}" style="width:28px; height:28px; border-radius:50%; background:var(--g100); border:1px solid var(--g200); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--black);">
               <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
             </button>

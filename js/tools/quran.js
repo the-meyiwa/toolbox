@@ -228,7 +228,7 @@ export default {
                 <button class="qrn-icon" data-play="${v.number}" title="Play this verse" aria-label="Play verse ${v.number}"
                         ${v.audio ? '' : 'disabled'}>▸</button>
                 <button class="qrn-icon" data-copy="${v.number}" title="Copy" aria-label="Copy verse ${v.number}">⧉</button>
-                <button class="qrn-icon" data-save="${v.number}" title="Save" aria-label="Save verse ${v.number}">★</button>
+                <button class="qrn-icon" data-save="${v.number}" title="Save" aria-label="Save verse ${v.number}"></button>
               </div>
               <div class="qrn-verse-body">
                 <p class="qrn-arabic" dir="rtl" lang="ar">${escapeHtml(v.arabic)}</p>

@@ -15,10 +15,10 @@ const LOOKAHEAD_MS = 25;
 const SCHEDULE_AHEAD = 0.1;   // seconds
 
 const SUBDIVISIONS = [
-  { id: 1, name: 'Quarter notes', label: '♩' },
-  { id: 2, name: 'Eighths', label: '♫' },
-  { id: 3, name: 'Triplets', label: '♪³' },
-  { id: 4, name: 'Sixteenths', label: '♬' },
+  { id: 1, name: 'Quarter notes', label: '' },
+  { id: 2, name: 'Eighths', label: '' },
+  { id: 3, name: 'Triplets', label: '³' },
+  { id: 4, name: 'Sixteenths', label: '' },
 ];
 
 const SOUNDS = {

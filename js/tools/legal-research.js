@@ -71,26 +71,26 @@ export default {
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px;">
           <!-- Issues Tree -->
           <div class="cd-card" style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:14px;">
-            <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase;">⚖️ Legal Issues to Address</h4>
+            <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase;">️ Legal Issues to Address</h4>
             <ol id="lr-issues-list" style="margin:0; padding-left:18px; font-size:0.85rem; line-height:1.55;"></ol>
           </div>
 
           <!-- Doctrinal Concepts & Legal Tests -->
           <div class="cd-card" style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:14px;">
-            <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase;">💡 Applicable Doctrines &amp; Legal Tests</h4>
+            <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase;"> Applicable Doctrines &amp; Legal Tests</h4>
             <ul id="lr-doctrines-list" style="margin:0; padding-left:18px; font-size:0.85rem; line-height:1.55;"></ul>
           </div>
 
           <!-- Boolean Database Search Strings -->
           <div class="cd-card" style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:14px; grid-column:1 / -1;">
-            <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase;">🔍 Optimized Boolean Search Strings</h4>
+            <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase;"> Optimized Boolean Search Strings</h4>
             <div id="lr-search-strings" style="font-size:0.82rem; font-family:var(--mono); display:flex; flex-direction:column; gap:8px;"></div>
           </div>
 
           <!-- Note-taking & Verification Matrix -->
           <div class="cd-card" style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:14px; grid-column:1 / -1;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0; text-transform:uppercase;">📋 Verified Authorities &amp; Findings Matrix</h4>
+              <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0; text-transform:uppercase;"> Verified Authorities &amp; Findings Matrix</h4>
               <span style="font-size:0.75rem; color:#2563eb; font-weight:600;">Grounded &amp; Editable</span>
             </div>
             <div id="lr-matrix-container">

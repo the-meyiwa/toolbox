@@ -9292,4 +9292,117 @@ input, select, textarea {
   background: #ded3b8;
 }
 
+/* ============================================================
+   ASSISTANT — Premium Rolling Line Thinking Shimmer
+   ============================================================ */
+.ast-thinking-shimmer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 170px;
+  max-width: 260px;
+  padding: 4px 2px;
+  user-select: none;
+}
+
+.ast-shimmer-track {
+  width: 100%;
+  height: 3.5px;
+  background: var(--g200);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.ast-shimmer-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 45%;
+  background: linear-gradient(90deg, transparent 0%, var(--black) 50%, transparent 100%);
+  border-radius: 999px;
+  animation: astRollingLine 1.3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes astRollingLine {
+  0% {
+    left: -45%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.ast-shimmer-text {
+  font-size: 0.76rem;
+  color: var(--g600);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ============================================================
+   ASSISTANT — In-Chat Drag & Dropzone Cards & Drag Overlays
+   ============================================================ */
+.ast-inchat-dropzone-card {
+  margin-top: 12px;
+  background: var(--white);
+  border: 2px dashed var(--g300);
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.ast-inchat-dropzone-card:hover,
+.ast-inchat-dropzone-card.dragover {
+  border-color: var(--black);
+  background: var(--g50);
+  transform: translateY(-1px);
+}
+
+.ast-inchat-drop-inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ast-inchat-drop-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--g100);
+  color: var(--black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.ast-inchat-dropzone-card:hover .ast-inchat-drop-icon-wrap {
+  background: var(--black);
+  color: var(--white);
+}
+
+.toolbox-assistant-root.is-drag-over::after {
+  content: 'Drop file here to attach to Assistant';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  pointer-events: none;
+  border: 3px dashed #ffffff;
+  border-radius: 18px;
+}
+
+
 

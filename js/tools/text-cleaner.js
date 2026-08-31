@@ -205,7 +205,7 @@ export default {
         pillsEl.innerHTML = '';
         outMetaEl.textContent = '';
       } else if (charDiff === 0 && totalModifications === 0) {
-        summaryEl.textContent = '✨ Clean — no invisible characters or formatting artifacts found';
+        summaryEl.textContent = ' Clean — no invisible characters or formatting artifacts found';
         pillsEl.innerHTML = '';
         outMetaEl.textContent = `${text.length.toLocaleString()} chars`;
       } else {

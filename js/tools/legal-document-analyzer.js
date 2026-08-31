@@ -48,31 +48,31 @@ export default {
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px;">
           <!-- Parties & Jurisdiction -->
           <div class="cd-card" style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:14px;">
-            <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase;">👥 Contracting Parties</h4>
+            <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase;"> Contracting Parties</h4>
             <div id="lda-parties" style="font-size:0.85rem; line-height:1.5;"></div>
           </div>
 
           <!-- Dates & Deadlines -->
           <div class="cd-card" style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:14px;">
-            <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase;">📅 Dates, Term &amp; Deadlines</h4>
+            <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase;"> Dates, Term &amp; Deadlines</h4>
             <div id="lda-dates" style="font-size:0.85rem; line-height:1.5;"></div>
           </div>
 
           <!-- Key Obligations & Covenants -->
           <div class="cd-card" style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:14px; grid-column:1 / -1;">
-            <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase;">📝 Core Obligations &amp; Covenants</h4>
+            <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase;"> Core Obligations &amp; Covenants</h4>
             <ul id="lda-obligations" style="margin:0; padding-left:18px; font-size:0.85rem; line-height:1.55;"></ul>
           </div>
 
           <!-- Defined Terms Glossary -->
           <div class="cd-card" style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:14px;">
-            <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase;">📖 Defined Terms &amp; Definitions</h4>
+            <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase;"> Defined Terms &amp; Definitions</h4>
             <ul id="lda-terms" style="margin:0; padding-left:18px; font-size:0.82rem; font-family:var(--mono);"></ul>
           </div>
 
           <!-- Liabilities, Indemnities & Termination -->
           <div class="cd-card" style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:14px;">
-            <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase;">🛡️ Liabilities, Indemnities &amp; Termination</h4>
+            <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase;">️ Liabilities, Indemnities &amp; Termination</h4>
             <div id="lda-liabilities" style="font-size:0.85rem; line-height:1.5;"></div>
           </div>
         </div>
@@ -226,7 +226,7 @@ export default {
 
       partiesEl.innerHTML = analysis.parties.map(p => `<div>• <strong>${p}</strong></div>`).join('');
       datesEl.innerHTML = analysis.dates.length
-        ? analysis.dates.map(d => `<div>📅 ${d}</div>`).join('')
+        ? analysis.dates.map(d => `<div> ${d}</div>`).join('')
         : 'No specific calendar dates detected; refer to execution date.';
 
       obligationsEl.innerHTML = analysis.obligations.map(o => `<li style="margin-bottom:6px;">${o}</li>`).join('');

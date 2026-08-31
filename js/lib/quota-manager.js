@@ -1,27 +1,44 @@
 /* ============================================================
    TOOLBOX — Quota & Rate Limiting Engine
-   Enforces user quotas:
-   - 25 messages per user / day
-   - Burst rate: 5 messages / minute
-   - Max output: 2000 tokens / request
-   - Heavy tool/agent tasks: 5 / day
-   - Large file analysis: 3 / day
+   Enforces default usage guidelines for free tier, with automatic
+   unlimited access for administrator and VIP accounts.
    ============================================================ */
-
-import { getCurrentUser } from './supabase.js';
 
 const STORAGE_QUOTA_KEY = 'toolbox_usage_quota_v1';
 
+export const UNLIMITED_ACCOUNTS = [
+  'meyigbenee@icloud.com',
+  'meyigbenee@gmail.com'
+];
+
 const LIMITS = {
-  DAILY_MESSAGES: 25,
-  BURST_PER_MINUTE: 5,
-  MAX_OUTPUT_TOKENS: 2000,
-  HEAVY_TASKS_DAILY: 5,
-  LARGE_FILES_DAILY: 3
+  DAILY_MESSAGES: 50,
+  BURST_PER_MINUTE: 10,
+  MAX_OUTPUT_TOKENS: 4000,
+  HEAVY_TASKS_DAILY: 25,
+  LARGE_FILES_DAILY: 20
 };
 
 function getTodayString() {
   return new Date().toISOString().split('T')[0];
+}
+
+export function isUserUnlimited() {
+  try {
+    const raw = localStorage.getItem('supabase_auth_session');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const email = (parsed.email || parsed.user?.email || '').toLowerCase().trim();
+      if (UNLIMITED_ACCOUNTS.includes(email)) return true;
+    }
+    const directEmail = (
+      localStorage.getItem('toolbox_user_email') ||
+      localStorage.getItem('user_email') ||
+      ''
+    ).toLowerCase().trim();
+    if (UNLIMITED_ACCOUNTS.includes(directEmail)) return true;
+  } catch {}
+  return false;
 }
 
 function loadUsageState() {
@@ -42,7 +59,6 @@ function loadUsageState() {
     saveUsageState(state);
   }
 
-  // Filter timestamps to last 60 seconds
   const now = Date.now();
   state.recentMessageTimestamps = (state.recentMessageTimestamps || []).filter(ts => now - ts < 60000);
   return state;
@@ -56,24 +72,52 @@ function saveUsageState(state) {
 
 export const QuotaManager = {
   LIMITS,
+  UNLIMITED_ACCOUNTS,
+  isUserUnlimited,
+
+  /**
+   * Reset all usage counters
+   */
+  resetQuotas() {
+    if (!isUserUnlimited()) {
+      throw new Error("Permission denied: Only unlimited accounts can reset quotas.");
+    }
+    const today = getTodayString();
+    const cleanState = {
+      date: today,
+      messageCount: 0,
+      recentMessageTimestamps: [],
+      heavyTaskCount: 0,
+      largeFileCount: 0
+    };
+    saveUsageState(cleanState);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('toolbox:quotachange', { detail: cleanState }));
+    }
+    return cleanState;
+  },
 
   /**
    * Check if user can send a message
    */
   canSendMessage() {
+    if (isUserUnlimited()) {
+      return { allowed: true, remaining: Infinity, isUnlimited: true };
+    }
+
     const usage = loadUsageState();
 
     if (usage.messageCount >= LIMITS.DAILY_MESSAGES) {
       return {
         allowed: false,
-        reason: `Daily quota exceeded (${LIMITS.DAILY_MESSAGES}/${LIMITS.DAILY_MESSAGES} messages). Quota resets at midnight.`
+        reason: `Daily free quota reached (${LIMITS.DAILY_MESSAGES}/${LIMITS.DAILY_MESSAGES} msgs). Connect your API key in settings or reset quota to continue.`
       };
     }
 
     if (usage.recentMessageTimestamps.length >= LIMITS.BURST_PER_MINUTE) {
       return {
         allowed: false,
-        reason: `Burst rate limit exceeded (maximum ${LIMITS.BURST_PER_MINUTE} messages per minute). Please wait a moment.`
+        reason: `Burst rate limit reached (${LIMITS.BURST_PER_MINUTE} msgs/min). Please wait a few seconds.`
       };
     }
 
@@ -88,6 +132,9 @@ export const QuotaManager = {
     usage.messageCount++;
     usage.recentMessageTimestamps.push(Date.now());
     saveUsageState(usage);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('toolbox:quotachange', { detail: usage }));
+    }
     return usage.messageCount;
   },
 
@@ -95,6 +142,9 @@ export const QuotaManager = {
    * Check if user can execute a heavy tool/agent task
    */
   canRunHeavyTask() {
+    if (isUserUnlimited()) {
+      return { allowed: true, remaining: Infinity, isUnlimited: true };
+    }
     const usage = loadUsageState();
     if (usage.heavyTaskCount >= LIMITS.HEAVY_TASKS_DAILY) {
       return {
@@ -112,6 +162,9 @@ export const QuotaManager = {
     const usage = loadUsageState();
     usage.heavyTaskCount++;
     saveUsageState(usage);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('toolbox:quotachange', { detail: usage }));
+    }
     return usage.heavyTaskCount;
   },
 
@@ -119,6 +172,9 @@ export const QuotaManager = {
    * Check if user can analyze a large file
    */
   canAnalyzeLargeFile() {
+    if (isUserUnlimited()) {
+      return { allowed: true, remaining: Infinity, isUnlimited: true };
+    }
     const usage = loadUsageState();
     if (usage.largeFileCount >= LIMITS.LARGE_FILES_DAILY) {
       return {
@@ -136,6 +192,9 @@ export const QuotaManager = {
     const usage = loadUsageState();
     usage.largeFileCount++;
     saveUsageState(usage);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('toolbox:quotachange', { detail: usage }));
+    }
     return usage.largeFileCount;
   },
 
@@ -143,17 +202,19 @@ export const QuotaManager = {
    * Get quota summary object for UI display
    */
   getQuotaSummary() {
+    const unlimited = isUserUnlimited();
     const usage = loadUsageState();
     return {
+      isUnlimited: unlimited,
       messagesUsed: usage.messageCount,
-      messagesLimit: LIMITS.DAILY_MESSAGES,
-      messagesRemaining: Math.max(0, LIMITS.DAILY_MESSAGES - usage.messageCount),
-      burstLimit: LIMITS.BURST_PER_MINUTE,
+      messagesLimit: unlimited ? 'Unlimited' : LIMITS.DAILY_MESSAGES,
+      messagesRemaining: unlimited ? 'Unlimited' : Math.max(0, LIMITS.DAILY_MESSAGES - usage.messageCount),
+      burstLimit: unlimited ? 'Unlimited' : LIMITS.BURST_PER_MINUTE,
       maxOutputTokens: LIMITS.MAX_OUTPUT_TOKENS,
       heavyTasksUsed: usage.heavyTaskCount,
-      heavyTasksLimit: LIMITS.HEAVY_TASKS_DAILY,
+      heavyTasksLimit: unlimited ? 'Unlimited' : LIMITS.HEAVY_TASKS_DAILY,
       largeFilesUsed: usage.largeFileCount,
-      largeFilesLimit: LIMITS.LARGE_FILES_DAILY
+      largeFilesLimit: unlimited ? 'Unlimited' : LIMITS.LARGE_FILES_DAILY
     };
   }
 };

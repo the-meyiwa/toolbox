@@ -3,6 +3,16 @@
 -- Run this script in the Supabase SQL Editor (SQL -> New Query)
 -- ============================================================
 
+-- P2P WebRTC Signaling Table
+CREATE TABLE IF NOT EXISTS public.p2p_signals (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_code text NOT NULL,
+  sender_id text NOT NULL,
+  message_type text NOT NULL,
+  payload jsonb NOT NULL,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- 1. PROFILES TABLE
 create table if not exists public.profiles (
   id uuid references auth.users on delete cascade primary key,
@@ -99,3 +109,17 @@ create policy "Users can view their own files"
 create policy "Users can delete their own files"
   on storage.objects for delete
   using (bucket_id = 'toolbox-files' and auth.uid()::text = (storage.foldername(name))[1]);
+
+-- 5. USER SETTINGS TABLE (For syncing application settings)
+create table if not exists public.user_settings (
+  user_id uuid references auth.users on delete cascade primary key,
+  settings jsonb default '{}'::jsonb,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.user_settings enable row level security;
+
+create policy "Users can manage own settings"
+  on public.user_settings for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);

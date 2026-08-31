@@ -242,30 +242,30 @@ export default {
       // 1. Legal View
       legalView.innerHTML = `
         <div class="cd-card" style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:14px;">
-          <h4 style="font-size:0.88rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase; letter-spacing:0.04em;">📜 Material Facts</h4>
+          <h4 style="font-size:0.88rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase; letter-spacing:0.04em;"> Material Facts</h4>
           <p style="font-size:0.85rem; line-height:1.55; color:var(--g900); margin:0; white-space:pre-wrap;">${digest.facts}</p>
         </div>
 
         <div class="cd-card" style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:14px;">
-          <h4 style="font-size:0.88rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase; letter-spacing:0.04em;">⚖️ Issues for Determination</h4>
+          <h4 style="font-size:0.88rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase; letter-spacing:0.04em;">️ Issues for Determination</h4>
           <ul style="margin:0; padding-left:18px; font-size:0.85rem; line-height:1.55;">
             ${digest.issues.map(iss => `<li style="margin-bottom:6px;">${iss}</li>`).join('')}
           </ul>
         </div>
 
         <div class="cd-card" style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:14px; border-left:4px solid var(--black);">
-          <h4 style="font-size:0.88rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase; letter-spacing:0.04em;">🏛️ Holding &amp; Final Orders</h4>
+          <h4 style="font-size:0.88rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase; letter-spacing:0.04em;">️ Holding &amp; Final Orders</h4>
           <p style="font-size:0.85rem; line-height:1.55; color:var(--g900); margin:0; font-weight:500;">${digest.holding}</p>
         </div>
 
         <div class="cd-card" style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:14px; border-left:4px solid #2563eb;">
-          <h4 style="font-size:0.88rem; font-weight:700; color:#1e40af; margin:0 0 8px 0; text-transform:uppercase; letter-spacing:0.04em;">💡 Ratio Decidendi (Binding Principle)</h4>
+          <h4 style="font-size:0.88rem; font-weight:700; color:#1e40af; margin:0 0 8px 0; text-transform:uppercase; letter-spacing:0.04em;"> Ratio Decidendi (Binding Principle)</h4>
           <p style="font-size:0.85rem; line-height:1.55; color:var(--g900); margin:0;">${digest.ratio}</p>
         </div>
 
         ${digest.authorities.length ? `
           <div class="cd-card" style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:14px;">
-            <h4 style="font-size:0.88rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase; letter-spacing:0.04em;">📚 Key Authorities Cited</h4>
+            <h4 style="font-size:0.88rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase; letter-spacing:0.04em;"> Key Authorities Cited</h4>
             <ul style="margin:0; padding-left:18px; font-size:0.82rem; font-family:var(--mono);">
               ${digest.authorities.map(a => `<li style="margin-bottom:4px;">${a}</li>`).join('')}
             </ul>

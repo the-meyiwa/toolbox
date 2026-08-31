@@ -276,3 +276,93 @@ export async function listSupabaseArtifacts() {
     return [];
   }
 }
+
+/**
+ * Save user settings to Supabase
+ */
+export async function syncSettingsToSupabase(settings) {
+  const config = getSupabaseConfig();
+  const user = getCurrentUser();
+  if (!user || !config.url || !config.anonKey) return;
+
+  try {
+    await fetch(`${config.url}/rest/v1/user_settings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': config.anonKey,
+        'Authorization': `Bearer ${user.token}`,
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({
+        user_id: user.id,
+        settings: settings,
+        updated_at: new Date().toISOString()
+      })
+    });
+  } catch {}
+}
+
+/**
+ * Load user settings from Supabase
+ */
+export async function loadSettingsFromSupabase() {
+  const config = getSupabaseConfig();
+  const user = getCurrentUser();
+  if (!user || !config.url || !config.anonKey) return null;
+
+  try {
+    const res = await fetch(`${config.url}/rest/v1/user_settings?user_id=eq.${user.id}`, {
+      headers: {
+        'apikey': config.anonKey,
+        'Authorization': `Bearer ${user.token}`
+      }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data && data.length > 0) return data[0].settings;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * P2P Signaling: Send WebRTC signal via Supabase REST
+ */
+export async function sendP2PSignal(roomCode, senderId, messageType, payload) {
+  const config = getSupabaseConfig();
+  if (!config.url || !config.anonKey) return;
+  try {
+    await fetch(`${config.url}/rest/v1/p2p_signals`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': config.anonKey
+      },
+      body: JSON.stringify({
+        room_code: roomCode,
+        sender_id: senderId,
+        message_type: messageType,
+        payload
+      })
+    });
+  } catch {}
+}
+
+/**
+ * P2P Signaling: Poll WebRTC signals via Supabase REST
+ */
+export async function pollP2PSignals(roomCode, sinceDate) {
+  const config = getSupabaseConfig();
+  if (!config.url || !config.anonKey) return [];
+  try {
+    const res = await fetch(`${config.url}/rest/v1/p2p_signals?room_code=eq.${roomCode}&created_at=gt.${sinceDate}&order=created_at.asc`, {
+      headers: { 'apikey': config.anonKey }
+    });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
+}
