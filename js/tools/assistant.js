@@ -35,6 +35,7 @@ import { QuotaManager } from '../lib/quota-manager.js';
 import { getCurrentUser } from '../lib/supabase.js';
 import { openAccountModal } from '../views/account-modal.js';
 import { AssistantAudioManager } from '../lib/assistant-audio.js';
+import { ConversationIntegrationManager } from '../lib/assistant-integration.js';
 import TOOLS from '../registry/tools.js';
 const BY_ID = new Map(TOOLS.map(t => [t.id, t]));
 
@@ -44,15 +45,24 @@ const STORAGE_KEEP_CONTEXT = 'toolbox_assistant_keep_context';
 export default {
   render(container, state = {}) {
     const currentToolId = state.tool?.id || null;
-    let history = [];
     let keepContext = localStorage.getItem(STORAGE_KEEP_CONTEXT) !== 'false';
     let currentAssistantAbortCtrl = null;
+    let hasStartedConversation = false;
 
-    try {
-      if (keepContext) {
-        history = JSON.parse(localStorage.getItem(STORAGE_HISTORY) || '[]');
+    // Initialize Phase 2 Integration Manager
+    const integrationManager = new ConversationIntegrationManager({
+      history: [],
+      keepContext,
+      audioManager: AssistantAudioManager,
+      onHistoryChange: () => {
+        // Optional: custom behavior on history updates
+      },
+      onMessageRendered: () => {
+        // Optional: custom behavior after rendering
       }
-    } catch {}
+    });
+
+    let history = [];
 
     const taskState = {
       activeToolId: currentToolId || null,
@@ -218,10 +228,10 @@ export default {
     window.addEventListener('toolbox:quotachange', updateQuotaDisplay);
 
     // Clear conversation
-    btnClear?.addEventListener('click', () => {
+    btnClear?.addEventListener('click', async () => {
       if (confirm('Clear current conversation history?')) {
         history = [];
-        localStorage.removeItem(STORAGE_HISTORY);
+        await integrationManager.clearConversation();
         renderMessageList();
       }
     });
@@ -453,11 +463,7 @@ export default {
                 <input type="file" class="ast-inchat-file-input" style="display:none;" />
               </div>
             ` : ''}
-            ${toolResults?.length ? `
-              <div class="ast-tool-results-area" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
-                ${toolResults.map(r => renderToolResultCard(r)).join('')}
-              </div>
-            ` : '<div class="ast-tool-results-area"></div>'}
+            <div class="ast-tool-results-area" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
           `;
         }
 
@@ -509,7 +515,12 @@ export default {
       }
 
       messagesEl.appendChild(msgDiv);
-      bindAudioControls(msgDiv);
+      const resultsArea = msgDiv.querySelector('.ast-tool-results-area');
+      if (role === 'assistant' && resultsArea) {
+        for (const result of toolResults) {
+          void integrationManager.renderToolResult(result, resultsArea);
+        }
+      }
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
@@ -849,7 +860,8 @@ export default {
     function persistHistory() {
       if (keepContext) {
         try {
-          localStorage.setItem(STORAGE_HISTORY, JSON.stringify(history.slice(-30)));
+          // Use the integration manager's single conversation store.
+          void integrationManager.persistHistory(history).catch(e => console.warn('[Assistant] Failed to persist chat history:', e));
         } catch (e) {
           console.warn('[Assistant] Failed to persist chat history:', e);
         }
@@ -864,6 +876,7 @@ export default {
       const fileToProcess = currentAttachedFile;
 
       if (!text && !fileToProcess) return;
+      hasStartedConversation = true;
 
       const quotaCheck = QuotaManager.canSendMessage();
       if (!quotaCheck.allowed) {
@@ -979,14 +992,7 @@ export default {
           onToolCallResult: (toolName, result) => {
             executedToolResults.push(result);
             if (toolResultsArea) {
-              const resHtml = renderToolResultCard(result);
-              if (resHtml) {
-                const cardWrap = document.createElement('div');
-                cardWrap.innerHTML = resHtml;
-                const newElem = cardWrap.firstElementChild;
-                toolResultsArea.appendChild(newElem);
-                bindAudioControls(toolResultsArea);
-              }
+              void integrationManager.renderToolResult(result, toolResultsArea, toolName);
             }
           },
           signal: abortCtrl.signal
@@ -1187,14 +1193,7 @@ export default {
           onToolCallResult: (toolName, result) => {
             executedToolResults.push(result);
             if (toolResultsArea) {
-              const resHtml = renderToolResultCard(result);
-              if (resHtml) {
-                const cardWrap = document.createElement('div');
-                cardWrap.innerHTML = resHtml;
-                const newElem = cardWrap.firstElementChild;
-                toolResultsArea.appendChild(newElem);
-                bindAudioControls(toolResultsArea);
-              }
+              void integrationManager.renderToolResult(result, toolResultsArea, toolName);
             }
           },
           signal: abortCtrl.signal
@@ -1316,6 +1315,14 @@ export default {
     }
 
     renderMessageList();
+
+    if (keepContext) {
+      void integrationManager.loadConversation().then(messages => {
+        if (!messages.length || hasStartedConversation) return;
+        history = integrationManager.getHistory();
+        renderMessageList();
+      }).catch(e => console.warn('[Assistant] Failed to load conversation:', e));
+    }
 
     // Auto-focus input
     setTimeout(() => {

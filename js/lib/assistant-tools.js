@@ -12,24 +12,14 @@ import { calculateMolarMass, balanceChemicalEquation, calculateStoichiometry } f
 import { COMPOUNDS_DATA } from './compounds-dataset.js';
 import { connectionInfo, measureLatency, measureDownload } from './netspeed.js';
 import { AssistantAudioManager } from './assistant-audio.js';
+import { toolDiscovery } from './assistant-tool-discovery.js';
 
 let activeAssistantAudios = [];
 
 /**
  * Assistant Tool Declarations (Standard Function Calling Schema)
  */
-const registryDeclarations = TOOLS.map(t => ({
-  name: `open_tool_${t.id.replace(/-/g, '_')}`,
-  description: `Toolbox Tool: ${t.name}. ${t.description}. Keywords: ${(t.keywords || []).join(', ')}. Intents: ${(t.intents || []).join(', ')}. Accepts: ${(t.accepts || []).join(', ')}. Produces: ${(t.produces || []).join(', ')}.`,
-  parameters: {
-    type: 'OBJECT',
-    properties: {
-      inputData: { type: 'STRING', description: 'Optional text or code artifact content to pass directly to the tool as input.' },
-      artifactName: { type: 'STRING', description: 'Optional filename for the input artifact (e.g. "data.csv" or "snippet.js").' },
-      standalone: { type: 'BOOLEAN', description: 'Set to true to open the tool in a new fullscreen standalone window.' }
-    }
-  }
-}));
+const registryDeclarations = toolDiscovery.generateNavigationDeclarations();
 
 export const ASSISTANT_TOOL_DECLARATIONS = [
   {

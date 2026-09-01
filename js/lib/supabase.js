@@ -261,7 +261,10 @@ export async function signUpWithEmail(email, password) {
 export function signOut() {
   try {
     localStorage.removeItem(SUPABASE_SESSION_KEY);
+    // Reset storage strategy to Browser/Local when signed out
+    localStorage.setItem(STORAGE_MODE_KEY, 'local');
     window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: null } }));
+    window.dispatchEvent(new CustomEvent('toolbox:storagemodechange', { detail: { mode: 'local' } }));
   } catch {}
 }
 

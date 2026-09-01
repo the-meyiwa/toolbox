@@ -9,6 +9,7 @@ class AssistantAudioService {
     this.instances = new Map();
     this.currentActiveId = null;
     this.listeners = new Set();
+    this.synthUrls = new Set(); // Track synthesized blob: URLs for cleanup
   }
 
   subscribe(fn) {
@@ -61,6 +62,8 @@ class AssistantAudioService {
         trackTitle = synthData.title;
         trackArtist = 'Toolbox WebAudio Synth';
         trackDuration = synthData.duration;
+        // Track synthesized URL for cleanup
+        this.synthUrls.add(audioUrl);
       } catch (err) {
         throw new Error(`Could not find or synthesize audio for "${query}".`);
       }
@@ -148,7 +151,7 @@ class AssistantAudioService {
       url: audioUrl,
       duration: instanceData.duration,
       controls: true,
-      message: `Playing "${trackTitle}" by ${trackArtist}. Interactive audio controls are displayed.`
+      message: `Now playing "${trackTitle}" by ${trackArtist}.`
     };
   }
 
@@ -158,49 +161,66 @@ class AssistantAudioService {
     return null;
   }
 
+  /** Restore a serialized player for a historical result without invoking a tool. */
+  restore(data = {}) {
+    if (!data.audioId || !data.url) return null;
+    const existing = this.getInstance(data.audioId);
+    if (existing) return existing;
+    const audio = new Audio(data.url);
+    const instance = { id: data.audioId, audio, title: data.title || 'Audio', artist: data.artist || '', artworkUrl: data.artworkUrl || '', url: data.url, duration: data.duration || 30, currentTime: data.currentTime || 0, volume: data.volume ?? 1, isPlaying: false, isEnded: false, error: null };
+    audio.volume = instance.volume;
+    audio.addEventListener('play', () => { instance.isPlaying = true; this.notify('play', instance); });
+    audio.addEventListener('pause', () => { instance.isPlaying = false; this.notify('pause', instance); });
+    audio.addEventListener('timeupdate', () => { instance.currentTime = audio.currentTime; this.notify('timeupdate', instance); });
+    audio.addEventListener('ended', () => { instance.isPlaying = false; instance.isEnded = true; this.notify('ended', instance); });
+    this.instances.set(instance.id, instance);
+    this.currentActiveId = instance.id;
+    return instance;
+  }
+
   pause(audioId) {
     const inst = this.getInstance(audioId);
-    if (!inst) return { success: false, message: 'No active audio found to pause.' };
+    if (!inst) return { success: false, type: 'audio', message: 'No active audio found to pause.' };
     inst.audio.pause();
-    return { success: true, audioId: inst.id, action: 'pause', message: `Paused "${inst.title}".` };
+    return { success: true, type: 'audio', audioId: inst.id, action: 'pause', message: `Paused "${inst.title}".` };
   }
 
   resume(audioId) {
     const inst = this.getInstance(audioId);
-    if (!inst) return { success: false, message: 'No active audio found to resume.' };
+    if (!inst) return { success: false, type: 'audio', message: 'No active audio found to resume.' };
     inst.audio.play().catch(e => console.error('Resume failed:', e));
-    return { success: true, audioId: inst.id, action: 'resume', message: `Resumed "${inst.title}".` };
+    return { success: true, type: 'audio', audioId: inst.id, action: 'resume', message: `Resumed "${inst.title}".` };
   }
 
   stop(audioId) {
     const inst = this.getInstance(audioId);
-    if (!inst) return { success: false, message: 'No active audio found to stop.' };
+    if (!inst) return { success: false, type: 'audio', message: 'No active audio found to stop.' };
     inst.audio.pause();
     inst.audio.currentTime = 0;
     inst.currentTime = 0;
     inst.isPlaying = false;
     this.notify('stop', inst);
-    return { success: true, audioId: inst.id, action: 'stop', message: `Stopped "${inst.title}".` };
+    return { success: true, type: 'audio', audioId: inst.id, action: 'stop', message: `Stopped "${inst.title}".` };
   }
 
   seek(audioId, seconds) {
     const inst = this.getInstance(audioId);
-    if (!inst) return { success: false, message: 'No active audio found to seek.' };
+    if (!inst) return { success: false, type: 'audio', message: 'No active audio found to seek.' };
     const clamped = Math.max(0, Math.min(seconds, inst.duration || 300));
     inst.audio.currentTime = clamped;
     inst.currentTime = clamped;
     this.notify('timeupdate', inst);
-    return { success: true, audioId: inst.id, action: 'seek', time: clamped, message: `Seeked to ${clamped.toFixed(1)}s.` };
+    return { success: true, type: 'audio', audioId: inst.id, action: 'seek', time: clamped, message: `Seeked to ${clamped.toFixed(1)}s.` };
   }
 
   setVolume(audioId, volume) {
     const inst = this.getInstance(audioId);
-    if (!inst) return { success: false, message: 'No active audio found to adjust volume.' };
+    if (!inst) return { success: false, type: 'audio', message: 'No active audio found to adjust volume.' };
     const clamped = Math.max(0, Math.min(1.0, volume));
     inst.audio.volume = clamped;
     inst.volume = clamped;
     this.notify('volume', inst);
-    return { success: true, audioId: inst.id, action: 'volume', volume: clamped, message: `Volume set to ${Math.round(clamped * 100)}%.` };
+    return { success: true, type: 'audio', audioId: inst.id, action: 'volume', volume: clamped, message: `Volume set to ${Math.round(clamped * 100)}%.` };
   }
 
   stopAll() {
@@ -213,6 +233,11 @@ class AssistantAudioService {
           inst.audio.load();
         }
         inst.isPlaying = false;
+        // Revoke blob URLs created by synthesized audio
+        if (inst.url && inst.url.startsWith('blob:')) {
+          URL.revokeObjectURL(inst.url);
+          this.synthUrls.delete(inst.url);
+        }
       } catch (e) {}
     });
     this.instances.clear();

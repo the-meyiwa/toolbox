@@ -192,6 +192,7 @@ const BASE_SYSTEM_INSTRUCTION = `You are Toolbox Assistant, a sophisticated, hig
 - If a user asks to edit a PDF, convert an image, or analyze a dataset and no file is attached, invite them to drag & drop or upload their file.
 - For math formulas, use clean LaTeX formatting ($$...$$).
 - For code snippets, provide complete, working code in language-specific code blocks.
+- When a tool returns structured UI such as audio players, cards, notes, charts, or other interactive controls, do not narrate the existence of those controls. Only provide natural-language text when it adds useful information beyond what the UI itself communicates.
 - You have real-time access to the current date and time in the Current Environment section below. Always reference it if asked.`;
 
 /**
@@ -199,7 +200,7 @@ const BASE_SYSTEM_INSTRUCTION = `You are Toolbox Assistant, a sophisticated, hig
  * All requests route securely through Toolbox's server proxy (/api/assistant/chat).
  */
 export async function streamChatCompletion({
-  mode = 'auto',
+  mode = null,
   history = [],
   systemInstruction = '',
   currentFile = null,
