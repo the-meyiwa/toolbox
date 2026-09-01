@@ -816,6 +816,16 @@ export default {
       });
     });
 
+    function persistHistory() {
+      if (keepContext) {
+        try {
+          localStorage.setItem(STORAGE_HISTORY, JSON.stringify(history.slice(-30)));
+        } catch (e) {
+          console.warn('[Assistant] Failed to persist chat history:', e);
+        }
+      }
+    }
+
     async function handleSend() {
       const text = userInput?.value?.trim() || '';
       const fileToProcess = currentAttachedFile;
@@ -828,6 +838,8 @@ export default {
         return;
       }
 
+      const turnId = `turn_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
       if (userInput) userInput.value = '';
       handleAutoResize();
 
@@ -835,7 +847,10 @@ export default {
       if (attachedBar) attachedBar.style.display = 'none';
       if (fileInput) fileInput.value = '';
 
+      // 1. Immediately commit and persist user turn
       const userMsgObj = {
+        id: `msg_${Date.now()}_u`,
+        turnId,
         role: 'user',
         content: text || `[Attached file: ${fileToProcess.name}]`,
         fileData: fileToProcess ? {
@@ -844,16 +859,19 @@ export default {
           base64: fileToProcess.base64,
           text: fileToProcess.text
         } : null,
-        filePreview: fileToProcess ? { name: fileToProcess.name, size: fileToProcess.size } : null
+        filePreview: fileToProcess ? { name: fileToProcess.name, size: fileToProcess.size } : null,
+        timestamp: Date.now()
       };
 
       history.push(userMsgObj);
+      persistHistory();
       appendRenderedMessage('user', userMsgObj.content, [], userMsgObj.filePreview);
 
       if (sendBtn) sendBtn.disabled = true;
 
       const assistantMsgDiv = document.createElement('div');
       assistantMsgDiv.className = 'ast-msg ast-msg-assistant';
+      assistantMsgDiv.dataset.turnId = turnId;
       assistantMsgDiv.style.display = 'flex';
       assistantMsgDiv.style.gap = '12px';
       assistantMsgDiv.style.maxWidth = '90%';
@@ -936,7 +954,7 @@ export default {
           signal: abortCtrl.signal
         });
 
-        const finalText = accumulatedStreamText || streamResult.text || '';
+        const finalText = accumulatedStreamText || streamResult.text || (executedToolResults.length ? 'Executed action successfully.' : '');
         if (textBody) {
           textBody.innerHTML = formatMarkdown(finalText);
           
@@ -997,42 +1015,64 @@ export default {
           }
         }
 
+        // 2. Commit and persist successful assistant turn
         history.push({
+          id: `msg_${Date.now()}_a`,
+          turnId,
           role: 'assistant',
           content: finalText,
-          toolResults: executedToolResults
+          toolResults: executedToolResults,
+          status: 'success',
+          timestamp: Date.now()
         });
-
-        if (keepContext) {
-          try {
-            localStorage.setItem(STORAGE_HISTORY, JSON.stringify(history.slice(-20)));
-          } catch {}
-        }
-
+        persistHistory();
         updateQuotaDisplay();
 
       } catch (err) {
+        const hasTools = executedToolResults.length > 0;
         const message = err?.name === 'AbortError'
           ? 'The request took too long. Please try again.'
           : (err?.message || 'Something went wrong.');
 
-        if (textBody) {
-          textBody.innerHTML = `
-            <div style="color:#ef4444; font-weight:600; margin-bottom:8px; line-height:1.4;">${escapeHtml(message)}</div>
-            <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
-              <button type="button" class="btn btn-primary btn-sm ast-err-btn-settings" style="font-size:0.75rem; font-weight:700;">
-                AI Settings
-              </button>
-              <button type="button" class="btn btn-secondary btn-sm ast-err-btn-retry" style="font-size:0.75rem; font-weight:700;">
-                Retry Request
-              </button>
-            </div>
-          `;
+        const finalAssistantText = accumulatedStreamText || (hasTools ? (executedToolResults.map(r => r.message).filter(Boolean).join('\n') || 'Executed action.') : '');
 
-          assistantMsgDiv.querySelector?.('.ast-err-btn-settings')?.addEventListener('click', openSettings);
-          assistantMsgDiv.querySelector?.('.ast-err-btn-retry')?.addEventListener('click', () => {
-            handleSend();
-          });
+        // 3. Durable state: Always commit the assistant turn even on failure
+        history.push({
+          id: `msg_${Date.now()}_a`,
+          turnId,
+          role: 'assistant',
+          content: finalAssistantText,
+          toolResults: executedToolResults,
+          status: hasTools ? 'partial_success' : 'failed',
+          error: message,
+          timestamp: Date.now()
+        });
+        persistHistory();
+
+        if (textBody) {
+          if (hasTools) {
+            textBody.innerHTML = `
+              <div>${formatMarkdown(finalAssistantText)}</div>
+              <div style="font-size:0.75rem; color:var(--g500); margin-top:6px; font-style:italic;">Action completed. Note: ${escapeHtml(message)}</div>
+            `;
+          } else {
+            textBody.innerHTML = `
+              <div style="color:#ef4444; font-weight:600; margin-bottom:8px; line-height:1.4;">${escapeHtml(message)}</div>
+              <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+                <button type="button" class="btn btn-primary btn-sm ast-err-btn-settings" style="font-size:0.75rem; font-weight:700;">
+                  AI Settings
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm ast-err-btn-retry" style="font-size:0.75rem; font-weight:700;">
+                  Retry Request
+                </button>
+              </div>
+            `;
+
+            assistantMsgDiv.querySelector?.('.ast-err-btn-settings')?.addEventListener('click', openSettings);
+            assistantMsgDiv.querySelector?.('.ast-err-btn-retry')?.addEventListener('click', () => {
+              handleSend();
+            });
+          }
         }
       } finally {
         clearTimeout(watchdog);

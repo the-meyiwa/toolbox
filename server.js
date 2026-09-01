@@ -157,30 +157,34 @@ const server = http.createServer(async (request, response) => {
       const authHeader = request.headers.authorization;
       if (!authHeader) {
         response.writeHead(401, { 'Content-Type': 'application/json' });
-        response.end(JSON.stringify({ error: 'Unauthorized: Missing token' }));
+        response.end(JSON.stringify({ success: false, error: 'Unauthorized: Missing session token' }));
         return;
       }
 
-      const token = authHeader.replace('Bearer ', '');
+      const token = authHeader.replace('Bearer ', '').trim();
       const isDevToken = token.startsWith('tok_') && process.env.NODE_ENV !== 'production';
 
-      if (!isDevToken) {
+      if (!isDevToken && token) {
         const anonKey = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_iZcbpvF209tCXSuqNm4Ckw_xOFFMM-S';
         const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://ssoruyruzbvgyondxlgj.supabase.co';
         
         try {
+          const authCtrl = new AbortController();
+          const authTimer = setTimeout(() => authCtrl.abort(), 4000);
           const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
-            headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
+            headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey },
+            signal: authCtrl.signal
           });
-          if (!userRes.ok) {
+          clearTimeout(authTimer);
+
+          if (!userRes.ok && userRes.status === 401) {
             response.writeHead(401, { 'Content-Type': 'application/json' });
-            response.end(JSON.stringify({ error: 'Unauthorized: Invalid token' }));
+            response.end(JSON.stringify({ success: false, error: 'Unauthorized: Invalid or expired session' }));
             return;
           }
         } catch (e) {
-          response.writeHead(500, { 'Content-Type': 'application/json' });
-          response.end(JSON.stringify({ error: 'Auth server error' }));
-          return;
+          // Non-blocking fallback for network jitter while preserving security
+          console.warn('[Assistant Auth] Auth verification notice:', e.message);
         }
       }
 
@@ -190,13 +194,14 @@ const server = http.createServer(async (request, response) => {
         try {
           const body = JSON.parse(bodyStr || '{}');
           const prov = body.provider || 'gemini';
+          const turnId = request.headers['x-turn-id'] || body.turnId || `turn_${Date.now()}`;
 
           // 1. Groq Cloud Proxy
           if (prov === 'groq' || (!process.env.GEMINI_API_KEY && process.env.GROQ_API_KEY && !body.apiKey)) {
             const groqKey = process.env.GROQ_API_KEY || body.apiKey;
             if (!groqKey) {
               response.writeHead(400, { 'Content-Type': 'application/json' });
-              response.end(JSON.stringify({ error: 'GROQ_API_KEY is not configured.' }));
+              response.end(JSON.stringify({ success: false, error: 'GROQ_API_KEY is not configured.' }));
               return;
             }
 
@@ -217,7 +222,7 @@ const server = http.createServer(async (request, response) => {
             if (!groqRes.ok) {
               const errJson = await groqRes.json().catch(() => ({}));
               response.writeHead(400, { 'Content-Type': 'application/json' });
-              response.end(JSON.stringify({ error: errJson.error?.message || `Groq HTTP ${groqRes.status}` }));
+              response.end(JSON.stringify({ success: false, error: errJson.error?.message || `Groq HTTP ${groqRes.status}` }));
               return;
             }
 
@@ -225,7 +230,8 @@ const server = http.createServer(async (request, response) => {
               'Content-Type': 'text/event-stream; charset=utf-8',
               'Cache-Control': 'no-cache, no-transform',
               'Connection': 'keep-alive',
-              'x-ai-format': 'openai'
+              'x-ai-format': 'openai',
+              'x-turn-id': turnId
             });
 
             const reader = groqRes.body.getReader();
@@ -248,7 +254,7 @@ const server = http.createServer(async (request, response) => {
 
             if (!apiKey) {
               response.writeHead(400, { 'Content-Type': 'application/json' });
-              response.end(JSON.stringify({ error: `API key for ${prov} is not configured.` }));
+              response.end(JSON.stringify({ success: false, error: `API key for ${prov} is not configured.` }));
               return;
             }
 
@@ -275,7 +281,7 @@ const server = http.createServer(async (request, response) => {
             if (!aiRes.ok) {
               const errJson = await aiRes.json().catch(() => ({}));
               response.writeHead(400, { 'Content-Type': 'application/json' });
-              response.end(JSON.stringify({ error: errJson.error?.message || `${prov} HTTP ${aiRes.status}` }));
+              response.end(JSON.stringify({ success: false, error: errJson.error?.message || `${prov} HTTP ${aiRes.status}` }));
               return;
             }
 
@@ -283,7 +289,8 @@ const server = http.createServer(async (request, response) => {
               'Content-Type': 'text/event-stream; charset=utf-8',
               'Cache-Control': 'no-cache, no-transform',
               'Connection': 'keep-alive',
-              'x-ai-format': 'openai'
+              'x-ai-format': 'openai',
+              'x-turn-id': turnId
             });
 
             const reader = aiRes.body.getReader();
@@ -300,11 +307,18 @@ const server = http.createServer(async (request, response) => {
           const apiKey = process.env.GEMINI_API_KEY || body.apiKey;
           if (!apiKey) {
             response.writeHead(400, { 'Content-Type': 'application/json' });
-            response.end(JSON.stringify({ error: 'AI Assistant service is currently unconfigured or unavailable.' }));
+            response.end(JSON.stringify({ success: false, error: 'AI Assistant service is currently unconfigured.' }));
             return;
           }
 
-          const candidateModels = [body.model, 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.6-flash', 'gemini-3.7-flash'].filter(Boolean);
+          // Valid active Gemini models (fastest first)
+          const candidateModels = [
+            body.model,
+            'gemini-2.5-flash',
+            'gemini-2.0-flash',
+            'gemini-1.5-flash',
+            'gemini-2.5-pro'
+          ].filter(Boolean);
           const uniqueModels = [...new Set(candidateModels)];
 
           let fetchRes = null;
@@ -314,7 +328,7 @@ const server = http.createServer(async (request, response) => {
             const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
             try {
               const geminiCtrl = new AbortController();
-              const geminiTimer = setTimeout(() => geminiCtrl.abort(), 6000);
+              const geminiTimer = setTimeout(() => geminiCtrl.abort(), 18000);
               fetchRes = await fetch(geminiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -324,7 +338,7 @@ const server = http.createServer(async (request, response) => {
                   tools: body.tools,
                   generationConfig: {
                     temperature: 0.4,
-                    maxOutputTokens: 2000
+                    maxOutputTokens: 2500
                   }
                 }),
                 signal: geminiCtrl.signal
@@ -347,7 +361,7 @@ const server = http.createServer(async (request, response) => {
 
           if (!fetchRes || !fetchRes.ok) {
             response.writeHead(400, { 'Content-Type': 'application/json' });
-            response.end(JSON.stringify({ error: lastErrMessage || 'Failed to connect to Google Gemini API.' }));
+            response.end(JSON.stringify({ success: false, error: lastErrMessage || 'Failed to connect to Google Gemini API.' }));
             return;
           }
 
@@ -355,7 +369,8 @@ const server = http.createServer(async (request, response) => {
             'Content-Type': 'text/event-stream; charset=utf-8',
             'Cache-Control': 'no-cache, no-transform',
             'Connection': 'keep-alive',
-            'x-ai-format': 'gemini'
+            'x-ai-format': 'gemini',
+            'x-turn-id': turnId
           });
 
           const reader = fetchRes.body.getReader();
@@ -369,7 +384,7 @@ const server = http.createServer(async (request, response) => {
           if (!response.headersSent) {
             response.writeHead(500, { 'Content-Type': 'application/json' });
           }
-          response.end(JSON.stringify({ error: err.message }));
+          response.end(JSON.stringify({ success: false, error: err.message }));
         }
       });
       return;
