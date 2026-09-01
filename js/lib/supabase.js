@@ -86,11 +86,18 @@ export function setStorageMode(mode) {
 /**
  * Get current user session
  */
+/**
+ * Get current user session
+ */
 export function getCurrentUser() {
   try {
     const raw = localStorage.getItem(SUPABASE_SESSION_KEY);
     if (!raw) return null;
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || !parsed.token) {
+      return null;
+    }
+    return parsed;
   } catch {
     return null;
   }
@@ -100,6 +107,7 @@ export function getCurrentUser() {
  * Sign in with email and password
  */
 export async function signInWithEmail(email, password) {
+  const cleanEmail = (email || '').trim().toLowerCase();
   const config = getSupabaseConfig();
   try {
     if (config.url && config.anonKey) {
@@ -109,17 +117,20 @@ export async function signInWithEmail(email, password) {
           'Content-Type': 'application/json',
           'apikey': config.anonKey
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email: cleanEmail, password })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error_description || data.message || 'Login failed');
+      if (!res.ok) {
+        const errorMsg = data.error_description || data.message || data.msg || (data.error === 'invalid_grant' ? 'Invalid email or password.' : 'Login failed');
+        throw new Error(errorMsg);
+      }
 
       const userSession = {
-        id: data.user.id,
-        email: data.user.email,
+        id: data.user?.id || `usr_${Date.now()}`,
+        email: data.user?.email || cleanEmail,
         token: data.access_token,
         refreshToken: data.refresh_token,
-        createdAt: data.user.created_at || new Date().toISOString()
+        createdAt: data.user?.created_at || new Date().toISOString()
       };
       localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
       window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
@@ -128,8 +139,8 @@ export async function signInWithEmail(email, password) {
 
     // Local / Dev Account simulation when no external Supabase URL is set
     const userSession = {
-      id: `usr_${btoa(email).slice(0, 10)}`,
-      email,
+      id: `usr_${btoa(cleanEmail).slice(0, 10)}`,
+      email: cleanEmail,
       token: `tok_${Date.now()}`,
       createdAt: new Date().toISOString()
     };
@@ -186,6 +197,7 @@ export async function refreshUserSession() {
  * Sign up with email and password
  */
 export async function signUpWithEmail(email, password) {
+  const cleanEmail = (email || '').trim().toLowerCase();
   const config = getSupabaseConfig();
   try {
     if (config.url && config.anonKey) {
@@ -195,32 +207,43 @@ export async function signUpWithEmail(email, password) {
           'Content-Type': 'application/json',
           'apikey': config.anonKey
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email: cleanEmail, password })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error_description || data.message || 'Sign up failed');
-
-      if (!data.access_token) {
-        // Email confirmation is required, no session created yet
-        return { success: true, requiresConfirmation: true };
+      if (!res.ok) {
+        const errorMsg = data.error_description || data.message || data.msg || 'Sign up failed';
+        throw new Error(errorMsg);
       }
 
-      const userSession = {
-        id: data.user?.id || `usr_${Date.now()}`,
-        email,
-        token: data.access_token,
-        refreshToken: data.refresh_token || '',
-        createdAt: new Date().toISOString()
-      };
-      localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
-      window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
-      return { success: true, user: userSession };
+      // If Supabase returned an access_token directly (instant confirmation)
+      if (data.access_token) {
+        const userSession = {
+          id: data.user?.id || `usr_${Date.now()}`,
+          email: cleanEmail,
+          token: data.access_token,
+          refreshToken: data.refresh_token || '',
+          createdAt: new Date().toISOString()
+        };
+        localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
+        window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
+        return { success: true, user: userSession };
+      }
+
+      // If no token was returned in signup, try immediate sign in
+      // (works automatically if auto-confirm trigger is installed or account is active)
+      const immediateLogin = await signInWithEmail(cleanEmail, password);
+      if (immediateLogin.success) {
+        return immediateLogin;
+      }
+
+      // Otherwise, the auth provider strictly enforces email confirmation link
+      return { success: true, requiresConfirmation: true };
     }
 
     // Dev Account simulation
     const userSession = {
-      id: `usr_${btoa(email).slice(0, 10)}`,
-      email,
+      id: `usr_${btoa(cleanEmail).slice(0, 10)}`,
+      email: cleanEmail,
       token: `tok_${Date.now()}`,
       createdAt: new Date().toISOString()
     };
