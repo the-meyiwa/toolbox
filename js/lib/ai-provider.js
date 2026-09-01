@@ -234,6 +234,7 @@ export async function streamChatCompletion({
 
   let fullResponseText = '';
   const executedToolResults = [];
+  const turnExecutedTools = new Map();
   const contents = buildGeminiContents(history, currentFile);
 
   if (!contents.length) {
@@ -285,6 +286,20 @@ export async function streamChatCompletion({
       return res;
     };
 
+    const handleSingleToolCall = async (toolName, toolArgs, callId = null) => {
+      const toolKey = callId || `${toolName}:${JSON.stringify(toolArgs || {})}`;
+      if (turnExecutedTools.has(toolKey)) {
+        return turnExecutedTools.get(toolKey);
+      }
+
+      onToolCallStart(toolName, toolArgs);
+      const toolRes = await executeAssistantTool(toolName, toolArgs, { currentFile, taskState });
+      turnExecutedTools.set(toolKey, toolRes);
+      onToolCallResult(toolName, toolRes);
+      executedToolResults.push(toolRes);
+      return toolRes;
+    };
+
     const proxyRes = await callProxy(contents);
 
     if (proxyRes.ok && proxyRes.body) {
@@ -293,25 +308,26 @@ export async function streamChatCompletion({
           fullResponseText += t;
           onToken(t);
         },
-        onToolCall: async (toolName, toolArgs) => {
-          onToolCallStart(toolName, toolArgs);
-          const toolRes = await executeAssistantTool(toolName, toolArgs, { currentFile, taskState });
-          onToolCallResult(toolName, toolRes);
-          executedToolResults.push(toolRes);
-          return toolRes;
-        },
+        onToolCall: handleSingleToolCall,
+        turnExecutedTools,
         signal
       });
 
-      // Multi-step tool chaining loop (allows sequential tool execution up to 6 turns)
-      let loopLimit = 6;
+      // Multi-step tool chaining loop (allows sequential tool execution up to 4 turns, with strict duplicate prevention)
+      let loopLimit = 4;
       while (loopLimit-- > 0 && currentParseResult.hadFunctionCalls && currentParseResult.functionResponses?.length) {
         if (signal?.aborted) break;
+
+        // Check if all function calls were already executed in prior steps to prevent infinite loop repetition
+        const hasUnprocessedToolCalls = currentParseResult.functionCalls.some(fc => {
+          const key = fc.id || `${fc.name}:${JSON.stringify(fc.args || {})}`;
+          return !contents.some(c => c.role === 'model' && c.parts?.some(p => p.functionCall?.name === fc.name && JSON.stringify(p.functionCall?.args) === JSON.stringify(fc.args)));
+        });
 
         contents.push({
           role: 'model',
           parts: currentParseResult.rawModelParts?.length ? currentParseResult.rawModelParts : currentParseResult.functionCalls.map(fc => ({
-            functionCall: { name: fc.name, args: fc.args || {} }
+            functionCall: { name: fc.name, args: fc.args || {}, id: fc.id }
           }))
         });
 
@@ -328,6 +344,11 @@ export async function streamChatCompletion({
           }))
         });
 
+        if (!hasUnprocessedToolCalls) {
+          // All tool calls were already completed in the model history; do not send repeated tool calls
+          break;
+        }
+
         const followUpRes = await callProxy(contents);
         if (followUpRes.ok && followUpRes.body) {
           currentParseResult = await processGeminiSseStream(followUpRes.body, {
@@ -335,13 +356,8 @@ export async function streamChatCompletion({
               fullResponseText += t;
               onToken(t);
             },
-            onToolCall: async (toolName, toolArgs) => {
-              onToolCallStart(toolName, toolArgs);
-              const toolRes = await executeAssistantTool(toolName, toolArgs, { currentFile, taskState });
-              onToolCallResult(toolName, toolRes);
-              executedToolResults.push(toolRes);
-              return toolRes;
-            },
+            onToolCall: handleSingleToolCall,
+            turnExecutedTools,
             signal
           });
         } else {
@@ -380,15 +396,16 @@ export async function streamChatCompletion({
 }
 
 /**
- * Decodes Google Gemini SSE stream and handles function calls
+ * Decodes Google Gemini SSE stream and handles function calls with strict deduplication
  */
-async function processGeminiSseStream(streamBody, { onToken = () => {}, onToolCall = null, signal = null }) {
+async function processGeminiSseStream(streamBody, { onToken = () => {}, onToolCall = null, turnExecutedTools = null, signal = null }) {
   const reader = streamBody.getReader();
   const decoder = new TextDecoder('utf-8');
   let buffer = '';
   const functionCalls = [];
   const functionResponses = [];
   const rawModelParts = [];
+  const streamExecutedKeys = new Set();
 
   while (true) {
     if (signal?.aborted) break;
@@ -417,12 +434,19 @@ async function processGeminiSseStream(streamBody, { onToken = () => {}, onToolCa
             onToken(part.text);
           }
           if (part.functionCall && onToolCall) {
-            functionCalls.push(part.functionCall);
-            const toolOutput = await onToolCall(part.functionCall.name, part.functionCall.args || {});
-            functionResponses.push({
-              name: part.functionCall.name,
-              output: toolOutput
-            });
+            const fc = part.functionCall;
+            const callKey = fc.id || `${fc.name}:${JSON.stringify(fc.args || {})}`;
+            
+            // Deduplicate within the same SSE stream
+            if (!streamExecutedKeys.has(callKey)) {
+              streamExecutedKeys.add(callKey);
+              functionCalls.push(fc);
+              const toolOutput = await onToolCall(fc.name, fc.args || {}, fc.id);
+              functionResponses.push({
+                name: fc.name,
+                output: toolOutput
+              });
+            }
           }
         }
       } catch {}

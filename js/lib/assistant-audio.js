@@ -206,17 +206,21 @@ class AssistantAudioService {
   stopAll() {
     this.instances.forEach(inst => {
       try {
-        inst.audio.pause();
-        inst.audio.currentTime = 0;
+        if (inst.audio) {
+          inst.audio.pause();
+          inst.audio.currentTime = 0;
+          inst.audio.src = '';
+          inst.audio.load();
+        }
         inst.isPlaying = false;
       } catch (e) {}
     });
+    this.instances.clear();
+    this.currentActiveId = null;
   }
 
   destroyAll() {
     this.stopAll();
-    this.instances.clear();
-    this.currentActiveId = null;
   }
 
   generateSynthAudio(query) {

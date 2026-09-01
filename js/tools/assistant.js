@@ -85,12 +85,7 @@ export default {
                 </svg>
               </div>
               <div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <span style="font-size:0.96rem; font-weight:800; color:var(--black); letter-spacing:-0.01em;">Assistant</span>
-                </div>
-                <div style="font-size:0.72rem; color:var(--g500); display:flex; align-items:center; gap:4px;" id="ast-context-indicator">
-                  ${taskState.activeToolId ? `Active Tool: <strong>${BY_ID.get(taskState.activeToolId)?.name || taskState.activeToolId}</strong>` : 'Connected to 100+ Toolbox Browser Tools'}
-                </div>
+                <span style="font-size:0.96rem; font-weight:800; color:var(--black); letter-spacing:-0.01em;">Assistant</span>
               </div>
             </div>
 
@@ -523,6 +518,9 @@ export default {
 
       // Interactive Audio Player Card
       if (result.type === 'audio' || result.audioId) {
+        if (['pause', 'resume', 'stop', 'volume', 'seek'].includes(result.action)) {
+          return '';
+        }
         const audioId = result.audioId;
         const dur = Math.max(1, Math.round(result.duration || 30));
         const formatTime = (s) => {
@@ -859,6 +857,9 @@ export default {
     }
 
     async function handleSend() {
+      if (sendBtn && sendBtn.disabled) return;
+      if (currentAssistantAbortCtrl) return;
+
       const text = userInput?.value?.trim() || '';
       const fileToProcess = currentAttachedFile;
 
