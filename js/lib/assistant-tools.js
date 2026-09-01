@@ -11,6 +11,7 @@ import { LANGUAGES, makeWorker } from './code-runtimes.js';
 import { calculateMolarMass, balanceChemicalEquation, calculateStoichiometry } from './chemistry-engine.js';
 import { COMPOUNDS_DATA } from './compounds-dataset.js';
 import { connectionInfo, measureLatency, measureDownload } from './netspeed.js';
+import { AssistantAudioManager } from './assistant-audio.js';
 
 let activeAssistantAudios = [];
 
@@ -416,17 +417,39 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
   },
   ...registryDeclarations,
   {
-    name: 'play_sound_effect',
-    description: 'Searches for and plays a sound effect or audio clip directly in the browser using the iTunes API.',
+    name: 'play_sound',
+    description: 'Searches for and plays a sound effect, song preview, instrument tone, or audio clip in the Assistant chat conversation, rendering an interactive live audio player.',
     parameters: {
       type: 'OBJECT',
       properties: {
         query: {
           type: 'STRING',
-          description: 'The sound effect to search for (e.g. "laser", "wilhelm scream", "applause").'
+          description: 'The sound, song, or audio sample to play (e.g. "piano", "laser", "applause", "rain", "guitar").'
+        },
+        url: {
+          type: 'STRING',
+          description: 'Optional direct audio stream URL.'
         }
       },
       required: ['query']
+    }
+  },
+  {
+    name: 'control_audio',
+    description: 'Controls active audio playback in the Assistant conversation (pause, resume, stop, set volume, or seek).',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        action: {
+          type: 'STRING',
+          description: 'Action to perform: "pause", "resume", "stop", "volume", "seek".'
+        },
+        value: {
+          type: 'NUMBER',
+          description: 'Optional parameter value: volume (0.0 to 1.0) or seek position in seconds.'
+        }
+      },
+      required: ['action']
     }
   }
 ];
@@ -1166,37 +1189,38 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
 
 
 
+    case 'play_sound':
     case 'play_sound_effect': {
-      const query = args.query || 'sound effect';
+      const query = args.query || args.sound || 'sound effect';
       try {
-        const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=5`);
-        const data = await res.json();
-        const tracks = data.results.filter(r => r.previewUrl);
-        
-        if (!tracks.length) {
-          return { status: 'error', message: `No sound effects or songs found for "${query}".` };
-        }
-
-        const track = tracks[0];
-        const audio = new Audio(track.previewUrl);
-        audio.volume = 1.0;
-        
-        activeAssistantAudios.forEach(a => {
-          a.pause();
-          a.currentTime = 0;
+        const audioResult = await AssistantAudioManager.playSound({
+          query,
+          url: args.url
         });
-        activeAssistantAudios = [audio];
-        
-        audio.play().catch(() => {});
-
-        return { 
-          status: 'success', 
-          track: track.trackName, 
-          artist: track.artistName,
-          message: `Currently playing "${track.trackName}" by ${track.artistName}.`
-        };
+        return audioResult;
       } catch (err) {
-        return { status: 'error', message: `Failed to fetch sound effect: ${err.message}` };
+        return { status: 'error', type: 'audio', message: `Audio playback failed: ${err.message}` };
+      }
+    }
+
+    case 'control_audio': {
+      const action = (args.action || 'pause').toLowerCase();
+      const val = typeof args.value === 'number' ? args.value : parseFloat(args.value);
+      
+      switch (action) {
+        case 'pause':
+          return AssistantAudioManager.pause();
+        case 'resume':
+        case 'play':
+          return AssistantAudioManager.resume();
+        case 'stop':
+          return AssistantAudioManager.stop();
+        case 'volume':
+          return AssistantAudioManager.setVolume(null, isNaN(val) ? 1.0 : val);
+        case 'seek':
+          return AssistantAudioManager.seek(null, isNaN(val) ? 0 : val);
+        default:
+          return { status: 'error', type: 'audio', message: `Unknown audio action: ${action}` };
       }
     }
 

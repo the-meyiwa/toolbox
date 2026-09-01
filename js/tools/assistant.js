@@ -34,6 +34,7 @@ import {
 import { QuotaManager } from '../lib/quota-manager.js';
 import { getCurrentUser } from '../lib/supabase.js';
 import { openAccountModal } from '../views/account-modal.js';
+import { AssistantAudioManager } from '../lib/assistant-audio.js';
 import TOOLS from '../registry/tools.js';
 const BY_ID = new Map(TOOLS.map(t => [t.id, t]));
 
@@ -481,11 +482,74 @@ export default {
       }
 
       messagesEl.appendChild(msgDiv);
+      bindAudioControls(msgDiv);
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
     function renderToolResultCard(result) {
       if (!result) return '';
+
+      // Interactive Audio Player Card
+      if (result.type === 'audio' || result.audioId) {
+        const audioId = result.audioId;
+        const dur = Math.max(1, Math.round(result.duration || 30));
+        const formatTime = (s) => {
+          const m = Math.floor(s / 60);
+          const rem = Math.floor(s % 60);
+          return `${m}:${rem < 10 ? '0' : ''}${rem}`;
+        };
+
+        return `
+          <div class="ast-audio-player-card" data-audio-id="${audioId}" style="padding:14px 16px; background:var(--white); border:1px solid var(--g300); border-radius:14px; box-shadow:0 4px 14px rgba(0,0,0,0.05); margin-top:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px;">
+              <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
+                ${result.artworkUrl ? `
+                  <img src="${result.artworkUrl}" style="width:38px; height:38px; border-radius:8px; object-fit:cover; flex-shrink:0;">
+                ` : `
+                  <div style="width:38px; height:38px; border-radius:8px; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                  </div>
+                `}
+                <div style="overflow:hidden;">
+                  <div style="font-weight:700; font-size:0.88rem; color:var(--black); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                    ${escapeHtml(result.title || 'Audio Sample')}
+                  </div>
+                  <div style="font-size:0.74rem; color:var(--g600); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                    ${escapeHtml(result.artist || 'Toolbox Audio')}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Stop Button -->
+              <button type="button" class="btn btn-secondary btn-sm ast-audio-btn-stop" data-audio-id="${audioId}" style="font-size:0.72rem; padding:4px 8px; color:#ef4444; flex-shrink:0;">
+                Stop
+              </button>
+            </div>
+
+            <!-- Scrubber bar & Play button -->
+            <div style="display:flex; align-items:center; gap:10px;">
+              <button type="button" class="ast-audio-btn-toggle" data-audio-id="${audioId}" style="width:36px; height:36px; border-radius:50%; background:var(--black); color:var(--white); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:transform 0.1s;" title="Play / Pause">
+                <svg class="ast-audio-icon-play" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="display:none;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <svg class="ast-audio-icon-pause" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+              </button>
+
+              <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+                <input type="range" class="ast-audio-seek" data-audio-id="${audioId}" min="0" max="${dur}" step="0.1" value="0" style="width:100%; cursor:pointer; accent-color:var(--black);">
+                <div style="display:flex; justify-content:space-between; font-size:0.7rem; font-family:var(--mono); color:var(--g600);">
+                  <span class="ast-audio-time-cur">0:00</span>
+                  <span class="ast-audio-time-dur">${formatTime(dur)}</span>
+                </div>
+              </div>
+
+              <!-- Volume Control -->
+              <div style="display:flex; align-items:center; gap:4px; margin-left:4px;">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--g500);"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                <input type="range" class="ast-audio-volume" data-audio-id="${audioId}" min="0" max="1" step="0.05" value="1" style="width:45px; cursor:pointer; accent-color:var(--black);" title="Volume">
+              </div>
+            </div>
+          </div>
+        `;
+      }
 
       // Speed Test Card
       if (typeof result.downloadSpeedMbps !== 'undefined') {
@@ -634,6 +698,124 @@ export default {
       return '';
     }
 
+    function bindAudioControls(parentEl = document) {
+      if (!parentEl) return;
+      const formatTime = (s) => {
+        const m = Math.floor(s / 60);
+        const rem = Math.floor(s % 60);
+        return `${m}:${rem < 10 ? '0' : ''}${rem}`;
+      };
+
+      const cards = parentEl.querySelectorAll('.ast-audio-player-card');
+      cards.forEach(card => {
+        if (card.dataset.bound) return;
+        card.dataset.bound = 'true';
+
+        const audioId = card.dataset.audioId;
+        const btnToggle = card.querySelector('.ast-audio-btn-toggle');
+        const iconPlay = card.querySelector('.ast-audio-icon-play');
+        const iconPause = card.querySelector('.ast-audio-icon-pause');
+        const btnStop = card.querySelector('.ast-audio-btn-stop');
+        const seekInput = card.querySelector('.ast-audio-seek');
+        const curTimeEl = card.querySelector('.ast-audio-time-cur');
+        const durTimeEl = card.querySelector('.ast-audio-time-dur');
+        const volInput = card.querySelector('.ast-audio-volume');
+
+        let isUserSeeking = false;
+
+        const updateCardUi = (inst) => {
+          if (!inst) return;
+          if (iconPlay && iconPause) {
+            iconPlay.style.display = inst.isPlaying ? 'none' : 'block';
+            iconPause.style.display = inst.isPlaying ? 'block' : 'none';
+          }
+          if (seekInput && !isUserSeeking) {
+            seekInput.max = inst.duration || 30;
+            seekInput.value = inst.currentTime || 0;
+          }
+          if (curTimeEl) {
+            curTimeEl.textContent = formatTime(inst.currentTime || 0);
+          }
+          if (durTimeEl && inst.duration) {
+            durTimeEl.textContent = formatTime(inst.duration);
+          }
+          if (volInput && typeof inst.volume === 'number') {
+            volInput.value = inst.volume;
+          }
+        };
+
+        const currentInst = AssistantAudioManager.getInstance(audioId);
+        if (currentInst) {
+          updateCardUi(currentInst);
+        }
+
+        btnToggle?.addEventListener('click', () => {
+          const inst = AssistantAudioManager.getInstance(audioId);
+          if (inst) {
+            if (inst.isPlaying) {
+              AssistantAudioManager.pause(audioId);
+            } else {
+              AssistantAudioManager.resume(audioId);
+            }
+          }
+        });
+
+        btnStop?.addEventListener('click', () => {
+          AssistantAudioManager.stop(audioId);
+        });
+
+        seekInput?.addEventListener('mousedown', () => { isUserSeeking = true; });
+        seekInput?.addEventListener('touchstart', () => { isUserSeeking = true; });
+
+        seekInput?.addEventListener('input', () => {
+          if (curTimeEl) curTimeEl.textContent = formatTime(parseFloat(seekInput.value));
+        });
+
+        seekInput?.addEventListener('change', () => {
+          isUserSeeking = false;
+          AssistantAudioManager.seek(audioId, parseFloat(seekInput.value));
+        });
+
+        volInput?.addEventListener('input', () => {
+          AssistantAudioManager.setVolume(audioId, parseFloat(volInput.value));
+        });
+      });
+    }
+
+    // Subscribe to global real-time audio service updates
+    AssistantAudioManager.subscribe((event, inst) => {
+      if (!messagesEl || !inst?.id) return;
+      const cards = messagesEl.querySelectorAll(`.ast-audio-player-card[data-audio-id="${inst.id}"]`);
+      const formatTime = (s) => {
+        const m = Math.floor(s / 60);
+        const rem = Math.floor(s % 60);
+        return `${m}:${rem < 10 ? '0' : ''}${rem}`;
+      };
+
+      cards.forEach(card => {
+        const iconPlay = card.querySelector('.ast-audio-icon-play');
+        const iconPause = card.querySelector('.ast-audio-icon-pause');
+        const seekInput = card.querySelector('.ast-audio-seek');
+        const curTimeEl = card.querySelector('.ast-audio-time-cur');
+        const durTimeEl = card.querySelector('.ast-audio-time-dur');
+
+        if (iconPlay && iconPause) {
+          iconPlay.style.display = inst.isPlaying ? 'none' : 'block';
+          iconPause.style.display = inst.isPlaying ? 'block' : 'none';
+        }
+        if (seekInput && document.activeElement !== seekInput) {
+          seekInput.max = inst.duration || 30;
+          seekInput.value = inst.currentTime || 0;
+        }
+        if (curTimeEl) {
+          curTimeEl.textContent = formatTime(inst.currentTime || 0);
+        }
+        if (durTimeEl && inst.duration) {
+          durTimeEl.textContent = formatTime(inst.duration);
+        }
+      });
+    });
+
     async function handleSend() {
       const text = userInput?.value?.trim() || '';
       const fileToProcess = currentAttachedFile;
@@ -745,7 +927,9 @@ export default {
               if (resHtml) {
                 const cardWrap = document.createElement('div');
                 cardWrap.innerHTML = resHtml;
-                toolResultsArea.appendChild(cardWrap.firstElementChild);
+                const newElem = cardWrap.firstElementChild;
+                toolResultsArea.appendChild(newElem);
+                bindAudioControls(toolResultsArea);
               }
             }
           },
@@ -865,5 +1049,9 @@ export default {
         userInput.focus();
       }
     }, 50);
+  },
+
+  destroy() {
+    AssistantAudioManager.destroyAll();
   }
 };
