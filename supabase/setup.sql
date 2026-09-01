@@ -181,7 +181,6 @@ create or replace function public.auto_confirm_user()
 returns trigger as $$
 begin
   new.email_confirmed_at := coalesce(new.email_confirmed_at, now());
-  new.confirmed_at := coalesce(new.confirmed_at, now());
   return new;
 end;
 $$ language plpgsql security definer;
@@ -193,8 +192,7 @@ create trigger on_auth_user_auto_confirm
 
 -- Ensure all existing accounts are marked as confirmed so they can log in immediately
 update auth.users
-set email_confirmed_at = coalesce(email_confirmed_at, now()),
-    confirmed_at = coalesce(confirmed_at, now())
+set email_confirmed_at = coalesce(email_confirmed_at, now())
 where email_confirmed_at is null;
 
 
