@@ -5,7 +5,7 @@
    Strictly enforces file safety: NO delete operations allowed.
    ============================================================ */
 
-import TOOLS from '../registry/tools.js';
+import { TOOLS } from '../registry/index.js';
 import { cleanText } from '../utils.js';
 import { LANGUAGES, makeWorker } from './code-runtimes.js';
 import { calculateMolarMass, balanceChemicalEquation, calculateStoichiometry } from './chemistry-engine.js';
@@ -17,6 +17,19 @@ let activeAssistantAudios = [];
 /**
  * Assistant Tool Declarations (Standard Function Calling Schema)
  */
+const registryDeclarations = TOOLS.map(t => ({
+  name: `open_tool_${t.id.replace(/-/g, '_')}`,
+  description: `Toolbox Tool: ${t.name}. ${t.description}. Keywords: ${(t.keywords || []).join(', ')}. Intents: ${(t.intents || []).join(', ')}. Accepts: ${(t.accepts || []).join(', ')}. Produces: ${(t.produces || []).join(', ')}.`,
+  parameters: {
+    type: 'OBJECT',
+    properties: {
+      inputData: { type: 'STRING', description: 'Optional text or code artifact content to pass directly to the tool as input.' },
+      artifactName: { type: 'STRING', description: 'Optional filename for the input artifact (e.g. "data.csv" or "snippet.js").' },
+      standalone: { type: 'BOOLEAN', description: 'Set to true to open the tool in a new fullscreen standalone window.' }
+    }
+  }
+}));
+
 export const ASSISTANT_TOOL_DECLARATIONS = [
   {
     name: 'run_speed_test',
@@ -401,24 +414,7 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
       required: ['name', 'content']
     }
   },
-  {
-    name: 'open_toolbox_tool',
-    description: 'Navigates and opens a specific Toolbox tool in the user browser window.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        toolId: {
-          type: 'STRING',
-          description: 'The tool ID to open (e.g. "code-playground", "periodic-table", "calculator", "notes", "file-drop", "speed-test").',
-        },
-        standalone: {
-          type: 'BOOLEAN',
-          description: 'If true, opens the tool in a full-screen standalone pop-out tab. Highly recommended for complex tools like code-playground and notes.'
-        }
-      },
-      required: ['toolId']
-    }
-  },
+  ...registryDeclarations,
   {
     name: 'play_sound_effect',
     description: 'Searches for and plays a sound effect or audio clip directly in the browser using the iTunes API.',
@@ -442,6 +438,66 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
   // STRICT FILE SAFETY CHECK: No delete operations exist or are permitted.
   if (name.includes('delete') || name.includes('remove_file') || name.includes('purge') || name.includes('wipe')) {
     throw new Error('Permission denied: The Assistant is strictly prohibited from deleting files.');
+  }
+
+  // Dynamic router for Toolbox Tools
+  if (name.startsWith('open_tool_')) {
+    const rawId = name.replace('open_tool_', '');
+    const tool = TOOLS.find(t => t.id.replace(/-/g, '_') === rawId);
+    if (!tool) {
+      throw new Error(`Tool ${rawId} not found in registry.`);
+    }
+    const toolId = tool.id;
+
+    if (args.inputData) {
+      const { setNextIncoming } = await import('./artifacts.js');
+      setNextIncoming({ 
+        kind: tool.accepts?.[0] || 'text', 
+        text: args.inputData, 
+        name: args.artifactName || `assistant_handoff_${Date.now()}`, 
+        from: 'assistant' 
+      });
+    }
+
+    try {
+      // Lazy load the tool module to attempt headless processing
+      const toolModules = import.meta.glob('../tools/*.js');
+      const loader = toolModules[`../tools/${toolId}.js`];
+      if (loader) {
+        const module = await loader();
+        const instance = module.default;
+        
+        // If the tool has artifact capabilities and input was provided, try headless execution
+        if (args.inputData && instance.setArtifact && instance.getArtifact) {
+          const dummyContainer = document.createElement('div');
+          instance.render(dummyContainer);
+          instance.setArtifact({ text: args.inputData });
+          const outArt = instance.getArtifact();
+          
+          if (instance.destroy) instance.destroy();
+          
+          // If it successfully processed the text (output differs from input), return the result headlessly!
+          if (outArt && outArt.text && outArt.text !== args.inputData) {
+            return {
+              status: 'success',
+              message: `Headless execution complete for ${tool.name}.`,
+              output: outArt.text
+            };
+          }
+        }
+      }
+    } catch (e) {
+      console.warn(`Headless execution attempt failed for ${toolId}:`, e);
+    }
+
+    // Fallback to UI Navigation
+    if (args.standalone) {
+      window.open(`/?standalone=true#${toolId}`, '_blank');
+      return { status: 'success', openedToolId: toolId, message: `Opened tool: #${toolId} in standalone fullscreen mode.` };
+    } else {
+      window.location.hash = `#${toolId}`;
+      return { status: 'success', openedToolId: toolId, message: `Navigated to tool: #${toolId}. The user is now viewing it.` };
+    }
   }
 
   switch (name) {
@@ -1108,16 +1164,7 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
       }
     }
 
-    case 'open_toolbox_tool': {
-      const { toolId, standalone } = args;
-      if (standalone) {
-        window.open(`/?standalone=true#${toolId}`, '_blank');
-        return { status: 'success', openedToolId: toolId, message: `Opened tool: #${toolId} in standalone fullscreen mode.` };
-      } else {
-        window.location.hash = `#${toolId}`;
-        return { status: 'success', openedToolId: toolId, message: `Opened tool: #${toolId}` };
-      }
-    }
+
 
     case 'play_sound_effect': {
       const query = args.query || 'sound effect';
@@ -1154,6 +1201,14 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
     }
 
     default:
-      return { status: 'error', message: `Unknown tool "${name}".` };
+      return { status: 'error', message: `Unknown assistant tool or capability: ${name}` };
+  }
+}
+
+// Development-time validation: Ensure all registry tools are discoverable
+if (typeof import.meta !== 'undefined' && import.meta.env?.DEV) {
+  const generatedToolsCount = ASSISTANT_TOOL_DECLARATIONS.filter(t => t.name.startsWith('open_tool_')).length;
+  if (generatedToolsCount !== TOOLS.length) {
+    console.error(`Assistant Registry Mismatch: Found ${TOOLS.length} registry tools but generated ${generatedToolsCount} assistant declarations.`);
   }
 }

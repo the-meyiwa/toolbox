@@ -5,6 +5,7 @@
    ============================================================ */
 
 import { marked } from 'marked';
+import { openSettings } from '../lib/settings-ui.js';
 
 function escapeHtml(str) {
   if (!str) return '';
@@ -196,7 +197,7 @@ export default {
       currentMode = getActiveAiMode();
       if (badgeWrap) {
         badgeWrap.innerHTML = getModeBadgeHtml();
-        badgeWrap.querySelector('#ast-btn-mode-badge')?.addEventListener('click', openAiSettingsModal);
+        badgeWrap.querySelector('#ast-btn-mode-badge')?.addEventListener('click', openSettings);
       }
     }
 
@@ -844,7 +845,7 @@ export default {
             </div>
           `;
 
-          assistantMsgDiv.querySelector?.('.ast-err-btn-settings')?.addEventListener('click', openAiSettingsModal);
+          assistantMsgDiv.querySelector?.('.ast-err-btn-settings')?.addEventListener('click', openSettings);
           assistantMsgDiv.querySelector?.('.ast-err-btn-retry')?.addEventListener('click', () => {
             handleSend();
           });

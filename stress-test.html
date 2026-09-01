@@ -54,18 +54,23 @@
 
       // 2. UI Navigation
       createLogEntry('Phase 2', 'open_toolbox_tool (standalone)');
+      createLogEntry('Phase 2', 'open_tool_code_playground');
       try {
         // Intercept window.open so we don't actually pop tabs during automated test
         const originalOpen = window.open;
         let openedUrl = null;
         window.open = (url) => { openedUrl = url; };
         
-        const r2 = await executeAssistantTool('open_toolbox_tool', { toolId: 'code-playground', standalone: true }, context);
+        const r2 = await executeAssistantTool('open_tool_code_playground', { standalone: true }, context);
         window.open = originalOpen; // restore
-        
         r2.interceptedWindowOpenUrl = openedUrl;
-        completeLogEntry('Phase 2', 'open_toolbox_tool', r2);
-      } catch (e) { completeLogEntry('Phase 2', 'open_toolbox_tool', e.stack || e.message, true); }
+        
+        if (r2.status === 'success') {
+          completeLogEntry('Phase 2', 'open_tool_code_playground', r2);
+        } else {
+          completeLogEntry('Phase 2', 'open_tool_code_playground', r2.message, true);
+        }
+      } catch (e) { completeLogEntry('Phase 2', 'open_tool_code_playground', e.stack || e.message, true); }
 
       // 3. Save Data (Notes)
       createLogEntry('Phase 3', 'create_note');
@@ -116,7 +121,7 @@
         const noteRes = await executeAssistantTool('create_note', { title: 'Chain Result', content: codeRes.output }, context);
         
         const originalHash = window.location.hash;
-        const openRes = await executeAssistantTool('open_toolbox_tool', { toolId: 'notes', standalone: false }, context);
+        const openRes = await executeAssistantTool('open_tool_notes', { standalone: false }, context);
         const newHash = window.location.hash;
         window.location.hash = originalHash; // Restore
         
