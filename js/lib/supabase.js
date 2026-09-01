@@ -142,6 +142,47 @@ export async function signInWithEmail(email, password) {
 }
 
 /**
+ * Refresh current user session using refresh token
+ */
+export async function refreshUserSession() {
+  const config = getSupabaseConfig();
+  const current = getCurrentUser();
+  if (!current || !current.refreshToken || !config.url || !config.anonKey) {
+    return current;
+  }
+
+  try {
+    const res = await fetch(`${config.url}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': config.anonKey
+      },
+      body: JSON.stringify({ refresh_token: current.refreshToken })
+    });
+
+    if (!res.ok) return current;
+
+    const data = await res.json();
+    if (data.access_token) {
+      const updated = {
+        ...current,
+        token: data.access_token,
+        refreshToken: data.refresh_token || current.refreshToken,
+        id: data.user?.id || current.id,
+        email: data.user?.email || current.email
+      };
+      localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: updated } }));
+      return updated;
+    }
+  } catch (e) {
+    console.warn('Failed to refresh user session:', e);
+  }
+  return current;
+}
+
+/**
  * Sign up with email and password
  */
 export async function signUpWithEmail(email, password) {

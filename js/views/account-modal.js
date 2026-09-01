@@ -17,8 +17,10 @@ import { QuotaManager } from '../lib/quota-manager.js';
 import { openSettings } from '../lib/settings-ui.js';
 
 let modalEl = null;
+let isSignUpMode = false;
 
-export function openAccountModal() {
+export function openAccountModal(signUp = false) {
+  isSignUpMode = signUp;
   if (!modalEl) {
     modalEl = document.createElement('div');
     modalEl.id = 'account-modal';
@@ -44,7 +46,6 @@ export function closeAccountModal() {
 function renderModalContent() {
   const user = getCurrentUser();
   const quota = QuotaManager.getQuotaSummary();
-  const supabaseConfig = getSupabaseConfig();
 
   modalEl.innerHTML = `
     <div class="settings-modal-window" style="max-width:560px; border-radius:18px;">
@@ -59,8 +60,12 @@ function renderModalContent() {
             </svg>
           </div>
           <div>
-            <h2 class="settings-modal-title" style="font-size:1.15rem; font-weight:800;">Account &amp; Storage Engine</h2>
-            <p class="settings-modal-subtitle">Manage cloud sync, dual storage preferences, and AI quotas.</p>
+            <h2 class="settings-modal-title" style="font-size:1.15rem; font-weight:800;">
+              ${user ? 'Account & Storage' : (isSignUpMode ? 'Create an Account' : 'Sign In')}
+            </h2>
+            <p class="settings-modal-subtitle">
+              ${user ? 'Manage cloud sync, dual storage preferences, and AI quotas.' : (isSignUpMode ? 'Sign up to access Assistant and sync your workspaces.' : 'Sign in to access Assistant, sync files, and manage spaces.')}
+            </p>
           </div>
         </div>
         <button type="button" class="settings-modal-close" id="close-account-modal" aria-label="Close">
@@ -86,20 +91,29 @@ function renderModalContent() {
             </div>
           ` : `
             <div>
-              <div style="font-size:0.88rem; font-weight:700; color:var(--black); margin-bottom:8px;">Sign in to Sync Files &amp; Spaces</div>
-              <div style="display:flex; flex-direction:column; gap:10px;" id="auth-form-wrap">
-                <input type="email" id="auth-email-input" class="tool-input" placeholder="Enter your email..." style="width:100%; padding:8px 12px; font-size:0.86rem; border-radius:8px;">
-                <input type="password" id="auth-pwd-input" class="tool-input" placeholder="Enter your password..." style="width:100%; padding:8px 12px; font-size:0.86rem; border-radius:8px;">
-                <div style="display:flex; gap:8px;">
-                  <button type="button" class="btn btn-primary btn-sm" id="btn-auth-signin" style="flex:1;">Sign In</button>
-                  <button type="button" class="btn btn-secondary btn-sm" id="btn-auth-signup" style="flex:1;">Create Account</button>
-                </div>
-                <div id="auth-msg" style="font-size:0.75rem; color:#ef4444; display:none;"></div>
+              <div style="font-size:0.88rem; font-weight:700; color:var(--black); margin-bottom:12px;">
+                ${isSignUpMode ? 'Create a New Account' : 'Sign In with Email'}
               </div>
+              <form id="auth-form" style="display:flex; flex-direction:column; gap:10px;" onsubmit="return false;">
+                <input type="email" id="auth-email-input" class="tool-input" placeholder="Enter your email..." required style="width:100%; padding:10px 12px; font-size:0.88rem; border-radius:8px;">
+                <input type="password" id="auth-pwd-input" class="tool-input" placeholder="Enter your password..." required style="width:100%; padding:10px 12px; font-size:0.88rem; border-radius:8px;">
+                
+                <button type="submit" class="btn btn-primary btn-sm" id="btn-auth-submit" style="width:100%; padding:10px; font-weight:600; font-size:0.9rem; margin-top:4px;">
+                  ${isSignUpMode ? 'Create Account' : 'Sign In'}
+                </button>
+                
+                <div id="auth-msg" style="font-size:0.8rem; line-height:1.4; display:none; padding:4px 0;"></div>
+                
+                <div style="text-align:center; font-size:0.82rem; color:var(--g600); margin-top:6px;">
+                  ${isSignUpMode ? `
+                    Already have an account? <button type="button" id="btn-toggle-auth" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-weight:600; cursor:pointer; text-decoration:underline;">Sign in</button>
+                  ` : `
+                    Don't have an account? <button type="button" id="btn-toggle-auth" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-weight:600; cursor:pointer; text-decoration:underline;">Create one</button>
+                  `}
+                </div>
+              </form>
             </div>
           `}
-        </div>
-
         </div>
 
         ${user ? `
@@ -153,59 +167,81 @@ function renderModalContent() {
     });
   }
 
-  const btnSignin = modalEl.querySelector('#btn-auth-signin');
-  const btnSignup = modalEl.querySelector('#btn-auth-signup');
-  const emailIn = modalEl.querySelector('#auth-email-input');
-  const pwdIn = modalEl.querySelector('#auth-pwd-input');
-  const authMsg = modalEl.querySelector('#auth-msg');
-
-  if (btnSignin && btnSignup) {
-    btnSignin.addEventListener('click', async () => {
-      const email = emailIn.value.trim();
-      const pwd = pwdIn.value.trim();
-      if (!email || !pwd) {
-        authMsg.style.display = 'block';
-        authMsg.textContent = 'Please enter both email and password.';
-        return;
-      }
-      authMsg.style.display = 'none';
-      const res = await signInWithEmail(email, pwd);
-      if (res.success) {
-        closeAccountModal();
-        window.location.hash = '#assistant';
-      } else {
-        authMsg.style.display = 'block';
-        authMsg.style.color = '#ef4444'; // Red for error
-        authMsg.textContent = res.error;
-      }
-    });
-
-    btnSignup.addEventListener('click', async () => {
-      const email = emailIn.value.trim();
-      const pwd = pwdIn.value.trim();
-      if (!email || !pwd) {
-        authMsg.style.display = 'block';
-        authMsg.textContent = 'Please enter both email and password.';
-        return;
-      }
-      authMsg.style.display = 'none';
-      const res = await signUpWithEmail(email, pwd);
-      if (res.success) {
-        if (res.requiresConfirmation) {
-          authMsg.style.display = 'block';
-          authMsg.style.color = '#10b981'; // Green for success
-          authMsg.textContent = 'Account created! Please check your email to confirm your account before signing in.';
-        } else {
-          closeAccountModal();
-          window.location.hash = '#assistant';
-        }
-      } else {
-        authMsg.style.display = 'block';
-        authMsg.style.color = '#ef4444'; // Red for error
-        authMsg.textContent = res.error;
-      }
+  const btnToggleAuth = modalEl.querySelector('#btn-toggle-auth');
+  if (btnToggleAuth) {
+    btnToggleAuth.addEventListener('click', () => {
+      isSignUpMode = !isSignUpMode;
+      renderModalContent();
+      const emailInput = modalEl.querySelector('#auth-email-input');
+      if (emailInput) emailInput.focus();
     });
   }
 
+  const authForm = modalEl.querySelector('#auth-form');
+  const emailIn = modalEl.querySelector('#auth-email-input');
+  const pwdIn = modalEl.querySelector('#auth-pwd-input');
+  const authMsg = modalEl.querySelector('#auth-msg');
+  const btnSubmit = modalEl.querySelector('#btn-auth-submit');
 
+  if (authForm && btnSubmit) {
+    authForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = emailIn.value.trim();
+      const pwd = pwdIn.value.trim();
+
+      if (!email || !pwd) {
+        authMsg.style.display = 'block';
+        authMsg.style.color = '#ef4444';
+        authMsg.textContent = 'Please enter both email and password.';
+        return;
+      }
+
+      authMsg.style.display = 'none';
+      btnSubmit.disabled = true;
+      const originalText = btnSubmit.textContent;
+      btnSubmit.textContent = isSignUpMode ? 'Creating Account...' : 'Signing In...';
+
+      try {
+        if (isSignUpMode) {
+          const res = await signUpWithEmail(email, pwd);
+          if (res.success) {
+            if (res.requiresConfirmation) {
+              authMsg.style.display = 'block';
+              authMsg.style.color = '#10b981';
+              authMsg.textContent = 'Account created! Please check your email inbox to confirm your account before signing in.';
+              btnSubmit.textContent = originalText;
+              btnSubmit.disabled = false;
+            } else {
+              closeAccountModal();
+              window.location.hash = '#assistant';
+            }
+          } else {
+            authMsg.style.display = 'block';
+            authMsg.style.color = '#ef4444';
+            authMsg.textContent = res.error || 'Failed to create account.';
+            btnSubmit.textContent = originalText;
+            btnSubmit.disabled = false;
+          }
+        } else {
+          const res = await signInWithEmail(email, pwd);
+          if (res.success) {
+            closeAccountModal();
+            window.location.hash = '#assistant';
+          } else {
+            authMsg.style.display = 'block';
+            authMsg.style.color = '#ef4444';
+            authMsg.textContent = res.error || 'Invalid credentials or login failed.';
+            btnSubmit.textContent = originalText;
+            btnSubmit.disabled = false;
+          }
+        }
+      } catch (err) {
+        authMsg.style.display = 'block';
+        authMsg.style.color = '#ef4444';
+        authMsg.textContent = err.message || 'An unexpected error occurred.';
+        btnSubmit.textContent = originalText;
+        btnSubmit.disabled = false;
+      }
+    });
+  }
 }

@@ -365,26 +365,37 @@ export async function streamChatCompletion({
     // Strategy 2: Backend Proxy (/api/assistant/chat)
     try {
       const callProxy = async (currentContents) => {
-        const { getCurrentUser } = await import('./supabase.js');
-        const user = getCurrentUser();
-        const headers = { 'Content-Type': 'application/json' };
-        if (user && user.token) {
-          headers['Authorization'] = `Bearer ${user.token}`;
-        }
+        const { getCurrentUser, refreshUserSession } = await import('./supabase.js');
+        let user = getCurrentUser();
         
-        return fetch('/api/assistant/chat', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            provider: 'gemini',
-            apiKey: apiKey || undefined,
-            model,
-            contents: currentContents,
-            systemInstruction: { parts: [{ text: fullSystemInstruction }] },
-            tools: [{ functionDeclarations: ASSISTANT_TOOL_DECLARATIONS }]
-          }),
-          signal
-        });
+        const executeFetch = async (token) => {
+          const headers = { 'Content-Type': 'application/json' };
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+          return fetch('/api/assistant/chat', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              provider: 'gemini',
+              apiKey: apiKey || undefined,
+              model,
+              contents: currentContents,
+              systemInstruction: { parts: [{ text: fullSystemInstruction }] },
+              tools: [{ functionDeclarations: ASSISTANT_TOOL_DECLARATIONS }]
+            }),
+            signal
+          });
+        };
+
+        let res = await executeFetch(user?.token);
+        if (res.status === 401 && user?.refreshToken) {
+          const refreshed = await refreshUserSession();
+          if (refreshed?.token && refreshed.token !== user.token) {
+            res = await executeFetch(refreshed.token);
+          }
+        }
+        return res;
       };
 
       const proxyRes = await callProxy(contents);
