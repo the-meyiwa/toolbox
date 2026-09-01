@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:match*",
+      "destination": "https://toolbox-signaling.onrender.com/api/:match*"
+    }
+  ]
+}
