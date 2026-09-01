@@ -300,7 +300,7 @@ const server = http.createServer(async (request, response) => {
           const apiKey = process.env.GEMINI_API_KEY || body.apiKey;
           if (!apiKey) {
             response.writeHead(400, { 'Content-Type': 'application/json' });
-            response.end(JSON.stringify({ error: 'GEMINI_API_KEY is not configured on the backend. Please provide your API key in AI Settings.' }));
+            response.end(JSON.stringify({ error: 'AI Assistant service is currently unconfigured or unavailable.' }));
             return;
           }
 
@@ -337,7 +337,7 @@ const server = http.createServer(async (request, response) => {
               lastErrMessage = errJson.error?.message || `HTTP ${fetchRes.status}`;
 
               if (lastErrMessage.toLowerCase().includes('leaked') || lastErrMessage.toLowerCase().includes('permission_denied')) {
-                lastErrMessage = 'Google AI reported this API key as leaked/revoked. Please generate a fresh free key at https://aistudio.google.com/app/apikey and save it in AI Settings or your .env file.';
+                lastErrMessage = 'AI service temporarily unavailable. Please try again later.';
                 break;
               }
             } catch (err) {

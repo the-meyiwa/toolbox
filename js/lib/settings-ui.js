@@ -150,7 +150,7 @@ function renderAiSettings() {
   container.innerHTML = `
     <div class="settings-section-header">
       <h3 class="settings-section-title">Assistant AI</h3>
-      <span class="settings-section-hint">Configure API keys, reasoning mode, and usage quotas</span>
+      <span class="settings-section-hint">Configure reasoning mode and view assistant capabilities</span>
     </div>
 
 

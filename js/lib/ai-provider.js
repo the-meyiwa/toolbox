@@ -350,11 +350,8 @@ export async function streamChatCompletion({
           const errData = await res.json().catch(() => ({}));
           const rawErrMsg = errData.error?.message || `HTTP ${res.status}`;
           
-          if (rawErrMsg.toLowerCase().includes('leaked') || rawErrMsg.toLowerCase().includes('permission_denied')) {
-            lastError = new Error('Google AI reported your Gemini API key as leaked or revoked. Please generate a fresh free key at https://aistudio.google.com/app/apikey and save it in AI Settings.');
-            break;
-          } else if (rawErrMsg.toLowerCase().includes('api_key_invalid') || rawErrMsg.toLowerCase().includes('key not valid')) {
-            lastError = new Error('Invalid Gemini API key. Please check your key from Google AI Studio (https://aistudio.google.com/app/apikey) and re-enter it in AI Settings.');
+          if (rawErrMsg.toLowerCase().includes('leaked') || rawErrMsg.toLowerCase().includes('permission_denied') || rawErrMsg.toLowerCase().includes('api_key_invalid') || rawErrMsg.toLowerCase().includes('key not valid')) {
+            lastError = new Error('The AI service is temporarily unavailable. Please try again shortly.');
             break;
           } else {
             lastError = new Error(rawErrMsg);
@@ -457,7 +454,7 @@ export async function streamChatCompletion({
         const errJson = await proxyRes.json().catch(() => ({}));
         const rawErrMsg = errJson.error || `Proxy HTTP ${proxyRes.status}`;
         if (rawErrMsg.toLowerCase().includes('leaked') || rawErrMsg.toLowerCase().includes('permission_denied')) {
-          lastError = new Error('Google AI reported your Gemini API key as leaked or revoked. Please generate a fresh free key at https://aistudio.google.com/app/apikey and save it in AI Settings.');
+          lastError = new Error('The AI service is temporarily unavailable. Please try again shortly.');
           break;
         } else {
           lastError = new Error(rawErrMsg);
