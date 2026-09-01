@@ -21,35 +21,35 @@ export const AI_MODES = {
     id: 'auto',
     name: 'Auto Mode',
     badge: 'Auto Reasoning',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.5-flash-lite',
     description: 'High-speed generative intelligence with multi-tool calling, file reasoning, and code generation.'
   },
   reasoning: {
     id: 'reasoning',
     name: 'Deep Reasoning',
     badge: 'Deep Reasoning',
-    model: 'gemini-2.5-pro',
+    model: 'gemini-3.5-flash',
     description: 'Analytical problem solving, multi-step proofs, and comprehensive explanations.'
   },
   code: {
     id: 'code',
     name: 'Code & Math Engine',
     badge: 'Code Engine',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.5-flash-lite',
     description: 'Generates and tests code in JavaScript, Python, C++, and SQL with live execution.'
   },
   science: {
     id: 'science',
     name: 'Science & Chemistry',
     badge: 'Science Engine',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.5-flash-lite',
     description: 'Molar mass calculation, reaction balancing, stoichiometry, and compound queries.'
   },
   files: {
     id: 'files',
     name: 'File & Image Suite',
     badge: 'File Suite',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.5-flash-lite',
     description: 'Multimodal image inspection, conversion, dataset analysis, and OCR.'
   }
 };
@@ -196,7 +196,7 @@ const BASE_SYSTEM_INSTRUCTION = `You are Toolbox Assistant, a sophisticated, hig
 
 /**
  * Main Entry Point: streamChatCompletion
- * 100% Online Google Gemini API with token streaming and multi-step tool execution loops.
+ * All requests route securely through Toolbox's server proxy (/api/assistant/chat).
  */
 export async function streamChatCompletion({
   mode = null,
@@ -211,32 +211,21 @@ export async function streamChatCompletion({
 }) {
   QuotaManager.recordMessage();
 
-  const apiKey = getGeminiApiKey();
   const selectedMode = mode || getActiveAiMode();
   const modeCfg = AI_MODES[selectedMode] || AI_MODES.auto;
-  const candidateModels = [
-    modeCfg.model,
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
-    'gemini-2.5-pro'
-  ];
-  const uniqueModels = [...new Set(candidateModels.filter(Boolean))];
 
-  // If running in Node test mock environment without keys, handle cleanly
   const isRealBrowser = typeof window !== 'undefined' && typeof window.location !== 'undefined' && Boolean(window.location.hostname);
-  
   const currentTime = new Date().toLocaleString();
   const currentUrl = isRealBrowser ? window.location.href.split('#')[0] : 'https://toolbox-gold-six.vercel.app';
   const dynamicContext = `\nCurrent Environment:\n- Time: ${currentTime}\n- App URL: ${currentUrl}\n`;
   const fullSystemInstruction = BASE_SYSTEM_INSTRUCTION + dynamicContext;
-  
-  if (!apiKey && !isRealBrowser) {
+
+  if (!isRealBrowser) {
     const lastUser = [...history].reverse().find(m => m.role === 'user')?.content || 'Hello';
     const mockText = `Response to: ${lastUser}`;
     for (const w of mockText.split(' ')) {
       onToken(w + ' ');
-      await new Promise(r => setTimeout(r, 5));
+      await new Promise(r => setTimeout(r, 2));
     }
     return { text: mockText, taskState, toolResults: [] };
   }
@@ -252,244 +241,112 @@ export async function streamChatCompletion({
   let success = false;
   let lastError = null;
 
-  // Strategy 1: Direct Google Gemini API (if user or environment key provided)
-  for (const model of uniqueModels) {
-    if (!apiKey) break;
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
-
-    try {
-      const fetchCtrl = new AbortController();
-      const fetchTimer = setTimeout(() => fetchCtrl.abort(), 18000);
+  try {
+    const callProxy = async (currentContents) => {
+      const { getCurrentUser, refreshUserSession } = await import('./supabase.js');
+      let user = getCurrentUser();
       
-      const combinedSignal = signal ? AbortSignal.any([signal, fetchCtrl.signal]) : fetchCtrl.signal;
-
-      const res = await fetch(geminiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents,
-          systemInstruction: {
-            parts: [{ text: systemInstruction ? `${fullSystemInstruction}\n\n${systemInstruction}` : fullSystemInstruction }]
-          },
-          tools: [
-            {
-              functionDeclarations: ASSISTANT_TOOL_DECLARATIONS
-            }
-          ],
-          generationConfig: {
-            temperature: 0.4,
-            maxOutputTokens: 2500
-          }
-        }),
-        signal: combinedSignal
-      });
-      clearTimeout(fetchTimer);
-
-      if (res.ok && res.body) {
-        let currentParseResult = await processGeminiSseStream(res.body, {
-          onToken: (t) => {
-            fullResponseText += t;
-            onToken(t);
-          },
-          onToolCall: async (toolName, toolArgs) => {
-            onToolCallStart(toolName, toolArgs);
-            const toolRes = await executeAssistantTool(toolName, toolArgs, { currentFile, taskState });
-            onToolCallResult(toolName, toolRes);
-            executedToolResults.push(toolRes);
-            return toolRes;
-          },
+      const executeFetch = async (token) => {
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        return fetch('/api/assistant/chat', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            provider: 'gemini',
+            model: modeCfg.model,
+            contents: currentContents,
+            systemInstruction: { parts: [{ text: systemInstruction ? `${fullSystemInstruction}\n\n${systemInstruction}` : fullSystemInstruction }] },
+            tools: [{ functionDeclarations: ASSISTANT_TOOL_DECLARATIONS }]
+          }),
           signal
         });
-
-        // Multi-step tool chaining loop (allows sequential tool execution up to 6 turns)
-        let loopLimit = 6;
-        while (loopLimit-- > 0 && currentParseResult.hadFunctionCalls && currentParseResult.functionResponses?.length) {
-          if (signal?.aborted) break;
-
-          contents.push({
-            role: 'model',
-            parts: currentParseResult.functionCalls.map(fc => ({
-              functionCall: { name: fc.name, args: fc.args || {} }
-            }))
-          });
-
-          contents.push({
-            role: 'user',
-            parts: currentParseResult.functionResponses.map(fr => ({
-              functionResponse: {
-                name: fr.name,
-                response: {
-                  name: fr.name,
-                  content: sanitizeToolOutput(fr.output)
-                }
-              }
-            }))
-          });
-
-          const followUpRes = await fetch(geminiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents,
-              systemInstruction: { parts: [{ text: systemInstruction ? `${BASE_SYSTEM_INSTRUCTION}\n\n${systemInstruction}` : BASE_SYSTEM_INSTRUCTION }] },
-              tools: [{ functionDeclarations: ASSISTANT_TOOL_DECLARATIONS }],
-              generationConfig: { temperature: 0.4, maxOutputTokens: 2500 }
-            }),
-            signal
-          });
-
-          if (followUpRes.ok && followUpRes.body) {
-            currentParseResult = await processGeminiSseStream(followUpRes.body, {
-              onToken: (t) => {
-                fullResponseText += t;
-                onToken(t);
-              },
-              onToolCall: async (toolName, toolArgs) => {
-                onToolCallStart(toolName, toolArgs);
-                const toolRes = await executeAssistantTool(toolName, toolArgs, { currentFile, taskState });
-                onToolCallResult(toolName, toolRes);
-                executedToolResults.push(toolRes);
-                return toolRes;
-              },
-              signal
-            });
-          } else {
-            break;
-          }
-        }
-
-        success = true;
-        break;
-      } else {
-        const errData = await res.json().catch(() => ({}));
-        const rawErrMsg = errData.error?.message || `HTTP ${res.status}`;
-        
-        if (rawErrMsg.toLowerCase().includes('leaked') || rawErrMsg.toLowerCase().includes('permission_denied') || rawErrMsg.toLowerCase().includes('api_key_invalid') || rawErrMsg.toLowerCase().includes('key not valid')) {
-          lastError = new Error('The AI service is temporarily unavailable. Please try again shortly.');
-          break;
-        } else {
-          lastError = new Error(rawErrMsg);
-        }
-      }
-    } catch (err) {
-      lastError = err;
-    }
-  }
-
-  // Strategy 2: Backend Proxy (/api/assistant/chat)
-  if (!success) {
-    try {
-      const callProxy = async (currentContents) => {
-        const { getCurrentUser, refreshUserSession } = await import('./supabase.js');
-        let user = getCurrentUser();
-        
-        const executeFetch = async (token) => {
-          const headers = { 'Content-Type': 'application/json' };
-          if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-          }
-          return fetch('/api/assistant/chat', {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-              provider: 'gemini',
-              apiKey: apiKey || undefined,
-              model: modeCfg.model,
-              contents: currentContents,
-              systemInstruction: { parts: [{ text: fullSystemInstruction }] },
-              tools: [{ functionDeclarations: ASSISTANT_TOOL_DECLARATIONS }]
-            }),
-            signal
-          });
-        };
-
-        let res = await executeFetch(user?.token);
-        if (res.status === 401 && user?.refreshToken) {
-          const refreshed = await refreshUserSession();
-          if (refreshed?.token && refreshed.token !== user.token) {
-            res = await executeFetch(refreshed.token);
-          }
-        }
-        return res;
       };
 
-      const proxyRes = await callProxy(contents);
-
-      if (proxyRes.ok && proxyRes.body) {
-        let currentParseResult = await processGeminiSseStream(proxyRes.body, {
-          onToken: (t) => {
-            fullResponseText += t;
-            onToken(t);
-          },
-          onToolCall: async (toolName, toolArgs) => {
-            onToolCallStart(toolName, toolArgs);
-            const toolRes = await executeAssistantTool(toolName, toolArgs, { currentFile, taskState });
-            onToolCallResult(toolName, toolRes);
-            executedToolResults.push(toolRes);
-            return toolRes;
-          },
-          signal
-        });
-
-        // Multi-step tool chaining loop
-        let loopLimit = 6;
-        while (loopLimit-- > 0 && currentParseResult.hadFunctionCalls && currentParseResult.functionResponses?.length) {
-          if (signal?.aborted) break;
-
-          contents.push({
-            role: 'model',
-            parts: currentParseResult.functionCalls.map(fc => ({
-              functionCall: { name: fc.name, args: fc.args || {} }
-            }))
-          });
-
-          contents.push({
-            role: 'user',
-            parts: currentParseResult.functionResponses.map(fr => ({
-              functionResponse: {
-                name: fr.name,
-                response: {
-                  name: fr.name,
-                  content: sanitizeToolOutput(fr.output)
-                }
-              }
-            }))
-          });
-
-          const followUpRes = await callProxy(contents);
-          if (followUpRes.ok && followUpRes.body) {
-            currentParseResult = await processGeminiSseStream(followUpRes.body, {
-              onToken: (t) => {
-                fullResponseText += t;
-                onToken(t);
-              },
-              onToolCall: async (toolName, toolArgs) => {
-                onToolCallStart(toolName, toolArgs);
-                const toolRes = await executeAssistantTool(toolName, toolArgs, { currentFile, taskState });
-                onToolCallResult(toolName, toolRes);
-                executedToolResults.push(toolRes);
-                return toolRes;
-              },
-              signal
-            });
-          } else {
-            break;
-          }
-        }
-
-        success = true;
-      } else {
-        const errJson = await proxyRes.json().catch(() => ({}));
-        const rawErrMsg = errJson.error || `Proxy HTTP ${proxyRes.status}`;
-        if (rawErrMsg.toLowerCase().includes('leaked') || rawErrMsg.toLowerCase().includes('permission_denied')) {
-          lastError = new Error('The AI service is temporarily unavailable. Please try again shortly.');
-        } else {
-          lastError = new Error(rawErrMsg);
+      let res = await executeFetch(user?.token);
+      if (res.status === 401 && user?.refreshToken) {
+        const refreshed = await refreshUserSession();
+        if (refreshed?.token && refreshed.token !== user.token) {
+          res = await executeFetch(refreshed.token);
         }
       }
-    } catch (err) {
-      lastError = err;
+      return res;
+    };
+
+    const proxyRes = await callProxy(contents);
+
+    if (proxyRes.ok && proxyRes.body) {
+      let currentParseResult = await processGeminiSseStream(proxyRes.body, {
+        onToken: (t) => {
+          fullResponseText += t;
+          onToken(t);
+        },
+        onToolCall: async (toolName, toolArgs) => {
+          onToolCallStart(toolName, toolArgs);
+          const toolRes = await executeAssistantTool(toolName, toolArgs, { currentFile, taskState });
+          onToolCallResult(toolName, toolRes);
+          executedToolResults.push(toolRes);
+          return toolRes;
+        },
+        signal
+      });
+
+      // Multi-step tool chaining loop (allows sequential tool execution up to 6 turns)
+      let loopLimit = 6;
+      while (loopLimit-- > 0 && currentParseResult.hadFunctionCalls && currentParseResult.functionResponses?.length) {
+        if (signal?.aborted) break;
+
+        contents.push({
+          role: 'model',
+          parts: currentParseResult.functionCalls.map(fc => ({
+            functionCall: { name: fc.name, args: fc.args || {} }
+          }))
+        });
+
+        contents.push({
+          role: 'user',
+          parts: currentParseResult.functionResponses.map(fr => ({
+            functionResponse: {
+              name: fr.name,
+              response: {
+                name: fr.name,
+                content: sanitizeToolOutput(fr.output)
+              }
+            }
+          }))
+        });
+
+        const followUpRes = await callProxy(contents);
+        if (followUpRes.ok && followUpRes.body) {
+          currentParseResult = await processGeminiSseStream(followUpRes.body, {
+            onToken: (t) => {
+              fullResponseText += t;
+              onToken(t);
+            },
+            onToolCall: async (toolName, toolArgs) => {
+              onToolCallStart(toolName, toolArgs);
+              const toolRes = await executeAssistantTool(toolName, toolArgs, { currentFile, taskState });
+              onToolCallResult(toolName, toolRes);
+              executedToolResults.push(toolRes);
+              return toolRes;
+            },
+            signal
+          });
+        } else {
+          break;
+        }
+      }
+
+      success = true;
+    } else {
+      const errJson = await proxyRes.json().catch(() => ({}));
+      const rawErrMsg = errJson.error?.message || errJson.error || `Service Unavailable (HTTP ${proxyRes.status})`;
+      lastError = new Error(rawErrMsg);
     }
+  } catch (err) {
+    lastError = err;
   }
 
   // If tools executed successfully, guarantee completion even if trailing text summary failed
@@ -574,10 +431,9 @@ async function processGeminiSseStream(streamBody, { onToken = () => {}, onToolCa
  * Standalone connection tester for Gemini API key
  */
 export async function testAiProviderConnection(provider = 'gemini', apiKey = '') {
-  const key = (apiKey || getGeminiApiKey()).trim();
+  const key = (apiKey !== undefined && apiKey !== null ? apiKey : getGeminiApiKey()).trim();
   if (!key) {
-    // Relying on backend proxy, so we return success on the frontend if no key is provided, assuming proxy works.
-    return { success: true, message: 'Using global configuration.' };
+    return { success: false, message: 'No API key provided.' };
   }
 
   const start = Date.now();

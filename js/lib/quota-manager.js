@@ -25,6 +25,7 @@ function getTodayString() {
 
 export function isUserUnlimited() {
   try {
+    if (typeof window === 'undefined' || !window.location?.hostname) return true;
     const raw = localStorage.getItem('supabase_auth_session');
     if (raw) {
       const parsed = JSON.parse(raw);

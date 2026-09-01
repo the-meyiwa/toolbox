@@ -378,18 +378,22 @@ export default {
 
       for (const msg of history) {
         if (msg.role === 'user') {
-          appendRenderedMessage('user', msg.content, [], msg.filePreview);
+          appendRenderedMessage('user', msg.content, [], msg.filePreview, msg.turnId);
         } else if (msg.role === 'assistant') {
-          appendRenderedMessage('assistant', msg.content, msg.toolResults || []);
+          appendRenderedMessage('assistant', msg.content, msg.toolResults || [], null, msg.turnId, msg.error, msg.status);
         }
       }
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
-    function appendRenderedMessage(role, text, toolResults = [], filePreview = null) {
+    function appendRenderedMessage(role, text, toolResults = [], filePreview = null, turnId = null, error = null, status = null) {
       if (!messagesEl) return;
       const msgDiv = document.createElement('div');
       msgDiv.className = `ast-msg ast-msg-${role}`;
+      if (turnId) {
+        try { if (!msgDiv.dataset) msgDiv.dataset = {}; msgDiv.dataset.turnId = turnId; } catch {}
+        msgDiv.setAttribute?.('data-turn-id', turnId);
+      }
       msgDiv.style.display = 'flex';
       msgDiv.style.gap = '12px';
       msgDiv.style.maxWidth = role === 'user' ? '80%' : '90%';
@@ -407,8 +411,9 @@ export default {
           </div>
         `;
       } else {
-        const lower = text.toLowerCase();
-        const needsFilePrompt = (
+        const isFailed = status === 'failed' || (error && !text && !toolResults?.length);
+        const lower = (text || '').toLowerCase();
+        const needsFilePrompt = !isFailed && (
           lower.includes('upload') ||
           lower.includes('drag & drop') ||
           lower.includes('attach your') ||
@@ -417,15 +422,24 @@ export default {
           toolResults.some(r => r?.status === 'needs_file')
         );
 
-        msgDiv.innerHTML = `
-          <div style="width:34px; height:34px; border-radius:50%; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-            </svg>
-          </div>
-          <div style="background:var(--g100); color:var(--black); padding:14px 18px; border-radius:16px; font-size:0.9rem; line-height:1.6; word-break:break-word;">
-            <div class="ast-text-body">${formatMarkdown(text)}</div>
+        let bodyHtml = '';
+        if (isFailed) {
+          bodyHtml = `
+            <div class="ast-tool-status-area" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
+            <div class="ast-text-body">
+              <div style="color:#ef4444; font-weight:600; margin-bottom:8px; line-height:1.4;">${escapeHtml(error || 'Assistant failed to respond.')}</div>
+              <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+                <button type="button" class="btn btn-secondary btn-sm ast-err-btn-retry" style="font-size:0.75rem; font-weight:700;">
+                  Retry Request
+                </button>
+              </div>
+            </div>
+            <div class="ast-tool-results-area"></div>
+          `;
+        } else {
+          bodyHtml = `
+            <div class="ast-tool-status-area" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
+            <div class="ast-text-body">${formatMarkdown(text || '')}</div>
             ${needsFilePrompt ? `
               <div class="ast-inchat-dropzone-card">
                 <div class="ast-inchat-drop-inner">
@@ -445,12 +459,30 @@ export default {
               </div>
             ` : ''}
             ${toolResults?.length ? `
-              <div style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
+              <div class="ast-tool-results-area" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
                 ${toolResults.map(r => renderToolResultCard(r)).join('')}
               </div>
-            ` : ''}
+            ` : '<div class="ast-tool-results-area"></div>'}
+          `;
+        }
+
+        msgDiv.innerHTML = `
+          <div style="width:34px; height:34px; border-radius:50%; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+          </div>
+          <div style="background:var(--g100); color:var(--black); padding:14px 18px; border-radius:16px; font-size:0.9rem; line-height:1.6; word-break:break-word; min-width:120px;">
+            ${bodyHtml}
           </div>
         `;
+
+        if (isFailed && turnId) {
+          msgDiv.querySelector('.ast-err-btn-retry')?.addEventListener('click', () => {
+            retryTurn(turnId, msgDiv);
+          });
+        }
 
         // Wire in-chat dropzone
         const dropCard = msgDiv.querySelector('.ast-inchat-dropzone-card');
@@ -871,7 +903,10 @@ export default {
 
       const assistantMsgDiv = document.createElement('div');
       assistantMsgDiv.className = 'ast-msg ast-msg-assistant';
-      assistantMsgDiv.dataset.turnId = turnId;
+      if (turnId) {
+        try { if (!assistantMsgDiv.dataset) assistantMsgDiv.dataset = {}; assistantMsgDiv.dataset.turnId = turnId; } catch {}
+        assistantMsgDiv.setAttribute?.('data-turn-id', turnId);
+      }
       assistantMsgDiv.style.display = 'flex';
       assistantMsgDiv.style.gap = '12px';
       assistantMsgDiv.style.maxWidth = '90%';
@@ -1059,18 +1094,212 @@ export default {
             textBody.innerHTML = `
               <div style="color:#ef4444; font-weight:600; margin-bottom:8px; line-height:1.4;">${escapeHtml(message)}</div>
               <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
-                <button type="button" class="btn btn-primary btn-sm ast-err-btn-settings" style="font-size:0.75rem; font-weight:700;">
-                  AI Settings
-                </button>
                 <button type="button" class="btn btn-secondary btn-sm ast-err-btn-retry" style="font-size:0.75rem; font-weight:700;">
                   Retry Request
                 </button>
               </div>
             `;
 
-            assistantMsgDiv.querySelector?.('.ast-err-btn-settings')?.addEventListener('click', openSettings);
             assistantMsgDiv.querySelector?.('.ast-err-btn-retry')?.addEventListener('click', () => {
-              handleSend();
+              retryTurn(turnId, assistantMsgDiv);
+            });
+          }
+        }
+      } finally {
+        clearTimeout(watchdog);
+        currentAssistantAbortCtrl = null;
+        if (sendBtn) sendBtn.disabled = false;
+      }
+    }
+
+    async function retryTurn(turnId, targetMsgDiv) {
+      if (!turnId) return;
+
+      const asstIdx = history.findIndex(m => m.turnId === turnId && m.role === 'assistant');
+      const userIdx = history.findIndex(m => m.turnId === turnId && m.role === 'user');
+      const userMsg = userIdx !== -1 ? history[userIdx] : (asstIdx > 0 ? history[asstIdx - 1] : null);
+      if (!userMsg) return;
+
+      const assistantMsgDiv = targetMsgDiv || messagesEl?.querySelector(`.ast-msg-assistant[data-turn-id="${turnId}"]`);
+      if (!assistantMsgDiv) return;
+
+      const textBody = assistantMsgDiv.querySelector('.ast-text-body');
+      const toolStatusArea = assistantMsgDiv.querySelector('.ast-tool-status-area');
+      const toolResultsArea = assistantMsgDiv.querySelector('.ast-tool-results-area');
+
+      if (toolStatusArea) toolStatusArea.innerHTML = '';
+      if (toolResultsArea) toolResultsArea.innerHTML = '';
+      if (textBody) {
+        textBody.innerHTML = `
+          <div class="ast-thinking-shimmer" aria-label="Thinking">
+            <div class="ast-shimmer-track">
+              <div class="ast-shimmer-bar"></div>
+            </div>
+            <span class="ast-shimmer-text">Thinking...</span>
+          </div>
+        `;
+      }
+
+      if (sendBtn) sendBtn.disabled = true;
+
+      let accumulatedStreamText = '';
+      let executedToolResults = [];
+
+      const abortCtrl = new AbortController();
+      currentAssistantAbortCtrl = abortCtrl;
+      const watchdog = setTimeout(() => abortCtrl.abort(), 25000);
+
+      // Context includes all conversation history up to this user message
+      const historyContext = history.slice(0, userIdx !== -1 ? userIdx + 1 : (asstIdx !== -1 ? asstIdx : history.length));
+
+      try {
+        const streamResult = await streamChatCompletion({
+          mode: currentMode,
+          history: historyContext,
+          systemInstruction: `User is in Toolbox workspace. Current active tool is: ${taskState.activeToolId || 'Home'}.`,
+          currentFile: userMsg.fileData || null,
+          taskState,
+          onToken: (chunk) => {
+            accumulatedStreamText += chunk;
+            if (textBody) textBody.innerHTML = formatMarkdown(accumulatedStreamText);
+            if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
+          },
+          onToolCallStart: (toolName, toolArgs) => {
+            if (!toolStatusArea) return;
+            const statusCard = document.createElement('div');
+            statusCard.style.padding = '6px 10px';
+            statusCard.style.background = 'var(--white)';
+            statusCard.style.border = '1px solid var(--g300)';
+            statusCard.style.borderRadius = '8px';
+            statusCard.style.fontSize = '0.78rem';
+            statusCard.style.fontWeight = '600';
+            statusCard.style.display = 'flex';
+            statusCard.style.alignItems = 'center';
+            statusCard.style.gap = '6px';
+            statusCard.innerHTML = `<span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#3b82f6;"></span> Executing tool: <code>${toolName}</code>...`;
+            toolStatusArea.appendChild(statusCard);
+          },
+          onToolCallResult: (toolName, result) => {
+            executedToolResults.push(result);
+            if (toolResultsArea) {
+              const resHtml = renderToolResultCard(result);
+              if (resHtml) {
+                const cardWrap = document.createElement('div');
+                cardWrap.innerHTML = resHtml;
+                const newElem = cardWrap.firstElementChild;
+                toolResultsArea.appendChild(newElem);
+                bindAudioControls(toolResultsArea);
+              }
+            }
+          },
+          signal: abortCtrl.signal
+        });
+
+        const finalText = accumulatedStreamText || streamResult.text || (executedToolResults.length ? 'Executed action successfully.' : '');
+        if (textBody) {
+          textBody.innerHTML = formatMarkdown(finalText);
+
+          const lower = finalText.toLowerCase();
+          const needsFilePrompt = (
+            lower.includes('upload') ||
+            lower.includes('drag & drop') ||
+            lower.includes('attach your') ||
+            lower.includes('attach the') ||
+            lower.includes('attach a') ||
+            executedToolResults.some(r => r?.status === 'needs_file')
+          );
+
+          if (needsFilePrompt) {
+            const dropDiv = document.createElement('div');
+            dropDiv.className = 'ast-inchat-dropzone-card';
+            dropDiv.innerHTML = `
+              <div class="ast-inchat-drop-inner">
+                <div class="ast-inchat-drop-icon-wrap">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                </div>
+                <div style="flex:1;">
+                  <div style="font-size:0.86rem; font-weight:700; color:var(--black);">Drag & drop file here</div>
+                  <div style="font-size:0.75rem; color:var(--g600); margin-top:2px;">
+                    or <span class="ast-inchat-browse-btn" style="color:var(--black); font-weight:700; text-decoration:underline; cursor:pointer;">Browse device</span> (PDF, Image, CSV, Audio)
+                  </div>
+                </div>
+              </div>
+              <input type="file" class="ast-inchat-file-input" style="display:none;" />
+            `;
+            textBody.parentElement?.appendChild(dropDiv);
+
+            const inFileInput = dropDiv.querySelector('.ast-inchat-file-input');
+            dropDiv.addEventListener('click', () => inFileInput?.click());
+            inFileInput?.addEventListener('change', (e) => {
+              const f = e.target.files?.[0];
+              if (f) handleFileSelected(f, true);
+            });
+          }
+        }
+
+        const updatedMsg = {
+          id: `msg_${Date.now()}_a`,
+          turnId,
+          role: 'assistant',
+          content: finalText,
+          toolResults: executedToolResults,
+          status: 'success',
+          timestamp: Date.now()
+        };
+
+        if (asstIdx !== -1) {
+          history[asstIdx] = updatedMsg;
+        } else {
+          history.push(updatedMsg);
+        }
+        persistHistory();
+        updateQuotaDisplay();
+
+      } catch (err) {
+        const hasTools = executedToolResults.length > 0;
+        const message = err?.name === 'AbortError'
+          ? 'The request took too long. Please try again.'
+          : (err?.message || 'Something went wrong.');
+
+        const finalAssistantText = accumulatedStreamText || (hasTools ? (executedToolResults.map(r => r.message).filter(Boolean).join('\n') || 'Executed action.') : '');
+
+        const failedMsg = {
+          id: `msg_${Date.now()}_a`,
+          turnId,
+          role: 'assistant',
+          content: finalAssistantText,
+          toolResults: executedToolResults,
+          status: hasTools ? 'partial_success' : 'failed',
+          error: message,
+          timestamp: Date.now()
+        };
+
+        if (asstIdx !== -1) {
+          history[asstIdx] = failedMsg;
+        } else {
+          history.push(failedMsg);
+        }
+        persistHistory();
+
+        if (textBody) {
+          if (hasTools) {
+            textBody.innerHTML = `
+              <div>${formatMarkdown(finalAssistantText)}</div>
+              <div style="font-size:0.75rem; color:var(--g500); margin-top:6px; font-style:italic;">Action completed. Note: ${escapeHtml(message)}</div>
+            `;
+          } else {
+            textBody.innerHTML = `
+              <div style="color:#ef4444; font-weight:600; margin-bottom:8px; line-height:1.4;">${escapeHtml(message)}</div>
+              <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+                <button type="button" class="btn btn-secondary btn-sm ast-err-btn-retry" style="font-size:0.75rem; font-weight:700;">
+                  Retry Request
+                </button>
+              </div>
+            `;
+            assistantMsgDiv.querySelector?.('.ast-err-btn-retry')?.addEventListener('click', () => {
+              retryTurn(turnId, assistantMsgDiv);
             });
           }
         }

@@ -311,18 +311,18 @@ const server = http.createServer(async (request, response) => {
             return;
           }
 
-          // Valid active Gemini models (fastest first)
+          // Valid active Gemini models on v1beta (fastest verified first)
           const candidateModels = [
             body.model,
-            'gemini-2.5-flash',
-            'gemini-2.0-flash',
-            'gemini-1.5-flash',
-            'gemini-2.5-pro'
+            'gemini-3.5-flash-lite',
+            'gemini-3.5-flash'
           ].filter(Boolean);
           const uniqueModels = [...new Set(candidateModels)];
 
           let fetchRes = null;
           let lastErrMessage = '';
+          let lastErrorCode = 'GEMINI_API_ERROR';
+          let lastHttpStatus = 400;
 
           for (const model of uniqueModels) {
             const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
@@ -348,20 +348,41 @@ const server = http.createServer(async (request, response) => {
               if (fetchRes.ok) break;
 
               const errJson = await fetchRes.json().catch(() => ({}));
-              lastErrMessage = errJson.error?.message || `HTTP ${fetchRes.status}`;
+              lastHttpStatus = fetchRes.status;
+              const rawErr = errJson.error?.message || `HTTP ${fetchRes.status}`;
 
-              if (lastErrMessage.toLowerCase().includes('leaked') || lastErrMessage.toLowerCase().includes('permission_denied')) {
-                lastErrMessage = 'AI service temporarily unavailable. Please try again later.';
-                break;
+              if (fetchRes.status === 404) {
+                lastErrorCode = 'MODEL_NOT_AVAILABLE';
+                lastErrMessage = 'The selected AI model is currently unavailable.';
+              } else if (fetchRes.status === 429) {
+                lastErrorCode = 'QUOTA_EXCEEDED';
+                lastErrMessage = 'AI service quota temporarily exceeded. Please try again shortly.';
+              } else if (fetchRes.status === 401 || fetchRes.status === 403) {
+                lastErrorCode = 'AUTHENTICATION_FAILED';
+                lastErrMessage = 'Assistant authentication check failed.';
+              } else if (fetchRes.status === 503) {
+                lastErrorCode = 'MODEL_UNAVAILABLE';
+                lastErrMessage = 'AI model is currently experiencing high demand. Please retry.';
+              } else {
+                lastErrorCode = 'GEMINI_API_ERROR';
+                lastErrMessage = rawErr;
               }
             } catch (err) {
+              lastErrorCode = 'STREAM_ERROR';
               lastErrMessage = err.message;
             }
           }
 
           if (!fetchRes || !fetchRes.ok) {
-            response.writeHead(400, { 'Content-Type': 'application/json' });
-            response.end(JSON.stringify({ success: false, error: lastErrMessage || 'Failed to connect to Google Gemini API.' }));
+            response.writeHead(lastHttpStatus >= 400 && lastHttpStatus < 600 ? lastHttpStatus : 400, { 'Content-Type': 'application/json' });
+            response.end(JSON.stringify({
+              success: false,
+              error: {
+                code: lastErrorCode,
+                message: lastErrMessage || 'Failed to connect to Google Gemini API.'
+              },
+              turnId
+            }));
             return;
           }
 
