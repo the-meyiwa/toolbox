@@ -85,7 +85,10 @@ function toolCard(tool, { compact = false } = {}) {
 
 /* --------------- rendering --------------- */
 
-function renderGrid(list, { query = '', noResult = false } = {}) {
+function renderGrid(originalList, { query = '', noResult = false } = {}) {
+  const user = getCurrentUser();
+  const list = user ? originalList : originalList.filter(t => t.id !== 'assistant');
+
   grid.innerHTML = '';
 
   // A weak best match is still a miss. Showing one barely-related card with
@@ -122,7 +125,7 @@ function renderGrid(list, { query = '', noResult = false } = {}) {
     `<section class="grid-category fade-in" id="cat-popular">
        <h2 class="category-label">Popular</h2>
        <p class="category-blurb">What people open most.</p>
-       <div class="category-tools">${popular(8).map(t => toolCard(t)).join('')}</div>
+       <div class="category-tools">${popular(8).filter(t => user || t.id !== 'assistant').map(t => toolCard(t)).join('')}</div>
      </section>`,
     ...categorised(list).map(c => `
       <section class="grid-category fade-in" id="cat-${c.id}">
@@ -185,7 +188,8 @@ function installCategoryChips() {
 
 function renderRelated(tool) {
   if (!relatedBar) return;
-  const rel = relatedTools(tool, TOOLS, 4);
+  const user = getCurrentUser();
+  const rel = relatedTools(tool, TOOLS, 4).filter(t => user || t.id !== 'assistant');
   if (!rel.length) { relatedBar.innerHTML = ''; relatedBar.hidden = true; return; }
   relatedBar.hidden = false;
   relatedBar.innerHTML = `
@@ -496,7 +500,8 @@ const homeHeroSubmitBtn = $('home-hero-submit-btn');
 
 function updateSearchPlaceholder() {
   if (!homeHeroInput) return;
-  homeHeroInput.placeholder = 'Search 100+ tools or prompt Assistant…';
+  const user = getCurrentUser();
+  homeHeroInput.placeholder = user ? 'Search 100+ tools or prompt Assistant…' : 'Search 100+ tools…';
 }
 
 export function renderHomeAssistantBanner() {
@@ -504,6 +509,12 @@ export function renderHomeAssistantBanner() {
   if (!bannerEl) return;
 
   const user = getCurrentUser();
+  const titleText = user ? 'Assistant is Ready' : 'Sign in for a whole new experience';
+  const descText = user 
+    ? 'Multi-model AI layer: write code, transform files, calculate math, and execute tools.'
+    : 'Unlock the multi-model AI layer to write code, transform files, calculate math, and execute tools.';
+  const btnText = user ? 'Open Assistant &rarr;' : 'Sign In to Assistant &rarr;';
+
   bannerEl.innerHTML = `
     <div class="home-assistant-card" style="padding:20px 24px; background:var(--g100); border:1px solid var(--g300); border-radius:18px; display:flex; align-items:center; justify-content:space-between; gap:16px; box-shadow:0 6px 20px rgba(0,0,0,0.03);">
       <div style="display:flex; align-items:center; gap:14px;">
@@ -515,14 +526,14 @@ export function renderHomeAssistantBanner() {
         </div>
         <div>
           <div style="display:flex; align-items:center; gap:6px;">
-            <h3 style="margin:0; font-size:1.02rem; font-weight:800; color:var(--black); letter-spacing:-0.01em;">Assistant is Ready</h3>
-            <span style="font-size:0.68rem; font-weight:700; background:#22c55e; color:#fff; padding:1px 7px; border-radius:9999px;">Active</span>
+            <h3 style="margin:0; font-size:1.02rem; font-weight:800; color:var(--black); letter-spacing:-0.01em;">${titleText}</h3>
+            ${user ? '<span style="font-size:0.68rem; font-weight:700; background:#22c55e; color:#fff; padding:1px 7px; border-radius:9999px;">Active</span>' : ''}
           </div>
-          <p style="margin:2px 0 0; font-size:0.82rem; color:var(--g600); line-height:1.4;">Multi-model AI layer: write code, transform files, calculate math, and execute tools.</p>
+          <p style="margin:2px 0 0; font-size:0.82rem; color:var(--g600); line-height:1.4;">${descText}</p>
         </div>
       </div>
       <button type="button" class="btn btn-primary" id="btn-open-assistant" style="padding:9px 20px; font-size:0.86rem; font-weight:700; border-radius:9999px; white-space:nowrap; flex-shrink:0; cursor:pointer;">
-        Open Assistant &rarr;
+        ${btnText}
       </button>
     </div>
   `;

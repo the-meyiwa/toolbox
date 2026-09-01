@@ -12,6 +12,7 @@ import {
   AI_MODES
 } from './ai-provider.js';
 import { QuotaManager } from './quota-manager.js';
+import { getCurrentUser } from './supabase.js';
 
 let modalEl = null;
 let isOpen = false;
@@ -127,13 +128,24 @@ function createModal() {
 }
 
 function renderAiSettings() {
+  const user = getCurrentUser();
+  const container = modalEl.querySelector('#ai-settings-container');
+  if (!container) return;
+
+  const hr = container.previousElementSibling;
+  if (!user) {
+    container.style.display = 'none';
+    if (hr && hr.tagName === 'HR') hr.style.display = 'none';
+    return;
+  }
+
+  container.style.display = 'block';
+  if (hr && hr.tagName === 'HR') hr.style.display = 'block';
+
   const currentMode = getActiveAiMode();
   const currentApiKey = getGeminiApiKey();
   const quota = QuotaManager.getQuotaSummary();
   const isUnlimited = QuotaManager.isUserUnlimited();
-
-  const container = modalEl.querySelector('#ai-settings-container');
-  if (!container) return;
 
   container.innerHTML = `
     <div class="settings-section-header">
