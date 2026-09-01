@@ -6,13 +6,26 @@
 
 import crypto from 'crypto';
 
+// Idempotency store with TTL (5 minutes)
+const IDEMPOTENCY_TTL_MS = 5 * 60 * 1000;
+const idempotencyStore = new Map();
+
+function cleanIdempotencyStore() {
+  const now = Date.now();
+  for (const [key, record] of idempotencyStore.entries()) {
+    if (now - record.timestamp > IDEMPOTENCY_TTL_MS) {
+      idempotencyStore.delete(key);
+    }
+  }
+}
+
 export async function handleApiRequest(request, response) {
   const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
 
   // CORS headers
   response.setHeader('Access-Control-Allow-Origin', '*');
   response.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Toolbox-Signature, X-Idempotency-Key');
+  response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Toolbox-Signature, X-Idempotency-Key, X-Turn-Id');
 
   if (request.method === 'OPTIONS') {
     response.writeHead(204);
@@ -164,15 +177,50 @@ export async function handleApiRequest(request, response) {
       let bodyStr = '';
       request.on('data', chunk => { bodyStr += chunk; });
       request.on('end', async () => {
+        let idempotencyKey = null;
         try {
+          cleanIdempotencyStore();
           const body = JSON.parse(bodyStr || '{}');
           const prov = body.provider || 'gemini';
           const turnId = request.headers['x-turn-id'] || body.turnId || `turn_${Date.now()}`;
+          idempotencyKey = request.headers['x-idempotency-key'] || request.headers['idempotency-key'] || body.idempotencyKey || null;
+
+          // Idempotency check: replay existing completed result
+          if (idempotencyKey && idempotencyStore.has(idempotencyKey)) {
+            const cached = idempotencyStore.get(idempotencyKey);
+            if (cached.status === 'completed' && cached.chunks?.length) {
+              console.log(`[Idempotency] Replaying cached response for key: ${idempotencyKey}`);
+              response.writeHead(200, {
+                'Content-Type': 'text/event-stream; charset=utf-8',
+                'Cache-Control': 'no-cache, no-transform',
+                'Connection': 'keep-alive',
+                'x-ai-format': cached.format || 'gemini',
+                'x-turn-id': turnId,
+                'x-idempotent-replay': 'true'
+              });
+              for (const chunk of cached.chunks) {
+                response.write(chunk);
+              }
+              response.end();
+              return;
+            }
+          }
+
+          // Register in-progress idempotency record
+          if (idempotencyKey) {
+            idempotencyStore.set(idempotencyKey, {
+              status: 'in_progress',
+              timestamp: Date.now(),
+              chunks: [],
+              format: prov === 'gemini' ? 'gemini' : 'openai'
+            });
+          }
 
           // 1. Groq Cloud Proxy
           if (prov === 'groq' || (!process.env.GEMINI_API_KEY && process.env.GROQ_API_KEY && !body.apiKey)) {
             const groqKey = process.env.GROQ_API_KEY || body.apiKey;
             if (!groqKey) {
+              if (idempotencyKey) idempotencyStore.delete(idempotencyKey);
               response.writeHead(400, { 'Content-Type': 'application/json' });
               response.end(JSON.stringify({ success: false, error: 'GROQ_API_KEY is not configured.' }));
               return;
@@ -193,6 +241,7 @@ export async function handleApiRequest(request, response) {
             });
 
             if (!groqRes.ok) {
+              if (idempotencyKey) idempotencyStore.delete(idempotencyKey);
               const errJson = await groqRes.json().catch(() => ({}));
               response.writeHead(400, { 'Content-Type': 'application/json' });
               response.end(JSON.stringify({ success: false, error: errJson.error?.message || `Groq HTTP ${groqRes.status}` }));
@@ -212,6 +261,11 @@ export async function handleApiRequest(request, response) {
               const { value, done } = await reader.read();
               if (done) break;
               response.write(value);
+              if (idempotencyKey) idempotencyStore.get(idempotencyKey)?.chunks.push(value);
+            }
+            if (idempotencyKey) {
+              const rec = idempotencyStore.get(idempotencyKey);
+              if (rec) { rec.status = 'completed'; rec.timestamp = Date.now(); }
             }
             response.end();
             return;
@@ -232,6 +286,7 @@ export async function handleApiRequest(request, response) {
             );
 
             if (!apiKey) {
+              if (idempotencyKey) idempotencyStore.delete(idempotencyKey);
               response.writeHead(400, { 'Content-Type': 'application/json' });
               response.end(JSON.stringify({ success: false, error: `API key for ${prov} is not configured.` }));
               return;
@@ -256,6 +311,7 @@ export async function handleApiRequest(request, response) {
             });
 
             if (!aiRes.ok) {
+              if (idempotencyKey) idempotencyStore.delete(idempotencyKey);
               const errJson = await aiRes.json().catch(() => ({}));
               response.writeHead(400, { 'Content-Type': 'application/json' });
               response.end(JSON.stringify({ success: false, error: errJson.error?.message || `${prov} HTTP ${aiRes.status}` }));
@@ -275,6 +331,11 @@ export async function handleApiRequest(request, response) {
               const { value, done } = await reader.read();
               if (done) break;
               response.write(value);
+              if (idempotencyKey) idempotencyStore.get(idempotencyKey)?.chunks.push(value);
+            }
+            if (idempotencyKey) {
+              const rec = idempotencyStore.get(idempotencyKey);
+              if (rec) { rec.status = 'completed'; rec.timestamp = Date.now(); }
             }
             response.end();
             return;
@@ -283,6 +344,7 @@ export async function handleApiRequest(request, response) {
           // 3. Default: Google Gemini Proxy
           const apiKey = process.env.GEMINI_API_KEY || body.apiKey;
           if (!apiKey) {
+            if (idempotencyKey) idempotencyStore.delete(idempotencyKey);
             response.writeHead(400, { 'Content-Type': 'application/json' });
             response.end(JSON.stringify({
               success: false,
@@ -358,6 +420,7 @@ export async function handleApiRequest(request, response) {
           }
 
           if (!fetchRes || !fetchRes.ok) {
+            if (idempotencyKey) idempotencyStore.delete(idempotencyKey);
             response.writeHead(lastHttpStatus >= 400 && lastHttpStatus < 600 ? lastHttpStatus : 400, { 'Content-Type': 'application/json' });
             response.end(JSON.stringify({
               success: false,
@@ -383,9 +446,15 @@ export async function handleApiRequest(request, response) {
             const { value, done } = await reader.read();
             if (done) break;
             response.write(value);
+            if (idempotencyKey) idempotencyStore.get(idempotencyKey)?.chunks.push(value);
+          }
+          if (idempotencyKey) {
+            const rec = idempotencyStore.get(idempotencyKey);
+            if (rec) { rec.status = 'completed'; rec.timestamp = Date.now(); }
           }
           response.end();
         } catch (err) {
+          if (idempotencyKey) idempotencyStore.delete(idempotencyKey);
           if (!response.headersSent) {
             response.writeHead(500, { 'Content-Type': 'application/json' });
           }

@@ -950,6 +950,8 @@ export default {
         const streamResult = await streamChatCompletion({
           mode: currentMode,
           history,
+          turnId,
+          idempotencyKey: turnId,
           systemInstruction: `User is in Toolbox workspace. Current active tool is: ${taskState.activeToolId || 'Home'}.`,
           currentFile: fileToProcess,
           taskState,
@@ -1156,6 +1158,8 @@ export default {
         const streamResult = await streamChatCompletion({
           mode: currentMode,
           history: historyContext,
+          turnId,
+          idempotencyKey: `retry_${turnId}_${Date.now()}`,
           systemInstruction: `User is in Toolbox workspace. Current active tool is: ${taskState.activeToolId || 'Home'}.`,
           currentFile: userMsg.fileData || null,
           taskState,

@@ -199,11 +199,13 @@ const BASE_SYSTEM_INSTRUCTION = `You are Toolbox Assistant, a sophisticated, hig
  * All requests route securely through Toolbox's server proxy (/api/assistant/chat).
  */
 export async function streamChatCompletion({
-  mode = null,
+  mode = 'auto',
   history = [],
   systemInstruction = '',
   currentFile = null,
   taskState = {},
+  turnId = null,
+  idempotencyKey = null,
   onToken = () => {},
   onToolCallStart = () => {},
   onToolCallResult = () => {},
@@ -251,6 +253,12 @@ export async function streamChatCompletion({
         if (token) {
           headers['Authorization'] = `Bearer ${token}`;
         }
+        if (turnId) {
+          headers['X-Turn-Id'] = turnId;
+        }
+        if (idempotencyKey) {
+          headers['X-Idempotency-Key'] = idempotencyKey;
+        }
         return fetch('/api/assistant/chat', {
           method: 'POST',
           headers,
@@ -258,6 +266,8 @@ export async function streamChatCompletion({
             provider: 'gemini',
             model: modeCfg.model,
             contents: currentContents,
+            turnId,
+            idempotencyKey,
             systemInstruction: { parts: [{ text: systemInstruction ? `${fullSystemInstruction}\n\n${systemInstruction}` : fullSystemInstruction }] },
             tools: [{ functionDeclarations: ASSISTANT_TOOL_DECLARATIONS }]
           }),
@@ -300,7 +310,7 @@ export async function streamChatCompletion({
 
         contents.push({
           role: 'model',
-          parts: currentParseResult.functionCalls.map(fc => ({
+          parts: currentParseResult.rawModelParts?.length ? currentParseResult.rawModelParts : currentParseResult.functionCalls.map(fc => ({
             functionCall: { name: fc.name, args: fc.args || {} }
           }))
         });
