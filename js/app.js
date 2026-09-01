@@ -527,7 +527,6 @@ export function renderHomeAssistantBanner() {
         <div>
           <div style="display:flex; align-items:center; gap:6px;">
             <h3 style="margin:0; font-size:1.02rem; font-weight:800; color:var(--black); letter-spacing:-0.01em;">${titleText}</h3>
-            ${user ? '<span style="font-size:0.68rem; font-weight:700; background:#22c55e; color:#fff; padding:1px 7px; border-radius:9999px;">Active</span>' : ''}
           </div>
           <p style="margin:2px 0 0; font-size:0.82rem; color:var(--g600); line-height:1.4;">${descText}</p>
         </div>
