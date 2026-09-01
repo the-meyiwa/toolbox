@@ -159,10 +159,15 @@ export async function signUpWithEmail(email, password) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error_description || data.message || 'Sign up failed');
 
+      if (!data.access_token) {
+        // Email confirmation is required, no session created yet
+        return { success: true, requiresConfirmation: true };
+      }
+
       const userSession = {
         id: data.user?.id || `usr_${Date.now()}`,
         email,
-        token: data.access_token || '',
+        token: data.access_token,
         refreshToken: data.refresh_token || '',
         createdAt: new Date().toISOString()
       };

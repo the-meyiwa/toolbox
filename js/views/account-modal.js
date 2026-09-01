@@ -102,7 +102,7 @@ function renderModalContent() {
 
         </div>
 
-
+        ${user ? `
         <!-- QUOTA & RATE LIMITS SUMMARY -->
         <div style="background:var(--g50); border:1px solid var(--g200); border-radius:14px; padding:14px;">
           <div style="font-size:0.82rem; font-weight:700; color:var(--black); margin-bottom:8px; display:flex; justify-content:space-between;">
@@ -133,6 +133,7 @@ function renderModalContent() {
             </div>
           </div>
         </div>
+        ` : ''}
 
       </div>
     </div>
@@ -174,6 +175,7 @@ function renderModalContent() {
         window.location.hash = '#assistant';
       } else {
         authMsg.style.display = 'block';
+        authMsg.style.color = '#ef4444'; // Red for error
         authMsg.textContent = res.error;
       }
     });
@@ -189,10 +191,17 @@ function renderModalContent() {
       authMsg.style.display = 'none';
       const res = await signUpWithEmail(email, pwd);
       if (res.success) {
-        closeAccountModal();
-        window.location.hash = '#assistant';
+        if (res.requiresConfirmation) {
+          authMsg.style.display = 'block';
+          authMsg.style.color = '#10b981'; // Green for success
+          authMsg.textContent = 'Account created! Please check your email to confirm your account before signing in.';
+        } else {
+          closeAccountModal();
+          window.location.hash = '#assistant';
+        }
       } else {
         authMsg.style.display = 'block';
+        authMsg.style.color = '#ef4444'; // Red for error
         authMsg.textContent = res.error;
       }
     });
