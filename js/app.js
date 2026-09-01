@@ -234,6 +234,14 @@ function teardownTool() {
 
 async function openTool(id) {
   const tool = BY_ID.get(id);
+  
+  if (id === 'assistant' && !getCurrentUser()) {
+    window.location.hash = '';
+    showPage('home');
+    openAccountModal();
+    return;
+  }
+
   if (!tool) return showPage('home');
 
   teardownTool();
@@ -357,7 +365,8 @@ let lastLoggedQuery = '';
 
 function runSearch() {
   const q = searchInput.value.trim();
-  const filteredTools = TOOLS.filter(t => t.id !== 'assistant');
+  const user = getCurrentUser();
+  const filteredTools = user ? TOOLS : TOOLS.filter(t => t.id !== 'assistant');
 
   if (!q) { renderGrid(filteredTools); return; }
 
@@ -520,6 +529,10 @@ export function renderHomeAssistantBanner() {
 
   bannerEl.querySelector('#btn-open-assistant')?.addEventListener('click', (e) => {
     e.preventDefault();
+    if (!getCurrentUser()) {
+      openAccountModal();
+      return;
+    }
     window.location.hash = '#assistant';
     openTool('assistant');
   });
@@ -529,7 +542,8 @@ updateSearchPlaceholder();
 renderHomeAssistantBanner();
 window.addEventListener('toolbox:authchange', () => {
   updateSearchPlaceholder();
-  renderGrid(TOOLS);
+  const user = getCurrentUser();
+  renderGrid(user ? TOOLS : TOOLS.filter(t => t.id !== 'assistant'));
   renderHomeAssistantBanner();
   if (window.location.hash === '#assistant') {
     openTool('assistant');
@@ -544,7 +558,8 @@ if (homeHeroInput && homeHeroDropdown) {
       return;
     }
 
-    const availableTools = TOOLS.filter(t => t.id !== 'assistant');
+    const user = getCurrentUser();
+    const availableTools = user ? TOOLS : TOOLS.filter(t => t.id !== 'assistant');
     const isAi = detectAiIntent(q);
     const searchRes = search(q, availableTools, { labels: CATEGORY_LABELS }).results.map(r => r.tool).slice(0, 6);
 
@@ -597,7 +612,8 @@ if (homeHeroInput && homeHeroDropdown) {
   function submitHomeHero() {
     const q = homeHeroInput.value.trim();
     if (!q) return;
-    const availableTools = TOOLS.filter(t => t.id !== 'assistant');
+    const user = getCurrentUser();
+    const availableTools = user ? TOOLS : TOOLS.filter(t => t.id !== 'assistant');
     const isAi = detectAiIntent(q);
     const searchRes = search(q, availableTools, { labels: CATEGORY_LABELS }).results;
 
@@ -750,7 +766,8 @@ if (isStandalone) {
   document.body.classList.add('standalone-mode');
 }
 
-renderGrid(TOOLS);
+const initialUser = getCurrentUser();
+renderGrid(initialUser ? TOOLS : TOOLS.filter(t => t.id !== 'assistant'));
 installCategoryChips();
 handleHash();
 

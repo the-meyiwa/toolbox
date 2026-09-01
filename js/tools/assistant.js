@@ -156,7 +156,7 @@ export default {
                 class="tool-input"
                 placeholder="Ask anything, drag & drop a file, request code, or trigger tools..."
                 rows="1"
-                style="display:block; margin:0; width:100%; min-height:44px; max-height:140px; padding:11px 16px; resize:none; border-radius:24px 0 0 24px; font-size:0.92rem; line-height:1.45; font-family:inherit; border:1px solid var(--g300); border-right:none; background:var(--white); box-sizing:border-box;"
+                style="display:block; margin:0; width:100%; min-height:44px; max-height:140px; padding:11px 16px; resize:none; border-radius:24px 0 0 24px; font-size:0.92rem; line-height:1.45; font-family:inherit; border:1px solid var(--g300); border-right:none; background:var(--white); box-sizing:border-box; scrollbar-width:none; outline:none;"
               ></textarea>
             </div>
 
@@ -832,12 +832,11 @@ export default {
           : (err?.message || 'Something went wrong.');
 
         if (textBody) {
-          const isKeyError = message.toLowerCase().includes('api key') || message.toLowerCase().includes('gemini');
           textBody.innerHTML = `
             <div style="color:#ef4444; font-weight:600; margin-bottom:8px; line-height:1.4;">${escapeHtml(message)}</div>
             <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
               <button type="button" class="btn btn-primary btn-sm ast-err-btn-settings" style="font-size:0.75rem; font-weight:700;">
-                ${isKeyError ? 'Configure API Key' : 'AI Settings'}
+                AI Settings
               </button>
               <button type="button" class="btn btn-secondary btn-sm ast-err-btn-retry" style="font-size:0.75rem; font-weight:700;">
                 Retry Request

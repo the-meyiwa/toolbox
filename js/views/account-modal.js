@@ -9,8 +9,6 @@ import {
   signInWithEmail,
   signUpWithEmail,
   signOut,
-  getStorageMode,
-  setStorageMode,
   getSupabaseConfig,
   saveSupabaseConfig,
   testSupabaseConnection
@@ -45,7 +43,6 @@ export function closeAccountModal() {
 
 function renderModalContent() {
   const user = getCurrentUser();
-  const storageMode = getStorageMode();
   const quota = QuotaManager.getQuotaSummary();
   const supabaseConfig = getSupabaseConfig();
 
@@ -103,26 +100,6 @@ function renderModalContent() {
           `}
         </div>
 
-        <!-- DUAL STORAGE ENGINE SWITCHER -->
-        <div>
-          <div style="font-size:0.86rem; font-weight:700; color:var(--black); margin-bottom:6px;">Storage Strategy</div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <div class="storage-card ${storageMode === 'local' ? 'active' : ''}" id="opt-storage-local" style="border:2px solid ${storageMode === 'local' ? 'var(--black)' : 'var(--g200)'}; background:${storageMode === 'local' ? 'var(--g100)' : 'var(--white)'}; border-radius:12px; padding:12px; cursor:pointer; transition:all 0.2s;">
-              <div style="display:flex; align-items:center; gap:6px; font-weight:700; font-size:0.84rem; color:var(--black);">
-                <span>Local Device</span>
-                ${storageMode === 'local' ? '<span style="font-size:0.65rem; background:var(--black); color:#fff; padding:1px 5px; border-radius:999px;">Active</span>' : ''}
-              </div>
-              <p style="margin:4px 0 0; font-size:0.74rem; color:var(--g600); line-height:1.4;">Zero latency, 100% offline, files stay in your browser disk.</p>
-            </div>
-
-            <div class="storage-card ${storageMode === 'supabase' ? 'active' : ''}" id="opt-storage-supabase" style="border:2px solid ${storageMode === 'supabase' ? 'var(--black)' : 'var(--g200)'}; background:${storageMode === 'supabase' ? 'var(--g100)' : 'var(--white)'}; border-radius:12px; padding:12px; cursor:pointer; transition:all 0.2s;">
-              <div style="display:flex; align-items:center; gap:6px; font-weight:700; font-size:0.84rem; color:var(--black);">
-                <span>Supabase Cloud</span>
-                ${storageMode === 'supabase' ? '<span style="font-size:0.65rem; background:var(--black); color:#fff; padding:1px 5px; border-radius:999px;">Active</span>' : ''}
-              </div>
-              <p style="margin:4px 0 0; font-size:0.74rem; color:var(--g600); line-height:1.4;">Non-volatile, persistent, accessible across devices.</p>
-            </div>
-          </div>
         </div>
 
 
@@ -220,17 +197,6 @@ function renderModalContent() {
       }
     });
   }
-
-  // Storage switcher
-  modalEl.querySelector('#opt-storage-local').addEventListener('click', () => {
-    setStorageMode('local');
-    renderModalContent();
-  });
-
-  modalEl.querySelector('#opt-storage-supabase').addEventListener('click', () => {
-    setStorageMode('supabase');
-    renderModalContent();
-  });
 
 
 }

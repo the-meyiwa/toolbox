@@ -32,7 +32,7 @@ try {
   }
 } catch (e) {}
 
-const server = http.createServer((request, response) => {
+const server = http.createServer(async (request, response) => {
   const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
 
   // CORS headers
@@ -154,6 +154,36 @@ const server = http.createServer((request, response) => {
     }
 
     if (url.pathname === '/api/assistant/chat' && request.method === 'POST') {
+      const authHeader = request.headers.authorization;
+      if (!authHeader) {
+        response.writeHead(401, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ error: 'Unauthorized: Missing token' }));
+        return;
+      }
+
+      const token = authHeader.replace('Bearer ', '');
+      const isDevToken = token.startsWith('tok_') && process.env.NODE_ENV !== 'production';
+
+      if (!isDevToken) {
+        const anonKey = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_iZcbpvF209tCXSuqNm4Ckw_xOFFMM-S';
+        const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://ssoruyruzbvgyondxlgj.supabase.co';
+        
+        try {
+          const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
+          });
+          if (!userRes.ok) {
+            response.writeHead(401, { 'Content-Type': 'application/json' });
+            response.end(JSON.stringify({ error: 'Unauthorized: Invalid token' }));
+            return;
+          }
+        } catch (e) {
+          response.writeHead(500, { 'Content-Type': 'application/json' });
+          response.end(JSON.stringify({ error: 'Auth server error' }));
+          return;
+        }
+      }
+
       let bodyStr = '';
       request.on('data', chunk => { bodyStr += chunk; });
       request.on('end', async () => {

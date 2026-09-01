@@ -225,6 +225,8 @@ export default {
   },
 
   playSound(s, cardEl, volumeLevel, isLooping) {
+    this.stopAll();
+
     if (cardEl) {
       cardEl.style.transform = 'scale(0.97)';
       cardEl.style.borderColor = 'var(--black)';

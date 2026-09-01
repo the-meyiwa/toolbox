@@ -12,6 +12,8 @@ import { calculateMolarMass, balanceChemicalEquation, calculateStoichiometry } f
 import { COMPOUNDS_DATA } from './compounds-dataset.js';
 import { connectionInfo, measureLatency, measureDownload } from './netspeed.js';
 
+let activeAssistantAudios = [];
+
 /**
  * Assistant Tool Declarations (Standard Function Calling Schema)
  */
@@ -1120,17 +1122,24 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
     case 'play_sound_effect': {
       const query = args.query || 'sound effect';
       try {
-        const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent('sound effect ' + query)}&entity=song&limit=5`);
+        const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=5`);
         const data = await res.json();
         const tracks = data.results.filter(r => r.previewUrl);
         
         if (!tracks.length) {
-          return { status: 'error', message: `No sound effects found for "${query}".` };
+          return { status: 'error', message: `No sound effects or songs found for "${query}".` };
         }
 
         const track = tracks[0];
         const audio = new Audio(track.previewUrl);
         audio.volume = 1.0;
+        
+        activeAssistantAudios.forEach(a => {
+          a.pause();
+          a.currentTime = 0;
+        });
+        activeAssistantAudios = [audio];
+        
         audio.play().catch(() => {});
 
         return { 

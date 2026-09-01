@@ -135,7 +135,7 @@ export default {
     /* ---------------- scene ---------------- */
 
     const mount  = container.querySelector('#an-canvas');
-    const viewer = new Viewer3D(mount, { background: 0xf2f2f0, ground: false, fov: 40 });
+    const viewer = new Viewer3D(mount, { background: 0x000000, ground: false, fov: 40 });
     this._viewer = viewer;
 
     const dracoLoader = new DRACOLoader().setDecoderPath(DRACO);

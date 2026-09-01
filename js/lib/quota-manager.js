@@ -110,7 +110,7 @@ export const QuotaManager = {
     if (usage.messageCount >= LIMITS.DAILY_MESSAGES) {
       return {
         allowed: false,
-        reason: `Daily free quota reached (${LIMITS.DAILY_MESSAGES}/${LIMITS.DAILY_MESSAGES} msgs). Connect your API key in settings or reset quota to continue.`
+        reason: `Daily free quota reached (${LIMITS.DAILY_MESSAGES}/${LIMITS.DAILY_MESSAGES} msgs). Reset quota to continue.`
       };
     }
 

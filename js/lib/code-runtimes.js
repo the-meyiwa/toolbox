@@ -254,120 +254,35 @@ try {
   // Offline mode active
 }
 
-// Built-in Pure JS C++ Runtime Engine (100% Offline with Zero Network Dependencies)
-function runCppBuiltin(code, stdin) {
-  var output = [];
-  var outStr = '';
-  
-  function coutWrite(val) {
-    if (val === '\\n' || val === '\n') {
-      output.push(outStr);
-      outStr = '';
-    } else {
-      outStr += val;
-    }
-  }
-
-  // Preprocess C++ code: strip includes and namespace
-  var clean = code
-    .replace(/#include\\s*<[^>]+>/g, '')
-    .replace(/#include\\s*"[^"]+"/g, '')
-    .replace(/using\\s+namespace\\s+std\\s*;/g, '')
-    .trim();
-
-  // Transpile standard C++ idioms into JS for sandboxed execution
-  var jsCode = clean
-    // cout << a << b << endl; -> coutWrite(a); coutWrite(b); coutWrite('\\n');
-    .replace(/cout\\s*<<\\s*([^;]+);/g, function(match, exprs) {
-      var parts = exprs.split('<<').map(function(s) { return s.trim(); });
-      var calls = parts.map(function(p) {
-        if (p === 'endl' || p === '"\\\\n"') return "coutWrite('\\n')";
-        return "coutWrite(" + p + ")";
-      });
-      return calls.join('; ') + ';';
-    })
-    // printf("...", args)
-    .replace(/printf\\s*\\(([^)]+)\\);/g, function(match, args) {
-      return "coutWrite(sprintf(" + args + "));";
-    })
-    // vector<T> name = { ... }; -> var name = [ ... ];
-    .replace(/vector\\s*<[^>]+>\\s+([a-zA-Z0-9_]+)\\s*=\\s*\\{([^}]+)\\};/g, 'var $1 = [$2];')
-    .replace(/vector\\s*<[^>]+>\\s+([a-zA-Z0-9_]+);/g, 'var $1 = [];')
-    .replace(/([a-zA-Z0-9_]+)\\.push_back\\(([^)]+)\\)/g, '$1.push($2)')
-    .replace(/([a-zA-Z0-9_]+)\\.size\\(\\)/g, '$1.length')
-    // string name = ... -> var name = ...
-    .replace(/\\bstring\\s+([a-zA-Z0-9_]+)/g, 'var $1')
-    // int/double/float/char/bool/auto varname -> var varname
-    .replace(/\\b(int|double|float|char|bool|long|auto)\\s+([a-zA-Z0-9_]+)\\s*=/g, 'var $2 =')
-    .replace(/\\b(int|double|float|char|bool|long|auto)\\s+([a-zA-Z0-9_]+)\\s*;/g, 'var $2 = 0;')
-    // range-based for: for (int x : vec) -> for (var x of vec)
-    .replace(/for\\s*\\(\\s*(?:int|double|float|auto|var)\\s+([a-zA-Z0-9_]+)\\s*:\\s*([a-zA-Z0-9_]+)\\s*\\)/g, 'for (var $1 of $2)')
-    // int main(...) -> function main()
-    .replace(/int\\s+main\\s*\\([^)]*\\)/g, 'function main()')
-    // return 0; in main
-    .replace(/\\b(int|double|float|void|bool|char)\\s+([a-zA-Z0-9_]+)\\s*\\(/g, 'function $2(');
-
-  var env = {
-    coutWrite: coutWrite,
-    endl: '\\n',
-    sqrt: Math.sqrt,
-    pow: Math.pow,
-    abs: Math.abs,
-    sin: Math.sin,
-    cos: Math.cos,
-    tan: Math.tan,
-    min: Math.min,
-    max: Math.max,
-    floor: Math.floor,
-    ceil: Math.ceil,
-    sprintf: function(fmt) {
-      var args = Array.prototype.slice.call(arguments, 1);
-      return fmt.replace(/%[dsf]/g, function() { return args.shift(); });
-    }
-  };
-
-  var fn = new Function('env', 
-    'with(env) {\\n' +
-    jsCode + '\\n' +
-    'if (typeof main === "function") { main(); }\\n' +
-    '}'
-  );
-
-  fn(env);
-  if (outStr) output.push(outStr);
-  return output;
-}
-
 self.onmessage = function (e) {
   var code = e.data.code;
   var stdin = e.data.stdin || '';
   var started = Date.now();
 
   try {
-    var output = '';
-    var exitCode = 0;
-
-    if (typeof JSCPP !== 'undefined' && JSCPP.run) {
-      try {
-        exitCode = JSCPP.run(code, stdin, {
-          stdio: { write: function (s) { output += s; } },
-          maxTimeout: 15000
-        });
-      } catch (jscppErr) {
-        var resLines = runCppBuiltin(code, stdin);
-        output = resLines.join('\\n');
-      }
-    } else {
-      var resLines = runCppBuiltin(code, stdin);
-      output = resLines.join('\\n');
+    if (typeof JSCPP === 'undefined' || !JSCPP.run) {
+      throw new Error('JSCPP library is not loaded. Ensure you have an internet connection.');
     }
+    
+    var outputBuffer = '';
+    var exitCode = JSCPP.run(code, stdin, {
+      stdio: { 
+        write: function (s) {
+          outputBuffer += s;
+          var nIdx;
+          while ((nIdx = outputBuffer.indexOf('\\n')) !== -1) {
+            post('out', 'log', outputBuffer.substring(0, nIdx));
+            outputBuffer = outputBuffer.substring(nIdx + 1);
+          }
+        } 
+      },
+      maxTimeout: 15000
+    });
 
-    if (output) {
-      var lines = output.split('\\n');
-      for (var i = 0; i < lines.length; i++) {
-        if (lines[i] || i < lines.length - 1) post('out', 'log', lines[i]);
-      }
+    if (outputBuffer.length > 0) {
+      post('out', 'log', outputBuffer);
     }
+    
     post('out', 'muted', 'Process finished with exit code ' + exitCode);
     post('done', null, String(Date.now() - started));
   } catch (err) {

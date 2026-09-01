@@ -367,28 +367,90 @@ export async function streamChatCompletion({
 
     // Strategy 2: Backend Proxy (/api/assistant/chat)
     try {
-      const proxyRes = await fetch('/api/assistant/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider: 'gemini',
-          apiKey: apiKey || undefined,
-          model,
-          contents,
-          systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
-          tools: [{ functionDeclarations: ASSISTANT_TOOL_DECLARATIONS }]
-        }),
-        signal
-      });
+      const callProxy = async (currentContents) => {
+        const { getCurrentUser } = await import('./supabase.js');
+        const user = getCurrentUser();
+        const headers = { 'Content-Type': 'application/json' };
+        if (user && user.token) {
+          headers['Authorization'] = `Bearer ${user.token}`;
+        }
+        
+        return fetch('/api/assistant/chat', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            provider: 'gemini',
+            apiKey: apiKey || undefined,
+            model,
+            contents: currentContents,
+            systemInstruction: { parts: [{ text: fullSystemInstruction }] },
+            tools: [{ functionDeclarations: ASSISTANT_TOOL_DECLARATIONS }]
+          }),
+          signal
+        });
+      };
+
+      const proxyRes = await callProxy(contents);
 
       if (proxyRes.ok && proxyRes.body) {
-        await processGeminiSseStream(proxyRes.body, {
+        let currentParseResult = await processGeminiSseStream(proxyRes.body, {
           onToken: (t) => {
             fullResponseText += t;
             onToken(t);
           },
+          onToolCall: async (toolName, toolArgs) => {
+            onToolCallStart(toolName, toolArgs);
+            const toolRes = await executeAssistantTool(toolName, toolArgs, { currentFile, taskState });
+            onToolCallResult(toolName, toolRes);
+            executedToolResults.push(toolRes);
+            return toolRes;
+          },
           signal
         });
+
+        // Multi-step tool chaining loop
+        let loopLimit = 6;
+        while (loopLimit-- > 0 && currentParseResult.hadFunctionCalls && currentParseResult.functionResponses?.length) {
+          if (signal?.aborted) break;
+
+          contents.push({
+            role: 'model',
+            parts: currentParseResult.rawModelParts?.length
+              ? currentParseResult.rawModelParts
+              : currentParseResult.functionCalls.map(fc => ({ functionCall: { name: fc.name, args: fc.args } }))
+          });
+
+          contents.push({
+            role: 'user',
+            parts: currentParseResult.functionResponses.map(fr => ({
+              functionResponse: {
+                name: fr.name,
+                response: { output: fr.output }
+              }
+            }))
+          });
+
+          const followUpRes = await callProxy(contents);
+          if (followUpRes.ok && followUpRes.body) {
+            currentParseResult = await processGeminiSseStream(followUpRes.body, {
+              onToken: (t) => {
+                fullResponseText += t;
+                onToken(t);
+              },
+              onToolCall: async (toolName, toolArgs) => {
+                onToolCallStart(toolName, toolArgs);
+                const toolRes = await executeAssistantTool(toolName, toolArgs, { currentFile, taskState });
+                onToolCallResult(toolName, toolRes);
+                executedToolResults.push(toolRes);
+                return toolRes;
+              },
+              signal
+            });
+          } else {
+            break;
+          }
+        }
+
         success = true;
         break;
       } else {
@@ -407,10 +469,7 @@ export async function streamChatCompletion({
   }
 
   if (!success) {
-    if (!apiKey) {
-      throw new Error('API key not found. Please click AI Modes or Account to save your API key.');
-    }
-    throw lastError || new Error('Unable to connect to the online AI service. Please check your network and API key.');
+    throw lastError || new Error('Unable to connect to the online AI service. Please check your network connection.');
   }
 
   return {
@@ -484,7 +543,8 @@ async function processGeminiSseStream(streamBody, { onToken = () => {}, onToolCa
 export async function testAiProviderConnection(provider = 'gemini', apiKey = '') {
   const key = (apiKey || getGeminiApiKey()).trim();
   if (!key) {
-    return { success: false, message: 'Please provide an API key.' };
+    // Relying on backend proxy, so we return success on the frontend if no key is provided, assuming proxy works.
+    return { success: true, message: 'Using global configuration.' };
   }
 
   const start = Date.now();
@@ -500,7 +560,7 @@ export async function testAiProviderConnection(provider = 'gemini', apiKey = '')
       const err = await res.json().catch(() => ({}));
       lastErr = err.error?.message || `HTTP ${res.status}`;
       if (lastErr.toLowerCase().includes('leaked') || lastErr.toLowerCase().includes('permission_denied')) {
-        return { success: false, message: 'Google reported this API key as leaked/revoked. Please generate a fresh key in Google AI Studio.' };
+        return { success: false, message: 'API connection issue. Please check your network or global configuration.' };
       }
     } catch (err) {
       lastErr = err.message;

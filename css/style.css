@@ -2926,16 +2926,17 @@ mark.regex-match {
 .tool-card { position: relative; }
 .tool-card-flag {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 6px;
+  right: 6px;
   font-family: var(--mono);
-  font-size: 0.56rem;
-  letter-spacing: 0.06em;
+  font-size: 0.45rem;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--g400);
   border: 1px solid var(--g200);
   border-radius: 3px;
-  padding: 1px 4px;
+  padding: 1px 3px;
 }
 
 .tool-related {
@@ -9439,4 +9440,13 @@ body.standalone-mode .notes-app-wrapper {
   height: 100% !important;
   border-radius: 0 !important;
   border: none !important;
+}
+
+/* Assistant Send Button Glow Fix */
+#ast-send-btn {
+  box-shadow: none !important;
+  transition: box-shadow 0.2s ease, background 0.2s ease !important;
+}
+#ast-send-btn:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
 }
