@@ -184,6 +184,15 @@ export default {
     const sendBtn = container.querySelector('#ast-send-btn');
     const fileInput = container.querySelector('#ast-file-input');
     const attachBtn = container.querySelector('#ast-attach-btn');
+
+    const updatePromptPlaceholder = () => {
+      if (userInput) {
+        userInput.placeholder = window.matchMedia?.('(max-width: 600px)')?.matches
+          ? 'Ask Assistant…'
+          : 'Ask anything, drag & drop a file, request code, or trigger tools...';
+      }
+    };
+    updatePromptPlaceholder();
     const attachedBar = container.querySelector('#ast-attached-bar');
     const attachedName = container.querySelector('#ast-attached-name');
     const attachedSize = container.querySelector('#ast-attached-size');

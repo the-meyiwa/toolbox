@@ -5234,8 +5234,18 @@ input, select, textarea {
   .pde-thumb { flex-shrink: 0; width: 80px; }
   .pde-toolbar { overflow-x: auto; flex-wrap: nowrap; }
 
+  /* Keep page-level cards clear of the viewport edge on narrow screens. */
+  #home-assistant-banner-wrap { width:calc(100% - 32px) !important; margin-top:22px !important; }
+  .home-assistant-card { padding:18px !important; align-items:flex-start !important; flex-direction:column; }
+  .home-assistant-card > div:first-child { align-items:flex-start !important; }
+  .home-assistant-card #btn-open-assistant { width:100%; justify-content:center; }
+
+  /* Assistant composer: each control is independently rounded and tap-friendly. */
+  #ast-user-input { border:1px solid var(--g300) !important; border-radius:999px !important; }
+  #ast-send-btn { border:1px solid var(--black) !important; border-radius:999px !important; padding:0 16px !important; }
+
   /* Spaces Mobile Layout */
-  .sp-directory { padding: 12px 0 40px; }
+  .sp-directory { padding:12px 16px 40px; box-sizing:border-box; }
   .sp-dir-hero { margin-bottom: 24px; padding-top: 16px; }
   .sp-dir-title { font-size: 2rem; }
   .sp-dir-sub { font-size: 0.92rem; margin-bottom: 20px; }
@@ -5244,7 +5254,7 @@ input, select, textarea {
   .sp-privacy-card { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px 16px; }
   .sp-spaces-grid { grid-template-columns: 1fr; }
 
-  .sp-landing { margin: 16px auto 40px; padding: 0 10px; }
+  .sp-landing { margin:16px auto 40px; padding:0 16px; box-sizing:border-box; }
   .sp-form-card { padding: 22px 18px; border-radius: 14px; }
 
   /* Room Topbar & Navigation */
