@@ -350,19 +350,48 @@ export function searchDiseases(query = '', options = {}) {
   const results = [];
   const seenNames = new Set();
 
-  // 1. Expand query using synonyms
+  if (!q) {
+    // If no query and no filter, return top commodity core diseases
+    for (const d of Object.values(DISEASES_CORE_DATABASE)) {
+      if (systemFilter && !d.system.toLowerCase().includes(systemFilter) && !d.category.toLowerCase().includes(systemFilter)) {
+        continue;
+      }
+      results.push({
+        id: `DIS_${d.icd11}`,
+        name: d.name,
+        icd11: d.icd11,
+        commodity: d.commodity,
+        system: d.system,
+        category: d.category,
+        prevalence: d.prevalence,
+        pathophysiology: d.pathophysiology,
+        symptoms: d.symptoms,
+        diagnosticCriteria: d.diagnosticCriteria,
+        management: d.management,
+        complications: d.complications,
+        tier: 1
+      });
+      if (results.length >= limit) break;
+    }
+    return results.sort((a, b) => (b.commodity || 0) - (a.commodity || 0));
+  }
+
+  // 1. Expand query using synonyms with exact or whole-word boundary matching
   if (DISEASE_SYNONYMS[q]) {
     q = DISEASE_SYNONYMS[q];
   } else {
     for (const [syn, mapped] of Object.entries(DISEASE_SYNONYMS)) {
-      if (q.includes(syn) || syn.includes(q)) {
-        q = mapped;
-        break;
+      if (syn.length >= 3) {
+        const regex = new RegExp(`\\b${syn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+        if (regex.test(q)) {
+          q = mapped;
+          break;
+        }
       }
     }
   }
 
-  // 2. Search Core Tier 1 Database first
+  // 2. Search Core Tier 1 Database
   for (const [key, d] of Object.entries(DISEASES_CORE_DATABASE)) {
     if (systemFilter && !d.system.toLowerCase().includes(systemFilter) && !d.category.toLowerCase().includes(systemFilter)) {
       continue;
@@ -373,13 +402,11 @@ export function searchDiseases(query = '', options = {}) {
     const keyLower = key.toLowerCase();
     const icdLower = d.icd11.toLowerCase();
 
-    if (!q) {
+    if (nameLower.includes(q) || keyLower.includes(q) || icdLower === q) {
       match = true;
-    } else if (nameLower.includes(q) || keyLower.includes(q) || icdLower.includes(q) || q.includes(keyLower)) {
+    } else if (q.length >= 4 && d.symptoms.some(s => s.toLowerCase().includes(q))) {
       match = true;
-    } else if (d.symptoms.some(s => s.toLowerCase().includes(q))) {
-      match = true;
-    } else if (d.pathophysiology.toLowerCase().includes(q) || d.category.toLowerCase().includes(q)) {
+    } else if (q.length >= 5 && (d.pathophysiology.toLowerCase().includes(q) || d.category.toLowerCase().includes(q))) {
       match = true;
     }
 
@@ -405,14 +432,14 @@ export function searchDiseases(query = '', options = {}) {
     if (results.length >= limit) break;
   }
 
-  // 3. Search Tier 2 chapters and ontology entities if more results needed
-  if (results.length < limit && q) {
+  // 3. Search Tier 2 chapters if medical query explicitly matched a chapter title
+  if (results.length < limit && q && q.length >= 4) {
     for (const ch of ICD11_CHAPTERS) {
       if (systemFilter && !ch.name.toLowerCase().includes(systemFilter)) {
         continue;
       }
 
-      if (ch.name.toLowerCase().includes(q) || ch.code.includes(q) || ch.prefix.toLowerCase().includes(q) || q.includes(ch.prefix.toLowerCase())) {
+      if (ch.name.toLowerCase().includes(q) || ch.code === q || ch.prefix.toLowerCase() === q) {
         const syntheticName = `${q.charAt(0).toUpperCase() + q.slice(1)} (${ch.name.split('(')[0].trim()})`;
         if (!seenNames.has(syntheticName)) {
           seenNames.add(syntheticName);

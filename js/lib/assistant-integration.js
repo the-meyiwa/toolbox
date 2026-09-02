@@ -157,8 +157,35 @@ export class ConversationIntegrationManager {
     const isTable = result?.type === 'table' || result?.renderer === 'table' ||
       Boolean(result?.rows && (result?.headers || result?.columns));
 
+    const isInvoice = result?.type === 'invoice' || result?.renderer === 'invoice' || Boolean(result?.invoice);
+    const isUml = result?.type === 'uml-diagram' || result?.renderer === 'uml-diagram' || Boolean(result?.code && result?.diagramType);
+    const isAlgorithm = result?.type === 'algorithm-simulation' || result?.renderer === 'algorithm-simulation' || Boolean(result?.algorithm && result?.frames);
+    const isMetronome = result?.type === 'metronome' || result?.renderer === 'metronome' || Boolean(result?.bpm && result?.beats);
+    const isSoundEffect = result?.type === 'sound-effect' || result?.renderer === 'sound-effect' || Boolean(result?.sfxType);
+    const isElements = result?.type === 'elements-comparison' || result?.renderer === 'elements-comparison' || Boolean(result?.elements && Array.isArray(result?.elements));
+    const isContainerQuote = result?.type === 'container-quote' || result?.renderer === 'container-quote' || Boolean(result?.quote && result?.size);
+    const isFloorPlan = result?.type === 'floor-plan' || result?.renderer === 'floor-plan' || Boolean(result?.rooms && result?.squareMeters);
+    const isLogicCircuit = result?.type === 'logic-circuit' || result?.renderer === 'logic-circuit' || Boolean(result?.gates && result?.connections);
+    const isMapView = result?.type === 'map-view' || result?.renderer === 'map-view' || Boolean(result?.markers && Array.isArray(result?.markers));
+    const isLocationCoordinates = result?.type === 'location-coordinates' || result?.renderer === 'location-coordinates' || (result?.latitude !== undefined && result?.longitude !== undefined);
+    const isTunerPitch = result?.type === 'tuner-pitch' || result?.renderer === 'tuner-pitch' || Boolean(result?.strings && result?.tuningName);
+    const isPdfAnnotation = result?.type === 'pdf-annotation' || result?.renderer === 'pdf-annotation' || Boolean(result?.annotations && result?.title);
+
     let detectedRenderer = 'text';
-    if (isAnatomy) detectedRenderer = 'anatomy-3d';
+    if (isInvoice) detectedRenderer = 'invoice';
+    else if (isUml) detectedRenderer = 'uml-diagram';
+    else if (isAlgorithm) detectedRenderer = 'algorithm-simulation';
+    else if (isMetronome) detectedRenderer = 'metronome';
+    else if (isSoundEffect) detectedRenderer = 'sound-effect';
+    else if (isElements) detectedRenderer = 'elements-comparison';
+    else if (isContainerQuote) detectedRenderer = 'container-quote';
+    else if (isFloorPlan) detectedRenderer = 'floor-plan';
+    else if (isLogicCircuit) detectedRenderer = 'logic-circuit';
+    else if (isMapView) detectedRenderer = 'map-view';
+    else if (isLocationCoordinates) detectedRenderer = 'location-coordinates';
+    else if (isTunerPitch) detectedRenderer = 'tuner-pitch';
+    else if (isPdfAnnotation) detectedRenderer = 'pdf-annotation';
+    else if (isAnatomy) detectedRenderer = 'anatomy-3d';
     else if (isIllustration) detectedRenderer = 'illustration';
     else if (isDisease) detectedRenderer = 'disease-list';
     else if (isFileList) detectedRenderer = 'file-list';

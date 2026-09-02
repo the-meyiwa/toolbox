@@ -12,6 +12,8 @@
  * 5. Cleaning up resources
  */
 
+import { AssistantAudioManager } from './assistant-audio.js';
+
 /**
  * Base Result Renderer — extend this to create new renderers
  */
@@ -72,13 +74,13 @@ export class FileDownloadCardRenderer extends ResultRenderer {
 
     const card = document.createElement('div');
     card.className = 'assistant-result-file-card';
-    card.style.cssText = 'margin-top:10px; padding:14px 16px; border:1px solid var(--g300, #e2e8f0); border-radius:14px; background:var(--white, #fff); box-shadow:0 2px 8px rgba(0,0,0,.04); display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;';
+    card.style.cssText = 'margin-top:10px; padding:14px 16px; border:1px solid var(--g200); border-radius:14px; background:var(--white); box-shadow:0 2px 8px rgba(0,0,0,.04); display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;';
 
     const left = document.createElement('div');
     left.style.cssText = 'display:flex; align-items:center; gap:12px; min-width:0; flex:1;';
 
     const iconBadge = document.createElement('div');
-    iconBadge.style.cssText = 'width:42px; height:42px; border-radius:10px; background:var(--g100, #f1f5f9); color:var(--primary, #2563eb); font:700 0.75rem var(--sans, sans-serif); display:flex; align-items:center; justify-content:center; flex-shrink:0; border:1px solid var(--g200, #e2e8f0);';
+    iconBadge.style.cssText = 'width:42px; height:42px; border-radius:10px; background:var(--g100); color:var(--primary, #2563eb); font:700 0.75rem var(--sans, sans-serif); display:flex; align-items:center; justify-content:center; flex-shrink:0; border:1px solid var(--g200);';
     iconBadge.textContent = ext.slice(0, 4);
 
     const info = document.createElement('div');
@@ -86,11 +88,11 @@ export class FileDownloadCardRenderer extends ResultRenderer {
 
     const nameEl = document.createElement('div');
     nameEl.textContent = filename;
-    nameEl.style.cssText = 'font-weight:700; font-size:0.92rem; color:var(--text, #0f172a); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
+    nameEl.style.cssText = 'font-weight:700; font-size:0.92rem; color:var(--black); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
 
     const metaEl = document.createElement('div');
     metaEl.textContent = [ext, sizeStr, data.message].filter(Boolean).slice(0, 2).join(' · ');
-    metaEl.style.cssText = 'font-size:0.75rem; color:var(--g600, #64748b); margin-top:2px;';
+    metaEl.style.cssText = 'font-size:0.75rem; color:var(--g600); margin-top:2px;';
 
     info.append(nameEl, metaEl);
     left.append(iconBadge, info);
@@ -128,7 +130,7 @@ export class FileDownloadCardRenderer extends ResultRenderer {
     downloadBtn.href = data.dataUrl || '#';
     downloadBtn.download = filename;
     downloadBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:5px;">${ICONS.download} Download</span>`;
-    downloadBtn.style.cssText = 'display:inline-flex; align-items:center; justify-content:center; padding:7px 16px; border-radius:9999px; background:var(--black, #0f172a); color:var(--white, #fff); font-size:0.85rem; font-weight:700; text-decoration:none; cursor:pointer; transition:opacity .15s; flex-shrink:0;';
+    downloadBtn.style.cssText = 'display:inline-flex; align-items:center; justify-content:center; padding:7px 16px; border-radius:9999px; background:var(--black); color:var(--white); font-size:0.85rem; font-weight:700; text-decoration:none; cursor:pointer; transition:opacity .15s; flex-shrink:0;';
     downloadBtn.onmouseover = () => { downloadBtn.style.opacity = '0.85'; };
     downloadBtn.onmouseout = () => { downloadBtn.style.opacity = '1'; };
 
@@ -169,11 +171,11 @@ export class FileListResultRenderer extends ResultRenderer {
 
     const wrapper = document.createElement('div');
     wrapper.className = 'assistant-result-file-list';
-    wrapper.style.cssText = 'margin-top:10px; border:1px solid var(--g300, #e2e8f0); border-radius:14px; background:var(--white, #fff); box-shadow:0 2px 8px rgba(0,0,0,.04); overflow:hidden;';
+    wrapper.style.cssText = 'margin-top:10px; border:1px solid var(--g200); border-radius:14px; background:var(--white); box-shadow:0 2px 8px rgba(0,0,0,.04); overflow:hidden;';
 
     // Header
     const header = document.createElement('div');
-    header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:var(--g50, #f8fafc); border-bottom:1px solid var(--g200, #e2e8f0); flex-wrap:wrap; gap:8px;';
+    header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:var(--g50); border-bottom:1px solid var(--g200); flex-wrap:wrap; gap:8px;';
 
     const leftHeader = document.createElement('div');
     leftHeader.style.cssText = 'display:flex; align-items:center; gap:8px;';
@@ -184,11 +186,11 @@ export class FileListResultRenderer extends ResultRenderer {
 
     const title = document.createElement('strong');
     title.textContent = 'Saved Files & Documents';
-    title.style.cssText = 'font-size:0.92rem; color:var(--text, #0f172a);';
+    title.style.cssText = 'font-size:0.92rem; color:var(--black);';
 
     const countBadge = document.createElement('span');
     countBadge.textContent = `${files.length} item${files.length === 1 ? '' : 's'}${filter}`;
-    countBadge.style.cssText = 'font-size:0.72rem; padding:2px 8px; border-radius:9999px; background:var(--g200, #e2e8f0); color:var(--g700, #334155); font-weight:600;';
+    countBadge.style.cssText = 'font-size:0.72rem; padding:2px 8px; border-radius:9999px; background:var(--g200); color:var(--g700); font-weight:600;';
 
     leftHeader.append(folderIcon, title, countBadge);
 
@@ -206,14 +208,14 @@ export class FileListResultRenderer extends ResultRenderer {
 
     if (files.length === 0) {
       const emptyBox = document.createElement('div');
-      emptyBox.style.cssText = 'padding:24px; text-align:center; color:var(--g500, #64748b); font-size:0.85rem;';
-      emptyBox.innerHTML = '<div style="margin-bottom:6px; color:var(--g400, #94a3b8);">' + ICONS.folder + '</div>No saved files found in your workspace.';
+      emptyBox.style.cssText = 'padding:24px; text-align:center; color:var(--g500); font-size:0.85rem;';
+      emptyBox.innerHTML = '<div style="margin-bottom:6px; color:var(--g400);">' + ICONS.folder + '</div>No saved files found in your workspace.';
       listBody.appendChild(emptyBox);
     } else {
       for (const file of files) {
         const itemRow = document.createElement('div');
-        itemRow.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid var(--g100, #f1f5f9); gap:12px; transition:background .15s;';
-        itemRow.onmouseover = () => { itemRow.style.background = 'var(--g50, #f8fafc)'; };
+        itemRow.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid var(--g100); gap:12px; transition:background .15s;';
+        itemRow.onmouseover = () => { itemRow.style.background = 'var(--g50)'; };
         itemRow.onmouseout = () => { itemRow.style.background = 'transparent'; };
 
         const itemLeft = document.createElement('div');
@@ -221,20 +223,20 @@ export class FileListResultRenderer extends ResultRenderer {
 
         const itemIcon = document.createElement('span');
         itemIcon.innerHTML = ICONS.file;
-        itemIcon.style.cssText = 'display:inline-flex; align-items:center; color:var(--g500, #64748b); flex-shrink:0;';
+        itemIcon.style.cssText = 'display:inline-flex; align-items:center; color:var(--g500); flex-shrink:0;';
 
         const itemMeta = document.createElement('div');
         itemMeta.style.cssText = 'min-width:0; flex:1;';
 
         const itemName = document.createElement('div');
         itemName.textContent = file.name;
-        itemName.style.cssText = 'font-size:0.86rem; font-weight:700; color:var(--text, #0f172a); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
+        itemName.style.cssText = 'font-size:0.86rem; font-weight:700; color:var(--black); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
 
         const itemSub = document.createElement('div');
         const sizeStr = file.bytes ? (file.bytes > 1048576 ? `${(file.bytes/1048576).toFixed(1)} MB` : `${Math.round(file.bytes/1024)} KB`) : 'Text file';
         const syncIcon = file.isCloudSynced ? ICONS.cloud : ICONS.local;
         itemSub.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">${(file.kind || 'file').toUpperCase()} · ${sizeStr} · <span title="${file.isCloudSynced ? 'Cloud' : 'Local'}" style="display:inline-flex; align-items:center;">${syncIcon}</span></span>`;
-        itemSub.style.cssText = 'font-size:0.72rem; color:var(--g500, #64748b); margin-top:1px;';
+        itemSub.style.cssText = 'font-size:0.72rem; color:var(--g500); margin-top:1px;';
 
         itemMeta.append(itemName, itemSub);
         itemLeft.append(itemIcon, itemMeta);
@@ -252,7 +254,7 @@ export class FileListResultRenderer extends ResultRenderer {
         downloadAction.type = 'button';
         downloadAction.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">${ICONS.download} Download</span>`;
         downloadAction.className = 'btn btn-sm';
-        downloadAction.style.cssText = 'font-size:0.75rem; padding:4px 12px; background:var(--black, #0f172a); color:#fff; border-radius:9999px; cursor:pointer;';
+        downloadAction.style.cssText = 'font-size:0.75rem; padding:4px 12px; background:var(--black); color:var(--white); border-radius:9999px; cursor:pointer;';
         downloadAction.addEventListener('click', async () => {
           try {
             const { get } = await import('./artifacts.js');
@@ -303,10 +305,10 @@ export class ImageResultRenderer extends ResultRenderer {
 
     const el = document.createElement('div');
     el.className = 'assistant-result-image-card';
-    el.style.cssText = 'margin-top:10px; padding:16px; border:1px solid var(--g300, #e2e8f0); border-radius:14px; background:var(--white, #fff); box-shadow:0 2px 8px rgba(0,0,0,.04); max-width:420px;';
+    el.style.cssText = 'margin-top:10px; padding:16px; border:1px solid var(--g200); border-radius:14px; background:var(--white); box-shadow:0 2px 8px rgba(0,0,0,.04); max-width:420px;';
 
     const imgWrapper = document.createElement('div');
-    imgWrapper.style.cssText = 'display:flex; justify-content:center; align-items:center; background:var(--g50, #f8fafc); border-radius:10px; padding:16px; border:1px solid var(--g200, #e2e8f0);';
+    imgWrapper.style.cssText = 'display:flex; justify-content:center; align-items:center; background:var(--g50); border-radius:10px; padding:16px; border:1px solid var(--g200);';
 
     const img = document.createElement('img');
     img.src = imgUrl;
@@ -319,13 +321,13 @@ export class ImageResultRenderer extends ResultRenderer {
 
     const caption = document.createElement('div');
     caption.textContent = data.text || data.message || filename;
-    caption.style.cssText = 'font-size:0.8rem; color:var(--g600, #64748b); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:240px;';
+    caption.style.cssText = 'font-size:0.8rem; color:var(--g600); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:240px;';
 
     const downloadLink = document.createElement('a');
     downloadLink.href = imgUrl;
     downloadLink.download = filename;
     downloadLink.textContent = 'Save Image';
-    downloadLink.style.cssText = 'padding:6px 12px; border-radius:7px; background:var(--black, #0f172a); color:var(--white, #fff); font-size:0.78rem; font-weight:700; text-decoration:none; cursor:pointer;';
+    downloadLink.style.cssText = 'padding:6px 12px; border-radius:9999px; background:var(--black); color:var(--white); font-size:0.78rem; font-weight:700; text-decoration:none; cursor:pointer;';
 
     footer.append(caption, downloadLink);
     el.append(imgWrapper, footer);
@@ -358,17 +360,17 @@ export class ChartResultRenderer extends ResultRenderer {
 
     const wrapper = document.createElement('div');
     wrapper.className = 'assistant-result-chart';
-    wrapper.style.cssText = 'margin-top:10px; padding:16px; border:1px solid var(--g300, #e2e8f0); border-radius:14px; background:var(--white, #fff); box-shadow:0 2px 8px rgba(0,0,0,.04); min-height:260px;';
+    wrapper.style.cssText = 'margin-top:10px; padding:16px; border:1px solid var(--g200); border-radius:14px; background:var(--white); box-shadow:0 2px 8px rgba(0,0,0,.04); min-height:260px;';
 
     const header = document.createElement('div');
     header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;';
     const titleEl = document.createElement('strong');
     titleEl.textContent = title;
-    titleEl.style.cssText = 'font-size:0.95rem; color:var(--text, #0f172a);';
+    titleEl.style.cssText = 'font-size:0.95rem; color:var(--black);';
 
     const badge = document.createElement('span');
     badge.textContent = `${chartType.toUpperCase()} (${values.length} points)`;
-    badge.style.cssText = 'font-size:0.72rem; padding:3px 8px; border-radius:6px; background:var(--g100, #f1f5f9); color:var(--g700, #334155); font-weight:700;';
+    badge.style.cssText = 'font-size:0.72rem; padding:3px 8px; border-radius:6px; background:var(--g100); color:var(--g700); font-weight:700;';
 
     header.append(titleEl, badge);
     wrapper.appendChild(header);
@@ -522,16 +524,16 @@ export class CircuitResultRenderer extends ResultRenderer {
 
     const wrapper = document.createElement('div');
     wrapper.className = 'assistant-result-circuit';
-    wrapper.style.cssText = 'margin-top:10px; padding:16px; border:1px solid var(--g300, #e2e8f0); border-radius:14px; background:var(--white, #fff); box-shadow:0 2px 8px rgba(0,0,0,.04);';
+    wrapper.style.cssText = 'margin-top:10px; padding:16px; border:1px solid var(--g200); border-radius:14px; background:var(--white); box-shadow:0 2px 8px rgba(0,0,0,.04);';
 
     const header = document.createElement('div');
     header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;';
     const titleEl = document.createElement('strong');
     titleEl.textContent = title;
-    titleEl.style.cssText = 'font-size:0.95rem; color:var(--text, #0f172a);';
+    titleEl.style.cssText = 'font-size:0.95rem; color:var(--black);';
     const badge = document.createElement('span');
     badge.textContent = 'Logic Lab';
-    badge.style.cssText = 'font-size:0.72rem; padding:3px 8px; border-radius:6px; background:#dbeafe; color:#1e40af; font-weight:700;';
+    badge.style.cssText = 'font-size:0.72rem; padding:3px 8px; border-radius:6px; background:var(--g100); color:var(--black); font-weight:700; border:1px solid var(--g200);';
     header.append(titleEl, badge);
     wrapper.appendChild(header);
 
@@ -615,18 +617,18 @@ export class CircuitResultRenderer extends ResultRenderer {
 
       const tableTitle = document.createElement('div');
       tableTitle.textContent = 'Truth Table';
-      tableTitle.style.cssText = 'font-weight:700; font-size:0.82rem; color:var(--g700, #334155); margin-bottom:6px;';
+      tableTitle.style.cssText = 'font-weight:700; font-size:0.82rem; color:var(--g700); margin-bottom:6px;';
       tableSection.appendChild(tableTitle);
 
       const tbl = document.createElement('table');
-      tbl.style.cssText = 'width:100%; border-collapse:collapse; font-size:0.8rem; font-family:var(--mono, monospace); text-align:center;';
+      tbl.style.cssText = 'width:100%; border-collapse:collapse; font-size:0.8rem; font-family:var(--mono, monospace); text-align:center; color:var(--black);';
 
       const thead = document.createElement('thead');
       const htr = document.createElement('tr');
       truthTable.headers.forEach(h => {
         const th = document.createElement('th');
         th.textContent = h;
-        th.style.cssText = 'padding:6px 10px; background:var(--g100, #f1f5f9); border:1px solid var(--g300, #cbd5e1); font-weight:700;';
+        th.style.cssText = 'padding:6px 10px; background:var(--g100); border:1px solid var(--g200); font-weight:700; color:var(--black);';
         htr.appendChild(th);
       });
       thead.appendChild(htr);
@@ -635,11 +637,11 @@ export class CircuitResultRenderer extends ResultRenderer {
       const tbody = document.createElement('tbody');
       truthTable.rows.forEach((row, ri) => {
         const tr = document.createElement('tr');
-        tr.style.background = ri % 2 === 0 ? 'var(--white, #fff)' : 'var(--g50, #f8fafc)';
+        tr.style.background = ri % 2 === 0 ? 'var(--white)' : 'var(--g50)';
         row.forEach(cell => {
           const td = document.createElement('td');
           td.textContent = cell;
-          td.style.cssText = 'padding:5px 8px; border:1px solid var(--g300, #cbd5e1);';
+          td.style.cssText = 'padding:5px 8px; border:1px solid var(--g200); color:var(--black);';
           tr.appendChild(td);
         });
         tbody.appendChild(tr);
@@ -678,7 +680,7 @@ export class FlowchartResultRenderer extends ResultRenderer {
 
     const wrapper = document.createElement('div');
     wrapper.className = 'assistant-result-flowchart';
-    wrapper.style.cssText = 'margin-top:10px; padding:16px; border:1px solid var(--g300, #e2e8f0); border-radius:14px; background:var(--white, #fff); box-shadow:0 2px 8px rgba(0,0,0,.04);';
+    wrapper.style.cssText = 'margin-top:10px; padding:16px; border:1px solid var(--g200); border-radius:14px; background:var(--white); box-shadow:0 2px 8px rgba(0,0,0,.04);';
 
     const header = document.createElement('div');
     header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;';
@@ -687,10 +689,10 @@ export class FlowchartResultRenderer extends ResultRenderer {
     leftHeader.style.cssText = 'display:flex; align-items:center; gap:8px;';
     const titleEl = document.createElement('strong');
     titleEl.textContent = title;
-    titleEl.style.cssText = 'font-size:0.95rem; color:var(--text, #0f172a);';
+    titleEl.style.cssText = 'font-size:0.95rem; color:var(--black);';
     const badge = document.createElement('span');
     badge.textContent = 'Flowchart & Code';
-    badge.style.cssText = 'font-size:0.72rem; padding:3px 8px; border-radius:6px; background:#eff6ff; color:#1e40af; font-weight:700;';
+    badge.style.cssText = 'font-size:0.72rem; padding:3px 8px; border-radius:6px; background:var(--g100); color:var(--black); font-weight:700; border:1px solid var(--g200);';
     leftHeader.append(titleEl, badge);
 
     const rightActions = document.createElement('div');
@@ -700,7 +702,7 @@ export class FlowchartResultRenderer extends ResultRenderer {
     openToolBtn.type = 'button';
     openToolBtn.className = 'btn btn-secondary btn-sm';
     openToolBtn.textContent = 'Open in Flowchart Tool ↗';
-    openToolBtn.style.cssText = 'font-size:0.75rem; font-weight:700; padding:4px 10px; cursor:pointer;';
+    openToolBtn.style.cssText = 'font-size:0.75rem; font-weight:700; padding:4px 10px; cursor:pointer; border-radius:9999px;';
     openToolBtn.addEventListener('click', () => {
       try {
         sessionStorage.setItem('toolbox_flowchart_import', JSON.stringify({ nodes, lang: 'python' }));
@@ -712,7 +714,7 @@ export class FlowchartResultRenderer extends ResultRenderer {
     copyBtn.type = 'button';
     copyBtn.className = 'btn btn-secondary btn-sm';
     copyBtn.textContent = 'Copy Code';
-    copyBtn.style.cssText = 'font-size:0.75rem; font-weight:600; padding:4px 10px; cursor:pointer;';
+    copyBtn.style.cssText = 'font-size:0.75rem; font-weight:600; padding:4px 10px; cursor:pointer; border-radius:9999px;';
     copyBtn.addEventListener('click', () => {
       navigator.clipboard?.writeText(pythonCode || jsCode);
       const original = copyBtn.textContent;
@@ -726,26 +728,26 @@ export class FlowchartResultRenderer extends ResultRenderer {
 
     // Tab Switcher: [Flowchart Diagram] | [Python Code] | [JavaScript Code]
     const tabNav = document.createElement('div');
-    tabNav.style.cssText = 'display:flex; gap:6px; margin-bottom:12px; border-bottom:1px solid var(--g200, #e2e8f0); padding-bottom:6px;';
+    tabNav.style.cssText = 'display:flex; gap:6px; margin-bottom:12px; border-bottom:1px solid var(--g200); padding-bottom:6px;';
 
     const tabChart = document.createElement('button');
     tabChart.textContent = 'Flowchart Diagram';
-    tabChart.style.cssText = 'padding:4px 12px; border-radius:6px; border:none; background:#0f172a; color:#fff; font-size:0.78rem; font-weight:700; cursor:pointer;';
+    tabChart.style.cssText = 'padding:4px 12px; border-radius:9999px; border:none; background:var(--black); color:var(--white); font-size:0.78rem; font-weight:700; cursor:pointer;';
 
     const tabPy = document.createElement('button');
     tabPy.textContent = 'Python Code';
-    tabPy.style.cssText = 'padding:4px 12px; border-radius:6px; border:1px solid var(--g300, #cbd5e1); background:#fff; color:#334155; font-size:0.78rem; font-weight:600; cursor:pointer;';
+    tabPy.style.cssText = 'padding:4px 12px; border-radius:9999px; border:1px solid var(--g200); background:var(--white); color:var(--g700); font-size:0.78rem; font-weight:600; cursor:pointer;';
 
     const tabJs = document.createElement('button');
     tabJs.textContent = 'JavaScript Code';
-    tabJs.style.cssText = 'padding:4px 12px; border-radius:6px; border:1px solid var(--g300, #cbd5e1); background:#fff; color:#334155; font-size:0.78rem; font-weight:600; cursor:pointer;';
+    tabJs.style.cssText = 'padding:4px 12px; border-radius:9999px; border:1px solid var(--g200); background:var(--white); color:var(--g700); font-size:0.78rem; font-weight:600; cursor:pointer;';
 
     tabNav.append(tabChart, tabPy, tabJs);
     wrapper.appendChild(tabNav);
 
     // Chart Canvas Container
     const chartBox = document.createElement('div');
-    chartBox.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:8px; padding:18px 12px; background:var(--g50, #f8fafc); border-radius:10px; border:1px solid var(--g200, #e2e8f0); overflow-x:auto;';
+    chartBox.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:8px; padding:18px 12px; background:var(--g50); border-radius:10px; border:1px solid var(--g200); overflow-x:auto;';
 
     // Code View Container (hidden by default)
     const codeBox = document.createElement('pre');
@@ -754,13 +756,13 @@ export class FlowchartResultRenderer extends ResultRenderer {
     // Tab Switch Behavior
     const activateTab = (activeBtn, showChart, codeContent) => {
       [tabChart, tabPy, tabJs].forEach(b => {
-        b.style.background = '#fff';
-        b.style.color = '#334155';
-        b.style.border = '1px solid var(--g300, #cbd5e1)';
+        b.style.background = 'var(--white)';
+        b.style.color = 'var(--g700)';
+        b.style.border = '1px solid var(--g200)';
         b.style.fontWeight = '600';
       });
-      activeBtn.style.background = '#0f172a';
-      activeBtn.style.color = '#fff';
+      activeBtn.style.background = 'var(--black)';
+      activeBtn.style.color = 'var(--white)';
       activeBtn.style.border = 'none';
       activeBtn.style.fontWeight = '700';
 
@@ -791,9 +793,9 @@ export class FlowchartResultRenderer extends ResultRenderer {
       box.style.cssText = `
         padding: 8px 16px;
         border-radius: ${isTerminal ? '20px' : isDecision ? '6px' : '8px'};
-        background: ${isTerminal ? '#3b82f6' : isDecision ? '#f59e0b' : kind === 'output' ? '#10b981' : '#ffffff'};
-        color: ${isTerminal || isDecision || kind === 'output' ? '#ffffff' : '#0f172a'};
-        border: 1.5px solid ${isTerminal ? '#2563eb' : isDecision ? '#d97706' : kind === 'output' ? '#059669' : '#cbd5e1'};
+        background: ${isTerminal ? '#3b82f6' : isDecision ? '#f59e0b' : kind === 'output' ? '#10b981' : 'var(--white)'};
+        color: ${isTerminal || isDecision || kind === 'output' ? '#ffffff' : 'var(--black)'};
+        border: 1.5px solid ${isTerminal ? '#2563eb' : isDecision ? '#d97706' : kind === 'output' ? '#059669' : 'var(--g200)'};
         font-weight: 700;
         font-size: 0.82rem;
         text-align: center;
@@ -804,8 +806,8 @@ export class FlowchartResultRenderer extends ResultRenderer {
       let text = kind;
       if (kind === 'declare') text = `Declare ${n.name} (${n.dataType || 'Integer'})`;
       else if (kind === 'assign') text = `${n.name} = ${n.expr}`;
-      else if (kind === 'output') text = `🖨️ Output: ${n.expr}`;
-      else if (kind === 'input') text = `📥 Input: ${n.name}`;
+      else if (kind === 'output') text = `Output: ${n.expr}`;
+      else if (kind === 'input') text = `Input: ${n.name}`;
       else if (kind === 'if') text = `Decision: If (${n.cond})`;
       else if (kind === 'while') text = `Loop: While (${n.cond})`;
       else if (kind === 'for') text = `Loop: For (${n.name} = ${n.from} to ${n.to})`;
@@ -819,7 +821,7 @@ export class FlowchartResultRenderer extends ResultRenderer {
         branchContainer.style.cssText = 'display:grid; grid-template-columns:1fr 1fr; gap:12px; width:100%; max-width:440px; margin-top:8px;';
 
         const trueCol = document.createElement('div');
-        trueCol.style.cssText = 'display:flex; flex-direction:column; align-items:center; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:8px;';
+        trueCol.style.cssText = 'display:flex; flex-direction:column; align-items:center; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:8px; padding:8px;';
         const trueLabel = document.createElement('span');
         trueLabel.textContent = 'True';
         trueLabel.style.cssText = 'font-size:0.72rem; font-weight:800; color:#16a34a; margin-bottom:6px;';
@@ -827,7 +829,7 @@ export class FlowchartResultRenderer extends ResultRenderer {
         (n.then || []).forEach(child => trueCol.appendChild(renderNodeItem(child)));
 
         const falseCol = document.createElement('div');
-        falseCol.style.cssText = 'display:flex; flex-direction:column; align-items:center; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:8px;';
+        falseCol.style.cssText = 'display:flex; flex-direction:column; align-items:center; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:8px;';
         const falseLabel = document.createElement('span');
         falseLabel.textContent = 'False';
         falseLabel.style.cssText = 'font-size:0.72rem; font-weight:800; color:#dc2626; margin-bottom:6px;';
@@ -841,10 +843,10 @@ export class FlowchartResultRenderer extends ResultRenderer {
       // Render nested loop body for while / for
       if ((kind === 'while' || kind === 'for') && n.body?.length) {
         const bodyCol = document.createElement('div');
-        bodyCol.style.cssText = 'display:flex; flex-direction:column; align-items:center; width:100%; max-width:380px; margin-top:8px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px; padding:8px;';
+        bodyCol.style.cssText = 'display:flex; flex-direction:column; align-items:center; width:100%; max-width:380px; margin-top:8px; background:var(--g50); border:1px dashed var(--g200); border-radius:8px; padding:8px;';
         const bodyLabel = document.createElement('span');
         bodyLabel.textContent = 'Loop Body';
-        bodyLabel.style.cssText = 'font-size:0.72rem; font-weight:800; color:#475569; margin-bottom:6px;';
+        bodyLabel.style.cssText = 'font-size:0.72rem; font-weight:800; color:var(--g600); margin-bottom:6px;';
         bodyCol.appendChild(bodyLabel);
         n.body.forEach(child => bodyCol.appendChild(renderNodeItem(child)));
         item.appendChild(bodyCol);
@@ -853,7 +855,7 @@ export class FlowchartResultRenderer extends ResultRenderer {
       // Down arrow
       const arrow = document.createElement('div');
       arrow.textContent = '↓';
-      arrow.style.cssText = 'color:#94a3b8; font-weight:bold; margin:2px 0;';
+      arrow.style.cssText = 'color:var(--g400); font-weight:bold; margin:2px 0;';
       item.appendChild(arrow);
 
       return item;
@@ -904,15 +906,15 @@ export class CodeExecutionResultRenderer extends ResultRenderer {
 
     const wrapper = document.createElement('div');
     wrapper.className = 'assistant-result-code-execution';
-    wrapper.style.cssText = 'margin-top:10px; border:1px solid var(--g300, #e2e8f0); border-radius:14px; overflow:hidden; background:var(--white, #fff); box-shadow:0 2px 8px rgba(0,0,0,.04);';
+    wrapper.style.cssText = 'margin-top:10px; border:1px solid var(--g200); border-radius:14px; overflow:hidden; background:var(--white); box-shadow:0 2px 8px rgba(0,0,0,.04);';
 
     // 1. Source Code Block
     if (codeText) {
       const codeHeader = document.createElement('div');
-      codeHeader.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:8px 14px; background:var(--g100, #f1f5f9); border-bottom:1px solid var(--g200, #e2e8f0); font-size:0.75rem;';
+      codeHeader.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:8px 14px; background:var(--g100); border-bottom:1px solid var(--g200); font-size:0.75rem;';
       const langBadge = document.createElement('strong');
       langBadge.textContent = lang.toUpperCase();
-      langBadge.style.cssText = 'color:var(--g700, #334155);';
+      langBadge.style.cssText = 'color:var(--black);';
 
       const copyCodeBtn = document.createElement('button');
       copyCodeBtn.textContent = 'Copy Code';
@@ -927,7 +929,7 @@ export class CodeExecutionResultRenderer extends ResultRenderer {
       wrapper.appendChild(codeHeader);
 
       const codePre = document.createElement('pre');
-      codePre.style.cssText = 'margin:0; padding:12px 14px; overflow-x:auto; font:12px/1.55 var(--mono, monospace); background:var(--white, #fff); color:var(--text, #0f172a);';
+      codePre.style.cssText = 'margin:0; padding:12px 14px; overflow-x:auto; font:12px/1.55 var(--mono, monospace); background:var(--white); color:var(--black);';
       codePre.textContent = codeText;
       wrapper.appendChild(codePre);
     }
@@ -981,19 +983,19 @@ export class TransformResultRenderer extends ResultRenderer {
 
     const el = document.createElement('div');
     el.className = 'assistant-result-transform';
-    el.style.cssText = 'margin-top:10px; padding:14px 16px; border:1px solid var(--g300, #e2e8f0); border-radius:14px; background:var(--white, #fff); box-shadow:0 2px 8px rgba(0,0,0,.04);';
+    el.style.cssText = 'margin-top:10px; padding:14px 16px; border:1px solid var(--g200); border-radius:14px; background:var(--white); box-shadow:0 2px 8px rgba(0,0,0,.04);';
 
     const header = document.createElement('div');
     header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;';
 
     const opBadge = document.createElement('span');
     opBadge.textContent = op.toUpperCase();
-    opBadge.style.cssText = 'font-size:0.72rem; padding:3px 8px; border-radius:6px; background:var(--g100, #f1f5f9); color:var(--g700, #334155); font-weight:700;';
+    opBadge.style.cssText = 'font-size:0.72rem; padding:3px 8px; border-radius:6px; background:var(--g100); color:var(--black); font-weight:700; border:1px solid var(--g200);';
 
     const copyBtn = document.createElement('button');
     copyBtn.className = 'assistant-transform-copy-btn';
     copyBtn.textContent = 'Copy';
-    copyBtn.style.cssText = 'padding:4px 10px; border-radius:6px; border:1px solid var(--g300, #cbd5e1); background:var(--white, #fff); font-size:0.75rem; font-weight:700; cursor:pointer;';
+    copyBtn.style.cssText = 'padding:4px 12px; border-radius:9999px; border:1px solid var(--g200); background:var(--white); font-size:0.75rem; font-weight:700; cursor:pointer; color:var(--black);';
     copyBtn.onclick = () => {
       navigator.clipboard.writeText(resultText);
       copyBtn.textContent = 'Copied ✓';
@@ -1001,8 +1003,8 @@ export class TransformResultRenderer extends ResultRenderer {
       copyBtn.style.color = '#ffffff';
       setTimeout(() => {
         copyBtn.textContent = 'Copy';
-        copyBtn.style.background = 'var(--white, #fff)';
-        copyBtn.style.color = 'inherit';
+        copyBtn.style.background = 'var(--white)';
+        copyBtn.style.color = 'var(--black)';
       }, 1500);
     };
 
@@ -1010,7 +1012,7 @@ export class TransformResultRenderer extends ResultRenderer {
     el.appendChild(header);
 
     const box = document.createElement('div');
-    box.style.cssText = 'padding:10px 12px; background:var(--g50, #f8fafc); border:1px solid var(--g200, #e2e8f0); border-radius:8px; font:700 0.95rem var(--mono, monospace); color:var(--text, #0f172a); word-break:break-all; user-select:all;';
+    box.style.cssText = 'padding:10px 12px; background:var(--g50); border:1px solid var(--g200); border-radius:8px; font:700 0.95rem var(--mono, monospace); color:var(--black); word-break:break-all; user-select:all;';
     box.textContent = resultText;
     el.appendChild(box);
 
@@ -1096,13 +1098,13 @@ export class TableResultRenderer extends ResultRenderer {
 
     const el = document.createElement('div');
     el.className = 'assistant-result-table';
-    el.style.cssText = 'margin-top:10px; border:1px solid var(--g300, #e2e8f0); border-radius:14px; overflow:hidden; background:var(--white, #fff); box-shadow:0 2px 8px rgba(0,0,0,.04);';
+    el.style.cssText = 'margin-top:10px; border:1px solid var(--g200); border-radius:14px; overflow:hidden; background:var(--white); box-shadow:0 2px 8px rgba(0,0,0,.04);';
 
     const scrollBox = document.createElement('div');
     scrollBox.style.cssText = 'overflow-x:auto; max-height:360px;';
 
     const table = document.createElement('table');
-    table.style.cssText = 'width:100%; border-collapse:collapse; font-size:0.82rem; text-align:left;';
+    table.style.cssText = 'width:100%; border-collapse:collapse; font-size:0.82rem; text-align:left; color:var(--black);';
 
     if (headers.length) {
       const thead = document.createElement('thead');
@@ -1110,7 +1112,7 @@ export class TableResultRenderer extends ResultRenderer {
       headers.forEach(h => {
         const th = document.createElement('th');
         th.textContent = typeof h === 'object' ? h.label || h.name : String(h);
-        th.style.cssText = 'padding:8px 12px; background:var(--g100, #f1f5f9); border-bottom:1px solid var(--g300, #cbd5e1); font-weight:700; color:var(--text, #0f172a); position:sticky; top:0;';
+        th.style.cssText = 'padding:8px 12px; background:var(--g100); border-bottom:1px solid var(--g200); font-weight:700; color:var(--black); position:sticky; top:0;';
         tr.appendChild(th);
       });
       thead.appendChild(tr);
@@ -1120,12 +1122,12 @@ export class TableResultRenderer extends ResultRenderer {
     const tbody = document.createElement('tbody');
     rows.forEach((row, ri) => {
       const tr = document.createElement('tr');
-      tr.style.background = ri % 2 === 0 ? 'var(--white, #fff)' : 'var(--g50, #f8fafc)';
+      tr.style.background = ri % 2 === 0 ? 'var(--white)' : 'var(--g50)';
       const cells = Array.isArray(row) ? row : Object.values(row);
       cells.forEach(c => {
         const td = document.createElement('td');
         td.textContent = c !== null && c !== undefined ? String(c) : '';
-        td.style.cssText = 'padding:6px 12px; border-bottom:1px solid var(--g200, #e2e8f0); color:var(--g800, #1e293b);';
+        td.style.cssText = 'padding:6px 12px; border-bottom:1px solid var(--g200); color:var(--black);';
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
@@ -1152,15 +1154,16 @@ export class SpeedTestResultRenderer extends ResultRenderer {
     const data = result.data || {};
     const el = document.createElement('section');
     el.className = 'assistant-result-speed-test';
-    el.style.cssText = 'margin-top:10px; padding:14px; border:1px solid var(--g300, #e2e8f0); border-radius:14px; background:var(--white, #fff); box-shadow:0 2px 8px rgba(0,0,0,.04);';
+    el.style.cssText = 'margin-top:10px; padding:14px; border:1px solid var(--g200); border-radius:14px; background:var(--white); box-shadow:0 2px 8px rgba(0,0,0,.04); color:var(--black);';
 
     const header = document.createElement('div');
     header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px;';
     const title = document.createElement('strong');
     title.textContent = 'Network Speed Test';
+    title.style.color = 'var(--black)';
     const location = document.createElement('span');
     location.textContent = data.city || data.country || 'Online';
-    location.style.cssText = 'font-size:.75rem; color:var(--g600, #64748b);';
+    location.style.cssText = 'font-size:.75rem; color:var(--g600);';
     header.append(title, location);
 
     const metrics = document.createElement('div');
@@ -1171,20 +1174,20 @@ export class SpeedTestResultRenderer extends ResultRenderer {
       ['Jitter', data.jitterMs, 'ms']
     ]) {
       const metric = document.createElement('div');
-      metric.style.cssText = 'padding:9px 8px; border:1px solid var(--g200, #e2e8f0); border-radius:9px; background:var(--g50, #f8fafc); text-align:center;';
+      metric.style.cssText = 'padding:9px 8px; border:1px solid var(--g200); border-radius:9px; background:var(--g50); text-align:center;';
       const name = document.createElement('div');
       name.textContent = label;
-      name.style.cssText = 'font-size:.65rem; color:var(--g600, #64748b); font-weight:700; text-transform:uppercase;';
+      name.style.cssText = 'font-size:.65rem; color:var(--g600); font-weight:700; text-transform:uppercase;';
       const number = document.createElement('div');
       number.textContent = `${value ?? '—'} ${unit}`;
-      number.style.cssText = 'margin-top:3px; font:700 1rem var(--mono, monospace); color:var(--text, #0f172a);';
+      number.style.cssText = 'margin-top:3px; font:700 1rem var(--mono, monospace); color:var(--black);';
       metric.append(name, number);
       metrics.appendChild(metric);
     }
 
     const footer = document.createElement('div');
     footer.textContent = [data.isp, data.ip, data.verdict].filter(Boolean).join(' · ');
-    footer.style.cssText = 'margin-top:10px; font-size:.75rem; color:var(--g600, #64748b);';
+    footer.style.cssText = 'margin-top:10px; font-size:.75rem; color:var(--g600);';
 
     el.append(header, metrics, footer);
     container.appendChild(el);
@@ -1200,56 +1203,187 @@ export class AudioPlayerResultRenderer extends ResultRenderer {
   static name = 'Audio Player';
 
   static canRender(result) {
-    const data = result.data || {};
-    return result.renderer === 'audio-player' || (data.url && data.audioId);
+    const data = result?.data || result || {};
+    return result?.renderer === 'audio-player' ||
+      result?.type === 'audio-player' ||
+      result?.type === 'audio' ||
+      data?.renderer === 'audio-player' ||
+      data?.type === 'audio-player' ||
+      data?.type === 'audio' ||
+      Boolean(data?.url && data?.audioId) ||
+      Boolean(result?.audioId);
   }
 
   static render(result, container) {
-    const data = result.data || {};
-    const el = document.createElement('div');
-    el.className = 'assistant-result-audio-player';
-    el.setAttribute('data-audio-id', data.audioId);
-    el.style.cssText = 'margin-top:10px; padding:14px; background:var(--white, #fff); border:1px solid var(--g300, #e2e8f0); border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,.05);';
+    const data = result?.data || result || {};
+    const audioId = data.audioId || result?.audioId;
+    const title = data.title || result?.title || 'Audio Sample';
+    const artist = data.artist || result?.artist || 'Toolbox Audio';
+    const artworkUrl = data.artworkUrl || result?.artworkUrl || '';
+    const duration = Math.max(1, Math.round(data.duration || result?.duration || 30));
+
+    const card = document.createElement('div');
+    card.className = 'assistant-result-audio-player ast-audio-player-card';
+    card.setAttribute('data-audio-id', audioId);
+    card.style.cssText = 'margin-top:10px; padding:14px 16px; background:var(--white); border:1px solid var(--g200); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,0.05); color:var(--black); font-family:var(--sans);';
+
+    const formatTime = (s) => {
+      const m = Math.floor(s / 60);
+      const rem = Math.floor(s % 60);
+      return `${m}:${rem < 10 ? '0' : ''}${rem}`;
+    };
 
     const header = document.createElement('div');
-    header.style.cssText = 'display:flex; align-items:center; gap:10px; margin-bottom:12px; min-width:0;';
-    if (data.artworkUrl) {
-      const artwork = document.createElement('img');
-      artwork.src = data.artworkUrl;
-      artwork.alt = '';
-      artwork.style.cssText = 'width:40px; height:40px; border-radius:9px; object-fit:cover; flex:0 0 auto;';
-      header.appendChild(artwork);
+    header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px;';
+
+    const info = document.createElement('div');
+    info.style.cssText = 'display:flex; align-items:center; gap:10px; overflow:hidden; min-width:0;';
+
+    if (artworkUrl) {
+      const img = document.createElement('img');
+      img.src = artworkUrl;
+      img.alt = '';
+      img.style.cssText = 'width:42px; height:42px; border-radius:8px; object-fit:cover; flex-shrink:0;';
+      info.appendChild(img);
+    } else {
+      const placeholder = document.createElement('div');
+      placeholder.style.cssText = 'width:42px; height:42px; border-radius:8px; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; flex-shrink:0;';
+      placeholder.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`;
+      info.appendChild(placeholder);
     }
+
     const labels = document.createElement('div');
-    labels.style.cssText = 'min-width:0; flex:1;';
-    const title = document.createElement('div');
-    title.textContent = data.title || 'Audio';
-    title.style.cssText = 'font-weight:750; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
-    const artist = document.createElement('div');
-    artist.textContent = data.artist || 'Toolbox Audio';
-    artist.style.cssText = 'font-size:.76rem; color:var(--g600, #64748b); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
-    labels.append(title, artist);
-    header.appendChild(labels);
-    el.appendChild(header);
-
-    const controls = document.createElement('div');
-    controls.style.cssText = 'display:flex; flex-wrap:wrap; align-items:center; gap:8px;';
-
-    const playBtn = document.createElement('button');
-    playBtn.setAttribute('data-action', 'play');
-    playBtn.textContent = 'Play';
-    playBtn.style.cssText = 'border:0; border-radius:8px; padding:7px 12px; background:var(--black, #0f172a); color:var(--white, #fff); font-weight:700; cursor:pointer;';
-    controls.appendChild(playBtn);
+    labels.style.cssText = 'overflow:hidden; min-width:0;';
+    const titleEl = document.createElement('div');
+    titleEl.textContent = title;
+    titleEl.style.cssText = 'font-weight:700; font-size:0.9rem; color:var(--black); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
+    const artistEl = document.createElement('div');
+    artistEl.textContent = artist;
+    artistEl.style.cssText = 'font-size:0.75rem; color:var(--g600); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
+    labels.append(titleEl, artistEl);
+    info.appendChild(labels);
+    header.appendChild(info);
 
     const stopBtn = document.createElement('button');
-    stopBtn.setAttribute('data-action', 'stop');
+    stopBtn.type = 'button';
+    stopBtn.className = 'btn btn-secondary btn-sm ast-audio-btn-stop';
     stopBtn.textContent = 'Stop';
-    stopBtn.style.cssText = 'border:1px solid var(--g300, #cbd5e1); border-radius:8px; padding:7px 12px; background:var(--white, #fff); color:#b91c1c; cursor:pointer;';
-    controls.appendChild(stopBtn);
+    stopBtn.style.cssText = 'font-size:0.72rem; padding:4px 10px; color:#ef4444; border-radius:9999px; cursor:pointer; font-weight:700; flex-shrink:0; border:1px solid var(--g200);';
+    stopBtn.addEventListener('click', () => {
+      AssistantAudioManager.stop(audioId);
+    });
+    header.appendChild(stopBtn);
+    card.appendChild(header);
 
-    el.appendChild(controls);
-    container.appendChild(el);
-    return el;
+    // Controls: Play/Pause, Seek bar, Time, Volume
+    const controls = document.createElement('div');
+    controls.style.cssText = 'display:flex; align-items:center; gap:10px;';
+
+    const toggleBtn = document.createElement('button');
+    toggleBtn.type = 'button';
+    toggleBtn.className = 'ast-audio-btn-toggle';
+    toggleBtn.style.cssText = 'width:36px; height:36px; border-radius:50%; background:var(--black); color:var(--white); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;';
+    toggleBtn.innerHTML = `
+      <svg class="ast-audio-icon-play" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="display:none;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      <svg class="ast-audio-icon-pause" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+    `;
+
+    const iconPlay = toggleBtn.querySelector('.ast-audio-icon-play');
+    const iconPause = toggleBtn.querySelector('.ast-audio-icon-pause');
+
+    toggleBtn.addEventListener('click', () => {
+      const inst = AssistantAudioManager.getInstance(audioId);
+      if (inst) {
+        if (inst.isPlaying) {
+          AssistantAudioManager.pause(audioId);
+        } else {
+          AssistantAudioManager.resume(audioId);
+        }
+      }
+    });
+    controls.appendChild(toggleBtn);
+
+    const seekWrap = document.createElement('div');
+    seekWrap.style.cssText = 'flex:1; display:flex; flex-direction:column; gap:4px;';
+
+    const seekInput = document.createElement('input');
+    seekInput.type = 'range';
+    seekInput.className = 'ast-audio-seek';
+    seekInput.min = '0';
+    seekInput.max = String(duration);
+    seekInput.step = '0.1';
+    seekInput.value = '0';
+    seekInput.style.cssText = 'width:100%; cursor:pointer; accent-color:var(--black);';
+
+    let isSeeking = false;
+    seekInput.addEventListener('mousedown', () => { isSeeking = true; });
+    seekInput.addEventListener('touchstart', () => { isSeeking = true; });
+    seekInput.addEventListener('change', () => {
+      isSeeking = false;
+      AssistantAudioManager.seek(audioId, parseFloat(seekInput.value));
+    });
+
+    const timeRow = document.createElement('div');
+    timeRow.style.cssText = 'display:flex; justify-content:space-between; font-size:0.7rem; font-family:var(--mono); color:var(--g600);';
+    const curTimeEl = document.createElement('span');
+    curTimeEl.className = 'ast-audio-time-cur';
+    curTimeEl.textContent = '0:00';
+    const durTimeEl = document.createElement('span');
+    durTimeEl.className = 'ast-audio-time-dur';
+    durTimeEl.textContent = formatTime(duration);
+    timeRow.append(curTimeEl, durTimeEl);
+
+    seekWrap.append(seekInput, timeRow);
+    controls.appendChild(seekWrap);
+
+    // Volume Slider
+    const volWrap = document.createElement('div');
+    volWrap.style.cssText = 'display:flex; align-items:center; gap:4px; margin-left:4px;';
+    volWrap.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--g500);"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>`;
+    const volInput = document.createElement('input');
+    volInput.type = 'range';
+    volInput.className = 'ast-audio-volume';
+    volInput.min = '0';
+    volInput.max = '1';
+    volInput.step = '0.05';
+    volInput.value = '1';
+    volInput.style.cssText = 'width:45px; cursor:pointer; accent-color:var(--black);';
+    volInput.addEventListener('input', () => {
+      AssistantAudioManager.setVolume(audioId, parseFloat(volInput.value));
+    });
+    volWrap.appendChild(volInput);
+    controls.appendChild(volWrap);
+
+    card.appendChild(controls);
+
+    // Subscribe to live audio updates for this card
+    AssistantAudioManager.subscribe((event, inst) => {
+      if (!inst || inst.id !== audioId) return;
+      if (iconPlay && iconPause) {
+        iconPlay.style.display = inst.isPlaying ? 'none' : 'block';
+        iconPause.style.display = inst.isPlaying ? 'block' : 'none';
+      }
+      if (!isSeeking && seekInput) {
+        if (inst.duration) seekInput.max = String(inst.duration);
+        seekInput.value = String(inst.currentTime || 0);
+      }
+      if (curTimeEl) curTimeEl.textContent = formatTime(inst.currentTime || 0);
+      if (durTimeEl && inst.duration) durTimeEl.textContent = formatTime(inst.duration);
+      if (volInput && typeof inst.volume === 'number') volInput.value = String(inst.volume);
+    });
+
+    const currentInst = AssistantAudioManager.getInstance(audioId);
+    if (currentInst) {
+      if (iconPlay && iconPause) {
+        iconPlay.style.display = currentInst.isPlaying ? 'none' : 'block';
+        iconPause.style.display = currentInst.isPlaying ? 'block' : 'none';
+      }
+      if (currentInst.duration && seekInput) seekInput.max = String(currentInst.duration);
+      if (durTimeEl && currentInst.duration) durTimeEl.textContent = formatTime(currentInst.duration);
+    }
+
+    container.appendChild(card);
+    return card;
   }
 }
 
@@ -1267,7 +1401,7 @@ export class ErrorResultRenderer extends ResultRenderer {
   static render(result, container) {
     const el = document.createElement('div');
     el.className = 'assistant-result-error';
-    el.style.cssText = 'margin-top:8px; padding:10px 14px; border-radius:8px; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; font-size:0.85rem; font-weight:600;';
+    el.style.cssText = 'margin-top:8px; padding:10px 14px; border-radius:8px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#dc2626; font-size:0.85rem; font-weight:600;';
     el.textContent = result.error || (typeof result.data === 'string' ? result.data : result.data?.message) || 'Operation failed.';
     container.appendChild(el);
     return el;
@@ -1295,7 +1429,7 @@ export class FileSavedResultRenderer extends ResultRenderer {
 
     const card = document.createElement('div');
     card.className = 'assistant-result-saved-card';
-    card.style.cssText = 'margin-top:8px; padding:8px 14px; border:1px solid var(--g200, #e2e8f0); border-radius:10px; background:var(--g50, #f8fafc); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; font-size:0.85rem;';
+    card.style.cssText = 'margin-top:8px; padding:8px 14px; border:1px solid var(--g200); border-radius:10px; background:var(--g50); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; font-size:0.85rem; color:var(--black);';
 
     const left = document.createElement('div');
     left.style.cssText = 'display:flex; align-items:center; gap:8px; min-width:0;';
@@ -1307,7 +1441,7 @@ export class FileSavedResultRenderer extends ResultRenderer {
 
     const nameEl = document.createElement('strong');
     nameEl.textContent = filename;
-    nameEl.style.cssText = 'color:var(--text, #0f172a); font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:280px;';
+    nameEl.style.cssText = 'color:var(--black); font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:280px;';
 
     left.append(icon, nameEl);
 
@@ -1318,9 +1452,9 @@ export class FileSavedResultRenderer extends ResultRenderer {
     viewBtn.className = 'assistant-saved-link';
     viewBtn.href = data.artifactId ? `#/saved?id=${data.artifactId}` : '#/saved';
     viewBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">View in Saved Work ${ICONS.external}</span>`;
-    viewBtn.style.cssText = 'font-size:0.78rem; font-weight:700; color:var(--primary, #2563eb); text-decoration:none; padding:4px 12px; border-radius:9999px; background:var(--white, #fff); border:1px solid var(--g300, #cbd5e1); transition:all .15s; white-space:nowrap;';
-    viewBtn.onmouseover = () => { viewBtn.style.background = 'var(--g100, #f1f5f9)'; };
-    viewBtn.onmouseout = () => { viewBtn.style.background = 'var(--white, #fff)'; };
+    viewBtn.style.cssText = 'font-size:0.78rem; font-weight:700; color:var(--primary, #2563eb); text-decoration:none; padding:4px 12px; border-radius:9999px; background:var(--white); border:1px solid var(--g200); transition:all .15s; white-space:nowrap;';
+    viewBtn.onmouseover = () => { viewBtn.style.background = 'var(--g100)'; };
+    viewBtn.onmouseout = () => { viewBtn.style.background = 'var(--white)'; };
 
     right.appendChild(viewBtn);
     card.append(left, right);
@@ -1353,19 +1487,19 @@ export class Anatomy3DResultRenderer extends ResultRenderer {
 
     const card = document.createElement('div');
     card.className = 'assistant-result-anatomy-card';
-    card.style.cssText = 'margin-top:10px; border:1px solid var(--g300, #e2e8f0); border-radius:14px; background:var(--white, #fff); box-shadow:0 3px 12px rgba(0,0,0,.06); overflow:hidden;';
+    card.style.cssText = 'margin-top:10px; border:1px solid var(--g200); border-radius:14px; background:var(--white); box-shadow:0 3px 12px rgba(0,0,0,.06); overflow:hidden;';
 
     // 1. Header with title and system badges
     const header = document.createElement('div');
-    header.style.cssText = 'padding:14px 16px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--g200, #e2e8f0); background:var(--g50, #f8fafc); flex-wrap:wrap; gap:8px;';
+    header.style.cssText = 'padding:14px 16px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--g200); background:var(--g50); flex-wrap:wrap; gap:8px;';
 
     const titleBox = document.createElement('div');
     const titleText = document.createElement('strong');
     titleText.textContent = `3D Anatomy: ${query.charAt(0).toUpperCase() + query.slice(1)}`;
-    titleText.style.cssText = 'font-size:0.95rem; color:var(--text, #0f172a); display:block;';
+    titleText.style.cssText = 'font-size:0.95rem; color:var(--black); display:block;';
     const subText = document.createElement('span');
     subText.textContent = `${structures.length} isolated structure(s) across: ${systems.map(s => s.toUpperCase()).join(' · ')}`;
-    subText.style.cssText = 'font-size:0.75rem; color:var(--g600, #64748b); font-weight:600;';
+    subText.style.cssText = 'font-size:0.75rem; color:var(--g600); font-weight:600;';
     titleBox.append(titleText, subText);
 
     const bridgeBtn = document.createElement('a');
@@ -1431,23 +1565,23 @@ export class Anatomy3DResultRenderer extends ResultRenderer {
 
     // 3. Structured Clinical Information Section
     const infoSection = document.createElement('div');
-    infoSection.style.cssText = 'padding:16px; background:var(--white, #fff); max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;';
+    infoSection.style.cssText = 'padding:16px; background:var(--white); max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;';
 
     if (details.length) {
       for (const d of details) {
         const item = document.createElement('div');
-        item.style.cssText = 'padding:12px; border-radius:10px; background:var(--g50, #f8fafc); border:1px solid var(--g200, #e2e8f0);';
+        item.style.cssText = 'padding:12px; border-radius:10px; background:var(--g50); border:1px solid var(--g200);';
 
         const itemHeader = document.createElement('div');
         itemHeader.style.cssText = 'display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; flex-wrap:wrap; gap:6px;';
 
         const nameLabel = document.createElement('strong');
         nameLabel.textContent = d.commonName || d.name;
-        nameLabel.style.cssText = 'font-size:0.92rem; color:var(--text, #0f172a);';
+        nameLabel.style.cssText = 'font-size:0.92rem; color:var(--black);';
 
         const latinName = document.createElement('em');
         latinName.textContent = d.name !== d.commonName ? d.name : '';
-        latinName.style.cssText = 'font-size:0.78rem; color:var(--g500, #64748b); margin-left:6px;';
+        latinName.style.cssText = 'font-size:0.78rem; color:var(--g500); margin-left:6px;';
         nameLabel.appendChild(latinName);
 
         const badge = document.createElement('span');
@@ -1459,14 +1593,14 @@ export class Anatomy3DResultRenderer extends ResultRenderer {
 
         if (d.functionDesc) {
           const fn = document.createElement('p');
-          fn.style.cssText = 'font-size:0.82rem; line-height:1.45; color:var(--text, #0f172a); margin:0 0 6px 0;';
+          fn.style.cssText = 'font-size:0.82rem; line-height:1.45; color:var(--black); margin:0 0 6px 0;';
           fn.innerHTML = `<strong>Function:</strong> ${d.functionDesc}`;
           item.appendChild(fn);
         }
 
         if (d.clinicalNotes) {
           const cl = document.createElement('p');
-          cl.style.cssText = 'font-size:0.8rem; line-height:1.45; color:var(--g700, #334155); margin:0; background:var(--white, #fff); padding:6px 10px; border-radius:6px; border-left:3px solid var(--primary, #2563eb);';
+          cl.style.cssText = 'font-size:0.8rem; line-height:1.45; color:var(--g700); margin:0; background:var(--white); padding:6px 10px; border-radius:6px; border-left:3px solid var(--primary, #2563eb); border:1px solid var(--g200);';
           cl.innerHTML = `<strong>Clinical Pearls:</strong> ${d.clinicalNotes}`;
           item.appendChild(cl);
         }
@@ -1475,7 +1609,7 @@ export class Anatomy3DResultRenderer extends ResultRenderer {
       }
     } else {
       const emptyNote = document.createElement('div');
-      emptyNote.style.cssText = 'font-size:0.82rem; color:var(--g600, #64748b);';
+      emptyNote.style.cssText = 'font-size:0.82rem; color:var(--g600);';
       emptyNote.textContent = data.summary || 'Anatomical model isolated.';
       infoSection.appendChild(emptyNote);
     }
@@ -1521,6 +1655,50 @@ export class Anatomy3DResultRenderer extends ResultRenderer {
           spinBtn.textContent = isSpinning ? 'Pause Spin' : 'Auto-Spin';
         });
 
+        const byId = new Map((index.structures || []).map(s => [s.id?.toLowerCase(), s]));
+        const byName = new Map((index.structures || []).map(s => [s.name?.toLowerCase(), s]));
+
+        const targetIdSet = new Set(Array.from(structureIds).map(id => String(id).toLowerCase().trim()));
+        const targetNamesLower = structures.map(s => String(s.name || '').toLowerCase().trim()).filter(Boolean);
+        const queryLower = String(query || '').toLowerCase().trim();
+        const hasSpecificTargets = targetIdSet.size > 0 || targetNamesLower.length > 0;
+        const visibleMeshes = [];
+
+        function matchStructure(nodeName) {
+          if (!hasSpecificTargets) return true;
+          const nLower = String(nodeName || '').toLowerCase().trim();
+          if (!nLower) return false;
+
+          // 1. Direct ID match
+          if (targetIdSet.has(nLower)) return true;
+          for (const tid of targetIdSet) {
+            if (nLower === tid || nLower.includes(tid) || tid.includes(nLower)) return true;
+          }
+
+          // 2. Lookup in index catalog by node name
+          const meta = byId.get(nLower) || byName.get(nLower);
+          const metaName = meta ? (meta.name || '').toLowerCase() : '';
+          const metaId = meta ? (meta.id || '').toLowerCase() : '';
+
+          if (metaId && targetIdSet.has(metaId)) return true;
+
+          // 3. Match against target names
+          for (const tName of targetNamesLower) {
+            if (tName.length >= 3) {
+              if (nLower.includes(tName) || tName.includes(nLower)) return true;
+              if (metaName && (metaName.includes(tName) || tName.includes(metaName))) return true;
+            }
+          }
+
+          // 4. Query keywords match (e.g. "c1", "atlas", "lung", "heart", "vertebra")
+          if (queryLower.length >= 3) {
+            if (nLower.includes(queryLower) || queryLower.includes(nLower)) return true;
+            if (metaName && (metaName.includes(queryLower) || queryLower.includes(metaName))) return true;
+          }
+
+          return false;
+        }
+
         // Load all requested system GLB files
         const systemPromises = systems.map(async (sysKey) => {
           const meta = index.systems[sysKey];
@@ -1532,19 +1710,24 @@ export class Anatomy3DResultRenderer extends ResultRenderer {
 
           const group = gltf.scene;
 
+          // Direct children of group represent individual anatomical structures in BodyParts3D GLTF
           for (const child of group.children) {
-            const isTarget = structureIds.size === 0 || structureIds.has(child.name);
+            const isTarget = matchStructure(child.name);
             child.visible = isTarget;
 
-            if (isTarget) {
-              child.traverse(n => {
-                if (n.isMesh) {
-                  n.material = n.material.clone();
-                  n.castShadow = n.receiveShadow = false;
+            child.traverse((node) => {
+              if (node.isMesh) {
+                const meshTarget = isTarget || matchStructure(node.name);
+                node.visible = meshTarget;
+
+                if (meshTarget) {
+                  node.material = node.material.clone();
+                  node.castShadow = node.receiveShadow = false;
+                  viewer.registerPickable(node);
+                  visibleMeshes.push(node);
                 }
-              });
-              viewer.registerPickable(child);
-            }
+              }
+            });
           }
 
           sceneRoot.add(group);
@@ -1552,23 +1735,29 @@ export class Anatomy3DResultRenderer extends ResultRenderer {
 
         await Promise.all(systemPromises);
 
-        // Frame and center on the isolated structures
-        const box = new THREE.Box3().setFromObject(sceneRoot);
+        // Frame and tightly center on the isolated target structures
+        const box = new THREE.Box3();
+        if (visibleMeshes.length > 0) {
+          visibleMeshes.forEach(m => box.expandByObject(m));
+        } else {
+          box.setFromObject(sceneRoot);
+        }
+
         if (!box.isEmpty()) {
           const center = box.getCenter(new THREE.Vector3());
           const size = box.getSize(new THREE.Vector3());
           viewer.controls.target.copy(center);
 
-          const maxDim = Math.max(size.x, size.y, size.z, 0.25);
-          const camDist = maxDim * 1.8;
-          viewer.camera.position.set(center.x + camDist * 0.4, center.y + camDist * 0.2, center.z + camDist);
-          viewer.controls.minDistance = 0.05;
+          const maxDim = Math.max(size.x, size.y, size.z, 0.05);
+          const camDist = Math.min(Math.max(maxDim * 1.5, 0.12), 3.5);
+          viewer.camera.position.set(center.x + camDist * 0.35, center.y + camDist * 0.15, center.z + camDist);
+          viewer.controls.minDistance = 0.01;
           viewer.controls.maxDistance = 10;
           viewer.controls.update();
 
           resetBtn.addEventListener('click', () => {
             viewer.controls.target.copy(center);
-            viewer.camera.position.set(center.x + camDist * 0.4, center.y + camDist * 0.2, center.z + camDist);
+            viewer.camera.position.set(center.x + camDist * 0.35, center.y + camDist * 0.15, center.z + camDist);
             viewer.controls.update();
           });
         }
@@ -1608,16 +1797,16 @@ export class IllustrationResultRenderer extends ResultRenderer {
 
     const card = document.createElement('div');
     card.className = 'assistant-result-illustration-card';
-    card.style.cssText = 'margin-top:10px; border:1px solid var(--g300, #e2e8f0); border-radius:14px; background:var(--white, #fff); box-shadow:0 3px 12px rgba(0,0,0,.05); overflow:hidden;';
+    card.style.cssText = 'margin-top:10px; border:1px solid var(--g200); border-radius:14px; background:var(--white); box-shadow:0 3px 12px rgba(0,0,0,.05); overflow:hidden;';
 
     // 1. Header with Title & Export Actions
     const header = document.createElement('div');
-    header.style.cssText = 'padding:12px 16px; background:var(--g50, #f8fafc); border-bottom:1px solid var(--g200, #e2e8f0); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;';
+    header.style.cssText = 'padding:12px 16px; background:var(--g50); border-bottom:1px solid var(--g200); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;';
 
     const headerLeft = document.createElement('div');
     const titleEl = document.createElement('strong');
     titleEl.textContent = title;
-    titleEl.style.cssText = 'font-size:0.95rem; color:var(--text, #0f172a); display:block;';
+    titleEl.style.cssText = 'font-size:0.95rem; color:var(--black); display:block;';
     const typeBadge = document.createElement('span');
     typeBadge.textContent = `${diagramType.toUpperCase()} DIAGRAM · ${steps.length} STAGE${steps.length === 1 ? '' : 'S'}`;
     typeBadge.style.cssText = 'font-size:0.7rem; color:var(--primary, #2563eb); font-weight:700;';
@@ -1642,7 +1831,7 @@ export class IllustrationResultRenderer extends ResultRenderer {
     saveWorkBtn.type = 'button';
     saveWorkBtn.className = 'btn btn-sm';
     saveWorkBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">${ICONS.cloud} Save to Work</span>`;
-    saveWorkBtn.style.cssText = 'font-size:0.75rem; padding:5px 14px; border-radius:9999px; background:var(--black, #0f172a); color:#fff; cursor:pointer; font-weight:700;';
+    saveWorkBtn.style.cssText = 'font-size:0.75rem; padding:5px 14px; border-radius:9999px; background:var(--black); color:var(--white); cursor:pointer; font-weight:700;';
 
     headerActions.append(savePngBtn, saveSvgBtn, saveWorkBtn);
     header.append(headerLeft, headerActions);
@@ -1650,7 +1839,7 @@ export class IllustrationResultRenderer extends ResultRenderer {
 
     // 2. Visual Diagram Canvas Container
     const diagramWrapper = document.createElement('div');
-    diagramWrapper.style.cssText = 'padding:24px 16px; background:linear-gradient(180deg, #f8fafc 0%, #ffffff 100%); overflow-x:auto; border-bottom:1px solid var(--g200, #e2e8f0);';
+    diagramWrapper.style.cssText = 'padding:24px 16px; background:var(--g50); overflow-x:auto; border-bottom:1px solid var(--g200);';
 
     const diagramInner = document.createElement('div');
     diagramInner.style.cssText = 'display:flex; align-items:center; justify-content:center; gap:10px; min-width:min-content; margin:0 auto; flex-wrap:wrap;';
@@ -1660,22 +1849,22 @@ export class IllustrationResultRenderer extends ResultRenderer {
       const step = steps[i];
 
       const nodeBox = document.createElement('div');
-      nodeBox.style.cssText = 'display:flex; flex-direction:column; align-items:center; text-align:center; min-width:130px; max-width:170px; padding:14px 12px; background:var(--white, #fff); border:1.5px solid var(--g300, #cbd5e1); border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.04); position:relative;';
+      nodeBox.style.cssText = 'display:flex; flex-direction:column; align-items:center; text-align:center; min-width:130px; max-width:170px; padding:14px 12px; background:var(--white); border:1.5px solid var(--g200); border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.04); position:relative;';
 
       const stepBadge = document.createElement('span');
       stepBadge.textContent = step.badge || `Stage ${i + 1}`;
-      stepBadge.style.cssText = 'font-size:0.68rem; font-weight:800; color:var(--primary, #2563eb); background:var(--primary-light, #eff6ff); padding:2px 8px; border-radius:9999px; margin-bottom:6px;';
+      stepBadge.style.cssText = 'font-size:0.68rem; font-weight:800; color:var(--primary, #2563eb); background:var(--primary-light, rgba(37,99,235,0.12)); padding:2px 8px; border-radius:9999px; margin-bottom:6px;';
 
       const nodeTitle = document.createElement('div');
       nodeTitle.textContent = step.label;
-      nodeTitle.style.cssText = 'font-size:0.88rem; font-weight:700; color:var(--text, #0f172a); margin-bottom:4px; line-height:1.3;';
+      nodeTitle.style.cssText = 'font-size:0.88rem; font-weight:700; color:var(--black); margin-bottom:4px; line-height:1.3;';
 
       nodeBox.append(stepBadge, nodeTitle);
 
       if (step.description) {
         const nodeDesc = document.createElement('div');
         nodeDesc.textContent = step.description;
-        nodeDesc.style.cssText = 'font-size:0.72rem; color:var(--g600, #64748b); line-height:1.35; margin-top:2px;';
+        nodeDesc.style.cssText = 'font-size:0.72rem; color:var(--g600); line-height:1.35; margin-top:2px;';
         nodeBox.appendChild(nodeDesc);
       }
 
@@ -1696,14 +1885,14 @@ export class IllustrationResultRenderer extends ResultRenderer {
     // 3. Summary & Educational Walkthrough
     if (summary) {
       const summaryBox = document.createElement('div');
-      summaryBox.style.cssText = 'padding:16px; background:var(--white, #fff); font-size:0.86rem; line-height:1.6; color:var(--text, #0f172a);';
+      summaryBox.style.cssText = 'padding:16px; background:var(--white); font-size:0.86rem; line-height:1.6; color:var(--black);';
       const summaryHeader = document.createElement('div');
-      summaryHeader.style.cssText = 'font-weight:700; color:var(--g700, #334155); margin-bottom:6px; font-size:0.8rem; text-transform:uppercase; letter-spacing:0.5px;';
+      summaryHeader.style.cssText = 'font-weight:700; color:var(--g700); margin-bottom:6px; font-size:0.8rem; text-transform:uppercase; letter-spacing:0.5px;';
       summaryHeader.textContent = 'Concept Breakdown & Analysis';
 
       const summaryText = document.createElement('div');
       summaryText.textContent = summary;
-      summaryText.style.cssText = 'color:var(--text, #0f172a);';
+      summaryText.style.cssText = 'color:var(--black);';
 
       summaryBox.append(summaryHeader, summaryText);
       card.appendChild(summaryBox);
@@ -1827,15 +2016,15 @@ export class DiseaseResultRenderer extends ResultRenderer {
 
     // Header
     const header = document.createElement('div');
-    header.style.cssText = 'padding:12px 16px; background:var(--g50, #f8fafc); border:1px solid var(--g300, #e2e8f0); border-radius:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;';
+    header.style.cssText = 'padding:12px 16px; background:var(--g50); border:1px solid var(--g200); border-radius:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;';
 
     const headerLeft = document.createElement('div');
     const title = document.createElement('strong');
     title.textContent = `Diseases & Pathology: "${query}"`;
-    title.style.cssText = 'font-size:0.92rem; color:var(--text, #0f172a); display:block;';
+    title.style.cssText = 'font-size:0.92rem; color:var(--black); display:block;';
     const sub = document.createElement('span');
     sub.textContent = `${diseases.length} condition(s) indexed by epidemiological commodity & WHO ICD-11`;
-    sub.style.cssText = 'font-size:0.74rem; color:var(--g600, #64748b);';
+    sub.style.cssText = 'font-size:0.74rem; color:var(--g600);';
     headerLeft.append(title, sub);
 
     header.appendChild(headerLeft);
@@ -1843,23 +2032,23 @@ export class DiseaseResultRenderer extends ResultRenderer {
 
     for (const d of diseases) {
       const card = document.createElement('div');
-      card.style.cssText = 'border:1px solid var(--g300, #e2e8f0); border-radius:14px; background:var(--white, #fff); box-shadow:0 2px 8px rgba(0,0,0,.04); overflow:hidden;';
+      card.style.cssText = 'border:1px solid var(--g200); border-radius:14px; background:var(--white); box-shadow:0 2px 8px rgba(0,0,0,.04); overflow:hidden; color:var(--black);';
 
       const cardHead = document.createElement('div');
-      cardHead.style.cssText = 'padding:12px 16px; background:var(--g50, #f8fafc); border-bottom:1px solid var(--g200, #e2e8f0); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;';
+      cardHead.style.cssText = 'padding:12px 16px; background:var(--g50); border-bottom:1px solid var(--g200); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;';
 
       const headTitle = document.createElement('div');
       const dName = document.createElement('strong');
       dName.textContent = d.name;
-      dName.style.cssText = 'font-size:0.95rem; color:var(--text, #0f172a); margin-right:8px;';
+      dName.style.cssText = 'font-size:0.95rem; color:var(--black); margin-right:8px;';
 
       const icdBadge = document.createElement('span');
       icdBadge.textContent = `ICD-11: ${d.icd11}`;
-      icdBadge.style.cssText = 'font-size:0.72rem; padding:2px 8px; border-radius:9999px; background:var(--primary-light, #eff6ff); color:var(--primary, #2563eb); font-weight:700;';
+      icdBadge.style.cssText = 'font-size:0.72rem; padding:2px 8px; border-radius:9999px; background:var(--primary-light, rgba(37,99,235,0.12)); color:var(--primary, #2563eb); font-weight:700;';
 
       const commodityBadge = document.createElement('span');
       commodityBadge.textContent = `Commodity ${d.commodity}/100`;
-      commodityBadge.style.cssText = 'font-size:0.72rem; padding:2px 8px; border-radius:9999px; background:#f0fdf4; color:#15803d; font-weight:700; margin-left:6px;';
+      commodityBadge.style.cssText = 'font-size:0.72rem; padding:2px 8px; border-radius:9999px; background:rgba(34,197,94,0.12); color:#16a34a; font-weight:700; margin-left:6px;';
 
       headTitle.append(dName, icdBadge, commodityBadge);
 
@@ -1887,7 +2076,7 @@ export class DiseaseResultRenderer extends ResultRenderer {
       card.appendChild(cardHead);
 
       const cardBody = document.createElement('div');
-      cardBody.style.cssText = 'padding:14px 16px; display:flex; flex-direction:column; gap:10px; font-size:0.84rem; line-height:1.5; color:var(--text, #0f172a);';
+      cardBody.style.cssText = 'padding:14px 16px; display:flex; flex-direction:column; gap:10px; font-size:0.84rem; line-height:1.5; color:var(--black);';
 
       if (d.pathophysiology) {
         const pathBlock = document.createElement('div');
@@ -1909,7 +2098,7 @@ export class DiseaseResultRenderer extends ResultRenderer {
 
       if (d.management && d.management.length) {
         const mgmtBlock = document.createElement('div');
-        mgmtBlock.style.cssText = 'padding:8px 12px; background:var(--g50, #f8fafc); border-radius:8px; border-left:3px solid var(--primary, #2563eb);';
+        mgmtBlock.style.cssText = 'padding:8px 12px; background:var(--g50); border-radius:8px; border-left:3px solid var(--primary, #2563eb); border:1px solid var(--g200);';
         mgmtBlock.innerHTML = `<strong>First-line Management:</strong><br>${d.management.map(m => `• ${m}`).join('<br>')}`;
         cardBody.appendChild(mgmtBlock);
       }
@@ -1920,6 +2109,1445 @@ export class DiseaseResultRenderer extends ResultRenderer {
 
     container.appendChild(wrapper);
     return wrapper;
+  }
+}
+
+/**
+ * INVOICE RESULT — Renders professional financial invoices with PDF download & handoff
+ */
+export class InvoiceResultRenderer extends ResultRenderer {
+  static id = 'invoice';
+  static name = 'Invoice';
+
+  static canRender(result) {
+    const data = result.data || {};
+    return result.renderer === 'invoice' ||
+      result.type === 'invoice' ||
+      Boolean(data.invoice);
+  }
+
+  static render(result, container) {
+    const data = result.data || {};
+    const inv = data.invoice || data;
+    const client = inv.client || 'Client';
+    const number = inv.number || 'INV-001';
+    const currency = inv.currency || 'NGN';
+    const lines = Array.isArray(inv.lines) ? inv.lines : [];
+    const sym = currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : (currency === 'GBP' ? '£' : '₦'));
+
+    const card = document.createElement('div');
+    card.className = 'assistant-result-invoice-card';
+    card.style.cssText = 'margin-top:10px; border:1px solid var(--g200); border-radius:16px; background:var(--white); box-shadow:0 2px 10px rgba(0,0,0,.04); overflow:hidden; color:var(--black); font-family:var(--sans);';
+
+    // Header
+    const head = document.createElement('div');
+    head.style.cssText = 'padding:14px 18px; background:var(--g50); border-bottom:1px solid var(--g200); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;';
+
+    const headLeft = document.createElement('div');
+    headLeft.style.cssText = 'display:flex; align-items:center; gap:8px;';
+    const numBadge = document.createElement('span');
+    numBadge.textContent = number;
+    numBadge.style.cssText = 'font-weight:800; font-size:0.95rem; color:var(--black);';
+    const statusBadge = document.createElement('span');
+    statusBadge.textContent = 'Invoice';
+    statusBadge.style.cssText = 'font-size:0.72rem; padding:3px 10px; border-radius:9999px; background:var(--g100); color:var(--black); font-weight:700; border:1px solid var(--g200);';
+    headLeft.appendChild(numBadge);
+    headLeft.appendChild(statusBadge);
+
+    const headActions = document.createElement('div');
+    headActions.style.cssText = 'display:flex; align-items:center; gap:6px;';
+
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'btn btn-secondary btn-sm';
+    editBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">${ICONS.external} Edit in Builder</span>`;
+    editBtn.style.cssText = 'font-size:0.75rem; padding:4px 12px; border-radius:9999px; cursor:pointer; font-weight:700;';
+    editBtn.addEventListener('click', () => {
+      try {
+        sessionStorage.setItem('toolbox.invoice.handoff', JSON.stringify(inv));
+        window.location.hash = '#invoice-generator';
+      } catch {}
+    });
+
+    const printBtn = document.createElement('button');
+    printBtn.type = 'button';
+    printBtn.className = 'btn btn-primary btn-sm';
+    printBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">${ICONS.download} Download PDF</span>`;
+    printBtn.style.cssText = 'font-size:0.75rem; padding:4px 12px; border-radius:9999px; cursor:pointer; font-weight:700;';
+    printBtn.addEventListener('click', () => {
+      const w = window.open('', '_blank');
+      if (w) {
+        w.document.write(`
+          <!DOCTYPE html><html><head><title>${number}</title>
+          <style>body{font-family:sans-serif;padding:40px;color:#000;} table{width:100%;border-collapse:collapse;margin:20px 0;} th,td{padding:10px;border-bottom:1px solid #ddd;text-align:left;} th{background:#f5f5f5;} .total{font-size:1.2rem;font-weight:bold;text-align:right;}</style>
+          </head><body>
+          <h2>INVOICE: ${number}</h2>
+          <p><strong>Billed To:</strong><br>${client.replace(/\n/g, '<br>')}</p>
+          <p><strong>Issued:</strong> ${inv.issued || ''} · <strong>Due:</strong> ${inv.due || ''}</p>
+          <table><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>
+          ${lines.map(l => `<tr><td>${l.description}</td><td>${l.qty}</td><td>${sym}${l.price.toLocaleString()}</td><td>${sym}${(l.qty * l.price).toLocaleString()}</td></tr>`).join('')}
+          </tbody></table>
+          <p class="total">Total Due: ${sym}${(inv.total || 0).toLocaleString()}</p>
+          <p style="margin-top:30px;font-size:0.85rem;color:#666;">${(inv.notes || '').replace(/\n/g, '<br>')}</p>
+          <script>window.print();<\/script></body></html>
+        `);
+        w.document.close();
+      }
+    });
+
+    headActions.appendChild(editBtn);
+    headActions.appendChild(printBtn);
+    head.appendChild(headLeft);
+    head.appendChild(headActions);
+    card.appendChild(head);
+
+    // Body
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:16px 18px; display:flex; flex-direction:column; gap:12px; font-size:0.85rem;';
+
+    // Client/Dates Info Bar
+    const metaBar = document.createElement('div');
+    metaBar.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; padding:10px 14px; background:var(--g50); border-radius:10px; border:1px solid var(--g150);';
+    metaBar.innerHTML = `
+      <div><span style="font-size:0.72rem; color:var(--g600); text-transform:uppercase; font-weight:700; display:block;">Billed To</span><strong style="color:var(--black);">${client.split('\n')[0]}</strong></div>
+      <div><span style="font-size:0.72rem; color:var(--g600); text-transform:uppercase; font-weight:700; display:block;">Issued Date</span><span>${inv.issued || 'Today'}</span></div>
+      <div><span style="font-size:0.72rem; color:var(--g600); text-transform:uppercase; font-weight:700; display:block;">Due Date</span><span>${inv.due || 'Net 30'}</span></div>
+    `;
+    body.appendChild(metaBar);
+
+    // Table
+    const tableWrap = document.createElement('div');
+    tableWrap.style.cssText = 'overflow-x:auto; margin-top:4px;';
+    tableWrap.innerHTML = `
+      <table style="width:100%; border-collapse:collapse; font-size:0.84rem; text-align:left;">
+        <thead>
+          <tr style="border-bottom:1.5px solid var(--g200); color:var(--g600); font-size:0.75rem; text-transform:uppercase;">
+            <th style="padding:6px 8px;">Description</th>
+            <th style="padding:6px 8px; text-align:center;">Qty</th>
+            <th style="padding:6px 8px; text-align:right;">Price</th>
+            <th style="padding:6px 8px; text-align:right;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${lines.map(l => `
+            <tr style="border-bottom:1px solid var(--g150);">
+              <td style="padding:8px; font-weight:600; color:var(--black);">${l.description}</td>
+              <td style="padding:8px; text-align:center; color:var(--g700);">${l.qty}</td>
+              <td style="padding:8px; text-align:right; font-family:var(--mono); color:var(--g700);">${sym}${l.price.toLocaleString()}</td>
+              <td style="padding:8px; text-align:right; font-weight:700; font-family:var(--mono); color:var(--black);">${sym}${(l.qty * l.price).toLocaleString()}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+    body.appendChild(tableWrap);
+
+    // Total summary
+    const summary = document.createElement('div');
+    summary.style.cssText = 'margin-top:6px; padding:10px 14px; background:var(--g50); border-radius:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;';
+    summary.innerHTML = `
+      <div style="font-size:0.75rem; color:var(--g600);">${inv.notes || 'Net 30 payment terms.'}</div>
+      <div style="text-align:right;">
+        <span style="font-size:0.78rem; color:var(--g600); margin-right:8px;">Total Due:</span>
+        <strong style="font-size:1.15rem; font-family:var(--mono); color:var(--black);">${sym}${(inv.total || 0).toLocaleString()}</strong>
+      </div>
+    `;
+    body.appendChild(summary);
+
+    card.appendChild(body);
+    container.appendChild(card);
+    return card;
+  }
+}
+
+/**
+ * UML DIAGRAM RESULT — Renders interactive Mermaid UML diagrams with vector export
+ */
+export class UmlDiagramResultRenderer extends ResultRenderer {
+  static id = 'uml-diagram';
+  static name = 'UML Diagram';
+
+  static canRender(result) {
+    const data = result.data || {};
+    return result.renderer === 'uml-diagram' ||
+      result.type === 'uml-diagram' ||
+      Boolean(data.code && data.diagramType);
+  }
+
+  static render(result, container) {
+    const data = result.data || {};
+    const title = data.title || 'UML Diagram';
+    const diagramType = (data.diagramType || 'diagram').toUpperCase();
+    const code = data.code || '';
+
+    const card = document.createElement('div');
+    card.className = 'assistant-result-uml-card';
+    card.style.cssText = 'margin-top:10px; border:1px solid var(--g200); border-radius:16px; background:var(--white); box-shadow:0 2px 10px rgba(0,0,0,.04); overflow:hidden; color:var(--black);';
+
+    // Header
+    const head = document.createElement('div');
+    head.style.cssText = 'padding:14px 18px; background:var(--g50); border-bottom:1px solid var(--g200); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;';
+
+    const headLeft = document.createElement('div');
+    headLeft.style.cssText = 'display:flex; align-items:center; gap:8px;';
+    const titleEl = document.createElement('strong');
+    titleEl.textContent = title;
+    titleEl.style.cssText = 'font-size:0.95rem; color:var(--black);';
+    const typeBadge = document.createElement('span');
+    typeBadge.textContent = diagramType;
+    typeBadge.style.cssText = 'font-size:0.72rem; padding:3px 10px; border-radius:9999px; background:var(--g100); color:var(--black); font-weight:700; border:1px solid var(--g200);';
+    headLeft.appendChild(titleEl);
+    headLeft.appendChild(typeBadge);
+
+    const headRight = document.createElement('div');
+    headRight.style.cssText = 'display:flex; align-items:center; gap:6px;';
+
+    const openStudioBtn = document.createElement('button');
+    openStudioBtn.type = 'button';
+    openStudioBtn.className = 'btn btn-secondary btn-sm';
+    openStudioBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">${ICONS.external} Open in UML Studio</span>`;
+    openStudioBtn.style.cssText = 'font-size:0.75rem; padding:4px 12px; border-radius:9999px; cursor:pointer; font-weight:700;';
+    openStudioBtn.addEventListener('click', () => {
+      try {
+        sessionStorage.setItem('toolbox.uml.handoff', JSON.stringify({ code, diagramType }));
+        window.location.hash = '#uml-diagram';
+      } catch {}
+    });
+
+    const saveSvgBtn = document.createElement('button');
+    saveSvgBtn.type = 'button';
+    saveSvgBtn.className = 'btn btn-primary btn-sm';
+    saveSvgBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">${ICONS.download} Save SVG</span>`;
+    saveSvgBtn.style.cssText = 'font-size:0.75rem; padding:4px 12px; border-radius:9999px; cursor:pointer; font-weight:700;';
+    saveSvgBtn.addEventListener('click', () => {
+      const svgEl = card.querySelector('svg');
+      if (svgEl) {
+        const blob = new Blob([svgEl.outerHTML], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '_')}.svg`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    });
+
+    headRight.appendChild(openStudioBtn);
+    headRight.appendChild(saveSvgBtn);
+    head.appendChild(headLeft);
+    head.appendChild(headRight);
+    card.appendChild(head);
+
+    // Canvas Container
+    const canvasWrap = document.createElement('div');
+    canvasWrap.style.cssText = 'padding:20px; background:var(--white); overflow:auto; display:flex; justify-content:center; align-items:center; min-height:180px;';
+
+    const stageId = `mermaid-stage-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+    const stage = document.createElement('div');
+    stage.id = stageId;
+    stage.style.cssText = 'width:100%; display:flex; justify-content:center;';
+
+    // Code fallback / rendering
+    const codeBlock = document.createElement('pre');
+    codeBlock.style.cssText = 'font-family:var(--mono); font-size:0.8rem; background:var(--g50); padding:12px; border-radius:8px; border:1px solid var(--g200); width:100%; overflow-x:auto; margin:0;';
+    codeBlock.textContent = code;
+    stage.appendChild(codeBlock);
+    canvasWrap.appendChild(stage);
+    card.appendChild(canvasWrap);
+
+    // Render Mermaid if library loaded
+    if (typeof window !== 'undefined') {
+      import('https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs').then(m => {
+        try {
+          m.default.initialize({ startOnLoad: false, theme: 'neutral' });
+          m.default.render(`${stageId}-svg`, code).then(({ svg }) => {
+            stage.innerHTML = svg;
+          }).catch(() => {});
+        } catch {}
+      }).catch(() => {});
+    }
+
+    container.appendChild(card);
+    return card;
+  }
+}
+
+/**
+ * ALGORITHM SIMULATION RESULT — Step-by-step playback scrubber for sorting/searching
+ */
+export class AlgorithmResultRenderer extends ResultRenderer {
+  static id = 'algorithm-simulation';
+  static name = 'Algorithm Simulation';
+
+  static canRender(result) {
+    const data = result.data || {};
+    return result.renderer === 'algorithm-simulation' ||
+      result.type === 'algorithm-simulation' ||
+      Boolean(data.frames && data.algorithm);
+  }
+
+  static render(result, container) {
+    const data = result.data || {};
+    const name = data.name || 'Algorithm';
+    const frames = Array.isArray(data.frames) && data.frames.length ? data.frames : [];
+    const complexity = data.complexity || { time: 'O(N²)', space: 'O(1)' };
+
+    let currentFrameIdx = 0;
+    let isPlaying = false;
+    let playInterval = null;
+
+    const card = document.createElement('div');
+    card.className = 'assistant-result-algo-card';
+    card.style.cssText = 'margin-top:10px; border:1px solid var(--g200); border-radius:16px; background:var(--white); box-shadow:0 2px 10px rgba(0,0,0,.04); overflow:hidden; color:var(--black);';
+
+    // Header
+    const head = document.createElement('div');
+    head.style.cssText = 'padding:14px 18px; background:var(--g50); border-bottom:1px solid var(--g200); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;';
+
+    const headLeft = document.createElement('div');
+    headLeft.style.cssText = 'display:flex; align-items:center; gap:8px;';
+    const titleEl = document.createElement('strong');
+    titleEl.textContent = name;
+    titleEl.style.cssText = 'font-size:0.95rem; color:var(--black);';
+    const compBadge = document.createElement('span');
+    compBadge.textContent = `Time: ${complexity.time} · Space: ${complexity.space}`;
+    compBadge.style.cssText = 'font-size:0.72rem; padding:3px 10px; border-radius:9999px; background:var(--g100); color:var(--black); font-weight:700; border:1px solid var(--g200);';
+    headLeft.appendChild(titleEl);
+    headLeft.appendChild(compBadge);
+
+    const openAlgoBtn = document.createElement('button');
+    openAlgoBtn.type = 'button';
+    openAlgoBtn.className = 'btn btn-secondary btn-sm';
+    openAlgoBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">${ICONS.external} Open in Algorithm Lab</span>`;
+    openAlgoBtn.style.cssText = 'font-size:0.75rem; padding:4px 12px; border-radius:9999px; cursor:pointer; font-weight:700;';
+    openAlgoBtn.addEventListener('click', () => {
+      window.location.hash = '#algorithm-lab';
+    });
+
+    head.appendChild(headLeft);
+    head.appendChild(openAlgoBtn);
+    card.appendChild(head);
+
+    // Visual Stage
+    const stage = document.createElement('div');
+    stage.style.cssText = 'padding:20px; background:var(--white); display:flex; flex-direction:column; gap:14px;';
+
+    const barContainer = document.createElement('div');
+    barContainer.style.cssText = 'height:120px; display:flex; align-items:flex-end; gap:6px; justify-content:center; padding:10px; background:var(--g50); border-radius:10px; border:1px solid var(--g150);';
+
+    const noteEl = document.createElement('div');
+    noteEl.style.cssText = 'font-size:0.8rem; color:var(--g700); text-align:center; min-height:20px;';
+
+    // Controls
+    const controls = document.createElement('div');
+    controls.style.cssText = 'display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;';
+
+    const playBtn = document.createElement('button');
+    playBtn.type = 'button';
+    playBtn.className = 'btn btn-primary btn-sm';
+    playBtn.textContent = '▶ Play';
+    playBtn.style.cssText = 'border-radius:9999px; padding:4px 14px; font-size:0.78rem; font-weight:700; cursor:pointer;';
+
+    const prevBtn = document.createElement('button');
+    prevBtn.type = 'button';
+    prevBtn.className = 'btn btn-secondary btn-sm';
+    prevBtn.textContent = '◀ Step';
+    prevBtn.style.cssText = 'border-radius:9999px; padding:4px 10px; font-size:0.78rem; cursor:pointer;';
+
+    const nextBtn = document.createElement('button');
+    nextBtn.type = 'button';
+    nextBtn.className = 'btn btn-secondary btn-sm';
+    nextBtn.textContent = 'Step ▶';
+    nextBtn.style.cssText = 'border-radius:9999px; padding:4px 10px; font-size:0.78rem; cursor:pointer;';
+
+    const scrub = document.createElement('input');
+    scrub.type = 'range';
+    scrub.min = '0';
+    scrub.max = String(Math.max(0, frames.length - 1));
+    scrub.value = '0';
+    scrub.style.cssText = 'width:140px; cursor:pointer;';
+
+    const frameCounter = document.createElement('span');
+    frameCounter.style.cssText = 'font-size:0.75rem; font-family:var(--mono); color:var(--g600); min-width:60px; text-align:center;';
+
+    function renderFrame(idx) {
+      if (!frames.length) return;
+      currentFrameIdx = Math.max(0, Math.min(frames.length - 1, idx));
+      const f = frames[currentFrameIdx];
+      scrub.value = String(currentFrameIdx);
+      frameCounter.textContent = `${currentFrameIdx + 1} / ${frames.length}`;
+      noteEl.textContent = f.note || '';
+
+      const maxVal = Math.max(...(f.data || [100]));
+      barContainer.innerHTML = '';
+      (f.data || []).forEach((val, i) => {
+        const bar = document.createElement('div');
+        const hPct = Math.max(10, Math.round((val / maxVal) * 100));
+        const isFocus = f.a === i || f.b === i || f.mid === i;
+        const isDone = Array.isArray(f.sorted) && f.sorted.includes(i);
+        bar.style.cssText = `flex:1; max-width:24px; height:${hPct}%; border-radius:4px 4px 0 0; background:${isFocus ? 'var(--primary, #2563eb)' : (isDone ? '#10b981' : 'var(--g300)')}; transition:all 0.15s ease; display:flex; align-items:flex-end; justify-content:center;`;
+        bar.innerHTML = `<span style="font-size:0.6rem; color:var(--white); margin-bottom:2px; font-weight:700;">${val}</span>`;
+        barContainer.appendChild(bar);
+      });
+    }
+
+    playBtn.addEventListener('click', () => {
+      if (isPlaying) {
+        clearInterval(playInterval);
+        isPlaying = false;
+        playBtn.textContent = '▶ Play';
+      } else {
+        isPlaying = true;
+        playBtn.textContent = '⏸ Pause';
+        playInterval = setInterval(() => {
+          if (currentFrameIdx >= frames.length - 1) {
+            clearInterval(playInterval);
+            isPlaying = false;
+            playBtn.textContent = '▶ Play';
+          } else {
+            renderFrame(currentFrameIdx + 1);
+          }
+        }, 300);
+      }
+    });
+
+    prevBtn.addEventListener('click', () => {
+      clearInterval(playInterval);
+      isPlaying = false;
+      playBtn.textContent = '▶ Play';
+      renderFrame(currentFrameIdx - 1);
+    });
+
+    nextBtn.addEventListener('click', () => {
+      clearInterval(playInterval);
+      isPlaying = false;
+      playBtn.textContent = '▶ Play';
+      renderFrame(currentFrameIdx + 1);
+    });
+
+    scrub.addEventListener('input', (e) => {
+      clearInterval(playInterval);
+      isPlaying = false;
+      playBtn.textContent = '▶ Play';
+      renderFrame(Number(e.target.value));
+    });
+
+    controls.appendChild(prevBtn);
+    controls.appendChild(playBtn);
+    controls.appendChild(nextBtn);
+    controls.appendChild(scrub);
+    controls.appendChild(frameCounter);
+
+    stage.appendChild(barContainer);
+    stage.appendChild(noteEl);
+    stage.appendChild(controls);
+    card.appendChild(stage);
+
+    renderFrame(0);
+    container.appendChild(card);
+    return card;
+  }
+}
+
+/**
+ * METRONOME RESULT — Web Audio ticking metronome widget inside chat
+ */
+export class MetronomeResultRenderer extends ResultRenderer {
+  static id = 'metronome';
+  static name = 'Metronome';
+
+  static canRender(result) {
+    const data = result.data || {};
+    return result.renderer === 'metronome' ||
+      result.type === 'metronome' ||
+      Boolean(data.bpm && data.beats);
+  }
+
+  static render(result, container) {
+    const data = result.data || {};
+    let bpm = Number(data.bpm || 120);
+    const beats = Number(data.beats || 4);
+    let isRunning = false;
+    let timer = null;
+    let beatIdx = 0;
+    let audioCtx = null;
+
+    const card = document.createElement('div');
+    card.className = 'assistant-result-metronome-card';
+    card.style.cssText = 'margin-top:10px; border:1px solid var(--g200); border-radius:16px; background:var(--white); box-shadow:0 2px 10px rgba(0,0,0,.04); overflow:hidden; color:var(--black);';
+
+    const head = document.createElement('div');
+    head.style.cssText = 'padding:14px 18px; background:var(--g50); border-bottom:1px solid var(--g200); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;';
+
+    const headLeft = document.createElement('div');
+    headLeft.style.cssText = 'display:flex; align-items:center; gap:8px;';
+    const titleEl = document.createElement('strong');
+    titleEl.textContent = 'Metronome';
+    titleEl.style.cssText = 'font-size:0.95rem; color:var(--black);';
+    const beatsBadge = document.createElement('span');
+    beatsBadge.textContent = `${beats}/4 Time`;
+    beatsBadge.style.cssText = 'font-size:0.72rem; padding:3px 10px; border-radius:9999px; background:var(--g100); color:var(--black); font-weight:700; border:1px solid var(--g200);';
+    headLeft.appendChild(titleEl);
+    headLeft.appendChild(beatsBadge);
+
+    const openMetBtn = document.createElement('button');
+    openMetBtn.type = 'button';
+    openMetBtn.className = 'btn btn-secondary btn-sm';
+    openMetBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">${ICONS.external} Open Metronome</span>`;
+    openMetBtn.style.cssText = 'font-size:0.75rem; padding:4px 12px; border-radius:9999px; cursor:pointer; font-weight:700;';
+    openMetBtn.addEventListener('click', () => {
+      window.location.hash = '#metronome';
+    });
+
+    head.appendChild(headLeft);
+    head.appendChild(openMetBtn);
+    card.appendChild(head);
+
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:20px; display:flex; flex-direction:column; align-items:center; gap:16px;';
+
+    const bpmDisplay = document.createElement('div');
+    bpmDisplay.style.cssText = 'display:flex; align-items:baseline; gap:6px;';
+    bpmDisplay.innerHTML = `<span class="met-bpm-val" style="font-size:2.2rem; font-weight:800; font-family:var(--mono); color:var(--black);">${bpm}</span><span style="font-size:0.8rem; color:var(--g600); font-weight:700;">BPM</span>`;
+
+    const dotsWrap = document.createElement('div');
+    dotsWrap.style.cssText = 'display:flex; gap:10px;';
+    for (let i = 0; i < beats; i++) {
+      const dot = document.createElement('div');
+      dot.className = `met-dot met-dot-${i}`;
+      dot.style.cssText = 'width:14px; height:14px; border-radius:50%; background:var(--g200); border:1.5px solid var(--g300); transition:all 0.08s ease;';
+      dotsWrap.appendChild(dot);
+    }
+
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = '30';
+    slider.max = '280';
+    slider.value = String(bpm);
+    slider.style.cssText = 'width:200px; cursor:pointer;';
+
+    const toggleBtn = document.createElement('button');
+    toggleBtn.type = 'button';
+    toggleBtn.className = 'btn btn-primary btn-sm';
+    toggleBtn.textContent = '▶ Start Metronome';
+    toggleBtn.style.cssText = 'border-radius:9999px; padding:6px 20px; font-size:0.85rem; font-weight:700; cursor:pointer;';
+
+    function clickSound(isAccent) {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.value = isAccent ? 1600 : 900;
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.05);
+      } catch {}
+    }
+
+    function tick() {
+      const dots = dotsWrap.querySelectorAll('.met-dot');
+      dots.forEach((d, i) => {
+        if (i === beatIdx) {
+          d.style.background = i === 0 ? 'var(--primary, #2563eb)' : 'var(--black)';
+          d.style.transform = 'scale(1.25)';
+        } else {
+          d.style.background = 'var(--g200)';
+          d.style.transform = 'scale(1)';
+        }
+      });
+
+      clickSound(beatIdx === 0);
+      beatIdx = (beatIdx + 1) % beats;
+    }
+
+    toggleBtn.addEventListener('click', () => {
+      if (isRunning) {
+        clearInterval(timer);
+        isRunning = false;
+        toggleBtn.textContent = '▶ Start Metronome';
+        const dots = dotsWrap.querySelectorAll('.met-dot');
+        dots.forEach(d => { d.style.background = 'var(--g200)'; d.style.transform = 'scale(1)'; });
+      } else {
+        isRunning = true;
+        toggleBtn.textContent = '⏸ Stop Metronome';
+        beatIdx = 0;
+        tick();
+        timer = setInterval(tick, (60 / bpm) * 1000);
+      }
+    });
+
+    slider.addEventListener('input', (e) => {
+      bpm = Number(e.target.value);
+      bpmDisplay.querySelector('.met-bpm-val').textContent = String(bpm);
+      if (isRunning) {
+        clearInterval(timer);
+        timer = setInterval(tick, (60 / bpm) * 1000);
+      }
+    });
+
+    body.appendChild(bpmDisplay);
+    body.appendChild(dotsWrap);
+    body.appendChild(slider);
+    body.appendChild(toggleBtn);
+    card.appendChild(body);
+    container.appendChild(card);
+    return card;
+  }
+}
+
+/**
+ * SOUND EFFECT RESULT — Web Audio synthesized foley and sound effects
+ */
+export class SoundEffectResultRenderer extends ResultRenderer {
+  static id = 'sound-effect';
+  static name = 'Sound Effect';
+
+  static canRender(result) {
+    const data = result.data || {};
+    return result.renderer === 'sound-effect' ||
+      result.type === 'sound-effect' ||
+      Boolean(data.sfxType);
+  }
+
+  static render(result, container) {
+    const data = result.data || {};
+    const name = data.name || 'Sound Effect';
+    const sfxType = data.sfxType || 'fanfare';
+    const duration = Number(data.duration || 1.2);
+
+    const card = document.createElement('div');
+    card.className = 'assistant-result-sfx-card';
+    card.style.cssText = 'margin-top:10px; border:1px solid var(--g200); border-radius:16px; background:var(--white); box-shadow:0 2px 10px rgba(0,0,0,.04); overflow:hidden; color:var(--black); padding:16px 18px; display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;';
+
+    const info = document.createElement('div');
+    info.style.cssText = 'display:flex; align-items:center; gap:12px;';
+    const waveIcon = document.createElement('div');
+    waveIcon.style.cssText = 'width:40px; height:40px; border-radius:50%; background:var(--g100); border:1px solid var(--g200); display:flex; align-items:center; justify-content:center; color:var(--primary, #2563eb);';
+    waveIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5v14M7 9v6M22 10v4M2 10v4"/></svg>`;
+
+    const textWrap = document.createElement('div');
+    textWrap.innerHTML = `
+      <strong style="font-size:0.92rem; color:var(--black); display:block;">${name}</strong>
+      <span style="font-size:0.75rem; color:var(--g600);">${sfxType.toUpperCase()} Audio · ${duration}s</span>
+    `;
+    info.appendChild(waveIcon);
+    info.appendChild(textWrap);
+
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:flex; align-items:center; gap:8px;';
+
+    const playBtn = document.createElement('button');
+    playBtn.type = 'button';
+    playBtn.className = 'btn btn-primary btn-sm';
+    playBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">▶ Play Sound</span>`;
+    playBtn.style.cssText = 'border-radius:9999px; padding:5px 16px; font-size:0.78rem; font-weight:700; cursor:pointer;';
+    playBtn.addEventListener('click', () => {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (ctx.state === 'suspended') ctx.resume();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = sfxType === 'laser' ? 'sawtooth' : 'sine';
+        if (sfxType === 'laser') {
+          osc.frequency.setValueAtTime(880, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(110, ctx.currentTime + duration);
+        } else {
+          osc.frequency.setValueAtTime(440, ctx.currentTime);
+          osc.frequency.linearRampToValueAtTime(880, ctx.currentTime + duration);
+        }
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      } catch {}
+    });
+
+    const openLibBtn = document.createElement('button');
+    openLibBtn.type = 'button';
+    openLibBtn.className = 'btn btn-secondary btn-sm';
+    openLibBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">${ICONS.external} Sound Effects</span>`;
+    openLibBtn.style.cssText = 'border-radius:9999px; padding:5px 14px; font-size:0.78rem; cursor:pointer; font-weight:700;';
+    openLibBtn.addEventListener('click', () => {
+      window.location.hash = '#sound-effects';
+    });
+
+    actions.appendChild(playBtn);
+    actions.appendChild(openLibBtn);
+    card.appendChild(info);
+    card.appendChild(actions);
+    container.appendChild(card);
+    return card;
+  }
+}
+
+/**
+ * ELEMENTS COMPARISON RESULT — Periodic table atomic properties & Bohr models
+ */
+export class ElementsResultRenderer extends ResultRenderer {
+  static id = 'elements-comparison';
+  static name = 'Periodic Elements';
+
+  static canRender(result) {
+    const data = result.data || {};
+    return result.renderer === 'elements-comparison' ||
+      result.type === 'elements-comparison' ||
+      Boolean(data.elements && Array.isArray(data.elements));
+  }
+
+  static render(result, container) {
+    const data = result.data || {};
+    const title = data.title || 'Periodic Table Elements Study';
+    const elements = Array.isArray(data.elements) ? data.elements : [];
+
+    const card = document.createElement('div');
+    card.className = 'assistant-result-elements-card';
+    card.style.cssText = 'margin-top:10px; border:1px solid var(--g200); border-radius:16px; background:var(--white); box-shadow:0 2px 10px rgba(0,0,0,.04); overflow:hidden; color:var(--black);';
+
+    const head = document.createElement('div');
+    head.style.cssText = 'padding:14px 18px; background:var(--g50); border-bottom:1px solid var(--g200); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;';
+
+    const headLeft = document.createElement('div');
+    headLeft.style.cssText = 'display:flex; align-items:center; gap:8px;';
+    const titleEl = document.createElement('strong');
+    titleEl.textContent = title;
+    titleEl.style.cssText = 'font-size:0.95rem; color:var(--black);';
+    const countBadge = document.createElement('span');
+    countBadge.textContent = `${elements.length} Elements`;
+    countBadge.style.cssText = 'font-size:0.72rem; padding:3px 10px; border-radius:9999px; background:var(--g100); color:var(--black); font-weight:700; border:1px solid var(--g200);';
+    headLeft.appendChild(titleEl);
+    headLeft.appendChild(countBadge);
+
+    const openPtBtn = document.createElement('button');
+    openPtBtn.type = 'button';
+    openPtBtn.className = 'btn btn-secondary btn-sm';
+    openPtBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">${ICONS.external} Open Periodic Table</span>`;
+    openPtBtn.style.cssText = 'font-size:0.75rem; padding:4px 12px; border-radius:9999px; cursor:pointer; font-weight:700;';
+    openPtBtn.addEventListener('click', () => {
+      window.location.hash = '#periodic-table';
+    });
+
+    head.appendChild(headLeft);
+    head.appendChild(openPtBtn);
+    card.appendChild(head);
+
+    const grid = document.createElement('div');
+    grid.style.cssText = 'padding:16px 18px; display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px;';
+
+    elements.forEach(el => {
+      const elBox = document.createElement('div');
+      elBox.style.cssText = 'padding:12px; background:var(--g50); border:1px solid var(--g200); border-radius:12px; display:flex; flex-direction:column; gap:6px;';
+      elBox.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-family:var(--mono); font-size:0.75rem; color:var(--g600);">Z = ${el.number || '—'}</span>
+          <span style="font-size:0.7rem; padding:2px 6px; border-radius:9999px; background:var(--g200); font-weight:700;">${el.category || 'Element'}</span>
+        </div>
+        <div style="display:flex; align-items:baseline; gap:6px;">
+          <strong style="font-size:1.4rem; font-family:var(--mono); color:var(--black);">${el.symbol}</strong>
+          <span style="font-weight:700; font-size:0.9rem;">${el.name}</span>
+        </div>
+        <div style="font-size:0.76rem; color:var(--g700); line-height:1.4;">
+          <div><strong>Atomic Mass:</strong> ${el.atomic_mass ? Number(el.atomic_mass).toFixed(3) : '—'} u</div>
+          <div><strong>Electronegativity:</strong> ${el.electronegativity_pauling || '—'}</div>
+          <div><strong>Electron Shells:</strong> ${(el.shells || []).join(', ') || '—'}</div>
+        </div>
+      `;
+      grid.appendChild(elBox);
+    });
+
+    card.appendChild(grid);
+    container.appendChild(card);
+    return card;
+  }
+}
+
+/**
+ * CONTAINER QUOTE BUILDER RESULT — 3D CAD preview & Bill of Quantities costing
+ */
+export class ContainerQuoteResultRenderer extends ResultRenderer {
+  static id = 'container-quote';
+  static name = 'Container Quote';
+
+  static canRender(result) {
+    const data = result.data || {};
+    return result.renderer === 'container-quote' ||
+      result.type === 'container-quote' ||
+      Boolean(data.quote && data.size);
+  }
+
+  static render(result, container) {
+    const data = result.data || {};
+    const size = data.size || '20ft';
+    const usage = data.usage || 'Converted Unit';
+    const quote = data.quote || { total: 18500, materials: 12000, labour: 6500 };
+    const model = data.model || {};
+
+    const card = document.createElement('div');
+    card.className = 'assistant-result-container-card';
+    card.style.cssText = 'margin-top:10px; border:1px solid var(--g200); border-radius:16px; background:var(--white); box-shadow:0 2px 10px rgba(0,0,0,.04); overflow:hidden; color:var(--black);';
+
+    const head = document.createElement('div');
+    head.style.cssText = 'padding:14px 18px; background:var(--g50); border-bottom:1px solid var(--g200); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;';
+
+    const headLeft = document.createElement('div');
+    headLeft.style.cssText = 'display:flex; align-items:center; gap:8px;';
+    const titleEl = document.createElement('strong');
+    titleEl.textContent = `${size.toUpperCase()} ${usage}`;
+    titleEl.style.cssText = 'font-size:0.95rem; color:var(--black);';
+    const cadBadge = document.createElement('span');
+    cadBadge.textContent = 'CAD Model';
+    cadBadge.style.cssText = 'font-size:0.72rem; padding:3px 10px; border-radius:9999px; background:var(--g100); color:var(--black); font-weight:700; border:1px solid var(--g200);';
+    headLeft.appendChild(titleEl);
+    headLeft.appendChild(cadBadge);
+
+    const openCpBtn = document.createElement('button');
+    openCpBtn.type = 'button';
+    openCpBtn.className = 'btn btn-secondary btn-sm';
+    openCpBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">${ICONS.external} Open in Planner</span>`;
+    openCpBtn.style.cssText = 'font-size:0.75rem; padding:4px 12px; border-radius:9999px; cursor:pointer; font-weight:700;';
+    openCpBtn.addEventListener('click', () => {
+      try {
+        sessionStorage.setItem('toolbox.container.handoff', JSON.stringify(model));
+        window.location.hash = '#container-planner';
+      } catch {}
+    });
+
+    head.appendChild(headLeft);
+    head.appendChild(openCpBtn);
+    card.appendChild(head);
+
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:16px 18px; display:flex; flex-direction:column; gap:14px;';
+
+    // Canvas CAD Preview Box
+    const canvasWrap = document.createElement('div');
+    canvasWrap.style.cssText = 'height:140px; background:var(--g50); border-radius:12px; border:1px solid var(--g200); display:flex; align-items:center; justify-content:center; position:relative;';
+    canvasWrap.innerHTML = `
+      <svg width="240" height="100" viewBox="0 0 240 100" fill="none" stroke="currentColor" stroke-width="1.8" style="color:var(--primary, #2563eb);">
+        <polygon points="30,30 190,30 220,15 60,15" fill="rgba(37,99,235,0.06)"/>
+        <polygon points="30,30 30,80 190,80 190,30" fill="rgba(37,99,235,0.12)"/>
+        <polygon points="190,30 190,80 220,65 220,15" fill="rgba(37,99,235,0.18)"/>
+        <rect x="50" y="40" width="30" height="30" stroke="var(--black)" stroke-width="1.5" fill="rgba(0,0,0,0.05)"/>
+        <rect x="110" y="35" width="22" height="45" stroke="var(--black)" stroke-width="1.5" fill="rgba(0,0,0,0.05)"/>
+      </svg>
+      <span style="position:absolute; bottom:8px; right:12px; font-size:0.72rem; color:var(--g600); font-family:var(--mono);">3D Geometry · ${(model.len || 6).toFixed(1)}m × ${(model.wid || 2.4).toFixed(1)}m</span>
+    `;
+    body.appendChild(canvasWrap);
+
+    // BoQ Summary Bar
+    const boq = document.createElement('div');
+    boq.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; padding:12px 14px; background:var(--g50); border-radius:10px; border:1px solid var(--g150);';
+    boq.innerHTML = `
+      <div><span style="font-size:0.72rem; color:var(--g600); font-weight:700; text-transform:uppercase; display:block;">Materials</span><strong style="font-family:var(--mono);">₦${(quote.materials || 0).toLocaleString()}</strong></div>
+      <div><span style="font-size:0.72rem; color:var(--g600); font-weight:700; text-transform:uppercase; display:block;">Labour</span><strong style="font-family:var(--mono);">₦${(quote.labour || 0).toLocaleString()}</strong></div>
+      <div><span style="font-size:0.72rem; color:var(--g600); font-weight:700; text-transform:uppercase; display:block;">Total Estimated</span><strong style="font-size:1.1rem; color:var(--primary, #2563eb); font-family:var(--mono);">₦${(quote.total || 0).toLocaleString()}</strong></div>
+    `;
+    body.appendChild(boq);
+
+    card.appendChild(body);
+    container.appendChild(card);
+    return card;
+  }
+}
+
+/**
+ * FLOOR PLAN RESULT — 2D vector architectural floor plan blueprint
+ */
+export class FloorPlanResultRenderer extends ResultRenderer {
+  static id = 'floor-plan';
+  static name = 'Floor Plan';
+
+  static canRender(result) {
+    const data = result.data || {};
+    return result.renderer === 'floor-plan' ||
+      result.type === 'floor-plan' ||
+      Boolean(data.rooms && data.squareMeters);
+  }
+
+  static render(result, container) {
+    const data = result.data || {};
+    const title = data.title || 'Floor Plan';
+    const squareMeters = Number(data.squareMeters || 85);
+    const rooms = Array.isArray(data.rooms) ? data.rooms : [];
+
+    const card = document.createElement('div');
+    card.className = 'assistant-result-floorplan-card';
+    card.style.cssText = 'margin-top:10px; border:1px solid var(--g200); border-radius:16px; background:var(--white); box-shadow:0 2px 10px rgba(0,0,0,.04); overflow:hidden; color:var(--black);';
+
+    const head = document.createElement('div');
+    head.style.cssText = 'padding:14px 18px; background:var(--g50); border-bottom:1px solid var(--g200); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;';
+
+    const headLeft = document.createElement('div');
+    headLeft.style.cssText = 'display:flex; align-items:center; gap:8px;';
+    const titleEl = document.createElement('strong');
+    titleEl.textContent = title;
+    titleEl.style.cssText = 'font-size:0.95rem; color:var(--black);';
+    const areaBadge = document.createElement('span');
+    areaBadge.textContent = `${squareMeters} m² Area`;
+    areaBadge.style.cssText = 'font-size:0.72rem; padding:3px 10px; border-radius:9999px; background:var(--g100); color:var(--black); font-weight:700; border:1px solid var(--g200);';
+    headLeft.appendChild(titleEl);
+    headLeft.appendChild(areaBadge);
+
+    const openArchBtn = document.createElement('button');
+    openArchBtn.type = 'button';
+    openArchBtn.className = 'btn btn-secondary btn-sm';
+    openArchBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">${ICONS.external} Edit in Architecture Studio</span>`;
+    openArchBtn.style.cssText = 'font-size:0.75rem; padding:4px 12px; border-radius:9999px; cursor:pointer; font-weight:700;';
+    openArchBtn.addEventListener('click', () => {
+      try {
+        sessionStorage.setItem('toolbox.arch.handoff', JSON.stringify({ rooms, title, squareMeters }));
+        window.location.hash = '#architecture-editor';
+      } catch {}
+    });
+
+    head.appendChild(headLeft);
+    head.appendChild(openArchBtn);
+    card.appendChild(head);
+
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:16px 18px; display:flex; flex-direction:column; gap:14px;';
+
+    // Vector Blueprint SVG
+    const svgWrap = document.createElement('div');
+    svgWrap.style.cssText = 'height:160px; background:var(--g50); border-radius:12px; border:1px solid var(--g200); display:flex; align-items:center; justify-content:center; overflow:hidden;';
+    svgWrap.innerHTML = `
+      <svg width="280" height="140" viewBox="0 0 280 140" fill="none" stroke="currentColor" stroke-width="1.8" style="color:var(--black);">
+        <rect x="20" y="15" width="240" height="110" stroke="var(--black)" stroke-width="2.5" fill="var(--white)"/>
+        <line x1="140" y1="15" x2="140" y2="125" stroke="var(--g300)" stroke-width="2"/>
+        <line x1="20" y1="75" x2="140" y2="75" stroke="var(--g300)" stroke-width="2"/>
+        <text x="75" y="50" font-size="9" font-family="sans-serif" font-weight="bold" fill="var(--black)" text-anchor="middle">Living Room (33m²)</text>
+        <text x="75" y="105" font-size="9" font-family="sans-serif" font-weight="bold" fill="var(--black)" text-anchor="middle">Kitchen & Bath</text>
+        <text x="200" y="75" font-size="9" font-family="sans-serif" font-weight="bold" fill="var(--black)" text-anchor="middle">Master Bedroom (22m²)</text>
+      </svg>
+    `;
+    body.appendChild(svgWrap);
+
+    card.appendChild(body);
+    container.appendChild(card);
+    return card;
+  }
+}
+
+/**
+ * LOGIC CIRCUIT RESULT — Interactive digital circuit schematic with live signal toggles
+ */
+export class LogicCircuitResultRenderer extends ResultRenderer {
+  static id = 'logic-circuit';
+  static name = 'Logic Circuit';
+
+  static canRender(result) {
+    const data = result.data || {};
+    return result.renderer === 'logic-circuit' ||
+      result.type === 'logic-circuit' ||
+      Boolean(data.gates && data.connections);
+  }
+
+  static render(result, container) {
+    const data = result.data || {};
+    const name = data.name || 'Digital Logic Circuit';
+    const expression = data.expression || 'Y = A · B';
+    const inputs = Array.isArray(data.inputs) ? data.inputs : ['A', 'B'];
+
+    const inputState = {};
+    inputs.forEach(inp => { inputState[inp] = 0; });
+
+    const card = document.createElement('div');
+    card.className = 'assistant-result-logic-card';
+    card.style.cssText = 'margin-top:10px; border:1px solid var(--g200); border-radius:16px; background:var(--white); box-shadow:0 2px 10px rgba(0,0,0,.04); overflow:hidden; color:var(--black);';
+
+    const head = document.createElement('div');
+    head.style.cssText = 'padding:14px 18px; background:var(--g50); border-bottom:1px solid var(--g200); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;';
+
+    const headLeft = document.createElement('div');
+    headLeft.style.cssText = 'display:flex; align-items:center; gap:8px;';
+    const titleEl = document.createElement('strong');
+    titleEl.textContent = name;
+    titleEl.style.cssText = 'font-size:0.95rem; color:var(--black);';
+    const gatesBadge = document.createElement('span');
+    gatesBadge.textContent = 'Logic Gates';
+    gatesBadge.style.cssText = 'font-size:0.72rem; padding:3px 10px; border-radius:9999px; background:var(--g100); color:var(--black); font-weight:700; border:1px solid var(--g200);';
+    headLeft.appendChild(titleEl);
+    headLeft.appendChild(gatesBadge);
+
+    const openLogicBtn = document.createElement('button');
+    openLogicBtn.type = 'button';
+    openLogicBtn.className = 'btn btn-secondary btn-sm';
+    openLogicBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">${ICONS.external} Open in Logic Lab</span>`;
+    openLogicBtn.style.cssText = 'font-size:0.75rem; padding:4px 12px; border-radius:9999px; cursor:pointer; font-weight:700;';
+    openLogicBtn.addEventListener('click', () => {
+      window.location.hash = '#logic-lab';
+    });
+
+    head.appendChild(headLeft);
+    head.appendChild(openLogicBtn);
+    card.appendChild(head);
+
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:16px 18px; display:flex; flex-direction:column; gap:14px;';
+
+    // Interactive Input Toggles
+    const toggleWrap = document.createElement('div');
+    toggleWrap.style.cssText = 'display:flex; align-items:center; gap:12px; flex-wrap:wrap;';
+    toggleWrap.innerHTML = `<span style="font-size:0.78rem; font-weight:700; color:var(--g600);">Interactive Inputs:</span>`;
+
+    const outDisplay = document.createElement('span');
+    outDisplay.style.cssText = 'font-size:0.78rem; font-family:var(--mono); font-weight:700; padding:3px 10px; border-radius:9999px; background:var(--g100); border:1px solid var(--g200); margin-left:auto;';
+    outDisplay.textContent = 'Output: 0';
+
+    inputs.forEach(inp => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-secondary btn-sm';
+      btn.style.cssText = 'font-size:0.75rem; font-family:var(--mono); font-weight:700; border-radius:9999px; padding:3px 12px; cursor:pointer;';
+      btn.textContent = `${inp} = 0`;
+      btn.addEventListener('click', () => {
+        inputState[inp] = inputState[inp] === 0 ? 1 : 0;
+        btn.textContent = `${inp} = ${inputState[inp]}`;
+        btn.style.background = inputState[inp] === 1 ? 'var(--black)' : '';
+        btn.style.color = inputState[inp] === 1 ? 'var(--white)' : '';
+        // Evaluate simple sum
+        const sum = Object.values(inputState).reduce((a, b) => a ^ b, 0);
+        outDisplay.textContent = `Output (Sum): ${sum}`;
+      });
+      toggleWrap.appendChild(btn);
+    });
+    toggleWrap.appendChild(outDisplay);
+    body.appendChild(toggleWrap);
+
+    // Expression summary
+    const exprBox = document.createElement('div');
+    exprBox.style.cssText = 'padding:10px 14px; background:var(--g50); border-radius:10px; border-left:3.5px solid var(--primary, #2563eb); font-size:0.82rem; font-family:var(--mono); color:var(--black);';
+    exprBox.innerHTML = `<strong>Formula:</strong> ${expression}`;
+    body.appendChild(exprBox);
+
+    card.appendChild(body);
+    container.appendChild(card);
+    return card;
+  }
+}
+
+/**
+ * MAP RESULT — Interactive visual vector/tile map with markers and routes
+ */
+export class MapResultRenderer extends ResultRenderer {
+  static id = 'map-view';
+  static name = 'Map View';
+
+  static canRender(result) {
+    const data = result?.data || result || {};
+    return result?.renderer === 'map-view' ||
+      result?.type === 'map-view' ||
+      data?.renderer === 'map-view' ||
+      data?.type === 'map-view' ||
+      Boolean(data?.markers && Array.isArray(data?.markers)) ||
+      Boolean(result?.markers && Array.isArray(result?.markers)) ||
+      Boolean(data?.places && Array.isArray(data?.places));
+  }
+
+  static render(result, container) {
+    const data = (result?.data && (result.data.markers || result.data.places || result.data.title)) ? result.data : (result || {});
+    const title = data.title || result?.title || 'Geographic Map';
+    let markers = Array.isArray(data.markers) ? data.markers : (Array.isArray(result?.markers) ? result.markers : []);
+    const places = Array.isArray(data.places) ? data.places : (Array.isArray(result?.places) ? result.places : []);
+    const distanceKm = Number(data.distanceKm || result?.distanceKm || 0);
+
+    // If places are provided but markers are empty, construct markers from places
+    if ((!markers || markers.length === 0) && places.length > 0) {
+      markers = places.map(p => ({
+        name: p.name,
+        lat: p.lat,
+        lng: p.lng,
+        description: `${p.address || ''} ${p.phone ? '· ' + p.phone : ''}`
+      }));
+    }
+
+    const card = document.createElement('div');
+    card.className = 'assistant-result-map-card';
+    card.style.cssText = 'margin-top:10px; border:1px solid var(--g200); border-radius:16px; background:var(--white); box-shadow:0 2px 10px rgba(0,0,0,.04); overflow:hidden; color:var(--black); font-family:var(--sans);';
+
+    const head = document.createElement('div');
+    head.style.cssText = 'padding:14px 18px; background:var(--g50); border-bottom:1px solid var(--g200); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;';
+
+    const headLeft = document.createElement('div');
+    headLeft.style.cssText = 'display:flex; align-items:center; gap:8px;';
+    const titleEl = document.createElement('strong');
+    titleEl.textContent = title;
+    titleEl.style.cssText = 'font-size:0.95rem; color:var(--black);';
+    headLeft.appendChild(titleEl);
+
+    if (distanceKm > 0) {
+      const distBadge = document.createElement('span');
+      distBadge.textContent = `${distanceKm.toLocaleString()} km`;
+      distBadge.style.cssText = 'font-size:0.72rem; padding:3px 10px; border-radius:9999px; background:var(--g100); color:var(--black); font-weight:700; border:1px solid var(--g200);';
+      headLeft.appendChild(distBadge);
+    }
+
+    const openMapBtn = document.createElement('button');
+    openMapBtn.type = 'button';
+    openMapBtn.className = 'btn btn-secondary btn-sm';
+    openMapBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">${ICONS.external} Open Interactive Map</span>`;
+    openMapBtn.style.cssText = 'font-size:0.75rem; padding:4px 12px; border-radius:9999px; cursor:pointer; font-weight:700; border:1px solid var(--g200);';
+    openMapBtn.addEventListener('click', () => {
+      try {
+        sessionStorage.setItem('toolbox.map.handoff', JSON.stringify({ title, markers, distanceKm }));
+        window.location.hash = '#interactive-map';
+      } catch {}
+    });
+
+    head.appendChild(headLeft);
+    head.appendChild(openMapBtn);
+    card.appendChild(head);
+
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:16px 18px; display:flex; flex-direction:column; gap:12px;';
+
+    // Visual Map Preview Canvas
+    const mapStage = document.createElement('div');
+    const mapStageId = `ast-map-${Date.now()}-${Math.floor(Math.random() * 899 + 100)}`;
+    mapStage.id = mapStageId;
+    mapStage.style.cssText = 'width:100%; height:230px; border-radius:12px; background:#0f172a; border:1px solid var(--g200); position:relative; overflow:hidden; z-index:1;';
+
+    if (markers.length > 0) {
+      const lats = markers.map(m => m.lat);
+      const lngs = markers.map(m => m.lng);
+      const minLat = Math.min(...lats);
+      const maxLat = Math.max(...lats);
+      const minLng = Math.min(...lngs);
+      const maxLng = Math.max(...lngs);
+      const latSpan = Math.max(maxLat - minLat, 0.005);
+      const lngSpan = Math.max(maxLng - minLng, 0.005);
+
+      const points = markers.map((m, idx) => {
+        const x = Math.round(60 + ((m.lng - minLng) / lngSpan) * 480);
+        const y = Math.round(185 - ((m.lat - minLat) / latSpan) * 140);
+        return { x, y, name: m.name, idx: idx + 1 };
+      });
+
+      const polylineHtml = points.length > 1
+        ? `<polyline points="${points.map(p => `${p.x},${p.y}`).join(' ')}" stroke="#38bdf8" stroke-width="2.5" stroke-dasharray="5,5" fill="none"/>`
+        : '';
+
+      const markersHtml = points.map(p => `
+        <g>
+          <circle cx="${p.x}" cy="${p.y}" r="13" fill="#2563eb" stroke="#ffffff" stroke-width="2"/>
+          <text x="${p.x}" y="${p.y + 4}" text-anchor="middle" fill="#ffffff" font-size="10.5" font-weight="bold">${p.idx}</text>
+          <text x="${p.x}" y="${p.y - 18}" text-anchor="middle" fill="#f1f5f9" font-size="10" font-weight="600">${p.name.length > 24 ? p.name.slice(0, 22) + '…' : p.name}</text>
+        </g>
+      `).join('');
+
+      mapStage.innerHTML = `
+        <svg viewBox="0 0 600 230" style="width:100%; height:100%; display:block; background:#0f172a; border-radius:12px;">
+          <defs>
+            <pattern id="mapGridDots" width="24" height="24" patternUnits="userSpaceOnUse">
+              <circle cx="2" cy="2" r="1.2" fill="#334155"/>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="#0f172a"/>
+          <rect width="100%" height="100%" fill="url(#mapGridDots)"/>
+          ${polylineHtml}
+          ${markersHtml}
+        </svg>
+      `;
+    } else {
+      mapStage.innerHTML = `<div style="display:flex; align-items:center; justify-content:center; height:100%; color:#94a3b8; font-size:0.85rem;">Interactive Map Visualizer</div>`;
+    }
+
+    body.appendChild(mapStage);
+
+    // Detailed Places Cards (if places array provided)
+    if (places.length > 0) {
+      const placesWrap = document.createElement('div');
+      placesWrap.style.cssText = 'display:flex; flex-direction:column; gap:8px; margin-top:4px;';
+
+      places.forEach((p, i) => {
+        const pCard = document.createElement('div');
+        pCard.style.cssText = 'padding:12px 14px; background:var(--g50); border-radius:12px; border:1px solid var(--g200); display:flex; flex-direction:column; gap:4px;';
+
+        const topRow = document.createElement('div');
+        topRow.style.cssText = 'display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;';
+        topRow.innerHTML = `
+          <div>
+            <strong style="color:var(--black); font-size:0.88rem;">${i + 1}. ${p.name}</strong>
+            ${p.certified ? `<div style="font-size:0.72rem; color:#16a34a; font-weight:700; margin-top:2px;">Verified: ${p.certified}</div>` : ''}
+          </div>
+          ${p.pricing ? `<span style="font-size:0.75rem; font-weight:750; background:var(--g100); color:var(--black); padding:3px 10px; border-radius:9999px; border:1px solid var(--g200);">${p.pricing}</span>` : ''}
+        `;
+        pCard.appendChild(topRow);
+
+        if (p.address || p.phone) {
+          const infoRow = document.createElement('div');
+          infoRow.style.cssText = 'font-size:0.76rem; color:var(--g600); display:flex; gap:12px; flex-wrap:wrap; margin-top:2px;';
+          if (p.address) infoRow.innerHTML += `<span>📍 ${p.address}</span>`;
+          if (p.phone) infoRow.innerHTML += `<span>📞 ${p.phone}</span>`;
+          pCard.appendChild(infoRow);
+        }
+
+        if (p.description) {
+          const descRow = document.createElement('div');
+          descRow.style.cssText = 'font-size:0.74rem; color:var(--g700); line-height:1.4; margin-top:2px;';
+          descRow.textContent = p.description;
+          pCard.appendChild(descRow);
+        }
+
+        placesWrap.appendChild(pCard);
+      });
+
+      body.appendChild(placesWrap);
+    } else if (markers.length > 0) {
+      // Marker waypoints list
+      const markersList = document.createElement('div');
+      markersList.style.cssText = 'display:flex; flex-direction:column; gap:6px; margin-top:2px;';
+      markers.forEach((m, i) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'padding:10px 14px; background:var(--g50); border-radius:10px; border:1px solid var(--g150); display:flex; justify-content:space-between; align-items:center; font-size:0.84rem;';
+        row.innerHTML = `
+          <div>
+            <strong style="color:var(--black); font-size:0.86rem;">${i + 1}. ${m.name}</strong>
+            ${m.description ? `<div style="font-size:0.75rem; color:var(--g600); margin-top:2px;">${m.description}</div>` : ''}
+          </div>
+          <span style="font-family:var(--mono); font-size:0.74rem; color:var(--g600); background:var(--g100); padding:3px 8px; border-radius:9999px;">${m.lat.toFixed(4)}°, ${m.lng.toFixed(4)}°</span>
+        `;
+        markersList.appendChild(row);
+      });
+      body.appendChild(markersList);
+    }
+
+    card.appendChild(body);
+    container.appendChild(card);
+    return card;
+  }
+}
+
+/**
+ * LOCATION COORDINATES RESULT — Visual GPS location pill card
+ */
+export class LocationCoordinatesResultRenderer extends ResultRenderer {
+  static id = 'location-coordinates';
+  static name = 'Location Coordinates';
+
+  static canRender(result) {
+    const data = result.data || {};
+    return result.renderer === 'location-coordinates' ||
+      result.type === 'location-coordinates' ||
+      Boolean(data.latitude !== undefined && data.longitude !== undefined);
+  }
+
+  static render(result, container) {
+    const data = result.data || {};
+    const lat = Number(data.latitude || 0);
+    const lng = Number(data.longitude || 0);
+    const area = data.area || 'Current Location';
+    const accuracy = Number(data.accuracy || 0);
+
+    const card = document.createElement('div');
+    card.className = 'assistant-result-location-card';
+    card.style.cssText = 'margin-top:8px; padding:10px 16px; border:1px solid var(--g200); border-radius:9999px; background:var(--g50); display:inline-flex; align-items:center; gap:10px; color:var(--black); font-family:var(--sans); box-shadow:0 2px 8px rgba(0,0,0,.03);';
+
+    const iconWrap = document.createElement('div');
+    iconWrap.style.cssText = 'width:28px; height:28px; border-radius:50%; background:var(--primary, #2563eb); color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0;';
+    iconWrap.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2" fill="currentColor"/><line x1="12" y1="1" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="23"/><line x1="1" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="23" y2="12"/></svg>`;
+
+    const textWrap = document.createElement('div');
+    textWrap.style.cssText = 'display:flex; align-items:baseline; gap:6px; font-size:0.84rem;';
+    const titleEl = document.createElement('strong');
+    titleEl.textContent = `GPS Location: ${area}`;
+    titleEl.style.cssText = 'color:var(--black); font-weight:700;';
+    const coordsEl = document.createElement('span');
+    coordsEl.textContent = `(${lat.toFixed(4)}°, ${lng.toFixed(4)}°)${accuracy > 0 ? ` ±${Math.round(accuracy)}m` : ''}`;
+    coordsEl.style.cssText = 'font-size:0.74rem; color:var(--g600); font-family:var(--mono);';
+    textWrap.appendChild(titleEl);
+    textWrap.appendChild(coordsEl);
+
+    card.appendChild(iconWrap);
+    card.appendChild(textWrap);
+    container.appendChild(card);
+    return card;
+  }
+}
+
+/**
+ * TUNER PITCH RESULT — Harmonic instrument string frequency reference
+ */
+export class TunerPitchResultRenderer extends ResultRenderer {
+  static id = 'tuner-pitch';
+  static name = 'Instrument Tuner Pitch';
+
+  static canRender(result) {
+    const data = result.data || {};
+    return result.renderer === 'tuner-pitch' ||
+      result.type === 'tuner-pitch' ||
+      Boolean(data.strings && data.tuningName);
+  }
+
+  static render(result, container) {
+    const data = result.data || {};
+    const instrument = data.instrument || 'Guitar';
+    const tuningName = data.tuningName || 'Standard E';
+    const strings = Array.isArray(data.strings) ? data.strings : [];
+    let audioCtx = null;
+
+    const card = document.createElement('div');
+    card.className = 'assistant-result-tuner-card';
+    card.style.cssText = 'margin-top:10px; border:1px solid var(--g200); border-radius:16px; background:var(--white); box-shadow:0 2px 10px rgba(0,0,0,.04); overflow:hidden; color:var(--black);';
+
+    const head = document.createElement('div');
+    head.style.cssText = 'padding:14px 18px; background:var(--g50); border-bottom:1px solid var(--g200); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;';
+
+    const headLeft = document.createElement('div');
+    headLeft.style.cssText = 'display:flex; align-items:center; gap:8px;';
+    const titleEl = document.createElement('strong');
+    titleEl.textContent = `${instrument} Tuner`;
+    titleEl.style.cssText = 'font-size:0.95rem; color:var(--black);';
+    const tuneBadge = document.createElement('span');
+    tuneBadge.textContent = tuningName;
+    tuneBadge.style.cssText = 'font-size:0.72rem; padding:3px 10px; border-radius:9999px; background:var(--g100); color:var(--black); font-weight:700; border:1px solid var(--g200);';
+    headLeft.appendChild(titleEl);
+    headLeft.appendChild(tuneBadge);
+
+    const openTunerBtn = document.createElement('button');
+    openTunerBtn.type = 'button';
+    openTunerBtn.className = 'btn btn-primary btn-sm';
+    openTunerBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">${ICONS.external} Launch Live Mic Tuner</span>`;
+    openTunerBtn.style.cssText = 'font-size:0.75rem; padding:4px 12px; border-radius:9999px; cursor:pointer; font-weight:700;';
+    openTunerBtn.addEventListener('click', () => {
+      window.location.hash = '#tuner';
+    });
+
+    head.appendChild(headLeft);
+    head.appendChild(openTunerBtn);
+    card.appendChild(head);
+
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:16px 18px; display:flex; flex-direction:column; gap:12px;';
+
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:0.78rem; color:var(--g600); font-weight:700;';
+    label.textContent = 'Click any string to hear reference pitch tone:';
+    body.appendChild(label);
+
+    const stringButtons = document.createElement('div');
+    stringButtons.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:8px;';
+
+    strings.forEach(st => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-secondary btn-sm';
+      btn.style.cssText = 'display:flex; flex-direction:column; align-items:center; padding:8px 10px; border-radius:12px; cursor:pointer;';
+      btn.innerHTML = `
+        <strong style="font-size:1.05rem; font-family:var(--mono); color:var(--black);">${st.note}${st.octave || ''}</strong>
+        <span style="font-size:0.72rem; color:var(--g600);">${st.freqHz.toFixed(1)} Hz</span>
+      `;
+      btn.addEventListener('click', () => {
+        try {
+          if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          if (audioCtx.state === 'suspended') audioCtx.resume();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(st.freqHz, audioCtx.currentTime);
+          gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.8);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 2.0);
+        } catch {}
+      });
+      stringButtons.appendChild(btn);
+    });
+    body.appendChild(stringButtons);
+
+    card.appendChild(body);
+    container.appendChild(card);
+    return card;
+  }
+}
+
+/**
+ * PDF ANNOTATION RESULT — Visual preview of document markup and redactions
+ */
+export class PdfAnnotationResultRenderer extends ResultRenderer {
+  static id = 'pdf-annotation';
+  static name = 'PDF Annotation';
+
+  static canRender(result) {
+    const data = result.data || {};
+    return result.renderer === 'pdf-annotation' ||
+      result.type === 'pdf-annotation' ||
+      Boolean(data.annotations && data.title);
+  }
+
+  static render(result, container) {
+    const data = result.data || {};
+    const title = data.title || 'Document Markup';
+    const summary = data.summary || 'Proposed document annotations and redactions.';
+    const annotations = Array.isArray(data.annotations) ? data.annotations : [];
+
+    const card = document.createElement('div');
+    card.className = 'assistant-result-pdfannot-card';
+    card.style.cssText = 'margin-top:10px; border:1px solid var(--g200); border-radius:16px; background:var(--white); box-shadow:0 2px 10px rgba(0,0,0,.04); overflow:hidden; color:var(--black);';
+
+    const head = document.createElement('div');
+    head.style.cssText = 'padding:14px 18px; background:var(--g50); border-bottom:1px solid var(--g200); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;';
+
+    const headLeft = document.createElement('div');
+    headLeft.style.cssText = 'display:flex; align-items:center; gap:8px;';
+    const titleEl = document.createElement('strong');
+    titleEl.textContent = title;
+    titleEl.style.cssText = 'font-size:0.95rem; color:var(--black);';
+    const countBadge = document.createElement('span');
+    countBadge.textContent = `${annotations.length} Directives`;
+    countBadge.style.cssText = 'font-size:0.72rem; padding:3px 10px; border-radius:9999px; background:var(--g100); color:var(--black); font-weight:700; border:1px solid var(--g200);';
+    headLeft.appendChild(titleEl);
+    headLeft.appendChild(countBadge);
+
+    const openPdeBtn = document.createElement('button');
+    openPdeBtn.type = 'button';
+    openPdeBtn.className = 'btn btn-secondary btn-sm';
+    openPdeBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">${ICONS.external} Open in PDF Editor</span>`;
+    openPdeBtn.style.cssText = 'font-size:0.75rem; padding:4px 12px; border-radius:9999px; cursor:pointer; font-weight:700;';
+    openPdeBtn.addEventListener('click', () => {
+      window.location.hash = '#pdf-editor';
+    });
+
+    head.appendChild(headLeft);
+    head.appendChild(openPdeBtn);
+    card.appendChild(head);
+
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:16px 18px; display:flex; flex-direction:column; gap:10px;';
+
+    const sumEl = document.createElement('div');
+    sumEl.style.cssText = 'font-size:0.84rem; color:var(--g700); line-height:1.5;';
+    sumEl.textContent = summary;
+    body.appendChild(sumEl);
+
+    const annotList = document.createElement('div');
+    annotList.style.cssText = 'display:flex; flex-direction:column; gap:6px;';
+    annotations.forEach(a => {
+      const row = document.createElement('div');
+      row.style.cssText = 'padding:8px 12px; background:var(--g50); border-radius:8px; border:1px solid var(--g150); display:flex; justify-content:space-between; align-items:center; font-size:0.82rem;';
+      const isRedact = a.type === 'redact';
+      row.innerHTML = `
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:0.7rem; padding:2px 8px; border-radius:9999px; background:${isRedact ? '#fee2e2' : 'var(--g200)'}; color:${isRedact ? '#b91c1c' : 'var(--black)'}; font-weight:700;">${a.type.toUpperCase()}</span>
+          <strong style="color:var(--black);">${a.label}</strong>
+        </div>
+        <span style="font-size:0.74rem; color:var(--g600);">Page ${a.page || 1}</span>
+      `;
+      annotList.appendChild(row);
+    });
+    body.appendChild(annotList);
+
+    card.appendChild(body);
+    container.appendChild(card);
+    return card;
   }
 }
 
@@ -1941,7 +3569,7 @@ export class TextResultRenderer extends ResultRenderer {
 
     const el = document.createElement('div');
     el.className = 'assistant-result-text';
-    el.style.cssText = 'margin-top:6px; font-size:0.88rem; line-height:1.5; color:var(--text, #0f172a);';
+    el.style.cssText = 'margin-top:6px; font-size:0.88rem; line-height:1.5; color:var(--black);';
     el.textContent = text;
     container.appendChild(el);
     return el;
@@ -1953,6 +3581,19 @@ export class TextResultRenderer extends ResultRenderer {
  */
 export const RESULT_RENDERERS = [
   ErrorResultRenderer,
+  InvoiceResultRenderer,
+  UmlDiagramResultRenderer,
+  AlgorithmResultRenderer,
+  MetronomeResultRenderer,
+  SoundEffectResultRenderer,
+  ElementsResultRenderer,
+  ContainerQuoteResultRenderer,
+  FloorPlanResultRenderer,
+  LogicCircuitResultRenderer,
+  MapResultRenderer,
+  LocationCoordinatesResultRenderer,
+  TunerPitchResultRenderer,
+  PdfAnnotationResultRenderer,
   Anatomy3DResultRenderer,
   IllustrationResultRenderer,
   DiseaseResultRenderer,

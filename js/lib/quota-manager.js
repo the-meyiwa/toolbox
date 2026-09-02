@@ -6,10 +6,10 @@
 
 const STORAGE_QUOTA_KEY = 'toolbox_usage_quota_v1';
 
-export const UNLIMITED_ACCOUNTS = [
-  'meyigbenee@icloud.com',
-  'meyigbenee@gmail.com'
-];
+export const UNLIMITED_ACCOUNTS = Object.freeze([
+  'meyigbenee@gmail.com',
+  'meyigbenee@icloud.com'
+]);
 
 const LIMITS = {
   DAILY_MESSAGES: 50,
@@ -23,21 +23,66 @@ function getTodayString() {
   return new Date().toISOString().split('T')[0];
 }
 
-export function isUserUnlimited() {
+/**
+ * Check if the user is an authorized unlimited account
+ * @param {string|null} [checkEmail] - Optional direct email string to verify
+ */
+export function isUserUnlimited(checkEmail = null) {
   try {
-    if (typeof window === 'undefined' || !window.location?.hostname) return true;
-    const raw = localStorage.getItem('supabase_auth_session');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      const email = (parsed.email || parsed.user?.email || '').toLowerCase().trim();
-      if (UNLIMITED_ACCOUNTS.includes(email)) return true;
+    if (checkEmail && typeof checkEmail === 'string') {
+      const norm = checkEmail.toLowerCase().trim();
+      return UNLIMITED_ACCOUNTS.includes(norm);
     }
-    const directEmail = (
-      localStorage.getItem('toolbox_user_email') ||
-      localStorage.getItem('user_email') ||
-      ''
-    ).toLowerCase().trim();
-    if (UNLIMITED_ACCOUNTS.includes(directEmail)) return true;
+
+    if (typeof localStorage === 'undefined') return false;
+
+    // Check supabase session in localStorage
+    const sessionKeys = [
+      'toolbox_supabase_session',
+      'supabase_auth_session',
+      'sb-ssoruyruzbvgyondxlgj-auth-token'
+    ];
+
+    for (const key of sessionKeys) {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          const email = (
+            parsed.email ||
+            parsed.user?.email ||
+            parsed.currentSession?.user?.email ||
+            ''
+          ).toLowerCase().trim();
+          if (email && UNLIMITED_ACCOUNTS.includes(email)) return true;
+        } catch {}
+      }
+    }
+
+    // Check SpaceEngine / user profile
+    const profileKeys = [
+      'toolbox_user_profile',
+      'toolbox_user_email',
+      'user_email',
+      'toolbox_profile',
+      'space_user_profile'
+    ];
+
+    for (const key of profileKeys) {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        try {
+          if (raw.startsWith('{')) {
+            const parsed = JSON.parse(raw);
+            const email = (parsed.email || parsed.user_email || '').toLowerCase().trim();
+            if (email && UNLIMITED_ACCOUNTS.includes(email)) return true;
+          } else {
+            const email = raw.toLowerCase().trim();
+            if (email && UNLIMITED_ACCOUNTS.includes(email)) return true;
+          }
+        } catch {}
+      }
+    }
   } catch {}
   return false;
 }

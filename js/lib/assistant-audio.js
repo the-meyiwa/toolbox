@@ -9,7 +9,6 @@ class AssistantAudioService {
     this.instances = new Map();
     this.currentActiveId = null;
     this.listeners = new Set();
-    this.synthUrls = new Set(); // Track synthesized blob: URLs for cleanup
   }
 
   subscribe(fn) {
@@ -34,43 +33,55 @@ class AssistantAudioService {
     let trackArtwork = artworkUrl || '';
     let trackDuration = 30; // standard iTunes preview duration in seconds
 
-    // 2. Fetch audio track preview if no direct URL is provided
+    // 2. Fetch audio track preview from iTunes if no direct URL is provided
     if (!audioUrl) {
-      try {
-        const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=10`);
-        if (res.ok) {
-          const data = await res.json();
-          const tracks = (data.results || []).filter(r => r.previewUrl);
-          if (tracks.length > 0) {
-            const track = tracks[0];
-            audioUrl = track.previewUrl;
-            trackTitle = track.trackName || trackTitle;
-            trackArtist = track.artistName || trackArtist;
-            trackArtwork = track.artworkUrl60 || track.artworkUrl30 || '';
+      const searchTerms = [
+        // Stage 1: Exact query with entity=song
+        `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=15`,
+        // Stage 2: Broader search without entity filter (finds sound effects, soundtracks, instrumentals)
+        `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&limit=15`,
+        // Stage 3: Simplified search stripping filler words
+        `https://itunes.apple.com/search?term=${encodeURIComponent(query.replace(/\b(play|some|music|song|audio|sound|sounds|of|the|a|an|in|for|track)\b/gi, '').trim() || query)}&limit=15`
+      ];
+
+      for (const urlEndpoint of searchTerms) {
+        if (audioUrl) break;
+        try {
+          const res = await fetch(urlEndpoint);
+          if (res.ok) {
+            const data = await res.json();
+            const tracks = (data.results || []).filter(r => r.previewUrl);
+            if (tracks.length > 0) {
+              const track = tracks[0];
+              audioUrl = track.previewUrl;
+              trackTitle = track.trackName || trackTitle;
+              trackArtist = track.artistName || trackArtist;
+              trackArtwork = track.artworkUrl100 || track.artworkUrl60 || track.artworkUrl30 || '';
+            }
           }
+        } catch (err) {
+          console.warn('iTunes search endpoint failed:', urlEndpoint, err);
         }
-      } catch (err) {
-        console.warn('iTunes search failed, attempting fallback:', err);
       }
     }
 
-    // 3. Fallback: Synthesized Web Audio tone/melody if search returned no results
+    // 3. If iTunes returned no playable preview, throw clear error (NO synthesized fanfare)
     if (!audioUrl) {
-      try {
-        const synthData = this.generateSynthAudio(query);
-        audioUrl = synthData.url;
-        trackTitle = synthData.title;
-        trackArtist = 'Toolbox WebAudio Synth';
-        trackDuration = synthData.duration;
-        // Track synthesized URL for cleanup
-        this.synthUrls.add(audioUrl);
-      } catch (err) {
-        throw new Error(`Could not find or synthesize audio for "${query}".`);
-      }
+      throw new Error(`Could not find an audio preview for "${query}" on iTunes. Please try searching by track title, artist name, or genre.`);
     }
 
     const audioId = `aud_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const audio = new Audio(audioUrl);
+    const audio = typeof Audio !== 'undefined'
+      ? new Audio(audioUrl)
+      : {
+          play: async () => {},
+          pause: () => {},
+          load: () => {},
+          addEventListener: () => {},
+          currentTime: 0,
+          duration: 30,
+          volume: 1
+        };
     audio.crossOrigin = 'anonymous';
     audio.volume = 1.0;
     audio.loop = !!loop;
@@ -233,11 +244,6 @@ class AssistantAudioService {
           inst.audio.load();
         }
         inst.isPlaying = false;
-        // Revoke blob URLs created by synthesized audio
-        if (inst.url && inst.url.startsWith('blob:')) {
-          URL.revokeObjectURL(inst.url);
-          this.synthUrls.delete(inst.url);
-        }
       } catch (e) {}
     });
     this.instances.clear();
@@ -246,75 +252,6 @@ class AssistantAudioService {
 
   destroyAll() {
     this.stopAll();
-  }
-
-  generateSynthAudio(query) {
-    // Generate a simple pleasant melody/arpeggio data URL as audio/wav
-    const sampleRate = 22050;
-    const duration = 2.5;
-    const numSamples = Math.floor(sampleRate * duration);
-    const buffer = new Float32Array(numSamples);
-
-    let baseFreq = 440; // A4
-    const lower = (query || '').toLowerCase();
-    if (lower.includes('piano') || lower.includes('chord')) baseFreq = 261.63; // C4
-    else if (lower.includes('laser') || lower.includes('beep')) baseFreq = 880; // A5
-    else if (lower.includes('bass') || lower.includes('drum')) baseFreq = 110; // A2
-
-    const notes = [baseFreq, baseFreq * 1.25, baseFreq * 1.5, baseFreq * 2];
-    const noteDuration = duration / notes.length;
-
-    for (let i = 0; i < numSamples; i++) {
-      const t = i / sampleRate;
-      const noteIdx = Math.min(notes.length - 1, Math.floor(t / noteDuration));
-      const freq = notes[noteIdx];
-      const noteTime = t % noteDuration;
-      const env = Math.exp(-3 * (noteTime / noteDuration));
-      buffer[i] = Math.sin(2 * Math.PI * freq * t) * env * 0.4;
-    }
-
-    // Convert Float32Array to 16-bit PCM WAV Data URI
-    const wavBuffer = new ArrayBuffer(44 + numSamples * 2);
-    const view = new DataView(wavBuffer);
-
-    // RIFF chunk descriptor
-    writeString(view, 0, 'RIFF');
-    view.setUint32(4, 36 + numSamples * 2, true);
-    writeString(view, 8, 'WAVE');
-    // fmt sub-chunk
-    writeString(view, 12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true); // PCM
-    view.setUint16(22, 1, true); // Mono
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * 2, true);
-    view.setUint16(32, 2, true);
-    view.setUint16(34, 16, true);
-    // data sub-chunk
-    writeString(view, 36, 'data');
-    view.setUint32(40, numSamples * 2, true);
-
-    let offset = 44;
-    for (let i = 0; i < numSamples; i++) {
-      const s = Math.max(-1, Math.min(1, buffer[i]));
-      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-      offset += 2;
-    }
-
-    const blob = new Blob([view], { type: 'audio/wav' });
-    const url = URL.createObjectURL(blob);
-
-    return {
-      url,
-      title: `${query.charAt(0).toUpperCase() + query.slice(1)} (Synth Sample)`,
-      duration: duration
-    };
-  }
-}
-
-function writeString(view, offset, string) {
-  for (let i = 0; i < string.length; i++) {
-    view.setUint8(offset + i, string.charCodeAt(i));
   }
 }
 

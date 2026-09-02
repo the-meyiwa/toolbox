@@ -8,7 +8,20 @@ import {
   FileDownloadCardRenderer,
   FileSavedResultRenderer,
   IllustrationResultRenderer,
-  DiseaseResultRenderer
+  DiseaseResultRenderer,
+  InvoiceResultRenderer,
+  UmlDiagramResultRenderer,
+  AlgorithmResultRenderer,
+  MetronomeResultRenderer,
+  SoundEffectResultRenderer,
+  ElementsResultRenderer,
+  ContainerQuoteResultRenderer,
+  FloorPlanResultRenderer,
+  LogicCircuitResultRenderer,
+  MapResultRenderer,
+  LocationCoordinatesResultRenderer,
+  TunerPitchResultRenderer,
+  PdfAnnotationResultRenderer
 } from '../../js/lib/assistant-result-renderer.js';
 import { ConversationIntegrationManager } from '../../js/lib/assistant-integration.js';
 import { resolveAnatomyQuery } from '../../js/lib/anatomy-data.js';
@@ -279,4 +292,318 @@ test('Diseases Database Search: resolves cephalitis and hay fever queries', asyn
   const otitisRes = searchDiseases('ear infection');
   assert.ok(otitisRes.length > 0);
   assert.equal(otitisRes[0].icd11, 'AA00');
+});
+
+test('Assistant Tool generate_invoice: generates structured invoice and renders card with PDF action', async () => {
+  const res = await executeAssistantTool('generate_invoice', {
+    client: 'Acme Corp\n456 Industrial Blvd',
+    lines: [
+      { description: 'React Engineering', qty: 40, price: 150 },
+      { description: 'Cloud Infrastructure', qty: 1, price: 500 }
+    ],
+    taxRate: 10
+  });
+
+  assert.equal(res.status, 'success');
+  assert.equal(res.type, 'invoice');
+  assert.equal(res.invoice.subtotal, 6500);
+  assert.equal(res.invoice.total, 7150);
+
+  const container = new MockElement('div');
+  const card = InvoiceResultRenderer.render({ data: res }, container);
+  assert.ok(card);
+  assert.ok(card.textContent.includes('Acme Corp'));
+  assert.ok(card.textContent.includes('7,150'));
+  assert.ok(card.textContent.includes('Download PDF'));
+  assert.ok(card.textContent.includes('Edit in Builder'));
+});
+
+test('Assistant Tool generate_uml: outputs Mermaid diagram with vector SVG actions', async () => {
+  const res = await executeAssistantTool('generate_uml', {
+    diagramType: 'sequence',
+    title: 'OAuth2 Login Flow',
+    code: 'sequenceDiagram\nUser->>AuthServer: Authorize\nAuthServer-->>User: Token'
+  });
+
+  assert.equal(res.status, 'success');
+  assert.equal(res.type, 'uml-diagram');
+  assert.equal(res.title, 'OAuth2 Login Flow');
+
+  const container = new MockElement('div');
+  const card = UmlDiagramResultRenderer.render({ data: res }, container);
+  assert.ok(card);
+  assert.ok(card.textContent.includes('OAuth2 Login Flow'));
+  assert.ok(card.textContent.includes('Open in UML Studio'));
+  assert.ok(card.textContent.includes('Save SVG'));
+});
+
+test('Assistant Tool simulate_algorithm: generates execution frames with transport controls', async () => {
+  const res = await executeAssistantTool('simulate_algorithm', {
+    algorithm: 'bubble',
+    data: [5, 1, 4, 2, 8]
+  });
+
+  assert.equal(res.status, 'success');
+  assert.equal(res.type, 'algorithm-simulation');
+  assert.ok(res.frames.length > 0);
+
+  const container = new MockElement('div');
+  const card = AlgorithmResultRenderer.render({ data: res }, container);
+  assert.ok(card);
+  assert.ok(card.textContent.toLowerCase().includes('bubble sort'));
+  assert.ok(card.textContent.includes('Open in Algorithm Lab'));
+});
+
+test('Assistant Tool start_metronome: prepares metronome widget with BPM', async () => {
+  const res = await executeAssistantTool('start_metronome', {
+    bpm: 144,
+    beats: 6
+  });
+
+  assert.equal(res.status, 'success');
+  assert.equal(res.type, 'metronome');
+  assert.equal(res.bpm, 144);
+  assert.equal(res.beats, 6);
+
+  const container = new MockElement('div');
+  const card = MetronomeResultRenderer.render({ data: res }, container);
+  assert.ok(card);
+  assert.ok(card.textContent.includes('144'));
+  assert.ok(card.textContent.includes('6/4 Time'));
+});
+
+test('Assistant Tool play_sound_effect: synthesizes sound effect audio card', async () => {
+  const res = await executeAssistantTool('play_sound_effect', {
+    name: 'Laser Zap',
+    type: 'laser',
+    duration: 0.8
+  });
+
+  assert.equal(res.status, 'success');
+  assert.equal(res.type, 'sound-effect');
+  assert.equal(res.name, 'Laser Zap');
+
+  const container = new MockElement('div');
+  const card = SoundEffectResultRenderer.render({ data: res }, container);
+  assert.ok(card);
+  assert.ok(card.textContent.includes('Laser Zap'));
+  assert.ok(card.textContent.includes('Play Sound'));
+});
+
+test('Assistant Tool explore_elements: compares periodic table elements with electron shells', async () => {
+  const res = await executeAssistantTool('explore_elements', {
+    elements: ['C', 'Si', 'Ge']
+  });
+
+  assert.equal(res.status, 'success');
+  assert.equal(res.type, 'elements-comparison');
+  assert.ok(res.elements.length >= 3);
+
+  const container = new MockElement('div');
+  const card = ElementsResultRenderer.render({ data: res }, container);
+  assert.ok(card);
+  assert.ok(card.textContent.includes('Carbon') || card.textContent.includes('C'));
+  assert.ok(card.textContent.includes('Open Periodic Table'));
+});
+
+test('Assistant Tool plan_container_quote: calculates BoQ cost and generates CAD model', async () => {
+  const res = await executeAssistantTool('plan_container_quote', {
+    size: '20ft',
+    usage: 'Office',
+    openings: [{ type: 'personnel-door', pos: 1.5 }],
+    electrical: true
+  });
+
+  assert.equal(res.status, 'success');
+  assert.equal(res.type, 'container-quote');
+  assert.ok(res.quote.total > 0);
+
+  const container = new MockElement('div');
+  const card = ContainerQuoteResultRenderer.render({ data: res }, container);
+  assert.ok(card);
+  assert.ok(card.textContent.toLowerCase().includes('20ft office'));
+  assert.ok(card.textContent.includes('Open in Planner'));
+});
+
+test('Assistant Tool generate_floor_plan: constructs architectural blueprint', async () => {
+  const res = await executeAssistantTool('generate_floor_plan', {
+    title: '2-Bedroom Luxury Suite',
+    squareMeters: 95
+  });
+
+  assert.equal(res.status, 'success');
+  assert.equal(res.type, 'floor-plan');
+  assert.equal(res.squareMeters, 95);
+
+  const container = new MockElement('div');
+  const card = FloorPlanResultRenderer.render({ data: res }, container);
+  assert.ok(card);
+  assert.ok(card.textContent.includes('2-Bedroom Luxury Suite'));
+  assert.ok(card.textContent.includes('Architecture Studio'));
+});
+
+test('Assistant Tool build_logic_circuit: constructs interactive logic schematic', async () => {
+  const res = await executeAssistantTool('build_logic_circuit', {
+    name: 'Half Adder Circuit',
+    inputs: ['A', 'B'],
+    expression: 'Sum = A ⊕ B, Carry = A · B'
+  });
+
+  assert.equal(res.status, 'success');
+  assert.equal(res.type, 'logic-circuit');
+
+  const container = new MockElement('div');
+  const card = LogicCircuitResultRenderer.render({ data: res }, container);
+  assert.ok(card);
+  assert.ok(card.textContent.includes('Half Adder Circuit'));
+  assert.ok(card.textContent.includes('Open in Logic Lab'));
+});
+
+test('Assistant Tool render_map: generates route map with geographic waypoints', async () => {
+  const res = await executeAssistantTool('render_map', {
+    title: 'Trans-European Express Route',
+    markers: [
+      { name: 'London', lat: 51.50, lng: -0.12 },
+      { name: 'Paris', lat: 48.85, lng: 2.35 },
+      { name: 'Berlin', lat: 52.52, lng: 13.40 }
+    ],
+    distanceKm: 1100
+  });
+
+  assert.equal(res.status, 'success');
+  assert.equal(res.type, 'map-view');
+
+  const container = new MockElement('div');
+  const card = MapResultRenderer.render({ data: res }, container);
+  assert.ok(card);
+  assert.ok(card.textContent.includes('Trans-European Express Route'));
+  assert.ok(card.textContent.includes('London'));
+  assert.ok(card.textContent.includes('Open Interactive Map'));
+});
+
+test('Assistant Tool tune_instrument: prepares reference frequency buttons', async () => {
+  const res = await executeAssistantTool('tune_instrument', {
+    instrument: 'Guitar',
+    tuningName: 'Drop D'
+  });
+
+  assert.equal(res.status, 'success');
+  assert.equal(res.type, 'tuner-pitch');
+
+  const container = new MockElement('div');
+  const card = TunerPitchResultRenderer.render({ data: res }, container);
+  assert.ok(card);
+  assert.ok(card.textContent.includes('Guitar Tuner'));
+  assert.ok(card.textContent.includes('Drop D'));
+  assert.ok(card.textContent.includes('Launch Live Mic Tuner'));
+});
+
+test('Assistant Tool annotate_pdf: structures document markup and redactions', async () => {
+  const res = await executeAssistantTool('annotate_pdf', {
+    title: 'Employment Agreement.pdf',
+    annotations: [
+      { page: 1, type: 'highlight', label: 'Compensation Section' },
+      { page: 1, type: 'redact', label: 'Bank Account Number' }
+    ]
+  });
+
+  assert.equal(res.status, 'success');
+  assert.equal(res.type, 'pdf-annotation');
+
+  const container = new MockElement('div');
+  const card = PdfAnnotationResultRenderer.render({ data: res }, container);
+  assert.ok(card);
+  assert.ok(card.textContent.includes('Employment Agreement.pdf'));
+  assert.ok(card.textContent.includes('Compensation Section'));
+  assert.ok(card.textContent.includes('Open in PDF Editor'));
+});
+
+test('Diseases Database Guardrail: rejects non-medical queries like driving schools', async () => {
+  const res1 = searchDiseases('driving schools');
+  assert.equal(res1.length, 0);
+
+  const res2 = searchDiseases('I am in kosofe, where are the nearest driving schools?');
+  assert.equal(res2.length, 0);
+
+  const res3 = searchDiseases('react web development');
+  assert.equal(res3.length, 0);
+
+  // Test Assistant Tool execution rejects honey and food compounds
+  const toolRes1 = await executeAssistantTool('search_diseases', { query: 'honey' });
+  assert.equal(toolRes1.status, 'error');
+  assert.equal(toolRes1.type, 'text');
+  assert.ok(toolRes1.message.includes('not a medical condition'));
+
+  const toolRes2 = await executeAssistantTool('search_diseases', { query: 'Tell me all the compounds inside honey' });
+  assert.equal(toolRes2.status, 'error');
+  assert.equal(toolRes2.type, 'text');
+  assert.ok(toolRes2.message.includes('not a medical condition'));
+});
+
+test('Assistant Tool render_map: resolves Kosofe driving schools and localized markers', async () => {
+  const res = await executeAssistantTool('render_map', {
+    title: 'Driving Schools in Kosofe',
+    location: 'Kosofe, Lagos',
+    query: 'nearest driving schools'
+  });
+
+  assert.equal(res.status, 'success');
+  assert.equal(res.type, 'map-view');
+  assert.ok(res.markers.length >= 3);
+  assert.ok(res.markers.some(m => m.name.includes('Driving') || m.description.includes('Kosofe')));
+
+  const container = new MockElement('div');
+  const card = MapResultRenderer.render({ data: res }, container);
+  assert.ok(card);
+  assert.ok(card.textContent.includes('Kosofe'));
+  assert.ok(card.textContent.includes('Open Interactive Map'));
+});
+
+test('Currency Localization: defaults to Nigerian Naira (NGN, ₦)', async () => {
+  const res = await executeAssistantTool('generate_invoice', {
+    client: 'Lagos Enterprise Ltd\nIkeja, Lagos',
+    lines: [{ description: 'Cloud Setup', qty: 1, price: 250000 }]
+  });
+
+  assert.equal(res.status, 'success');
+  assert.equal(res.invoice.currency, 'NGN');
+  assert.ok(res.message.includes('₦') || res.message.includes('250,000'));
+
+  const container = new MockElement('div');
+  const card = InvoiceResultRenderer.render({ data: res }, container);
+  assert.ok(card.textContent.includes('₦250,000') || card.textContent.includes('₦'));
+});
+
+test('Assistant Tool get_current_location: acquires coordinates and renders GPS location card', async () => {
+  const mockGeo = {
+    getCurrentPosition: (success) => {
+      success({
+        coords: {
+          latitude: 6.5750,
+          longitude: 3.3930,
+          accuracy: 12
+        }
+      });
+    }
+  };
+
+  const originalGeo = globalThis.navigator?.geolocation;
+  if (!globalThis.navigator) globalThis.navigator = {};
+  globalThis.navigator.geolocation = mockGeo;
+
+  const res = await executeAssistantTool('get_current_location', {});
+  assert.equal(res.status, 'success');
+  assert.equal(res.type, 'location-coordinates');
+  assert.equal(res.latitude, 6.5750);
+  assert.equal(res.longitude, 3.3930);
+
+  const container = new MockElement('div');
+  const card = LocationCoordinatesResultRenderer.render({ data: res }, container);
+  assert.ok(card);
+  assert.ok(card.textContent.includes('6.5750°'));
+  assert.ok(card.textContent.includes('3.3930°'));
+
+  if (originalGeo) {
+    globalThis.navigator.geolocation = originalGeo;
+  }
 });

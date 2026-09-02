@@ -133,6 +133,28 @@ export const ANATOMY_DATABASE = {
     relations: ['Frontal', 'Ethmoid', 'Nasal', 'Zygomatic', 'Palatine', 'Vomer'],
     fma: '53649',
   },
+  'first cervical vertebra': {
+    name: 'Atlas (First Cervical Vertebra / C1)',
+    commonName: 'Atlas (C1 Vertebra)',
+    system: 'skeletal',
+    region: 'head-neck',
+    subregion: 'Cervical Spine',
+    functionDesc: 'Ring-shaped atypical vertebra lacking a vertebral body or true spinous process; supports the globe of the skull via superior articular facets articulating with the occipital condyles (enabling nodding "yes" motion).',
+    clinicalNotes: 'Jefferson burst fracture occurs from axial compressive load (e.g. shallow diving), breaking anterior and posterior arches. The transverse ligament of the atlas holds the odontoid process (dens) against the anterior arch; disruption leads to catastrophic atlantoaxial instability and brainstem compression.',
+    relations: ['Occipital condyles', 'Axis (C2 vertebra)', 'Dens of C2', 'Vertebral artery in transverse foramen', 'Spinal cord'],
+    fma: '12519',
+  },
+  'second cervical vertebra': {
+    name: 'Axis (Second Cervical Vertebra / C2)',
+    commonName: 'Axis (C2 Vertebra)',
+    system: 'skeletal',
+    region: 'head-neck',
+    subregion: 'Cervical Spine',
+    functionDesc: 'Atypical cervical vertebra featuring the tooth-like vertical dens (odontoid process) serving as the vertical pivot around which the atlas and skull rotate (enabling 50% of cervical axial rotation).',
+    clinicalNotes: 'Hangman fracture is a hyperextension traumatic spondylolisthesis of the pars interarticularis of C2. Type II fractures of the odontoid peg have a high incidence of non-union due to tenuous watershed microvascular supply.',
+    relations: ['Atlas (C1 vertebra)', 'Third cervical vertebra (C3)', 'Transverse ligament of atlas'],
+    fma: '12520',
+  },
   'cervical vertebra': {
     name: 'Vertebrae cervicales (C1–C7)',
     commonName: 'Cervical Vertebrae',
@@ -143,6 +165,39 @@ export const ANATOMY_DATABASE = {
     clinicalNotes: 'Distinguished by transverse foramina carrying the vertebral arteries (C1–C6). C1 (atlas) lacks a vertebral body and nods at atlanto-occipital joint; C2 (axis) bears the dens (odontoid process) allowing 50% of cervical rotation.',
     relations: ['Spinal cord', 'Vertebral artery', 'Occipital condyles', 'T1 vertebra'],
     fma: '12521',
+  },
+  'lungs': {
+    name: 'Pulmones / Lungs',
+    commonName: 'Lungs (Respiratory System)',
+    system: 'respiratory',
+    region: 'thorax',
+    subregion: 'Pleural Cavities & Mediastinum',
+    functionDesc: 'Primary organs of respiration that bring atmospheric oxygen into contact with the pulmonary capillary blood network and excrete metabolic carbon dioxide.',
+    clinicalNotes: 'Right lung has 3 lobes (superior, middle, inferior) and 2 fissures (oblique and horizontal); left lung has 2 lobes (superior and inferior) and the cardiac notch/lingula. Right main bronchus is wider, shorter, and more vertical, making it the most frequent location for aspirated foreign bodies.',
+    relations: ['Trachea', 'Primary bronchi', 'Heart & Pericardium', 'Diaphragm', 'Pulmonary trunk & arteries', 'Pulmonary veins'],
+    fma: '7394',
+  },
+  'trachea': {
+    name: 'Trachea / Windpipe',
+    commonName: 'Trachea',
+    system: 'respiratory',
+    region: 'thorax',
+    subregion: 'Superior Mediastinum',
+    functionDesc: 'Flexible cartilaginous and membranous tube extending from larynx (C6) to carina (T4/T5) that conducts air to the left and right principal bronchi.',
+    clinicalNotes: 'C-shaped hyaline cartilage rings prevent collapse during negative intrathoracic pressures while posterior trachealis smooth muscle accommodates esophageal bolus passage. Emergency tracheostomy is placed between 2nd and 3rd tracheal rings.',
+    relations: ['Esophagus posteriorly', 'Thyroid gland isthmus anteriorly', 'Recurrent laryngeal nerves', 'Aortic arch'],
+    fma: '7394',
+  },
+  'heart': {
+    name: 'Cor / Heart',
+    commonName: 'Heart',
+    system: 'cardiovascular',
+    region: 'thorax',
+    subregion: 'Middle Mediastinum',
+    functionDesc: 'Four-chambered muscular pump maintaining pulmonary (right heart) and systemic (left heart) circulation.',
+    clinicalNotes: 'Left anterior descending (LAD) branch of left coronary artery supplies the anterior 2/3 of the interventricular septum and apex; occlusion produces anterior wall MI. Cardiac conduction originates in Sinoatrial (SA) node located at the junction of superior vena cava and right atrium.',
+    relations: ['Pericardium', 'Lungs and pleurae laterally', 'Diaphragm inferiorly', 'Esophagus posteriorly', 'Thymus anteriorly'],
+    fma: '7088',
   },
   'thoracic vertebra': {
     name: 'Vertebrae thoracicae (T1–T12)',
@@ -1213,13 +1268,13 @@ export const ANATOMICAL_SYNONYMS = {
   'backbone': 'vertebra',
   'skull': 'cranium, frontal bone, parietal bone, temporal bone, occipital bone, sphenoid bone',
   'brain': 'cerebral hemisphere, cerebellum, pons, medulla oblongata, thalamus, hippocampus, amygdala',
-  'heart': 'wall of heart, ascending aorta, arch of aorta, pulmonary artery, superior vena cava, inferior vena cava',
-  'lungs': 'upper lobe of right lung, upper lobe of left lung, lower lobe of right lung, lower lobe of left lung, middle lobe of lung, trachea, bronchus',
-  'lung': 'upper lobe of right lung, upper lobe of left lung, lower lobe of right lung, lower lobe of left lung, middle lobe of lung',
+  'heart': 'wall of heart',
+  'lungs': 'lung',
+  'lung': 'lung',
   'airway': 'trachea, bronchus',
   'airways': 'trachea, bronchus',
   'pulmonary': 'respiratory',
-  'respiratory': 'upper lobe of right lung, upper lobe of left lung, lower lobe of right lung, lower lobe of left lung, middle lobe of lung, trachea, bronchus',
+  'respiratory': 'trachea, bronchus, lung',
   'kidneys': 'kidney, ureter, urinary bladder',
   'kidney': 'kidney, ureter, urinary bladder',
   'bladder': 'urinary bladder',
@@ -1249,10 +1304,34 @@ export const ANATOMICAL_SYNONYMS = {
   'ribcage': 'ribs, sternum',
   'breastbone': 'sternum',
   'breast bone': 'sternum',
-  'neck vertebrae': 'cervical vertebrae',
-  'cervical spine': 'cervical vertebrae',
-  'lower back': 'lumbar vertebrae',
-  'lumbar spine': 'lumbar vertebrae',
+  'c1': 'cervical vertebra',
+  'c1 vertebra': 'cervical vertebra',
+  'c1 vertebrae': 'cervical vertebra',
+  'atlas': 'cervical vertebra',
+  'atlas vertebra': 'cervical vertebra',
+  'c2': 'cervical vertebra',
+  'c2 vertebra': 'cervical vertebra',
+  'c2 vertebrae': 'cervical vertebra',
+  'axis': 'cervical vertebra',
+  'axis vertebra': 'cervical vertebra',
+  'cervical': 'cervical vertebra',
+  'cervical vertebrae': 'cervical vertebra',
+  'c3': 'third cervical vertebra',
+  'c3 vertebra': 'third cervical vertebra',
+  'c4': 'fourth cervical vertebra',
+  'c4 vertebra': 'fourth cervical vertebra',
+  'c5': 'fifth cervical vertebra',
+  'c5 vertebra': 'fifth cervical vertebra',
+  'c6': 'sixth cervical vertebra',
+  'c6 vertebra': 'sixth cervical vertebra',
+  'c7': 'seventh cervical vertebra',
+  'c7 vertebra': 'seventh cervical vertebra',
+  'vertebra prominens': 'seventh cervical vertebra',
+  'neck vertebrae': 'first cervical vertebra, second cervical vertebra, third cervical vertebra, fourth cervical vertebra, fifth cervical vertebra, sixth cervical vertebra, seventh cervical vertebra',
+  'cervical vertebrae': 'first cervical vertebra, second cervical vertebra, third cervical vertebra, fourth cervical vertebra, fifth cervical vertebra, sixth cervical vertebra, seventh cervical vertebra',
+  'cervical spine': 'first cervical vertebra, second cervical vertebra, third cervical vertebra, fourth cervical vertebra, fifth cervical vertebra, sixth cervical vertebra, seventh cervical vertebra',
+  'lower back': 'first lumbar vertebra, second lumbar vertebra, third lumbar vertebra, fourth lumbar vertebra, fifth lumbar vertebra',
+  'lumbar spine': 'first lumbar vertebra, second lumbar vertebra, third lumbar vertebra, fourth lumbar vertebra, fifth lumbar vertebra',
   'ankle': 'talus, calcaneus, tibia, fibula',
   'tarsals': 'talus, calcaneus, navicular, cuboid, cuneiforms',
   'tarsal': 'talus, calcaneus, navicular, cuboid, cuneiforms',
@@ -1310,9 +1389,10 @@ export async function resolveAnatomyQuery(query = '', indexData = null) {
     fma: v.fma || null
   }));
 
-  // 2. Expand synonyms in query
+  // 2. Expand synonyms in query (longest phrase first to avoid partial conflicts)
   let expandedQuery = cleanQuery;
-  for (const [phrase, replacement] of Object.entries(ANATOMICAL_SYNONYMS)) {
+  const sortedSynonyms = Object.entries(ANATOMICAL_SYNONYMS).sort((a, b) => b[0].length - a[0].length);
+  for (const [phrase, replacement] of sortedSynonyms) {
     const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(`\\b${escaped}\\b`, 'gi');
     if (regex.test(expandedQuery)) {
@@ -1328,7 +1408,7 @@ export async function resolveAnatomyQuery(query = '', indexData = null) {
   ]);
 
   const clauses = expandedQuery
-    .split(/\b(?:and|as well as|plus|with|\&|\;|\,)\b/i)
+    .split(/\b(?:and|as well as|plus|with)\b|[,;&]/i)
     .map(c => c.trim())
     .filter(Boolean);
 
@@ -1366,26 +1446,38 @@ export async function resolveAnatomyQuery(query = '', indexData = null) {
 
     // Match individual structures
     for (const struct of structuresCatalog) {
-      const sName = (struct.name || '').toLowerCase();
-      const sCommon = (struct.commonName || '').toLowerCase();
-      const sKey = (struct.dbKey || '').toLowerCase();
+      const sName = (struct.name || '').toLowerCase().trim();
+      const sCommon = (struct.commonName || '').toLowerCase().trim();
+      const sKey = (struct.dbKey || '').toLowerCase().trim();
       const sSystem = struct.system || 'general';
 
       let isMatch = false;
-      if (sName.includes(clause) || sCommon.includes(clause) || sKey.includes(clause) ||
-          (clause.length > 3 && (clause.includes(sName) || clause.includes(sCommon) || clause.includes(sKey)))) {
+
+      // 1. Direct clause match against full names (guarded to prevent empty-string matches)
+      if (sName && (sName === clause || sName.includes(clause) || (clause.length >= 4 && clause.includes(sName)))) {
+        isMatch = true;
+      } else if (sCommon && sCommon.length >= 3 && (sCommon === clause || sCommon.includes(clause) || (clause.length >= 4 && clause.includes(sCommon)))) {
+        isMatch = true;
+      } else if (sKey && sKey.length >= 3 && (sKey === clause || sKey.includes(clause) || (clause.length >= 4 && clause.includes(sKey)))) {
         isMatch = true;
       } else {
-        // Test exact term or stemmed term in sName / sCommon / sKey
+        // 2. Term-based matching
         const matchCount = searchTerms.filter((t, i) => {
           const stem = stemmedTerms[i];
-          return sName.includes(t) || sCommon.includes(t) || sKey.includes(t) ||
-            (stem && (sName.includes(stem) || sCommon.includes(stem) || sKey.includes(stem)));
+          const hasTerm = (sName && sName.includes(t)) || (sCommon && sCommon.length >= 3 && sCommon.includes(t)) || (sKey && sKey.length >= 3 && sKey.includes(t));
+          const hasStem = stem && ((sName && sName.includes(stem)) || (sCommon && sCommon.length >= 3 && sCommon.includes(stem)) || (sKey && sKey.length >= 3 && sKey.includes(stem)));
+          return hasTerm || hasStem;
         }).length;
 
-        if (matchCount === searchTerms.length || (searchTerms.length > 1 && matchCount >= 2)) {
+        // Accurate thresholds:
+        // For single-word query ("lung", "femur"): must match
+        // For 2-word query ("cervical vertebra", "biceps brachii"): must match both
+        // For 3+ words: must match at least 2 or all
+        if (searchTerms.length === 1 && matchCount === 1) {
           isMatch = true;
-        } else if (searchTerms.length === 1 && matchCount === 1) {
+        } else if (searchTerms.length === 2 && matchCount === 2) {
+          isMatch = true;
+        } else if (searchTerms.length >= 3 && matchCount >= Math.min(searchTerms.length, 3)) {
           isMatch = true;
         }
       }
