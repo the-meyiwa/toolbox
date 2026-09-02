@@ -21,6 +21,7 @@ import { installSettingsUI } from './lib/settings-ui.js';
 import { installHeaderMenu } from './lib/header-menu.js';
 import { getCurrentUser } from './lib/supabase.js';
 import { openAccountModal } from './views/account-modal.js';
+import { initFlutterwaveContribution } from './lib/flutterwave-contribution.js';
 
 /* --------------- state --------------- */
 
@@ -60,7 +61,7 @@ const savedView = $('saved-view');
 const navSaved = $('nav-saved');
 const spacesView = $('spaces-view');
 
-const VIEWS = { home: homeView, tools: toolsView, support: supportView, saved: savedView, spaces: spacesView, tool: viewport };
+const VIEWS = { home: homeView, tools: toolsView, about: supportView, support: supportView, saved: savedView, files: savedView, spaces: spacesView, tool: viewport };
 
 const toolModules = import.meta.glob('./tools/*.js');
 
@@ -87,7 +88,7 @@ function toolCard(tool, { compact = false } = {}) {
 
 function renderGrid(originalList, { query = '', noResult = false } = {}) {
   const user = getCurrentUser();
-  const list = user ? originalList : originalList.filter(t => t.id !== 'assistant');
+  const list = originalList.filter(t => !t.hidden && (user || t.id !== 'assistant'));
 
   grid.innerHTML = '';
 
@@ -215,8 +216,13 @@ function showPage(page) {
   }
 
   currentPage = page;
-  for (const link of navLinks) link.classList.toggle('active', link.dataset.page === page);
+  for (const link of navLinks) {
+    link.classList.toggle('active', link.dataset.page === page || (page === 'about' && link.dataset.page === 'support') || (page === 'support' && link.dataset.page === 'about'));
+  }
   searchWrapper.style.display = page === 'tools' ? '' : 'none';
+  if (page === 'about' || page === 'support') {
+    initFlutterwaveContribution();
+  }
   requestAnimationFrame(updateMobileNavIndicator);
 }
 
@@ -336,12 +342,13 @@ function handleHash() {
 
   if (raw === '' || raw === 'home') return showPage('home');
   if (raw === 'tools') { showPage('tools'); return; }
-  if (raw === 'support') return showPage('support');
+  if (raw === 'about' || raw === 'support') return showPage('about');
 
-  // #saved, or #saved/<artifact id> to land on one directly.
-  if (raw === 'saved' || raw.startsWith('saved/')) {
+  // #saved or #files, or #saved/<artifact id> / #files/<artifact id>
+  if (raw === 'saved' || raw.startsWith('saved/') || raw === 'files' || raw.startsWith('files/')) {
     showPage('saved');
-    unmountSaved = renderSaved(savedView, raw.slice(6) || null);
+    const fileId = raw.startsWith('files/') ? raw.slice(6) : (raw.startsWith('saved/') ? raw.slice(6) : null);
+    unmountSaved = renderSaved(savedView, fileId || null);
     return;
   }
 

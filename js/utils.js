@@ -27,6 +27,124 @@ export function copyText(text, btn) {
   });
 }
 
+const ENTITY_MAP = {
+  '&rarr;': '→',
+  '&larr;': '←',
+  '&harr;': '↔',
+  '&uarr;': '↑',
+  '&darr;': '↓',
+  '&rArr;': '⇒',
+  '&lArr;': '⇐',
+  '&deg;': '°',
+  '&times;': '×',
+  '&divide;': '÷',
+  '&plusmn;': '±',
+  '&le;': '≤',
+  '&ge;': '≥',
+  '&ne;': '≠',
+  '&approx;': '≈',
+  '&asymp;': '≈',
+  '&infin;': '∞',
+  '&bull;': '•',
+  '&trade;': '™',
+  '&copy;': '©',
+  '&reg;': '®',
+  '&pound;': '£',
+  '&yen;': '¥',
+  '&euro;': '€',
+  '&sect;': '§',
+  '&para;': '¶',
+  '&micro;': 'µ',
+  '&alpha;': 'α',
+  '&beta;': 'β',
+  '&gamma;': 'γ',
+  '&delta;': 'δ',
+  '&Delta;': 'Δ',
+  '&pi;': 'π',
+  '&omega;': 'ω',
+  '&Omega;': 'Ω',
+  '&theta;': 'θ',
+  '&lambda;': 'λ',
+  '&sigma;': 'σ',
+  '&Sigma;': 'Σ',
+  '&sum;': '∑',
+  '&radic;': '√',
+  '&sub;': '⊂',
+  '&sup;': '⊃',
+  '&isin;': '∈',
+  '&notin;': '∉',
+  '&empty;': '∅',
+  '&ang;': '∠'
+};
+
+function normalizeSymbolsInText(text) {
+  if (!text) return '';
+
+  // 1. Decode HTML entities for symbols
+  text = text.replace(/&(?:[a-zA-Z]+|#\d+|#x[0-9a-fA-F]+);/g, (match) => {
+    if (ENTITY_MAP[match]) return ENTITY_MAP[match];
+    if (match.startsWith('&#x') || match.startsWith('&#X')) {
+      const hex = match.slice(3, -1);
+      const code = parseInt(hex, 16);
+      if (!isNaN(code) && code >= 32) return String.fromCodePoint(code);
+    } else if (match.startsWith('&#')) {
+      const dec = match.slice(2, -1);
+      const code = parseInt(dec, 10);
+      if (!isNaN(code) && code >= 32) return String.fromCodePoint(code);
+    }
+    return match;
+  });
+
+  // 2. Decode raw string literal unicode escapes like \u2192, \u00b0
+  text = text.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => {
+    try {
+      const code = parseInt(hex, 16);
+      return String.fromCharCode(code);
+    } catch {
+      return `\\u${hex}`;
+    }
+  });
+
+  // 3. Remove stray backslashes escaping currency and symbols outside code
+  text = text.replace(/\\([₦$€£¥°±×÷≤≥≠≈→←↔↑↓•])/g, '$1');
+
+  // 4. Normalize pseudo-symbols in plain text
+  text = text.replace(/(^|\s)\+\/-(\s|$)/g, '$1±$2');
+  text = text.replace(/(^|\s)\+-(\s|$)/g, '$1±$2');
+  text = text.replace(/(^|\s)(?:--?>)(\s|$)/g, '$1→$2');
+  text = text.replace(/(^|\s)(?:<--?)(\s|$)/g, '$1←$2');
+  text = text.replace(/(^|\s)=>>?(\s|$)/g, '$1⇒$2');
+  text = text.replace(/(^|\s)!=(\s|$)/g, '$1≠$2');
+  text = text.replace(/(^|\s)<=(\s|$)/g, '$1≤$2');
+  text = text.replace(/(^|\s)>=(\s|$)/g, '$1≥$2');
+  text = text.replace(/(^|\s)~=(\s|$)/g, '$1≈$2');
+
+  return text;
+}
+
+function processWithCodeBlocksPreserved(text, processor) {
+  if (!text) return '';
+  const codeBlocks = [];
+  // Mask triple backtick code blocks
+  let masked = text.replace(/```[\s\S]*?```/g, (match) => {
+    const placeholder = `__TBX_CODE_BLOCK_${codeBlocks.length}__`;
+    codeBlocks.push(match);
+    return placeholder;
+  });
+  // Mask single inline backticks
+  masked = masked.replace(/`[^`\n]+`/g, (match) => {
+    const placeholder = `__TBX_CODE_BLOCK_${codeBlocks.length}__`;
+    codeBlocks.push(match);
+    return placeholder;
+  });
+
+  // Process outside code blocks
+  masked = processor(masked);
+
+  // Restore code blocks
+  return masked.replace(/__TBX_CODE_BLOCK_(\d+)__/g, (_, idx) => codeBlocks[Number(idx)] || '');
+}
+
 export function sanitizeUserFacingText(t, { preserveWhitespace = true, preserveMarkdown = true } = {}) {
   if (t === null || t === undefined) return '';
   if (typeof t !== 'string') {
@@ -51,6 +169,9 @@ export function sanitizeUserFacingText(t, { preserveWhitespace = true, preserveM
 
   // 5. Trim trailing whitespace per line
   res = res.replace(/[ \t]+$/gm, '');
+
+  // 6. Clean and normalize symbol representations and escapes
+  res = processWithCodeBlocksPreserved(res, normalizeSymbolsInText);
 
   if (!preserveWhitespace) {
     res = res.replace(/[ \t]{2,}/g, ' ').trim();

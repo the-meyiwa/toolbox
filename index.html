@@ -32,10 +32,8 @@
       <nav class="nav-links desktop-nav" id="desktop-nav-links">
         <a href="#home" class="nav-link active" data-page="home">Home</a>
         <a href="#tools" class="nav-link" data-page="tools">Tools</a>
-        <!-- Saved appears only once there is something in it. Nobody who came
-             to format some JSON should meet a workspace. -->
-        <a href="#saved" class="nav-link" data-page="saved" id="nav-saved" hidden>Saved</a>
-        <a href="#support" class="nav-link" data-page="support">Support</a>
+        <a href="#saved" class="nav-link" data-page="saved" id="nav-saved">Files</a>
+        <a href="#about" class="nav-link" data-page="about">About</a>
         <a href="#spaces" class="nav-link" data-page="spaces">Spaces</a>
       </nav>
       <div class="header-actions" id="header-actions">
@@ -186,7 +184,7 @@
             </div>
           </div>
 
-          <h1 class="support-title" style="margin-top:28px;">Support & Community</h1>
+          <h1 class="support-title" style="margin-top:28px;">About Toolbox</h1>
 
           <section class="support-section">
             <h2 class="support-heading">Feature Request</h2>
@@ -208,6 +206,66 @@
               </a>
             </div>
             <p style="margin-top:12px; font-size:0.75rem; color:var(--g400);">Every message is read by one person. Tool requests that describe the actual problem tend to get built first.</p>
+          </section>
+
+          <!-- CONTRIBUTE TO DEVELOPMENT (FLUTTERWAVE INTEGRATION) -->
+          <section class="support-section contribute-section" id="contribute-section">
+            <h2 class="support-heading" style="display:flex; align-items:center; gap:8px;">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+              </svg>
+              <span>Contribute to Development</span>
+            </h2>
+            <p style="margin-bottom:18px; line-height:1.6; color:var(--text-secondary);">
+              Toolbox is free, open, and built with obsessive care. Your contributions directly fund server costs, API access, continuous updates, and cross-platform native development for desktop and mobile.
+            </p>
+            
+            <div class="contribute-card" style="background:var(--bg-subtle); border:1px solid var(--border); border-radius:16px; padding:22px 24px; box-shadow:0 4px 16px rgba(0,0,0,0.03);">
+              <!-- Amount and currency inputs -->
+              <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
+                <label for="contrib-amount-input" style="font-weight:600; font-size:0.88rem; color:var(--text);">Enter Contribution Amount</label>
+                <div style="display:flex; gap:10px; align-items:center;">
+                  <div style="position:relative; flex:1; display:flex; align-items:center;">
+                    <span id="contrib-curr-symbol" style="position:absolute; left:12px; font-weight:700; color:var(--text-secondary); pointer-events:none; font-family:var(--mono);">₦</span>
+                    <input type="number" id="contrib-amount-input" class="tool-input" placeholder="Amount (e.g. 5000)" min="1" step="any" style="padding-left:32px; width:100%; font-size:0.95rem; font-family:var(--mono);">
+                  </div>
+                  <select id="contrib-currency" class="tool-select" style="font-size:0.85rem; padding:8px 12px; border-radius:8px; min-width:110px;">
+                    <option value="NGN" selected>NGN (₦)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="CAD">CAD ($)</option>
+                    <option value="GBP">GBP (£)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Contributor Details -->
+              <div class="contrib-details-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                <div>
+                  <label style="display:block; font-size:0.78rem; font-weight:600; margin-bottom:4px; color:var(--text-secondary);">Your Name (Optional)</label>
+                  <input type="text" id="contrib-name" class="tool-input" placeholder="Anonymous Supporter" style="width:100%; font-size:0.86rem;">
+                </div>
+                <div>
+                  <label style="display:block; font-size:0.78rem; font-weight:600; margin-bottom:4px; color:var(--text-secondary);">Email Address</label>
+                  <input type="email" id="contrib-email" class="tool-input" placeholder="supporter@example.com" style="width:100%; font-size:0.86rem;">
+                </div>
+              </div>
+
+              <!-- Action Bar -->
+              <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-top:8px;">
+                <button type="button" id="contrib-flutterwave-btn" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:8px; padding:10px 22px; font-weight:600; cursor:pointer;">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                  </svg>
+                  <span>Contribute via Flutterwave</span>
+                </button>
+                <div style="font-size:0.75rem; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                  <span>Secured by Flutterwave</span>
+                </div>
+              </div>
+
+              <div id="contrib-status-msg" style="display:none; margin-top:12px; padding:10px 14px; border-radius:8px; font-size:0.82rem;"></div>
+            </div>
           </section>
 
           <section class="support-section">
@@ -291,11 +349,12 @@
         </svg>
         <span class="mob-nav-label">Tools</span>
       </a>
-      <a href="#saved" class="nav-link mob-nav-item" data-page="saved" id="nav-saved-mob" hidden>
+      <a href="#saved" class="nav-link mob-nav-item" data-page="saved" id="nav-saved-mob">
         <svg class="mob-nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
         </svg>
-        <span class="mob-nav-label">Saved</span>
+        <span class="mob-nav-label">Files</span>
       </a>
       <a href="#spaces" class="nav-link mob-nav-item" data-page="spaces">
         <svg class="mob-nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -306,13 +365,13 @@
         </svg>
         <span class="mob-nav-label">Spaces</span>
       </a>
-      <a href="#support" class="nav-link mob-nav-item" data-page="support">
+      <a href="#about" class="nav-link mob-nav-item" data-page="about">
         <svg class="mob-nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
-          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
         </svg>
-        <span class="mob-nav-label">Support</span>
+        <span class="mob-nav-label">About</span>
       </a>
     </nav>
   </div>

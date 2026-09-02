@@ -34,3 +34,23 @@ test('cleanText: keeps backticks intact while cleaning smart quotes and invisibl
   assert.ok(cleaned.includes('`backtick_code`'), 'Backticks must NOT be converted to single quotes');
   assert.ok(cleaned.includes('"Smart Quote"'), 'Smart double quotes converted to standard ASCII quotes');
 });
+
+test('sanitizeUserFacingText: converts HTML entities and unicode escapes into visual characters', () => {
+  const input = 'Temperature is 25&deg;C with &plusmn;2&deg;C variation and &rarr; symbol';
+  const sanitized = sanitizeUserFacingText(input);
+  assert.equal(sanitized, 'Temperature is 25°C with ±2°C variation and → symbol');
+
+  const unicodeEscaped = 'Delta \\u2192 reaction at 100\\u00b0C';
+  const sanitizedUnicode = sanitizeUserFacingText(unicodeEscaped);
+  assert.equal(sanitizedUnicode, 'Delta → reaction at 100°C');
+});
+
+test('sanitizeUserFacingText: cleans escaped currencies and normalizes pseudo-symbols outside code', () => {
+  const input = 'Cost is \\₦50,000 +/- 10% and flow goes A -> B but code `x -> y`';
+  const sanitized = sanitizeUserFacingText(input);
+  assert.ok(sanitized.includes('₦50,000'), 'Escaped Naira symbol unescaped');
+  assert.ok(sanitized.includes('± 10%'), '+/- converted to ±');
+  assert.ok(sanitized.includes('A → B'), '-> converted to → in prose');
+  assert.ok(sanitized.includes('`x -> y`'), 'Inline code block preserved without mangling');
+});
+

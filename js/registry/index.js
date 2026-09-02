@@ -19,8 +19,9 @@ export const CATEGORY_LABELS = Object.fromEntries(CATEGORIES.map(c => [c.id, c.l
 
 /** Categories in display order, each with the tools whose primary home it is. */
 export function categorised(tools = TOOLS) {
+  const visible = tools.filter(t => !t.hidden);
   const byCat = new Map();
-  for (const t of tools) {
+  for (const t of visible) {
     if (!byCat.has(t.category)) byCat.set(t.category, []);
     byCat.get(t.category).push(t);
   }
@@ -36,12 +37,12 @@ export function categorised(tools = TOOLS) {
 
 /** Tools listing a category as primary or secondary. */
 export function inCategory(categoryId) {
-  return TOOLS.filter(t => t.category === categoryId || (t.secondary ?? []).includes(categoryId));
+  return TOOLS.filter(t => !t.hidden && (t.category === categoryId || (t.secondary ?? []).includes(categoryId)));
 }
 
 /** The most-used tools, for the home page shortcut row. */
 export function popular(n = 8) {
-  return [...TOOLS].sort((a, b) => (b.weight ?? 50) - (a.weight ?? 50)).slice(0, n);
+  return [...TOOLS].filter(t => !t.hidden).sort((a, b) => (b.weight ?? 50) - (a.weight ?? 50)).slice(0, n);
 }
 
 /**

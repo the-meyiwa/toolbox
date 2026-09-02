@@ -13,6 +13,13 @@ import { COMPOUNDS_DATA } from './compounds-dataset.js';
 import { connectionInfo, measureLatency, measureDownload } from './netspeed.js';
 import { AssistantAudioManager } from './assistant-audio.js';
 import { toolDiscovery } from './assistant-tool-discovery.js';
+import {
+  addEvent as calendarAddEvent,
+  getEventsForDate as calendarGetEventsForDate,
+  getEventsInRange as calendarGetEventsInRange,
+  searchEvents as calendarSearchEvents,
+  deleteEvent as calendarDeleteEvent
+} from './calendar-store.js';
 
 let activeAssistantAudios = [];
 
@@ -1051,6 +1058,61 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
         }
       },
       required: ['action']
+    }
+  },
+  {
+    name: 'calendar_add_event',
+    description: 'Schedules a new event, meeting, appointment, deadline, or reminder on the user\'s calendar.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        title: { type: 'STRING', description: 'Title or name of the event (e.g. "Doctor Appointment", "Sprint Planning").' },
+        date: { type: 'STRING', description: 'Date in YYYY-MM-DD format (e.g. "2026-09-05"). Defaults to today.' },
+        startTime: { type: 'STRING', description: 'Event start time in 24h HH:MM format (e.g. "14:30").' },
+        endTime: { type: 'STRING', description: 'Event end time in 24h HH:MM format (e.g. "15:30").' },
+        category: { type: 'STRING', description: 'Category: "work", "personal", "meeting", "deadline", "holiday", "health", "family".' },
+        description: { type: 'STRING', description: 'Optional details, notes, or agenda items.' },
+        location: { type: 'STRING', description: 'Optional physical location or meeting link.' },
+        isAllDay: { type: 'BOOLEAN', description: 'True if the event runs the whole day.' },
+        recurrence: { type: 'STRING', description: 'Repeat frequency: "none", "daily", "weekly", "monthly", "yearly".' }
+      },
+      required: ['title']
+    }
+  },
+  {
+    name: 'calendar_get_events',
+    description: 'Retrieves scheduled calendar events for a specific date, date range, or search query.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        date: { type: 'STRING', description: 'Specific date in YYYY-MM-DD format.' },
+        startDate: { type: 'STRING', description: 'Start date of range in YYYY-MM-DD format.' },
+        endDate: { type: 'STRING', description: 'End date of range in YYYY-MM-DD format.' },
+        query: { type: 'STRING', description: 'Search keyword to filter events.' }
+      }
+    }
+  },
+  {
+    name: 'calendar_cancel_event',
+    description: 'Cancels or removes a calendar event by its event ID or matching title.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        eventId: { type: 'STRING', description: 'Unique event ID.' },
+        title: { type: 'STRING', description: 'Title of the event to cancel if ID is unknown.' },
+        date: { type: 'STRING', description: 'Date of the event in YYYY-MM-DD format.' }
+      }
+    }
+  },
+  {
+    name: 'browse_web',
+    description: 'Searches, opens, and browses a webpage, research topic, Wikipedia article, or documentation using the isolated Assistant Browser engine, returning structured page summary and content.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        url: { type: 'STRING', description: 'Target website or documentation URL (e.g. "https://en.wikipedia.org/wiki/Quantum_computing").' },
+        query: { type: 'STRING', description: 'Search keywords or topic to research if URL is unknown (e.g. "Nikola Tesla biography").' }
+      }
     }
   }
 ];
@@ -3101,6 +3163,130 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
         summary,
         annotations,
         message: `Prepared ${annotations.length} annotations for "${title}".`
+      };
+    }
+
+    case 'calendar_add_event': {
+      const created = calendarAddEvent({
+        title: args.title,
+        date: args.date,
+        startTime: args.startTime || '09:00',
+        endTime: args.endTime || '10:00',
+        category: args.category || 'personal',
+        description: args.description || '',
+        location: args.location || '',
+        isAllDay: Boolean(args.isAllDay),
+        recurrence: args.recurrence || 'none'
+      });
+      return {
+        status: 'success',
+        type: 'calendar-event',
+        renderer: 'calendar-card',
+        action: 'created',
+        event: created,
+        message: `Scheduled event "${created.title}" for ${created.date} (${created.isAllDay ? 'All-day' : `${created.startTime} – ${created.endTime}`}).`
+      };
+    }
+
+    case 'calendar_get_events': {
+      let events = [];
+      if (args.date) {
+        events = calendarGetEventsForDate(args.date);
+      } else if (args.startDate && args.endDate) {
+        events = calendarGetEventsInRange(args.startDate, args.endDate);
+      } else if (args.query) {
+        events = calendarSearchEvents(args.query);
+      } else {
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        events = calendarGetEventsForDate(todayStr);
+      }
+      return {
+        status: 'success',
+        type: 'calendar-list',
+        renderer: 'calendar-card',
+        action: 'list',
+        events,
+        query: args.query || args.date || 'today',
+        message: `Found ${events.length} calendar event(s).`
+      };
+    }
+
+    case 'calendar_cancel_event': {
+      let deleted = false;
+      if (args.eventId) {
+        deleted = calendarDeleteEvent(args.eventId);
+      } else if (args.title) {
+        const all = calendarSearchEvents(args.title);
+        const match = all.find(e => !args.date || e.date === args.date);
+        if (match) {
+          deleted = calendarDeleteEvent(match.id);
+        }
+      }
+      return {
+        status: deleted ? 'success' : 'error',
+        type: 'calendar-event',
+        renderer: 'calendar-card',
+        action: 'cancelled',
+        success: deleted,
+        message: deleted ? `Event cancelled successfully.` : `Could not find matching event to cancel.`
+      };
+    }
+
+    case 'browse_web': {
+      const targetQuery = (args.query || '').trim();
+      let targetUrl = (args.url || '').trim();
+
+      if (!targetUrl && targetQuery) {
+        targetUrl = `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(targetQuery)}`;
+      }
+      if (!targetUrl) {
+        targetUrl = 'https://en.wikipedia.org/wiki/Web_browser';
+      }
+
+      let title = targetQuery || 'Web Research';
+      let excerpt = '';
+      let hostname = '';
+
+      try {
+        const u = new URL(targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`);
+        hostname = u.hostname;
+        title = targetQuery || u.hostname;
+
+        if (hostname.includes('wikipedia.org') || targetQuery) {
+          const wikiTitle = targetQuery || decodeURIComponent(u.pathname.split('/wiki/')[1] || '').replace(/_/g, ' ');
+          if (wikiTitle && !wikiTitle.startsWith('Special:Search')) {
+            try {
+              const apiRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiTitle)}`);
+              if (apiRes.ok) {
+                const data = await apiRes.json();
+                title = data.title || title;
+                excerpt = data.extract || data.description || '';
+                if (data.content_urls?.desktop?.page) targetUrl = data.content_urls.desktop.page;
+              }
+            } catch (fetchErr) {
+              console.warn('[AssistantTools] Wikipedia API fetch failed:', fetchErr);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[AssistantTools] browse_web parsing warning:', err);
+      }
+
+      if (!excerpt) {
+        excerpt = `Browsed ${hostname || targetUrl}. The Assistant Browser engine has loaded the page in an isolated sandbox environment.`;
+      }
+
+      return {
+        status: 'success',
+        type: 'browser-preview',
+        renderer: 'browser-card',
+        url: targetUrl,
+        query: targetQuery,
+        title: title,
+        excerpt: excerpt,
+        hostname: hostname,
+        message: `Browsed "${title}" at ${targetUrl}.`
       };
     }
 

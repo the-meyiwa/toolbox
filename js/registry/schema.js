@@ -32,6 +32,7 @@
  * @property {string[]}     [related]     Ids of tools worth showing alongside. Must resolve.
  * @property {number}       [weight]      Search/popularity bias, 0–100. Default 50.
  * @property {boolean}      [offline]     True when it never touches the network. Default true.
+ * @property {boolean}      [hidden]      True if reserved or hidden from public browsing.
  * @property {string}       icon          Inline SVG markup.
  *
  * @typedef {object} Category

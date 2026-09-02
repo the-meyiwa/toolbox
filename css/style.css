@@ -1130,6 +1130,43 @@ mark.regex-match {
   line-height: 1.7;
 }
 
+/* Contribution & Flutterwave Integration */
+.contribute-card {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+}
+
+.contrib-tier-btn {
+  padding: 9px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 10px;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.contrib-tier-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-subtle);
+  transform: translateY(-1px);
+}
+
+.contrib-tier-btn.active {
+  background: var(--black) !important;
+  color: var(--white) !important;
+  border-color: var(--black) !important;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
 /* Profile Card in Support */
 .creator-card-full {
   display: flex;
@@ -1539,6 +1576,127 @@ mark.regex-match {
     gap: 12px;
     width: 100%;
     box-sizing: border-box;
+  }
+
+  /* Contribute Section on Mobile */
+  .contribute-card {
+    padding: 18px 16px !important;
+  }
+  .contrib-details-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  #contrib-flutterwave-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Files (Saved) View on Mobile */
+  .sv {
+    padding: 0 4px 40px !important;
+  }
+  .sv-head {
+    padding: 14px 16px !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+  .sv-head > div:last-child {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    justify-content: space-between !important;
+  }
+  .sv-body {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+  .sv-list {
+    max-height: 280px !important;
+  }
+  .sv-detail {
+    padding: 16px 14px !important;
+  }
+  .sv-grid-wrap {
+    grid-template-columns: 1fr !important;
+  }
+  .sv-table-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Calendar Tool on Mobile */
+  .calendar-app-wrapper {
+    padding: 0 4px !important;
+  }
+  .cal-header-bar {
+    padding: 14px !important;
+  }
+  .cal-header-bar > div:first-child {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+  .cal-view-strip {
+    width: 100% !important;
+    justify-content: space-between !important;
+  }
+  .cal-day-cell {
+    min-height: 52px !important;
+    padding: 3px !important;
+  }
+  .cal-event-pill {
+    font-size: 0.65rem !important;
+    padding: 1px 3px !important;
+  }
+  .cal-event-time {
+    display: none !important;
+  }
+  .cal-today-banner {
+    padding: 10px 14px !important;
+  }
+  .cal-category-pills {
+    overflow-x: auto !important;
+    padding-bottom: 4px !important;
+    width: 100% !important;
+  }
+
+  /* Browser Tool on Mobile */
+  .browser-app-wrapper {
+    border-radius: 12px !important;
+  }
+  .browser-chrome {
+    padding: 6px 8px 0 !important;
+  }
+  .brw-address-box {
+    padding: 2px 6px !important;
+  }
+  #brw-url-input {
+    font-size: 0.78rem !important;
+  }
+  .brw-hide-mobile {
+    display: none !important;
+  }
+  #brw-viewport {
+    min-height: 420px !important;
+  }
+  #brw-page-content {
+    padding: 16px !important;
+  }
+
+  /* Assistant Tool on Mobile */
+  .toolbox-assistant-root {
+    height: calc(100vh - 145px) !important;
+    min-height: 440px !important;
+    margin-bottom: 78px !important;
+    border-radius: 14px !important;
+  }
+  #ast-messages {
+    padding: 16px 12px !important;
+  }
+  .ast-browser-card,
+  .ast-calendar-card {
+    margin: 8px 0 !important;
   }
 
   /* Touch Targets & Inputs */
@@ -5620,6 +5778,128 @@ input, select, textarea {
   --g800: #312816;
   --g900: #1f1e1c;
   --shadow-lg: 0 24px 60px rgba(40, 30, 20, 0.12);
+}
+
+/* ============================================================
+   UNIVERSAL THEME DEMARCATIONS FOR COMPLEX LAYOUTS & TOOLS
+   ============================================================ */
+[data-theme] {
+  --text: var(--black);
+  --text-secondary: var(--g600);
+  --text-muted: var(--g400);
+  --bg-card: var(--white);
+  --bg-subtle: var(--g50);
+  --bg-hover: var(--g100);
+  --border: var(--g200);
+  --border-subtle: var(--g150);
+}
+
+[data-theme] .tool-controls,
+[data-theme] .tool-panel,
+[data-theme] .tool-workspace,
+[data-theme] .tool-stat,
+[data-theme] .tool-output,
+[data-theme] .tool-section,
+[data-theme] .wm-stage,
+[data-theme] .wm-bottom-bar,
+[data-theme] .calc-display,
+[data-theme] .notes-app-wrapper,
+[data-theme] .tab-btn,
+[data-theme] .pill-btn,
+[data-theme] .code-output,
+[data-theme] .output-box,
+[data-theme] .card-pane,
+[data-theme] .editor-pane,
+[data-theme] .stage-pane,
+[data-theme] .contribute-card,
+[data-theme] .browser-app-wrapper,
+[data-theme] .sv,
+[data-theme] .sv-empty,
+[data-theme] .sv-head,
+[data-theme] .sv-detail,
+[data-theme] .sv-grid-card,
+[data-theme] .sv-table-wrap,
+[data-theme] .ast-browser-card,
+[data-theme] .ast-calendar-card {
+  color: var(--text);
+}
+
+[data-theme] .sv-layout-btn:hover,
+[data-theme] .sv-cview-btn:hover {
+  background: var(--bg-hover) !important;
+}
+
+[data-theme] .sv-layout-btn.active,
+[data-theme] .sv-cview-btn.active {
+  background: var(--bg-card) !important;
+  color: var(--text) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme] .sv-table-row:hover {
+  background: var(--bg-hover) !important;
+}
+
+[data-theme] .sv-grid-card:hover {
+  border-color: var(--border) !important;
+  transform: translateY(-2px);
+}
+
+[data-theme] .tool-stat {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+[data-theme] .tool-output {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+[data-theme] .tool-label {
+  color: var(--text);
+}
+
+[data-theme] .tool-range {
+  background: var(--border);
+}
+
+[data-theme] .tool-range::-webkit-slider-thumb {
+  background: var(--black);
+}
+
+[data-theme] .tool-range::-moz-range-thumb {
+  background: var(--black);
+}
+
+[data-theme] .tool-checkbox input[type="checkbox"] {
+  background: var(--bg-card);
+  border-color: var(--border);
+}
+
+[data-theme] .tool-checkbox input[type="checkbox"]:checked {
+  background: var(--black);
+  border-color: var(--black);
+}
+
+[data-theme] .tool-checkbox input[type="checkbox"]:checked::after {
+  border-color: var(--white);
+}
+
+[data-theme] .output-list-item {
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text);
+}
+
+[data-theme] .output-list-item:hover {
+  background: var(--bg-hover);
+}
+
+[data-theme] .timestamp-display {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  color: var(--text);
 }
 
 /* ============================================================

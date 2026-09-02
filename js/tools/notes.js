@@ -14,10 +14,10 @@ export default {
     let activePaper = 'blank';
 
     container.innerHTML = `
-      <div class="notes-app-wrapper" style="display:grid; grid-template-columns:minmax(180px, 220px) minmax(220px, 280px) 1fr; height:720px; max-height:85vh; min-height:500px; background:var(--white); border:1px solid var(--g200); border-radius:18px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.04);">
+      <div class="notes-app-wrapper" style="display:grid; grid-template-columns:minmax(180px, 220px) minmax(220px, 280px) 1fr; height:720px; max-height:85vh; min-height:500px; background:var(--bg-card); border:1px solid var(--border); border-radius:18px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.04);">
         
         <!-- 1. FOLDERS SIDEBAR -->
-        <div class="notes-sidebar-col" style="background:var(--g50); border-right:1px solid var(--g200); display:flex; flex-direction:column; justify-content:space-between; padding:14px; min-height:0; overflow-y:auto;">
+        <div class="notes-sidebar-col" style="background:var(--bg-subtle); border-right:1px solid var(--border); display:flex; flex-direction:column; justify-content:space-between; padding:14px; min-height:0; overflow-y:auto;">
           <div>
             <div style="font-weight:700; font-size:0.95rem; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -44,9 +44,9 @@ export default {
         </div>
 
         <!-- 2. NOTE LIST COLUMN -->
-        <div class="notes-list-col" style="background:var(--white); border-right:1px solid var(--g200); display:flex; flex-direction:column; min-height:0; overflow:hidden;">
+        <div class="notes-list-col" style="background:var(--bg-card); border-right:1px solid var(--border); display:flex; flex-direction:column; min-height:0; overflow:hidden;">
           <!-- Top Bar with Search & New Note -->
-          <div style="padding:12px; border-bottom:1px solid var(--g150); display:flex; gap:8px; align-items:center; flex-shrink:0;">
+          <div style="padding:12px; border-bottom:1px solid var(--border); display:flex; gap:8px; align-items:center; flex-shrink:0;">
             <input type="text" id="notes-search-input" class="tool-input" placeholder="Search notes..." style="flex:1; font-size:0.8rem; padding:6px 10px;">
             <button type="button" class="btn btn-primary btn-sm" id="notes-add-btn" title="Create New Note" style="padding:6px 12px; font-weight:600; flex-shrink:0;">+ New</button>
           </div>
@@ -56,9 +56,9 @@ export default {
         </div>
 
         <!-- 3. MAIN EDITOR AREA -->
-        <div class="notes-editor-col" style="display:flex; flex-direction:column; background:var(--white); position:relative; min-height:0; overflow:hidden;">
+        <div class="notes-editor-col" style="display:flex; flex-direction:column; background:var(--bg-card); position:relative; min-height:0; overflow:hidden;">
           <!-- Editor Toolbar -->
-          <div style="padding:8px 14px; border-bottom:1px solid var(--g150); background:var(--g50); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; flex-shrink:0;">
+          <div class="notes-toolbar-top" style="padding:8px 14px; border-bottom:1px solid var(--border); background:var(--bg-subtle); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; flex-shrink:0;">
             <div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap;">
               <button type="button" class="notes-tool-btn" id="tool-bold" title="Bold"><strong>B</strong></button>
               <button type="button" class="notes-tool-btn" id="tool-italic" title="Italic"><em>I</em></button>
@@ -83,13 +83,13 @@ export default {
 
           <!-- Note Content Area -->
           <div id="notes-editor-container" class="notes-paper-blank" style="flex:1; overflow-y:auto; min-height:0; padding:24px 32px; display:flex; flex-direction:column; gap:12px;">
-            <input type="text" id="note-title-input" placeholder="Title" style="font-size:1.5rem; font-weight:700; border:none; outline:none; background:transparent; width:100%; color:var(--black);">
-            <div id="note-meta-line" style="font-size:0.75rem; color:var(--g400); font-family:var(--mono);"></div>
-            <div id="note-body-editor" contenteditable="true" style="flex:1; outline:none; font-size:0.95rem; line-height:1.7; min-height:200px; color:var(--g900); white-space:pre-wrap;"></div>
+            <input type="text" id="note-title-input" placeholder="Title" style="font-size:1.5rem; font-weight:700; border:none; outline:none; background:transparent; width:100%; color:var(--text);">
+            <div id="note-meta-line" style="font-size:0.75rem; color:var(--text-muted); font-family:var(--mono);"></div>
+            <div id="note-body-editor" contenteditable="true" style="flex:1; outline:none; font-size:0.95rem; line-height:1.7; min-height:200px; color:var(--text); white-space:pre-wrap;"></div>
           </div>
 
           <!-- Word Counter Footer -->
-          <div style="padding:6px 16px; border-top:1px solid var(--g150); background:var(--g50); display:flex; justify-content:space-between; font-size:0.74rem; color:var(--g500); font-family:var(--mono); flex-shrink:0;">
+          <div class="notes-footer-bar" style="padding:6px 16px; border-top:1px solid var(--border); background:var(--bg-subtle); display:flex; justify-content:space-between; font-size:0.74rem; color:var(--text-muted); font-family:var(--mono); flex-shrink:0;">
             <span id="note-word-count">0 words · 0 characters</span>
             <span id="note-save-status">Saved locally</span>
           </div>
@@ -160,15 +160,15 @@ export default {
       }
 
       cardsListEl.innerHTML = filtered.map(note => `
-        <div class="note-card-item ${note.id === activeNoteId ? 'active' : ''}" data-id="${note.id}" style="padding:12px 14px; border-bottom:1px solid var(--g150); cursor:pointer; transition:background 0.15s;">
+        <div class="note-card-item ${note.id === activeNoteId ? 'active' : ''}" data-id="${note.id}" style="padding:12px 14px; border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.15s;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
-            <strong style="font-size:0.88rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:80%;">${note.title || 'New Note'}</strong>
-            ${note.pinned ? '<span style="font-size:0.72rem; font-weight:700; color:var(--g600); border:1px solid var(--g300); padding:1px 5px; border-radius:4px;">PINNED</span>' : ''}
+            <strong style="font-size:0.88rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:80%; color:var(--text);">${note.title || 'New Note'}</strong>
+            ${note.pinned ? '<span style="font-size:0.72rem; font-weight:700; color:var(--text-secondary); border:1px solid var(--border); padding:1px 5px; border-radius:4px;">PINNED</span>' : ''}
           </div>
-          <div style="font-size:0.75rem; color:var(--g500); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:4px;">
+          <div style="font-size:0.75rem; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:4px;">
             ${(note.body || 'No additional text').replace(/<[^>]*>?/gm, '').slice(0, 60)}
           </div>
-          <div style="font-size:0.68rem; color:var(--g400); font-family:var(--mono);">
+          <div style="font-size:0.68rem; color:var(--text-muted); font-family:var(--mono);">
             ${new Date(note.updatedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
           </div>
         </div>
@@ -329,46 +329,118 @@ function injectNotesCSS() {
   const style = document.createElement('style');
   style.id = 'notes-injected-styles';
   style.textContent = `
+    .notes-app-wrapper {
+      background: var(--bg-card) !important;
+      border: 1px solid var(--border) !important;
+      color: var(--text) !important;
+    }
+    .notes-sidebar-col {
+      background: var(--bg-subtle) !important;
+      border-right: 1px solid var(--border) !important;
+      color: var(--text) !important;
+    }
+    .notes-list-col {
+      background: var(--bg-card) !important;
+      border-right: 1px solid var(--border) !important;
+      color: var(--text) !important;
+    }
+    .notes-editor-col {
+      background: var(--bg-card) !important;
+      color: var(--text) !important;
+    }
+    .notes-toolbar-top {
+      background: var(--bg-subtle) !important;
+      border-bottom: 1px solid var(--border) !important;
+    }
+    .notes-footer-bar {
+      background: var(--bg-subtle) !important;
+      border-top: 1px solid var(--border) !important;
+      color: var(--text-muted) !important;
+    }
+
     .notes-folder-btn {
       padding: 8px 10px;
-      border: none;
+      border: 1px solid transparent;
       background: transparent;
       border-radius: 8px;
       font-size: 0.82rem;
       font-weight: 500;
-      color: var(--g700);
+      color: var(--text-secondary);
       text-align: left;
       cursor: pointer;
       transition: all 0.15s;
     }
-    .notes-folder-btn:hover { background: var(--g100); color: var(--black); }
-    .notes-folder-btn.active { background: var(--white); color: var(--black); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .notes-folder-btn:hover { background: var(--bg-hover); color: var(--text); }
+    .notes-folder-btn.active {
+      background: var(--bg-card) !important;
+      color: var(--text) !important;
+      border-color: var(--border) !important;
+      font-weight: 700;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
     
-    .note-card-item:hover { background: var(--g50); }
-    .note-card-item.active { background: var(--g100); border-left: 3px solid var(--black); }
+    .note-card-item {
+      color: var(--text);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .note-card-item:hover { background: var(--bg-hover) !important; }
+    .note-card-item.active {
+      background: var(--bg-hover) !important;
+      border-left: 3px solid var(--text) !important;
+    }
 
     .notes-tool-btn {
-      padding: 4px 8px;
+      padding: 5px 9px;
       font-size: 0.78rem;
-      background: var(--white);
-      border: 1px solid var(--g200);
+      background: var(--bg-card) !important;
+      color: var(--text) !important;
+      border: 1px solid var(--border) !important;
       border-radius: 6px;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, border-color 0.15s;
     }
-    .notes-tool-btn:hover { background: var(--g100); }
+    .notes-tool-btn:hover {
+      background: var(--bg-hover) !important;
+      border-color: var(--border-subtle) !important;
+    }
 
-    .notes-paper-blank { background: var(--white) !important; }
+    .notes-paper-blank {
+      background-color: var(--bg-card) !important;
+      color: var(--text) !important;
+    }
     .notes-paper-lined {
-      background: repeating-linear-gradient(transparent, transparent 27px, #e5e7eb 28px) !important;
+      background-color: var(--bg-card) !important;
+      background-image: repeating-linear-gradient(transparent, transparent 27px, var(--border) 28px) !important;
       line-height: 28px !important;
+      color: var(--text) !important;
     }
     .notes-paper-grid {
-      background-image: linear-gradient(#e5e7eb 1px, transparent 1px), linear-gradient(90deg, #e5e7eb 1px, transparent 1px) !important;
+      background-color: var(--bg-card) !important;
+      background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px) !important;
       background-size: 20px 20px !important;
+      color: var(--text) !important;
     }
     .notes-paper-dot {
-      background-image: radial-gradient(#d1d5db 1.2px, transparent 1.2px) !important;
+      background-color: var(--bg-card) !important;
+      background-image: radial-gradient(var(--border) 1.5px, transparent 1.5px) !important;
       background-size: 18px 18px !important;
+      color: var(--text) !important;
+    }
+
+    #note-title-input {
+      color: var(--text) !important;
+    }
+    #note-title-input::placeholder {
+      color: var(--text-muted) !important;
+    }
+    #note-body-editor {
+      color: var(--text) !important;
+    }
+    #note-meta-line {
+      color: var(--text-muted) !important;
     }
 
     .note-chk {

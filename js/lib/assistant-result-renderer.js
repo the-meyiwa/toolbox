@@ -3552,6 +3552,168 @@ export class PdfAnnotationResultRenderer extends ResultRenderer {
 }
 
 /**
+ * CALENDAR CARD RESULT — Interactive visual card for scheduled events and agenda lists
+ */
+export class CalendarCardRenderer extends ResultRenderer {
+  static id = 'calendar-card';
+  static name = 'Calendar Event';
+
+  static canRender(result) {
+    return result.renderer === 'calendar-card' ||
+      result.type === 'calendar-event' ||
+      result.type === 'calendar-list';
+  }
+
+  static render(result, container) {
+    const card = document.createElement('div');
+    card.className = 'ast-calendar-card';
+    card.style.cssText = 'background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:16px; margin:8px 0; box-shadow:0 4px 16px rgba(0,0,0,0.04); font-family:var(--sans);';
+
+    if (result.type === 'calendar-list' || result.action === 'list') {
+      const events = result.events || [];
+      const safeQuery = String(result.query || 'Upcoming');
+      card.innerHTML = `
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; border-bottom:1px solid var(--border-subtle); padding-bottom:8px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="width:28px; height:28px; border-radius:8px; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <strong style="font-size:0.92rem; color:var(--text);">Scheduled Events (${events.length})</strong>
+          </div>
+          <a href="#calendar" class="btn btn-secondary btn-sm" style="height:28px; padding:0 12px; font-size:0.75rem; text-decoration:none;">Open Calendar →</a>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          ${events.length === 0 ? `
+            <div style="font-size:0.82rem; color:var(--text-muted); padding:8px 0;">No events found for ${safeQuery}.</div>
+          ` : events.map(e => `
+            <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-subtle); padding:8px 12px; border-radius:8px; border:1px solid var(--border-subtle);">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:0.75rem; font-family:var(--mono); color:var(--text-muted);">${e.date}</span>
+                <span style="font-weight:600; font-size:0.86rem; color:var(--text);">${String(e.title || '')}</span>
+                <span style="font-size:0.75rem; color:var(--text-secondary);">${e.isAllDay ? '(All day)' : `${e.startTime} – ${e.endTime}`}</span>
+              </div>
+              <span style="font-size:0.68rem; font-weight:700; text-transform:uppercase; padding:2px 7px; border-radius:999px; background:rgba(59,130,246,0.12); color:#3b82f6;">${e.category || 'event'}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    } else {
+      const evt = result.event || {};
+      const isCancelled = result.action === 'cancelled';
+      card.innerHTML = `
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="width:32px; height:32px; border-radius:8px; background:${isCancelled ? '#ef4444' : 'var(--black)'}; color:var(--white); display:flex; align-items:center; justify-content:center;">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <div>
+              <div style="font-weight:700; font-size:0.95rem; color:var(--text);">${String(evt.title || result.message || 'Calendar Event')}</div>
+              <div style="font-size:0.75rem; color:var(--text-secondary);">${isCancelled ? 'Event cancelled from schedule' : 'Event confirmed & scheduled'}</div>
+            </div>
+          </div>
+          <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; padding:3px 9px; border-radius:999px; background:${isCancelled ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)'}; color:${isCancelled ? '#ef4444' : '#10b981'};">
+            ${isCancelled ? 'Cancelled' : 'Scheduled'}
+          </span>
+        </div>
+        ${!isCancelled ? `
+          <div style="background:var(--bg-subtle); border:1px solid var(--border-subtle); border-radius:10px; padding:12px 14px; display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; font-size:0.8rem;">
+            <div><span style="color:var(--text-muted); display:block; font-size:0.7rem; text-transform:uppercase;">Date</span><strong style="color:var(--text);">${evt.date || 'Today'}</strong></div>
+            <div><span style="color:var(--text-muted); display:block; font-size:0.7rem; text-transform:uppercase;">Time</span><strong style="color:var(--text);">${evt.isAllDay ? 'All-day' : `${evt.startTime} – ${evt.endTime}`}</strong></div>
+            <div><span style="color:var(--text-muted); display:block; font-size:0.7rem; text-transform:uppercase;">Category</span><strong style="color:var(--text); text-transform:capitalize;">${evt.category || 'Personal'}</strong></div>
+            ${evt.location ? `<div><span style="color:var(--text-muted); display:block; font-size:0.7rem; text-transform:uppercase;">Location</span><strong style="color:var(--text);">${String(evt.location)}</strong></div>` : ''}
+          </div>
+          ${evt.description ? `<div style="font-size:0.78rem; color:var(--text-secondary); margin-top:10px; padding:0 2px;">${String(evt.description)}</div>` : ''}
+        ` : ''}
+        <div style="display:flex; justify-content:flex-end; margin-top:12px;">
+          <a href="#calendar" class="btn btn-secondary btn-sm" style="font-size:0.76rem; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            <span>View in Calendar</span>
+          </a>
+        </div>
+      `;
+    }
+
+    container.appendChild(card);
+    return card;
+  }
+}
+
+/**
+ * BROWSER CARD RESULT — Interactive browser preview card with address bar and sandbox launcher
+ */
+export class BrowserCardRenderer extends ResultRenderer {
+  static id = 'browser-card';
+  static name = 'Web Browser';
+
+  static canRender(result) {
+    return result.renderer === 'browser-card' ||
+      result.type === 'browser-preview';
+  }
+
+  static render(result, container) {
+    const card = document.createElement('div');
+    card.className = 'ast-browser-card';
+    card.style.cssText = 'background:var(--bg-card); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin:10px 0; box-shadow:0 4px 18px rgba(0,0,0,0.05); font-family:var(--sans);';
+
+    const url = String(result.url || 'https://en.wikipedia.org');
+    const title = String(result.title || 'Web Research');
+    const excerpt = String(result.excerpt || '');
+    const browserToolLink = `#browser?url=${encodeURIComponent(url)}`;
+
+    card.innerHTML = `
+      <!-- Window Chrome -->
+      <div style="background:var(--bg-subtle); border-bottom:1px solid var(--border); padding:8px 12px; display:flex; align-items:center; justify-content:space-between; gap:10px;">
+        <div style="display:flex; align-items:center; gap:5px;">
+          <span style="width:9px; height:9px; border-radius:50%; background:#ef4444; display:inline-block;"></span>
+          <span style="width:9px; height:9px; border-radius:50%; background:#f59e0b; display:inline-block;"></span>
+          <span style="width:9px; height:9px; border-radius:50%; background:#10b981; display:inline-block;"></span>
+          <span style="font-size:0.75rem; font-weight:700; color:var(--text); margin-left:6px;">Browser</span>
+        </div>
+        <!-- Address pill -->
+        <div style="flex:1; max-width:460px; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:3px 10px; font-family:var(--mono); font-size:0.75rem; color:var(--text); display:flex; align-items:center; gap:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#10b981" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          <span style="overflow:hidden; text-overflow:ellipsis;">${url}</span>
+        </div>
+        <span style="font-size:0.7rem; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Isolated</span>
+      </div>
+
+      <!-- Content Preview -->
+      <div style="padding:16px 18px;">
+        <h3 style="margin:0 0 8px; font-size:1.05rem; font-weight:700; color:var(--text);">${title}</h3>
+        <p style="margin:0 0 14px; font-size:0.86rem; line-height:1.6; color:var(--text-secondary);">${excerpt}</p>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; border-top:1px solid var(--border-subtle); padding-top:12px;">
+          <div style="display:flex; gap:8px;">
+            <a href="${browserToolLink}" class="btn btn-primary btn-sm" style="font-size:0.76rem; text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-weight:600;">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              <span>Open in Browser</span>
+            </a>
+            <a href="${url}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="font-size:0.76rem; text-decoration:none; display:inline-flex; align-items:center; gap:5px;">
+              <span>Visit Site</span>
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm brw-card-copy-btn" data-url="${url}" style="font-size:0.75rem; padding:4px 8px;">Copy URL</button>
+        </div>
+      </div>
+    `;
+
+    const copyBtn = card.querySelector('.brw-card-copy-btn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(url).then(() => {
+          copyBtn.textContent = 'Copied';
+          setTimeout(() => { copyBtn.textContent = 'Copy URL'; }, 2000);
+        });
+      });
+    }
+
+    container.appendChild(card);
+    return card;
+  }
+}
+
+/**
  * TEXT RESULT — Clean fallback text output
  */
 export class TextResultRenderer extends ResultRenderer {
@@ -3610,6 +3772,8 @@ export const RESULT_RENDERERS = [
   TableResultRenderer,
   SpeedTestResultRenderer,
   AudioPlayerResultRenderer,
+  CalendarCardRenderer,
+  BrowserCardRenderer,
   TextResultRenderer
 ];
 
