@@ -7,7 +7,7 @@
    with regional filters, innervation, blood supply, and relationships.
    ============================================================ */
 
-import { anatomyService, ANATOMICAL_REGIONS } from '../lib/anatomy-data.js';
+import { anatomyService, ANATOMICAL_REGIONS, stemWord } from '../lib/anatomy-data.js';
 
 const ROOT   = import.meta.env?.BASE_URL ?? '/';
 const BASE   = `${ROOT}anatomy/`.replace(/\/{2,}/g, '/');
@@ -330,10 +330,19 @@ export default {
     let filterTimeout;
     function renderList() {
       const q = filterEl.value.trim().toLowerCase();
+      const qStem = stemWord(q);
       const selId = viewer.selected?.userData.structure?.id;
 
       const rows = index.structures.filter(s => {
-        if (q && !s.name.toLowerCase().includes(q)) return false;
+        if (q) {
+          const sName = s.name.toLowerCase();
+          const matchDirect = sName.includes(q) || (qStem && sName.includes(qStem));
+          if (!matchDirect) {
+            const detail = anatomyService.getDetail(s.name, s.system);
+            const cName = (detail.commonName || '').toLowerCase();
+            if (!cName.includes(q) && !(qStem && cName.includes(qStem))) return false;
+          }
+        }
         if (selectedRegion !== 'all') {
           const detail = anatomyService.getDetail(s.name, s.system);
           if (detail.region !== selectedRegion) return false;

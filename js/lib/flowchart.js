@@ -342,3 +342,249 @@ export const EXAMPLES = {
 
   blank: { name: 'Empty', about: 'Start from nothing.', build: () => [] },
 };
+
+/**
+ * Parse code into flowchart AST nodes.
+ * @param {string} code
+ * @param {string} [language='auto']
+ * @returns {Array} AST nodes
+ */
+export function parseCodeToNodes(code, language = 'auto') {
+  if (!code || typeof code !== 'string') return [];
+
+  const rawLines = code.split('\n');
+  const lines = rawLines
+    .map(l => l.replace(/\r/g, ''))
+    .filter(l => l.trim().length > 0);
+
+  if (lines.length === 0) return [];
+
+  function parseBlock(lineList) {
+    const result = [];
+    let i = 0;
+
+    while (i < lineList.length) {
+      const fullLine = lineList[i];
+      const trimmed = fullLine.trim();
+
+      // Skip function headers/main wraps
+      if (/^(def\s+\w+|function\s+\w+|public\s+static|int\s+main|class\s+\w+|if\s+__name__)/i.test(trimmed)) {
+        i++;
+        continue;
+      }
+
+      // 1. Comments
+      if (trimmed.startsWith('#') || trimmed.startsWith('//') || trimmed.startsWith('/*')) {
+        const text = trimmed.replace(/^[#\/]+|\*\/$/g, '').trim();
+        result.push(makeNode('comment', { text }));
+        i++;
+        continue;
+      }
+
+      // 2. Output / Print
+      const printMatch = trimmed.match(/^(?:print|console\.log|System\.out\.println|printf|Output)\s*\((.*)\);?$/i) ||
+                         trimmed.match(/^Output\s+(.+)$/i);
+      if (printMatch) {
+        let expr = printMatch[1].trim();
+        if (expr.startsWith('"') && expr.endsWith('"')) {
+          // Keep quotes
+        } else if (expr.startsWith("'") && expr.endsWith("'")) {
+          expr = `"${expr.slice(1, -1)}"`;
+        }
+        result.push(makeNode('output', { expr }));
+        i++;
+        continue;
+      }
+
+      // 3. Input / Read
+      const inputMatch = trimmed.match(/^(\w+)\s*=\s*(?:input|prompt|scanner\.next(?:Line)?|Console\.ReadLine|Input)\s*\((.*)\);?$/i) ||
+                         trimmed.match(/^Input\s+(\w+)$/i);
+      if (inputMatch) {
+        result.push(makeNode('input', { name: inputMatch[1] }));
+        i++;
+        continue;
+      }
+
+      // 4. For Loop
+      const forRangeMatch = trimmed.match(/^for\s+(\w+)\s+in\s+range\s*\((.*?)\)\s*:?$/i) ||
+                            trimmed.match(/^for\s*\(\s*(?:let|var|int)?\s*(\w+)\s*=\s*(\d+)\s*;\s*\1\s*<=\s*([^;]+)\s*;\s*\1\s*(?:\+\+|\+=\s*(\d+))\s*\)\s*\{?$/i) ||
+                            trimmed.match(/^for\s+(\w+)\s*=\s*(\d+)\s+to\s+([^\s]+)(?:\s+step\s+(\d+))?/i);
+      if (forRangeMatch) {
+        let name = forRangeMatch[1];
+        let from = '1';
+        let to = '10';
+        let step = '1';
+
+        if (trimmed.includes('range')) {
+          const args = forRangeMatch[2].split(',').map(s => s.trim());
+          if (args.length === 1) {
+            from = '0';
+            to = args[0] ? `${args[0]} - 1` : '10';
+          } else if (args.length === 2) {
+            from = args[0];
+            to = args[1] ? `${args[1]} - 1` : '10';
+          } else if (args.length === 3) {
+            from = args[0];
+            to = args[1];
+            step = args[2];
+          }
+        } else if (forRangeMatch[2] && forRangeMatch[3]) {
+          from = forRangeMatch[2];
+          to = forRangeMatch[3];
+          step = forRangeMatch[4] || '1';
+        }
+
+        const bodyLines = [];
+        i++;
+        const baseIndent = getIndentLevel(fullLine);
+        while (i < lineList.length) {
+          const nextLine = lineList[i];
+          const nextTrimmed = nextLine.trim();
+          if (nextTrimmed === '}' && getIndentLevel(nextLine) <= baseIndent) {
+            i++;
+            break;
+          }
+          if (getIndentLevel(nextLine) > baseIndent || (nextTrimmed && !nextLine.startsWith('}'))) {
+            bodyLines.push(nextLine);
+            i++;
+          } else {
+            break;
+          }
+        }
+
+        result.push(makeNode('for', {
+          name, from, to, step,
+          body: bodyLines.length ? parseBlock(bodyLines) : []
+        }));
+        continue;
+      }
+
+      // 5. While Loop
+      const whileMatch = trimmed.match(/^while\s*\(?(.*?)\)?\s*(?::|\{)?$/i);
+      if (whileMatch && !trimmed.startsWith('}')) {
+        const cond = whileMatch[1].trim() || 'true';
+        const bodyLines = [];
+        i++;
+        const baseIndent = getIndentLevel(fullLine);
+        while (i < lineList.length) {
+          const nextLine = lineList[i];
+          const nextTrimmed = nextLine.trim();
+          if (nextTrimmed === '}' && getIndentLevel(nextLine) <= baseIndent) {
+            i++;
+            break;
+          }
+          if (getIndentLevel(nextLine) > baseIndent) {
+            bodyLines.push(nextLine);
+            i++;
+          } else {
+            break;
+          }
+        }
+
+        result.push(makeNode('while', {
+          cond,
+          body: bodyLines.length ? parseBlock(bodyLines) : []
+        }));
+        continue;
+      }
+
+      // 6. If-Else Condition
+      const ifMatch = trimmed.match(/^if\s*\(?(.*?)\)?\s*(?::|\{)?$/i);
+      if (ifMatch && !trimmed.startsWith('}')) {
+        const cond = ifMatch[1].trim();
+        const thenLines = [];
+        const elseLines = [];
+        let inElse = false;
+        i++;
+        const baseIndent = getIndentLevel(fullLine);
+
+        while (i < lineList.length) {
+          const nextLine = lineList[i];
+          const nextTrimmed = nextLine.trim();
+
+          if (/^(?:}\s*)?else(?:\s*\{|:)?$/i.test(nextTrimmed)) {
+            inElse = true;
+            i++;
+            continue;
+          }
+
+          if (nextTrimmed === '}' && getIndentLevel(nextLine) <= baseIndent) {
+            i++;
+            break;
+          }
+
+          if (getIndentLevel(nextLine) > baseIndent || (inElse && getIndentLevel(nextLine) >= baseIndent)) {
+            if (inElse) elseLines.push(nextLine);
+            else thenLines.push(nextLine);
+            i++;
+          } else {
+            break;
+          }
+        }
+
+        result.push(makeNode('if', {
+          cond,
+          then: parseBlock(thenLines),
+          else: parseBlock(elseLines)
+        }));
+        continue;
+      }
+
+      // 7. Variable Declarations
+      const declMatch = trimmed.match(/^(?:let|const|var|Dim|Declare)\s+(\w+)(?:\s*:\s*(\w+)|\s+As\s+(\w+))?(?:\s*=\s*(.*))?;?$/i) ||
+                        trimmed.match(/^(?:int|float|double|String|bool)\s+(\w+)(?:\s*=\s*(.*))?;?$/i);
+      if (declMatch) {
+        const name = declMatch[1];
+        const rawType = (declMatch[2] || declMatch[3] || 'Integer');
+        const dataType = normalizeDataType(rawType);
+        const expr = (declMatch[4] || '').replace(/;$/, '').trim();
+
+        result.push(makeNode('declare', { name, dataType }));
+        if (expr) {
+          result.push(makeNode('assign', { name, expr }));
+        }
+        i++;
+        continue;
+      }
+
+      // 8. Assignments
+      const assignMatch = trimmed.match(/^(\w+)\s*(?:=|\+=|-=|\*=|\/=)\s*(.*);?$/);
+      if (assignMatch) {
+        const name = assignMatch[1];
+        let expr = assignMatch[2].replace(/;$/, '').trim();
+        if (trimmed.includes('+=')) expr = `${name} + ${expr}`;
+        else if (trimmed.includes('-=')) expr = `${name} - ${expr}`;
+        else if (trimmed.includes('*=')) expr = `${name} * ${expr}`;
+        else if (trimmed.includes('/=')) expr = `${name} / ${expr}`;
+
+        result.push(makeNode('assign', { name, expr }));
+        i++;
+        continue;
+      }
+
+      // Default fallback: treat as comment or statement
+      if (trimmed) {
+        result.push(makeNode('comment', { text: trimmed.replace(/;$/, '') }));
+      }
+      i++;
+    }
+
+    return result;
+  }
+
+  function getIndentLevel(line) {
+    const match = line.match(/^(\s*)/);
+    return match ? match[1].length : 0;
+  }
+
+  function normalizeDataType(t) {
+    const s = String(t || '').toLowerCase();
+    if (s.includes('int') || s.includes('number')) return 'Integer';
+    if (s.includes('float') || s.includes('double') || s.includes('real')) return 'Real';
+    if (s.includes('bool')) return 'Boolean';
+    return 'String';
+  }
+
+  return parseBlock(lines);
+}
+

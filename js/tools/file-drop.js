@@ -44,17 +44,17 @@ export default {
                 <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
                 <path d="M16 16l4 4 4-4M4 20h16"/>
               </svg>
-              Local File Drop (P2P AirDrop)
+              Local File Drop
             </h2>
             <div style="font-size:0.82rem; color:var(--g600);">
-              Quickly send files directly to your phone over local Wi-Fi with zero cloud uploads or size limits.
+              Quickly send files directly to your phone or nearby devices over local Wi-Fi with zero cloud uploads or size limits.
             </div>
           </div>
 
           <!-- Mode Toggle Buttons -->
-          <div style="display:flex; background:var(--g100); padding:3px; border-radius:8px; gap:2px;">
-            <button type="button" class="btn btn-sm ${mode === 'send' ? 'btn-primary' : 'btn-secondary'}" id="p2p-tab-send" style="padding:4px 14px; font-size:0.8rem;">Send to Phone</button>
-            <button type="button" class="btn btn-sm ${mode === 'receive' ? 'btn-primary' : 'btn-secondary'}" id="p2p-tab-receive" style="padding:4px 14px; font-size:0.8rem;">Receive File</button>
+          <div style="display:flex; background:var(--g100); padding:3px; border-radius:9999px; gap:2px;">
+            <button type="button" class="btn btn-sm ${mode === 'send' ? 'btn-primary' : 'btn-secondary'}" id="p2p-tab-send" style="padding:5px 16px; font-size:0.8rem; border-radius:9999px;">Send to Phone</button>
+            <button type="button" class="btn btn-sm ${mode === 'receive' ? 'btn-primary' : 'btn-secondary'}" id="p2p-tab-receive" style="padding:5px 16px; font-size:0.8rem; border-radius:9999px;">Receive File</button>
           </div>
         </div>
 

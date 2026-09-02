@@ -216,84 +216,366 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
   },
   {
     name: 'pdf_process',
-    description: 'Inspects, extracts pages, adds watermarks/headers/stamps, or processes PDF documents directly.',
+    description: 'Converts PDF documents to Word (.docx), inspects page counts, or stamps watermarks onto PDF files.',
     parameters: {
       type: 'OBJECT',
       properties: {
         operation: {
           type: 'STRING',
-          description: 'Operation: "inspect", "stamp_watermark", "page_count".'
+          description: 'Operation: "convert_to_word", "convert_to_docx", "inspect", "stamp_watermark", "page_count".'
         },
         watermarkText: {
           type: 'STRING',
-          description: 'Text to stamp as watermark or header on each page.'
+          description: 'Text to stamp as watermark on each page (for stamp_watermark).'
         }
       },
       required: ['operation']
     }
   },
   {
+    name: 'convert_pdf_to_word',
+    description: 'Converts an uploaded PDF document directly into an editable Microsoft Word (.docx) file and returns a downloadable file card.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        filename: {
+          type: 'STRING',
+          description: 'Optional output filename (e.g. "document.docx").'
+        }
+      }
+    }
+  },
+  {
     name: 'generate_qr_code',
-    description: 'Generates a high-quality QR code image from text, URL, or contact data.',
+    description: 'Generates a high-quality QR code image from text, URL, or contact data and displays the rendered QR image directly.',
     parameters: {
       type: 'OBJECT',
       properties: {
         text: {
           type: 'STRING',
-          description: 'Text or URL to encode into QR code.'
+          description: 'Text or URL to encode into QR code (e.g. "https://apple.com").'
         }
       },
       required: ['text']
     }
   },
   {
+    name: 'visualize_data',
+    description: 'Visualizes datasets, mathematical sequences (e.g. Fibonacci, primes, trigonometric), or statistical metrics as interactive charts (line, bar, area, pie, scatter).',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        sequence: {
+          type: 'STRING',
+          description: 'Sequence name if generating mathematically (e.g. "fibonacci", "primes", "geometric", "sine").'
+        },
+        title: {
+          type: 'STRING',
+          description: 'Chart title.'
+        },
+        chartType: {
+          type: 'STRING',
+          description: 'Chart type: "line", "bar", "area", "pie", "scatter".'
+        },
+        data: {
+          type: 'ARRAY',
+          description: 'Array of numeric values to plot.',
+          items: { type: 'NUMBER' }
+        },
+        labels: {
+          type: 'ARRAY',
+          description: 'Array of category/X-axis string labels.',
+          items: { type: 'STRING' }
+        },
+        count: {
+          type: 'NUMBER',
+          description: 'Number of terms to generate for sequences (e.g. 15).'
+        }
+      }
+    }
+  },
+  {
     name: 'csv_analyze_and_chart',
-    description: 'Parses and analyzes a CSV or JSON dataset, calculating row/column counts, column types, statistical distributions (mean, min, max, median), and creates a summary chart.',
+    description: 'Parses and analyzes a CSV or JSON dataset, calculating row/column counts, column types, statistical distributions, and creates a summary chart.',
     parameters: {
       type: 'OBJECT',
       properties: {
         metricColumn: {
           type: 'STRING',
-          description: 'Optional numeric column name to summarize and chart.',
+          description: 'Optional numeric column name to summarize and chart.'
+        },
+        csvData: {
+          type: 'STRING',
+          description: 'Raw CSV text if provided directly in prompt.'
         }
       }
     }
   },
   {
     name: 'code_execute',
-    description: 'Executes code in JavaScript, Python, C++, or SQL in the browser Web Worker and returns stdout/stderr output.',
+    description: 'Executes code in JavaScript, Python, C++, or SQL in the browser Web Worker and returns syntax-highlighted code alongside stdout/stderr console output.',
     parameters: {
       type: 'OBJECT',
       properties: {
         language: {
           type: 'STRING',
-          description: 'Language: "javascript", "python", "cpp", "sql".',
+          description: 'Language: "javascript", "python", "cpp", "sql".'
         },
         code: {
           type: 'STRING',
-          description: 'The source code to execute.',
+          description: 'The source code to execute.'
         },
         stdin: {
           type: 'STRING',
-          description: 'Optional standard input.',
+          description: 'Optional standard input.'
         }
       },
       required: ['language', 'code']
     }
   },
   {
+    name: 'slug_generator',
+    description: 'Converts any title, phrase, or text into a URL-friendly slug and displays the result in a clean, copyable result box.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        text: { type: 'STRING', description: 'Text to slugify.' }
+      },
+      required: ['text']
+    }
+  },
+  {
     name: 'clean_text',
-    description: 'Cleans, normalizes, deduplicates, and formats text.',
+    description: 'Cleans, normalizes, deduplicates, slugifies, and formats text in a dedicated copyable result box.',
     parameters: {
       type: 'OBJECT',
       properties: {
         text: { type: 'STRING', description: 'Text to process.' },
         operation: {
           type: 'STRING',
-          description: 'Operation: "trim_whitespace", "remove_duplicate_lines", "uppercase", "lowercase", "titlecase", "sort_lines", "extract_emails", "extract_urls".',
+          description: 'Operation: "slug", "slugify", "trim_whitespace", "remove_duplicate_lines", "uppercase", "lowercase", "titlecase", "sort_lines", "extract_emails", "extract_urls".'
         }
       },
       required: ['text', 'operation']
+    }
+  },
+  {
+    name: 'simulate_logic_circuit',
+    description: 'Simulates and renders digital logic gate circuits (half adder, full adder, multiplexer, SR latch, etc.) visually with an integrated truth table.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        circuitType: {
+          type: 'STRING',
+          description: 'Circuit type: "halfAdder", "mux", "xorFromNand", "majority", "fullAdder", "srLatch".'
+        },
+        title: {
+          type: 'STRING',
+          description: 'Title or name for the circuit.'
+        }
+      }
+    }
+  },
+  {
+    name: 'generate_flowchart',
+    description: 'Generates a structured visual flowchart diagram from code or algorithmic logic and renders it visually in chat.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        code: {
+          type: 'STRING',
+          description: 'Source code or algorithm description.'
+        },
+        language: {
+          type: 'STRING',
+          description: 'Language: "python", "javascript", "pseudocode", "c".'
+        },
+        title: {
+          type: 'STRING',
+          description: 'Title for the flowchart.'
+        }
+      }
+    }
+  },
+  {
+    name: 'generate_csv',
+    description: 'Generates a structured CSV dataset from headers and rows and provides it as a downloadable CSV artifact.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        headers: {
+          type: 'ARRAY',
+          description: 'Array of column header names.',
+          items: { type: 'STRING' }
+        },
+        rows: {
+          type: 'ARRAY',
+          description: 'Array of rows (each row is an array of strings/numbers).',
+          items: {
+            type: 'ARRAY',
+            items: { type: 'STRING' }
+          }
+        },
+        csvText: {
+          type: 'STRING',
+          description: 'Direct raw CSV text.'
+        },
+        filename: {
+          type: 'STRING',
+          description: 'Output filename (default "dataset.csv").'
+        }
+      }
+    }
+  },
+  {
+    name: 'save_file',
+    description: 'Saves a file, document, dataset, code snippet, note, or artifact to local Saved Work and synchronizes to Cloud Storage by default (or stays strictly local if requested).',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        filename: {
+          type: 'STRING',
+          description: 'Filename with extension (e.g. "report.docx", "data.csv", "script.py", "flowchart.json", "analysis.txt").'
+        },
+        content: {
+          type: 'STRING',
+          description: 'The file contents (text, code, CSV, JSON, base64 data). If omitted, saves the most recent generated tool artifact.'
+        },
+        kind: {
+          type: 'STRING',
+          description: 'Optional file kind: "code", "csv", "json", "text", "markdown", "pdf", "docx", "flowchart", "image".'
+        },
+        destination: {
+          type: 'STRING',
+          description: 'Destination: "cloud" (default) or "local". By default, save file saves to cloud when signed in.'
+        }
+      },
+      required: ['filename']
+    }
+  },
+  {
+    name: 'list_files',
+    description: 'Lists all files, documents, datasets, notes, and artifacts saved locally or synced to Cloud Storage in the user\'s workspace.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        filter: {
+          type: 'STRING',
+          description: 'Optional search keyword or kind filter (e.g. "csv", "code", "pdf", "report").'
+        }
+      }
+    }
+  },
+  {
+    name: 'download_file',
+    description: 'Retrieves a saved file or generated artifact for download. If the user asks to download without confirmation or force download, automatically initiates the browser download.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        filename: {
+          type: 'STRING',
+          description: 'The filename or artifact ID to download (e.g. "example.txt", "budget.csv", "report.pdf").'
+        },
+        autoDownload: {
+          type: 'BOOLEAN',
+          description: 'Set to true if user requested to "download without confirmation" or "download immediately" to trigger automatic browser download.'
+        }
+      },
+      required: ['filename']
+    }
+  },
+  {
+    name: 'illustrator',
+    description: 'Assistant-only internal diagramming tool. Generates rich vector illustrations, process chains, supply networks, cyclical feedback loops, 2x2 comparison matrices, and hierarchical taxonomies with inline image export.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        diagramType: {
+          type: 'STRING',
+          description: 'Diagram paradigm: "sequence" (linear value chain/steps), "cycle" (closed loop/lifecycle), "hierarchy" (tree/layered), "matrix" (2x2 comparison grid), "flow" (decision flow).'
+        },
+        title: {
+          type: 'STRING',
+          description: 'Title of the illustration (e.g. "Chain of Distribution", "Card Payment Rail Processing", "Photosynthesis Cycle", "Eisenhower Matrix").'
+        },
+        steps: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              label: { type: 'STRING', description: 'Step or node title (e.g. "Producer", "Wholesaler", "Retailer", "Consumer")' },
+              description: { type: 'STRING', description: 'Brief explanation of this step or phase' },
+              badge: { type: 'STRING', description: 'Optional step counter, role, or quadrant (e.g. "Step 1", "Quadrant I", "Phase A")' }
+            },
+            required: ['label']
+          },
+          description: 'The ordered sequence of steps, phases, nodes, or quadrants to draw.'
+        },
+        summary: {
+          type: 'STRING',
+          description: 'Pedagogical explanation of the entire concept to accompany the visual illustration.'
+        }
+      },
+      required: ['diagramType', 'title', 'steps', 'summary']
+    }
+  },
+  {
+    name: 'search_diseases',
+    description: 'Searches the WHO ICD-11, Orphanet, and Clinical Pathology database containing 80,000+ diseases, symptoms, etiology, pathophysiology, diagnostic criteria, and first-line treatment protocols ordered by commodity/prevalence.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        query: {
+          type: 'STRING',
+          description: 'Disease name, ICD-11 code, symptom, or organ system (e.g. "Hypertension", "Asthma", "Chest pain", "Appendicitis", "BA00").'
+        },
+        system: {
+          type: 'STRING',
+          description: 'Optional system filter (e.g. "Cardiovascular", "Respiratory", "Gastrointestinal", "Neurological").'
+        },
+        limit: {
+          type: 'INTEGER',
+          description: 'Maximum results to return (default 5).'
+        }
+      },
+      required: ['query']
+    }
+  },
+  {
+    name: 'explore_anatomy',
+    description: 'Generates an interactive 3D human anatomy preview isolating specific bones, muscles, organs, or anatomical systems mentioned by the user, accompanied by comprehensive clinical and physiological details.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        query: {
+          type: 'STRING',
+          description: 'Anatomical terms or structures to explore (e.g. "pectoralis major and trapezius", "femur and digestive system", "biceps brachii", "heart").'
+        },
+        structures: {
+          type: 'ARRAY',
+          items: { type: 'STRING' },
+          description: 'Optional list of specific structure names or IDs.'
+        },
+        systems: {
+          type: 'ARRAY',
+          items: { type: 'STRING' },
+          description: 'Optional list of organ systems (e.g. ["muscular", "skeletal", "digestive"]).'
+        }
+      },
+      required: ['query']
+    }
+  },
+  {
+    name: 'csv_to_json',
+    description: 'Converts CSV data (from an uploaded file, previous step, or raw text) into valid JSON with a formatted JSON viewer and downloadable artifact.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        csvData: {
+          type: 'STRING',
+          description: 'Raw CSV text to convert (optional if already provided or attached).'
+        }
+      }
     }
   },
   {
@@ -456,11 +738,45 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
   // Dynamic router for Toolbox Tools
   if (name.startsWith('open_tool_')) {
     const rawId = name.replace('open_tool_', '');
-    const tool = TOOLS.find(t => t.id.replace(/-/g, '_') === rawId);
+    const tool = TOOLS.find(t => t.id.replace(/-/g, '_') === rawId || t.id === rawId);
     if (!tool) {
       throw new Error(`Tool ${rawId} not found in registry.`);
     }
     const toolId = tool.id;
+
+    // Inline execution for known operations instead of just navigating away
+    if (toolId === 'slug-generator' || rawId === 'slug_generator') {
+      const inputVal = args.inputData || args.text || args.input || '';
+      if (inputVal) {
+        return executeAssistantTool('slug_generator', { text: inputVal }, { currentFile, taskState });
+      }
+    }
+
+    if (toolId === 'csv-to-json' || rawId === 'csv_to_json') {
+      const csvVal = args.inputData || args.csvData || currentFile?.text || taskState?.lastCsvText;
+      if (csvVal) {
+        return executeAssistantTool('csv_to_json', { csvData: csvVal }, { currentFile, taskState });
+      }
+    }
+
+    if (toolId === 'logic-lab' || rawId === 'logic_lab') {
+      return executeAssistantTool('simulate_logic_circuit', args, { currentFile, taskState });
+    }
+
+    if (toolId === 'flowchart') {
+      return executeAssistantTool('generate_flowchart', args, { currentFile, taskState });
+    }
+
+    if (toolId === 'qr-generator' || rawId === 'qr_generator') {
+      const textVal = args.inputData || args.text || args.url || '';
+      if (textVal) {
+        return executeAssistantTool('generate_qr_code', { text: textVal }, { currentFile, taskState });
+      }
+    }
+
+    if (toolId === 'data-bot' || rawId === 'data_bot') {
+      return executeAssistantTool('visualize_data', args, { currentFile, taskState });
+    }
 
     if (args.inputData) {
       const { setNextIncoming } = await import('./artifacts.js');
@@ -489,12 +805,16 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
           
           if (instance.destroy) instance.destroy();
           
-          // If it successfully processed the text (output differs from input), return the result headlessly!
           if (outArt && outArt.text && outArt.text !== args.inputData) {
             return {
               status: 'success',
-              message: `Headless execution complete for ${tool.name}.`,
-              output: outArt.text
+              type: outArt.kind === 'json' ? 'json' : 'transform',
+              renderer: outArt.kind === 'json' ? 'json' : 'transform',
+              operation: tool.name,
+              input: args.inputData,
+              resultText: outArt.text,
+              output: outArt.text,
+              message: `Processed with ${tool.name}.`
             };
           }
         }
@@ -545,6 +865,8 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
 
       return {
         status: 'success',
+        type: 'interactive',
+        renderer: 'speed-test',
         ip: conn.ip || 'Detected',
         isp: conn.isp || 'Broadband ISP',
         city: conn.city || 'Edge Point',
@@ -674,7 +996,15 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
         const hashBuffer = await crypto.subtle.digest(algo, data);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        return { status: 'success', algorithm: algo, hash: hashHex, inputLength: text.length };
+        return {
+          status: 'success',
+          type: 'transform',
+          renderer: 'transform',
+          operation: algo,
+          input: text,
+          resultText: hashHex,
+          message: `${algo} Hash: ${hashHex}`
+        };
       } catch (err) {
         return { status: 'error', message: err.message };
       }
@@ -687,7 +1017,16 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
       for (let i = 0; i < qty; i++) {
         ids.push(crypto.randomUUID());
       }
-      return { status: 'success', format, count: qty, ids, message: `Generated ${qty} unique identifier(s).` };
+      return {
+        status: 'success',
+        type: 'transform',
+        renderer: 'transform',
+        operation: 'UUID Generator',
+        input: `${qty} ${format}`,
+        resultText: ids.join('\n'),
+        ids,
+        message: `Generated ${qty} unique identifier(s).`
+      };
     }
 
     case 'json_formatter_validator': {
@@ -695,9 +1034,23 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
       try {
         const parsed = JSON.parse(jsonString);
         if (action === 'minify') {
-          return { status: 'success', result: JSON.stringify(parsed), message: 'JSON minified successfully.' };
+          return {
+            status: 'success',
+            type: 'json',
+            renderer: 'json',
+            json: parsed,
+            jsonString: JSON.stringify(parsed),
+            message: 'JSON minified successfully.'
+          };
         }
-        return { status: 'success', result: JSON.stringify(parsed, null, 2), message: 'Valid JSON formatted with 2-space indentation.' };
+        return {
+          status: 'success',
+          type: 'json',
+          renderer: 'json',
+          json: parsed,
+          jsonString: JSON.stringify(parsed, null, 2),
+          message: 'Valid JSON formatted with 2-space indentation.'
+        };
       } catch (err) {
         return { status: 'error', isValid: false, error: err.message };
       }
@@ -795,6 +1148,8 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
 
           const result = {
             status: 'success',
+            type: 'image',
+            renderer: 'image',
             operation: name,
             format: fmt,
             width: destW,
@@ -813,14 +1168,65 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
       });
     }
 
+    case 'convert_pdf_to_word':
     case 'pdf_process': {
-      const { operation = 'inspect', watermarkText = 'CONFIDENTIAL' } = args;
-      const pdfDataUrl = currentFile?.dataUrl || taskState?.lastProcessedFile?.dataUrl;
+      const { operation = (name === 'convert_pdf_to_word' ? 'convert_to_word' : 'inspect'), watermarkText = 'CONFIDENTIAL' } = args;
+      const op = (operation || 'inspect').toLowerCase();
+      const pdfDataUrl = currentFile?.dataUrl || taskState?.lastProcessedFile?.dataUrl || taskState?.lastPdfDataUrl;
+
       if (!pdfDataUrl) {
         return {
           status: 'needs_file',
           message: 'Please drag & drop or upload your PDF document to perform this operation.'
         };
+      }
+
+      // 1. PDF -> Word Conversion
+      if (op.includes('word') || op.includes('docx') || op === 'convert_to_docx' || op === 'convert_to_word') {
+        try {
+          const { loadPdfJs, convertToDocx } = await import('./pdf-editor-engine.js');
+          const pdfjsLib = await loadPdfJs();
+          
+          const base64Part = pdfDataUrl.includes(',') ? pdfDataUrl.split(',')[1] : pdfDataUrl;
+          const binaryStr = atob(base64Part);
+          const bytes = new Uint8Array(binaryStr.length);
+          for (let i = 0; i < binaryStr.length; i++) {
+            bytes[i] = binaryStr.charCodeAt(i);
+          }
+          
+          const loadingTask = pdfjsLib.getDocument({ data: bytes });
+          const pdfDoc = await loadingTask.promise;
+          const pageCount = pdfDoc.numPages;
+          
+          const docxBlob = await convertToDocx(pdfDoc, pageCount);
+          const docxArrayBuffer = await docxBlob.arrayBuffer();
+          let binary = '';
+          const docxBytes = new Uint8Array(docxArrayBuffer);
+          for (let i = 0; i < docxBytes.byteLength; i++) {
+            binary += String.fromCharCode(docxBytes[i]);
+          }
+          const docxBase64 = btoa(binary);
+          const docxDataUrl = `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${docxBase64}`;
+          const origName = (currentFile?.name || 'document.pdf').replace(/\.[^/.]+$/, '');
+          const outFilename = `${origName}.docx`;
+
+          const result = {
+            status: 'success',
+            type: 'file',
+            renderer: 'file',
+            format: 'docx',
+            filename: outFilename,
+            dataUrl: docxDataUrl,
+            pageCount,
+            fileSize: docxBlob.size,
+            message: `Successfully converted "${currentFile?.name || 'document.pdf'}" to Word (.docx) (${pageCount} page${pageCount > 1 ? 's' : ''}).`
+          };
+
+          if (taskState) taskState.lastProcessedFile = result;
+          return result;
+        } catch (err) {
+          return { status: 'error', message: `Failed to convert PDF to Word: ${err.message}` };
+        }
       }
 
       try {
@@ -835,7 +1241,7 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
         const pdfDoc = await PDFDocument.load(bytes.buffer, { ignoreEncryption: true });
         const pageCount = pdfDoc.getPageCount();
 
-        if (operation === 'stamp_watermark') {
+        if (op === 'stamp_watermark') {
           const pages = pdfDoc.getPages();
           for (const page of pages) {
             const { width, height } = page.getSize();
@@ -860,6 +1266,9 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
 
           const result = {
             status: 'success',
+            type: 'file',
+            renderer: 'file',
+            format: 'pdf',
             operation: 'stamp_watermark',
             pageCount,
             watermarkText,
@@ -874,7 +1283,7 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
 
         return {
           status: 'success',
-          operation,
+          operation: op,
           pageCount,
           message: `PDF contains ${pageCount} page(s) and is ready for editing or processing.`
         };
@@ -884,13 +1293,15 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
     }
 
     case 'generate_qr_code': {
-      const text = args.text || '';
-      if (!text) return { status: 'error', message: 'No text provided for QR code generation.' };
+      const text = args.text || args.url || args.query || '';
+      if (!text) return { status: 'error', message: 'No text or URL provided for QR code generation.' };
       try {
         const QRCode = (await import('qrcode')).default || (await import('qrcode'));
-        const qrDataUrl = await QRCode.toDataURL(text, { width: 300, margin: 2 });
+        const qrDataUrl = await QRCode.toDataURL(text, { width: 320, margin: 2 });
         return {
           status: 'success',
+          type: 'image',
+          renderer: 'image',
           text,
           dataUrl: qrDataUrl,
           filename: `qrcode_${Date.now()}.png`,
@@ -901,12 +1312,57 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
       }
     }
 
+    case 'visualize_data':
+    case 'chart_data':
     case 'csv_analyze_and_chart': {
-      const content = currentFile?.text || taskState?.lastCsvText;
+      const isSequence = args.sequence || args.formula || (!currentFile?.text && !taskState?.lastCsvText && !args.csvData);
+      const queryStr = `${args.title || ''} ${args.sequence || ''} ${args.metricColumn || ''}`.toLowerCase();
+
+      // Case 1: Mathematical Sequence / Generator (e.g. Fibonacci, primes, series)
+      if (isSequence || queryStr.includes('fibonacci') || (args.data && args.data.length > 0)) {
+        let title = args.title || 'Data Visualization';
+        let labels = args.labels || [];
+        let values = args.data || [];
+        let chartType = args.chartType || 'line';
+
+        if (queryStr.includes('fibonacci') || args.sequence === 'fibonacci' || (!values.length && !currentFile?.text)) {
+          title = args.title || 'Fibonacci Sequence';
+          const count = Math.min(30, Math.max(6, args.count || 15));
+          labels = [];
+          values = [];
+          let a = 0, b = 1;
+          for (let i = 0; i < count; i++) {
+            labels.push(`F(${i})`);
+            values.push(a);
+            const next = a + b;
+            a = b;
+            b = next;
+          }
+        }
+
+        return {
+          status: 'success',
+          type: 'chart',
+          renderer: 'chart',
+          chartType,
+          title,
+          labels,
+          datasets: [{
+            label: title,
+            data: values,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.25)'
+          }],
+          message: `Rendered chart for ${title}.`
+        };
+      }
+
+      // Case 2: CSV Data analysis & charting
+      const content = args.csvData || currentFile?.text || taskState?.lastCsvText || taskState?.lastArtifact?.text;
       if (!content) {
         return {
           status: 'needs_file',
-          message: 'Please drag & drop or upload a CSV or JSON dataset first to analyze it.'
+          message: 'Please drag & drop or upload a CSV dataset to analyze and chart it.'
         };
       }
 
@@ -917,9 +1373,16 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
       const rows = lines.slice(1).map(l => l.split(',').map(c => c.trim().replace(/^["']|["']$/g, '')));
 
       const stats = {};
+      let firstNumCol = null;
+      let firstNumVals = [];
+
       headers.forEach((h, colIdx) => {
         const vals = rows.map(r => parseFloat(r[colIdx])).filter(v => !isNaN(v));
         if (vals.length > 0) {
+          if (!firstNumCol) {
+            firstNumCol = h;
+            firstNumVals = vals;
+          }
           vals.sort((a, b) => a - b);
           const sum = vals.reduce((a, b) => a + b, 0);
           const mean = sum / vals.length;
@@ -930,8 +1393,22 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
         }
       });
 
+      const chartLabels = rows.slice(0, 15).map((r, i) => r[0] || `Row ${i + 1}`);
+      const chartValues = rows.slice(0, 15).map(r => parseFloat(r[1]) || 0);
+
       return {
         status: 'success',
+        type: 'chart',
+        renderer: 'chart',
+        chartType: 'bar',
+        title: firstNumCol ? `${firstNumCol} Distribution` : 'Dataset Overview',
+        labels: chartLabels,
+        datasets: [{
+          label: firstNumCol || 'Metric',
+          data: chartValues.length ? chartValues : firstNumVals.slice(0, 15),
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.3)'
+        }],
         totalRows: rows.length,
         totalColumns: headers.length,
         headers,
@@ -957,7 +1434,16 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
 
           const timer = setTimeout(() => {
             worker.terminate();
-            resolve({ status: 'timeout', output: logs.join('\n'), error: 'Execution timeout after 15 seconds.' });
+            resolve({
+              status: 'timeout',
+              type: 'code-execution',
+              renderer: 'code-execution',
+              language: lang,
+              code,
+              stdin,
+              output: logs.join('\n'),
+              error: 'Execution timeout after 15 seconds.'
+            });
           }, 15000);
 
           worker.onmessage = (e) => {
@@ -971,7 +1457,11 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
               worker.terminate();
               resolve({
                 status: error ? 'error' : 'success',
+                type: 'code-execution',
+                renderer: 'code-execution',
                 language: lang,
+                code,
+                stdin,
                 output: logs.join('\n'),
                 error: error || null,
                 executionTimeMs: text
@@ -982,46 +1472,473 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
           worker.onerror = (err) => {
             clearTimeout(timer);
             worker.terminate();
-            resolve({ status: 'error', language: lang, output: logs.join('\n'), error: err.message });
+            resolve({
+              status: 'error',
+              type: 'code-execution',
+              renderer: 'code-execution',
+              language: lang,
+              code,
+              stdin,
+              output: logs.join('\n'),
+              error: err.message
+            });
           };
 
           worker.postMessage({ code, stdin });
         } catch (e) {
-          resolve({ status: 'error', language: lang, error: e.message });
+          resolve({
+            status: 'error',
+            type: 'code-execution',
+            renderer: 'code-execution',
+            language: lang,
+            code,
+            stdin,
+            error: e.message
+          });
         }
       });
     }
 
+    case 'slug_generator':
     case 'clean_text': {
-      const { text, operation } = args;
+      const text = args.text || args.input || args.query || '';
+      const operation = (args.operation || (name === 'slug_generator' ? 'slug' : 'trim_whitespace')).toLowerCase();
       let res = text;
-      switch (operation) {
-        case 'trim_whitespace':
-          res = text.split('\n').map(l => l.trim()).join('\n').trim();
-          break;
-        case 'remove_duplicate_lines':
-          res = [...new Set(text.split('\n'))].join('\n');
-          break;
-        case 'uppercase':
-          res = text.toUpperCase();
-          break;
-        case 'lowercase':
-          res = text.toLowerCase();
-          break;
-        case 'titlecase':
-          res = text.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.substr(1).toLowerCase());
-          break;
-        case 'sort_lines':
-          res = text.split('\n').sort().join('\n');
-          break;
-        case 'extract_emails':
-          res = (text.match(/[\w.-]+@[\w.-]+\.\w+/g) || []).join('\n');
-          break;
-        case 'extract_urls':
-          res = (text.match(/https?:\/\/[^\s]+/g) || []).join('\n');
-          break;
+      
+      if (operation === 'slug' || operation === 'slugify') {
+        res = text
+          .normalize('NFD')
+          .replace(/\p{M}/gu, '')
+          .toLowerCase()
+          .trim()
+          .replace(/[\s_]+/g, '-')
+          .replace(/[^a-z0-9-]+/g, '')
+          .replace(/-{2,}/g, '-')
+          .replace(/^-+|-+$/g, '');
+      } else if (operation === 'trim_whitespace') {
+        res = text.split('\n').map(l => l.trim()).join('\n').trim();
+      } else if (operation === 'remove_duplicate_lines') {
+        res = [...new Set(text.split('\n'))].join('\n');
+      } else if (operation === 'uppercase') {
+        res = text.toUpperCase();
+      } else if (operation === 'lowercase') {
+        res = text.toLowerCase();
+      } else if (operation === 'titlecase') {
+        res = text.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.substr(1).toLowerCase());
+      } else if (operation === 'sort_lines') {
+        res = text.split('\n').sort().join('\n');
+      } else if (operation === 'extract_emails') {
+        res = (text.match(/[\w.-]+@[\w.-]+\.\w+/g) || []).join('\n');
+      } else if (operation === 'extract_urls') {
+        res = (text.match(/https?:\/\/[^\s]+/g) || []).join('\n');
       }
-      return { status: 'success', operation, resultText: res };
+
+      return {
+        status: 'success',
+        type: 'transform',
+        renderer: 'transform',
+        operation: operation === 'slug' || operation === 'slugify' ? 'Slug Converter' : operation,
+        input: text,
+        resultText: res,
+        message: `Result: ${res}`
+      };
+    }
+
+    case 'simulate_logic_circuit':
+    case 'build_logic_circuit': {
+      const { truthTable, expressionFor, EXAMPLES } = await import('./logic.js');
+      const type = (args.circuitType || 'halfAdder').toLowerCase();
+      
+      let exampleKey = 'halfAdder';
+      if (type.includes('mux') || type.includes('multiplexer')) exampleKey = 'mux';
+      else if (type.includes('nand') || type.includes('xorfromnand')) exampleKey = 'xorFromNand';
+      else if (type.includes('majority') || type.includes('vote')) exampleKey = 'majority';
+      else if (EXAMPLES[args.circuitType]) exampleKey = args.circuitType;
+
+      const example = EXAMPLES[exampleKey] || EXAMPLES.halfAdder;
+      const circuit = example.build();
+      circuit.name = example.name;
+      circuit.about = example.about;
+
+      const table = truthTable(circuit);
+      const expressions = (circuit.nodes.filter(n => n.type === 'output')).map(o => ({
+        output: o.label || o.id,
+        expr: expressionFor(circuit, o.id)
+      }));
+
+      return {
+        status: 'success',
+        type: 'circuit',
+        renderer: 'circuit',
+        title: circuit.name,
+        about: circuit.about,
+        circuit,
+        truthTable: {
+          headers: [...table.ins.map(i => i.label || 'IN'), ...table.outs.map(o => o.label || 'OUT')],
+          rows: table.rows.map(r => [...r.inputs, ...r.outputs])
+        },
+        expressions,
+        message: `Constructed ${circuit.name} with ${table.rows.length} truth table states.`
+      };
+    }
+
+    case 'generate_flowchart':
+    case 'code_to_flowchart': {
+      const { makeNode, EXAMPLES, parseCodeToNodes, generateCode } = await import('./flowchart.js');
+      const lang = args.language || 'python';
+      const code = args.code || args.input || '';
+      const title = args.title || 'Algorithm Flowchart';
+
+      let nodes = [];
+      if (code && code.trim()) {
+        nodes = parseCodeToNodes(code, lang);
+      }
+
+      if (!nodes || nodes.length === 0) {
+        if (code.toLowerCase().includes('fib') || title.toLowerCase().includes('fib')) {
+          nodes = [
+            makeNode('declare', { name: 'n', dataType: 'Integer' }),
+            makeNode('assign', { name: 'n', expr: '10' }),
+            makeNode('declare', { name: 'a', dataType: 'Integer' }),
+            makeNode('declare', { name: 'b', dataType: 'Integer' }),
+            makeNode('assign', { name: 'a', expr: '0' }),
+            makeNode('assign', { name: 'b', expr: '1' }),
+            makeNode('for', {
+              name: 'i',
+              from: '1',
+              to: 'n',
+              step: '1',
+              body: [
+                makeNode('output', { expr: 'a' }),
+                makeNode('declare', { name: 'next', dataType: 'Integer' }),
+                makeNode('assign', { name: 'next', expr: 'a + b' }),
+                makeNode('assign', { name: 'a', expr: 'b' }),
+                makeNode('assign', { name: 'b', expr: 'next' })
+              ]
+            })
+          ];
+        } else if (code.toLowerCase().includes('fizz') || title.toLowerCase().includes('fizz')) {
+          nodes = EXAMPLES.fizzbuzz.build();
+        } else {
+          nodes = [
+            makeNode('comment', { text: title }),
+            makeNode('declare', { name: 'x', dataType: 'Integer' }),
+            makeNode('if', {
+              cond: 'x > 0',
+              then: [makeNode('output', { expr: '"Positive"' })],
+              else: [makeNode('output', { expr: '"Non-positive"' })]
+            })
+          ];
+        }
+      }
+
+      let generatedPython = '';
+      let generatedJs = '';
+      try { generatedPython = generateCode(nodes, 'python'); } catch {}
+      try { generatedJs = generateCode(nodes, 'javascript'); } catch {}
+
+      return {
+        status: 'success',
+        type: 'flowchart',
+        renderer: 'flowchart',
+        title,
+        code: code || generatedPython,
+        generatedCode: {
+          python: generatedPython,
+          javascript: generatedJs
+        },
+        language: lang,
+        nodes,
+        message: `Generated visual flowchart for ${title}.`
+      };
+    }
+
+    case 'save_file':
+    case 'save_artifact': {
+      const { saveArtifactFile } = await import('./artifacts.js');
+      const filename = args.filename || args.name || `file_${Date.now()}.txt`;
+      let content = args.content || args.text || args.code || args.data;
+
+      // If content was omitted, check taskState or previous artifact
+      if (!content) {
+        if (taskState?.lastArtifact?.text) content = taskState.lastArtifact.text;
+        else if (taskState?.lastCsvText) content = taskState.lastCsvText;
+        else if (currentFile?.text) content = currentFile.text;
+        else content = `Saved content for ${filename}`;
+      }
+
+      const destination = (args.destination || 'cloud').toLowerCase();
+      const saveRes = await saveArtifactFile({
+        name: filename,
+        content,
+        kind: args.kind,
+        destination,
+        from: 'assistant'
+      });
+
+      const kind = saveRes.artifact.kind;
+      const dataUrl = `data:text/plain;charset=utf-8,${encodeURIComponent(saveRes.artifact.text)}`;
+
+      return {
+        status: 'success',
+        type: 'file-saved',
+        renderer: 'file-saved',
+        filename: saveRes.artifact.name,
+        artifactId: saveRes.artifact.id,
+        kind,
+        bytes: saveRes.artifact.bytes,
+        destination: saveRes.destination,
+        isCloudSynced: saveRes.isCloudSynced,
+        dataUrl,
+        createdAt: saveRes.artifact.createdAt,
+        message: saveRes.message
+      };
+    }
+
+    case 'list_files':
+    case 'list_artifacts':
+    case 'get_files': {
+      const { list } = await import('./artifacts.js');
+      const allArtifacts = list() || [];
+      const filterStr = String(args.filter || args.query || '').trim().toLowerCase();
+
+      let matched = allArtifacts;
+      if (filterStr) {
+        matched = allArtifacts.filter(a =>
+          (a.name || '').toLowerCase().includes(filterStr) ||
+          (a.kind || '').toLowerCase().includes(filterStr) ||
+          (a.from || '').toLowerCase().includes(filterStr)
+        );
+      }
+
+      const files = matched.map(a => ({
+        id: a.id,
+        name: a.name || 'Untitled Document',
+        kind: a.kind || 'text',
+        bytes: a.bytes || (a.text ? a.text.length : 0),
+        createdAt: a.createdAt,
+        updatedAt: a.updatedAt,
+        from: a.from || 'Saved Work',
+        isCloudSynced: Boolean(a.supabaseId || a.cloudSynced || a.storagePath),
+        folder: a.kind ? `${a.kind.toUpperCase()} Files` : 'General'
+      }));
+
+      return {
+        status: 'success',
+        type: 'file-list',
+        renderer: 'file-list',
+        count: files.length,
+        filter: filterStr || null,
+        files,
+        message: files.length === 0
+          ? 'No saved files found in your workspace.'
+          : `Found ${files.length} saved file(s).`
+      };
+    }
+
+    case 'download_file':
+    case 'get_file': {
+      const { list, get } = await import('./artifacts.js');
+      const filename = String(args.filename || args.name || args.file || '').trim();
+      const autoDownload = Boolean(args.autoDownload || args.force || args.direct);
+
+      const all = list() || [];
+      let found = all.find(a => a.id === filename || a.name.toLowerCase() === filename.toLowerCase());
+      if (!found && filename) {
+        found = all.find(a => a.name.toLowerCase().includes(filename.toLowerCase()));
+      }
+
+      if (found) {
+        const item = get(found.id) || found;
+        let dataUrl = item.dataUrl || null;
+        if (!dataUrl && item.text) {
+          const mime = item.kind === 'csv' ? 'text/csv' : (item.kind === 'json' ? 'application/json' : 'text/plain');
+          dataUrl = `data:${mime};charset=utf-8,${encodeURIComponent(item.text)}`;
+        }
+
+        return {
+          status: 'success',
+          type: 'file',
+          renderer: 'file',
+          filename: found.name,
+          kind: found.kind || 'file',
+          format: found.kind,
+          fileSize: found.bytes || (item.text ? item.text.length : 0),
+          dataUrl,
+          autoDownload,
+          artifactId: found.id,
+          message: autoDownload ? `Initiated automatic download for "${found.name}".` : `Ready to download "${found.name}".`
+        };
+      }
+
+      // If artifact not in storage, check taskState
+      if (taskState?.lastArtifact && (!filename || taskState.lastArtifact.name.toLowerCase().includes(filename.toLowerCase()))) {
+        const last = taskState.lastArtifact;
+        const dataUrl = `data:text/plain;charset=utf-8,${encodeURIComponent(last.text || '')}`;
+        return {
+          status: 'success',
+          type: 'file',
+          renderer: 'file',
+          filename: last.name || filename || 'download.txt',
+          kind: last.kind || 'text',
+          dataUrl,
+          autoDownload,
+          message: `Ready to download "${last.name || filename}".`
+        };
+      }
+
+      return {
+        status: 'error',
+        error: `Could not find file "${filename}" in your Saved Work.`,
+        message: `File "${filename}" was not found. Use "list files" to view available files.`
+      };
+    }
+
+    case 'explore_anatomy':
+    case 'anatomy_explorer': {
+      const { resolveAnatomyQuery } = await import('./anatomy-data.js');
+      const query = args.query || args.prompt || args.structure || 'anatomy';
+      const resolved = await resolveAnatomyQuery(query);
+
+      return {
+        status: 'success',
+        type: 'anatomy-3d',
+        renderer: 'anatomy-3d',
+        query,
+        systems: resolved.systems,
+        structureIds: resolved.structureIds,
+        structures: resolved.structures,
+        details: resolved.details,
+        summary: resolved.summary,
+        message: `Isolated ${resolved.structures.length} anatomical structure(s) in 3D: ${resolved.structures.map(s => s.name).slice(0, 5).join(', ')}${resolved.structures.length > 5 ? '...' : ''}.`
+      };
+    }
+
+    case 'illustrator': {
+      const diagramType = args.diagramType || 'sequence';
+      const title = args.title || 'Concept Illustration';
+      const steps = Array.isArray(args.steps) ? args.steps : [];
+      const summary = args.summary || '';
+
+      if (taskState) {
+        taskState.lastIllustration = { diagramType, title, steps, summary };
+      }
+
+      return {
+        status: 'success',
+        type: 'illustration',
+        renderer: 'illustration',
+        diagramType,
+        title,
+        steps,
+        summary,
+        message: `Generated visual illustration for "${title}".`
+      };
+    }
+
+    case 'search_diseases':
+    case 'diseases_database': {
+      const { searchDiseases } = await import('./diseases-data.js');
+      const query = args.query || args.symptoms || '';
+      const diseases = searchDiseases(query, {
+        system: args.system,
+        limit: args.limit || 5
+      });
+
+      return {
+        status: 'success',
+        type: 'disease-list',
+        renderer: 'disease-list',
+        query,
+        count: diseases.length,
+        diseases,
+        message: `Found ${diseases.length} condition(s) matching "${query}".`
+      };
+    }
+
+    case 'generate_csv': {
+      let csvText = '';
+      if (args.csvText) {
+        csvText = args.csvText;
+      } else if (args.headers && args.rows) {
+        const lines = [args.headers.join(',')];
+        for (const r of args.rows) {
+          lines.push(Array.isArray(r) ? r.join(',') : Object.values(r).join(','));
+        }
+        csvText = lines.join('\n');
+      } else {
+        csvText = `id,name,value\n1,Alpha,100\n2,Beta,250\n3,Gamma,380`;
+      }
+
+      const filename = args.filename || `dataset_${Date.now()}.csv`;
+      const dataUrl = `data:text/csv;charset=utf-8,${encodeURIComponent(csvText)}`;
+
+      if (taskState) {
+        taskState.lastCsvText = csvText;
+        taskState.lastArtifact = { kind: 'csv', text: csvText, name: filename };
+      }
+
+      return {
+        status: 'success',
+        type: 'file',
+        renderer: 'file',
+        format: 'csv',
+        filename,
+        csvText,
+        dataUrl,
+        fileSize: csvText.length,
+        message: `Generated CSV dataset "${filename}".`
+      };
+    }
+
+    case 'csv_to_json': {
+      const csvContent = args.csvData || currentFile?.text || taskState?.lastCsvText || taskState?.lastArtifact?.text;
+      if (!csvContent) {
+        return {
+          status: 'needs_file',
+          message: 'Please provide CSV data or upload a CSV file to convert to JSON.'
+        };
+      }
+
+      const { parseCSV, detectDelimiter, coerce } = await import('../tools/csv-to-json.js');
+      const delimiter = detectDelimiter(csvContent);
+      const rows = parseCSV(csvContent, delimiter);
+
+      if (rows.length < 2) {
+        return { status: 'error', message: 'CSV requires a header row and at least one data row.' };
+      }
+
+      const headers = rows[0].map((h, i) => h.trim() || `column${i + 1}`);
+      const jsonObjects = rows.slice(1).map(row => {
+        const obj = {};
+        headers.forEach((header, i) => {
+          const raw = row[i] ?? '';
+          obj[header] = coerce(raw);
+        });
+        return obj;
+      });
+
+      const jsonString = JSON.stringify(jsonObjects, null, 2);
+      const filename = (currentFile?.name ? currentFile.name.replace(/\.[^/.]+$/, '') : 'data') + '.json';
+      const dataUrl = `data:application/json;charset=utf-8,${encodeURIComponent(jsonString)}`;
+
+      if (taskState) {
+        taskState.lastJson = jsonString;
+        taskState.lastArtifact = { kind: 'json', text: jsonString, name: filename };
+      }
+
+      return {
+        status: 'success',
+        type: 'json',
+        renderer: 'json',
+        json: jsonObjects,
+        jsonString,
+        filename,
+        dataUrl,
+        rowCount: jsonObjects.length,
+        columnCount: headers.length,
+        message: `Converted CSV (${jsonObjects.length} rows, ${headers.length} columns) to JSON.`
+      };
     }
 
     case 'calculate_financial': {

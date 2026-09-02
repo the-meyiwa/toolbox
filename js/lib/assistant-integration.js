@@ -122,29 +122,70 @@ export class ConversationIntegrationManager {
   normalizeToolResult(result, toolName = null, toolCallId = null) {
     if (result instanceof ToolResult) return result;
     // Results read from storage have already passed through ToolResult#toJSON.
-    // Rehydrate them instead of treating that wrapper as ordinary result data.
     if (result?.data && (result.renderer || result.toolCallId || result.toolName) &&
         ['result', 'interactive', 'workspace', 'preview'].includes(result.type)) {
       const saved = ToolResult.fromJSON(result);
-      if (saved.renderer === 'text' && saved.data?.language && Object.hasOwn(saved.data, 'output')) {
-        saved.renderer = 'sandbox-output';
-      }
       return saved;
     }
     const failed = result?.success === false || result?.status === 'error';
     const isAudio = result?.type === 'audio' || result?.audioId;
-    const isSpeedTest = typeof result?.downloadSpeedMbps !== 'undefined';
-    const isSandboxOutput = Boolean(result?.language && Object.hasOwn(result, 'output'));
+    const isSpeedTest = typeof result?.downloadSpeedMbps !== 'undefined' || result?.renderer === 'speed-test';
+    const isAnatomy = result?.type === 'anatomy-3d' || result?.renderer === 'anatomy-3d' ||
+      Boolean(result?.structureIds && result?.systems);
+    const isIllustration = result?.type === 'illustration' || result?.renderer === 'illustration' ||
+      Boolean(result?.diagramType && result?.steps);
+    const isDisease = result?.type === 'disease-list' || result?.renderer === 'disease-list' ||
+      Boolean(Array.isArray(result?.diseases));
+    const isFileList = result?.type === 'file-list' || result?.renderer === 'file-list' ||
+      Boolean(Array.isArray(result?.files) && result?.files);
+    const isSaved = result?.type === 'file-saved' || result?.renderer === 'file-saved' ||
+      Boolean(result?.artifactId && (result?.filename || result?.isCloudSynced !== undefined));
+    const isFile = result?.type === 'file' || result?.renderer === 'file' ||
+      Boolean(result?.dataUrl && (result?.filename || result?.format === 'docx' || result?.format === 'pdf' || result?.format === 'csv' || result?.format === 'xlsx'));
+    const isImage = result?.type === 'image' || result?.renderer === 'image' ||
+      (typeof result?.dataUrl === 'string' && result?.dataUrl.startsWith('data:image/'));
+    const isChart = result?.type === 'chart' || result?.renderer === 'chart' ||
+      Boolean(result?.chartType || result?.datasets || result?.numericStats);
+    const isCircuit = result?.type === 'circuit' || result?.renderer === 'circuit' || Boolean(result?.circuit);
+    const isFlowchart = result?.type === 'flowchart' || result?.renderer === 'flowchart' || Boolean(result?.nodes && Array.isArray(result?.nodes));
+    const isCodeExec = result?.type === 'code-execution' || result?.renderer === 'code-execution' ||
+      Boolean(result?.language && (result?.code || Object.hasOwn(result, 'output')));
+    const isTransform = result?.type === 'transform' || result?.renderer === 'transform' ||
+      Boolean(result?.operation && result?.resultText);
+    const isJson = result?.type === 'json' || result?.renderer === 'json' ||
+      result?.json !== undefined || result?.jsonString !== undefined;
+    const isTable = result?.type === 'table' || result?.renderer === 'table' ||
+      Boolean(result?.rows && (result?.headers || result?.columns));
+
+    let detectedRenderer = 'text';
+    if (isAnatomy) detectedRenderer = 'anatomy-3d';
+    else if (isIllustration) detectedRenderer = 'illustration';
+    else if (isDisease) detectedRenderer = 'disease-list';
+    else if (isFileList) detectedRenderer = 'file-list';
+    else if (isSaved) detectedRenderer = 'file-saved';
+    else if (isFile) detectedRenderer = 'file';
+    else if (isImage) detectedRenderer = 'image';
+    else if (isChart) detectedRenderer = 'chart';
+    else if (isCircuit) detectedRenderer = 'circuit';
+    else if (isFlowchart) detectedRenderer = 'flowchart';
+    else if (isCodeExec) detectedRenderer = 'code-execution';
+    else if (isTransform) detectedRenderer = 'transform';
+    else if (isJson) detectedRenderer = 'json';
+    else if (isTable) detectedRenderer = 'table';
+    else if (isAudio) detectedRenderer = 'audio-player';
+    else if (isSpeedTest) detectedRenderer = 'speed-test';
+    else if (result?.renderer) detectedRenderer = result.renderer;
+
     return new ToolResult({
       toolId: result?.toolId || toolName,
       toolName: result?.toolName || toolName,
       toolCallId: result?.toolCallId || toolCallId,
       success: !failed,
       error: failed ? (result?.error || result?.message || 'Operation failed') : null,
-      type: isAudio || isSpeedTest ? 'interactive' : 'result',
+      type: isAudio || isSpeedTest || isCircuit || isChart || isAnatomy || isIllustration ? 'interactive' : 'result',
       data: result || {},
       state: result?.state || {},
-      renderer: isAudio ? 'audio-player' : (isSpeedTest ? 'speed-test' : (isSandboxOutput ? 'sandbox-output' : 'text'))
+      renderer: detectedRenderer
     });
   }
 
@@ -153,34 +194,6 @@ export class ConversationIntegrationManager {
     const element = await renderToolResult(normalized, container);
     this.bindResultInteractions(normalized, container);
     return element;
-  }
-
-  /**
-   * Infer result type from result object
-   */
-  inferResultType(result) {
-    // Audio
-    if (result.audioId || result.type === 'audio' || result.url?.includes('audio')) {
-      return 'interactive';
-    }
-
-    // Speed test
-    if (typeof result.downloadSpeedMbps !== 'undefined') {
-      return 'interactive';
-    }
-
-    // DNS records
-    if (result.answers?.length) {
-      return 'interactive';
-    }
-
-    // Tables
-    if (result.rows && Array.isArray(result.rows)) {
-      return 'interactive';
-    }
-
-    // Default: simple result
-    return 'result';
   }
 
   /**

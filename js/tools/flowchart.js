@@ -6,7 +6,7 @@
 
    Edit the chart on the left, watch seven languages update on the right. */
 
-import { NODE_TYPES, DATA_TYPES, LANGUAGES, EXAMPLES, makeNode, generateCode } from '../lib/flowchart.js';
+import { NODE_TYPES, DATA_TYPES, LANGUAGES, EXAMPLES, makeNode, generateCode, parseCodeToNodes } from '../lib/flowchart.js';
 import { escapeHtml } from '../lib/biz.js';
 import { copyText } from '../utils.js';
 import { handOff } from '../lib/artifacts.js';
@@ -21,10 +21,19 @@ export default {
     let saved = {};
     try { saved = JSON.parse(localStorage.getItem(STORE) || '{}'); } catch { /* ignore */ }
 
+    let imported = null;
+    try {
+      const raw = sessionStorage.getItem('toolbox_flowchart_import');
+      if (raw) {
+        sessionStorage.removeItem('toolbox_flowchart_import');
+        imported = JSON.parse(raw);
+      }
+    } catch {}
+
     const state = {
-      nodes: EXAMPLES.fizzbuzz.build(),
-      lang: LANGUAGES[saved.lang] ? saved.lang : 'python',
-      example: 'fizzbuzz',
+      nodes: imported?.nodes || (saved.nodes?.length ? saved.nodes : EXAMPLES.fizzbuzz.build()),
+      lang: LANGUAGES[imported?.lang || saved.lang] ? (imported?.lang || saved.lang) : 'python',
+      example: imported ? 'custom' : (saved.example || 'fizzbuzz'),
       selected: null,
     };
 
@@ -32,11 +41,13 @@ export default {
       <div class="flw">
         <div class="flw-bar">
           <select class="tool-select" id="fl-example" aria-label="Example">
-            ${Object.entries(EXAMPLES).map(([id, e]) => `<option value="${id}">${e.name}</option>`).join('')}
+            ${imported ? `<option value="custom" selected>Imported Logic</option>` : ''}
+            ${Object.entries(EXAMPLES).map(([id, e]) => `<option value="${id}"${!imported && id === state.example ? ' selected' : ''}>${e.name}</option>`).join('')}
           </select>
           <div class="flw-palette" id="fl-palette">
             ${Object.entries(NODE_TYPES).map(([k, t]) =>
               `<button class="btn btn-sm" data-add="${k}" title="${escapeHtml(t.hint)}">+ ${t.label}</button>`).join('')}
+            <button class="btn btn-sm btn-secondary" id="fl-import-code" title="Paste Python/JS/Pseudocode to generate flowchart" style="margin-left:8px; font-weight:700;">Paste Code</button>
           </div>
         </div>
 
@@ -347,7 +358,23 @@ export default {
       commit();
     });
 
-    $('fl-about').textContent = EXAMPLES.fizzbuzz.about;
+    $('fl-import-code')?.addEventListener('click', () => {
+      const code = prompt('Paste your Python, JavaScript, or Pseudocode:');
+      if (!code || !code.trim()) return;
+      const parsed = parseCodeToNodes(code);
+      if (parsed.length > 0) {
+        state.nodes = parsed;
+        state.example = 'custom';
+        state.selected = null;
+        $('fl-about').textContent = 'Flowchart generated from custom code input.';
+        container.querySelector('.flw-editor')?.remove();
+        commit();
+      } else {
+        alert('Could not parse statements from provided code. Please check formatting.');
+      }
+    });
+
+    $('fl-about').textContent = imported ? 'Imported from Assistant logic breakdown.' : EXAMPLES.fizzbuzz.about;
     commit();
     analytics?.started();
 

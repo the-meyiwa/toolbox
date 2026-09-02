@@ -6,6 +6,7 @@
 
 import { marked } from 'marked';
 import { openSettings } from '../lib/settings-ui.js';
+import { sanitizeUserFacingText } from '../utils.js';
 
 function escapeHtml(str) {
   if (!str) return '';
@@ -19,12 +20,13 @@ function escapeHtml(str) {
 
 function formatMarkdown(text) {
   if (!text) return '';
+  const sanitized = sanitizeUserFacingText(text);
   try {
     if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
-      return marked.parse(text);
+      return marked.parse(sanitized);
     }
   } catch {}
-  return escapeHtml(text).replace(/\n/g, '<br/>');
+  return escapeHtml(sanitized).replace(/\n/g, '<br/>');
 }
 import {
   streamChatCompletion,
@@ -80,7 +82,7 @@ export default {
     }
 
     container.innerHTML = `
-      <div class="toolbox-assistant-root" style="max-width:1040px; margin:0 auto; display:flex; flex-direction:column; height:calc(100vh - 200px); min-height:540px; max-height:840px; background:var(--white); border:1px solid var(--g200); border-radius:18px; overflow:hidden; box-shadow:0 16px 48px rgba(0,0,0,0.08); position:relative; font-family:var(--sans);">
+      <div class="toolbox-assistant-root" style="width:100%; max-width:1320px; margin:0 auto; display:flex; flex-direction:column; height:calc(100vh - 160px); min-height:580px; max-height:920px; background:var(--white); border:1px solid var(--g200); border-radius:18px; overflow:hidden; box-shadow:0 16px 48px rgba(0,0,0,0.08); position:relative; font-family:var(--sans);">
         
         <!-- HEADER BAR -->
         <div style="padding:12px 20px; border-bottom:1px solid var(--g200); background:var(--g50); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; flex-shrink:0;">
@@ -414,11 +416,16 @@ export default {
       msgDiv.style.alignSelf = role === 'user' ? 'flex-end' : 'flex-start';
 
       if (role === 'user') {
+        const isShort = (text || '').trim().length <= 80 && !text.includes('\n');
+        const radius = isShort ? '9999px' : '22px';
+        const padding = isShort ? '10px 20px' : '14px 20px';
+
         msgDiv.innerHTML = `
-          <div style="background:var(--black); color:var(--white); padding:12px 18px; border-radius:16px; font-size:0.9rem; line-height:1.5; word-break:break-word;">
+          <div style="background:var(--black); color:var(--white); padding:${padding}; border-radius:${radius}; font-size:0.9rem; line-height:1.5; word-break:break-word;">
             ${filePreview ? `
-              <div style="font-size:0.75rem; opacity:0.8; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
-                <span>📎</span> <span>${escapeHtml(filePreview.name)}</span>
+              <div style="font-size:0.75rem; opacity:0.85; margin-bottom:4px; display:flex; align-items:center; gap:5px;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                <span>${escapeHtml(filePreview.name)}</span>
               </div>
             ` : ''}
             <div>${escapeHtml(text)}</div>
@@ -443,7 +450,7 @@ export default {
             <div class="ast-text-body">
               <div style="color:#ef4444; font-weight:600; margin-bottom:8px; line-height:1.4;">${escapeHtml(error || 'Assistant failed to respond.')}</div>
               <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
-                <button type="button" class="btn btn-secondary btn-sm ast-err-btn-retry" style="font-size:0.75rem; font-weight:700;">
+                <button type="button" class="btn btn-secondary btn-sm ast-err-btn-retry" style="font-size:0.75rem; font-weight:700; border-radius:9999px; padding:5px 14px;">
                   Retry Request
                 </button>
               </div>
@@ -483,7 +490,7 @@ export default {
               <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
             </svg>
           </div>
-          <div style="background:var(--g100); color:var(--black); padding:14px 18px; border-radius:16px; font-size:0.9rem; line-height:1.6; word-break:break-word; min-width:120px;">
+          <div style="background:var(--g100); color:var(--black); padding:16px 20px; border-radius:22px; font-size:0.9rem; line-height:1.6; word-break:break-word; min-width:120px;">
             ${bodyHtml}
           </div>
         `;
@@ -1007,9 +1014,25 @@ export default {
           signal: abortCtrl.signal
         });
 
-        const finalText = accumulatedStreamText || streamResult.text || (executedToolResults.length ? 'Executed action successfully.' : '');
+        let finalText = accumulatedStreamText || streamResult.text || '';
+        const hasStructuredCards = executedToolResults.some(r => r && (r.renderer === 'file' || r.renderer === 'image' || r.renderer === 'chart' || r.renderer === 'circuit' || r.renderer === 'flowchart' || r.renderer === 'code-execution' || r.renderer === 'transform' || r.renderer === 'json'));
+        
+        // Avoid duplicate plain text summaries or raw json dumps when full structured components are rendered
+        if (hasStructuredCards && finalText.trim().startsWith('{') && finalText.trim().endsWith('}')) {
+          finalText = '';
+        }
+
         if (textBody) {
-          textBody.innerHTML = formatMarkdown(finalText);
+          if (finalText.trim()) {
+            textBody.innerHTML = formatMarkdown(finalText);
+            textBody.style.display = 'block';
+          } else if (!hasStructuredCards) {
+            textBody.innerHTML = formatMarkdown('Executed action successfully.');
+            textBody.style.display = 'block';
+          } else {
+            textBody.innerHTML = '';
+            textBody.style.display = 'none';
+          }
           
           const lower = finalText.toLowerCase();
           const needsFilePrompt = (

@@ -17,7 +17,8 @@
         instead of implying work is safe when it is not.
    ============================================================ */
 
-import { KIND_IDS, kindExt, kindMime } from '../registry/kinds.js';
+import { KIND_IDS, kindExt, kindMime, kindFromFilename } from '../registry/kinds.js';
+import { syncArtifactToSupabase, getCurrentUser } from './supabase.js';
 
 const INDEX_KEY = 'toolbox.artifacts.index.v1';
 const BODY_PREFIX = 'toolbox.artifact.v1.';
@@ -308,4 +309,51 @@ export function importBundle(json) {
     }
   }
   return { imported, skipped };
+}
+
+/**
+ * Unified file saving for Assistant and UI components.
+ * Saves to local Saved Work and synchronizes to Cloud Storage by default
+ * (or stays strictly local if requested).
+ *
+ * @param {{name: string, content: string, kind?: string, destination?: 'cloud'|'local', from?: string}} options
+ * @returns {Promise<{success: boolean, artifact: Artifact, destination: 'cloud'|'local', isCloudSynced: boolean, message: string}>}
+ */
+export async function saveArtifactFile({ name, content, kind, destination = 'cloud', from = 'assistant' } = {}) {
+  const filename = String(name || 'untitled.txt').trim();
+  const textContent = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+  const fileKind = kind || kindFromFilename(filename);
+
+  // 1. Always save locally first (offline-first & available in #/saved)
+  const saved = save({
+    name: filename,
+    kind: fileKind,
+    text: textContent,
+    from: from || 'assistant'
+  });
+
+  const isLocalOnly = destination === 'local';
+  let isCloudSynced = false;
+
+  // 2. Sync to Cloud by default if user is signed in
+  if (!isLocalOnly) {
+    const user = getCurrentUser();
+    if (user) {
+      try {
+        await syncArtifactToSupabase(saved);
+        isCloudSynced = true;
+      } catch (err) {
+        console.warn('Supabase cloud sync deferred:', err.message);
+      }
+    }
+  }
+
+  const destinationLabel = isCloudSynced ? 'Cloud & Local Saved Work' : (isLocalOnly ? 'Local Saved Work' : 'Local Saved Work (Ready to Cloud Sync)');
+  return {
+    success: true,
+    artifact: saved,
+    destination: isCloudSynced ? 'cloud' : 'local',
+    isCloudSynced,
+    message: `File "${saved.name}" saved successfully to ${destinationLabel}.`
+  };
 }

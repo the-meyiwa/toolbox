@@ -544,10 +544,35 @@ body {
    TOOL VIEWPORT
    ============================================================ */
 #tool-viewport {
-  max-width: 960px;
+  width: 100%;
+  max-width: 1380px;
   margin: 0 auto;
   padding: 0 28px 64px;
 }
+
+@media (max-width: 900px) {
+  #tool-viewport {
+    padding: 0 16px 48px;
+  }
+}
+
+@media (max-width: 768px) {
+  .notes-app-wrapper {
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+  .notes-sidebar-col {
+    display: none !important;
+  }
+  .notes-list-col {
+    max-height: 260px !important;
+  }
+  .notes-editor-col {
+    min-height: 400px !important;
+  }
+}
+
 
 .viewport-header {
   display: flex;

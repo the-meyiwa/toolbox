@@ -14,7 +14,7 @@
 
 /**
  * @typedef {'text'|'json'|'csv'|'yaml'|'sql'|'markdown'|'code'|'uml'
- *          |'flowchart'|'html'|'svg'|'colour'|'regex'} ArtifactKind
+ *          |'flowchart'|'html'|'svg'|'colour'|'regex'|'pdf'|'docx'|'image'|'binary'} ArtifactKind
  */
 
 /** Everything the artifact layer knows how to hold, name and hand on. */
@@ -31,6 +31,10 @@ export const KINDS = {
   html:      { label: 'HTML',        ext: 'html', mime: 'text/html' },
   svg:       { label: 'SVG',         ext: 'svg',  mime: 'image/svg+xml' },
   regex:     { label: 'Regex',       ext: 'txt',  mime: 'text/plain' },
+  pdf:       { label: 'PDF Document',ext: 'pdf',  mime: 'application/pdf' },
+  docx:      { label: 'Word Document', ext: 'docx', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
+  image:     { label: 'Image',       ext: 'png',  mime: 'image/png' },
+  binary:    { label: 'Binary file', ext: 'bin',  mime: 'application/octet-stream' },
 };
 
 export const KIND_IDS = new Set(Object.keys(KINDS));
@@ -42,10 +46,14 @@ export const kindMime = (kind) => KINDS[kind]?.mime ?? 'text/plain';
 /** Guess a kind from a filename, for imported and dropped files. */
 export function kindFromFilename(name = '') {
   const ext = String(name).toLowerCase().split('.').pop();
-  const hit = Object.entries(KINDS).find(([, k]) => k.ext === ext);
-  if (hit) return hit[0];
+  if (['py', 'js', 'ts', 'jsx', 'tsx', 'c', 'cpp', 'h', 'cs', 'java', 'go', 'rs', 'php', 'rb'].includes(ext)) return 'code';
+  if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'avif'].includes(ext)) return 'image';
+  if (ext === 'docx' || ext === 'doc') return 'docx';
+  if (ext === 'pdf') return 'pdf';
   if (ext === 'yml') return 'yaml';
   if (ext === 'mermaid') return 'uml';
+  const hit = Object.entries(KINDS).find(([, k]) => k.ext === ext);
+  if (hit) return hit[0];
   return 'text';
 }
 

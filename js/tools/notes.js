@@ -14,10 +14,10 @@ export default {
     let activePaper = 'blank';
 
     container.innerHTML = `
-      <div class="notes-app-wrapper" style="display:grid; grid-template-columns:220px 260px 1fr; height:680px; background:var(--white); border:1px solid var(--g200); border-radius:18px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.04);">
+      <div class="notes-app-wrapper" style="display:grid; grid-template-columns:minmax(180px, 220px) minmax(220px, 280px) 1fr; height:720px; max-height:85vh; min-height:500px; background:var(--white); border:1px solid var(--g200); border-radius:18px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.04);">
         
         <!-- 1. FOLDERS SIDEBAR -->
-        <div style="background:var(--g50); border-right:1px solid var(--g200); display:flex; flex-direction:column; justify-content:space-between; padding:14px;">
+        <div class="notes-sidebar-col" style="background:var(--g50); border-right:1px solid var(--g200); display:flex; flex-direction:column; justify-content:space-between; padding:14px; min-height:0; overflow-y:auto;">
           <div>
             <div style="font-weight:700; font-size:0.95rem; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -38,28 +38,28 @@ export default {
             </div>
           </div>
 
-          <div>
+          <div style="margin-top:12px;">
             <button type="button" class="btn btn-secondary btn-sm" id="notes-new-folder" style="width:100%;">+ New Folder</button>
           </div>
         </div>
 
         <!-- 2. NOTE LIST COLUMN -->
-        <div style="background:var(--white); border-right:1px solid var(--g200); display:flex; flex-direction:column;">
+        <div class="notes-list-col" style="background:var(--white); border-right:1px solid var(--g200); display:flex; flex-direction:column; min-height:0; overflow:hidden;">
           <!-- Top Bar with Search & New Note -->
-          <div style="padding:12px; border-bottom:1px solid var(--g150); display:flex; gap:8px; align-items:center;">
+          <div style="padding:12px; border-bottom:1px solid var(--g150); display:flex; gap:8px; align-items:center; flex-shrink:0;">
             <input type="text" id="notes-search-input" class="tool-input" placeholder="Search notes..." style="flex:1; font-size:0.8rem; padding:6px 10px;">
-            <button type="button" class="btn btn-primary btn-sm" id="notes-add-btn" title="Create New Note" style="padding:6px 12px; font-weight:600;">+ New</button>
+            <button type="button" class="btn btn-primary btn-sm" id="notes-add-btn" title="Create New Note" style="padding:6px 12px; font-weight:600; flex-shrink:0;">+ New</button>
           </div>
 
           <!-- Note Cards Scroll List -->
-          <div id="notes-cards-list" style="flex:1; overflow-y:auto; display:flex; flex-direction:column;"></div>
+          <div id="notes-cards-list" style="flex:1; overflow-y:auto; min-height:0; display:flex; flex-direction:column;"></div>
         </div>
 
         <!-- 3. MAIN EDITOR AREA -->
-        <div style="display:flex; flex-direction:column; background:var(--white); position:relative;">
+        <div class="notes-editor-col" style="display:flex; flex-direction:column; background:var(--white); position:relative; min-height:0; overflow:hidden;">
           <!-- Editor Toolbar -->
-          <div style="padding:8px 14px; border-bottom:1px solid var(--g150); background:var(--g50); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-            <div style="display:flex; align-items:center; gap:4px;">
+          <div style="padding:8px 14px; border-bottom:1px solid var(--g150); background:var(--g50); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; flex-shrink:0;">
+            <div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap;">
               <button type="button" class="notes-tool-btn" id="tool-bold" title="Bold"><strong>B</strong></button>
               <button type="button" class="notes-tool-btn" id="tool-italic" title="Italic"><em>I</em></button>
               <button type="button" class="notes-tool-btn" id="tool-heading" title="Heading"><strong>H</strong></button>
@@ -68,7 +68,7 @@ export default {
             </div>
 
             <!-- Paper Background Style & Export Dropdown -->
-            <div style="display:flex; align-items:center; gap:6px;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
               <select id="notes-paper-select" class="tool-input" style="font-size:0.76rem; padding:4px 8px; width:100px;">
                 <option value="blank">Blank Paper</option>
                 <option value="lined">Ruled Lined</option>
@@ -82,14 +82,14 @@ export default {
           </div>
 
           <!-- Note Content Area -->
-          <div id="notes-editor-container" class="notes-paper-blank" style="flex:1; overflow-y:auto; padding:24px 32px; display:flex; flex-direction:column; gap:12px;">
+          <div id="notes-editor-container" class="notes-paper-blank" style="flex:1; overflow-y:auto; min-height:0; padding:24px 32px; display:flex; flex-direction:column; gap:12px;">
             <input type="text" id="note-title-input" placeholder="Title" style="font-size:1.5rem; font-weight:700; border:none; outline:none; background:transparent; width:100%; color:var(--black);">
             <div id="note-meta-line" style="font-size:0.75rem; color:var(--g400); font-family:var(--mono);"></div>
-            <div id="note-body-editor" contenteditable="true" style="flex:1; outline:none; font-size:0.95rem; line-height:1.7; min-height:300px; color:var(--g900); white-space:pre-wrap;"></div>
+            <div id="note-body-editor" contenteditable="true" style="flex:1; outline:none; font-size:0.95rem; line-height:1.7; min-height:200px; color:var(--g900); white-space:pre-wrap;"></div>
           </div>
 
           <!-- Word Counter Footer -->
-          <div style="padding:6px 16px; border-top:1px solid var(--g150); background:var(--g50); display:flex; justify-content:space-between; font-size:0.74rem; color:var(--g500); font-family:var(--mono);">
+          <div style="padding:6px 16px; border-top:1px solid var(--g150); background:var(--g50); display:flex; justify-content:space-between; font-size:0.74rem; color:var(--g500); font-family:var(--mono); flex-shrink:0;">
             <span id="note-word-count">0 words · 0 characters</span>
             <span id="note-save-status">Saved locally</span>
           </div>
