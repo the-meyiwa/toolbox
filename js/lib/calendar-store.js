@@ -61,11 +61,10 @@ function getSampleEvents() {
  */
 export function loadEvents() {
   try {
+    if (typeof localStorage === 'undefined') return [];
     const raw = localStorage.getItem(STORAGE_KEY_CALENDAR);
     if (!raw) {
-      const samples = getSampleEvents();
-      saveEvents(samples);
-      return samples;
+      return [];
     }
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -81,6 +80,7 @@ export function loadEvents() {
  */
 export function saveEvents(events) {
   try {
+    if (typeof localStorage === 'undefined') return;
     localStorage.setItem(STORAGE_KEY_CALENDAR, JSON.stringify(events));
   } catch (err) {
     console.error('[CalendarStore] Failed to save events:', err);

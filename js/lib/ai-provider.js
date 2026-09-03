@@ -316,7 +316,20 @@ export async function streamChatCompletion({
       }
 
       onToolCallStart(toolName, toolArgs);
-      const toolRes = await executeAssistantTool(toolName, toolArgs, { currentFile, taskState });
+      let toolRes;
+      try {
+        toolRes = await executeAssistantTool(toolName, toolArgs, { currentFile, taskState });
+        if (!toolRes || typeof toolRes !== 'object') {
+          toolRes = { status: 'success', message: String(toolRes || 'Action completed.') };
+        }
+      } catch (err) {
+        toolRes = {
+          status: 'error',
+          success: false,
+          error: err.message || 'Operation failed',
+          message: `Failed to execute: ${err.message || 'Unknown error'}`
+        };
+      }
       turnExecutedTools.set(toolKey, toolRes);
       onToolCallResult(toolName, toolRes);
       executedToolResults.push(toolRes);
@@ -398,10 +411,22 @@ export async function streamChatCompletion({
     lastError = err;
   }
 
-  // If tools executed successfully, guarantee completion even if trailing text summary failed
+  // If tools executed, construct truthful verified status
   if (executedToolResults.length > 0) {
     if (!fullResponseText) {
-      fullResponseText = executedToolResults.map(r => r.message).filter(Boolean).join('\n') || 'Action completed successfully.';
+      const failed = executedToolResults.filter(r => r.status === 'error' || r.success === false);
+      const succeeded = executedToolResults.filter(r => r.status === 'success' || r.success === true || (r.status !== 'error' && r.success !== false));
+
+      if (failed.length > 0 && succeeded.length > 0) {
+        fullResponseText = `Completed ${succeeded.length} action(s), but encountered an issue with ${failed.length} action(s):\n` +
+          succeeded.map(r => `• ${r.message || 'Succeeded'}`).join('\n') + '\n' +
+          failed.map(r => `• Failed: ${r.message || r.error || 'Operation failed'}`).join('\n');
+      } else if (failed.length > 0) {
+        fullResponseText = `The requested action(s) could not be completed:\n` +
+          failed.map(r => `• ${r.message || r.error || 'Failed'}`).join('\n');
+      } else {
+        fullResponseText = succeeded.map(r => r.message).filter(Boolean).join('\n') || 'Action completed successfully.';
+      }
       onToken(fullResponseText);
     }
     success = true;

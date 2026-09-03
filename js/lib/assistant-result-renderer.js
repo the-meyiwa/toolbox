@@ -2972,9 +2972,17 @@ export class FloorPlanResultRenderer extends ResultRenderer {
 
   static render(result, container) {
     const data = result.data || {};
-    const title = data.title || 'Floor Plan';
-    const squareMeters = Number(data.squareMeters || 85);
-    const rooms = Array.isArray(data.rooms) ? data.rooms : [];
+    const title = result.title || data.title || 'Floor Plan';
+    const squareMeters = Number(result.squareMeters || data.squareMeters || 85);
+    const rooms = Array.isArray(result.rooms) && result.rooms.length
+      ? result.rooms
+      : (Array.isArray(data.rooms) && data.rooms.length
+          ? data.rooms
+          : [
+              { name: 'Living Room', width: 5.5, length: 6.0, x: 0, y: 0, color: '#3b82f6' },
+              { name: 'Master Bedroom', width: 4.0, length: 3.8, x: 5.5, y: 0, color: '#10b981' },
+              { name: 'Kitchen & Bath', width: 4.0, length: 2.2, x: 5.5, y: 3.8, color: '#f59e0b' }
+            ]);
 
     const card = document.createElement('div');
     card.className = 'assistant-result-floorplan-card';
@@ -3013,17 +3021,33 @@ export class FloorPlanResultRenderer extends ResultRenderer {
     const body = document.createElement('div');
     body.style.cssText = 'padding:16px 18px; display:flex; flex-direction:column; gap:14px;';
 
-    // Vector Blueprint SVG
+    // Dynamic Vector Blueprint SVG scaled to viewBox
+    const maxX = Math.max(...rooms.map(r => (r.x || 0) + (r.width || 4)), 8);
+    const maxY = Math.max(...rooms.map(r => (r.y || 0) + (r.length || r.height || 4)), 6);
+    const svgW = 320;
+    const svgH = 180;
+    const pad = 16;
+    const s = Math.min((svgW - pad * 2) / maxX, (svgH - pad * 2) / maxY);
+    const offX = (svgW - maxX * s) / 2;
+    const offY = (svgH - maxY * s) / 2;
+
+    const roomSvgs = rooms.map(r => {
+      const rx = offX + (r.x || 0) * s;
+      const ry = offY + (r.y || 0) * s;
+      const rw = (r.width || 4) * s;
+      const rh = (r.length || r.height || 4) * s;
+      const fillCol = r.color ? `${r.color}15` : 'rgba(59,130,246,0.08)';
+      return `
+        <rect x="${rx}" y="${ry}" width="${rw}" height="${rh}" stroke="var(--black)" stroke-width="2" fill="${fillCol}"/>
+        <text x="${rx + rw / 2}" y="${ry + rh / 2 + 3}" font-size="8" font-family="sans-serif" font-weight="600" fill="var(--black)" text-anchor="middle">${r.name}</text>
+      `;
+    }).join('');
+
     const svgWrap = document.createElement('div');
-    svgWrap.style.cssText = 'height:160px; background:var(--g50); border-radius:12px; border:1px solid var(--g200); display:flex; align-items:center; justify-content:center; overflow:hidden;';
+    svgWrap.style.cssText = 'height:180px; background:var(--g50); border-radius:12px; border:1px solid var(--g200); display:flex; align-items:center; justify-content:center; overflow:hidden;';
     svgWrap.innerHTML = `
-      <svg width="280" height="140" viewBox="0 0 280 140" fill="none" stroke="currentColor" stroke-width="1.8" style="color:var(--black);">
-        <rect x="20" y="15" width="240" height="110" stroke="var(--black)" stroke-width="2.5" fill="var(--white)"/>
-        <line x1="140" y1="15" x2="140" y2="125" stroke="var(--g300)" stroke-width="2"/>
-        <line x1="20" y1="75" x2="140" y2="75" stroke="var(--g300)" stroke-width="2"/>
-        <text x="75" y="50" font-size="9" font-family="sans-serif" font-weight="bold" fill="var(--black)" text-anchor="middle">Living Room (33m²)</text>
-        <text x="75" y="105" font-size="9" font-family="sans-serif" font-weight="bold" fill="var(--black)" text-anchor="middle">Kitchen & Bath</text>
-        <text x="200" y="75" font-size="9" font-family="sans-serif" font-weight="bold" fill="var(--black)" text-anchor="middle">Master Bedroom (22m²)</text>
+      <svg width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}" fill="none" stroke="currentColor" style="color:var(--black);">
+        ${roomSvgs}
       </svg>
     `;
     body.appendChild(svgWrap);

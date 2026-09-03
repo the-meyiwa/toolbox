@@ -4854,8 +4854,7 @@ input, select, textarea {
 .pal { position: fixed; inset: 0; z-index: 1200; }
 .pal-scrim {
   position: absolute; inset: 0;
-  background: rgba(255,255,255,0.7);
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.45);
 }
 .pal-panel {
   position: relative;
@@ -4864,35 +4863,53 @@ input, select, textarea {
   border: 1px solid var(--g200);
   border-radius: 16px;
   background: var(--white);
+  color: var(--black);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
 }
-.pal-field { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--g150); color: var(--g400); }
+.pal-field {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--g150);
+  color: var(--g500);
+  background: var(--white);
+}
 .pal-field input {
   flex: 1; border: none; outline: none; background: none;
   font-family: var(--sans); font-size: 1rem; color: var(--black);
 }
-.pal-list { max-height: min(52vh, 420px); overflow-y: auto; padding: 6px; }
+.pal-field input::placeholder {
+  color: var(--g400);
+}
+.pal-field kbd {
+  font-family: var(--mono); font-size: 0.72rem; padding: 2px 6px;
+  border: 1px solid var(--g200); border-radius: 4px;
+  color: var(--g500); background: var(--g50);
+}
+.pal-list { max-height: min(52vh, 420px); overflow-y: auto; padding: 6px; background: var(--white); }
 .pal-group {
   margin: 10px 10px 4px;
-  font-size: 0.66rem; font-weight: 500; letter-spacing: 0.09em;
-  text-transform: uppercase; color: var(--g400);
+  font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--g500);
 }
 .pal-row {
   display: flex; align-items: flex-start; gap: 11px;
   width: 100%; padding: 9px 10px; border: none; border-radius: 9px;
   background: none; text-align: left; cursor: pointer; font-family: var(--sans);
+  color: var(--black);
+  transition: background 0.12s ease;
 }
+.pal-row:hover { background: var(--g50); }
 .pal-row.is-cursor { background: var(--g100); }
-.pal-text { min-width: 0; }
-.pal-text strong { display: block; font-size: 0.86rem; font-weight: 500; }
+.pal-text { min-width: 0; flex: 1; }
+.pal-text strong { display: block; font-size: 0.86rem; font-weight: 600; color: var(--black); }
 .pal-text em {
-  display: block; font-style: normal; font-size: 0.74rem; color: var(--g500);
+  display: block; font-style: normal; font-size: 0.74rem; color: var(--g600);
   line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.pal-icon { display: flex; width: 15px; height: 15px; margin-top: 3px; color: var(--g400); flex: none; }
+.pal-icon { display: flex; width: 15px; height: 15px; margin-top: 3px; color: var(--g500); flex: none; }
 .pal-icon svg { width: 100%; height: 100%; }
-.pal-empty { padding: 24px 16px; margin: 0; font-size: 0.83rem; color: var(--g500); line-height: 1.6; }
+.pal-empty { padding: 24px 16px; margin: 0; font-size: 0.84rem; color: var(--g500); line-height: 1.6; text-align: center; }
 
 /* ============================================================
    SURPRISE ME

@@ -26,10 +26,10 @@ const DEFAULT_CURRENCY = 'USD';
 
 /* ---------------- formatting ---------------- */
 
-export function money(value, code = DEFAULT_CURRENCY, { compact = false, dp } = {}) {
+export function money(value, code = DEFAULT_CURRENCY, { compact = false, dp, locale = 'en-US' } = {}) {
   if (!Number.isFinite(value)) return '—';
   const curr = (code && typeof code === 'string' && code.trim()) ? code.trim().toUpperCase() : DEFAULT_CURRENCY;
-  return new Intl.NumberFormat(undefined, {
+  return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: curr,
     notation: compact ? 'compact' : 'standard',

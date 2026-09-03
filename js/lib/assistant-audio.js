@@ -172,34 +172,142 @@ class AssistantAudioService {
     return null;
   }
 
-  /** Restore a serialized player for a historical result without invoking a tool. */
+  /**
+   * Restore a serialized player for a historical result without auto-playing.
+   * The HTMLAudioElement is the authoritative source of truth.
+   */
   restore(data = {}) {
     if (!data.audioId || !data.url) return null;
     const existing = this.getInstance(data.audioId);
-    if (existing) return existing;
-    const audio = new Audio(data.url);
-    const instance = { id: data.audioId, audio, title: data.title || 'Audio', artist: data.artist || '', artworkUrl: data.artworkUrl || '', url: data.url, duration: data.duration || 30, currentTime: data.currentTime || 0, volume: data.volume ?? 1, isPlaying: false, isEnded: false, error: null };
-    audio.volume = instance.volume;
-    audio.addEventListener('play', () => { instance.isPlaying = true; this.notify('play', instance); });
-    audio.addEventListener('pause', () => { instance.isPlaying = false; this.notify('pause', instance); });
-    audio.addEventListener('timeupdate', () => { instance.currentTime = audio.currentTime; this.notify('timeupdate', instance); });
-    audio.addEventListener('ended', () => { instance.isPlaying = false; instance.isEnded = true; this.notify('ended', instance); });
+    if (existing) {
+      if (existing.audio) {
+        existing.isPlaying = !existing.audio.paused && !existing.audio.ended;
+        existing.currentTime = existing.audio.currentTime || 0;
+      }
+      return existing;
+    }
+
+    const audio = typeof Audio !== 'undefined'
+      ? new Audio(data.url)
+      : {
+          play: async () => {},
+          pause: () => {},
+          load: () => {},
+          addEventListener: () => {},
+          currentTime: 0,
+          duration: data.duration || 30,
+          volume: data.volume ?? 1,
+          paused: true,
+          ended: false,
+          readyState: 0
+        };
+
+    const instance = {
+      id: data.audioId,
+      audio,
+      title: data.title || 'Audio Sample',
+      artist: data.artist || 'Toolbox Audio',
+      artworkUrl: data.artworkUrl || '',
+      url: data.url,
+      duration: data.duration || 30,
+      currentTime: data.currentTime || 0,
+      volume: data.volume ?? 1.0,
+      isPlaying: false,
+      isEnded: false,
+      isReady: false,
+      error: null
+    };
+
+    if (typeof audio.volume !== 'undefined') {
+      audio.volume = instance.volume;
+    }
+
+    audio.addEventListener('loadedmetadata', () => {
+      if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
+        instance.duration = audio.duration;
+      }
+      if (instance.currentTime > 0 && typeof audio.currentTime !== 'undefined') {
+        try { audio.currentTime = instance.currentTime; } catch {}
+      }
+      instance.isReady = true;
+      this.notify('update', instance);
+    });
+
+    audio.addEventListener('canplay', () => {
+      instance.isReady = true;
+      if (instance.currentTime > 0 && typeof audio.currentTime !== 'undefined' && Math.abs(audio.currentTime - instance.currentTime) > 1) {
+        try { audio.currentTime = instance.currentTime; } catch {}
+      }
+      this.notify('update', instance);
+    });
+
+    audio.addEventListener('play', () => {
+      instance.isPlaying = true;
+      instance.isEnded = false;
+      this.notify('play', instance);
+    });
+
+    audio.addEventListener('pause', () => {
+      instance.isPlaying = false;
+      this.notify('pause', instance);
+    });
+
+    audio.addEventListener('timeupdate', () => {
+      instance.currentTime = audio.currentTime;
+      instance.isPlaying = !audio.paused && !audio.ended;
+      this.notify('timeupdate', instance);
+    });
+
+    audio.addEventListener('ended', () => {
+      instance.isPlaying = false;
+      instance.isEnded = true;
+      this.notify('ended', instance);
+    });
+
+    audio.addEventListener('error', () => {
+      instance.isPlaying = false;
+      instance.error = 'Failed to load audio stream.';
+      this.notify('error', instance);
+    });
+
     this.instances.set(instance.id, instance);
     this.currentActiveId = instance.id;
     return instance;
+  }
+
+  getPlaybackState(audioId) {
+    const inst = this.getInstance(audioId);
+    if (!inst || !inst.audio) return { isPlaying: false, currentTime: 0, duration: 30 };
+    return {
+      isPlaying: !inst.audio.paused && !inst.audio.ended,
+      currentTime: inst.audio.currentTime || 0,
+      duration: inst.audio.duration || inst.duration || 30,
+      volume: inst.audio.volume ?? inst.volume
+    };
   }
 
   pause(audioId) {
     const inst = this.getInstance(audioId);
     if (!inst) return { success: false, type: 'audio', message: 'No active audio found to pause.' };
     inst.audio.pause();
+    inst.isPlaying = false;
     return { success: true, type: 'audio', audioId: inst.id, action: 'pause', message: `Paused "${inst.title}".` };
   }
 
   resume(audioId) {
     const inst = this.getInstance(audioId);
     if (!inst) return { success: false, type: 'audio', message: 'No active audio found to resume.' };
-    inst.audio.play().catch(e => console.error('Resume failed:', e));
+    // Stop other audios to prevent competing playback
+    this.instances.forEach(other => {
+      if (other.id !== inst.id && other.audio && !other.audio.paused) {
+        try { other.audio.pause(); other.isPlaying = false; } catch {}
+      }
+    });
+    this.currentActiveId = inst.id;
+    inst.audio.play().catch(e => {
+      inst.isPlaying = false;
+      console.warn('Resume playback failed:', e);
+    });
     return { success: true, type: 'audio', audioId: inst.id, action: 'resume', message: `Resumed "${inst.title}".` };
   }
 

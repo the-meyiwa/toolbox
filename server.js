@@ -7,6 +7,7 @@ import http from 'http';
 import * as map from 'lib0/map';
 import crypto from 'crypto';
 import fs from 'fs';
+import { handleApiRequest } from './server-handler.js';
 
 const wsReadyStateConnecting = 0;
 const wsReadyStateOpen = 1;

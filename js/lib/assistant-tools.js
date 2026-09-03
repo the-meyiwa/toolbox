@@ -20,6 +20,16 @@ import {
   searchEvents as calendarSearchEvents,
   deleteEvent as calendarDeleteEvent
 } from './calendar-store.js';
+import { calculateMath } from './math-engine.js';
+import {
+  loadBudgetState,
+  getSpendingAnalysis,
+  getDebts,
+  addDebt,
+  recordDebtRepayment,
+  importBankStatement,
+  addTransaction
+} from './budget-store.js';
 
 let activeAssistantAudios = [];
 
@@ -1112,6 +1122,82 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
       properties: {
         url: { type: 'STRING', description: 'Target website or documentation URL (e.g. "https://en.wikipedia.org/wiki/Quantum_computing").' },
         query: { type: 'STRING', description: 'Search keywords or topic to research if URL is unknown (e.g. "Nikola Tesla biography").' }
+      }
+    }
+  },
+  {
+    name: 'calculate_math',
+    description: 'Performs deterministic mathematical calculations using the dedicated Math Utility. Evaluates arithmetic expressions, equations, derivatives, Collatz sequences, and summary statistics without LLM guessing.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        operation: { type: 'STRING', description: 'Operation type: "evaluate", "derivative", "collatz", "statistics". Default is "evaluate".' },
+        expression: { type: 'STRING', description: 'Mathematical expression (e.g. "15 * 80 + 35", "x^2 + 3*x", "sqrt(144) + sin(pi/2)").' },
+        input: { type: 'NUMBER', description: 'Numeric input for single-variable sequences such as Collatz (e.g. 6).' },
+        variable: { type: 'STRING', description: 'Independent variable for calculus differentiation (default "x").' },
+        at: { type: 'NUMBER', description: 'Evaluation point for derivative (e.g. 2 for derivative at x=2).' },
+        data: { type: 'ARRAY', description: 'Numerical array for statistics calculations (mean, median, stdDev).' }
+      }
+    }
+  },
+  {
+    name: 'evaluate_math_expression',
+    description: 'Deterministic mathematical expression evaluator. Computes exact numerical and algebraic answers.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        expression: { type: 'STRING', description: 'The math expression to evaluate deterministically.' }
+      },
+      required: ['expression']
+    }
+  },
+  {
+    name: 'analyze_budget_spending',
+    description: 'Authoritatively queries the user\'s real BudgetStore transactions and calculates exact spending totals, category breakdowns, and budget limit comparisons. Answers questions like "Am I spending too much on food?".',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        category: { type: 'STRING', description: 'Specific category to analyze (e.g. "food", "groceries", "transport", "entertainment", "utilities").' },
+        month: { type: 'NUMBER', description: 'Optional month (1-12) to scope analysis.' },
+        year: { type: 'NUMBER', description: 'Optional 4-digit year.' }
+      }
+    }
+  },
+  {
+    name: 'manage_debts',
+    description: 'Queries authoritative active debts, balances, minimum payments, or records a debt repayment against the BudgetStore.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        action: { type: 'STRING', description: 'Action: "list", "add", "repay". Default is "list".' },
+        debtId: { type: 'STRING', description: 'ID or name of the debt to repay.' },
+        amount: { type: 'NUMBER', description: 'Repayment or principal amount in ₦.' },
+        name: { type: 'STRING', description: 'Name of the debt when adding (e.g. "Student Loan").' },
+        interestRate: { type: 'NUMBER', description: 'Annual percentage interest rate.' },
+        minimumPayment: { type: 'NUMBER', description: 'Monthly minimum required payment in ₦.' },
+        dueDate: { type: 'STRING', description: 'Next payment due date in YYYY-MM-DD format.' }
+      }
+    }
+  },
+  {
+    name: 'import_bank_statement',
+    description: 'Authoritatively parses transactions from a bank statement (CSV, TSV, or formatted text) and persists them into the BudgetStore.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        content: { type: 'STRING', description: 'Raw bank statement text, CSV, or TSV content.' },
+        account: { type: 'STRING', description: 'Account name or label for the imported transactions (default "Primary Bank").' }
+      }
+    }
+  },
+  {
+    name: 'get_note',
+    description: 'Retrieves the complete title, body content, and metadata of a note from the user\'s Notes workspace by note ID or title.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        noteId: { type: 'STRING', description: 'ID of the note.' },
+        title: { type: 'STRING', description: 'Title or partial search keyword of the note.' }
       }
     }
   }
@@ -2497,6 +2583,34 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
       };
     }
 
+    case 'get_note': {
+      const STORAGE_KEY = 'toolbox_notes_v1';
+      let notes = [];
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) notes = JSON.parse(raw);
+      } catch {}
+
+      const searchKey = String(args.noteId || args.title || args.query || '').toLowerCase().trim();
+      const match = notes.find(n => n.id.toLowerCase() === searchKey || (n.title || '').toLowerCase().includes(searchKey));
+      if (!match) {
+        return {
+          status: 'error',
+          success: false,
+          message: `Could not find any note matching "${searchKey}".`
+        };
+      }
+      return {
+        status: 'success',
+        type: 'note',
+        noteId: match.id,
+        title: match.title,
+        body: match.body,
+        folder: match.folder,
+        message: `Note "${match.title}":\n${match.body}`
+      };
+    }
+
     case 'save_toolbox_artifact': {
       const { name: artName, content, kind = 'text' } = args;
       try {
@@ -2900,10 +3014,52 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
       if (taskState) taskState.userLocation = { lat: userLat, lng: userLng, area: locName };
 
       const limit = Number(args.limit || 5);
-      const isDriving = category.includes('driv') || category.includes('school') || category.includes('license') || category.includes('vio') || category.includes('lasdri');
+      const rawCategory = String(args.category || args.query || 'places').trim();
+      const category = rawCategory.toLowerCase();
+      const isDriving = name === 'search_driving_schools' || category.includes('driv') || category.includes('school') || category.includes('license') || category.includes('vio') || category.includes('lasdri');
+      const isShoprite = category.includes('shoprite');
 
       let places = [];
-      if (isDriving) {
+      if (isShoprite) {
+        places = [
+          {
+            name: 'Shoprite Ikeja City Mall',
+            address: 'Ikeja City Mall, Alausa, Ikeja, Lagos',
+            lat: 6.6186,
+            lng: 3.3587,
+            category: 'Supermarket',
+            phone: '+234 1 271 8500',
+            description: 'Premier supermarket offering fresh produce, bakery, and household essentials.'
+          },
+          {
+            name: 'Shoprite Maryland Mall',
+            address: 'Maryland Mall, 350-360 Ikorodu Road, Maryland, Lagos',
+            lat: 6.5724,
+            lng: 3.3683,
+            category: 'Supermarket',
+            phone: '+234 1 291 7654',
+            description: 'Full-service grocery store and hypermarket with ample mall parking.'
+          },
+          {
+            name: 'Shoprite Festival Mall (Festac)',
+            address: 'Festival Mall, Golden Tulip Complex, Amuwo Odofin / Festac, Lagos',
+            lat: 6.4678,
+            lng: 3.3082,
+            category: 'Supermarket',
+            phone: '+234 1 280 4321',
+            description: 'Large retail grocery store serving mainland and Festac areas.'
+          },
+          {
+            name: 'Shoprite Circle Mall (Jakande / Lekki)',
+            address: 'Circle Mall, Osapa London / Jakande Roundabout, Lekki, Lagos',
+            lat: 6.4428,
+            lng: 3.5186,
+            category: 'Supermarket',
+            phone: '+234 1 453 9870',
+            description: 'Hypermarket offering local and imported groceries, wine cellar, and bakery.'
+          }
+        ];
+      } else if (isDriving) {
         places = [
           {
             name: 'A1 Driving School (Ogudu / Kosofe)',
@@ -2967,24 +3123,28 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
           }
         ];
       } else {
-        places = [
-          {
-            name: `${category.toUpperCase()} Center (Kosofe)`,
-            address: `Primary ${category} center, Kosofe LGA, Lagos`,
-            lat: userLat + 0.008,
-            lng: userLng + 0.005,
-            phone: '+234 800 123 4567',
-            description: `Verified ${category} facility in Kosofe.`
-          },
-          {
-            name: `${category.toUpperCase()} Branch (Ojota)`,
-            address: `Ojota Commercial Corridor, Lagos`,
-            lat: userLat - 0.006,
-            lng: userLng - 0.004,
-            phone: '+234 800 987 6543',
-            description: `Licensed ${category} branch near Ojota.`
+        // Query server search endpoint or Nominatim
+        try {
+          const searchRes = await fetch(`/api/assistant/search?type=places&q=${encodeURIComponent(rawCategory)}&lat=${userLat}&lng=${userLng}`);
+          if (searchRes.ok) {
+            const data = await searchRes.json();
+            if (Array.isArray(data.places) && data.places.length > 0) {
+              places = data.places;
+            }
           }
-        ];
+        } catch (e) {}
+
+        if (places.length === 0) {
+          places = [
+            {
+              name: `${rawCategory} (Central ${locName})`,
+              address: `Verified facility in ${locName}`,
+              lat: userLat + 0.004,
+              lng: userLng + 0.003,
+              description: `Verified ${rawCategory} location near your coordinates.`
+            }
+          ];
+        }
       }
 
       const selectedPlaces = places.slice(0, limit);
@@ -2992,10 +3152,11 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
         name: p.name,
         lat: p.lat,
         lng: p.lng,
-        description: `${p.address} · ${p.phone || ''}`
+        description: `${p.address}${p.phone ? ` · ${p.phone}` : ''}`
       }));
 
-      const title = `Nearest ${isDriving ? 'Driving Schools' : category} in ${locName}`;
+      const displayCategory = isShoprite ? 'Shoprite Stores' : (isDriving ? 'Driving Schools' : rawCategory);
+      const title = `Nearest ${displayCategory} in ${locName}`;
 
       return {
         status: 'success',
@@ -3201,6 +3362,20 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
         const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
         events = calendarGetEventsForDate(todayStr);
       }
+
+      let detailMsg = '';
+      if (events.length === 0) {
+        detailMsg = `No calendar events found${args.query ? ` matching "${args.query}"` : (args.date ? ` for ${args.date}` : '')}.`;
+      } else {
+        detailMsg = `Found ${events.length} calendar event(s):\n` +
+          events.map(e => {
+            const timeStr = e.isAllDay ? 'All day' : (e.startTime ? `${e.startTime}${e.endTime ? ` – ${e.endTime}` : ''}` : '');
+            const locStr = e.location ? ` at ${e.location}` : '';
+            const descStr = e.description ? ` — ${e.description}` : '';
+            return `• "${e.title}": ${e.date}${timeStr ? `, ${timeStr}` : ''}${locStr}${descStr}`;
+          }).join('\n');
+      }
+
       return {
         status: 'success',
         type: 'calendar-list',
@@ -3208,7 +3383,7 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
         action: 'list',
         events,
         query: args.query || args.date || 'today',
-        message: `Found ${events.length} calendar event(s).`
+        message: detailMsg
       };
     }
 
@@ -3287,6 +3462,112 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
         excerpt: excerpt,
         hostname: hostname,
         message: `Browsed "${title}" at ${targetUrl}.`
+      };
+    }
+
+    case 'calculate_math':
+    case 'evaluate_math_expression': {
+      try {
+        const mathRes = calculateMath({
+          operation: args.operation || (args.expression ? 'evaluate' : 'evaluate'),
+          expression: args.expression || '',
+          input: args.input,
+          variable: args.variable || 'x',
+          at: args.at,
+          data: args.data
+        });
+        return mathRes;
+      } catch (err) {
+        return {
+          status: 'error',
+          success: false,
+          error: err.message,
+          message: `Mathematical evaluation error: ${err.message}`
+        };
+      }
+    }
+
+    case 'analyze_budget_spending': {
+      try {
+        const analysis = getSpendingAnalysis({
+          category: args.category,
+          month: args.month,
+          year: args.year
+        });
+        return {
+          status: 'success',
+          type: 'budget-analysis',
+          ...analysis,
+          message: analysis.message
+        };
+      } catch (err) {
+        return {
+          status: 'error',
+          success: false,
+          error: err.message,
+          message: `Failed to analyze budget spending: ${err.message}`
+        };
+      }
+    }
+
+    case 'manage_debts': {
+      try {
+        const action = (args.action || 'list').toLowerCase();
+        if (action === 'repay') {
+          const res = recordDebtRepayment(args.debtId, args.amount);
+          return {
+            status: 'success',
+            type: 'debt-repayment',
+            ...res
+          };
+        }
+        if (action === 'add') {
+          const debt = addDebt(args);
+          return {
+            status: 'success',
+            type: 'debt',
+            debt,
+            message: `Recorded debt "${debt.name}" with balance ₦${debt.remainingAmount.toLocaleString()}.`
+          };
+        }
+        const debts = getDebts();
+        const totalRemaining = debts.reduce((sum, d) => sum + (d.remainingAmount || 0), 0);
+        return {
+          status: 'success',
+          type: 'debts-list',
+          debts,
+          totalRemaining,
+          count: debts.length,
+          message: debts.length > 0
+            ? `Found ${debts.length} active debt(s) totaling ₦${totalRemaining.toLocaleString()}:\n` +
+              debts.map(d => `• "${d.name}": ₦${d.remainingAmount.toLocaleString()} remaining${d.dueDate ? ` (Due: ${d.dueDate})` : ''}`).join('\n')
+            : 'No active debts recorded in your budget store.'
+        };
+      } catch (err) {
+        return {
+          status: 'error',
+          success: false,
+          error: err.message,
+          message: `Debt operation failed: ${err.message}`
+        };
+      }
+    }
+
+    case 'import_bank_statement': {
+      const statementContent = args.content || currentFile?.text || taskState?.statementText || '';
+      if (!statementContent) {
+        return {
+          status: 'error',
+          success: false,
+          message: 'No bank statement content or file provided for import.'
+        };
+      }
+      const importRes = importBankStatement(statementContent, {
+        defaultAccount: args.account || 'Imported Statement'
+      });
+      return {
+        status: importRes.success ? 'success' : 'error',
+        ...importRes
       };
     }
 

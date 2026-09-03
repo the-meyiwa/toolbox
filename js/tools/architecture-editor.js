@@ -36,18 +36,18 @@ export default {
           <!-- "+ Add" Menu -->
           <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
             <span class="tool-label" style="margin:0; font-weight:600; font-size:0.84rem;">+ Add:</span>
-            <button class="btn btn-sm btn-secondary" data-add="wall" title="Add a Wall"> Wall</button>
-            <button class="btn btn-sm btn-secondary" data-add="door" title="Add a Door"> Door</button>
-            <button class="btn btn-sm btn-secondary" data-add="window" title="Add a Window">🪟 Window</button>
-            <button class="btn btn-sm btn-secondary" data-add="room" title="Add a Room Area"> Room</button>
-            <button class="btn btn-sm btn-secondary" data-add="text" title="Add a Text Label"> Text</button>
-            <button class="btn btn-sm btn-secondary" data-add="dimension" title="Add a Dimension Line"> Dimension</button>
+            <button class="btn btn-sm btn-secondary" data-add="wall" title="Add a Wall">Wall</button>
+            <button class="btn btn-sm btn-secondary" data-add="door" title="Add a Door">Door</button>
+            <button class="btn btn-sm btn-secondary" data-add="window" title="Add a Window">Window</button>
+            <button class="btn btn-sm btn-secondary" data-add="room" title="Add a Room Area">Room</button>
+            <button class="btn btn-sm btn-secondary" data-add="text" title="Add a Text Label">Text</button>
+            <button class="btn btn-sm btn-secondary" data-add="dimension" title="Add a Dimension Line">Dimension</button>
           </div>
 
           <!-- Undo / Redo & Viewport Info -->
           <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-            <button class="btn btn-sm btn-secondary" id="arch-undo-btn" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
-            <button class="btn btn-sm btn-secondary" id="arch-redo-btn" title="Redo (Ctrl+Y)" disabled>↷ Redo</button>
+            <button class="btn btn-sm btn-secondary" id="arch-undo-btn" title="Undo (Ctrl+Z)" disabled>Undo</button>
+            <button class="btn btn-sm btn-secondary" id="arch-redo-btn" title="Redo (Ctrl+Y)" disabled>Redo</button>
             <div style="display:inline-flex; align-items:center; gap:4px; margin-left:6px;">
               <span id="arch-zoom-val" style="font-family:var(--mono); font-size:0.78rem; min-width:44px; text-align:center; background:var(--g100); padding:3px 8px; border-radius:4px;">100%</span>
               <button class="btn btn-sm btn-secondary" id="arch-zoom-fit" title="Fit to Screen" style="padding:0 10px;">Fit View</button>
@@ -62,9 +62,9 @@ export default {
           <!-- Floating Element Action Menu (when an element is selected) -->
           <div id="arch-floating-actions" hidden style="position:absolute; bottom:16px; left:50%; transform:translateX(-50%); background:var(--white); border:1px solid var(--g200); border-radius:999px; box-shadow:0 8px 24px rgba(0,0,0,0.14); padding:6px 14px; display:flex; align-items:center; gap:8px; z-index:10;">
             <span id="arch-selected-name" style="font-size:0.82rem; font-weight:600; color:var(--g800); margin-right:4px;">Wall</span>
-            <button class="btn btn-sm btn-secondary" id="arch-rotate-el" title="Rotate element 45°">↻ Rotate</button>
-            <button class="btn btn-sm btn-secondary" id="arch-dup-el" title="Duplicate element"> Duplicate</button>
-            <button class="btn btn-sm btn-secondary" id="arch-del-el" title="Delete element" style="color:#ef4444;"> Delete</button>
+            <button class="btn btn-sm btn-secondary" id="arch-rotate-el" title="Rotate element 45°">Rotate</button>
+            <button class="btn btn-sm btn-secondary" id="arch-dup-el" title="Duplicate element">Duplicate</button>
+            <button class="btn btn-sm btn-secondary" id="arch-del-el" title="Delete element" style="color:#ef4444;">Delete</button>
           </div>
         </div>
 
@@ -205,7 +205,116 @@ export default {
       }
     }
 
+    function hydrateFloorPlan(handoff) {
+      if (!handoff) return;
+      const roomsData = Array.isArray(handoff.rooms) && handoff.rooms.length
+        ? handoff.rooms
+        : (Array.isArray(handoff.data?.rooms) ? handoff.data.rooms : []);
+
+      if (roomsData.length === 0) return;
+
+      const width = 1000;
+      const height = 750;
+      const canvasEl = document.createElement('canvas');
+      canvasEl.width = width;
+      canvasEl.height = height;
+      const c = canvasEl.getContext('2d');
+      if (c) {
+        c.fillStyle = '#ffffff';
+        c.fillRect(0, 0, width, height);
+
+        c.strokeStyle = '#f1f5f9';
+        c.lineWidth = 1;
+        for (let x = 0; x < width; x += 25) {
+          c.beginPath(); c.moveTo(x, 0); c.lineTo(x, height); c.stroke();
+        }
+        for (let y = 0; y < height; y += 25) {
+          c.beginPath(); c.moveTo(0, y); c.lineTo(width, y); c.stroke();
+        }
+      }
+
+      bgCanvas = canvasEl;
+      cleanBgCanvas = canvasEl;
+
+      const maxX = Math.max(...roomsData.map(r => (r.x || 0) + (r.width || 4)), 8);
+      const maxY = Math.max(...roomsData.map(r => (r.y || 0) + (r.length || r.height || 4)), 8);
+
+      const padding = 60;
+      const scaleX = (width - padding * 2) / maxX;
+      const scaleY = (height - padding * 2) / maxY;
+      const scale = Math.min(scaleX, scaleY);
+
+      const offsetX = (width - maxX * scale) / 2;
+      const offsetY = (height - maxY * scale) / 2;
+
+      const newElements = [];
+      let elId = 1;
+
+      roomsData.forEach(r => {
+        const rx = offsetX + (r.x || 0) * scale;
+        const ry = offsetY + (r.y || 0) * scale;
+        const rw = (r.width || 4) * scale;
+        const rh = (r.length || r.height || 4) * scale;
+
+        // 1. Room Area element
+        newElements.push({
+          id: `room-${elId++}`,
+          type: 'room',
+          x: rx,
+          y: ry,
+          width: rw,
+          height: rh,
+          label: r.name || 'Room',
+          color: r.color ? `${r.color}20` : 'rgba(59,130,246,0.1)'
+        });
+
+        // 2. 4 Wall perimeter segments
+        newElements.push({ id: `wall-${elId++}`, type: 'wall', x: rx, y: ry, x2: rx + rw, y2: ry, thickness: 8, color: '#0f172a' });
+        newElements.push({ id: `wall-${elId++}`, type: 'wall', x: rx + rw, y: ry, x2: rx + rw, y2: ry + rh, thickness: 8, color: '#0f172a' });
+        newElements.push({ id: `wall-${elId++}`, type: 'wall', x: rx + rw, y: ry + rh, x2: rx, y2: ry + rh, thickness: 8, color: '#0f172a' });
+        newElements.push({ id: `wall-${elId++}`, type: 'wall', x: rx, y: ry + rh, x2: rx, y2: ry, thickness: 8, color: '#0f172a' });
+
+        // 3. Door
+        newElements.push({
+          id: `door-${elId++}`,
+          type: 'door',
+          x: rx + 24,
+          y: ry + rh,
+          width: 38,
+          rotation: 0
+        });
+
+        // 4. Text label
+        newElements.push({
+          id: `text-${elId++}`,
+          type: 'text',
+          x: rx + rw / 2,
+          y: ry + rh / 2,
+          text: `${r.name || 'Room'} (${Math.round((r.width || 4) * (r.length || r.height || 4))}m²)`,
+          size: 14
+        });
+      });
+
+      elements = newElements;
+      work.hidden = false;
+      zone.hidden = true;
+      banner.hidden = false;
+      bannerText.innerHTML = `Loaded floor plan blueprint <strong>"${handoff.title || 'Floor Plan'}"</strong> (${handoff.squareMeters || 85} m²). All ${elements.length} walls and rooms are interactive and editable.`;
+      saveState();
+      fitToScreen();
+    }
+
     attachFileInput(zone, input, (files) => handleFile(files[0]));
+
+    // Check for incoming Assistant floor-plan handoff
+    try {
+      const rawHandoff = sessionStorage.getItem('toolbox.arch.handoff');
+      if (rawHandoff) {
+        const parsed = JSON.parse(rawHandoff);
+        sessionStorage.removeItem('toolbox.arch.handoff');
+        hydrateFloorPlan(parsed);
+      }
+    } catch {}
 
     dismissBtn.addEventListener('click', () => {
       banner.hidden = true;
@@ -213,6 +322,7 @@ export default {
 
     newBtn.addEventListener('click', () => {
       work.hidden = true;
+      zone.hidden = false;
       bgCanvas = null;
       cleanBgCanvas = null;
       elements = [];
@@ -541,3 +651,68 @@ export default {
     this._cleanup = [];
   },
 };
+
+export function convertFloorPlanHandoffToElements(handoff, width = 1000, height = 750) {
+  const roomsData = Array.isArray(handoff?.rooms) && handoff.rooms.length
+    ? handoff.rooms
+    : (Array.isArray(handoff?.data?.rooms) ? handoff.data.rooms : []);
+
+  if (roomsData.length === 0) return [];
+
+  const maxX = Math.max(...roomsData.map(r => (r.x || 0) + (r.width || 4)), 8);
+  const maxY = Math.max(...roomsData.map(r => (r.y || 0) + (r.length || r.height || 4)), 8);
+
+  const padding = 60;
+  const scaleX = (width - padding * 2) / maxX;
+  const scaleY = (height - padding * 2) / maxY;
+  const scale = Math.min(scaleX, scaleY);
+
+  const offsetX = (width - maxX * scale) / 2;
+  const offsetY = (height - maxY * scale) / 2;
+
+  const newElements = [];
+  let elId = 1;
+
+  roomsData.forEach(r => {
+    const rx = offsetX + (r.x || 0) * scale;
+    const ry = offsetY + (r.y || 0) * scale;
+    const rw = (r.width || 4) * scale;
+    const rh = (r.length || r.height || 4) * scale;
+
+    newElements.push({
+      id: `room-${elId++}`,
+      type: 'room',
+      x: rx,
+      y: ry,
+      width: rw,
+      height: rh,
+      label: r.name || 'Room',
+      color: r.color ? `${r.color}20` : 'rgba(59,130,246,0.1)'
+    });
+
+    newElements.push({ id: `wall-${elId++}`, type: 'wall', x: rx, y: ry, x2: rx + rw, y2: ry, thickness: 8, color: '#0f172a' });
+    newElements.push({ id: `wall-${elId++}`, type: 'wall', x: rx + rw, y: ry, x2: rx + rw, y2: ry + rh, thickness: 8, color: '#0f172a' });
+    newElements.push({ id: `wall-${elId++}`, type: 'wall', x: rx + rw, y: ry + rh, x2: rx, y2: ry + rh, thickness: 8, color: '#0f172a' });
+    newElements.push({ id: `wall-${elId++}`, type: 'wall', x: rx, y: ry + rh, x2: rx, y2: ry, thickness: 8, color: '#0f172a' });
+
+    newElements.push({
+      id: `door-${elId++}`,
+      type: 'door',
+      x: rx + 24,
+      y: ry + rh,
+      width: 38,
+      rotation: 0
+    });
+
+    newElements.push({
+      id: `text-${elId++}`,
+      type: 'text',
+      x: rx + rw / 2,
+      y: ry + rh / 2,
+      text: `${r.name || 'Room'} (${Math.round((r.width || 4) * (r.length || r.height || 4))}m²)`,
+      size: 14
+    });
+  });
+
+  return newElements;
+}

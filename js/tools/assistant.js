@@ -990,22 +990,19 @@ export default {
             if (textBody) textBody.innerHTML = formatMarkdown(accumulatedStreamText);
             if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
           },
-          onToolCallStart: (toolName, toolArgs) => {
+          onToolCallStart: () => {
             if (!toolStatusArea) return;
-            const statusCard = document.createElement('div');
-            statusCard.style.padding = '6px 10px';
-            statusCard.style.background = 'var(--white)';
-            statusCard.style.border = '1px solid var(--g300)';
-            statusCard.style.borderRadius = '8px';
-            statusCard.style.fontSize = '0.78rem';
-            statusCard.style.fontWeight = '600';
-            statusCard.style.display = 'flex';
-            statusCard.style.alignItems = 'center';
-            statusCard.style.gap = '6px';
-            statusCard.innerHTML = `<span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#3b82f6;"></span> Executing tool: <code>${toolName}</code>...`;
-            toolStatusArea.appendChild(statusCard);
+            toolStatusArea.innerHTML = `
+              <div style="display:inline-flex; align-items:center; gap:8px; font-size:0.78rem; color:var(--g500); padding:4px 0;">
+                <span class="spinner-sm" style="display:inline-block; width:12px; height:12px; border:2px solid var(--g300); border-top-color:var(--black); border-radius:50%; animation:spin 0.8s linear infinite;"></span>
+                <span>Processing request...</span>
+              </div>
+            `;
           },
           onToolCallResult: (toolName, result) => {
+            if (toolStatusArea) {
+              toolStatusArea.innerHTML = '';
+            }
             executedToolResults.push(result);
             if (toolResultsArea) {
               void integrationManager.renderToolResult(result, toolResultsArea, toolName);
