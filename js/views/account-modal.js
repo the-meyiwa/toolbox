@@ -14,14 +14,32 @@ import {
   getUserFromToken,
   getSupabaseConfig,
   saveSupabaseConfig,
-  testSupabaseConnection
+  testSupabaseConnection,
+  resendConfirmationEmail,
+  isPasskeySupported,
+  getRegisteredPasskeys,
+  registerPasskey,
+  removeRegisteredPasskey,
+  authenticateWithPasskey
 } from '../lib/supabase.js';
 import { QuotaManager } from '../lib/quota-manager.js';
 import { openSettings } from '../lib/settings-ui.js';
+import { showToast } from '../utils.js';
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 let modalEl = null;
-let authMode = 'signin'; // 'signin' | 'signup' | 'reset' | 'set-new-password'
+let authMode = 'signin'; // 'signin' | 'signup' | 'reset' | 'set-new-password' | 'verify-pending'
 let recoveryContext = null;
+let pendingConfirmationEmail = null;
 
 export async function openAccountModal(modeOrSignUp = false, context = null) {
   if (typeof modeOrSignUp === 'string') {
@@ -66,6 +84,268 @@ export function closeAccountModal() {
   }
 }
 
+function renderAuthCard(user, authMode, recoveryContext, pendingConfirmationEmail) {
+  if (authMode === 'set-new-password') {
+    return `
+      <div>
+        <div style="font-size:0.88rem; font-weight:700; color:var(--black); margin-bottom:4px;">
+          Set New Password
+        </div>
+        <div style="font-size:0.8rem; color:var(--g600); margin-bottom:14px; line-height:1.5;">
+          ${recoveryContext?.email ? `Update password for <strong id="set-pwd-email-label" style="color:var(--black);">${escapeHtml(recoveryContext.email)}</strong>.` : 'Enter and confirm your new password below.'}
+        </div>
+        <form id="set-pwd-form" style="display:flex; flex-direction:column; gap:10px;">
+          <div style="position:relative;">
+            <input type="password" id="new-pwd-input" class="tool-input" placeholder="New password..." required minlength="6" style="width:100%; padding:10px 36px 10px 12px; font-size:0.88rem; border-radius:8px;">
+            <button type="button" class="pwd-toggle-btn" data-target="new-pwd-input" aria-label="Show password" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; padding:2px; cursor:pointer; color:var(--g500); display:flex; align-items:center;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-open">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-closed" style="display:none;">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+                <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div id="new-pwd-strength-container" style="margin-top:-2px; margin-bottom:2px; display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <span style="font-size:0.72rem; color:var(--g500);">Strength:</span>
+              <span id="new-pwd-strength-label" style="font-size:0.72rem; font-weight:600; color:var(--g500);">Weak</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:4px; height:4px;">
+              <div class="new-pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
+              <div class="new-pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
+              <div class="new-pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
+              <div class="new-pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
+            </div>
+          </div>
+
+          <div style="position:relative;">
+            <input type="password" id="new-pwd-confirm-input" class="tool-input" placeholder="Confirm new password..." required minlength="6" style="width:100%; padding:10px 36px 10px 12px; font-size:0.88rem; border-radius:8px;">
+            <button type="button" class="pwd-toggle-btn" data-target="new-pwd-confirm-input" aria-label="Show password" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; padding:2px; cursor:pointer; color:var(--g500); display:flex; align-items:center;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-open">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-closed" style="display:none;">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+                <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path>
+              </svg>
+            </button>
+          </div>
+          <div id="new-pwd-match-hint" style="font-size:0.72rem; color:var(--g500); margin-top:-4px;">Password must be at least 6 characters.</div>
+
+          <button type="submit" class="btn btn-primary btn-sm" id="btn-set-pwd-submit" style="width:100%; padding:10px; font-weight:600; font-size:0.9rem; margin-top:4px;">
+            Update Password
+          </button>
+
+          <div id="set-pwd-msg" style="font-size:0.8rem; line-height:1.4; display:none; padding:4px 0;"></div>
+        </form>
+      </div>
+    `;
+  }
+
+  if (authMode === 'verify-pending') {
+    return `
+      <div id="verify-pending-wrap" style="text-align:center; padding:8px 4px;">
+        <div style="width:48px; height:48px; border-radius:50%; background:var(--g100); display:flex; align-items:center; justify-content:center; margin:0 auto 12px; color:var(--black);">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+            <polyline points="22,6 12,13 2,6"></polyline>
+          </svg>
+        </div>
+        <div style="font-size:0.95rem; font-weight:700; color:var(--black); margin-bottom:6px;">Check Your Inbox</div>
+        <div style="font-size:0.82rem; color:var(--g600); line-height:1.5; margin-bottom:14px;">
+          We sent an activation link to:<br>
+          <strong style="color:var(--black); font-family:monospace; display:inline-block; margin-top:3px;">${escapeHtml(pendingConfirmationEmail || 'your email')}</strong>
+        </div>
+        <div style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:10px 12px; font-size:0.78rem; color:var(--g600); line-height:1.4; margin-bottom:14px; text-align:left;">
+          Click the confirmation link in that email to activate your account. You will be signed in automatically upon verification.
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-resend-confirmation" style="width:100%; padding:9px; font-weight:600; font-size:0.86rem; margin-bottom:8px;">
+          Resend Confirmation Email
+        </button>
+        <div id="resend-msg" style="font-size:0.78rem; line-height:1.4; display:none; padding:4px 0; margin-bottom:6px;"></div>
+        <div>
+          <button type="button" id="btn-pending-back" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-size:0.82rem; font-weight:600; cursor:pointer;">
+            Back to Sign In
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  if (authMode === 'verify-pending') {
+    return `
+      <div id="verify-pending-wrap" style="text-align:center; padding:8px 4px;">
+        <div style="width:48px; height:48px; border-radius:50%; background:var(--g100); display:flex; align-items:center; justify-content:center; margin:0 auto 12px; color:var(--black);">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+            <polyline points="22,6 12,13 2,6"></polyline>
+          </svg>
+        </div>
+        <div style="font-size:0.95rem; font-weight:700; color:var(--black); margin-bottom:6px;">Check Your Inbox</div>
+        <div style="font-size:0.82rem; color:var(--g600); line-height:1.5; margin-bottom:14px;">
+          We sent an activation link to:<br>
+          <strong style="color:var(--black); font-family:monospace; display:inline-block; margin-top:3px;">${escapeHtml(pendingConfirmationEmail || 'your email')}</strong>
+        </div>
+        <div style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:10px 12px; font-size:0.78rem; color:var(--g600); line-height:1.4; margin-bottom:14px; text-align:left;">
+          Click the confirmation link in that email to activate your account. You will be signed in automatically upon verification.
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-resend-confirmation" style="width:100%; padding:9px; font-weight:600; font-size:0.86rem; margin-bottom:8px;">
+          Resend Confirmation Email
+        </button>
+        <div id="resend-msg" style="font-size:0.78rem; line-height:1.4; display:none; padding:4px 0; margin-bottom:6px;"></div>
+        <div>
+          <button type="button" id="btn-pending-back" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-size:0.82rem; font-weight:600; cursor:pointer;">
+            Back to Sign In
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  if (user) {
+    return `
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:0.75rem; color:var(--g500); font-weight:600;">SIGNED IN AS</div>
+          <div style="font-size:0.95rem; font-weight:700; color:var(--black); margin-top:2px;">${escapeHtml(user.email)}</div>
+          <div style="font-size:0.72rem; color:var(--g600); font-family:monospace; margin-top:2px;">ID: ${escapeHtml(user.id)}</div>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-auth-signout" style="color:#ef4444;">Sign Out</button>
+      </div>
+    `;
+  }
+
+  if (authMode === 'reset') {
+    return `
+      <div>
+        <div style="font-size:0.88rem; font-weight:700; color:var(--black); margin-bottom:4px;">
+          Reset Your Password
+        </div>
+        <div style="font-size:0.8rem; color:var(--g600); margin-bottom:14px; line-height:1.5;">
+          Enter the email address associated with your account and we will send you a recovery link.
+        </div>
+        <form id="reset-form" style="display:flex; flex-direction:column; gap:12px;">
+          <input type="email" id="reset-email-input" class="tool-input" placeholder="Enter your email..." required style="width:100%; padding:10px 12px; font-size:0.88rem; border-radius:8px;">
+          
+          <button type="submit" class="btn btn-primary btn-sm" id="btn-reset-submit" style="width:100%; padding:10px; font-weight:600; font-size:0.9rem;">
+            Send Reset Link
+          </button>
+          
+          <div id="reset-msg" style="font-size:0.8rem; line-height:1.4; display:none; padding:4px 0;"></div>
+          
+          <div style="text-align:center; font-size:0.82rem; color:var(--g600); margin-top:4px;">
+            Remember your password? <button type="button" id="btn-back-to-signin" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-weight:600; cursor:pointer; text-decoration:underline;">Back to sign in</button>
+          </div>
+        </form>
+      </div>
+    `;
+  }
+
+  // signin or signup mode
+  const isSignUp = authMode === 'signup';
+  return `
+    <div>
+      <div style="font-size:0.88rem; font-weight:700; color:var(--black); margin-bottom:12px;">
+        ${isSignUp ? 'Create a New Account' : 'Sign In with Email'}
+      </div>
+
+      ${(!isSignUp && isPasskeySupported()) ? `
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-auth-passkey" style="width:100%; padding:10px; font-weight:600; font-size:0.88rem; display:flex; align-items:center; justify-content:center; gap:8px; border:1px solid var(--g300); background:var(--white); color:var(--black); margin-bottom:12px;">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          Continue with Passkey
+        </button>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+          <div style="flex:1; height:1px; background:var(--g200);"></div>
+          <span style="font-size:0.72rem; color:var(--g500); text-transform:uppercase; letter-spacing:0.5px;">or</span>
+          <div style="flex:1; height:1px; background:var(--g200);"></div>
+        </div>
+      ` : ''}
+
+      <form id="auth-form" style="display:flex; flex-direction:column; gap:10px;">
+        <input type="email" id="auth-email-input" class="tool-input" placeholder="Enter your email..." required autocomplete="username webauthn" style="width:100%; padding:10px 12px; font-size:0.88rem; border-radius:8px;">
+        
+        <div style="position:relative;">
+          <input type="password" id="auth-pwd-input" class="tool-input" placeholder="Enter your password..." required minlength="6" style="width:100%; padding:10px 36px 10px 12px; font-size:0.88rem; border-radius:8px;">
+          <button type="button" class="pwd-toggle-btn" data-target="auth-pwd-input" aria-label="Show password" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; padding:2px; cursor:pointer; color:var(--g500); display:flex; align-items:center;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-open">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-closed" style="display:none;">
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
+              <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
+              <line x1="1" y1="1" x2="23" y2="23"></line>
+              <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path>
+            </svg>
+          </button>
+        </div>
+
+        ${isSignUp ? `
+          <div id="pwd-strength-container" style="margin-top:-2px; margin-bottom:2px; display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <span style="font-size:0.72rem; color:var(--g500);">Strength:</span>
+              <span id="pwd-strength-label" style="font-size:0.72rem; font-weight:600; color:var(--g500);">Weak</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:4px; height:4px;">
+              <div class="pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
+              <div class="pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
+              <div class="pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
+              <div class="pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
+            </div>
+          </div>
+
+          <div style="position:relative;">
+            <input type="password" id="auth-pwd-confirm-input" class="tool-input" placeholder="Confirm your password..." required minlength="6" style="width:100%; padding:10px 36px 10px 12px; font-size:0.88rem; border-radius:8px;">
+            <button type="button" class="pwd-toggle-btn" data-target="auth-pwd-confirm-input" aria-label="Show password" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; padding:2px; cursor:pointer; color:var(--g500); display:flex; align-items:center;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-open">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-closed" style="display:none;">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+                <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path>
+              </svg>
+            </button>
+          </div>
+          <div id="pwd-match-hint" style="font-size:0.72rem; color:var(--g500); margin-top:-4px;">Password must be at least 6 characters.</div>
+        ` : `
+          <div style="text-align:right; margin-top:-4px;">
+            <button type="button" id="btn-forgot-password" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-size:0.78rem; font-weight:500; cursor:pointer; text-decoration:none;">Forgot password?</button>
+          </div>
+        `}
+
+        <button type="submit" class="btn btn-primary btn-sm" id="btn-auth-submit" style="width:100%; padding:10px; font-weight:600; font-size:0.9rem; margin-top:4px;">
+          ${isSignUp ? 'Create Account' : 'Sign In'}
+        </button>
+        
+        <div id="auth-msg" style="font-size:0.8rem; line-height:1.4; display:none; padding:4px 0;"></div>
+        
+        <div style="text-align:center; font-size:0.82rem; color:var(--g600); margin-top:6px;">
+          ${isSignUp ? `
+            Already have an account? <button type="button" id="btn-toggle-auth" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-weight:600; cursor:pointer; text-decoration:underline;">Sign in</button>
+          ` : `
+            Don't have an account? <button type="button" id="btn-toggle-auth" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-weight:600; cursor:pointer; text-decoration:underline;">Create one</button>
+          `}
+        </div>
+      </form>
+    </div>
+  `;
+}
+
 function renderModalContent() {
   const user = getCurrentUser();
   const quota = QuotaManager.getQuotaSummary();
@@ -84,10 +364,10 @@ function renderModalContent() {
           </div>
           <div>
             <h2 class="settings-modal-title" style="font-size:1.15rem; font-weight:800;">
-              ${(user && authMode !== 'set-new-password') ? 'Account & Storage' : (authMode === 'set-new-password' ? 'Set New Password' : (authMode === 'reset' ? 'Reset Password' : (authMode === 'signup' ? 'Create an Account' : 'Sign In')))}
+              ${(user && authMode !== 'set-new-password') ? 'Account & Storage' : (authMode === 'set-new-password' ? 'Set New Password' : (authMode === 'verify-pending' ? 'Verify Your Email' : (authMode === 'reset' ? 'Reset Password' : (authMode === 'signup' ? 'Create an Account' : 'Sign In'))))}
             </h2>
             <p class="settings-modal-subtitle">
-              ${(user && authMode !== 'set-new-password') ? 'Manage cloud sync, dual storage preferences, and AI quotas.' : (authMode === 'set-new-password' ? (recoveryContext?.email ? `Choose a new password for ${recoveryContext.email}.` : 'Choose a new password for your account.') : (authMode === 'reset' ? 'Enter your email to receive a password recovery link.' : (authMode === 'signup' ? 'Sign up to access Assistant and sync your workspaces.' : 'Sign in to access Assistant, sync files, and manage spaces.')))}
+              ${(user && authMode !== 'set-new-password') ? 'Manage cloud sync, dual storage preferences, passkeys, and AI quotas.' : (authMode === 'set-new-password' ? (recoveryContext?.email ? `Choose a new password for ${recoveryContext.email}.` : 'Choose a new password for your account.') : (authMode === 'verify-pending' ? `An activation link was sent to ${pendingConfirmationEmail || 'your email'}.` : (authMode === 'reset' ? 'Enter your email to receive a password recovery link.' : (authMode === 'signup' ? 'Sign up to access Assistant and sync your workspaces.' : 'Sign in to access Assistant, sync files, and manage spaces.'))))}
             </p>
           </div>
         </div>
@@ -103,178 +383,40 @@ function renderModalContent() {
         
         <!-- USER AUTH CARD -->
         <div style="background:var(--g50); border:1px solid var(--g200); border-radius:14px; padding:16px;">
-          ${(user && authMode !== 'set-new-password') ? `
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <div>
-                <div style="font-size:0.75rem; color:var(--g500); font-weight:600;">SIGNED IN AS</div>
-                <div style="font-size:0.95rem; font-weight:700; color:var(--black); margin-top:2px;">${user.email}</div>
-                <div style="font-size:0.72rem; color:var(--g600); font-family:monospace; margin-top:2px;">ID: ${user.id}</div>
-              </div>
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-auth-signout" style="color:#ef4444;">Sign Out</button>
-            </div>
-          ` : (authMode === 'set-new-password' ? `
-            <div>
-              <div style="font-size:0.88rem; font-weight:700; color:var(--black); margin-bottom:4px;">
-                Set New Password
-              </div>
-              <div style="font-size:0.8rem; color:var(--g600); margin-bottom:14px; line-height:1.5;">
-                ${recoveryContext?.email ? `Update password for <strong id="set-pwd-email-label" style="color:var(--black);">${recoveryContext.email}</strong>.` : 'Enter and confirm your new password below.'}
-              </div>
-              <form id="set-pwd-form" style="display:flex; flex-direction:column; gap:10px;">
-                <div style="position:relative;">
-                  <input type="password" id="new-pwd-input" class="tool-input" placeholder="New password..." required minlength="6" style="width:100%; padding:10px 36px 10px 12px; font-size:0.88rem; border-radius:8px;">
-                  <button type="button" class="pwd-toggle-btn" data-target="new-pwd-input" aria-label="Show password" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; padding:2px; cursor:pointer; color:var(--g500); display:flex; align-items:center;">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-open">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                      <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-closed" style="display:none;">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
-                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
-                      <line x1="1" y1="1" x2="23" y2="23"></line>
-                      <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path>
-                    </svg>
-                  </button>
-                </div>
-
-                <div id="new-pwd-strength-container" style="margin-top:-2px; margin-bottom:2px; display:none;">
-                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                    <span style="font-size:0.72rem; color:var(--g500);">Strength:</span>
-                    <span id="new-pwd-strength-label" style="font-size:0.72rem; font-weight:600; color:var(--g500);">Weak</span>
-                  </div>
-                  <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:4px; height:4px;">
-                    <div class="new-pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
-                    <div class="new-pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
-                    <div class="new-pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
-                    <div class="new-pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
-                  </div>
-                </div>
-
-                <div style="position:relative;">
-                  <input type="password" id="new-pwd-confirm-input" class="tool-input" placeholder="Confirm new password..." required minlength="6" style="width:100%; padding:10px 36px 10px 12px; font-size:0.88rem; border-radius:8px;">
-                  <button type="button" class="pwd-toggle-btn" data-target="new-pwd-confirm-input" aria-label="Show password" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; padding:2px; cursor:pointer; color:var(--g500); display:flex; align-items:center;">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-open">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                      <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-closed" style="display:none;">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
-                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
-                      <line x1="1" y1="1" x2="23" y2="23"></line>
-                      <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path>
-                    </svg>
-                  </button>
-                </div>
-                <div id="new-pwd-match-hint" style="font-size:0.72rem; color:var(--g500); margin-top:-4px;">Password must be at least 6 characters.</div>
-
-                <button type="submit" class="btn btn-primary btn-sm" id="btn-set-pwd-submit" style="width:100%; padding:10px; font-weight:600; font-size:0.9rem; margin-top:4px;">
-                  Update Password
-                </button>
-
-                <div id="set-pwd-msg" style="font-size:0.8rem; line-height:1.4; display:none; padding:4px 0;"></div>
-              </form>
-            </div>
-          ` : (authMode === 'reset' ? `
-            <div>
-              <div style="font-size:0.88rem; font-weight:700; color:var(--black); margin-bottom:4px;">
-                Reset Your Password
-              </div>
-              <div style="font-size:0.8rem; color:var(--g600); margin-bottom:14px; line-height:1.5;">
-                Enter the email address associated with your account and we will send you a recovery link.
-              </div>
-              <form id="reset-form" style="display:flex; flex-direction:column; gap:12px;">
-                <input type="email" id="reset-email-input" class="tool-input" placeholder="Enter your email..." required style="width:100%; padding:10px 12px; font-size:0.88rem; border-radius:8px;">
-                
-                <button type="submit" class="btn btn-primary btn-sm" id="btn-reset-submit" style="width:100%; padding:10px; font-weight:600; font-size:0.9rem;">
-                  Send Reset Link
-                </button>
-                
-                <div id="reset-msg" style="font-size:0.8rem; line-height:1.4; display:none; padding:4px 0;"></div>
-                
-                <div style="text-align:center; font-size:0.82rem; color:var(--g600); margin-top:4px;">
-                  Remember your password? <button type="button" id="btn-back-to-signin" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-weight:600; cursor:pointer; text-decoration:underline;">Back to sign in</button>
-                </div>
-              </form>
-            </div>
-          ` : `
-            <div>
-              <div style="font-size:0.88rem; font-weight:700; color:var(--black); margin-bottom:12px;">
-                ${authMode === 'signup' ? 'Create a New Account' : 'Sign In with Email'}
-              </div>
-              <form id="auth-form" style="display:flex; flex-direction:column; gap:10px;">
-                <input type="email" id="auth-email-input" class="tool-input" placeholder="Enter your email..." required style="width:100%; padding:10px 12px; font-size:0.88rem; border-radius:8px;">
-                
-                <div style="position:relative;">
-                  <input type="password" id="auth-pwd-input" class="tool-input" placeholder="Enter your password..." required minlength="6" style="width:100%; padding:10px 36px 10px 12px; font-size:0.88rem; border-radius:8px;">
-                  <button type="button" class="pwd-toggle-btn" data-target="auth-pwd-input" aria-label="Show password" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; padding:2px; cursor:pointer; color:var(--g500); display:flex; align-items:center;">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-open">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                      <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-closed" style="display:none;">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
-                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
-                      <line x1="1" y1="1" x2="23" y2="23"></line>
-                      <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path>
-                    </svg>
-                  </button>
-                </div>
-
-                ${authMode === 'signup' ? `
-                  <div id="pwd-strength-container" style="margin-top:-2px; margin-bottom:2px; display:none;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                      <span style="font-size:0.72rem; color:var(--g500);">Strength:</span>
-                      <span id="pwd-strength-label" style="font-size:0.72rem; font-weight:600; color:var(--g500);">Weak</span>
-                    </div>
-                    <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:4px; height:4px;">
-                      <div class="pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
-                      <div class="pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
-                      <div class="pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
-                      <div class="pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
-                    </div>
-                  </div>
-
-                  <div style="position:relative;">
-                    <input type="password" id="auth-pwd-confirm-input" class="tool-input" placeholder="Confirm your password..." required minlength="6" style="width:100%; padding:10px 36px 10px 12px; font-size:0.88rem; border-radius:8px;">
-                    <button type="button" class="pwd-toggle-btn" data-target="auth-pwd-confirm-input" aria-label="Show password" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; padding:2px; cursor:pointer; color:var(--g500); display:flex; align-items:center;">
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-open">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                      </svg>
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-closed" style="display:none;">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
-                        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
-                        <line x1="1" y1="1" x2="23" y2="23"></line>
-                        <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path>
-                      </svg>
-                    </button>
-                  </div>
-                  <div id="pwd-match-hint" style="font-size:0.72rem; color:var(--g500); margin-top:-4px;">Password must be at least 6 characters.</div>
-                ` : `
-                  <div style="text-align:right; margin-top:-4px;">
-                    <button type="button" id="btn-forgot-password" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-size:0.78rem; font-weight:500; cursor:pointer; text-decoration:none;">Forgot password?</button>
-                  </div>
-                `}
-
-                <button type="submit" class="btn btn-primary btn-sm" id="btn-auth-submit" style="width:100%; padding:10px; font-weight:600; font-size:0.9rem; margin-top:4px;">
-                  ${authMode === 'signup' ? 'Create Account' : 'Sign In'}
-                </button>
-                
-                <div id="auth-msg" style="font-size:0.8rem; line-height:1.4; display:none; padding:4px 0;"></div>
-                
-                <div style="text-align:center; font-size:0.82rem; color:var(--g600); margin-top:6px;">
-                  ${authMode === 'signup' ? `
-                    Already have an account? <button type="button" id="btn-toggle-auth" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-weight:600; cursor:pointer; text-decoration:underline;">Sign in</button>
-                  ` : `
-                    Don't have an account? <button type="button" id="btn-toggle-auth" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-weight:600; cursor:pointer; text-decoration:underline;">Create one</button>
-                  `}
-                </div>
-              </form>
-            </div>
-          `))}
+          ${renderAuthCard(user, authMode, recoveryContext, pendingConfirmationEmail)}
         </div>
 
         ${user ? `
+        <!-- PASSKEYS & BIOMETRICS -->
+        <div style="background:var(--g50); border:1px solid var(--g200); border-radius:14px; padding:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="width:24px; height:24px; border-radius:6px; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center;">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </div>
+              <span style="font-size:0.85rem; font-weight:700; color:var(--black);">Passkeys &amp; Biometrics</span>
+            </div>
+            ${isPasskeySupported() ? `
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-add-passkey" style="padding:4px 10px; font-size:0.76rem; font-weight:600; display:flex; align-items:center; gap:4px;">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Add Passkey
+              </button>
+            ` : `
+              <span style="font-size:0.72rem; color:var(--g500);">Not supported</span>
+            `}
+          </div>
+
+          <p style="font-size:0.78rem; color:var(--g600); margin-bottom:12px; line-height:1.4;">
+            Authenticate instantly using Touch ID, Face ID, Windows Hello, or FIDO2 keys without typing a password.
+          </p>
+
+          <div id="passkeys-list-container" style="display:flex; flex-direction:column; gap:8px;"></div>
+          <div id="passkey-feedback" style="font-size:0.78rem; line-height:1.4; display:none; padding:4px 0; margin-top:8px;"></div>
+        </div>
+
         <!-- QUOTA & RATE LIMITS SUMMARY -->
         <div style="background:var(--g50); border:1px solid var(--g200); border-radius:14px; padding:14px;">
           <div style="font-size:0.82rem; font-weight:700; color:var(--black); margin-bottom:8px; display:flex; justify-content:space-between;">
@@ -700,11 +842,9 @@ function renderModalContent() {
           const res = await signUpWithEmail(email, pwd);
           if (res.success) {
             if (res.requiresConfirmation) {
-              authMsg.style.display = 'block';
-              authMsg.style.color = '#10b981';
-              authMsg.textContent = 'Account created! Please check your email inbox to confirm your account before signing in.';
-              btnSubmit.textContent = originalText;
-              btnSubmit.disabled = false;
+              pendingConfirmationEmail = email;
+              authMode = 'verify-pending';
+              renderModalContent();
             } else {
               closeAccountModal();
               window.location.hash = '#assistant';
@@ -737,5 +877,177 @@ function renderModalContent() {
         btnSubmit.disabled = false;
       }
     });
+  }
+
+  // --- Passkey Sign-In Handler ---
+  const btnAuthPasskey = modalEl.querySelector('#btn-auth-passkey');
+  if (btnAuthPasskey) {
+    btnAuthPasskey.addEventListener('click', async () => {
+      btnAuthPasskey.disabled = true;
+      const origHtml = btnAuthPasskey.innerHTML;
+      btnAuthPasskey.textContent = 'Verifying Biometrics...';
+      if (authMsg) authMsg.style.display = 'none';
+
+      const emailVal = emailIn?.value?.trim() || null;
+      try {
+        const res = await authenticateWithPasskey(emailVal);
+        if (res.success) {
+          closeAccountModal();
+          showToast('Signed in with Passkey.', 'success');
+          window.location.hash = '#assistant';
+        } else {
+          if (authMsg) {
+            authMsg.style.display = 'block';
+            authMsg.style.color = '#ef4444';
+            authMsg.textContent = res.error || 'Passkey authentication failed.';
+          }
+          btnAuthPasskey.disabled = false;
+          btnAuthPasskey.innerHTML = origHtml;
+        }
+      } catch (err) {
+        if (authMsg) {
+          authMsg.style.display = 'block';
+          authMsg.style.color = '#ef4444';
+          authMsg.textContent = err.message || 'Passkey verification failed.';
+        }
+        btnAuthPasskey.disabled = false;
+        btnAuthPasskey.innerHTML = origHtml;
+      }
+    });
+  }
+
+  // --- Resend Confirmation Email Handler ---
+  const btnResend = modalEl.querySelector('#btn-resend-confirmation');
+  const resendMsg = modalEl.querySelector('#resend-msg');
+  const btnPendingBack = modalEl.querySelector('#btn-pending-back');
+
+  if (btnResend) {
+    btnResend.addEventListener('click', async () => {
+      btnResend.disabled = true;
+      btnResend.textContent = 'Sending...';
+      if (resendMsg) resendMsg.style.display = 'none';
+
+      const targetEmail = pendingConfirmationEmail || emailIn?.value?.trim() || '';
+      const res = await resendConfirmationEmail(targetEmail);
+      if (resendMsg) {
+        resendMsg.style.display = 'block';
+        if (res.success) {
+          resendMsg.style.color = '#10b981';
+          resendMsg.textContent = 'Verification email resent. Please check your inbox.';
+        } else {
+          resendMsg.style.color = '#ef4444';
+          resendMsg.textContent = res.error || 'Failed to resend confirmation email.';
+        }
+      }
+
+      let count = 30;
+      btnResend.textContent = `Resend in ${count}s`;
+      const interval = setInterval(() => {
+        count -= 1;
+        if (count <= 0) {
+          clearInterval(interval);
+          btnResend.disabled = false;
+          btnResend.textContent = 'Resend Confirmation Email';
+        } else {
+          btnResend.textContent = `Resend in ${count}s`;
+        }
+      }, 1000);
+    });
+  }
+
+  if (btnPendingBack) {
+    btnPendingBack.addEventListener('click', () => {
+      authMode = 'signin';
+      renderModalContent();
+      const emailInput = modalEl.querySelector('#auth-email-input');
+      if (emailInput) {
+        if (pendingConfirmationEmail) emailInput.value = pendingConfirmationEmail;
+        emailInput.focus();
+      }
+    });
+  }
+
+  // --- Passkeys List & Registration (Logged-In View) ---
+  const passkeysContainer = modalEl.querySelector('#passkeys-list-container');
+  const btnAddPasskey = modalEl.querySelector('#btn-add-passkey');
+  const passkeyFeedback = modalEl.querySelector('#passkey-feedback');
+
+  if (passkeysContainer && user) {
+    const renderPasskeysList = () => {
+      const list = getRegisteredPasskeys(user);
+      if (list.length === 0) {
+        passkeysContainer.innerHTML = `
+          <div style="font-size:0.78rem; color:var(--g500); padding:10px 12px; background:var(--white); border:1px dashed var(--g300); border-radius:8px; text-align:center;">
+            No passkeys enrolled on this device. Click "+ Add Passkey" to register Touch ID / Face ID.
+          </div>
+        `;
+      } else {
+        passkeysContainer.innerHTML = list.map(pk => `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:9px 12px; background:var(--white); border:1px solid var(--g200); border-radius:8px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--g700); flex-shrink:0;">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+              <div>
+                <div style="font-size:0.82rem; font-weight:600; color:var(--black);">${escapeHtml(pk.name || 'Security Key')}</div>
+                <div style="font-size:0.7rem; color:var(--g500);">Registered ${new Date(pk.createdAt).toLocaleDateString()}</div>
+              </div>
+            </div>
+            <button type="button" class="btn-remove-passkey" data-id="${pk.id}" aria-label="Remove passkey" style="background:none; border:none; padding:4px; cursor:pointer; color:var(--g500); border-radius:4px; display:flex; align-items:center;">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+          </div>
+        `).join('');
+
+        passkeysContainer.querySelectorAll('.btn-remove-passkey').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            btn.disabled = true;
+            await removeRegisteredPasskey(user, id);
+            renderPasskeysList();
+            showToast('Passkey removed.', 'info');
+          });
+        });
+      }
+    };
+
+    renderPasskeysList();
+
+    if (btnAddPasskey) {
+      btnAddPasskey.addEventListener('click', async () => {
+        btnAddPasskey.disabled = true;
+        const origText = btnAddPasskey.innerHTML;
+        btnAddPasskey.textContent = 'Enrolling...';
+        if (passkeyFeedback) passkeyFeedback.style.display = 'none';
+
+        try {
+          const res = await registerPasskey(user);
+          if (res.success) {
+            showToast('Passkey registered successfully!', 'success');
+            renderPasskeysList();
+          } else {
+            if (passkeyFeedback) {
+              passkeyFeedback.style.display = 'block';
+              passkeyFeedback.style.color = '#ef4444';
+              passkeyFeedback.textContent = res.error || 'Failed to register passkey.';
+            }
+          }
+        } catch (err) {
+          if (passkeyFeedback) {
+            passkeyFeedback.style.display = 'block';
+            passkeyFeedback.style.color = '#ef4444';
+            passkeyFeedback.textContent = err.message || 'Passkey enrollment error.';
+          }
+        } finally {
+          btnAddPasskey.disabled = false;
+          btnAddPasskey.innerHTML = origText;
+        }
+      });
+    }
   }
 }

@@ -14,8 +14,7 @@ import { mountArtifactStrip, incomingBanner } from './lib/artifact-ui.js';
 import { installPalette, openPalette, detectAiIntent } from './lib/palette.js';
 import { renderSaved } from './views/saved.js';
 import { renderSpaces } from './views/spaces.js';
-import { kindLabel } from './registry/kinds.js';
-import { copyText } from './utils.js';
+import { copyText, showToast } from './utils.js';
 import { initTheme } from './lib/theme.js';
 import { installSettingsUI } from './lib/settings-ui.js';
 import { installHeaderMenu } from './lib/header-menu.js';
@@ -338,7 +337,7 @@ async function openTool(id) {
 }
 
 function handleHash() {
-  // Check for auth recovery or redirect parameters
+  // Check for auth recovery, email confirmation, or redirect parameters
   const redirect = parseAuthRedirect();
   if (redirect) {
     if (redirect.type === 'recovery' && redirect.accessToken) {
@@ -346,6 +345,39 @@ function handleHash() {
         window.history.replaceState(null, '', window.location.pathname + '#home');
       } catch {}
       openAccountModal('set-new-password', redirect);
+      showPage('home');
+      return;
+    }
+
+    if ((redirect.type === 'signup' || redirect.type === 'email_change' || redirect.type === 'token') && redirect.accessToken) {
+      try {
+        window.history.replaceState(null, '', window.location.pathname + '#home');
+      } catch {}
+
+      const userSession = {
+        id: redirect.userId || `usr_${Date.now()}`,
+        email: redirect.email || 'user@toolbox.app',
+        token: redirect.accessToken,
+        refreshToken: redirect.refreshToken || '',
+        createdAt: new Date().toISOString()
+      };
+      localStorage.setItem('toolbox_supabase_session', JSON.stringify(userSession));
+      localStorage.setItem('supabase_auth_session', JSON.stringify(userSession));
+      window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
+
+      const successMsg = redirect.type === 'email_change'
+        ? 'Email address confirmed and updated successfully.'
+        : 'Email verified successfully! Welcome to Toolbox.';
+      showToast(successMsg, 'success');
+      showPage('home');
+      return;
+    }
+
+    if (redirect.type === 'error') {
+      try {
+        window.history.replaceState(null, '', window.location.pathname + '#home');
+      } catch {}
+      showToast(redirect.error || 'Authentication error during verification.', 'error', 5000);
       showPage('home');
       return;
     }
