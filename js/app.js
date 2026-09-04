@@ -396,6 +396,10 @@ function handleHash() {
     openAccountModal('reset');
     return showPage('home');
   }
+  if (raw === 'verify-pending') {
+    openAccountModal('verify-pending');
+    return showPage('home');
+  }
 
   // #saved or #files, or #saved/<artifact id> / #files/<artifact id>
   if (raw === 'saved' || raw.startsWith('saved/') || raw === 'files' || raw.startsWith('files/')) {

@@ -65,6 +65,9 @@ let pendingConfirmationEmail = null;
 export async function openAccountModal(modeOrSignUp = false, context = null) {
   if (typeof modeOrSignUp === 'string') {
     authMode = modeOrSignUp;
+    if (modeOrSignUp === 'verify-pending' && typeof context === 'string') {
+      pendingConfirmationEmail = context;
+    }
   } else {
     authMode = modeOrSignUp ? 'signup' : 'signin';
   }
