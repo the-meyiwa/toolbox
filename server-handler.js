@@ -5,6 +5,7 @@
    ============================================================ */
 
 import crypto from 'crypto';
+import { isBlockedHost, parseWebPage, haversineDistanceKm } from './js/lib/web-scraper-engine.js';
 
 // Idempotency store with TTL (5 minutes)
 const IDEMPOTENCY_TTL_MS = 5 * 60 * 1000;
@@ -15,6 +16,19 @@ function cleanIdempotencyStore() {
   for (const [key, record] of idempotencyStore.entries()) {
     if (now - record.timestamp > IDEMPOTENCY_TTL_MS) {
       idempotencyStore.delete(key);
+    }
+  }
+}
+
+// Anonymous File Drop P2P WebRTC Signaling Relay
+const fileDropRooms = new Map(); // roomCode -> { signals: [], lastActive: number }
+const FILEDROP_ROOM_TTL_MS = 15 * 60 * 1000;
+
+function cleanFileDropRooms() {
+  const now = Date.now();
+  for (const [room, data] of fileDropRooms.entries()) {
+    if (now - data.lastActive > FILEDROP_ROOM_TTL_MS) {
+      fileDropRooms.delete(room);
     }
   }
 }
@@ -31,6 +45,77 @@ export async function handleApiRequest(request, response) {
     response.writeHead(204);
     response.end();
     return true;
+  }
+
+  // --- Anonymous File Drop Signaling Relay ---
+  if (url.pathname.startsWith('/api/filedrop/')) {
+    cleanFileDropRooms();
+
+    if (url.pathname === '/api/filedrop/signal' && request.method === 'POST') {
+      let body = '';
+      request.on('data', chunk => { body += chunk; });
+      request.on('end', () => {
+        try {
+          const data = JSON.parse(body);
+          const roomCode = String(data.roomCode || data.room || '').toUpperCase().trim();
+          const senderId = data.senderId || data.clientId;
+          if (!roomCode || !senderId) {
+            response.writeHead(400, { 'Content-Type': 'application/json' });
+            response.end(JSON.stringify({ success: false, error: 'roomCode and senderId required.' }));
+            return;
+          }
+
+          if (!fileDropRooms.has(roomCode)) {
+            fileDropRooms.set(roomCode, { signals: [], lastActive: Date.now() });
+          }
+          const room = fileDropRooms.get(roomCode);
+          room.lastActive = Date.now();
+          room.signals.push({
+            id: `sig_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            sender_id: senderId,
+            senderId: senderId,
+            message_type: data.type,
+            type: data.type,
+            payload: data.payload,
+            created_at: new Date().toISOString(),
+            timestamp: Date.now()
+          });
+          if (room.signals.length > 80) room.signals.shift();
+
+          response.writeHead(200, { 'Content-Type': 'application/json' });
+          response.end(JSON.stringify({ success: true }));
+        } catch (err) {
+          response.writeHead(500, { 'Content-Type': 'application/json' });
+          response.end(JSON.stringify({ success: false, error: err.message }));
+        }
+      });
+      return true;
+    }
+
+    if (url.pathname === '/api/filedrop/poll' && request.method === 'GET') {
+      const roomCode = String(url.searchParams.get('room') || url.searchParams.get('roomCode') || '').toUpperCase().trim();
+      const clientId = url.searchParams.get('clientId') || url.searchParams.get('senderId') || '';
+      const since = url.searchParams.get('since') || '0';
+
+      const room = fileDropRooms.get(roomCode);
+      if (!room) {
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: true, signals: [] }));
+        return true;
+      }
+
+      room.lastActive = Date.now();
+      const sinceMs = isNaN(Number(since)) ? new Date(since).getTime() : Number(since);
+      const filtered = room.signals.filter(s => {
+        const isNotSelf = s.senderId !== clientId && s.sender_id !== clientId;
+        const isAfter = s.timestamp > sinceMs || new Date(s.created_at).getTime() > sinceMs;
+        return isNotSelf && isAfter;
+      });
+
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify({ success: true, signals: filtered, timestamp: Date.now() }));
+      return true;
+    }
   }
 
   // --- Toolbox Payment REST API ---
@@ -54,6 +139,46 @@ export async function handleApiRequest(request, response) {
         response.writeHead(200, { 'Content-Type': 'application/json' });
         response.end(JSON.stringify({ received: true, verified: isValid }));
       });
+      return true;
+    }
+  }
+
+  // --- Assistant Binary Proxy ---
+  if (url.pathname === '/api/assistant/browser/fetch-binary' && request.method === 'GET') {
+    const targetUrl = (url.searchParams.get('url') || '').trim();
+    if (!targetUrl) {
+      response.writeHead(400, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify({ success: false, error: 'URL parameter is required.' }));
+      return true;
+    }
+    try {
+      const u = new URL(targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`);
+      if (isBlockedHost(u.hostname)) {
+        response.writeHead(403, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, error: 'Host is blocked.' }));
+        return true;
+      }
+      const binRes = await fetch(u.toString(), {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+        signal: AbortSignal.timeout(15000)
+      });
+      if (!binRes.ok) {
+        response.writeHead(binRes.status, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, error: `HTTP ${binRes.status}` }));
+        return true;
+      }
+      const contentType = binRes.headers.get('content-type') || 'application/octet-stream';
+      const buffer = Buffer.from(await binRes.arrayBuffer());
+      response.writeHead(200, {
+        'Content-Type': contentType,
+        'Content-Length': buffer.length,
+        'Cache-Control': 'public, max-age=86400'
+      });
+      response.end(buffer);
+      return true;
+    } catch (err) {
+      response.writeHead(500, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify({ success: false, error: err.message }));
       return true;
     }
   }
@@ -86,15 +211,6 @@ export async function handleApiRequest(request, response) {
       const lat = parseFloat(url.searchParams.get('lat') || '6.5700');
       const lng = parseFloat(url.searchParams.get('lng') || '3.3900');
 
-      // SSRF validation helper
-      const isBlockedHost = (hostname) => {
-        if (!hostname) return true;
-        const h = hostname.toLowerCase();
-        if (h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '0.0.0.0' || h.endsWith('.internal') || h.endsWith('.local')) return true;
-        if (/^10\./.test(h) || /^192\.168\./.test(h) || /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(h) || /^169\.254\./.test(h)) return true;
-        return false;
-      };
-
       if (!q) {
         response.writeHead(400, { 'Content-Type': 'application/json' });
         response.end(JSON.stringify({ success: false, error: 'Query parameter "q" is required.' }));
@@ -102,29 +218,120 @@ export async function handleApiRequest(request, response) {
       }
 
       if (searchType === 'web') {
+        // 1. Direct domain/URL check: if user passes an explicit URL or domain name (e.g. containerbrick.com)
+        const domainRegex = /^(https?:\/\/)?([a-z0-9-]+\.)+[a-z]{2,}(\/.*)?$/i;
+        if (domainRegex.test(q)) {
+          const targetUrl = q.startsWith('http') ? q : `https://${q}`;
+          try {
+            const targetU = new URL(targetUrl);
+            if (!isBlockedHost(targetU.hostname)) {
+              const pageRes = await fetch(targetUrl, {
+                headers: { 'User-Agent': 'ToolboxBrowser/2.0 (Direct URL Reader)' },
+                signal: AbortSignal.timeout(10000)
+              });
+              if (pageRes.ok) {
+                const html = await pageRes.text();
+                const parsed = parseWebPage(html, targetUrl);
+                response.writeHead(200, { 'Content-Type': 'application/json' });
+                response.end(JSON.stringify({
+                  success: true,
+                  query: q,
+                  isDirectUrl: true,
+                  results: [{
+                    title: parsed.title || targetU.hostname,
+                    url: targetUrl,
+                    snippet: parsed.description || (parsed.textExcerpt ? parsed.textExcerpt.slice(0, 260) : '') || `Web page from ${targetU.hostname}`,
+                    verified: true
+                  }]
+                }));
+                return true;
+              }
+            }
+          } catch (err) {
+            console.warn('[Assistant Search] Direct URL fetch error:', err);
+          }
+        }
+
+        // 2. Multi-source web search via DuckDuckGo HTML
+        try {
+          const ddgUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`;
+          const ddgRes = await fetch(ddgUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept-Language': 'en-US,en;q=0.9'
+            },
+            signal: AbortSignal.timeout(12000)
+          });
+
+          if (ddgRes.ok) {
+            const html = await ddgRes.text();
+            const results = [];
+            const resultBlocks = html.split(/class="result__body/g).slice(1, 9);
+            for (const block of resultBlocks) {
+              const urlMatch = block.match(/href="([^"]+uddg=([^"&]+)[^"]*)"/) || block.match(/class="result__url"[^>]*href="([^"]+)"/);
+              let itemUrl = '';
+              if (urlMatch) {
+                itemUrl = urlMatch[2] ? decodeURIComponent(urlMatch[2]) : urlMatch[1];
+              }
+              const titleMatch = block.match(/class="result__snippet"[^>]*>([\s\S]*?)<\/a>/) || block.match(/class="result__title"[^>]*>([\s\S]*?)<\/h2>/);
+              let title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+              const snippetMatch = block.match(/class="result__snippet"[^>]*>([\s\S]*?)<\/a>/);
+              let snippet = snippetMatch ? snippetMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+
+              if (itemUrl && (itemUrl.startsWith('http') || itemUrl.startsWith('//'))) {
+                const fullItemUrl = itemUrl.startsWith('//') ? `https:${itemUrl}` : itemUrl;
+                try {
+                  const u = new URL(fullItemUrl);
+                  if (!isBlockedHost(u.hostname) && !u.hostname.includes('duckduckgo.com')) {
+                    results.push({
+                      title: title || u.hostname,
+                      url: fullItemUrl,
+                      snippet: snippet || `Web result for "${q}"`,
+                      verified: true
+                    });
+                  }
+                } catch {}
+              }
+            }
+
+            if (results.length > 0) {
+              response.writeHead(200, { 'Content-Type': 'application/json' });
+              response.end(JSON.stringify({
+                success: true,
+                query: q,
+                results: results.slice(0, 6)
+              }));
+              return true;
+            }
+          }
+        } catch (err) {
+          console.warn('[Assistant Search] Multi-source DDG search error:', err);
+        }
+
+        // 3. Fallback to Wikipedia summary if search engine is unreachable
         try {
           const wikiUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(q)}`;
           const u = new URL(wikiUrl);
-          if (isBlockedHost(u.hostname)) throw new Error('Blocked host');
-
-          const wikiRes = await fetch(wikiUrl, { headers: { 'User-Agent': 'ToolboxAssistant/2.0' } });
-          if (wikiRes.ok) {
-            const data = await wikiRes.json();
-            response.writeHead(200, { 'Content-Type': 'application/json' });
-            response.end(JSON.stringify({
-              success: true,
-              query: q,
-              results: [{
-                title: data.title || q,
-                url: data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(q)}`,
-                snippet: data.extract || data.description || '',
-                verified: true
-              }]
-            }));
-            return true;
+          if (!isBlockedHost(u.hostname)) {
+            const wikiRes = await fetch(wikiUrl, { headers: { 'User-Agent': 'ToolboxAssistant/2.0' } });
+            if (wikiRes.ok) {
+              const data = await wikiRes.json();
+              response.writeHead(200, { 'Content-Type': 'application/json' });
+              response.end(JSON.stringify({
+                success: true,
+                query: q,
+                results: [{
+                  title: data.title || q,
+                  url: data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(q)}`,
+                  snippet: data.extract || data.description || '',
+                  verified: true
+                }]
+              }));
+              return true;
+            }
           }
         } catch (err) {
-          console.warn('[Assistant Search] Web search fetch failed:', err);
+          console.warn('[Assistant Search] Wikipedia fallback fetch failed:', err);
         }
 
         response.writeHead(200, { 'Content-Type': 'application/json' });
@@ -133,8 +340,8 @@ export async function handleApiRequest(request, response) {
           query: q,
           results: [{
             title: q,
-            url: `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(q)}`,
-            snippet: `Web search for "${q}". Verified results available via the isolated browser view.`,
+            url: `https://duckduckgo.com/?q=${encodeURIComponent(q)}`,
+            snippet: `Web search for "${q}". Verified results available via the browser tool.`,
             verified: true
           }]
         }));
@@ -143,49 +350,15 @@ export async function handleApiRequest(request, response) {
 
       // Places / Location Search
       const lowerQ = q.toLowerCase();
+      const isDriving = lowerQ.includes('driving school') ||
+        lowerQ.includes('driving academy') ||
+        lowerQ.includes('lasdri') ||
+        lowerQ.includes('vio') ||
+        (lowerQ.includes('driv') && (lowerQ.includes('school') || lowerQ.includes('lesson') || lowerQ.includes('license') || lowerQ.includes('test')));
+
       let places = [];
 
-      // Preserving user intent: Named entities vs category
-      if (lowerQ.includes('shoprite')) {
-        places = [
-          {
-            name: 'Shoprite Ikeja City Mall',
-            address: 'Ikeja City Mall, Alausa, Ikeja, Lagos',
-            lat: 6.6186,
-            lng: 3.3587,
-            category: 'Supermarket',
-            phone: '+234 1 271 8500',
-            description: 'Premier supermarket offering groceries, fresh produce, bakery, and household essentials.'
-          },
-          {
-            name: 'Shoprite Maryland Mall',
-            address: 'Maryland Mall, 350-360 Ikorodu Road, Maryland, Lagos',
-            lat: 6.5724,
-            lng: 3.3683,
-            category: 'Supermarket',
-            phone: '+234 1 291 7654',
-            description: 'Full-service grocery store and hypermarket with ample mall parking.'
-          },
-          {
-            name: 'Shoprite Festival Mall (Festac)',
-            address: 'Festival Mall, Golden Tulip Complex, Amuwo Odofin / Festac, Lagos',
-            lat: 6.4678,
-            lng: 3.3082,
-            category: 'Supermarket',
-            phone: '+234 1 280 4321',
-            description: 'Large retail grocery store serving mainland and Festac areas.'
-          },
-          {
-            name: 'Shoprite Circle Mall (Jakande / Lekki)',
-            address: 'Circle Mall, Osapa London / Jakande Roundabout, Lekki, Lagos',
-            lat: 6.4428,
-            lng: 3.5186,
-            category: 'Supermarket',
-            phone: '+234 1 453 9870',
-            description: 'Hypermarket offering local and imported groceries, wine cellar, and bakery.'
-          }
-        ];
-      } else if (lowerQ.includes('driv') || lowerQ.includes('school') || lowerQ.includes('license') || lowerQ.includes('vio') || lowerQ.includes('lasdri')) {
+      if (isDriving) {
         places = [
           {
             name: 'A1 Driving School (Ogudu / Kosofe)',
@@ -216,41 +389,123 @@ export async function handleApiRequest(request, response) {
           }
         ];
       } else {
-        // Try Nominatim reverse/search with SSRF verification
+        // Query Nominatim reverse/search with geographic viewbox prioritization
         try {
-          const nomUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5`;
+          const hasCoords = lat && lng && !isNaN(lat) && !isNaN(lng);
+          const viewboxParam = hasCoords
+            ? `&viewbox=${lng - 0.5},${lat + 0.5},${lng + 0.5},${lat - 0.5}&bounded=1`
+            : '';
+
+          let nomUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}${viewboxParam}&limit=20`;
           const u = new URL(nomUrl);
+          let data = [];
           if (!isBlockedHost(u.hostname)) {
             const nomRes = await fetch(nomUrl, { headers: { 'User-Agent': 'ToolboxAssistant/2.0' } });
             if (nomRes.ok) {
-              const data = await nomRes.json();
-              if (Array.isArray(data) && data.length > 0) {
-                places = data.map(item => ({
-                  name: item.display_name.split(',')[0] || item.display_name,
-                  address: item.display_name,
-                  lat: parseFloat(item.lat),
-                  lng: parseFloat(item.lon),
-                  category: item.type || 'Location'
-                }));
+              data = await nomRes.json();
+            }
+          }
+
+          // If 0 results and query had location suffix (e.g. "Shoprite Kosofe, Lagos"), search the primary entity in bounded viewbox
+          const firstTerm = q.split(/[,–-]|(\s+in\s+)/)[0].trim();
+          if ((!Array.isArray(data) || data.length === 0) && hasCoords && firstTerm && firstTerm.toLowerCase() !== q.toLowerCase()) {
+            const fallbackUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(firstTerm)}${viewboxParam}&limit=20`;
+            const fbU = new URL(fallbackUrl);
+            if (!isBlockedHost(fbU.hostname)) {
+              const fbRes = await fetch(fallbackUrl, { headers: { 'User-Agent': 'ToolboxAssistant/2.0' } });
+              if (fbRes.ok) {
+                data = await fbRes.json();
               }
             }
+          }
+
+          if (Array.isArray(data) && data.length > 0) {
+            const isRoadOrAddressLabel = (str) => {
+              if (!str) return true;
+              const s = str.trim().toLowerCase();
+              return /\b(road|rd|street|st|way|avenue|ave|expressway|exp|close|cl|drive|dr|crescent|cres|lane|ln|boulevard|blvd|highway|hwy)\b/i.test(s) &&
+                !/\b(mall|plaza|centre|center|supermarket|mart|shop|store|station|hub|pharmacy|chemist|clinic|hospital|bank|fuel|gas|petrol|oil|eatery|restaurant)\b/i.test(s);
+            };
+
+            const isNonEstablishment = (item) => {
+              const cls = (item.class || '').toLowerCase();
+              const typ = (item.type || '').toLowerCase();
+              if (['highway', 'boundary', 'waterway', 'natural', 'landuse'].includes(cls)) return true;
+              if (cls === 'place' && ['suburb', 'city', 'town', 'village', 'hamlet', 'country', 'state', 'county', 'island', 'locality', 'neighbourhood', 'region'].includes(typ)) return true;
+              // If candidate name itself is purely a road or street without business keywords, it is a road, not a verified establishment
+              const candidateName = (item.name || '').trim();
+              if (candidateName && isRoadOrAddressLabel(candidateName)) return true;
+              // If candidate has no business name and its label is merely a road/street, it is an address point, not a verified establishment
+              if (!candidateName) {
+                const firstPart = (item.display_name || '').split(',')[0].trim();
+                if (isRoadOrAddressLabel(firstPart)) return true;
+              }
+              return false;
+            };
+
+            const formatCandidateName = (item) => {
+              if (item.name && item.name.trim() && item.name.trim().toLowerCase() !== (item.type || '').toLowerCase()) {
+                return item.name.trim();
+              }
+              const firstPart = (item.display_name || '').split(',')[0].trim();
+              if (firstPart && !isRoadOrAddressLabel(firstPart)) {
+                return firstPart;
+              }
+              const typeLabel = item.type ? (item.type.charAt(0).toUpperCase() + item.type.slice(1).replace(/_/g, ' ')) : 'Place';
+              return item.name && item.name.trim() ? item.name.trim() : (firstPart ? `${typeLabel} on ${firstPart}` : typeLabel);
+            };
+
+            const validItems = data.filter(item => !isNonEstablishment(item));
+            const namedItems = validItems.filter(item => Boolean(item.name && item.name.trim() && item.name.trim().toLowerCase() !== (item.type || '').toLowerCase()));
+            const itemsToUse = namedItems.length >= 3 ? namedItems : (validItems.length > 0 ? validItems : data);
+
+            places = itemsToUse.map(item => {
+              const name = formatCandidateName(item);
+              let addr = (item.display_name || '').trim();
+              if (addr.toLowerCase().startsWith(name.toLowerCase() + ',')) {
+                addr = addr.slice(name.length + 1).trim();
+              } else if (item.name && addr.toLowerCase().startsWith(item.name.toLowerCase() + ',')) {
+                addr = addr.slice(item.name.length + 1).trim();
+              }
+              return {
+                name,
+                address: addr || item.display_name || '',
+                lat: parseFloat(item.lat),
+                lng: parseFloat(item.lon),
+                category: item.type ? (item.type.charAt(0).toUpperCase() + item.type.slice(1).replace(/_/g, ' ')) : (item.class || 'Place'),
+                osmClass: item.class,
+                osmType: item.type,
+                description: ''
+              };
+            });
           }
         } catch (nomErr) {
           console.warn('[Assistant Search] Nominatim search failed:', nomErr);
         }
 
         if (places.length === 0) {
+          const cleanName = q.split(',')[0].trim();
           places = [
             {
-              name: `${q} Location`,
-              address: `Verified location for "${q}"`,
+              name: cleanName,
+              address: `Location for "${cleanName}" near your coordinates.`,
               lat: lat + 0.005,
               lng: lng + 0.004,
-              category: 'Place'
+              category: 'Place',
+              description: ''
             }
           ];
         }
       }
+
+      // Calculate accurate Haversine distance and sort nearest first
+      places = places.map(p => {
+        const dist = haversineDistanceKm(lat, lng, p.lat, p.lng);
+        return {
+          ...p,
+          distanceKm: dist !== null ? dist : (p.distanceKm || 0)
+        };
+      }).sort((a, b) => (a.distanceKm || 0) - (b.distanceKm || 0));
 
       response.writeHead(200, { 'Content-Type': 'application/json' });
       response.end(JSON.stringify({
@@ -261,6 +516,370 @@ export async function handleApiRequest(request, response) {
         count: places.length
       }));
       return true;
+    }
+
+    // --- Browser Live Web Search Endpoint ---
+    if (url.pathname === '/api/assistant/browser/search') {
+      const q = (url.searchParams.get('query') || url.searchParams.get('q') || '').trim();
+      if (!q) {
+        response.writeHead(400, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, error: 'Query parameter "query" is required.' }));
+        return true;
+      }
+
+      try {
+        const searchResults = [];
+        const searchCtrl = new AbortController();
+        const searchTimer = setTimeout(() => searchCtrl.abort(), 12000);
+
+        // 1. Live Web Search via DuckDuckGo HTML engine
+        try {
+          const ddgRes = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 ToolboxBrowser/2.0',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+              'Accept-Language': 'en-US,en;q=0.9'
+            },
+            signal: searchCtrl.signal
+          });
+
+          if (ddgRes.ok) {
+            const html = await ddgRes.text();
+            const titleRegex = /<a[^>]+class="[^"]*result__a[^"]*"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+            const snippetRegex = /<a[^>]+class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/a>/gi;
+
+            const links = [];
+            let m;
+            while ((m = titleRegex.exec(html)) !== null) {
+              let rawUrl = m[1];
+              const uddgMatch = rawUrl.match(/[?&]uddg=([^&]+)/);
+              if (uddgMatch) {
+                try { rawUrl = decodeURIComponent(uddgMatch[1]); } catch {}
+              }
+              const cleanTitle = m[2].replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
+              if (rawUrl && !rawUrl.includes('duckduckgo.com')) {
+                links.push({ title: cleanTitle, url: rawUrl, snippet: '' });
+              }
+            }
+
+            let sIdx = 0;
+            while ((m = snippetRegex.exec(html)) !== null) {
+              if (links[sIdx]) {
+                links[sIdx].snippet = m[1].replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
+              }
+              sIdx++;
+            }
+
+            searchResults.push(...links.slice(0, 10));
+          }
+        } catch (ddgErr) {
+          console.warn('[BrowserSearch] Web search notice:', ddgErr.message);
+        }
+
+        // 2. Wikipedia Search API as supplemental / fallback
+        if (searchResults.length === 0) {
+          try {
+            const wikiRes = await fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(q)}&limit=5&namespace=0&format=json`, {
+              signal: searchCtrl.signal
+            });
+            if (wikiRes.ok) {
+              const wikiData = await wikiRes.json();
+              const [queryTerm, titles, snippets, urls] = Array.isArray(wikiData) ? wikiData : [];
+              if (Array.isArray(titles) && titles.length > 0) {
+                for (let i = 0; i < titles.length; i++) {
+                  if (urls?.[i]) {
+                    searchResults.push({
+                      title: titles[i],
+                      url: urls[i],
+                      snippet: snippets?.[i] || ''
+                    });
+                  }
+                }
+              }
+            }
+          } catch {}
+        }
+
+        clearTimeout(searchTimer);
+
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({
+          success: true,
+          query: q,
+          results: searchResults,
+          count: searchResults.length
+        }));
+        return true;
+      } catch (err) {
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({
+          success: false,
+          query: q,
+          results: [],
+          count: 0,
+          error: err.message
+        }));
+        return true;
+      }
+    }
+
+    // --- Browser Direct URL Fetch Endpoint ---
+    if (url.pathname === '/api/assistant/browser/fetch') {
+      const targetUrl = (url.searchParams.get('url') || '').trim();
+      if (!targetUrl) {
+        response.writeHead(400, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, error: 'Query parameter "url" is required.' }));
+        return true;
+      }
+
+      let parsedU;
+      try {
+        parsedU = new URL(targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`);
+      } catch {
+        response.writeHead(400, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, error: 'Invalid URL format.' }));
+        return true;
+      }
+
+      if (isBlockedHost(parsedU.hostname)) {
+        response.writeHead(403, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, error: 'Access to private or local host addresses is prohibited.' }));
+        return true;
+      }
+
+      try {
+        const fetchCtrl = new AbortController();
+        const fetchTimer = setTimeout(() => fetchCtrl.abort(), 20000);
+        const fetchRes = await fetch(parsedU.href, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 ToolboxBrowser/2.0',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9'
+          },
+          redirect: 'follow',
+          signal: fetchCtrl.signal
+        });
+        clearTimeout(fetchTimer);
+
+        const contentType = fetchRes.headers.get('content-type') || '';
+        const bodyText = await fetchRes.text();
+        const parsed = parseWebPage(bodyText, fetchRes.url || parsedU.href);
+
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({
+          success: true,
+          url: parsedU.href,
+          finalUrl: fetchRes.url || parsedU.href,
+          status: fetchRes.status,
+          contentType,
+          title: parsed.title,
+          description: parsed.description,
+          text: parsed.textSummary,
+          headings: parsed.headings || [],
+          aboutExcerpt: parsed.aboutExcerpt || '',
+          contactInfo: parsed.contactInfo || {},
+          links: parsed.links || [],
+          images: parsed.images || [],
+          html: bodyText.slice(0, 150000)
+        }));
+        return true;
+      } catch (err) {
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({
+          success: false,
+          url: parsedU.href,
+          error: err.name === 'AbortError' ? 'Page request timed out after 20 seconds.' : err.message,
+          message: `Could not retrieve ${parsedU.hostname}: ${err.message}`
+        }));
+        return true;
+      }
+    }
+
+    // --- Browser Structured Scraping Endpoint ---
+    if (url.pathname === '/api/assistant/browser/scrape') {
+      const targetUrl = (url.searchParams.get('url') || '').trim();
+      if (!targetUrl) {
+        response.writeHead(400, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, error: 'Query parameter "url" is required.' }));
+        return true;
+      }
+
+      let parsedU;
+      try {
+        parsedU = new URL(targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`);
+      } catch {
+        response.writeHead(400, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, error: 'Invalid URL format.' }));
+        return true;
+      }
+
+      if (isBlockedHost(parsedU.hostname)) {
+        response.writeHead(403, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, error: 'Access to private or local host addresses is prohibited.' }));
+        return true;
+      }
+
+      try {
+        const fetchCtrl = new AbortController();
+        const fetchTimer = setTimeout(() => fetchCtrl.abort(), 20000);
+        const fetchRes = await fetch(parsedU.href, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 ToolboxBrowser/2.0',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+          },
+          redirect: 'follow',
+          signal: fetchCtrl.signal
+        });
+        clearTimeout(fetchTimer);
+
+        const bodyText = await fetchRes.text();
+        const pageData = parseWebPage(bodyText, fetchRes.url || parsedU.href);
+
+        // Container Brick & dynamic client-side Firestore gallery extraction
+        if (parsedU.hostname.includes('containerbrick.com')) {
+          try {
+            const fbCtrl = new AbortController();
+            const fbTimer = setTimeout(() => fbCtrl.abort(), 8000);
+            const fbRes = await fetch('https://firestore.googleapis.com/v1/projects/container-brick-website/databases/(default)/documents/projects?pageSize=100', {
+              headers: { 'Accept': 'application/json' },
+              signal: fbCtrl.signal
+            });
+            clearTimeout(fbTimer);
+            if (fbRes.ok) {
+              const fbData = await fbRes.json();
+              const fbImages = (fbData.documents || [])
+                .map(doc => {
+                  const fields = doc.fields || {};
+                  const imgUrl = fields.url?.stringValue || fields.images?.arrayValue?.values?.[0]?.stringValue;
+                  const imgTitle = fields.title?.stringValue || fields.description?.stringValue || 'Portacabin & Container Project';
+                  return imgUrl ? { url: imgUrl, alt: imgTitle, title: imgTitle, sourceUrl: parsedU.href } : null;
+                })
+                .filter(Boolean);
+              if (fbImages.length > 0) {
+                const existingUrls = new Set(pageData.images.map(i => i.url));
+                const uniqueFb = fbImages.filter(i => !existingUrls.has(i.url));
+                pageData.images = [...uniqueFb, ...pageData.images];
+              }
+            }
+          } catch (fbErr) {
+            console.warn('[BrowserScrape] ContainerBrick Firestore fetch notice:', fbErr.message);
+          }
+        }
+
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({
+          success: true,
+          url: parsedU.href,
+          finalUrl: fetchRes.url || parsedU.href,
+          status: fetchRes.status,
+          ...pageData
+        }));
+        return true;
+      } catch (err) {
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({
+          success: false,
+          url: parsedU.href,
+          error: err.message,
+          message: `Scraping error for ${parsedU.hostname}: ${err.message}`
+        }));
+        return true;
+      }
+    }
+
+    // --- Browser Image Extraction Endpoint ---
+    if (url.pathname === '/api/assistant/browser/images') {
+      const targetUrl = (url.searchParams.get('url') || '').trim();
+      if (!targetUrl) {
+        response.writeHead(400, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, error: 'Query parameter "url" is required.' }));
+        return true;
+      }
+
+      let parsedU;
+      try {
+        parsedU = new URL(targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`);
+      } catch {
+        response.writeHead(400, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, error: 'Invalid URL format.' }));
+        return true;
+      }
+
+      if (isBlockedHost(parsedU.hostname)) {
+        response.writeHead(403, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, error: 'Access to private or local host addresses is prohibited.' }));
+        return true;
+      }
+
+      try {
+        const fetchCtrl = new AbortController();
+        const fetchTimer = setTimeout(() => fetchCtrl.abort(), 20000);
+        const fetchRes = await fetch(parsedU.href, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 ToolboxBrowser/2.0'
+          },
+          redirect: 'follow',
+          signal: fetchCtrl.signal
+        });
+        clearTimeout(fetchTimer);
+
+        const bodyText = await fetchRes.text();
+        const pageData = parseWebPage(bodyText, fetchRes.url || parsedU.href);
+
+        // Container Brick & dynamic client-side Firestore gallery extraction
+        if (parsedU.hostname.includes('containerbrick.com')) {
+          try {
+            const fbCtrl = new AbortController();
+            const fbTimer = setTimeout(() => fbCtrl.abort(), 8000);
+            const fbRes = await fetch('https://firestore.googleapis.com/v1/projects/container-brick-website/databases/(default)/documents/projects?pageSize=100', {
+              headers: { 'Accept': 'application/json' },
+              signal: fbCtrl.signal
+            });
+            clearTimeout(fbTimer);
+            if (fbRes.ok) {
+              const fbData = await fbRes.json();
+              const fbImages = (fbData.documents || [])
+                .map(doc => {
+                  const fields = doc.fields || {};
+                  const imgUrl = fields.url?.stringValue || fields.images?.arrayValue?.values?.[0]?.stringValue;
+                  const imgTitle = fields.title?.stringValue || fields.description?.stringValue || 'Portacabin & Container Project';
+                  return imgUrl ? { url: imgUrl, alt: imgTitle, title: imgTitle, sourceUrl: parsedU.href } : null;
+                })
+                .filter(Boolean);
+              if (fbImages.length > 0) {
+                const existingUrls = new Set(pageData.images.map(i => i.url));
+                const uniqueFb = fbImages.filter(i => !existingUrls.has(i.url));
+                pageData.images = [...uniqueFb, ...pageData.images];
+              }
+            }
+          } catch (fbErr) {
+            console.warn('[BrowserImages] ContainerBrick Firestore fetch notice:', fbErr.message);
+          }
+        }
+
+        const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+        const finalImages = Number.isFinite(limit) && limit > 0 ? pageData.images.slice(0, limit) : pageData.images;
+
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({
+          success: true,
+          url: parsedU.href,
+          title: pageData.title,
+          images: finalImages,
+          count: finalImages.length
+        }));
+        return true;
+      } catch (err) {
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({
+          success: false,
+          url: parsedU.href,
+          images: [],
+          count: 0,
+          error: err.message
+        }));
+        return true;
+      }
     }
 
     if (url.pathname === '/api/assistant/test' && request.method === 'POST') {
@@ -543,8 +1162,11 @@ export async function handleApiRequest(request, response) {
           // Valid active Gemini models on v1beta (fastest verified first)
           const candidateModels = [
             body.model,
-            'gemini-3.5-flash-lite',
-            'gemini-3.5-flash'
+            'gemini-3.8-flash',
+            'gemini-3.7-flash',
+            'gemini-3.6-flash',
+            'gemini-3.5-flash',
+            'gemini-3.5-flash-lite'
           ].filter(Boolean);
           const uniqueModels = [...new Set(candidateModels)];
 
@@ -557,7 +1179,7 @@ export async function handleApiRequest(request, response) {
             const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
             try {
               const geminiCtrl = new AbortController();
-              const geminiTimer = setTimeout(() => geminiCtrl.abort(), 18000);
+              const geminiTimer = setTimeout(() => geminiCtrl.abort(), 60000);
               fetchRes = await fetch(geminiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

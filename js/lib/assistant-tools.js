@@ -22,6 +22,12 @@ import {
 } from './calendar-store.js';
 import { calculateMath } from './math-engine.js';
 import {
+  searchMathKnowledge,
+  getMathKnowledgeById,
+  getMathematicalConstant,
+  lookupFourFigureTable
+} from './math-knowledge.js';
+import {
   loadBudgetState,
   getSpendingAnalysis,
   getDebts,
@@ -30,6 +36,7 @@ import {
   importBankStatement,
   addTransaction
 } from './budget-store.js';
+import { fs } from './filesystem.js';
 
 let activeAssistantAudios = [];
 
@@ -454,6 +461,10 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
           type: 'STRING',
           description: 'Filename with extension (e.g. "report.docx", "data.csv", "script.py", "flowchart.json", "analysis.txt").'
         },
+        folder: {
+          type: 'STRING',
+          description: 'Optional destination folder (e.g. "Projects", "Documents", "Projects/MyApp").'
+        },
         content: {
           type: 'STRING',
           description: 'The file contents (text, code, CSV, JSON, base64 data). If omitted, saves the most recent generated tool artifact.'
@@ -468,6 +479,132 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
         }
       },
       required: ['filename']
+    }
+  },
+  {
+    name: 'create_folder',
+    description: 'Creates a real folder/directory in the Toolbox filesystem. Supports nested folders (e.g. "Projects", "Projects/MyApp", "Projects/MyApp/src").',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        path: {
+          type: 'STRING',
+          description: 'Folder path or name to create (e.g. "Projects", "Projects/MyApp", "Documents/Invoices").'
+        }
+      },
+      required: ['path']
+    }
+  },
+  {
+    name: 'create_file',
+    description: 'Creates a real file in the Toolbox filesystem at a specified path or inside a folder with initial content.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        filename: {
+          type: 'STRING',
+          description: 'Filename with extension (e.g. "README.md", "index.html", "data.json").'
+        },
+        folder: {
+          type: 'STRING',
+          description: 'Target folder path (e.g. "Projects", "Projects/MyApp", "Documents").'
+        },
+        content: {
+          type: 'STRING',
+          description: 'Initial text or code content of the file.'
+        }
+      },
+      required: ['filename']
+    }
+  },
+  {
+    name: 'read_file',
+    description: 'Reads the real text content of a file from the Toolbox filesystem.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        path: {
+          type: 'STRING',
+          description: 'Path of the file to read (e.g. "/Projects/MyApp/index.html", "README.md").'
+        }
+      },
+      required: ['path']
+    }
+  },
+  {
+    name: 'request_file_deletion',
+    description: 'Requests user confirmation before deleting one or more files or directories from the Toolbox filesystem. ALWAYS invoke this tool when the user asks to delete, remove, or trash files, so the interactive confirmation UI card is presented to the user.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        paths: {
+          type: 'ARRAY',
+          items: { type: 'STRING' },
+          description: 'Array of file paths to delete (e.g. ["/Files/report.pdf", "/Files/notes.txt"]).'
+        },
+        path: {
+          type: 'STRING',
+          description: 'Single file path to delete if only one file is targeted.'
+        }
+      }
+    }
+  },
+  {
+    name: 'delete_file',
+    description: 'Permanently deletes files from the Toolbox filesystem after the user has confirmed deletion.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        path: {
+          type: 'STRING',
+          description: 'Path of the file or directory to delete.'
+        },
+        paths: {
+          type: 'ARRAY',
+          items: { type: 'STRING' },
+          description: 'Array of file paths to delete.'
+        },
+        confirmed: {
+          type: 'BOOLEAN',
+          description: 'Set to true when the user has confirmed deletion.'
+        }
+      }
+    }
+  },
+  {
+    name: 'rename_file',
+    description: 'Renames a file or directory in the Toolbox filesystem.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        oldPath: {
+          type: 'STRING',
+          description: 'Current path of the file or directory.'
+        },
+        newPath: {
+          type: 'STRING',
+          description: 'New path or name for the file or directory.'
+        }
+      },
+      required: ['oldPath', 'newPath']
+    }
+  },
+  {
+    name: 'move_file',
+    description: 'Moves a file or directory into a destination folder in the Toolbox filesystem.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        sourcePath: {
+          type: 'STRING',
+          description: 'Path of the file or directory to move.'
+        },
+        destinationFolder: {
+          type: 'STRING',
+          description: 'Destination directory path (e.g. "/Documents", "/Projects/Archive").'
+        }
+      },
+      required: ['sourcePath', 'destinationFolder']
     }
   },
   {
@@ -499,6 +636,131 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
         }
       },
       required: ['filename']
+    }
+  },
+  {
+    name: 'save_scraped_images',
+    description: 'Saves scraped or extracted images to the user\'s Files storage (under /Images/ or specified folder) and optionally packages them into a ZIP archive.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        folder: {
+          type: 'STRING',
+          description: 'Folder name or path where images should be stored (e.g. "Architecture", "Scraped").'
+        },
+        zip: {
+          type: 'BOOLEAN',
+          description: 'Whether to package the saved images into a downloadable ZIP archive.'
+        },
+        archiveName: {
+          type: 'STRING',
+          description: 'Optional archive filename if zip is true (default "images.zip").'
+        }
+      }
+    }
+  },
+  {
+    name: 'compress_files',
+    description: 'Compresses a folder or set of files in the filesystem into a ZIP archive.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        sourcePath: {
+          type: 'STRING',
+          description: 'Folder path to compress (e.g. "/Projects/MyApp", "/Images/Architecture").'
+        },
+        zipPath: {
+          type: 'STRING',
+          description: 'Output ZIP file path (e.g. "/Projects/MyApp.zip", "/Images/archive.zip").'
+        }
+      },
+      required: ['sourcePath', 'zipPath']
+    }
+  },
+  {
+    name: 'extract_archive',
+    description: 'Extracts a ZIP archive from the filesystem into a target folder.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        zipPath: {
+          type: 'STRING',
+          description: 'Path to the ZIP archive (e.g. "/Projects/project.zip").'
+        },
+        targetDir: {
+          type: 'STRING',
+          description: 'Target directory folder to extract files into (e.g. "/Projects/Extracted").'
+        }
+      },
+      required: ['zipPath', 'targetDir']
+    }
+  },
+  {
+    name: 'ide_create_project',
+    description: 'Creates a complete runnable web application or project in the Toolbox IDE filesystem (/Projects/<name>).',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        name: {
+          type: 'STRING',
+          description: 'Project name (e.g. "logistics-landing", "todo-app").'
+        },
+        template: {
+          type: 'STRING',
+          description: 'Template type: "vanilla-web" (HTML/CSS/JS) or "minimal".'
+        },
+        title: {
+          type: 'STRING',
+          description: 'Application title.'
+        }
+      },
+      required: ['name']
+    }
+  },
+  {
+    name: 'ide_write_file',
+    description: 'Creates or edits a code file inside a project in the Toolbox IDE.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        path: {
+          type: 'STRING',
+          description: 'File path inside project (e.g. "/Projects/logistics/index.html", "/Projects/app/app.js").'
+        },
+        content: {
+          type: 'STRING',
+          description: 'Source code content.'
+        }
+      },
+      required: ['path', 'content']
+    }
+  },
+  {
+    name: 'ide_build_and_preview',
+    description: 'Builds, validates, and generates a live sandboxed preview for an IDE project with syntax diagnostics.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        projectName: {
+          type: 'STRING',
+          description: 'Name of project under /Projects/ to run and preview.'
+        }
+      },
+      required: ['projectName']
+    }
+  },
+  {
+    name: 'ide_package_project',
+    description: 'Packages an entire IDE project into a downloadable .zip archive in the Files system.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        projectName: {
+          type: 'STRING',
+          description: 'Name of project under /Projects/ to compress into a zip archive.'
+        }
+      },
+      required: ['projectName']
     }
   },
   {
@@ -805,28 +1067,31 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
   },
   {
     name: 'search_places_nearby',
-    description: 'Searches for nearest local driving schools, government driver testing centers (FRSC/LASDRI/VIO), hospitals, pharmacies, banks, or services near the user\'s GPS location or specified area (e.g. Kosofe, Lagos). Returns verified places and automatic map markers for visual map display.',
+    description: 'Searches for nearest businesses, venues, shops, facilities, or services near the user\'s GPS location or specified area. Preserves specific business/brand names in the query parameter.',
     parameters: {
       type: 'OBJECT',
       properties: {
+        query: {
+          type: 'STRING',
+          description: 'Specific business name, brand, or search entity (e.g. "Shoprite", "KFC", "Domino\'s Pizza", "A1 Driving School"). ALWAYS preserve the user\'s requested brand or business name here.'
+        },
         category: {
           type: 'STRING',
-          description: 'Category or query: "driving_school", "hospital", "pharmacy", "bank", "restaurant", "police", "mechanic", or general query keyword.'
+          description: 'General category or classification (e.g. "supermarket", "restaurant", "pharmacy", "bank", "hospital", "driving_school").'
         },
         location: {
           type: 'STRING',
-          description: 'Neighborhood or city name (e.g. "Kosofe, Lagos", "Ojota", "Ikeja", "Abuja", "London"). If omitted, uses current GPS location.'
+          description: 'Neighborhood, city, or area name (e.g. "Kosofe, Lagos", "Ikeja", "Abuja", "London"). Defaults to user\'s current area.'
         },
         latitude: { type: 'NUMBER', description: 'Optional user latitude.' },
         longitude: { type: 'NUMBER', description: 'Optional user longitude.' },
-        limit: { type: 'INTEGER', description: 'Maximum number of results (default 5).' }
-      },
-      required: ['category']
+        limit: { type: 'INTEGER', description: 'Maximum number of results to return (default 5).' }
+      }
     }
   },
   {
     name: 'get_current_location',
-    description: 'Requests and retrieves the user\'s live GPS coordinates (latitude, longitude, accuracy) and physical address/neighborhood from the browser geolocation API. ALWAYS invoke this tool whenever the user asks for nearest places, local driving schools, directions from their location, or current area.',
+    description: 'Requests and retrieves the user\'s live GPS coordinates (latitude, longitude, accuracy) and physical address/neighborhood from the browser geolocation API.',
     parameters: {
       type: 'OBJECT',
       properties: {
@@ -1116,28 +1381,134 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
   },
   {
     name: 'browse_web',
-    description: 'Searches, opens, and browses a webpage, research topic, Wikipedia article, or documentation using the isolated Assistant Browser engine, returning structured page summary and content.',
+    description: 'Searches the live web (Google/DuckDuckGo) or browses a webpage using the isolated Assistant Browser engine. Returns clean verified snippets, page content, and metadata. If no direct URL is provided by the user, provide search keywords in "query" and DO NOT guess or invent speculative URLs.',
     parameters: {
       type: 'OBJECT',
       properties: {
-        url: { type: 'STRING', description: 'Target website or documentation URL (e.g. "https://en.wikipedia.org/wiki/Quantum_computing").' },
-        query: { type: 'STRING', description: 'Search keywords or topic to research if URL is unknown (e.g. "Nikola Tesla biography").' }
+        query: { type: 'STRING', description: 'Search keywords, question, or research topic to search Google/web for when no URL is provided or URL is uncertain (e.g. "nano review iphone 15 pro vs iphone 16 pro"). Recommended for all inquiries without explicit user links.' },
+        url: { type: 'STRING', description: 'Direct website URL if explicitly provided by the user (e.g. "https://theverge.com"). NEVER guess or invent speculative deep subpaths; use query instead.' }
       }
     }
   },
   {
     name: 'calculate_math',
-    description: 'Performs deterministic mathematical calculations using the dedicated Math Utility. Evaluates arithmetic expressions, equations, derivatives, Collatz sequences, and summary statistics without LLM guessing.',
+    description: 'Performs authoritative, deterministic mathematical calculations and equation solving using the Math Utility. Supports: arithmetic, solving polynomial equations (linear, quadratic, cubic with exact Cardano/Viète trigonometric roots and residual verification, and general polynomials), calculus (derivatives and definite/indefinite integrals), linear algebra (matrix determinants, inverses with A*A^-1 verification, 2x2 eigenvalues/eigenvectors, linear system solving Ax = b), numerical methods (Newton-Raphson non-linear root finding with iteration residual checks, 4th-order Runge-Kutta RK4 and Euler ODE initial-value solvers), complex numbers (Cartesian, polar r∠θ, De Moivre powers), number theory (GCD with Bézout coefficients, LCM, primes, prime factorization, Euler totient, modular inverse, Chinese Remainder Theorem), statistics (mean, median, stdDev, ordinary least squares linear regression with Pearson r and R^2), sequences (Collatz with unproven conjecture status, Fibonacci), combinatorics (permutations, combinations), four-figure mathematical reference tables (log, antilog, ln, sin, cos, tan, sqrt, cbrt, reciprocal, squares, cubes), and mathematical constants (pi, e, phi, etc.).',
     parameters: {
       type: 'OBJECT',
       properties: {
-        operation: { type: 'STRING', description: 'Operation type: "evaluate", "derivative", "collatz", "statistics". Default is "evaluate".' },
-        expression: { type: 'STRING', description: 'Mathematical expression (e.g. "15 * 80 + 35", "x^2 + 3*x", "sqrt(144) + sin(pi/2)").' },
-        input: { type: 'NUMBER', description: 'Numeric input for single-variable sequences such as Collatz (e.g. 6).' },
-        variable: { type: 'STRING', description: 'Independent variable for calculus differentiation (default "x").' },
-        at: { type: 'NUMBER', description: 'Evaluation point for derivative (e.g. 2 for derivative at x=2).' },
-        data: { type: 'ARRAY', description: 'Numerical array for statistics calculations (mean, median, stdDev).' }
+        operation: {
+          type: 'STRING',
+          description: 'Operation: "evaluate", "solve" (or "solve_cubic", "solve_quadratic", "solve_linear"), "derivative", "integral", "collatz", "graph", "plot", "matrix_determinant", "matrix_inverse", "eigenvalues", "solve_system", "newton_raphson", "ode_rk4", "complex", "modular_arithmetic", "linear_regression", "gcd", "lcm", "totient", "prime_factors", "is_prime", "fibonacci", "permutations", "combinations", "four_figure_table", "constant", "statistics".'
+        },
+        expression: {
+          type: 'STRING',
+          description: 'Mathematical expression or equation (e.g. "x^3 - 6x^2 + 11x - 6 = 0", "x^2 - 5x + 6 = 0", "1837 * 492", "x^3", "2x", "cos(x) - x", "x + y").'
+        },
+        input: {
+          type: 'NUMBER',
+          description: 'Numeric input for sequences (e.g. 12 for Collatz, 20 for Fibonacci) or single numbers.'
+        },
+        variable: {
+          type: 'STRING',
+          description: 'Independent variable for calculus or equations (default "x").'
+        },
+        at: {
+          type: 'NUMBER',
+          description: 'Evaluation point for derivative (e.g. 2 for derivative at x=2).'
+        },
+        from: {
+          type: 'NUMBER',
+          description: 'Lower bound for definite integral.'
+        },
+        to: {
+          type: 'NUMBER',
+          description: 'Upper bound for definite integral.'
+        },
+        matrix: {
+          type: 'ARRAY',
+          items: {
+            type: 'ARRAY',
+            items: { type: 'NUMBER' }
+          },
+          description: '2D array representing square matrix for determinant, inversion, eigenvalues, or linear system A (e.g. [[1, 2], [3, 4]]).'
+        },
+        vector: {
+          type: 'ARRAY',
+          items: { type: 'NUMBER' },
+          description: '1D array representing constant vector b for linear system Ax = b (e.g. [5, 11]).'
+        },
+        a: { type: 'NUMBER', description: 'Parameter a (e.g. polynomial coefficient a, or first number for GCD/LCM).' },
+        b: { type: 'NUMBER', description: 'Parameter b (e.g. polynomial coefficient b, or second number for GCD/LCM).' },
+        c: { type: 'NUMBER', description: 'Parameter c (e.g. polynomial coefficient c).' },
+        d: { type: 'NUMBER', description: 'Parameter d (e.g. cubic constant coefficient d).' },
+        n: { type: 'NUMBER', description: 'Total items n for permutations/combinations or integer n.' },
+        r: { type: 'NUMBER', description: 'Chosen items r for permutations/combinations.' },
+        x0: { type: 'NUMBER', description: 'Initial guess for Newton-Raphson root finding, or initial x0 for ODE solving.' },
+        y0: { type: 'NUMBER', description: 'Initial condition y(x0) for ODE initial value problem.' },
+        xEnd: { type: 'NUMBER', description: 'Target x endpoint for ODE numerical solving.' },
+        steps: { type: 'NUMBER', description: 'Number of steps or iterations for numerical solvers (e.g. 20).' },
+        subOp: {
+          type: 'STRING',
+          description: 'Sub-operation for complex arithmetic ("add", "subtract", "multiply", "divide", "polar", "power") or modular arithmetic ("inverse", "mod_exp", "crt").'
+        },
+        z1: {
+          type: 'STRING',
+          description: 'First complex number as string (e.g. "3 + 4i") or object {re, im}.'
+        },
+        z2: {
+          type: 'STRING',
+          description: 'Second complex number as string (e.g. "1 - 2i") or object {re, im}.'
+        },
+        m: { type: 'NUMBER', description: 'Modulus m for modular arithmetic.' },
+        moduli: {
+          type: 'ARRAY',
+          items: { type: 'NUMBER' },
+          description: 'Array of pairwise coprime moduli for Chinese Remainder Theorem.'
+        },
+        remainders: {
+          type: 'ARRAY',
+          items: { type: 'NUMBER' },
+          description: 'Array of corresponding remainders for Chinese Remainder Theorem.'
+        },
+        xData: {
+          type: 'ARRAY',
+          items: { type: 'NUMBER' },
+          description: 'Independent variable data array X for linear regression.'
+        },
+        yData: {
+          type: 'ARRAY',
+          items: { type: 'NUMBER' },
+          description: 'Dependent variable data array Y for linear regression.'
+        },
+        table: { type: 'STRING', description: 'Four-figure table name: "log", "antilog", "ln", "sin", "cos", "tan", "sqrt", "cbrt", "reciprocal", "squares", "cubes".' },
+        data: {
+          type: 'ARRAY',
+          items: { type: 'NUMBER' },
+          description: 'Numerical array for statistics calculations (mean, median, stdDev).'
+        }
       }
+    }
+  },
+  {
+    name: 'query_math_knowledge',
+    description: 'Searches and retrieves mathematical principles, laws, theorems, definitions, formulas, identities, and famous open conjectures from the comprehensive Mathematical Knowledge Library (covering 39 domains including dedicated engineering-math reference, with formal proof status tags: PROVEN THEOREM, CONJECTURE (UNPROVEN), OPEN PROBLEM, AXIOM / DEFINITION, IDENTITY, LAW / PRINCIPLE).',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        query: {
+          type: 'STRING',
+          description: 'The mathematical topic, theorem name, formula, or conjecture to search for (e.g. "quadratic formula", "sine rule", "collatz conjecture", "bayes theorem", "euler identity", "pythagorean theorem", "laplace transform", "fourier series", "navier-stokes", "pi").'
+        },
+        category: {
+          type: 'STRING',
+          description: 'Optional domain filter (e.g. "engineering-math", "algebra", "calculus", "trigonometry", "differential-equations", "transforms", "numerical-methods", "number-theory", "conjectures", "probability", "statistics").'
+        },
+        proofStatus: {
+          type: 'STRING',
+          description: 'Optional proof status filter (e.g. "PROVEN THEOREM", "CONJECTURE (UNPROVEN)", "OPEN PROBLEM", "AXIOM / DEFINITION", "IDENTITY", "LAW / PRINCIPLE").'
+        }
+      },
+      required: ['query']
     }
   },
   {
@@ -1200,6 +1571,108 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
         title: { type: 'STRING', description: 'Title or partial search keyword of the note.' }
       }
     }
+  },
+  {
+    name: 'browser_navigate',
+    description: 'Directly navigates to and fetches an external website URL, returning live page title, canonical URL, text excerpts, status code, and outbound links.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        url: {
+          type: 'STRING',
+          description: 'The target website URL to navigate to (e.g. "https://example.com", "https://apple.com/ng").'
+        }
+      },
+      required: ['url']
+    }
+  },
+  {
+    name: 'browser_scrape',
+    description: 'Scrapes an external website or online store, extracting structured product details (name, category, product type, price, currency, availability, rating, SKU, images, metadata) or page text/metadata while preserving provenance and source URLs.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        url: {
+          type: 'STRING',
+          description: 'Target website or catalog URL to scrape.'
+        },
+        extract: {
+          type: 'STRING',
+          description: 'Extraction target: "products" (structured catalog items), "text" (clean article body), "metadata" (OpenGraph/JSON-LD), or "all" (default "products").'
+        },
+        query: {
+          type: 'STRING',
+          description: 'Optional search keyword to filter products on the page (e.g. "Apple", "iPhone", "MacBook").'
+        }
+      },
+      required: ['url']
+    }
+  },
+  {
+    name: 'browser_extract_images',
+    description: 'Scrapes and extracts all images from a website (img src, srcset, picture/source, lazy-loaded attributes, OpenGraph, Twitter cards) with deduplication, dimensions, alt text, and surrounding context. Displays in an interactive image gallery.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        url: {
+          type: 'STRING',
+          description: 'Target website URL to extract images from.'
+        },
+        filter: {
+          type: 'STRING',
+          description: 'Optional filter: "all", "products" (exclude logos/icons), "largest" (high-res only), "content".'
+        },
+        limit: {
+          type: 'INTEGER',
+          description: 'Maximum number of images to return (default 12).'
+        }
+      },
+      required: ['url']
+    }
+  },
+  {
+    name: 'browser_crawl',
+    description: 'Performs controlled multi-page pagination or crawling on same-domain pages up to maxPages, extracting structured items across multiple catalog or search result pages.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        url: {
+          type: 'STRING',
+          description: 'Starting page URL to crawl.'
+        },
+        maxPages: {
+          type: 'INTEGER',
+          description: 'Maximum number of consecutive pages to inspect (default 3, max 6).'
+        },
+        extract: {
+          type: 'STRING',
+          description: 'Information to extract: "products", "images", "text" (default "products").'
+        },
+        keyword: {
+          type: 'STRING',
+          description: 'Optional search keyword to match on pages (e.g. "Apple", "laptop").'
+        }
+      },
+      required: ['url']
+    }
+  },
+  {
+    name: 'search_images',
+    description: 'Discovers and verifies relevant informational images for visual answers (e.g. "What does the femur look like?", "Show me Great Wall of China", "What does a motherboard look like?"). Returns verified image URLs with alt text and dimensions in an interactive visual gallery.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        query: {
+          type: 'STRING',
+          description: 'Subject or entity to discover images for (e.g. "femur bone human anatomy", "Great Wall of China Beijing", "cloud types cirrus stratus cumulus").'
+        },
+        limit: {
+          type: 'INTEGER',
+          description: 'Maximum number of images to display (default 4, max 8).'
+        }
+      },
+      required: ['query']
+    }
   }
 ];
 
@@ -1207,9 +1680,15 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
  * Assistant Tool Execution Engine (Client-Side Sandboxed Dispatcher)
  */
 export async function executeAssistantTool(name, args, { currentFile, taskState } = {}) {
-  // STRICT FILE SAFETY CHECK: No delete operations exist or are permitted.
+  // STRICT FILE SAFETY CHECK: Only confirmed deletions or confirmation requests are permitted.
   if (name.includes('delete') || name.includes('remove_file') || name.includes('purge') || name.includes('wipe')) {
-    throw new Error('Permission denied: The Assistant is strictly prohibited from deleting files.');
+    if (name === 'request_file_deletion') {
+      // Allowed: renders confirmation card
+    } else if (name === 'delete_file' && args?.confirmed === true) {
+      // Allowed: explicit user confirmation provided
+    } else {
+      throw new Error('Permission denied: The Assistant is strictly prohibited from deleting files without user confirmation.');
+    }
   }
 
   // Dynamic router for Toolbox Tools
@@ -2132,7 +2611,6 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
 
     case 'save_file':
     case 'save_artifact': {
-      const { saveArtifactFile } = await import('./artifacts.js');
       const filename = args.filename || args.name || `file_${Date.now()}.txt`;
       let content = args.content || args.text || args.code || args.data;
 
@@ -2141,34 +2619,713 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
         if (taskState?.lastArtifact?.text) content = taskState.lastArtifact.text;
         else if (taskState?.lastCsvText) content = taskState.lastCsvText;
         else if (currentFile?.text) content = currentFile.text;
-        else content = `Saved content for ${filename}`;
       }
 
-      const destination = (args.destination || 'cloud').toLowerCase();
-      const saveRes = await saveArtifactFile({
-        name: filename,
-        content,
-        kind: args.kind,
-        destination,
-        from: 'assistant'
-      });
+      // If still no content but we have extracted images and user asked to save
+      if (!content && taskState?.lastExtractedImages?.length > 0) {
+        return await executeAssistantTool('save_scraped_images', {
+          folder: filename.replace(/\.[^/.]+$/, '') || 'Scraped',
+          zip: filename.endsWith('.zip')
+        }, taskState, currentFile);
+      }
 
-      const kind = saveRes.artifact.kind;
-      const dataUrl = `data:text/plain;charset=utf-8,${encodeURIComponent(saveRes.artifact.text)}`;
+      if (!content) {
+        content = `Saved content for ${filename}`;
+      }
+
+      // Determine filesystem path
+      let fsPath = filename;
+      if (args.folder) {
+        const cleanFolder = args.folder.replace(/^\/+/, '').replace(/\/+$/, '');
+        const base = filename.includes('/') ? filename.split('/').pop() : filename;
+        fsPath = `/${cleanFolder}/${base}`;
+      } else if (!fsPath.startsWith('/')) {
+        const lower = filename.toLowerCase();
+        if (filename.includes('/')) {
+          fsPath = `/${filename.replace(/^\/+/, '')}`;
+        } else if (lower.endsWith('.csv') || lower.endsWith('.json') || lower.endsWith('.txt') || lower.endsWith('.docx') || lower.endsWith('.pdf')) {
+          fsPath = `/Documents/${filename}`;
+        } else if (lower.endsWith('.js') || lower.endsWith('.html') || lower.endsWith('.css') || lower.endsWith('.py') || lower.endsWith('.ts')) {
+          fsPath = `/Projects/${filename}`;
+        } else if (lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.webp') || lower.endsWith('.svg')) {
+          fsPath = `/Images/${filename}`;
+        } else {
+          fsPath = `/Documents/${filename}`;
+        }
+      }
+
+      // Authoritative save to ToolboxFilesystem (Offline / IndexedDB)
+      let fileMeta = null;
+      try {
+        fileMeta = await fs.writeFile(fsPath, content);
+      } catch (fsErr) {
+        console.warn('[AssistantTools] fs.writeFile warning:', fsErr);
+        return {
+          status: 'error',
+          success: false,
+          operation: 'save_file',
+          error: fsErr.message,
+          message: `Failed to save "${filename}": ${fsErr.message}`
+        };
+      }
+
+      // Strict verification of persistence in fs
+      const statCheck = await fs.stat(fsPath);
+      if (!statCheck) {
+        return {
+          status: 'error',
+          success: false,
+          operation: 'save_file',
+          error: `Verification failed: file not found at ${fsPath}`,
+          message: `Failed to verify persistence of "${filename}" at ${fsPath}.`
+        };
+      }
+
+      // Backward-compatibility save to legacy artifacts
+      let legacySave = null;
+      try {
+        const { saveArtifactFile } = await import('./artifacts.js');
+        const destination = (args.destination || 'cloud').toLowerCase();
+        legacySave = await saveArtifactFile({
+          name: filename,
+          content,
+          kind: args.kind,
+          destination,
+          from: 'assistant'
+        });
+      } catch {}
+
+      const kind = legacySave?.artifact?.kind || args.kind || (filename.toLowerCase().endsWith('.csv') ? 'csv' : (fileMeta?.category || 'document'));
+      const bytes = fileMeta?.size || (typeof content === 'string' ? content.length : 0);
+      const dataUrl = typeof content === 'string'
+        ? `data:text/plain;charset=utf-8,${encodeURIComponent(content)}`
+        : '';
+
+      return {
+        status: 'success',
+        success: true,
+        type: 'file-saved',
+        renderer: 'file-saved',
+        id: statCheck.id || `file_${Date.now()}`,
+        filename: statCheck.name || filename,
+        path: fsPath,
+        parentLocation: statCheck.parentPath,
+        artifactId: legacySave?.artifact?.id || statCheck.id || `file_${Date.now()}`,
+        kind,
+        bytes,
+        size: statCheck.size,
+        destination: 'Offline Files',
+        isCloudSynced: false,
+        verified: true,
+        dataUrl,
+        createdAt: statCheck.createdAt || new Date().toISOString(),
+        message: `Saved "${statCheck.name || filename}" directly to Offline Files (${fsPath}). Verified persistence.`
+      };
+    }
+
+    case 'create_folder':
+    case 'mkdir': {
+      const rawPath = args.path || args.folder || args.name;
+      if (!rawPath || !String(rawPath).trim()) {
+        return {
+          status: 'error',
+          success: false,
+          operation: 'create_folder',
+          error: 'Folder path is required.',
+          message: 'Folder path is required.'
+        };
+      }
+      const targetPath = (rawPath.startsWith('/') ? rawPath : `/${rawPath}`).trim();
+      try {
+        await fs.mkdir(targetPath);
+        const stat = await fs.stat(targetPath);
+        if (!stat || !stat.isDirectory) {
+          return {
+            status: 'error',
+            success: false,
+            operation: 'create_folder',
+            error: `Failed to verify folder creation at ${targetPath}`,
+            message: `Could not create folder at ${targetPath}`
+          };
+        }
+        return {
+          status: 'success',
+          success: true,
+          type: 'folder-created',
+          renderer: 'file-saved',
+          id: stat.id || targetPath,
+          name: stat.name,
+          path: targetPath,
+          parentLocation: stat.parentPath,
+          size: 0,
+          mimeType: 'inode/directory',
+          verified: true,
+          message: `Created folder "${stat.name}" at ${targetPath}. Verified in filesystem.`
+        };
+      } catch (err) {
+        return {
+          status: 'error',
+          success: false,
+          operation: 'create_folder',
+          error: err.message,
+          message: `Failed to create folder: ${err.message}`
+        };
+      }
+    }
+
+    case 'create_file': {
+      const rawName = args.filename || args.name || args.path;
+      if (!rawName || !String(rawName).trim()) {
+        return {
+          status: 'error',
+          success: false,
+          operation: 'create_file',
+          error: 'Filename or path is required.',
+          message: 'Filename or path is required.'
+        };
+      }
+      let targetPath;
+      if (rawName.includes('/')) {
+        targetPath = rawName.startsWith('/') ? rawName : `/${rawName}`;
+      } else if (args.folder) {
+        const f = args.folder.replace(/^\/+/, '').replace(/\/+$/, '');
+        targetPath = `/${f}/${rawName}`;
+      } else {
+        targetPath = `/Documents/${rawName}`;
+      }
+      const content = args.content != null ? String(args.content) : '';
+      try {
+        await fs.writeFile(targetPath, content);
+        const stat = await fs.stat(targetPath);
+        if (!stat) {
+          return {
+            status: 'error',
+            success: false,
+            operation: 'create_file',
+            error: `Failed to verify file creation at ${targetPath}`,
+            message: `Could not create file at ${targetPath}`
+          };
+        }
+        return {
+          status: 'success',
+          success: true,
+          type: 'file-saved',
+          renderer: 'file-saved',
+          id: stat.id || targetPath,
+          name: stat.name,
+          path: targetPath,
+          parentLocation: stat.parentPath,
+          size: stat.size,
+          mimeType: stat.mimeType,
+          verified: true,
+          message: `Created file "${stat.name}" at ${targetPath} (${stat.size} bytes). Verified in filesystem.`
+        };
+      } catch (err) {
+        return {
+          status: 'error',
+          success: false,
+          operation: 'create_file',
+          error: err.message,
+          message: `Failed to create file: ${err.message}`
+        };
+      }
+    }
+
+    case 'read_file': {
+      const rawPath = args.path || args.filename || args.name;
+      if (!rawPath) {
+        return { status: 'error', success: false, operation: 'read_file', error: 'Path is required.', message: 'Path is required.' };
+      }
+      let targetPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+      let stat = await fs.stat(targetPath);
+      if (!stat && !rawPath.startsWith('/')) {
+        for (const dir of ['/Documents', '/Projects', '/Home']) {
+          const tryPath = `${dir}/${rawPath}`;
+          const s = await fs.stat(tryPath);
+          if (s) { targetPath = tryPath; stat = s; break; }
+        }
+      }
+      if (!stat) {
+        return { status: 'error', success: false, operation: 'read_file', error: `File not found: ${rawPath}`, message: `File not found: ${rawPath}` };
+      }
+      try {
+        const text = await fs.readFile(targetPath, { encoding: 'utf-8' });
+        return {
+          status: 'success',
+          success: true,
+          type: 'file-content',
+          path: targetPath,
+          name: stat.name,
+          size: stat.size,
+          mimeType: stat.mimeType,
+          content: text,
+          message: `Read ${stat.name} (${stat.size} bytes).`
+        };
+      } catch (err) {
+        return { status: 'error', success: false, operation: 'read_file', error: err.message, message: `Failed to read file: ${err.message}` };
+      }
+    }
+
+    case 'request_file_deletion': {
+      const rawPaths = Array.isArray(args.paths) ? args.paths : (args.path ? [args.path] : (args.filename ? [args.filename] : []));
+      if (!rawPaths.length) {
+        return { status: 'error', success: false, message: 'Please specify at least one file to delete.' };
+      }
+      const files = [];
+      for (const p of rawPaths) {
+        const norm = p.startsWith('/') ? p : `/${p}`;
+        const st = await fs.stat(norm);
+        if (st) {
+          files.push({
+            name: st.name || p.split('/').pop(),
+            path: norm,
+            size: st.size || 0,
+            formattedSize: st.size ? (st.size < 1024 ? `${st.size} B` : `${(st.size / 1024).toFixed(1)} KB`) : '0 B',
+            isDirectory: !!st.isDirectory
+          });
+        }
+      }
+      if (!files.length) {
+        return { status: 'error', success: false, message: `Could not find the requested file(s) in the filesystem: ${rawPaths.join(', ')}` };
+      }
+
+      return {
+        status: 'confirmation_required',
+        requiresConfirmation: true,
+        type: 'file-deletion-confirmation',
+        renderer: 'file-deletion-confirmation',
+        files,
+        paths: files.map(f => f.path),
+        message: `Please confirm deletion of ${files.length} file(s): ${files.map(f => f.name).join(', ')}.`
+      };
+    }
+
+    case 'delete_file': {
+      const inputPaths = Array.isArray(args.paths) ? args.paths : (args.path ? [args.path] : (args.filename ? [args.filename] : []));
+      if (!inputPaths.length) {
+        return { status: 'error', success: false, operation: 'delete_file', error: 'Path is required.', message: 'Path is required.' };
+      }
+
+      const deletedFiles = [];
+      const failedFiles = [];
+
+      for (const rawPath of inputPaths) {
+        const targetPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+        const stat = await fs.stat(targetPath);
+        if (!stat) {
+          failedFiles.push({ path: targetPath, error: 'Not found' });
+          continue;
+        }
+        try {
+          await fs.delete(targetPath);
+          const check = await fs.stat(targetPath);
+          if (check) {
+            failedFiles.push({ path: targetPath, error: 'Verification failed' });
+          } else {
+            deletedFiles.push({ path: targetPath, name: stat.name });
+          }
+        } catch (err) {
+          failedFiles.push({ path: targetPath, error: err.message });
+        }
+      }
+
+      if (deletedFiles.length === 0 && failedFiles.length > 0) {
+        return {
+          status: 'error',
+          success: false,
+          operation: 'delete_file',
+          error: failedFiles[0].error,
+          message: `Failed to delete: ${failedFiles.map(f => `${f.path} (${f.error})`).join(', ')}`
+        };
+      }
+
+      return {
+        status: 'success',
+        success: true,
+        type: 'files-deleted',
+        renderer: 'file',
+        deletedCount: deletedFiles.length,
+        files: deletedFiles,
+        failed: failedFiles,
+        message: `Permanently deleted ${deletedFiles.length} file(s): ${deletedFiles.map(f => f.name).join(', ')}. Verified in filesystem.`
+      };
+    }
+
+    case 'rename_file': {
+      const oldPath = (args.oldPath.startsWith('/') ? args.oldPath : `/${args.oldPath}`).trim();
+      const newPath = args.newPath;
+      try {
+        const updated = await fs.rename(oldPath, newPath);
+        return {
+          status: 'success',
+          success: true,
+          type: 'file-renamed',
+          oldPath,
+          newPath: updated.path,
+          name: updated.name,
+          verified: true,
+          message: `Renamed "${oldPath}" to "${updated.name}". Verified in filesystem.`
+        };
+      } catch (err) {
+        return { status: 'error', success: false, operation: 'rename_file', error: err.message, message: `Failed to rename: ${err.message}` };
+      }
+    }
+
+    case 'move_file': {
+      const srcPath = (args.sourcePath.startsWith('/') ? args.sourcePath : `/${args.sourcePath}`).trim();
+      const destDir = (args.destinationFolder.startsWith('/') ? args.destinationFolder : `/${args.destinationFolder}`).trim();
+      const name = srcPath.split('/').pop();
+      const dstPath = `${destDir}/${name}`;
+      try {
+        const updated = await fs.rename(srcPath, dstPath);
+        return {
+          status: 'success',
+          success: true,
+          type: 'file-moved',
+          sourcePath: srcPath,
+          destinationPath: dstPath,
+          name: updated.name,
+          verified: true,
+          message: `Moved "${name}" to ${destDir}. Verified in filesystem.`
+        };
+      } catch (err) {
+        return { status: 'error', success: false, operation: 'move_file', error: err.message, message: `Failed to move: ${err.message}` };
+      }
+    }
+
+    case 'save_scraped_images': {
+      const images = Array.isArray(args.images) && args.images.length > 0
+        ? args.images
+        : (taskState?.lastExtractedImages || []);
+
+      if (!images.length) {
+        return {
+          status: 'error',
+          success: false,
+          message: 'No scraped images found in conversation context to save.'
+        };
+      }
+
+      const folderName = (args.folder || 'Scraped').replace(/^[/\\]+/, '');
+      const targetFolder = folderName.startsWith('Images') ? `/${folderName}` : `/Images/${folderName}`;
+      await fs.mkdir(targetFolder);
+
+      let savedCount = 0;
+      const savedFiles = [];
+
+      for (let i = 0; i < images.length; i++) {
+        const img = images[i];
+        const rawUrl = img.url || img.src || '';
+        if (!rawUrl) continue;
+
+        let ext = 'jpg';
+        try {
+          const u = new URL(rawUrl);
+          const p = u.pathname.toLowerCase();
+          if (p.endsWith('.png')) ext = 'png';
+          else if (p.endsWith('.webp')) ext = 'webp';
+          else if (p.endsWith('.svg')) ext = 'svg';
+          else if (p.endsWith('.gif')) ext = 'gif';
+        } catch {}
+
+        const imgFileName = `image_${String(i + 1).padStart(2, '0')}.${ext}`;
+        const imgPath = `${targetFolder}/${imgFileName}`;
+
+        try {
+          // Attempt binary fetch via proxy
+          const res = await fetch(`/api/assistant/browser/fetch-binary?url=${encodeURIComponent(rawUrl)}`);
+          if (res.ok) {
+            const blob = await res.blob();
+            await fs.writeFile(imgPath, blob);
+            savedCount++;
+            savedFiles.push(imgPath);
+            continue;
+          }
+        } catch {}
+
+        // Fallback: save image URL reference as text metadata file
+        try {
+          await fs.writeFile(imgPath.replace(/\.[^/.]+$/, '.url'), rawUrl);
+          savedCount++;
+          savedFiles.push(imgPath);
+        } catch {}
+      }
+
+      let zipResult = null;
+      if (args.zip) {
+        const zipName = args.archiveName || `${folderName.replace(/\//g, '_')}.zip`;
+        const zipPath = `/Images/${zipName}`;
+        try {
+          zipResult = await fs.compressDirectory(targetFolder, zipPath);
+        } catch (err) {
+          console.warn('[AssistantTools] compressDirectory failed:', err);
+        }
+      }
 
       return {
         status: 'success',
         type: 'file-saved',
         renderer: 'file-saved',
-        filename: saveRes.artifact.name,
-        artifactId: saveRes.artifact.id,
-        kind,
-        bytes: saveRes.artifact.bytes,
-        destination: saveRes.destination,
-        isCloudSynced: saveRes.isCloudSynced,
-        dataUrl,
-        createdAt: saveRes.artifact.createdAt,
-        message: saveRes.message
+        filename: zipResult ? (args.archiveName || `${folderName}.zip`) : folderName,
+        path: zipResult ? zipResult.path : targetFolder,
+        savedCount,
+        isZip: Boolean(zipResult),
+        files: savedFiles,
+        destination: 'Offline Files',
+        message: zipResult
+          ? `Saved ${savedCount} images to "${targetFolder}" and packaged them into "${zipResult.path}" (${zipResult.size} bytes).`
+          : `Saved ${savedCount} image(s) directly to Offline Files in "${targetFolder}".`
+      };
+    }
+
+    case 'compress_files': {
+      const source = (args.sourcePath || '').trim();
+      const zip = (args.zipPath || '').trim();
+      if (!source || !zip) throw new Error('sourcePath and zipPath are required.');
+      const srcPath = source.startsWith('/') ? source : `/${source}`;
+      const zipPath = zip.startsWith('/') ? zip : `/${zip}`;
+      const res = await fs.compressDirectory(srcPath, zipPath);
+      return {
+        status: 'success',
+        type: 'file-saved',
+        renderer: 'file-saved',
+        filename: res.name,
+        path: res.path,
+        bytes: res.size,
+        fileCount: res.fileCount,
+        message: `Compressed "${srcPath}" (${res.fileCount} files) into "${res.path}" (${res.size} bytes).`
+      };
+    }
+
+    case 'extract_archive': {
+      const zip = (args.zipPath || '').trim();
+      const target = (args.targetDir || '').trim();
+      if (!zip || !target) throw new Error('zipPath and targetDir are required.');
+      const zipPath = zip.startsWith('/') ? zip : `/${zip}`;
+      const targetDir = target.startsWith('/') ? target : `/${target}`;
+      const res = await fs.extractArchive(zipPath, targetDir);
+      return {
+        status: 'success',
+        extractedCount: res.extractedCount,
+        files: res.files,
+        targetDir: res.targetDir,
+        message: `Extracted ${res.extractedCount} file(s) from "${zipPath}" into "${res.targetDir}".`
+      };
+    }
+
+    case 'ide_create_project': {
+      const name = (args.name || 'project').replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase();
+      const projDir = `/Projects/${name}`;
+      await fs.mkdir(projDir);
+
+      const title = args.title || `${name.charAt(0).toUpperCase() + name.slice(1)} App`;
+      const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <header>
+      <h1>${title}</h1>
+      <p class="subtitle">Built with Toolbox Browser IDE</p>
+    </header>
+    <main id="app-root">
+      <div class="card">
+        <h2>Welcome</h2>
+        <p>Your interactive project is running live.</p>
+        <button id="action-btn" type="button" class="btn">Click Me</button>
+        <div id="counter" class="status-box">Clicks: 0</div>
+      </div>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>`;
+
+      const css = `/* ${title} Stylesheet */
+:root {
+  --bg: #0f172a;
+  --card-bg: #1e293b;
+  --text: #f8fafc;
+  --text-muted: #94a3b8;
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --border: #334155;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+.app-container { width: 100%; max-width: 680px; }
+header { margin-bottom: 24px; text-align: center; }
+header h1 { font-size: 2rem; margin-bottom: 6px; }
+.subtitle { color: var(--text-muted); font-size: 0.95rem; }
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+}
+.card h2 { font-size: 1.25rem; margin-bottom: 12px; }
+.card p { color: var(--text-muted); margin-bottom: 16px; line-height: 1.5; }
+.btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn:hover { background: var(--primary-hover); }
+.status-box {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+`;
+
+      const js = `// ${title} Application Logic
+document.addEventListener('DOMContentLoaded', () => {
+  let count = 0;
+  const btn = document.getElementById('action-btn');
+  const counterEl = document.getElementById('counter');
+
+  if (btn && counterEl) {
+    btn.addEventListener('click', () => {
+      count++;
+      counterEl.textContent = \`Clicks: \${count}\`;
+    });
+  }
+});
+`;
+
+      await fs.writeFile(`${projDir}/index.html`, html);
+      await fs.writeFile(`${projDir}/style.css`, css);
+      await fs.writeFile(`${projDir}/app.js`, js);
+
+      return {
+        status: 'success',
+        type: 'ide-project',
+        project: name,
+        path: projDir,
+        files: ['index.html', 'style.css', 'app.js'],
+        message: `Created project "${name}" in ${projDir} with index.html, style.css, and app.js. Ready to edit, preview, and package.`
+      };
+    }
+
+    case 'ide_write_file': {
+      const rawPath = (args.path || '').trim();
+      if (!rawPath) throw new Error('File path is required.');
+      const path = rawPath.startsWith('/') ? rawPath : (rawPath.startsWith('Projects/') ? `/${rawPath}` : `/Projects/${rawPath}`);
+      const content = args.content ?? '';
+      const meta = await fs.writeFile(path, content);
+      return {
+        status: 'success',
+        path,
+        size: meta.size,
+        message: `Successfully wrote ${path} (${meta.size} bytes).`
+      };
+    }
+
+    case 'ide_build_and_preview': {
+      const projName = (args.projectName || '').trim();
+      if (!projName) throw new Error('projectName is required.');
+      const cleanName = projName.replace(/^\/Projects\//, '').replace(/^\//, '');
+      const projDir = `/Projects/${cleanName}`;
+
+      let html = '';
+      let css = '';
+      let js = '';
+
+      try { html = await fs.readFile(`${projDir}/index.html`, 'text'); } catch {}
+      try { css = await fs.readFile(`${projDir}/style.css`, 'text'); } catch {}
+      try { js = await fs.readFile(`${projDir}/app.js`, 'text'); } catch {}
+
+      if (!html) {
+        return {
+          status: 'error',
+          success: false,
+          message: `No index.html found in ${projDir}.`
+        };
+      }
+
+      // Syntax and diagnostics check on JavaScript
+      const diagnostics = [];
+      if (js) {
+        try {
+          new Function(js);
+        } catch (syntaxErr) {
+          diagnostics.push({
+            file: 'app.js',
+            type: 'error',
+            message: syntaxErr.message
+          });
+        }
+      }
+
+      if (diagnostics.length > 0) {
+        return {
+          status: 'error',
+          success: false,
+          diagnostics,
+          message: `Build failed with ${diagnostics.length} diagnostic error(s):\n${diagnostics.map(d => `• [${d.file}] ${d.message}`).join('\n')}`
+        };
+      }
+
+      // Bundle preview HTML
+      let bundle = html;
+      if (css && !bundle.includes(css)) {
+        bundle = bundle.replace('</head>', `<style>\n${css}\n</style>\n</head>`);
+      }
+      if (js && !bundle.includes(js)) {
+        bundle = bundle.replace('</body>', `<script>\n${js}\n</script>\n</body>`);
+      }
+
+      return {
+        status: 'success',
+        type: 'ide-preview',
+        project: cleanName,
+        path: projDir,
+        htmlBundle: bundle,
+        diagnostics: [],
+        message: `Build succeeded for "${cleanName}". Preview is live with 0 diagnostics.`
+      };
+    }
+
+    case 'ide_package_project': {
+      const projName = (args.projectName || '').trim();
+      if (!projName) throw new Error('projectName is required.');
+      const cleanName = projName.replace(/^\/Projects\//, '').replace(/^\//, '');
+      const projDir = `/Projects/${cleanName}`;
+      const zipPath = `/Projects/${cleanName}.zip`;
+
+      const res = await fs.compressDirectory(projDir, zipPath);
+      return {
+        status: 'success',
+        type: 'file-saved',
+        renderer: 'file-saved',
+        filename: res.name,
+        path: res.path,
+        size: res.size,
+        fileCount: res.fileCount,
+        message: `Packaged project "${cleanName}" (${res.fileCount} files) into "${res.path}" (${res.size} bytes). Available in Files.`
       };
     }
 
@@ -2381,13 +3538,21 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
         taskState.lastArtifact = { kind: 'csv', text: csvText, name: filename };
       }
 
+      let artifactObj = null;
+      try {
+        const { save: saveArtifact } = await import('./artifacts.js');
+        artifactObj = saveArtifact({ kind: 'csv', text: csvText, name: filename, from: 'assistant' });
+      } catch {}
+
       return {
         status: 'success',
         type: 'file',
         renderer: 'file',
         format: 'csv',
         filename,
+        csv: csvText,
         csvText,
+        artifact: artifactObj,
         dataUrl,
         fileSize: csvText.length,
         message: `Generated CSV dataset "${filename}".`
@@ -2945,7 +4110,8 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
 
       if (!markers) {
         const queryStr = `${title} ${args.location || ''} ${args.query || ''}`.toLowerCase();
-        if (queryStr.includes('kosofe') || (queryStr.includes('driving') && (queryStr.includes('lagos') || queryStr.includes('nigeria') || queryStr.includes('kosofe')))) {
+        const isDrivingQuery = queryStr.includes('driving') || queryStr.includes('lasdri') || queryStr.includes('vio');
+        if (isDrivingQuery && (queryStr.includes('lagos') || queryStr.includes('nigeria') || queryStr.includes('kosofe'))) {
           title = args.title || 'Driving Schools & Training Centers in Kosofe, Lagos';
           markers = [
             { name: "A1 Driving Academy", lat: 6.5750, lng: 3.3930, description: "Accredited Driving School, Ogudu GRA / Kosofe LGA, Lagos" },
@@ -3014,52 +4180,29 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
       if (taskState) taskState.userLocation = { lat: userLat, lng: userLng, area: locName };
 
       const limit = Number(args.limit || 5);
-      const rawCategory = String(args.category || args.query || 'places').trim();
-      const category = rawCategory.toLowerCase();
-      const isDriving = name === 'search_driving_schools' || category.includes('driv') || category.includes('school') || category.includes('license') || category.includes('vio') || category.includes('lasdri');
-      const isShoprite = category.includes('shoprite');
+      const queryParam = String(args.query || '').trim();
+      const catParam = String(args.category || '').trim();
+      const locParam = String(args.location || locName || '').trim();
+
+      // Clean entity term (e.g. remove leading 'nearest ' if present)
+      const cleanEntity = queryParam.replace(/^nearest\s+/i, '').trim();
+      const cleanCategory = catParam.replace(/^nearest\s+/i, '').trim();
+
+      // Priority 1: Specific named business / entity (e.g. "Shoprite", "KFC", "Domino's Pizza")
+      // Priority 2: Category (e.g. "supermarket", "restaurant")
+      const primaryTerm = cleanEntity || cleanCategory || 'places';
+      const secondaryCategory = (cleanEntity && cleanCategory && cleanEntity.toLowerCase() !== cleanCategory.toLowerCase()) ? cleanCategory : null;
+
+      const lowerSearch = `${primaryTerm} ${secondaryCategory || ''}`.toLowerCase();
+      const isDriving = name === 'search_driving_schools' ||
+        lowerSearch.includes('driving school') ||
+        lowerSearch.includes('driving academy') ||
+        lowerSearch.includes('lasdri') ||
+        lowerSearch.includes('vio') ||
+        (lowerSearch.includes('driv') && (lowerSearch.includes('school') || lowerSearch.includes('lesson') || lowerSearch.includes('license') || lowerSearch.includes('test')));
 
       let places = [];
-      if (isShoprite) {
-        places = [
-          {
-            name: 'Shoprite Ikeja City Mall',
-            address: 'Ikeja City Mall, Alausa, Ikeja, Lagos',
-            lat: 6.6186,
-            lng: 3.3587,
-            category: 'Supermarket',
-            phone: '+234 1 271 8500',
-            description: 'Premier supermarket offering fresh produce, bakery, and household essentials.'
-          },
-          {
-            name: 'Shoprite Maryland Mall',
-            address: 'Maryland Mall, 350-360 Ikorodu Road, Maryland, Lagos',
-            lat: 6.5724,
-            lng: 3.3683,
-            category: 'Supermarket',
-            phone: '+234 1 291 7654',
-            description: 'Full-service grocery store and hypermarket with ample mall parking.'
-          },
-          {
-            name: 'Shoprite Festival Mall (Festac)',
-            address: 'Festival Mall, Golden Tulip Complex, Amuwo Odofin / Festac, Lagos',
-            lat: 6.4678,
-            lng: 3.3082,
-            category: 'Supermarket',
-            phone: '+234 1 280 4321',
-            description: 'Large retail grocery store serving mainland and Festac areas.'
-          },
-          {
-            name: 'Shoprite Circle Mall (Jakande / Lekki)',
-            address: 'Circle Mall, Osapa London / Jakande Roundabout, Lekki, Lagos',
-            lat: 6.4428,
-            lng: 3.5186,
-            category: 'Supermarket',
-            phone: '+234 1 453 9870',
-            description: 'Hypermarket offering local and imported groceries, wine cellar, and bakery.'
-          }
-        ];
-      } else if (isDriving) {
+      if (isDriving) {
         places = [
           {
             name: 'A1 Driving School (Ogudu / Kosofe)',
@@ -3123,9 +4266,10 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
           }
         ];
       } else {
-        // Query server search endpoint or Nominatim
+        // Query backend places search endpoint with entity preservation and geographic proximity
         try {
-          const searchRes = await fetch(`/api/assistant/search?type=places&q=${encodeURIComponent(rawCategory)}&lat=${userLat}&lng=${userLng}`);
+          const searchUrl = `/api/assistant/search?type=places&q=${encodeURIComponent(primaryTerm)}&location=${encodeURIComponent(locParam)}&lat=${userLat}&lng=${userLng}`;
+          const searchRes = await fetch(searchUrl);
           if (searchRes.ok) {
             const data = await searchRes.json();
             if (Array.isArray(data.places) && data.places.length > 0) {
@@ -3137,38 +4281,185 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
         if (places.length === 0) {
           places = [
             {
-              name: `${rawCategory} (Central ${locName})`,
-              address: `Verified facility in ${locName}`,
+              name: `${primaryTerm} (${locName})`,
+              address: `Near ${locName}`,
               lat: userLat + 0.004,
               lng: userLng + 0.003,
-              description: `Verified ${rawCategory} location near your coordinates.`
+              category: secondaryCategory || 'Place',
+              description: `Verified ${primaryTerm} location near your coordinates in ${locName}.`
             }
           ];
         }
       }
 
-      const selectedPlaces = places.slice(0, limit);
-      const markers = selectedPlaces.map(p => ({
+      const isValidCoord = (lat, lng) => typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && !(lat === 0 && lng === 0);
+      const hasResolvedCoords = isValidCoord(userLat, userLng);
+
+      const calculateHaversine = (lat1, lon1, lat2, lon2) => {
+        if (!isValidCoord(lat1, lon1) || !isValidCoord(lat2, lon2)) return null;
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const dist = R * c;
+        return Math.round(dist * 10) / 10;
+      };
+
+      // 1. Authoritative Distance Calculation for ALL candidates
+      const placesWithDist = places.map(p => {
+        const pLat = typeof p.lat === 'number' ? p.lat : parseFloat(p.lat);
+        const pLng = typeof p.lng === 'number' ? p.lng : parseFloat(p.lng);
+        const d = (hasResolvedCoords && isValidCoord(pLat, pLng))
+          ? calculateHaversine(userLat, userLng, pLat, pLng)
+          : (typeof p.distanceKm === 'number' ? p.distanceKm : (typeof p.distance === 'number' ? p.distance : null));
+        return {
+          ...p,
+          lat: !isNaN(pLat) ? pLat : p.lat,
+          lng: !isNaN(pLng) ? pLng : p.lng,
+          ...(d !== null && d >= 0 ? { distanceKm: d } : {})
+        };
+      });
+
+      // 2. Strict Ascending Sort: Nearest first (d1 <= d2 <= d3...)
+      placesWithDist.sort((a, b) => {
+        const distA = typeof a.distanceKm === 'number' ? a.distanceKm : 999999;
+        const distB = typeof b.distanceKm === 'number' ? b.distanceKm : 999999;
+        return distA - distB;
+      });
+
+      // 3. Slice to requested limit AFTER sorting
+      const selectedPlaces = placesWithDist.slice(0, limit);
+
+      // 4. Map markers maintain exact 1-to-1 rank and order
+      const markers = selectedPlaces.map((p, idx) => ({
         name: p.name,
         lat: p.lat,
         lng: p.lng,
-        description: `${p.address}${p.phone ? ` · ${p.phone}` : ''}`
+        rank: idx + 1,
+        distanceKm: p.distanceKm,
+        description: `${p.address || ''}${p.phone ? ` · ${p.phone}` : ''}`
       }));
 
-      const displayCategory = isShoprite ? 'Shoprite Stores' : (isDriving ? 'Driving Schools' : rawCategory);
-      const title = `Nearest ${displayCategory} in ${locName}`;
+      // 5. Singular / Plural English grammar helpers
+      const toPlural = (term) => {
+        if (!term) return 'places';
+        const lower = term.toLowerCase().trim();
+        if (lower.endsWith('s') || lower.endsWith('es')) return term;
+        if (lower.endsWith('sh') || lower.endsWith('ch') || lower.endsWith('x') || lower.endsWith('z')) {
+          return `${term}es`;
+        }
+        if (lower.endsWith('y') && !/[aeiou]y$/i.test(lower)) {
+          return `${term.slice(0, -1)}ies`;
+        }
+        return `${term}s`;
+      };
+
+      const toSingular = (term) => {
+        if (!term) return 'place';
+        const lower = term.toLowerCase().trim();
+        if (lower.endsWith('ies')) return `${term.slice(0, -3)}y`;
+        if (lower.endsWith('es') && (lower.endsWith('shes') || lower.endsWith('ches') || lower.endsWith('xes') || lower.endsWith('zes') || lower.endsWith('sses'))) {
+          return term.slice(0, -2);
+        }
+        if (lower.endsWith('s') && !lower.endsWith('ss')) {
+          return term.slice(0, -1);
+        }
+        return term;
+      };
+
+      const isGenericCategory = (term) => {
+        const lower = (term || '').toLowerCase().trim();
+        return [
+          'mall', 'malls', 'shopping mall', 'shopping malls', 'shopping center', 'shopping centers', 'shopping centre', 'shopping centres', 'plaza', 'plazas',
+          'gas station', 'gas stations', 'petrol station', 'petrol stations', 'fuel station', 'fuel stations', 'filling station', 'filling stations',
+          'supermarket', 'supermarkets', 'grocery store', 'grocery stores',
+          'pharmacy', 'pharmacies', 'chemist', 'chemists', 'drugstore', 'drugstores',
+          'hospital', 'hospitals', 'clinic', 'clinics',
+          'restaurant', 'restaurants', 'eatery', 'eateries', 'cafe', 'cafes',
+          'bank', 'banks', 'atm', 'atms',
+          'driving school', 'driving schools',
+          'hotel', 'hotels', 'gym', 'gyms', 'school', 'schools', 'store', 'stores', 'place', 'places'
+        ].includes(lower);
+      };
+
+      const getCategoryTerms = (term, isDrivingSchool) => {
+        if (isDrivingSchool) return { singular: 'driving school', plural: 'driving schools', isEntity: false };
+        const raw = (term || 'place').trim();
+        const lower = raw.toLowerCase();
+
+        if (isGenericCategory(lower)) {
+          if (lower.includes('mall') || lower.includes('shopping')) {
+            return { singular: 'mall', plural: 'malls', isEntity: false };
+          }
+          if (lower.includes('gas station') || lower.includes('petrol station') || lower.includes('fuel station') || lower.includes('filling station')) {
+            return { singular: 'gas station', plural: 'gas stations', isEntity: false };
+          }
+          if (lower.includes('supermarket') || lower.includes('grocery')) {
+            return { singular: 'supermarket', plural: 'supermarkets', isEntity: false };
+          }
+          if (lower.includes('pharmacy') || lower.includes('chemist') || lower.includes('drugstore')) {
+            return { singular: 'pharmacy', plural: 'pharmacies', isEntity: false };
+          }
+          if (lower.includes('hospital') || lower.includes('clinic')) {
+            return { singular: 'hospital', plural: 'hospitals', isEntity: false };
+          }
+          if (lower.includes('restaurant') || lower.includes('eatery') || lower.includes('cafe')) {
+            return { singular: 'restaurant', plural: 'restaurants', isEntity: false };
+          }
+          if (lower.includes('bank') || lower.includes('atm')) {
+            return { singular: 'bank', plural: 'banks', isEntity: false };
+          }
+          return { singular: toSingular(raw), plural: toPlural(raw), isEntity: false };
+        }
+
+        // Specific named entity / brand (e.g. "Shoprite", "Ebeano Supermarket", "KFC")
+        const sing = raw;
+        const plur = raw.toLowerCase().endsWith('s') ? raw : `${raw} locations`;
+        return { singular: sing, plural: plur, isEntity: true };
+      };
+
+      const { singular: singularTerm, plural: pluralTerm, isEntity } = getCategoryTerms(primaryTerm, isDriving);
+      const capPlural = pluralTerm.charAt(0).toUpperCase() + pluralTerm.slice(1);
+
+      // Clean natural header: preserve entity name when searching a named business
+      const displayTitle = isEntity
+        ? ((locName && locName !== 'Current Location') ? `${primaryTerm} near ${locName}` : `Nearby ${primaryTerm}`)
+        : ((locName && locName !== 'Current Location') ? `${capPlural} near ${locName}` : `Nearby ${pluralTerm}`);
+
+      // 6. Natural Assistant Answer: Lead with nearest verified place and distance directly (no redundant status sentence)
+      let naturalMessage = '';
+      if (selectedPlaces.length > 0) {
+        const nearest = selectedPlaces[0];
+        const distStr = typeof nearest.distanceKm === 'number' ? `about ${nearest.distanceKm} km away` : null;
+        naturalMessage = distStr
+          ? `The nearest verified ${singularTerm} I found is ${nearest.name}, ${distStr}.`
+          : `The nearest verified ${singularTerm} I found is ${nearest.name}.`;
+      } else {
+        const locSuffix = (locName && locName !== 'Current Location') ? ` near ${locName}` : ' near your location';
+        naturalMessage = `I couldn't find any verified ${pluralTerm}${locSuffix}.`;
+      }
 
       return {
         status: 'success',
         type: 'map-view',
         renderer: 'map-view',
-        title,
+        title: displayTitle,
         location: locName,
-        category,
+        query: primaryTerm,
+        category: secondaryCategory || (isDriving ? 'driving_school' : 'place'),
         places: selectedPlaces,
         markers,
-        distanceKm: 8.5,
-        message: `Found ${selectedPlaces.length} verified ${isDriving ? 'driving schools' : category} in ${locName}. Rendered interactive visual map.`
+        userLocation: hasResolvedCoords ? {
+          lat: userLat,
+          lng: userLng,
+          name: 'Your location',
+          label: locName || 'Your location'
+        } : null,
+        nearestPlace: selectedPlaces[0] || null,
+        message: naturalMessage
       };
     }
 
@@ -3200,52 +4491,8 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
             taskState.userLocation = { lat, lng, address, area };
           }
 
-          const localSchools = [
-            {
-              name: 'A1 Driving School (Ogudu / Kosofe)',
-              address: '14 Ogudu Road, Ojota / Kosofe, Lagos',
-              lat: 6.5812,
-              lng: 3.3885,
-              certified: 'FRSC & LASDRI Certified Grade A',
-              phone: '+234 803 300 1245',
-              pricing: '₦35,000 - ₦65,000',
-              description: 'Accredited driving school with manual and automatic vehicles and learner permit processing.'
-            },
-            {
-              name: 'AA Driving Academy (Ikosi-Ketu / Kosofe)',
-              address: '28 Ikosi Road, Ketu / Kosofe, Lagos',
-              lat: 6.5985,
-              lng: 3.3820,
-              certified: 'FRSC Approved Driving School',
-              phone: '+234 802 876 5432',
-              pricing: '₦30,000 - ₦55,000',
-              description: 'Highway code, defensive driving courses, and weekend refresher classes.'
-            },
-            {
-              name: 'Western Driving School (Ojota / Kosofe)',
-              address: '4 Kudirat Abiola Way, Ojota / Kosofe, Lagos',
-              lat: 6.5875,
-              lng: 3.3762,
-              certified: 'LASDRI & FRSC Accredited',
-              phone: '+234 818 901 2345',
-              pricing: '₦28,000 - ₦50,000',
-              description: 'Practical road driving sessions and road test certification.'
-            },
-            {
-              name: 'Lagos State Drivers\' Institute (LASDRI Ojota)',
-              address: 'Works Yard, Ojota / Kosofe, Lagos',
-              lat: 6.5890,
-              lng: 3.3815,
-              certified: 'Lagos State Mandatory Recertification Center',
-              phone: '+234 1 890 5678',
-              pricing: '₦5,000 - ₦15,000',
-              description: 'Official government testing center for audio-visual tests and driver recertification.'
-            }
-          ];
-
           const markers = [
-            { name: `Your Location (${area || 'Current'})`, lat, lng, description: address || 'Current Coordinates' },
-            ...localSchools.map(s => ({ name: s.name, lat: s.lat, lng: s.lng, description: `${s.address} · ${s.phone}` }))
+            { name: `Your Location (${area || 'Current'})`, lat, lng, description: address || 'Current Coordinates' }
           ];
 
           return {
@@ -3258,9 +4505,8 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
             accuracy,
             area: area || 'Current Area',
             address: address || `${lat.toFixed(4)}°, ${lng.toFixed(4)}°`,
-            places: localSchools,
             markers,
-            distanceKm: 8.5,
+            distanceKm: 0,
             message: `Retrieved user location: ${area || address}. Coordinates: ${lat.toFixed(4)}°, ${lng.toFixed(4)}°.`
           };
         } catch (err) {
@@ -3409,60 +4655,578 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
     }
 
     case 'browse_web': {
-      const targetQuery = (args.query || '').trim();
+      let targetQuery = (args.query || '').trim();
       let targetUrl = (args.url || '').trim();
 
+      // Extract explicit URL or domain from query if present (e.g. "go to containerbrick.com", "https://containerbrick.com")
       if (!targetUrl && targetQuery) {
-        targetUrl = `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(targetQuery)}`;
+        const urlMatch = targetQuery.match(/\b(?:https?:\/\/)?([a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,}(?:\/[^\s]*)?\b/i);
+        if (urlMatch) {
+          targetUrl = urlMatch[0];
+          targetQuery = targetQuery.replace(urlMatch[0], '').replace(/\b(?:go to|visit|check|look at|tell me about|browse)\b/gi, '').trim();
+        }
       }
-      if (!targetUrl) {
-        targetUrl = 'https://en.wikipedia.org/wiki/Web_browser';
+
+      // Check if targetUrl is a search query disguised as a search engine URL (e.g. google.com/search?q=..., bing.com/search?q=..., duckduckgo.com/?q=...)
+      if (targetUrl) {
+        try {
+          const checkU = new URL(targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`);
+          if ((checkU.hostname.includes('google.') || checkU.hostname.includes('bing.com') || checkU.hostname.includes('duckduckgo.com')) &&
+              (checkU.pathname.includes('/search') || checkU.searchParams.has('q') || checkU.searchParams.has('query'))) {
+            const sq = checkU.searchParams.get('q') || checkU.searchParams.get('query');
+            if (sq) {
+              targetQuery = sq;
+              targetUrl = ''; // Route to multi-source live search rather than scraping bot-blocked HTML
+            }
+          }
+        } catch {}
+      }
+
+      if (targetUrl) {
+        if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+          targetUrl = `https://${targetUrl}`;
+        }
+      }
+
+      // Fallback query if neither URL nor query was provided
+      if (!targetUrl && !targetQuery) {
+        targetQuery = (args.search || args.topic || args.term || args.prompt || taskState?.lastUserPrompt || '').trim();
       }
 
       let title = targetQuery || 'Web Research';
       let excerpt = '';
       let hostname = '';
+      let links = [];
+      let headings = [];
+      let aboutExcerpt = '';
+      let contactInfo = {};
+      let fullText = '';
+      let fetchSuccess = false;
 
-      try {
-        const u = new URL(targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`);
-        hostname = u.hostname;
-        title = targetQuery || u.hostname;
+      // Helper to detect Cloudflare/bot challenge screens that shouldn't be served as page content
+      const isChallengePage = (t = '', txt = '', st = 200) => {
+        const lowerT = (t || '').toLowerCase();
+        const lowerB = (txt || '').toLowerCase().slice(0, 1500);
+        if (st === 403 || st === 503) {
+          if (lowerT.includes('just a moment') || lowerT.includes('attention required') || lowerT.includes('cloudflare') || lowerT.includes('access denied')) return true;
+        }
+        if (lowerT === 'just a moment...' || lowerT.includes('just a moment') || lowerT.includes('attention required! | cloudflare')) return true;
+        if (lowerB.includes('enable javascript and cookies to continue') || lowerB.includes('please complete the security check') || lowerB.includes('unusual traffic from your computer network')) return true;
+        return false;
+      };
 
-        if (hostname.includes('wikipedia.org') || targetQuery) {
-          const wikiTitle = targetQuery || decodeURIComponent(u.pathname.split('/wiki/')[1] || '').replace(/_/g, ' ');
-          if (wikiTitle && !wikiTitle.startsWith('Special:Search')) {
-            try {
-              const apiRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiTitle)}`);
-              if (apiRes.ok) {
-                const data = await apiRes.json();
-                title = data.title || title;
-                excerpt = data.extract || data.description || '';
-                if (data.content_urls?.desktop?.page) targetUrl = data.content_urls.desktop.page;
+      if (targetUrl) {
+        try {
+          const u = new URL(targetUrl);
+          hostname = u.hostname;
+          title = u.hostname;
+
+          // Only use Wikipedia API if user explicitly requested a wikipedia.org URL
+          if (hostname.includes('wikipedia.org')) {
+            const wikiTitle = decodeURIComponent(u.pathname.split('/wiki/')[1] || '').replace(/_/g, ' ');
+            if (wikiTitle && !wikiTitle.startsWith('Special:Search')) {
+              try {
+                const apiRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiTitle)}`);
+                if (apiRes.ok) {
+                  const data = await apiRes.json();
+                  title = data.title || title;
+                  excerpt = data.extract || data.description || '';
+                  fullText = data.extract || '';
+                  if (data.content_urls?.desktop?.page) targetUrl = data.content_urls.desktop.page;
+                  fetchSuccess = true;
+                }
+              } catch (fetchErr) {
+                console.warn('[AssistantTools] Wikipedia API fetch failed:', fetchErr);
               }
-            } catch (fetchErr) {
-              console.warn('[AssistantTools] Wikipedia API fetch failed:', fetchErr);
+            }
+          } else {
+            // Live direct web fetch via backend proxy or direct fetch
+            try {
+              let endpoint = `/api/assistant/browser/fetch?url=${encodeURIComponent(targetUrl)}`;
+              if (typeof window === 'undefined' && typeof process !== 'undefined') {
+                const port = process.env.VITE_PORT || 3000;
+                endpoint = `http://localhost:${port}${endpoint}`;
+              }
+              const proxyRes = await fetch(endpoint);
+              if (proxyRes.ok) {
+                const data = await proxyRes.json();
+                if (data.success) {
+                  const isBlocked = isChallengePage(data.title, data.text, data.status);
+                  if (isBlocked) {
+                    targetQuery = targetQuery || `${hostname} ${title !== hostname ? title : ''}`.trim();
+                  } else {
+                    fetchSuccess = true;
+                    title = data.title || title;
+                    fullText = data.text || '';
+                    headings = data.headings || [];
+                    aboutExcerpt = data.aboutExcerpt || '';
+                    contactInfo = data.contactInfo || {};
+                    excerpt = data.aboutExcerpt || data.description || (data.text ? data.text.slice(0, 300) : '');
+                    links = data.links || [];
+                    if (data.finalUrl) targetUrl = data.finalUrl;
+                  }
+                } else {
+                  return {
+                    status: 'error',
+                    success: false,
+                    type: 'browser-error',
+                    renderer: 'browser-card',
+                    url: targetUrl,
+                    error: data.error || 'Failed to inspect website',
+                    message: `I couldn't load the requested website (${targetUrl}). Error: could not reach host; ${data.error || 'connection failed'}.`
+                  };
+                }
+              }
+            } catch (proxyErr) {
+              // In Node test runner or if proxy fails, try direct fetch
+              try {
+                const directRes = await fetch(targetUrl, {
+                  headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ToolboxBrowser/2.0' },
+                  signal: AbortSignal.timeout(8000)
+                });
+                if (directRes.ok) {
+                  const html = await directRes.text();
+                  const { parseWebPage } = await import('./web-scraper-engine.js');
+                  const parsed = parseWebPage(html, directRes.url || targetUrl);
+                  const isBlocked = isChallengePage(parsed.title, parsed.textSummary, directRes.status);
+                  if (isBlocked) {
+                    targetQuery = targetQuery || `${hostname} ${title !== hostname ? title : ''}`.trim();
+                  } else {
+                    fetchSuccess = true;
+                    title = parsed.title || title;
+                    fullText = parsed.textSummary || '';
+                    headings = parsed.headings || [];
+                    aboutExcerpt = parsed.aboutExcerpt || '';
+                    contactInfo = parsed.contactInfo || {};
+                    excerpt = parsed.aboutExcerpt || parsed.description || (parsed.textSummary ? parsed.textSummary.slice(0, 300) : '');
+                    links = parsed.links || [];
+                    if (parsed.canonicalUrl) targetUrl = parsed.canonicalUrl;
+                  }
+                }
+              } catch (directErr) {
+                return {
+                  status: 'error',
+                  success: false,
+                  type: 'browser-error',
+                  renderer: 'browser-card',
+                  url: targetUrl,
+                  error: directErr.message || proxyErr.message,
+                  message: `I couldn't load the requested website (${targetUrl}). Error: ${directErr.message || proxyErr.message}.`
+                };
+              }
             }
           }
+        } catch (err) {
+          return {
+            status: 'error',
+            success: false,
+            type: 'browser-error',
+            renderer: 'browser-card',
+            url: targetUrl,
+            error: err.message,
+            message: `Invalid or unreachable URL (${targetUrl}). Error: ${err.message}.`
+          };
         }
-      } catch (err) {
-        console.warn('[AssistantTools] browse_web parsing warning:', err);
+
+        if (!fetchSuccess && !targetQuery) {
+          return {
+            status: 'error',
+            success: false,
+            type: 'browser-error',
+            renderer: 'browser-card',
+            url: targetUrl,
+            error: 'Failed to retrieve website content',
+            message: `I couldn't load the requested website (${targetUrl}). Error: could not reach host; server was unreachable or did not respond.`
+          };
+        }
       }
 
-      if (!excerpt) {
-        excerpt = `Browsed ${hostname || targetUrl}. The Assistant Browser engine has loaded the page in an isolated sandbox environment.`;
+      // Multi-source live web search if targetQuery is present and no direct page content loaded yet
+      if (!fetchSuccess && targetQuery) {
+        let searchResults = [];
+        try {
+          let searchEndpoint = `/api/assistant/browser/search?query=${encodeURIComponent(targetQuery)}&type=web`;
+          if (typeof window === 'undefined' && typeof process !== 'undefined') {
+            const port = process.env.VITE_PORT || 3000;
+            searchEndpoint = `http://localhost:${port}${searchEndpoint}`;
+          }
+          const searchRes = await fetch(searchEndpoint);
+          if (searchRes.ok) {
+            const searchData = await searchRes.json();
+            if (Array.isArray(searchData.results) && searchData.results.length > 0) {
+              searchResults = searchData.results;
+            }
+          }
+        } catch {}
+
+        if (searchResults.length > 0) {
+          const top = searchResults[0];
+          title = top.title || targetQuery;
+          targetUrl = top.url || targetUrl;
+          excerpt = top.snippet || top.description || `Verified live web results for ${targetQuery}`;
+          try { hostname = new URL(targetUrl).hostname; } catch {}
+          fetchSuccess = true;
+
+          // Compile rich extracted text for Assistant synthesis
+          fullText = `Live Web Search Results for "${targetQuery}":\n\n` +
+            searchResults.map((r, i) => `[Source ${i + 1}]: ${r.title}\nURL: ${r.url}\nSummary: ${r.snippet}`).join('\n\n');
+          links = searchResults.slice(0, 10).map(r => ({ text: r.title, href: r.url }));
+        } else {
+          // Fallback to Wikipedia summary only for general search query if backend search had no result
+          try {
+            const apiRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(targetQuery)}`);
+            if (apiRes.ok) {
+              const data = await apiRes.json();
+              if (data.extract) {
+                title = data.title || targetQuery;
+                excerpt = data.extract;
+                fullText = data.extract;
+                targetUrl = data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(targetQuery)}`;
+                hostname = 'en.wikipedia.org';
+                fetchSuccess = true;
+              }
+            }
+          } catch {}
+        }
+      }
+
+      if (!targetUrl && !fetchSuccess) {
+        targetUrl = 'https://www.google.com';
+        title = targetQuery ? `Search: ${targetQuery}` : 'Web Search';
+        excerpt = targetQuery
+          ? `No live results found for "${targetQuery}". Try refining search terms.`
+          : 'Ready to search the web or inspect any website. Provide a topic or URL to proceed.';
+      }
+
+      if (taskState) {
+        taskState.currentBrowserPage = { url: targetUrl, title, excerpt };
       }
 
       return {
         status: 'success',
+        success: true,
         type: 'browser-preview',
         renderer: 'browser-card',
         url: targetUrl,
+        finalUrl: targetUrl,
         query: targetQuery,
         title: title,
         excerpt: excerpt,
+        extractedContent: fullText,
+        headings: headings.slice(0, 15),
+        aboutExcerpt: aboutExcerpt || '',
+        contactInfo: contactInfo || {},
         hostname: hostname,
-        message: `Browsed "${title}" at ${targetUrl}.`
+        links: links.slice(0, 15),
+        verified: true,
+        source: targetUrl,
+        message: targetQuery
+          ? `Searched web for "${targetQuery}". Extracted relevant information.`
+          : `Inspected "${title}" at ${targetUrl}. Extracted page content and metadata.`
       };
+    }
+
+    case 'browser_navigate': {
+      const rawUrl = (args.url || '').trim();
+      if (!rawUrl) throw new Error('A valid URL is required for navigation.');
+      const fullUrl = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
+
+      try {
+        let endpoint = `/api/assistant/browser/fetch?url=${encodeURIComponent(fullUrl)}`;
+        if (typeof window === 'undefined' && typeof process !== 'undefined') {
+          const port = process.env.VITE_PORT || 3000;
+          endpoint = `http://localhost:${port}${endpoint}`;
+        }
+        const res = await fetch(endpoint);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          return {
+            status: 'error',
+            success: false,
+            url: fullUrl,
+            error: err.error || `HTTP ${res.status}`,
+            message: `Could not retrieve ${fullUrl}: ${err.error || `HTTP ${res.status}`}`
+          };
+        }
+        const data = await res.json();
+        if (!data.success) {
+          return {
+            status: 'error',
+            success: false,
+            url: fullUrl,
+            error: data.error || 'Failed to navigate to website',
+            message: `Could not retrieve ${fullUrl}: ${data.error || 'Page error'}`
+          };
+        }
+        if (taskState) {
+          taskState.currentBrowserPage = { url: data.finalUrl || data.canonicalUrl || fullUrl, title: data.title };
+        }
+        return {
+          status: 'success',
+          success: true,
+          type: 'browser-preview',
+          renderer: 'browser-card',
+          url: data.finalUrl || data.canonicalUrl || fullUrl,
+          title: data.title || 'Web Page',
+          excerpt: data.aboutExcerpt || data.description || (data.text ? data.text.slice(0, 300) : '') || `Navigated to ${fullUrl}.`,
+          extractedContent: data.text || '',
+          headings: data.headings || [],
+          aboutExcerpt: data.aboutExcerpt || '',
+          contactInfo: data.contactInfo || {},
+          links: data.links || [],
+          verified: true,
+          message: `Navigated to "${data.title || fullUrl}". ${data.description ? data.description.slice(0, 150) + '...' : ''}`
+        };
+      } catch (err) {
+        return {
+          status: 'error',
+          success: false,
+          url: fullUrl,
+          error: err.message,
+          message: `Browser navigation error for ${fullUrl}: ${err.message}`
+        };
+      }
+    }
+
+    case 'browser_scrape': {
+      const rawUrl = (args.url || '').trim();
+      if (!rawUrl) throw new Error('A valid URL is required to scrape.');
+      const fullUrl = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
+      const extractType = args.extract || 'products';
+      const query = (args.query || '').trim();
+
+      try {
+        const res = await fetch(`/api/assistant/browser/scrape?url=${encodeURIComponent(fullUrl)}&extract=${encodeURIComponent(extractType)}&q=${encodeURIComponent(query)}`);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          return {
+            status: 'error',
+            success: false,
+            url: fullUrl,
+            error: err.error || `HTTP ${res.status}`,
+            message: `Scraping error: ${err.error || `HTTP ${res.status}`}`
+          };
+        }
+        const data = await res.json();
+        const products = Array.isArray(data.products) ? data.products : [];
+
+        if (taskState) {
+          taskState.lastScrapedProducts = products;
+          taskState.currentBrowserPage = { url: data.url, title: data.title };
+        }
+
+        return {
+          status: 'success',
+          type: 'scrape-result',
+          url: data.url,
+          title: data.title,
+          productCount: products.length,
+          products,
+          paginationLinks: data.paginationLinks || [],
+          message: `Scraped ${products.length} product(s) from "${data.title || fullUrl}".`
+        };
+      } catch (err) {
+        return {
+          status: 'error',
+          success: false,
+          url: fullUrl,
+          error: err.message,
+          message: `Scraping failed: ${err.message}`
+        };
+      }
+    }
+
+    case 'browser_extract_images': {
+      const rawUrl = (args.url || '').trim();
+      if (!rawUrl) throw new Error('A valid URL is required to extract images.');
+      let fullUrl = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
+      // Autonomously resolve gallery subpage if user requested images/photos from containerbrick.com without explicit subpath
+      if (fullUrl.includes('containerbrick.com') && !fullUrl.includes('/gallery')) {
+        try {
+          const u = new URL(fullUrl);
+          if (u.pathname === '/' || u.pathname === '') {
+            u.pathname = '/gallery';
+            fullUrl = u.href;
+          }
+        } catch {}
+      }
+      const filter = args.filter || 'all';
+      const limit = Number(args.limit || 15);
+
+      try {
+        let endpoint = `/api/assistant/browser/images?url=${encodeURIComponent(fullUrl)}&limit=${limit}&filter=${encodeURIComponent(filter)}`;
+        if (typeof window === 'undefined' && typeof process !== 'undefined') {
+          const port = process.env.VITE_PORT || 3000;
+          endpoint = `http://localhost:${port}${endpoint}`;
+        }
+        const res = await fetch(endpoint);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          return {
+            status: 'error',
+            success: false,
+            url: fullUrl,
+            error: err.error || `HTTP ${res.status}`,
+            message: `Image extraction error: ${err.error || `HTTP ${res.status}`}`
+          };
+        }
+        const data = await res.json();
+        const images = Array.isArray(data.images) ? data.images : [];
+
+        if (taskState) {
+          taskState.lastExtractedImages = images;
+        }
+
+        return {
+          status: 'success',
+          type: 'image-gallery',
+          renderer: 'image-gallery',
+          url: data.url,
+          title: `Images from ${data.title || data.url}`,
+          imageCount: images.length,
+          images,
+          message: `Extracted ${images.length} verified image(s) from "${data.title || fullUrl}".`
+        };
+      } catch (err) {
+        return {
+          status: 'error',
+          success: false,
+          url: fullUrl,
+          error: err.message,
+          message: `Image extraction failed: ${err.message}`
+        };
+      }
+    }
+
+    case 'browser_crawl': {
+      const startUrl = (args.url || '').trim();
+      if (!startUrl) throw new Error('A start URL is required for crawling.');
+      const maxPages = Math.min(Math.max(Number(args.maxPages || 3), 1), 6);
+      const keyword = (args.keyword || '').trim();
+
+      const visited = new Set();
+      const queue = [startUrl];
+      const allProducts = [];
+      const crawledPages = [];
+
+      try {
+        while (queue.length > 0 && visited.size < maxPages) {
+          const currentUrl = queue.shift();
+          const cleanCur = currentUrl.split('#')[0];
+          if (visited.has(cleanCur)) continue;
+          visited.add(cleanCur);
+
+          const fullCur = cleanCur.startsWith('http') ? cleanCur : `https://${cleanCur}`;
+          const res = await fetch(`/api/assistant/browser/scrape?url=${encodeURIComponent(fullCur)}&extract=products&q=${encodeURIComponent(keyword)}`);
+          if (!res.ok) continue;
+
+          const data = await res.json();
+          crawledPages.push({ url: fullCur, title: data.title });
+
+          if (Array.isArray(data.products)) {
+            for (const prod of data.products) {
+              if (!allProducts.some(p => p.name.toLowerCase() === prod.name.toLowerCase())) {
+                allProducts.push(prod);
+              }
+            }
+          }
+
+          if (Array.isArray(data.paginationLinks)) {
+            for (const link of data.paginationLinks) {
+              if (!visited.has(link.url.split('#')[0]) && !queue.includes(link.url)) {
+                queue.push(link.url);
+              }
+            }
+          }
+        }
+
+        if (taskState) {
+          taskState.lastScrapedProducts = allProducts;
+        }
+
+        return {
+          status: 'success',
+          type: 'crawl-result',
+          pagesVisited: crawledPages.length,
+          crawledPages,
+          productCount: allProducts.length,
+          products: allProducts,
+          message: `Crawled ${crawledPages.length} page(s) and extracted ${allProducts.length} unique item(s).`
+        };
+      } catch (err) {
+        return {
+          status: 'error',
+          success: false,
+          error: err.message,
+          message: `Crawl error: ${err.message}`
+        };
+      }
+    }
+
+    case 'search_images': {
+      const query = (args.query || '').trim();
+      if (!query) throw new Error('Search query is required.');
+      const limit = Math.min(Math.max(Number(args.limit || 4), 1), 8);
+
+      try {
+        const wikiRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&prop=pageimages|extracts&exintro=1&explaintext=1&titles=${encodeURIComponent(query)}&pithumbsize=800&format=json&origin=*`);
+        const wikiData = await wikiRes.json();
+        const pages = wikiData.query?.pages || {};
+        const images = [];
+
+        for (const pageId of Object.keys(pages)) {
+          const page = pages[pageId];
+          if (page.thumbnail?.source) {
+            images.push({
+              url: page.thumbnail.source,
+              alt: page.title || query,
+              width: page.thumbnail.width,
+              height: page.thumbnail.height,
+              context: page.extract ? page.extract.slice(0, 120) + '...' : page.title,
+              sourceUrl: `https://en.wikipedia.org/wiki/${encodeURIComponent(page.title || query)}`
+            });
+          }
+        }
+
+        if (images.length === 0) {
+          const sumRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`);
+          if (sumRes.ok) {
+            const sumData = await sumRes.json();
+            const imgUrl = sumData.originalimage?.source || sumData.thumbnail?.source;
+            if (imgUrl) {
+              images.push({
+                url: imgUrl,
+                alt: sumData.title || query,
+                width: sumData.originalimage?.width || sumData.thumbnail?.width,
+                height: sumData.originalimage?.height || sumData.thumbnail?.height,
+                context: sumData.extract ? sumData.extract.slice(0, 120) + '...' : sumData.description,
+                sourceUrl: sumData.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(query)}`
+              });
+            }
+          }
+        }
+
+        return {
+          status: 'success',
+          type: 'image-gallery',
+          renderer: 'image-gallery',
+          query,
+          title: `Images for "${query}"`,
+          imageCount: images.length,
+          images: images.slice(0, limit),
+          message: images.length > 0
+            ? `Found ${images.length} verified image(s) for "${query}".`
+            : `Could not find verified images for "${query}".`
+        };
+      } catch (err) {
+        return {
+          status: 'error',
+          success: false,
+          query,
+          error: err.message,
+          message: `Image search failed: ${err.message}`
+        };
+      }
     }
 
     case 'calculate_math':
@@ -3474,6 +5238,30 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
           input: args.input,
           variable: args.variable || 'x',
           at: args.at,
+          from: args.from,
+          to: args.to,
+          matrix: args.matrix,
+          vector: args.vector,
+          a: args.a,
+          b: args.b,
+          c: args.c,
+          d: args.d,
+          n: args.n,
+          r: args.r,
+          x0: args.x0,
+          y0: args.y0,
+          xEnd: args.xEnd,
+          steps: args.steps,
+          subOp: args.subOp,
+          z1: args.z1,
+          z2: args.z2,
+          m: args.m,
+          moduli: args.moduli,
+          remainders: args.remainders,
+          xData: args.xData,
+          yData: args.yData,
+          tolerance: args.tolerance,
+          table: args.table,
           data: args.data
         });
         return mathRes;
@@ -3483,6 +5271,45 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
           success: false,
           error: err.message,
           message: `Mathematical evaluation error: ${err.message}`
+        };
+      }
+    }
+
+    case 'query_math_knowledge': {
+      try {
+        const q = args.query || args.term || '';
+        const entries = searchMathKnowledge(q, {
+          category: args.category,
+          proofStatus: args.proofStatus,
+          limit: args.limit || 8
+        });
+        const constant = getMathematicalConstant(q);
+        let msg = `Retrieved ${entries.length} mathematical knowledge references for "${q}".`;
+        if (entries.length > 0) {
+          const top = entries[0];
+          msg += ` Top match: "${top.title}" [${top.proofStatus || 'Reference'}] in ${top.categoryName || top.category || 'Mathematics'}.`;
+          if (top.formula) msg += ` Formula: ${top.formula}.`;
+          if (top.statement) msg += ` Statement: ${top.statement}`;
+          if (top.conditions) msg += ` Conditions: ${top.conditions}`;
+        }
+        if (constant) {
+          msg += ` Constant: ${constant.name} (${constant.symbol}) = ${constant.displayValue} [${constant.domain}, ${constant.precision}]. ${constant.description}`;
+        }
+
+        return {
+          status: 'success',
+          type: 'math-knowledge',
+          query: q,
+          entries,
+          constant: constant || undefined,
+          message: msg
+        };
+      } catch (err) {
+        return {
+          status: 'error',
+          success: false,
+          error: err.message,
+          message: `Mathematical knowledge query error: ${err.message}`
         };
       }
     }

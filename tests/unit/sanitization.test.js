@@ -54,3 +54,18 @@ test('sanitizeUserFacingText: cleans escaped currencies and normalizes pseudo-sy
   assert.ok(sanitized.includes('`x -> y`'), 'Inline code block preserved without mangling');
 });
 
+test('sanitizeUserFacingText: decodes space entities (&#x20;, &#32;, &nbsp;) without leakage and preserves XSS safety', () => {
+  const input = 'Nearest&#x20;Ebeano&nbsp;Supermarket&#32;Lekki&amp;#x20;Branch';
+  const sanitized = sanitizeUserFacingText(input, { preserveWhitespace: false });
+  assert.equal(sanitized, 'Nearest Ebeano Supermarket Lekki Branch');
+  assert.ok(!sanitized.includes('&#x20;'), 'Must not contain &#x20;');
+  assert.ok(!sanitized.includes('&nbsp;'), 'Must not contain &nbsp;');
+
+  // XSS protection
+  const malicious = '&#60;script&#62;alert(1)&#60;/script&#62; and &#x3c;img src=x&#x3e;';
+  const safe = sanitizeUserFacingText(malicious);
+  assert.ok(!safe.includes('<script>'), 'Must NOT unescape dangerous <script> tags');
+  assert.ok(!safe.includes('<img>'), 'Must NOT unescape dangerous <img> tags');
+});
+
+

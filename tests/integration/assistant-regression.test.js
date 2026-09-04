@@ -93,6 +93,14 @@ test('P0 Phase 1: Deterministic Math Utility executes multi-step problems withou
   assert.equal(r4.median, 30);
   assert.equal(r4.min, 10);
   assert.equal(r4.max, 50);
+
+  // 5. Cubic polynomial equation solving (x^3 - 6x^2 + 11x - 6 = 0 -> roots [1, 2, 3])
+  const r5 = await executeAssistantTool('calculate_math', { expression: 'x^3 - 6x^2 + 11x - 6 = 0' });
+  assert.equal(r5.status, 'success');
+  assert.equal(r5.operation, 'solve_cubic');
+  assert.deepEqual(r5.roots, [1, 2, 3]);
+  assert.equal(r5.verified, true);
+  assert.ok(r5.residuals.every(r => r <= 1e-4));
 });
 
 test('P0 Phase 2: Calendar store returns full details and empty state is strictly empty', async () => {
@@ -267,15 +275,47 @@ test('P0 Phase 3: Media playback state maintains HTMLAudioElement as single sour
 });
 
 test('P0 Phase 4: Places search preserves entity intent ("nearest Shoprite" vs driving schools)', async () => {
-  // "nearest Shoprite" must return Shoprite supermarket locations, NEVER driving schools
-  const shopriteRes = await executeAssistantTool('search_places_nearby', { query: 'nearest Shoprite' });
-  assert.equal(shopriteRes.status, 'success');
-  assert.ok(shopriteRes.title.toLowerCase().includes('shoprite'));
-  assert.ok(shopriteRes.markers.length > 0);
-  assert.ok(shopriteRes.markers.some(m => m.name.toLowerCase().includes('shoprite')));
-  assert.ok(!shopriteRes.markers.some(m => m.name.toLowerCase().includes('driving school')));
+  const checkNoDrivingSchools = (res, entityName) => {
+    assert.equal(res.status, 'success');
+    assert.ok(
+      res.title.toLowerCase().includes(entityName.toLowerCase()),
+      `Expected title "${res.title}" to include "${entityName}"`
+    );
+    assert.ok(res.markers.length > 0, `Expected markers for "${entityName}"`);
+    assert.ok(
+      res.markers.some(m => m.name.toLowerCase().includes(entityName.toLowerCase()) || (m.description && m.description.toLowerCase().includes(entityName.toLowerCase()))),
+      `Expected markers to include "${entityName}"`
+    );
+    assert.ok(
+      !res.markers.some(m => /driving school|driving academy|lasdri|vio/i.test(m.name + ' ' + (m.description || ''))),
+      `Found unrelated driving schools in markers for "${entityName}": ${JSON.stringify(res.markers)}`
+    );
+  };
 
-  // Driving schools query must return certified driving schools
+  // 1. "nearest Shoprite" must return Shoprite locations, NEVER driving schools
+  const shopriteRes = await executeAssistantTool('search_places_nearby', { query: 'nearest Shoprite' });
+  checkNoDrivingSchools(shopriteRes, 'Shoprite');
+
+  // 2. "nearest KFC" must return KFC locations, NEVER driving schools
+  const kfcRes = await executeAssistantTool('search_places_nearby', { query: 'nearest KFC' });
+  checkNoDrivingSchools(kfcRes, 'KFC');
+
+  // 3. "nearest Domino's Pizza" must return Domino's locations, NEVER driving schools
+  const dominosRes = await executeAssistantTool('search_places_nearby', { query: 'nearest Domino\'s Pizza' });
+  checkNoDrivingSchools(dominosRes, 'Domino');
+
+  // 4. Geographic location (e.g. "Kosofe") alone must NEVER trigger driving schools in render_map
+  const kosofeMapRes = await executeAssistantTool('render_map', {
+    title: 'Supermarket Locations in Kosofe',
+    location: 'Kosofe, Lagos',
+    query: 'nearest Shoprite'
+  });
+  assert.ok(
+    !kosofeMapRes.markers.some(m => /driving school|driving academy|lasdri/i.test(m.name + ' ' + (m.description || ''))),
+    'render_map must not default to driving schools when a geographic location like Kosofe is present without driving query'
+  );
+
+  // 5. Driving schools query explicitly returns certified driving schools
   const drivingRes = await executeAssistantTool('search_places_nearby', { query: 'nearest driving school' });
   assert.equal(drivingRes.status, 'success');
   assert.ok(drivingRes.title.toLowerCase().includes('driving school'));

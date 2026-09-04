@@ -88,7 +88,12 @@ function toolCard(tool, { compact = false } = {}) {
 
 function renderGrid(originalList, { query = '', noResult = false } = {}) {
   const user = getCurrentUser();
-  const list = originalList.filter(t => !t.hidden && (user || t.id !== 'assistant'));
+  const list = originalList.filter(t => {
+    if (t.hidden) return false;
+    if (!user && t.id === 'assistant') return false;
+    if (user && t.id === 'file-drop') return false;
+    return true;
+  });
 
   grid.innerHTML = '';
 
@@ -126,7 +131,7 @@ function renderGrid(originalList, { query = '', noResult = false } = {}) {
     `<section class="grid-category fade-in" id="cat-popular">
        <h2 class="category-label">Popular</h2>
        <p class="category-blurb">What people open most.</p>
-       <div class="category-tools">${popular(8).filter(t => user || t.id !== 'assistant').map(t => toolCard(t)).join('')}</div>
+       <div class="category-tools">${popular(8).filter(t => (!user ? t.id !== 'assistant' : t.id !== 'file-drop')).map(t => toolCard(t)).join('')}</div>
      </section>`,
     ...categorised(list).map(c => `
       <section class="grid-category fade-in" id="cat-${c.id}">
@@ -190,7 +195,7 @@ function installCategoryChips() {
 function renderRelated(tool) {
   if (!relatedBar) return;
   const user = getCurrentUser();
-  const rel = relatedTools(tool, TOOLS, 4).filter(t => user || t.id !== 'assistant');
+  const rel = relatedTools(tool, TOOLS, 4).filter(t => (!user ? t.id !== 'assistant' : t.id !== 'file-drop'));
   if (!rel.length) { relatedBar.innerHTML = ''; relatedBar.hidden = true; return; }
   relatedBar.hidden = false;
   relatedBar.innerHTML = `
@@ -748,8 +753,9 @@ if (taskGrid) {
    product must not look like a workspace to somebody who does not want one. */
 function reflectSavedWork() {
   const items = artifacts.list();
-  document.querySelectorAll('[data-page="saved"]').forEach(el => {
-    el.hidden = items.length === 0;
+  // Primary navigation for Files must always remain visible
+  document.querySelectorAll('.nav-link[data-page="saved"]').forEach(el => {
+    el.hidden = false;
   });
 
   const strip = $('home-saved');

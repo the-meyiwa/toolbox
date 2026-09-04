@@ -6,7 +6,7 @@
 
 import { marked } from 'marked';
 import { openSettings } from '../lib/settings-ui.js';
-import { sanitizeUserFacingText } from '../utils.js';
+import { sanitizeUserFacingText, cleanAssistantOutput } from '../utils.js';
 
 function escapeHtml(str) {
   if (!str) return '';
@@ -20,13 +20,13 @@ function escapeHtml(str) {
 
 function formatMarkdown(text) {
   if (!text) return '';
-  const sanitized = sanitizeUserFacingText(text);
+  const cleaned = cleanAssistantOutput(text);
   try {
     if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
-      return marked.parse(sanitized);
+      return marked.parse(cleaned);
     }
   } catch {}
-  return escapeHtml(sanitized).replace(/\n/g, '<br/>');
+  return escapeHtml(cleaned).replace(/\n/g, '<br/>');
 }
 import {
   streamChatCompletion,
@@ -39,10 +39,90 @@ import { openAccountModal } from '../views/account-modal.js';
 import { AssistantAudioManager } from '../lib/assistant-audio.js';
 import { ConversationIntegrationManager } from '../lib/assistant-integration.js';
 import TOOLS from '../registry/tools.js';
-const BY_ID = new Map(TOOLS.map(t => [t.id, t]));
+import { getSetting } from '../lib/settings.js';
+import { ToolboxFilesystem, fs } from '../lib/filesystem.js';
 
 const STORAGE_HISTORY = 'toolbox_assistant_history_v2';
 const STORAGE_KEEP_CONTEXT = 'toolbox_assistant_keep_context';
+
+export function getAssistantAnimationClass() {
+  const isEnabled = getSetting('assistantResponseAnimation') !== false;
+  if (!isEnabled) return '';
+  const style = getSetting('assistantAnimationStyle') || 'color rave';
+  switch (style) {
+    case 'color rave': return 'ast-anim-color-rave';
+    case 'glow': return 'ast-anim-glow';
+    case 'Pixel': return 'ast-anim-glow';
+    case 'Plain Fade': return 'ast-anim-plain-fade';
+    case 'Pop In': return 'ast-anim-pop-in';
+    default: return 'ast-anim-color-rave';
+  }
+}
+
+export function formatToolProgressStatus(toolName, toolArgs = {}) {
+  switch (toolName) {
+    case 'search_places_nearby':
+      return `Searching verified places for "${toolArgs?.query || 'locations'}"...`;
+    case 'render_map':
+      return 'Rendering interactive map...';
+    case 'search_web':
+    case 'browse_web':
+      return `Searching the web for "${toolArgs?.query || toolArgs?.url || 'information'}"...`;
+    case 'search_images':
+      return `Searching verified images for "${toolArgs?.query || 'subject'}"...`;
+    case 'browser_navigate':
+      return `Navigating to ${toolArgs?.url || 'requested site'}...`;
+    case 'browser_scrape': {
+      let host = 'website';
+      try { if (toolArgs?.url) host = new URL(toolArgs.url).hostname; } catch {}
+      return `Extracting structured content from ${host}...`;
+    }
+    case 'browser_extract_images': {
+      let host = 'webpage';
+      try { if (toolArgs?.url) host = new URL(toolArgs.url).hostname; } catch {}
+      return `Extracting images and media from ${host}...`;
+    }
+    case 'browser_crawl': {
+      let host = 'site';
+      try { if (toolArgs?.url) host = new URL(toolArgs.url).hostname; } catch {}
+      return `Crawling pages across ${host}...`;
+    }
+    case 'calculate_math': {
+      const op = String(toolArgs?.operation || '').toLowerCase();
+      if (op === 'collatz') return 'Calculating Collatz sequence and trajectory...';
+      if (op === 'graph' || op === 'plot') return 'Generating mathematical function plot...';
+      if (op === 'newton_raphson') return 'Computing Newton-Raphson numerical roots...';
+      if (op === 'ode' || op === 'euler_ode') return 'Computing numerical ODE trajectory...';
+      if (op === 'linear_regression') return 'Computing linear regression and metrics...';
+      if (op === 'matrix_multiply' || op === 'matrix_invert' || op === 'matrix_determinant') return 'Performing matrix linear algebra...';
+      return 'Performing mathematical computation...';
+    }
+    case 'query_math_knowledge':
+      return 'Consulting mathematical knowledge base...';
+    case 'generate_csv':
+      return 'Building and verifying CSV dataset...';
+    case 'create_file':
+    case 'save_file':
+    case 'save_toolbox_artifact':
+      return 'Saving file to workspace artifacts...';
+    case 'play_sound':
+      return `Finding audio tracks for "${toolArgs?.query || 'audio'}"...`;
+    case 'calendar_add_event':
+    case 'calendar_get_events':
+      return 'Updating calendar and schedule...';
+    case 'get_budget_summary':
+    case 'add_transaction':
+      return 'Processing financial data...';
+    case 'analyze_statement':
+      return 'Parsing bank statement records...';
+    case 'execute_code':
+      return 'Running sandboxed code execution...';
+    case 'explore_anatomy':
+      return `Isolating 3D anatomical structure: ${toolArgs?.structure || ''}...`;
+    default:
+      return 'Processing request...';
+  }
+}
 
 export default {
   render(container, state = {}) {
@@ -151,12 +231,37 @@ export default {
           
           <input type="file" id="ast-file-input" style="display:none;" />
 
-          <button type="button" class="btn btn-secondary" id="ast-attach-btn" style="height:44px; width:44px; padding:0; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;" title="Attach image, CSV, PDF, or file">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-          </button>
+          <div class="ast-attach-menu-wrap" style="position:relative; display:inline-flex;">
+            <button type="button" class="btn btn-secondary" id="ast-attach-btn" style="height:44px; width:44px; padding:0; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;" title="Attach file" aria-haspopup="true" aria-expanded="false">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+
+            <div class="ast-attach-popup" id="ast-attach-popup" style="display:none;">
+              <button type="button" class="ast-attach-popup-item" id="ast-attach-opt-computer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                  <line x1="8" y1="21" x2="16" y2="21"></line>
+                  <line x1="12" y1="17" x2="12" y2="21"></line>
+                </svg>
+                <div>
+                  <div style="font-weight:700; font-size:0.83rem; color:var(--black);">Upload from computer</div>
+                  <div style="font-size:0.71rem; color:var(--g500); font-weight:400;">Browse device files</div>
+                </div>
+              </button>
+              <button type="button" class="ast-attach-popup-item" id="ast-attach-opt-toolbox">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
+                <div>
+                  <div style="font-weight:700; font-size:0.83rem; color:var(--black);">Import from Toolbox files</div>
+                  <div style="font-size:0.71rem; color:var(--g500); font-weight:400;">Saved Work & filesystem</div>
+                </div>
+              </button>
+            </div>
+          </div>
 
           <div style="flex:1; display:flex; align-items:flex-end;">
             <div style="flex:1; position:relative; display:flex;">
@@ -186,6 +291,9 @@ export default {
     const sendBtn = container.querySelector('#ast-send-btn');
     const fileInput = container.querySelector('#ast-file-input');
     const attachBtn = container.querySelector('#ast-attach-btn');
+    const attachPopup = container.querySelector('#ast-attach-popup');
+    const attachOptComputer = container.querySelector('#ast-attach-opt-computer');
+    const attachOptToolbox = container.querySelector('#ast-attach-opt-toolbox');
 
     const updatePromptPlaceholder = () => {
       if (userInput) {
@@ -255,7 +363,168 @@ export default {
     });
 
     // Attachments
-    attachBtn?.addEventListener('click', () => fileInput?.click());
+    attachBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!attachPopup) return;
+      const isVisible = attachPopup.style.display === 'flex';
+      attachPopup.style.display = isVisible ? 'none' : 'flex';
+      attachBtn.setAttribute('aria-expanded', isVisible ? 'false' : 'true');
+    });
+
+    attachOptComputer?.addEventListener('click', () => {
+      if (attachPopup) attachPopup.style.display = 'none';
+      attachBtn?.setAttribute('aria-expanded', 'false');
+      fileInput?.click();
+    });
+
+    attachOptToolbox?.addEventListener('click', () => {
+      if (attachPopup) attachPopup.style.display = 'none';
+      attachBtn?.setAttribute('aria-expanded', 'false');
+      openToolboxFilePicker();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (attachPopup && attachPopup.style.display === 'flex') {
+        if (!attachPopup.contains(e.target) && e.target !== attachBtn && !attachBtn?.contains(e.target)) {
+          attachPopup.style.display = 'none';
+          attachBtn?.setAttribute('aria-expanded', 'false');
+        }
+      }
+    });
+
+    async function openToolboxFilePicker() {
+      const backdrop = document.createElement('div');
+      backdrop.className = 'ast-import-modal-backdrop';
+
+      backdrop.innerHTML = `
+        <div class="ast-import-modal">
+          <div class="ast-import-modal-header">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:32px; height:32px; border-radius:8px; background:var(--g100); display:flex; align-items:center; justify-content:center; color:var(--black);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
+              </div>
+              <div>
+                <div style="font-weight:700; font-size:0.95rem; color:var(--black);">Import from Toolbox Files</div>
+                <div style="font-size:0.75rem; color:var(--g600);">Select a file from your saved workspace</div>
+              </div>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" id="ast-import-modal-close" style="padding:0; border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; cursor:pointer;" aria-label="Close file picker">✕</button>
+          </div>
+          <div style="padding:14px 20px 0 20px;">
+            <input type="text" id="ast-import-search" class="tool-input" placeholder="Search saved files by name..." style="width:100%; font-size:0.84rem; padding:8px 12px; border-radius:8px; border:1px solid var(--g200); background:var(--white); box-sizing:border-box;" />
+          </div>
+          <div class="ast-import-modal-body" id="ast-import-modal-body">
+            <div style="text-align:center; padding:24px; color:var(--g500); font-size:0.85rem;">Loading workspace files...</div>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(backdrop);
+
+      const closeModal = () => {
+        backdrop.remove();
+      };
+
+      backdrop.querySelector('#ast-import-modal-close')?.addEventListener('click', closeModal);
+      backdrop.addEventListener('click', (e) => {
+        if (e.target === backdrop) closeModal();
+      });
+
+      const bodyEl = backdrop.querySelector('#ast-import-modal-body');
+      const searchInput = backdrop.querySelector('#ast-import-search');
+
+      try {
+        const metaList = await (fs.listAllMeta ? fs.listAllMeta() : ToolboxFilesystem.listAllMeta());
+        const files = (metaList || []).filter(item => !item.isDirectory);
+
+        const renderList = (filterText = '') => {
+          const q = filterText.toLowerCase().trim();
+          const filtered = files.filter(f => !q || (f.name && f.name.toLowerCase().includes(q)) || (f.path && f.path.toLowerCase().includes(q)));
+
+          if (!filtered.length) {
+            bodyEl.innerHTML = `
+              <div style="text-align:center; padding:32px 16px; color:var(--g500); font-size:0.85rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:8px; opacity:0.6;">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+                <div>${q ? 'No files match your search.' : 'No saved files found in Toolbox filesystem.'}</div>
+              </div>
+            `;
+            return;
+          }
+
+          bodyEl.innerHTML = '';
+          filtered.forEach(file => {
+            const row = document.createElement('div');
+            row.className = 'ast-import-file-row';
+            const sizeStr = file.size ? (file.size > 1048576 ? `${(file.size/1048576).toFixed(1)} MB` : `${Math.round(file.size/1024)} KB`) : '0 KB';
+            const ext = file.name.includes('.') ? file.name.split('.').pop().toUpperCase() : 'FILE';
+
+            row.innerHTML = `
+              <div style="display:flex; align-items:center; gap:12px; min-width:0; flex:1;">
+                <div style="width:34px; height:34px; border-radius:8px; background:var(--g100); border:1px solid var(--g200); color:var(--black); font-size:0.7rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                  ${escapeHtml(ext.slice(0, 4))}
+                </div>
+                <div style="min-width:0; flex:1;">
+                  <div style="font-weight:700; font-size:0.86rem; color:var(--black); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                    ${escapeHtml(file.name)}
+                  </div>
+                  <div style="font-size:0.72rem; color:var(--g500); margin-top:2px;">
+                    ${escapeHtml(file.path || file.name)} · ${sizeStr}
+                  </div>
+                </div>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" style="padding:4px 12px; font-size:0.76rem; font-weight:700; border-radius:9999px; flex-shrink:0;">Select</button>
+            `;
+
+            row.addEventListener('click', async () => {
+              row.style.opacity = '0.5';
+              try {
+                const dataUrl = await ToolboxFilesystem.readFile(file.path, { encoding: 'dataurl' });
+                let text = null;
+                try {
+                  text = await ToolboxFilesystem.readFile(file.path, { encoding: 'utf-8' });
+                } catch {}
+
+                const base64 = typeof dataUrl === 'string' && dataUrl.includes(',') ? dataUrl.split(',')[1] : null;
+
+                currentAttachedFile = {
+                  name: file.name,
+                  size: file.size || 0,
+                  type: file.mimeType || 'application/octet-stream',
+                  dataUrl: dataUrl,
+                  base64: base64,
+                  text: text,
+                  path: file.path
+                };
+
+                if (attachedName) attachedName.textContent = file.name;
+                if (attachedSize) attachedSize.textContent = `(${sizeStr})`;
+                if (attachedBar) attachedBar.style.display = 'flex';
+
+                closeModal();
+                userInput?.focus();
+              } catch (err) {
+                alert('Could not read file from Toolbox filesystem: ' + err.message);
+                row.style.opacity = '1';
+              }
+            });
+
+            bodyEl.appendChild(row);
+          });
+        };
+
+        renderList();
+        searchInput?.addEventListener('input', (e) => renderList(e.target.value));
+        setTimeout(() => searchInput?.focus(), 50);
+      } catch (err) {
+        bodyEl.innerHTML = `<div style="color:#ef4444; padding:20px; font-size:0.85rem;">Error loading files: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
     fileInput?.addEventListener('change', (e) => {
       const file = e.target.files?.[0];
       if (!file) return;
@@ -417,11 +686,8 @@ export default {
 
       if (role === 'user') {
         const isShort = (text || '').trim().length <= 80 && !text.includes('\n');
-        const radius = isShort ? '9999px' : '22px';
-        const padding = isShort ? '10px 20px' : '14px 20px';
-
         msgDiv.innerHTML = `
-          <div style="background:var(--black); color:var(--white); padding:${padding}; border-radius:${radius}; font-size:0.9rem; line-height:1.5; word-break:break-word;">
+          <div class="ast-msg-user-bubble ${isShort ? 'is-pill' : ''}">
             ${filePreview ? `
               <div style="font-size:0.75rem; opacity:0.85; margin-bottom:4px; display:flex; align-items:center; gap:5px;">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
@@ -444,10 +710,12 @@ export default {
         );
 
         let bodyHtml = '';
+        const animClass = getAssistantAnimationClass();
         if (isFailed) {
           bodyHtml = `
-            <div class="ast-tool-status-area" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
-            <div class="ast-text-body">
+            <div class="ast-tool-status-area"></div>
+            <div class="ast-tool-results-area"></div>
+            <div class="ast-text-body ${animClass}">
               <div style="color:#ef4444; font-weight:600; margin-bottom:8px; line-height:1.4;">${escapeHtml(error || 'Assistant failed to respond.')}</div>
               <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
                 <button type="button" class="btn btn-secondary btn-sm ast-err-btn-retry" style="font-size:0.75rem; font-weight:700; border-radius:9999px; padding:5px 14px;">
@@ -455,12 +723,12 @@ export default {
                 </button>
               </div>
             </div>
-            <div class="ast-tool-results-area"></div>
           `;
         } else {
           bodyHtml = `
-            <div class="ast-tool-status-area" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
-            <div class="ast-text-body">${formatMarkdown(text || '')}</div>
+            <div class="ast-tool-status-area"></div>
+            <div class="ast-tool-results-area"></div>
+            <div class="ast-text-body ${animClass}">${formatMarkdown(text || '')}</div>
             ${needsFilePrompt ? `
               <div class="ast-inchat-dropzone-card">
                 <div class="ast-inchat-drop-inner">
@@ -479,7 +747,6 @@ export default {
                 <input type="file" class="ast-inchat-file-input" style="display:none;" />
               </div>
             ` : ''}
-            <div class="ast-tool-results-area" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
           `;
         }
 
@@ -490,7 +757,7 @@ export default {
               <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
             </svg>
           </div>
-          <div style="background:var(--g100); color:var(--black); padding:16px 20px; border-radius:22px; font-size:0.9rem; line-height:1.6; word-break:break-word; min-width:120px;">
+          <div class="ast-msg-assistant-bubble">
             ${bodyHtml}
           </div>
         `;
@@ -942,13 +1209,15 @@ export default {
       assistantMsgDiv.style.maxWidth = '90%';
       assistantMsgDiv.style.alignSelf = 'flex-start';
 
+      const animClass = getAssistantAnimationClass();
       assistantMsgDiv.innerHTML = `
         <div style="width:34px; height:34px; border-radius:50%; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
         </div>
-        <div style="background:var(--g100); color:var(--black); padding:14px 18px; border-radius:16px; font-size:0.9rem; line-height:1.6; word-break:break-word; min-width:120px;">
-          <div class="ast-tool-status-area" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
-          <div class="ast-text-body">
+        <div class="ast-msg-assistant-bubble">
+          <div class="ast-tool-status-area"></div>
+          <div class="ast-tool-results-area"></div>
+          <div class="ast-text-body ${animClass}">
             <div class="ast-thinking-shimmer" aria-label="Thinking">
               <div class="ast-shimmer-track">
                 <div class="ast-shimmer-bar"></div>
@@ -956,7 +1225,6 @@ export default {
               <span class="ast-shimmer-text">Thinking...</span>
             </div>
           </div>
-          <div class="ast-tool-results-area"></div>
         </div>
       `;
 
@@ -974,7 +1242,7 @@ export default {
 
       const abortCtrl = new AbortController();
       currentAssistantAbortCtrl = abortCtrl;
-      const watchdog = setTimeout(() => abortCtrl.abort(), 25000);
+      const watchdog = setTimeout(() => abortCtrl.abort(), 90000);
 
       try {
         const streamResult = await streamChatCompletion({
@@ -987,15 +1255,21 @@ export default {
           taskState,
           onToken: (chunk) => {
             accumulatedStreamText += chunk;
-            if (textBody) textBody.innerHTML = formatMarkdown(accumulatedStreamText);
+            if (textBody) {
+              textBody.innerHTML = formatMarkdown(accumulatedStreamText);
+              if (animClass && !textBody.classList.contains(animClass)) {
+                textBody.classList.add(animClass);
+              }
+            }
             if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
           },
-          onToolCallStart: () => {
+          onToolCallStart: (toolName, toolArgs) => {
             if (!toolStatusArea) return;
+            const statusMsg = formatToolProgressStatus(toolName, toolArgs);
             toolStatusArea.innerHTML = `
               <div style="display:inline-flex; align-items:center; gap:8px; font-size:0.78rem; color:var(--g500); padding:4px 0;">
                 <span class="spinner-sm" style="display:inline-block; width:12px; height:12px; border:2px solid var(--g300); border-top-color:var(--black); border-radius:50%; animation:spin 0.8s linear infinite;"></span>
-                <span>Processing request...</span>
+                <span>${escapeHtml(statusMsg)}</span>
               </div>
             `;
           },
@@ -1011,11 +1285,18 @@ export default {
           signal: abortCtrl.signal
         });
 
-        let finalText = accumulatedStreamText || streamResult.text || '';
-        const hasStructuredCards = executedToolResults.some(r => r && (r.renderer === 'file' || r.renderer === 'image' || r.renderer === 'chart' || r.renderer === 'circuit' || r.renderer === 'flowchart' || r.renderer === 'code-execution' || r.renderer === 'transform' || r.renderer === 'json'));
+        let finalText = cleanAssistantOutput(accumulatedStreamText || streamResult.text || '');
+        const hasStructuredCards = executedToolResults.some(r => r && (
+          r.renderer === 'file' || r.renderer === 'image' || r.renderer === 'chart' ||
+          r.renderer === 'circuit' || r.renderer === 'flowchart' || r.renderer === 'code-execution' ||
+          r.renderer === 'transform' || r.renderer === 'json' || r.renderer === 'map-view'
+        ));
         
         // Avoid duplicate plain text summaries or raw json dumps when full structured components are rendered
-        if (hasStructuredCards && finalText.trim().startsWith('{') && finalText.trim().endsWith('}')) {
+        if (hasStructuredCards && (
+          (finalText.trim().startsWith('{') && finalText.trim().endsWith('}')) ||
+          (finalText.trim().startsWith('[') && finalText.trim().endsWith(']'))
+        )) {
           finalText = '';
         }
 
@@ -1023,9 +1304,15 @@ export default {
           if (finalText.trim()) {
             textBody.innerHTML = formatMarkdown(finalText);
             textBody.style.display = 'block';
+            if (animClass && !textBody.classList.contains(animClass)) {
+              textBody.classList.add(animClass);
+            }
           } else if (!hasStructuredCards) {
             textBody.innerHTML = formatMarkdown('Executed action successfully.');
             textBody.style.display = 'block';
+            if (animClass && !textBody.classList.contains(animClass)) {
+              textBody.classList.add(animClass);
+            }
           } else {
             textBody.innerHTML = '';
             textBody.style.display = 'none';
@@ -1104,10 +1391,12 @@ export default {
       } catch (err) {
         const hasTools = executedToolResults.length > 0;
         const message = err?.name === 'AbortError'
-          ? 'The request took too long. Please try again.'
-          : (err?.message || 'Something went wrong.');
+          ? (hasTools
+              ? 'The operation took longer than expected, but partial results were preserved.'
+              : 'The requested task took longer than the time limit. Please try a more specific request or retry.')
+          : (err?.message || 'Unable to complete the request.');
 
-        const finalAssistantText = accumulatedStreamText || (hasTools ? (executedToolResults.map(r => r.message).filter(Boolean).join('\n') || 'Executed action.') : '');
+        const finalAssistantText = cleanAssistantOutput(accumulatedStreamText || (hasTools ? (executedToolResults.map(r => r.message).filter(Boolean).join('\n') || 'Executed action.') : ''));
 
         // 3. Durable state: Always commit the assistant turn even on failure
         history.push({
@@ -1185,10 +1474,15 @@ export default {
 
       const abortCtrl = new AbortController();
       currentAssistantAbortCtrl = abortCtrl;
-      const watchdog = setTimeout(() => abortCtrl.abort(), 25000);
+      const watchdog = setTimeout(() => abortCtrl.abort(), 90000);
 
       // Context includes all conversation history up to this user message
       const historyContext = history.slice(0, userIdx !== -1 ? userIdx + 1 : (asstIdx !== -1 ? asstIdx : history.length));
+
+      const animClass = getAssistantAnimationClass();
+      if (textBody && animClass && !textBody.classList.contains(animClass)) {
+        textBody.classList.add(animClass);
+      }
 
       try {
         const streamResult = await streamChatCompletion({
@@ -1201,25 +1495,28 @@ export default {
           taskState,
           onToken: (chunk) => {
             accumulatedStreamText += chunk;
-            if (textBody) textBody.innerHTML = formatMarkdown(accumulatedStreamText);
+            if (textBody) {
+              textBody.innerHTML = formatMarkdown(accumulatedStreamText);
+              if (animClass && !textBody.classList.contains(animClass)) {
+                textBody.classList.add(animClass);
+              }
+            }
             if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
           },
           onToolCallStart: (toolName, toolArgs) => {
             if (!toolStatusArea) return;
-            const statusCard = document.createElement('div');
-            statusCard.style.padding = '6px 10px';
-            statusCard.style.background = 'var(--white)';
-            statusCard.style.border = '1px solid var(--g300)';
-            statusCard.style.borderRadius = '8px';
-            statusCard.style.fontSize = '0.78rem';
-            statusCard.style.fontWeight = '600';
-            statusCard.style.display = 'flex';
-            statusCard.style.alignItems = 'center';
-            statusCard.style.gap = '6px';
-            statusCard.innerHTML = `<span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#3b82f6;"></span> Executing tool: <code>${toolName}</code>...`;
-            toolStatusArea.appendChild(statusCard);
+            const statusMsg = formatToolProgressStatus(toolName, toolArgs);
+            toolStatusArea.innerHTML = `
+              <div style="display:inline-flex; align-items:center; gap:8px; font-size:0.78rem; color:var(--g500); padding:4px 0;">
+                <span class="spinner-sm" style="display:inline-block; width:12px; height:12px; border:2px solid var(--g300); border-top-color:var(--black); border-radius:50%; animation:spin 0.8s linear infinite;"></span>
+                <span>${escapeHtml(statusMsg)}</span>
+              </div>
+            `;
           },
           onToolCallResult: (toolName, result) => {
+            if (toolStatusArea) {
+              toolStatusArea.innerHTML = '';
+            }
             executedToolResults.push(result);
             if (toolResultsArea) {
               void integrationManager.renderToolResult(result, toolResultsArea, toolName);
@@ -1228,7 +1525,7 @@ export default {
           signal: abortCtrl.signal
         });
 
-        const finalText = accumulatedStreamText || streamResult.text || (executedToolResults.length ? 'Executed action successfully.' : '');
+        const finalText = cleanAssistantOutput(accumulatedStreamText || streamResult.text || (executedToolResults.length ? 'Executed action successfully.' : ''));
         if (textBody) {
           textBody.innerHTML = formatMarkdown(finalText);
 
@@ -1293,10 +1590,12 @@ export default {
       } catch (err) {
         const hasTools = executedToolResults.length > 0;
         const message = err?.name === 'AbortError'
-          ? 'The request took too long. Please try again.'
-          : (err?.message || 'Something went wrong.');
+          ? (hasTools
+              ? 'The operation took longer than expected, but partial results were preserved.'
+              : 'The requested task took longer than the time limit. Please try a more specific request or retry.')
+          : (err?.message || 'Unable to complete the request.');
 
-        const finalAssistantText = accumulatedStreamText || (hasTools ? (executedToolResults.map(r => r.message).filter(Boolean).join('\n') || 'Executed action.') : '');
+        const finalAssistantText = cleanAssistantOutput(accumulatedStreamText || (hasTools ? (executedToolResults.map(r => r.message).filter(Boolean).join('\n') || 'Executed action.') : ''));
 
         const failedMsg = {
           id: `msg_${Date.now()}_a`,

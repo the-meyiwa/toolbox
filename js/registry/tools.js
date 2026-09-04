@@ -482,6 +482,30 @@ export const TOOLS = [
     icon: svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>'),
   },
   {
+    id: 'math-utility',
+    name: 'Math Utility',
+    description: 'Mathematical reference library, formula lookup, and computational solving workspace',
+    category: 'numbers',
+    secondary: ['science', 'developer', 'reference'],
+    keywords: [
+      'math', 'mathematics', 'math utility', 'algebra', 'calculus', 'equations',
+      'quadratic', 'linear', 'derivative', 'integral', 'matrix', 'determinant',
+      'inverse', 'collatz', 'fibonacci', 'four-figure tables', 'tables', 'constants',
+      'theorems', 'conjectures', 'open problems', 'number theory', 'primes', 'gcd',
+      'lcm', 'totient', 'permutations', 'combinations', 'statistics', 'verification'
+    ],
+    synonyms: ['math knowledge', 'equation solver', 'math reference', 'math engine', 'collatz explorer'],
+    intents: [
+      'solve quadratic equation', 'solve equation', 'collatz sequence', 'run collatz',
+      'lookup math formula', 'four figure tables', 'matrix determinant', 'matrix inverse',
+      'gcd and lcm', 'calculate derivative', 'definite integral', 'fibonacci sequence',
+      'euler totient', 'prime factorization', 'mathematical constants'
+    ],
+    related: ['calculator', 'percentage-calculator', 'unit-converter'],
+    weight: 99,
+    icon: svg('<path d="M18 4H6l6 8-6 8h12"/><line x1="6" y1="4" x2="18" y2="4"/><line x1="6" y1="20" x2="18" y2="20"/>'),
+  },
+  {
     id: 'calculator',
     name: 'Calculator',
     description: 'Universal calculating engine for standard, scientific, programmer, financial, engineering, graphing, RPN and statistics',

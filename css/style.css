@@ -9748,6 +9748,164 @@ input, select, textarea {
 }
 
 /* ============================================================
+   TOOLBOX ASSISTANT — Polished Chat Bubbles with Theme Gradient Outline
+   ============================================================ */
+
+.ast-msg {
+  display: flex;
+  gap: 12px;
+  max-width: 90%;
+  animation: astFadeIn 0.2s ease;
+}
+
+@keyframes astFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ast-msg-user {
+  max-width: 80%;
+  align-self: flex-end;
+}
+
+.ast-msg-assistant {
+  max-width: 92%;
+  align-self: flex-start;
+}
+
+/* Assistant Chat Bubble: Even 20px padding on all 4 sides & Theme Gradient Outline */
+.ast-msg-assistant-bubble {
+  position: relative;
+  background: var(--g100);
+  color: var(--black);
+  padding: 20px !important;
+  border-radius: 20px;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  word-break: break-word;
+  min-width: 140px;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--black) 16%, transparent);
+  box-shadow: 
+    0 0 0 1px color-mix(in srgb, var(--g400, var(--black)) 16%, transparent),
+    0 4px 20px 0 color-mix(in srgb, var(--black) 6%, transparent),
+    0 0 18px 2px color-mix(in srgb, var(--g500, var(--black)) 12%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Faint blurry transparent gradient outline via pseudo-element */
+.ast-msg-assistant-bubble::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 21px;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--black) 32%, transparent) 0%,
+    color-mix(in srgb, var(--g400, var(--black)) 15%, transparent) 35%,
+    color-mix(in srgb, var(--black) 24%, transparent) 70%,
+    color-mix(in srgb, var(--g500, var(--black)) 12%, transparent) 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  filter: blur(0.5px);
+}
+
+/* User Chat Bubble: Even padding & Theme Accent */
+.ast-msg-user-bubble {
+  position: relative;
+  background: var(--black);
+  color: var(--white);
+  padding: 14px 20px !important;
+  border-radius: 20px;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  word-break: break-word;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--white) 16%, transparent);
+  box-shadow: 
+    0 0 0 1px color-mix(in srgb, var(--white) 12%, transparent),
+    0 4px 16px 0 color-mix(in srgb, var(--black) 15%, transparent),
+    0 0 14px 1px color-mix(in srgb, var(--white) 8%, transparent);
+}
+
+.ast-msg-user-bubble.is-pill {
+  border-radius: 9999px;
+  padding: 10px 20px !important;
+}
+
+/* Clean Markdown spacing inside response bubbles to preserve even margins */
+.ast-text-body {
+  margin: 0;
+  padding: 0;
+}
+
+.ast-text-body > :first-child {
+  margin-top: 0 !important;
+}
+
+.ast-text-body > :last-child {
+  margin-bottom: 0 !important;
+}
+
+.ast-text-body p {
+  margin: 0 0 12px 0;
+  line-height: 1.6;
+}
+
+.ast-text-body p:last-child {
+  margin-bottom: 0 !important;
+}
+
+.ast-text-body ul, 
+.ast-text-body ol {
+  margin: 8px 0 12px 0;
+  padding-left: 20px;
+}
+
+.ast-text-body ul:last-child,
+.ast-text-body ol:last-child {
+  margin-bottom: 0 !important;
+}
+
+.ast-text-body li {
+  margin-bottom: 5px;
+}
+
+.ast-text-body li:last-child {
+  margin-bottom: 0;
+}
+
+.ast-text-body h1, 
+.ast-text-body h2, 
+.ast-text-body h3, 
+.ast-text-body h4 {
+  margin: 14px 0 8px 0;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.ast-text-body h1:first-child, 
+.ast-text-body h2:first-child, 
+.ast-text-body h3:first-child, 
+.ast-text-body h4:first-child {
+  margin-top: 0 !important;
+}
+
+/* Hide empty helper zones to eliminate uneven spacing */
+.ast-tool-status-area:empty,
+.ast-tool-results-area:empty {
+  display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+
+/* ============================================================
    STANDALONE MODE (Pop-out fullscreen tools)
    ============================================================ */
 body.standalone-mode #app-header,
@@ -9818,7 +9976,9 @@ body.standalone-mode .notes-app-wrapper {
 .assistant-result-map-card,
 .assistant-result-location-card,
 .assistant-result-tuner-card,
-.assistant-result-pdf-card {
+.assistant-result-pdf-card,
+.assistant-result-math-card,
+.assistant-result-math-knowledge-card {
   color: var(--black) !important;
   background: var(--white) !important;
   border-color: var(--g200) !important;
@@ -9839,11 +9999,669 @@ body.standalone-mode .notes-app-wrapper {
 .assistant-result-map-card strong,
 .assistant-result-location-card strong,
 .assistant-result-tuner-card strong,
-.assistant-result-pdf-card strong {
+.assistant-result-pdf-card strong,
+.assistant-result-math-card strong,
+.assistant-result-math-knowledge-card strong {
   color: var(--black) !important;
 }
 
 .ast-msg-assistant {
   color: var(--black) !important;
 }
+
+/* ============================================================
+   MATH UTILITY & MATHEMATICAL NOTATION
+   ============================================================ */
+
+/* MathML and Mathematical Notation Typography */
+.math-rendered-formula {
+  font-family: 'Cambria Math', 'STIX Two Math', 'Latin Modern Math', 'KaTeX_Math', 'Times New Roman', serif;
+  color: var(--text);
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+.math-rendered-formula math {
+  font-family: inherit;
+  font-size: 1.05rem;
+  color: inherit;
+  display: inline;
+}
+
+.math-rendered-formula math[display="block"] {
+  display: block;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.math-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  margin: 8px 0;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+}
+
+.math-inline {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  padding: 0 3px;
+}
+
+/* MathML Fallback and Enhancements */
+.math-rendered-formula math mfrac {
+  padding: 0 0.15em;
+}
+
+.math-rendered-formula math mo {
+  padding: 0 0.15em;
+  font-family: 'Cambria Math', 'STIX Two Math', serif;
+}
+
+.math-rendered-formula math mtable {
+  border-collapse: collapse;
+  margin: 0.25em auto;
+}
+
+.math-rendered-formula math mtd {
+  padding: 0.2em 0.5em;
+  text-align: center;
+}
+
+/* Math Utility Tab Navigation */
+.math-tab-nav {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.math-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.math-tab-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.math-tab-btn.active {
+  background: var(--black);
+  color: var(--white);
+  border-color: var(--black);
+}
+
+/* Knowledge Controls Bar */
+.math-controls-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  background: var(--bg-card);
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.math-control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.math-search-input {
+  height: 38px;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--bg-subtle);
+  color: var(--text);
+  padding: 0 16px 0 34px;
+  font-size: 0.84rem;
+  font-family: var(--sans);
+  outline: none;
+  width: 100%;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+}
+
+.math-search-input:focus {
+  border-color: var(--text);
+  background: var(--bg-card);
+  box-shadow: 0 0 0 2px var(--border);
+}
+
+.math-select-control {
+  height: 38px;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background-color: var(--bg-subtle);
+  color: var(--text);
+  padding: 0 16px;
+  font-size: 0.82rem;
+  font-family: var(--sans);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+  color-scheme: inherit;
+}
+
+.math-select-control:focus {
+  border-color: var(--text);
+  background-color: var(--bg-card);
+}
+
+.math-select-control option {
+  background-color: var(--white);
+  color: var(--black);
+}
+
+/* Engineering Math Filter Chip */
+.math-chip-btn {
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: var(--sans);
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.math-chip-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.math-chip-btn.active {
+  background: var(--black);
+  color: var(--white);
+  border-color: var(--black);
+}
+
+/* Minimal Proof Status Badges */
+.math-proof-badge {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  line-height: 1.3;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.math-badge-proven {
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.math-badge-conjecture,
+.math-badge-open {
+  border-style: dashed;
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+.math-badge-axiom,
+.math-badge-law,
+.math-badge-identity,
+.math-badge-algorithm {
+  border-color: var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+/* Knowledge Reference Cards */
+.math-knowledge-card {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.math-knowledge-card:hover {
+  border-color: var(--g300);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.math-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.math-card-title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.math-card-subdomain {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 3px;
+  font-weight: 500;
+}
+
+.math-card-statement {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+
+.math-card-computable {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.math-card-computable code {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+/* ============================================================
+   ASSISTANT IMPROVEMENTS: Result Placement, Text Animations,
+   Attachment Popups, and File Picker Modal
+   ============================================================ */
+
+/* Tool results at top of response */
+.ast-tool-results-area:not(:empty) {
+  margin-bottom: 14px;
+}
+
+/* 1. Color Rave Animation (Rainbow wave effect across all themes) */
+.ast-anim-color-rave {
+  background: linear-gradient(
+    135deg,
+    #ff0055 0%,
+    #ff5500 14%,
+    #ffcc00 28%,
+    #00ff66 42%,
+    #00ccff 57%,
+    #7928ca 71%,
+    #ff00aa 85%,
+    #ff0055 100%
+  );
+  background-size: 250% 250%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: astColorRave 4s linear infinite;
+  display: block;
+}
+
+.ast-anim-color-rave p,
+.ast-anim-color-rave span,
+.ast-anim-color-rave strong,
+.ast-anim-color-rave em,
+.ast-anim-color-rave li,
+.ast-anim-color-rave h1,
+.ast-anim-color-rave h2,
+.ast-anim-color-rave h3,
+.ast-anim-color-rave h4,
+.ast-anim-color-rave h5,
+.ast-anim-color-rave h6 {
+  background: inherit;
+  background-size: inherit;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: inherit;
+}
+
+.ast-anim-color-rave pre,
+.ast-anim-color-rave code,
+.ast-anim-color-rave button {
+  -webkit-text-fill-color: initial !important;
+}
+
+@keyframes astColorRave {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* 2. Glow Animation (Vibrant ambient neon glow with smooth luminous pulsing) */
+.ast-anim-glow,
+.ast-anim-pixel {
+  animation: astGlowEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards, astGlowPulse 2.8s ease-in-out infinite alternate;
+  display: block;
+}
+
+@keyframes astGlowEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(3px);
+    text-shadow: 0 0 14px var(--accent, #6366f1), 0 0 24px var(--accent, #6366f1);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    text-shadow: 0 0 4px var(--accent, rgba(99, 102, 241, 0.5));
+  }
+}
+
+@keyframes astGlowPulse {
+  0% {
+    text-shadow: 0 0 3px var(--accent, rgba(99, 102, 241, 0.3));
+  }
+  50% {
+    text-shadow: 0 0 8px var(--accent, rgba(99, 102, 241, 0.7)), 0 0 16px var(--accent, rgba(99, 102, 241, 0.4));
+  }
+  100% {
+    text-shadow: 0 0 3px var(--accent, rgba(99, 102, 241, 0.3));
+  }
+}
+
+/* Settings Animation Preview Box */
+.ast-anim-preview-box {
+  padding: 8px 12px;
+  background: var(--bg-alt, var(--g100));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.ast-anim-preview-text {
+  font-size: 0.88rem;
+  font-weight: 500;
+  line-height: 1.4;
+  transition: all 0.2s ease;
+}
+
+
+/* 3. Plain Fade Animation (Smooth graceful lift with theme-aware shadow) */
+.ast-anim-plain-fade {
+  animation: astPlainFade 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  display: block;
+}
+
+@keyframes astPlainFade {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: drop-shadow(0 2px 6px var(--g200, rgba(0,0,0,0.08)));
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+}
+
+/* 4. Pop In Animation (Spring bouncy scale with theme-aware aura) */
+.ast-anim-pop-in {
+  animation: astPopIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: top left;
+  display: block;
+}
+
+@keyframes astPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.93) translateY(5px);
+    text-shadow: 0 0 8px var(--g300, rgba(0,0,0,0.15));
+  }
+  70% {
+    transform: scale(1.02) translateY(-1px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    text-shadow: none;
+  }
+}
+
+/* Attachment Menu Popup */
+.ast-attach-menu-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.ast-attach-popup {
+  position: absolute;
+  bottom: 52px;
+  left: 0;
+  min-width: 240px;
+  background: var(--white);
+  border: 1px solid var(--g200);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
+  padding: 6px;
+  z-index: 100;
+  display: none;
+  flex-direction: column;
+  gap: 3px;
+  animation: astPopupIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes astPopupIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.ast-attach-popup-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--black);
+  font-size: 0.84rem;
+  font-weight: 600;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ast-attach-popup-item:hover,
+.ast-attach-popup-item:focus-visible {
+  background: var(--g100);
+  outline: none;
+}
+
+.ast-attach-popup-item svg {
+  color: var(--black);
+  flex-shrink: 0;
+}
+
+/* Toolbox Files Picker Modal */
+.ast-import-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: astFadeBackdrop 0.18s ease-out;
+}
+
+@keyframes astFadeBackdrop {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ast-import-modal {
+  background: var(--white);
+  border: 1px solid var(--g200);
+  border-radius: 16px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 580px;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: astPopupIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ast-import-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--g200);
+  background: var(--g50);
+}
+
+.ast-import-modal-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ast-import-file-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--g200);
+  background: var(--white);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s;
+}
+
+.ast-import-file-row:hover {
+  background: var(--g50);
+  border-color: var(--black);
+  transform: translateX(2px);
+}
+
+/* ============================================================
+   Finder Context Menu & OS Icon Grid Styles
+   ============================================================ */
+.finder-context-menu {
+  animation: finderMenuPop 0.12s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  user-select: none;
+}
+
+@keyframes finderMenuPop {
+  0% { opacity: 0; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.finder-menu-item {
+  color: var(--text);
+  transition: background 0.12s, color 0.12s;
+}
+
+.finder-menu-item:hover {
+  background: var(--accent, #3b82f6) !important;
+  color: #ffffff !important;
+}
+
+.finder-menu-item:hover svg {
+  stroke: #ffffff !important;
+}
+
+.finder-tag-dot {
+  display: inline-block;
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+
+.finder-tag-dot:hover {
+  transform: scale(1.3);
+  box-shadow: 0 0 6px currentColor;
+}
+
+.sv-grid-icon {
+  user-select: none;
+  border: 1px solid transparent;
+}
+
+.sv-grid-icon:hover {
+  background: var(--bg-subtle, rgba(0,0,0,0.04)) !important;
+  border-color: var(--border) !important;
+}
+
+.sv-tag-pill {
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border-radius: 9999px;
+  padding: 2px 10px;
+  font-size: 0.74rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+}
+
+.sv-tag-pill:hover,
+.sv-tag-pill.active {
+  background: var(--bg-subtle);
+  color: var(--text);
+  border-color: var(--text);
+}
+
+
 

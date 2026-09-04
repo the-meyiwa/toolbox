@@ -41,3 +41,37 @@ test('Files View: renders multiple viewing options (split, grid, list switcher)'
 
   unmount();
 });
+
+test('Files View: icon system recognizes categories and renders SVGs without emojis', async () => {
+  const { detectFileCategory, getFileTypeIcon } = await import('../../js/lib/file-icons.js');
+
+  const testCases = [
+    { name: 'document.pdf', kind: 'pdf', expected: 'pdf' },
+    { name: 'sheet.xlsx', kind: 'csv', expected: 'spreadsheet' },
+    { name: 'data.csv', kind: 'csv', expected: 'spreadsheet' },
+    { name: 'report.docx', kind: 'text', expected: 'document' },
+    { name: 'slides.pptx', kind: 'presentation', expected: 'presentation' },
+    { name: 'photo.jpg', kind: 'image', expected: 'image' },
+    { name: 'schema.json', kind: 'json', expected: 'json' },
+    { name: 'script.js', kind: 'code', expected: 'code' },
+    { name: 'song.mp3', kind: 'audio', expected: 'audio' },
+    { name: 'clip.mp4', kind: 'video', expected: 'video' },
+    { name: 'backup.zip', kind: 'archive', expected: 'archive' },
+    { name: 'notes.md', kind: 'markdown', expected: 'markdown' },
+    { name: 'readme.txt', kind: 'text', expected: 'text' },
+    { name: 'my-folder', kind: 'folder', expected: 'folder' },
+    { name: 'unknown.xyz', kind: 'unknown', expected: 'generic' },
+  ];
+
+  for (const tc of testCases) {
+    const cat = detectFileCategory(tc.name, tc.kind);
+    assert.equal(cat, tc.expected, `Expected ${tc.name} to map to ${tc.expected}, got ${cat}`);
+
+    const iconSvg = getFileTypeIcon(tc.name, tc.kind, 24);
+    assert.ok(iconSvg.includes('<svg'), `Icon for ${tc.name} must be an SVG`);
+    assert.ok(iconSvg.includes('file-icon-'), `Icon for ${tc.name} must contain file-icon- class`);
+    // Ensure no emoji
+    const emojiRegex = /[\u{1F300}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F1E0}-\u{1F1FF}]/u;
+    assert.equal(emojiRegex.test(iconSvg), false, `Icon for ${tc.name} must not contain emojis`);
+  }
+});

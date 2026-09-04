@@ -106,11 +106,15 @@ function collect(query) {
   }));
 
   const user = getCurrentUser();
-  const availableTools = user ? TOOLS : TOOLS.filter(t => t.id !== 'assistant');
+  const availableTools = TOOLS.filter(t => {
+    if (!user && t.id === 'assistant') return false;
+    if (user && t.id === 'file-drop') return false;
+    return true;
+  });
 
   const toolRows = (q
     ? search(q, availableTools, { labels: CATEGORY_LABELS }).results.map(r => r.tool)
-    : popular(6).filter(t => user || t.id !== 'assistant')
+    : popular(6).filter(t => (!user ? t.id !== 'assistant' : t.id !== 'file-drop'))
   ).slice(0, 8).map(t => ({
     group: q ? 'Tools' : 'Most used',
     title: t.name,

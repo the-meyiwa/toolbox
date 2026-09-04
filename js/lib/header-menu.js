@@ -121,6 +121,38 @@ function renderPreferencesContent() {
         </div>
         <input type="checkbox" id="pref-audio" class="pref-switch" ${current.hapticAudio ? 'checked' : ''}>
       </label>
+
+      <!-- Assistant Response Animation -->
+      <label class="pref-option-row">
+        <div class="pref-option-info">
+          <span class="pref-option-title">Assistant response animation</span>
+          <span class="pref-option-desc">Animate assistant message text dynamically as responses are generated.</span>
+        </div>
+        <input type="checkbox" id="pref-ast-anim" class="pref-switch" ${current.assistantResponseAnimation !== false ? 'checked' : ''}>
+      </label>
+
+      <!-- Assistant Animation Style -->
+      <div class="pref-option-row">
+        <div class="pref-option-info">
+          <span class="pref-option-title">Assistant animation style</span>
+          <span class="pref-option-desc">Visual effect rendered on assistant response text.</span>
+        </div>
+        <select class="tool-select pref-select" id="pref-ast-anim-style">
+          <option value="color rave" ${(current.assistantAnimationStyle || 'color rave') === 'color rave' ? 'selected' : ''}>color rave</option>
+          <option value="glow" ${(current.assistantAnimationStyle === 'glow' || current.assistantAnimationStyle === 'Pixel') ? 'selected' : ''}>glow</option>
+          <option value="Plain Fade" ${current.assistantAnimationStyle === 'Plain Fade' ? 'selected' : ''}>Plain Fade</option>
+          <option value="Pop In" ${current.assistantAnimationStyle === 'Pop In' ? 'selected' : ''}>Pop In</option>
+        </select>
+      </div>
+
+      <!-- Animation Live Preview -->
+      <div class="pref-option-row" style="margin-top: 4px; border-bottom: none; padding-bottom: 0;">
+        <div class="pref-option-info" style="width: 100%;">
+          <div class="ast-anim-preview-box" id="pref-ast-anim-preview-box" style="width: 100%; justify-content: center; text-align: center;">
+            <span class="ast-anim-preview-text" id="pref-ast-anim-preview-text">Animation preview</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Backup / Restore -->
@@ -160,6 +192,40 @@ function renderPreferencesContent() {
 
   body.querySelector('#pref-audio').addEventListener('change', (e) => {
     updateSettings({ hapticAudio: e.target.checked });
+  });
+
+  const updatePreview = () => {
+    const isEnabled = body.querySelector('#pref-ast-anim')?.checked;
+    const style = body.querySelector('#pref-ast-anim-style')?.value || 'color rave';
+    const previewEl = body.querySelector('#pref-ast-anim-preview-text');
+    if (!previewEl) return;
+    previewEl.className = 'ast-anim-preview-text';
+    if (!isEnabled) {
+      previewEl.textContent = 'Animations disabled';
+      previewEl.style.opacity = '0.4';
+      previewEl.style.fontStyle = 'italic';
+    } else {
+      previewEl.textContent = 'Animation preview';
+      previewEl.style.opacity = '1';
+      previewEl.style.fontStyle = 'normal';
+      let animClass = 'ast-anim-color-rave';
+      if (style === 'glow' || style === 'Pixel') animClass = 'ast-anim-glow';
+      else if (style === 'Plain Fade') animClass = 'ast-anim-plain-fade';
+      else if (style === 'Pop In') animClass = 'ast-anim-pop-in';
+      previewEl.classList.add(animClass);
+    }
+  };
+
+  updatePreview();
+
+  body.querySelector('#pref-ast-anim')?.addEventListener('change', (e) => {
+    updateSettings({ assistantResponseAnimation: e.target.checked });
+    updatePreview();
+  });
+
+  body.querySelector('#pref-ast-anim-style')?.addEventListener('change', (e) => {
+    updateSettings({ assistantAnimationStyle: e.target.value });
+    updatePreview();
   });
 
   body.querySelector('#pref-export-btn').addEventListener('click', () => {

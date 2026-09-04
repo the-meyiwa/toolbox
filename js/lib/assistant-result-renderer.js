@@ -13,6 +13,18 @@
  */
 
 import { AssistantAudioManager } from './assistant-audio.js';
+import { sanitizeUserFacingText } from '../utils.js';
+import { renderMath, renderMathInText } from './math-renderer.js';
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 /**
  * Base Result Renderer — extend this to create new renderers
@@ -49,7 +61,9 @@ const ICONS = {
   file: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
   download: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
   external: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
-  check: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+  check: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  pin: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+  phone: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>'
 };
 
 /**
@@ -281,6 +295,147 @@ export class FileListResultRenderer extends ResultRenderer {
     wrapper.appendChild(listBody);
     container.appendChild(wrapper);
     return wrapper;
+  }
+}
+
+/**
+ * FILE DELETION CONFIRMATION RESULT — Interactive card requiring user confirmation before files are deleted
+ */
+export class FileDeletionConfirmationRenderer extends ResultRenderer {
+  static id = 'file-deletion-confirmation';
+  static name = 'File Deletion Confirmation';
+
+  static canRender(result) {
+    const data = result?.data || result || {};
+    return result?.renderer === 'file-deletion-confirmation' ||
+      result?.type === 'file-deletion-confirmation' ||
+      data?.renderer === 'file-deletion-confirmation' ||
+      data?.type === 'file-deletion-confirmation';
+  }
+
+  static render(result, container) {
+    const data = result?.data || result || {};
+    const files = Array.isArray(data.files) ? data.files : (Array.isArray(result.files) ? result.files : []);
+    const paths = Array.isArray(data.paths) ? data.paths : (Array.isArray(result.paths) ? result.paths : files.map(f => f.path || f));
+
+    const card = document.createElement('div');
+    card.className = 'assistant-result-delete-confirm-card';
+    card.style.cssText = 'margin-top:10px; padding:16px; border:1px solid var(--border-color, #e2e8f0); border-left:4px solid #ef4444; border-radius:12px; background:var(--bg-surface, var(--white, #ffffff)); box-shadow:0 2px 10px rgba(0,0,0,0.06); max-width:540px;';
+
+    // Header
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:10px;';
+    header.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <span style="font-weight:700; font-size:0.92rem; color:var(--text-primary, #0f172a);">Confirm File Deletion</span>
+      <span style="font-size:0.75rem; padding:2px 8px; border-radius:9999px; background:#fef2f2; color:#b91c1c; font-weight:600; border:1px solid #fecaca;">Action Required</span>
+    `;
+    card.appendChild(header);
+
+    // Explanatory prompt
+    const desc = document.createElement('p');
+    desc.style.cssText = 'font-size:0.85rem; color:var(--text-secondary, #475569); margin:0 0 12px 0; line-height:1.4;';
+    desc.textContent = `The assistant is requesting to permanently delete ${paths.length} file${paths.length === 1 ? '' : 's'}. This cannot be undone:`;
+    card.appendChild(desc);
+
+    // List of files targeted
+    const fileListBox = document.createElement('div');
+    fileListBox.style.cssText = 'background:var(--bg-elevated, var(--g50, #f8fafc)); border:1px solid var(--border-color, #e2e8f0); border-radius:8px; padding:8px 12px; margin-bottom:14px; max-height:160px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;';
+
+    paths.forEach(p => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex; align-items:center; gap:8px; font-size:0.82rem; font-family:var(--mono, monospace); color:var(--text-primary, #1e293b);';
+      const label = typeof p === 'string' ? p : (p.name || p.path || JSON.stringify(p));
+      row.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+        </svg>
+        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(label)}</span>
+      `;
+      fileListBox.appendChild(row);
+    });
+    card.appendChild(fileListBox);
+
+    // Actions
+    const actionRow = document.createElement('div');
+    actionRow.style.cssText = 'display:flex; align-items:center; gap:10px;';
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.type = 'button';
+    confirmBtn.className = 'btn btn-sm btn-danger';
+    confirmBtn.style.cssText = 'padding:6px 16px; border-radius:8px; background:#dc2626; color:#ffffff; font-size:0.82rem; font-weight:700; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:background 0.15s;';
+    confirmBtn.innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="3 6 5 6 21 6"/>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      </svg>
+      Confirm Delete
+    `;
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'btn btn-sm btn-secondary';
+    cancelBtn.style.cssText = 'padding:6px 14px; border-radius:8px; background:var(--bg-elevated, var(--g100, #f1f5f9)); color:var(--text-secondary, #475569); font-size:0.82rem; font-weight:600; border:1px solid var(--border-color, #e2e8f0); cursor:pointer;';
+    cancelBtn.textContent = 'Cancel';
+
+    const statusMsg = document.createElement('span');
+    statusMsg.style.cssText = 'font-size:0.8rem; font-weight:600; display:none;';
+
+    confirmBtn.addEventListener('click', async () => {
+      confirmBtn.disabled = true;
+      cancelBtn.disabled = true;
+      confirmBtn.style.opacity = '0.6';
+      confirmBtn.textContent = 'Deleting...';
+      try {
+        const { executeAssistantTool } = await import('./assistant-tools.js');
+        const targetPaths = paths.map(p => typeof p === 'string' ? p : (p.path || p.name));
+        const res = await executeAssistantTool('delete_file', { paths: targetPaths, confirmed: true });
+        
+        card.style.borderColor = '#22c55e';
+        card.style.borderLeftColor = '#22c55e';
+        header.innerHTML = `
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span style="font-weight:700; font-size:0.92rem; color:var(--text-primary, #0f172a);">Files Deleted</span>
+        `;
+        desc.textContent = res.message || `Successfully deleted ${targetPaths.length} file(s).`;
+        desc.style.color = '#15803d';
+        fileListBox.style.opacity = '0.5';
+        actionRow.innerHTML = '';
+        const doneBadge = document.createElement('span');
+        doneBadge.style.cssText = 'font-size:0.8rem; color:#16a34a; font-weight:700; display:inline-flex; align-items:center; gap:4px;';
+        doneBadge.innerHTML = '✓ Operation Complete';
+        actionRow.appendChild(doneBadge);
+      } catch (err) {
+        confirmBtn.disabled = false;
+        cancelBtn.disabled = false;
+        confirmBtn.style.opacity = '1';
+        confirmBtn.textContent = 'Confirm Delete';
+        statusMsg.textContent = `Error: ${err.message}`;
+        statusMsg.style.color = '#dc2626';
+        statusMsg.style.display = 'inline';
+      }
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      confirmBtn.disabled = true;
+      cancelBtn.disabled = true;
+      card.style.opacity = '0.7';
+      desc.textContent = 'Deletion cancelled by user.';
+      desc.style.color = 'var(--text-muted, #64748b)';
+      actionRow.innerHTML = '<span style="font-size:0.8rem; color:var(--text-muted, #64748b); font-style:italic;">Cancelled</span>';
+    });
+
+    actionRow.append(confirmBtn, cancelBtn, statusMsg);
+    card.appendChild(actionRow);
+    container.appendChild(card);
+    return card;
   }
 }
 
@@ -941,7 +1096,7 @@ export class CodeExecutionResultRenderer extends ResultRenderer {
     const consoleHeader = document.createElement('div');
     consoleHeader.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:7px 14px; background:#1e293b; font-size:0.72rem;';
     const statusLabel = document.createElement('span');
-    statusLabel.textContent = isError ? '❌ Execution Error' : '⚡ Output Console';
+    statusLabel.textContent = isError ? 'Execution Error' : 'Output Console';
     statusLabel.style.cssText = `font-weight:700; color:${isError ? '#f87171' : '#38bdf8'};`;
 
     const timeBadge = document.createElement('span');
@@ -3176,7 +3331,8 @@ export class MapResultRenderer extends ResultRenderer {
 
   static render(result, container) {
     const data = (result?.data && (result.data.markers || result.data.places || result.data.title)) ? result.data : (result || {});
-    const title = data.title || result?.title || 'Geographic Map';
+    const rawTitle = data.title || result?.title || 'Geographic Map';
+    const title = sanitizeUserFacingText(rawTitle);
     let markers = Array.isArray(data.markers) ? data.markers : (Array.isArray(result?.markers) ? result.markers : []);
     const places = Array.isArray(data.places) ? data.places : (Array.isArray(result?.places) ? result.places : []);
     const distanceKm = Number(data.distanceKm || result?.distanceKm || 0);
@@ -3205,7 +3361,8 @@ export class MapResultRenderer extends ResultRenderer {
     titleEl.style.cssText = 'font-size:0.95rem; color:var(--black);';
     headLeft.appendChild(titleEl);
 
-    if (distanceKm > 0) {
+    // Only show route distance badge on header if places list is empty (e.g. waypoint route)
+    if (distanceKm > 0 && places.length === 0) {
       const distBadge = document.createElement('span');
       distBadge.textContent = `${distanceKm.toLocaleString()} km`;
       distBadge.style.cssText = 'font-size:0.72rem; padding:3px 10px; border-radius:9999px; background:var(--g100); color:var(--black); font-weight:700; border:1px solid var(--g200);';
@@ -3229,52 +3386,127 @@ export class MapResultRenderer extends ResultRenderer {
     card.appendChild(head);
 
     const body = document.createElement('div');
-    body.style.cssText = 'padding:16px 18px; display:flex; flex-direction:column; gap:12px;';
+    body.style.cssText = 'padding:14px 16px; display:flex; flex-direction:column; gap:10px;';
 
     // Visual Map Preview Canvas
     const mapStage = document.createElement('div');
     const mapStageId = `ast-map-${Date.now()}-${Math.floor(Math.random() * 899 + 100)}`;
     mapStage.id = mapStageId;
-    mapStage.style.cssText = 'width:100%; height:230px; border-radius:12px; background:#0f172a; border:1px solid var(--g200); position:relative; overflow:hidden; z-index:1;';
+    mapStage.style.cssText = 'width:100%; height:180px; border-radius:12px; background:#0f172a; border:1px solid var(--g200); position:relative; overflow:hidden; z-index:1;';
 
-    if (markers.length > 0) {
-      const lats = markers.map(m => m.lat);
-      const lngs = markers.map(m => m.lng);
+    const userLoc = data.userLocation || result?.userLocation || null;
+    const hasUserLocation = Boolean(
+      userLoc &&
+      typeof userLoc.lat === 'number' &&
+      typeof userLoc.lng === 'number' &&
+      !isNaN(userLoc.lat) &&
+      !isNaN(userLoc.lng) &&
+      Math.abs(userLoc.lat) <= 90 &&
+      Math.abs(userLoc.lng) <= 180 &&
+      !(userLoc.lat === 0 && userLoc.lng === 0)
+    );
+
+    if (markers.length > 0 || hasUserLocation) {
+      const validMarkers = markers.filter(m => typeof m.lat === 'number' && typeof m.lng === 'number' && !isNaN(m.lat) && !isNaN(m.lng) && !(m.lat === 0 && m.lng === 0));
+      const markersToUse = validMarkers;
+
+      const lats = markersToUse.map(m => m.lat);
+      const lngs = markersToUse.map(m => m.lng);
+      if (hasUserLocation) {
+        lats.push(userLoc.lat);
+        lngs.push(userLoc.lng);
+      }
+
       const minLat = Math.min(...lats);
       const maxLat = Math.max(...lats);
       const minLng = Math.min(...lngs);
       const maxLng = Math.max(...lngs);
-      const latSpan = Math.max(maxLat - minLat, 0.005);
-      const lngSpan = Math.max(maxLng - minLng, 0.005);
+      const centerLat = (minLat + maxLat) / 2;
+      const centerLng = (minLng + maxLng) / 2;
 
-      const points = markers.map((m, idx) => {
-        const x = Math.round(60 + ((m.lng - minLng) / lngSpan) * 480);
-        const y = Math.round(185 - ((m.lat - minLat) / latSpan) * 140);
-        return { x, y, name: m.name, idx: idx + 1 };
+      // Authentic geographic projection (equirectangular with latitude cosine compensation)
+      const cosLat = Math.cos(centerLat * Math.PI / 180);
+      const latSpan = Math.max(maxLat - minLat, 0.012);
+      const lngSpan = Math.max(maxLng - minLng, 0.012);
+
+      // Canvas dimensions 600x180: available plot box 480x120 centered at (300, 90)
+      const scaleLat = 120 / latSpan;
+      const scaleLng = 480 / (lngSpan * Math.max(cosLat, 0.3));
+      const geoScale = Math.min(scaleLat, scaleLng);
+
+      const points = markersToUse.map((m, idx) => {
+        const x = Math.round(300 + (m.lng - centerLng) * cosLat * geoScale);
+        const y = Math.round(90 - (m.lat - centerLat) * geoScale);
+        const rank = m.rank || (idx + 1);
+        return { x, y, name: m.name, rank, lat: m.lat, lng: m.lng };
       });
 
-      const polylineHtml = points.length > 1
+      // Distinct User Location Marker (Origin)
+      let userMarkerHtml = '';
+      if (hasUserLocation) {
+        const userX = Math.round(300 + (userLoc.lng - centerLng) * cosLat * geoScale);
+        const userY = Math.round(90 - (userLoc.lat - centerLat) * geoScale);
+        userMarkerHtml = `
+          <g class="map-user-location-marker" role="img" aria-label="Your location">
+            <circle cx="${userX}" cy="${userY}" r="16" fill="#06b6d4" fill-opacity="0.2"/>
+            <circle cx="${userX}" cy="${userY}" r="8" fill="#0ea5e9" stroke="#ffffff" stroke-width="2.5"/>
+            <circle cx="${userX}" cy="${userY}" r="3" fill="#ffffff"/>
+            <text x="${userX}" y="${userY + 18}" text-anchor="middle" fill="#38bdf8" font-size="9" font-weight="700" letter-spacing="0.2px">Your location</text>
+          </g>
+        `;
+      }
+
+      // True metric scale bar: 1 deg lat ~= 111.32 km
+      const pxPerKm = geoScale / 111.32;
+      const scaleCandidates = [1, 2, 5, 10, 20, 50];
+      const scaleKm = scaleCandidates.find(c => (c * pxPerKm) >= 40) || 5;
+      const scaleBarWidth = Math.min(180, Math.max(30, Math.round(scaleKm * pxPerKm)));
+
+      // ONLY draw polyline if an explicit continuous route was requested (not for independent places)
+      const polylineHtml = (points.length > 1 && Array.isArray(data.route) && data.route.length > 1)
         ? `<polyline points="${points.map(p => `${p.x},${p.y}`).join(' ')}" stroke="#38bdf8" stroke-width="2.5" stroke-dasharray="5,5" fill="none"/>`
         : '';
 
       const markersHtml = points.map(p => `
         <g>
-          <circle cx="${p.x}" cy="${p.y}" r="13" fill="#2563eb" stroke="#ffffff" stroke-width="2"/>
-          <text x="${p.x}" y="${p.y + 4}" text-anchor="middle" fill="#ffffff" font-size="10.5" font-weight="bold">${p.idx}</text>
-          <text x="${p.x}" y="${p.y - 18}" text-anchor="middle" fill="#f1f5f9" font-size="10" font-weight="600">${p.name.length > 24 ? p.name.slice(0, 22) + '…' : p.name}</text>
+          <circle cx="${p.x}" cy="${p.y}" r="12" fill="#2563eb" stroke="#ffffff" stroke-width="2"/>
+          <text x="${p.x}" y="${p.y + 4}" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="bold">${p.rank}</text>
+          <text x="${p.x}" y="${p.y - 15}" text-anchor="middle" fill="#f1f5f9" font-size="9.5" font-weight="600">${escapeHtml(p.name.length > 24 ? p.name.slice(0, 22) + '…' : p.name)}</text>
         </g>
       `).join('');
 
       mapStage.innerHTML = `
-        <svg viewBox="0 0 600 230" style="width:100%; height:100%; display:block; background:#0f172a; border-radius:12px;">
+        <svg viewBox="0 0 600 180" style="width:100%; height:100%; display:block; background:#0f172a; border-radius:12px;">
           <defs>
-            <pattern id="mapGridDots" width="24" height="24" patternUnits="userSpaceOnUse">
-              <circle cx="2" cy="2" r="1.2" fill="#334155"/>
+            <pattern id="geoGrid-${mapStageId}" width="60" height="60" patternUnits="userSpaceOnUse">
+              <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#1e293b" stroke-width="1"/>
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="#0f172a"/>
-          <rect width="100%" height="100%" fill="url(#mapGridDots)"/>
+          <rect width="100%" height="100%" fill="url(#geoGrid-${mapStageId})"/>
+
+          <!-- Geographic coordinates & North indicator -->
+          <g transform="translate(568, 24)">
+            <circle cx="0" cy="0" r="11" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+            <path d="M0 -6 L3 3 L0 1 L-3 3 Z" fill="#38bdf8"/>
+            <text x="0" y="-8" text-anchor="middle" fill="#94a3b8" font-size="7.5" font-weight="bold">N</text>
+          </g>
+
+          <!-- Geographic center label -->
+          <text x="20" y="24" fill="#64748b" font-size="9.5" font-weight="600" font-family="sans-serif">
+            Coordinates: ${centerLat.toFixed(3)}°N, ${centerLng.toFixed(3)}°E
+          </text>
+
+          <!-- Metric Scale Bar -->
+          <g transform="translate(20, 162)">
+            <line x1="0" y1="0" x2="${scaleBarWidth}" y2="0" stroke="#94a3b8" stroke-width="1.8"/>
+            <line x1="0" y1="-3" x2="0" y2="3" stroke="#94a3b8" stroke-width="1.8"/>
+            <line x1="${scaleBarWidth}" y1="-3" x2="${scaleBarWidth}" y2="3" stroke="#94a3b8" stroke-width="1.8"/>
+            <text x="${scaleBarWidth / 2}" y="-4" text-anchor="middle" fill="#94a3b8" font-size="9" font-weight="600" font-family="sans-serif">${scaleKm} km</text>
+          </g>
+
           ${polylineHtml}
+          ${userMarkerHtml}
           ${markersHtml}
         </svg>
       `;
@@ -3287,35 +3519,68 @@ export class MapResultRenderer extends ResultRenderer {
     // Detailed Places Cards (if places array provided)
     if (places.length > 0) {
       const placesWrap = document.createElement('div');
-      placesWrap.style.cssText = 'display:flex; flex-direction:column; gap:8px; margin-top:4px;';
+      placesWrap.style.cssText = 'display:flex; flex-direction:column; gap:8px; margin-top:2px;';
 
       places.forEach((p, i) => {
         const pCard = document.createElement('div');
-        pCard.style.cssText = 'padding:12px 14px; background:var(--g50); border-radius:12px; border:1px solid var(--g200); display:flex; flex-direction:column; gap:4px;';
+        pCard.style.cssText = 'padding:10px 14px; background:var(--g50); border-radius:10px; border:1px solid var(--g200); display:flex; flex-direction:column; gap:4px;';
+
+        const pName = sanitizeUserFacingText(p.name || 'Place');
+        const rawAddress = sanitizeUserFacingText(p.address || '');
+        const pPhone = sanitizeUserFacingText(p.phone || '');
+        const pDist = p.distanceKm ? `${p.distanceKm} km` : (p.distance ? `${p.distance}` : '');
+
+        // Strip repeated business name from start of address
+        let displayAddress = rawAddress;
+        if (displayAddress.toLowerCase().startsWith(pName.toLowerCase() + ',')) {
+          displayAddress = displayAddress.slice(pName.length + 1).trim();
+        }
 
         const topRow = document.createElement('div');
-        topRow.style.cssText = 'display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;';
-        topRow.innerHTML = `
-          <div>
-            <strong style="color:var(--black); font-size:0.88rem;">${i + 1}. ${p.name}</strong>
-            ${p.certified ? `<div style="font-size:0.72rem; color:#16a34a; font-weight:700; margin-top:2px;">Verified: ${p.certified}</div>` : ''}
-          </div>
-          ${p.pricing ? `<span style="font-size:0.75rem; font-weight:750; background:var(--g100); color:var(--black); padding:3px 10px; border-radius:9999px; border:1px solid var(--g200);">${p.pricing}</span>` : ''}
+        topRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;';
+        
+        const topRowLeft = document.createElement('div');
+        topRowLeft.innerHTML = `
+          <strong style="color:var(--black); font-size:0.88rem;">${i + 1}. ${escapeHtml(pName)}</strong>
+          ${p.certified ? `<div style="font-size:0.72rem; color:#16a34a; font-weight:700; margin-top:2px;">Verified: ${escapeHtml(p.certified)}</div>` : ''}
         `;
+        topRow.appendChild(topRowLeft);
+
+        const topRowRight = document.createElement('div');
+        topRowRight.style.cssText = 'display:flex; align-items:center; gap:6px;';
+        if (pDist) {
+          topRowRight.innerHTML += `<span style="font-size:0.75rem; font-weight:700; background:var(--g100); color:var(--g700); padding:3px 10px; border-radius:9999px; border:1px solid var(--g200);">${escapeHtml(pDist)}</span>`;
+        }
+        if (p.pricing) {
+          topRowRight.innerHTML += `<span style="font-size:0.75rem; font-weight:750; background:var(--g100); color:var(--black); padding:3px 10px; border-radius:9999px; border:1px solid var(--g200);">${escapeHtml(p.pricing)}</span>`;
+        }
+        topRow.appendChild(topRowRight);
         pCard.appendChild(topRow);
 
-        if (p.address || p.phone) {
+        if (displayAddress || pPhone) {
           const infoRow = document.createElement('div');
           infoRow.style.cssText = 'font-size:0.76rem; color:var(--g600); display:flex; gap:12px; flex-wrap:wrap; margin-top:2px;';
-          if (p.address) infoRow.innerHTML += `<span>📍 ${p.address}</span>`;
-          if (p.phone) infoRow.innerHTML += `<span>📞 ${p.phone}</span>`;
+          if (displayAddress) {
+            infoRow.innerHTML += `<span style="display:inline-flex; align-items:center; gap:5px;">${ICONS.pin}<span>${escapeHtml(displayAddress)}</span></span>`;
+          }
+          if (pPhone) {
+            infoRow.innerHTML += `<span style="display:inline-flex; align-items:center; gap:5px;">${ICONS.phone}<span>${escapeHtml(pPhone)}</span></span>`;
+          }
           pCard.appendChild(infoRow);
         }
 
-        if (p.description) {
+        const cleanDesc = sanitizeUserFacingText(p.description || '').trim();
+        const isDuplicateAddress = cleanDesc && displayAddress && (
+          cleanDesc.toLowerCase() === displayAddress.toLowerCase() ||
+          cleanDesc.toLowerCase().includes(displayAddress.toLowerCase()) ||
+          displayAddress.toLowerCase().includes(cleanDesc.toLowerCase())
+        );
+        const isBoilerplate = cleanDesc.toLowerCase().includes('verified') && (cleanDesc.toLowerCase().includes('location near') || cleanDesc.toLowerCase().includes('coordinates in'));
+
+        if (cleanDesc && !isDuplicateAddress && !isBoilerplate) {
           const descRow = document.createElement('div');
           descRow.style.cssText = 'font-size:0.74rem; color:var(--g700); line-height:1.4; margin-top:2px;';
-          descRow.textContent = p.description;
+          descRow.textContent = cleanDesc;
           pCard.appendChild(descRow);
         }
 
@@ -3330,12 +3595,14 @@ export class MapResultRenderer extends ResultRenderer {
       markers.forEach((m, i) => {
         const row = document.createElement('div');
         row.style.cssText = 'padding:10px 14px; background:var(--g50); border-radius:10px; border:1px solid var(--g150); display:flex; justify-content:space-between; align-items:center; font-size:0.84rem;';
+        const mName = sanitizeUserFacingText(m.name || 'Waypoint');
+        const mDesc = sanitizeUserFacingText(m.description || '');
         row.innerHTML = `
           <div>
-            <strong style="color:var(--black); font-size:0.86rem;">${i + 1}. ${m.name}</strong>
-            ${m.description ? `<div style="font-size:0.75rem; color:var(--g600); margin-top:2px;">${m.description}</div>` : ''}
+            <strong style="color:var(--black); font-size:0.86rem;">${i + 1}. ${escapeHtml(mName)}</strong>
+            ${mDesc ? `<div style="font-size:0.75rem; color:var(--g600); margin-top:2px;">${escapeHtml(mDesc)}</div>` : ''}
           </div>
-          <span style="font-family:var(--mono); font-size:0.74rem; color:var(--g600); background:var(--g100); padding:3px 8px; border-radius:9999px;">${m.lat.toFixed(4)}°, ${m.lng.toFixed(4)}°</span>
+          <span style="font-family:var(--mono); font-size:0.74rem; color:var(--g600); background:var(--g100); padding:3px 8px; border-radius:9999px;">${Number(m.lat || 0).toFixed(4)}°, ${Number(m.lng || 0).toFixed(4)}°</span>
         `;
         markersList.appendChild(row);
       });
@@ -3589,13 +3856,14 @@ export class CalendarCardRenderer extends ResultRenderer {
   }
 
   static render(result, container) {
+    const data = result?.data || result || {};
     const card = document.createElement('div');
     card.className = 'ast-calendar-card';
     card.style.cssText = 'background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:16px; margin:8px 0; box-shadow:0 4px 16px rgba(0,0,0,0.04); font-family:var(--sans);';
 
-    if (result.type === 'calendar-list' || result.action === 'list') {
-      const events = result.events || [];
-      const safeQuery = String(result.query || 'Upcoming');
+    if (data.type === 'calendar-list' || data.action === 'list' || result.type === 'calendar-list' || result.action === 'list') {
+      const events = data.events || result.events || [];
+      const safeQuery = String(data.query || result.query || 'Upcoming');
       card.innerHTML = `
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; border-bottom:1px solid var(--border-subtle); padding-bottom:8px;">
           <div style="display:flex; align-items:center; gap:8px;">
@@ -3622,8 +3890,8 @@ export class CalendarCardRenderer extends ResultRenderer {
         </div>
       `;
     } else {
-      const evt = result.event || {};
-      const isCancelled = result.action === 'cancelled';
+      const evt = data.event || result.event || {};
+      const isCancelled = (data.action || result.action) === 'cancelled';
       card.innerHTML = `
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
           <div style="display:flex; align-items:center; gap:8px;">
@@ -3631,7 +3899,7 @@ export class CalendarCardRenderer extends ResultRenderer {
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </div>
             <div>
-              <div style="font-weight:700; font-size:0.95rem; color:var(--text);">${String(evt.title || result.message || 'Calendar Event')}</div>
+              <div style="font-weight:700; font-size:0.95rem; color:var(--text);">${String(evt.title || data.message || result.message || 'Calendar Event')}</div>
               <div style="font-size:0.75rem; color:var(--text-secondary);">${isCancelled ? 'Event cancelled from schedule' : 'Event confirmed & scheduled'}</div>
             </div>
           </div>
@@ -3670,8 +3938,13 @@ export class BrowserCardRenderer extends ResultRenderer {
   static name = 'Web Browser';
 
   static canRender(result) {
-    return result.renderer === 'browser-card' ||
-      result.type === 'browser-preview';
+    const data = result?.data || result || {};
+    return result?.renderer === 'browser-card' ||
+      data?.renderer === 'browser-card' ||
+      result?.type === 'browser-preview' ||
+      data?.type === 'browser-preview' ||
+      result?.type === 'browser-error' ||
+      data?.type === 'browser-error';
   }
 
   static render(result, container) {
@@ -3679,10 +3952,19 @@ export class BrowserCardRenderer extends ResultRenderer {
     card.className = 'ast-browser-card';
     card.style.cssText = 'background:var(--bg-card); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin:10px 0; box-shadow:0 4px 18px rgba(0,0,0,0.05); font-family:var(--sans);';
 
-    const url = String(result.url || 'https://en.wikipedia.org');
-    const title = String(result.title || 'Web Research');
-    const excerpt = String(result.excerpt || '');
-    const browserToolLink = `#browser?url=${encodeURIComponent(url)}`;
+    const data = result?.data || result || {};
+    const rawUrl = data.url || data.finalUrl || data.source || result.url || '';
+    const url = String(rawUrl || '').trim();
+    let displayHostname = '';
+    try {
+      if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+        displayHostname = new URL(url).hostname;
+      }
+    } catch {}
+
+    const title = String(data.title || result.title || data.query || displayHostname || 'Web Research');
+    const excerpt = String(data.excerpt || data.aboutExcerpt || data.description || data.snippet || (data.text ? data.text.slice(0, 320) : '') || result.excerpt || '');
+    const browserToolLink = url ? `#browser?url=${encodeURIComponent(url)}` : '#browser';
 
     card.innerHTML = `
       <!-- Window Chrome -->
@@ -3696,7 +3978,7 @@ export class BrowserCardRenderer extends ResultRenderer {
         <!-- Address pill -->
         <div style="flex:1; max-width:460px; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:3px 10px; font-family:var(--mono); font-size:0.75rem; color:var(--text); display:flex; align-items:center; gap:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
           <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#10b981" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-          <span style="overflow:hidden; text-overflow:ellipsis;">${url}</span>
+          <span style="overflow:hidden; text-overflow:ellipsis;">${url || 'Web Search'}</span>
         </div>
         <span style="font-size:0.7rem; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Isolated</span>
       </div>
@@ -3704,7 +3986,7 @@ export class BrowserCardRenderer extends ResultRenderer {
       <!-- Content Preview -->
       <div style="padding:16px 18px;">
         <h3 style="margin:0 0 8px; font-size:1.05rem; font-weight:700; color:var(--text);">${title}</h3>
-        <p style="margin:0 0 14px; font-size:0.86rem; line-height:1.6; color:var(--text-secondary);">${excerpt}</p>
+        ${excerpt ? `<p style="margin:0 0 14px; font-size:0.86rem; line-height:1.6; color:var(--text-secondary);">${excerpt}</p>` : ''}
         
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; border-top:1px solid var(--border-subtle); padding-top:12px;">
           <div style="display:flex; gap:8px;">
@@ -3712,18 +3994,20 @@ export class BrowserCardRenderer extends ResultRenderer {
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
               <span>Open in Browser</span>
             </a>
-            <a href="${url}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="font-size:0.76rem; text-decoration:none; display:inline-flex; align-items:center; gap:5px;">
-              <span>Visit Site</span>
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            </a>
+            ${url ? `
+              <a href="${url}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="font-size:0.76rem; text-decoration:none; display:inline-flex; align-items:center; gap:5px;">
+                <span>Visit Site</span>
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              </a>
+            ` : ''}
           </div>
-          <button type="button" class="btn btn-secondary btn-sm brw-card-copy-btn" data-url="${url}" style="font-size:0.75rem; padding:4px 8px;">Copy URL</button>
+          ${url ? `<button type="button" class="btn btn-secondary btn-sm brw-card-copy-btn" data-url="${url}" style="font-size:0.75rem; padding:4px 8px;">Copy URL</button>` : ''}
         </div>
       </div>
     `;
 
     const copyBtn = card.querySelector('.brw-card-copy-btn');
-    if (copyBtn) {
+    if (copyBtn && url) {
       copyBtn.addEventListener('click', () => {
         navigator.clipboard.writeText(url).then(() => {
           copyBtn.textContent = 'Copied';
@@ -3763,10 +4047,820 @@ export class TextResultRenderer extends ResultRenderer {
 }
 
 /**
+ * Deterministic SVG Line Plot renderer for Collatz trajectories and numerical functions
+ */
+function renderSvgLineChart(chartData, title = '') {
+  if (!chartData) return '';
+  const dataset = chartData.datasets?.[0] || {};
+  const data = dataset.data || chartData.data || [];
+  const labels = chartData.labels || [];
+  const n = data.length;
+  if (n < 2) return '';
+
+  const width = 560;
+  const height = 180;
+  const padLeft = 50;
+  const padRight = 20;
+  const padTop = 20;
+  const padBottom = 30;
+
+  const plotW = width - padLeft - padRight;
+  const plotH = height - padTop - padBottom;
+
+  const validVals = data.filter(v => typeof v === 'number' && !isNaN(v));
+  if (validVals.length < 2) return '';
+  let maxVal = Math.max(...validVals);
+  let minVal = Math.min(...validVals);
+  if (maxVal === minVal) {
+    maxVal += 1;
+    minVal -= 1;
+  }
+
+  const getX = (idx) => padLeft + (idx / (n - 1)) * plotW;
+  const getY = (val) => padTop + plotH - ((val - minVal) / (maxVal - minVal)) * plotH;
+
+  const points = data.map((val, idx) => `${getX(idx).toFixed(1)},${getY(val).toFixed(1)}`).join(' ');
+
+  let peakIdx = 0;
+  let peakVal = data[0];
+  data.forEach((v, i) => {
+    if (v > peakVal) {
+      peakVal = v;
+      peakIdx = i;
+    }
+  });
+
+  const peakX = getX(peakIdx).toFixed(1);
+  const peakY = getY(peakVal).toFixed(1);
+  const areaPoints = `${points} ${getX(n - 1).toFixed(1)},${padTop + plotH} ${getX(0).toFixed(1)},${padTop + plotH}`;
+
+  const chartId = `svg-chart-${Math.random().toString(36).slice(2, 8)}`;
+
+  return `
+    <div style="background:var(--bg-subtle); border:1px solid var(--border-subtle); border-radius:10px; padding:12px; margin-top:8px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">
+        <span>${escapeHtml(title || dataset.label || 'Trajectory Plot')}</span>
+        <span>Peak: ${peakVal} (Step ${peakIdx}) · Points: ${n}</span>
+      </div>
+      <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; display:block; overflow:visible;">
+        <defs>
+          <linearGradient id="${chartId}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/>
+            <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.02"/>
+          </linearGradient>
+        </defs>
+        <line x1="${padLeft}" y1="${padTop}" x2="${width - padRight}" y2="${padTop}" stroke="var(--border)" stroke-dasharray="3,3" stroke-width="1"/>
+        <line x1="${padLeft}" y1="${padTop + plotH / 2}" x2="${width - padRight}" y2="${padTop + plotH / 2}" stroke="var(--border)" stroke-dasharray="3,3" stroke-width="1"/>
+        <line x1="${padLeft}" y1="${padTop + plotH}" x2="${width - padRight}" y2="${padTop + plotH}" stroke="var(--border)" stroke-width="1.2"/>
+        <line x1="${padLeft}" y1="${padTop}" x2="${padLeft}" y2="${padTop + plotH}" stroke="var(--border)" stroke-width="1.2"/>
+
+        <text x="${padLeft - 6}" y="${padTop + 4}" font-size="10" fill="var(--text-muted)" text-anchor="end" font-family="monospace">${typeof maxVal === 'number' && maxVal % 1 !== 0 ? maxVal.toFixed(2) : maxVal}</text>
+        <text x="${padLeft - 6}" y="${padTop + plotH / 2 + 3}" font-size="10" fill="var(--text-muted)" text-anchor="end" font-family="monospace">${typeof minVal === 'number' && ((maxVal + minVal) / 2) % 1 !== 0 ? ((maxVal + minVal) / 2).toFixed(2) : Math.round((maxVal + minVal) / 2)}</text>
+        <text x="${padLeft - 6}" y="${padTop + plotH}" font-size="10" fill="var(--text-muted)" text-anchor="end" font-family="monospace">${typeof minVal === 'number' && minVal % 1 !== 0 ? minVal.toFixed(2) : minVal}</text>
+
+        <polygon points="${areaPoints}" fill="url(#${chartId})"/>
+        <polyline fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="${points}"/>
+
+        <circle cx="${peakX}" cy="${peakY}" r="4" fill="#ef4444" stroke="#ffffff" stroke-width="2"/>
+        <text x="${peakX}" y="${Math.max(14, peakY - 8)}" font-size="10" font-weight="700" fill="#ef4444" text-anchor="middle" font-family="monospace">Peak: ${peakVal}</text>
+
+        <text x="${padLeft}" y="${padTop + plotH + 18}" font-size="10" fill="var(--text-muted)" text-anchor="middle" font-family="monospace">${labels[0] || '0'}</text>
+        <text x="${width - padRight}" y="${padTop + plotH + 18}" font-size="10" fill="var(--text-muted)" text-anchor="middle" font-family="monospace">${labels[n - 1] || (n - 1)}</text>
+      </svg>
+    </div>
+  `;
+}
+
+/**
+ * MATHEMATICAL RESULT RENDERER — Deterministic computation, verification, and working steps
+ */
+export class MathResultRenderer extends ResultRenderer {
+  static id = 'math-result';
+  static name = 'Mathematical Utility Result';
+
+  static canRender(result) {
+    const data = result.data || result;
+    return result.type === 'math-result' ||
+      result.renderer === 'math-result' ||
+      data.type === 'math-result' ||
+      Boolean(data.chart) ||
+      (data.operation && (
+        data.sequence !== undefined ||
+        data.roots !== undefined ||
+        data.root !== undefined ||
+        data.discriminant !== undefined ||
+        data.determinant !== undefined ||
+        data.eigenvalues !== undefined ||
+        data.odeSolution !== undefined ||
+        data.polar !== undefined ||
+        data.solutionVector !== undefined ||
+        data.regressionLine !== undefined ||
+        data.inverseModulo !== undefined ||
+        data.crtSolution !== undefined ||
+        data.tableValue !== undefined ||
+        data.bezoutCoefficients !== undefined ||
+        data.factors !== undefined ||
+        data.phi !== undefined ||
+        data.operation === 'collatz' ||
+        data.operation === 'graph' ||
+        data.operation === 'plot'
+      ));
+  }
+
+  static render(result, container) {
+    const data = result.data || result;
+    const card = document.createElement('section');
+    card.className = 'assistant-result-math-card';
+    card.style.cssText = 'margin-top:10px; padding:16px; border:1px solid var(--g200); border-radius:14px; background:var(--white); box-shadow:0 2px 8px rgba(0,0,0,.04); color:var(--black); font-family:var(--sans, sans-serif);';
+
+    // Top Header: Operation type and status badge
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap;';
+
+    const opTitle = document.createElement('div');
+    opTitle.style.cssText = 'display:flex; align-items:center; gap:8px; font-weight:700; font-size:0.95rem; color:var(--black);';
+
+    const sigmaIcon = document.createElement('span');
+    sigmaIcon.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--primary, #2563eb)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 4H6l6 8-6 8h12"/></svg>';
+    sigmaIcon.style.display = 'inline-flex';
+
+    const titleText = document.createElement('span');
+    titleText.textContent = getOperationTitle(data.operation);
+    opTitle.append(sigmaIcon, titleText);
+
+    // Badges container (Proof Status / Verification)
+    const badges = document.createElement('div');
+    badges.style.cssText = 'display:flex; align-items:center; gap:6px; flex-wrap:wrap;';
+
+    if (data.conjectureStatus) {
+      const conjBadge = document.createElement('span');
+      conjBadge.className = 'math-proof-badge math-badge-conjecture';
+      conjBadge.textContent = data.conjectureStatus;
+      badges.appendChild(conjBadge);
+    }
+
+    if (data.verified !== undefined) {
+      const verBadge = document.createElement('span');
+      verBadge.className = `math-proof-badge ${data.verified ? 'math-badge-proven' : 'math-badge-conjecture'}`;
+      verBadge.textContent = data.verified ? 'VERIFIED' : 'UNVERIFIED';
+      badges.appendChild(verBadge);
+    }
+
+    header.append(opTitle, badges);
+    card.appendChild(header);
+
+    // Body content according to operation
+    const body = document.createElement('div');
+    body.style.cssText = 'display:flex; flex-direction:column; gap:12px;';
+
+    // 1. COLLATZ
+    if (data.operation === 'collatz' && Array.isArray(data.sequence)) {
+      const metricGrid = document.createElement('div');
+      metricGrid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:8px;';
+
+      for (const [label, val] of [
+        ['Input', data.input],
+        ['Steps to 1', data.steps],
+        ['Peak Excursion', data.maximum_value],
+        ['Terminates', data.reached_one ? 'Yes (reached 1)' : 'No']
+      ]) {
+        const m = document.createElement('div');
+        m.style.cssText = 'padding:8px 10px; border:1px solid var(--g200); border-radius:8px; background:var(--g50); text-align:center;';
+        m.innerHTML = `<div style="font-size:0.65rem; text-transform:uppercase; color:var(--g600); font-weight:700;">${escapeHtml(label)}</div><div style="font-family:var(--mono, monospace); font-weight:700; font-size:1.05rem; margin-top:2px; color:var(--black);">${escapeHtml(val)}</div>`;
+        metricGrid.appendChild(m);
+      }
+      body.appendChild(metricGrid);
+
+      // Sequence pills track
+      const seqLabel = document.createElement('div');
+      seqLabel.style.cssText = 'font-size:0.75rem; font-weight:700; color:var(--g600); margin-top:4px;';
+      seqLabel.textContent = `Generated Sequence (${data.sequence.length} elements):`;
+      body.appendChild(seqLabel);
+
+      const seqTrack = document.createElement('div');
+      seqTrack.style.cssText = 'display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; font-family:var(--mono, monospace); font-size:0.85rem; align-items:center; scrollbar-width:thin;';
+
+      data.sequence.forEach((num, idx) => {
+        const item = document.createElement('span');
+        item.style.cssText = 'padding:3px 8px; border-radius:6px; background:var(--g100); border:1px solid var(--g200); flex-shrink:0;';
+        if (num === data.maximum_value) {
+          item.style.background = 'var(--primary, #2563eb)';
+          item.style.color = '#ffffff';
+          item.title = 'Peak maximum excursion';
+        }
+        item.textContent = num;
+        seqTrack.appendChild(item);
+
+        if (idx < data.sequence.length - 1) {
+          const arrow = document.createElement('span');
+          arrow.textContent = '→';
+          arrow.style.color = 'var(--g600)';
+          seqTrack.appendChild(arrow);
+        }
+      });
+      body.appendChild(seqTrack);
+
+      // Render SVG trajectory graph if chart data or sequence is present
+      const chartHtml = renderSvgLineChart(data.chart || {
+        labels: data.sequence.map((_, i) => String(i)),
+        datasets: [{ label: `Collatz Trajectory (n = ${data.input})`, data: data.sequence }]
+      }, `Collatz Trajectory (n = ${data.input})`);
+
+      if (chartHtml) {
+        const chartWrapper = document.createElement('div');
+        chartWrapper.innerHTML = chartHtml;
+        body.appendChild(chartWrapper);
+      }
+
+      // Proof Status Disclaimer
+      const notice = document.createElement('div');
+      notice.style.cssText = 'padding:10px 12px; border-radius:8px; background:var(--g50); border:1px solid var(--g200); font-size:0.75rem; color:var(--g700); line-height:1.4;';
+      notice.innerHTML = '<strong>Mathematical Notice:</strong> The Collatz (3n + 1) Conjecture is an <strong>UNPROVEN</strong> open problem in number theory. Empirical termination at 1 for specific inputs does not constitute a mathematical proof for all natural numbers.';
+      body.appendChild(notice);
+
+    // 2. EQUATIONS (QUADRATIC & LINEAR)
+    } else if (data.operation === 'solve_quadratic' || data.operation === 'solve_linear') {
+      const rootCard = document.createElement('div');
+      rootCard.style.cssText = 'padding:12px 14px; border-radius:10px; background:var(--g50); border:1px solid var(--g200);';
+
+      const rootsText = Array.isArray(data.roots)
+        ? data.roots.map((r, i) => `${data.variable || 'x'}<sub>${i + 1}</sub> = <strong>${escapeHtml(r)}</strong>`).join('&nbsp;&nbsp;|&nbsp;&nbsp;')
+        : `${data.variable || 'x'} = <strong>${escapeHtml(data.root)}</strong>`;
+
+      rootCard.innerHTML = `
+        <div style="font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase;">Solution Roots</div>
+        <div style="font-family:var(--mono, monospace); font-size:1.15rem; margin-top:4px; color:var(--black);">${rootsText}</div>
+        ${data.nature ? `<div style="font-size:0.75rem; color:var(--g600); margin-top:4px;">Nature of roots: ${escapeHtml(data.nature)} (Discriminant D = ${escapeHtml(data.discriminant)})</div>` : ''}
+      `;
+      body.appendChild(rootCard);
+
+    // 3. NEWTON-RAPHSON ROOT FINDING
+    } else if (data.operation === 'newton_raphson') {
+      const nrCard = document.createElement('div');
+      nrCard.style.cssText = 'padding:12px 14px; border-radius:10px; background:var(--g50); border:1px solid var(--g200);';
+      nrCard.innerHTML = `
+        <div style="font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase;">Numerical Root Solution</div>
+        <div style="font-family:var(--mono, monospace); font-size:1.2rem; font-weight:700; margin-top:4px; color:var(--black);">
+          Root x* = <strong>${escapeHtml(data.root)}</strong>
+        </div>
+        <div style="font-size:0.75rem; color:var(--g600); margin-top:4px;">
+          Residual |f(x*)| = ${escapeHtml(data.residual)} | Iterations: ${escapeHtml(data.iterationCount)} | Initial x₀ = ${escapeHtml(data.x0)}
+        </div>
+      `;
+      body.appendChild(nrCard);
+
+      if (Array.isArray(data.iterations) && data.iterations.length > 0) {
+        const iterDetails = document.createElement('details');
+        iterDetails.style.cssText = 'margin-top:4px; font-size:0.8rem; border:1px solid var(--g200); border-radius:8px; padding:6px 10px; background:var(--white);';
+        iterDetails.innerHTML = `
+          <summary style="cursor:pointer; font-weight:600; color:var(--g700); outline:none;">Iteration Progression (${data.iterations.length} steps)</summary>
+          <div style="overflow-x:auto; margin-top:8px;">
+            <table style="width:100%; border-collapse:collapse; font-family:var(--mono, monospace); font-size:0.75rem; text-align:right;">
+              <thead>
+                <tr style="border-bottom:1px solid var(--g200); color:var(--g600);">
+                  <th style="padding:4px 6px; text-align:left;">n</th>
+                  <th style="padding:4px 6px;">xₙ</th>
+                  <th style="padding:4px 6px;">f(xₙ)</th>
+                  <th style="padding:4px 6px;">f'(xₙ)</th>
+                  <th style="padding:4px 6px;">|Δx|</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${data.iterations.map(it => `
+                  <tr style="border-bottom:1px solid var(--g100);">
+                    <td style="padding:4px 6px; text-align:left;">${it.step}</td>
+                    <td style="padding:4px 6px;">${it.x}</td>
+                    <td style="padding:4px 6px;">${it.fx}</td>
+                    <td style="padding:4px 6px;">${it.fPrime}</td>
+                    <td style="padding:4px 6px;">${it.error}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+        body.appendChild(iterDetails);
+      }
+
+    // 4. ODE SOLVERS (RK4 / EULER)
+    } else if (data.operation === 'ode_rk4' || data.operation === 'ode_euler') {
+      const odeCard = document.createElement('div');
+      odeCard.style.cssText = 'padding:12px 14px; border-radius:10px; background:var(--g50); border:1px solid var(--g200);';
+      odeCard.innerHTML = `
+        <div style="font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase;">ODE Initial Value Solution (${escapeHtml(data.method || 'RK4')})</div>
+        <div style="font-family:var(--mono, monospace); font-size:1.2rem; font-weight:700; margin-top:4px; color:var(--black);">
+          y(${escapeHtml(data.xEnd)}) = <strong>${escapeHtml(data.yEnd)}</strong>
+        </div>
+        <div style="font-size:0.75rem; color:var(--g600); margin-top:4px;">
+          Initial Condition: y(${escapeHtml(data.x0)}) = ${escapeHtml(data.y0)} | Step Size h = ${escapeHtml(data.stepSize)} (${escapeHtml(data.stepsCount)} steps)
+        </div>
+      `;
+      body.appendChild(odeCard);
+
+    // 5. COMPLEX NUMBERS
+    } else if (data.operation === 'complex' && data.rectangular) {
+      const compCard = document.createElement('div');
+      compCard.style.cssText = 'padding:12px 14px; border-radius:10px; background:var(--g50); border:1px solid var(--g200);';
+      compCard.innerHTML = `
+        <div style="font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase;">Complex Number Representation</div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:8px; margin-top:6px;">
+          <div style="padding:6px 8px; background:var(--white); border:1px solid var(--g200); border-radius:6px; text-align:center;">
+            <div style="font-size:0.65rem; color:var(--g600); font-weight:700;">Cartesian Form</div>
+            <div style="font-family:var(--mono, monospace); font-size:1.05rem; font-weight:700; margin-top:2px;">${escapeHtml(data.rectangular)}</div>
+          </div>
+          <div style="padding:6px 8px; background:var(--white); border:1px solid var(--g200); border-radius:6px; text-align:center;">
+            <div style="font-size:0.65rem; color:var(--g600); font-weight:700;">Polar Form</div>
+            <div style="font-family:var(--mono, monospace); font-size:1.05rem; font-weight:700; margin-top:2px; color:var(--primary, #2563eb);">${escapeHtml(data.polar?.notation || '')}</div>
+          </div>
+          <div style="padding:6px 8px; background:var(--white); border:1px solid var(--g200); border-radius:6px; text-align:center;">
+            <div style="font-size:0.65rem; color:var(--g600); font-weight:700;">Modulus |z|</div>
+            <div style="font-family:var(--mono, monospace); font-size:1.05rem; font-weight:700; margin-top:2px;">${escapeHtml(data.modulus)}</div>
+          </div>
+          <div style="padding:6px 8px; background:var(--white); border:1px solid var(--g200); border-radius:6px; text-align:center;">
+            <div style="font-size:0.65rem; color:var(--g600); font-weight:700;">Argument θ</div>
+            <div style="font-family:var(--mono, monospace); font-size:1.05rem; font-weight:700; margin-top:2px;">${escapeHtml(data.polar?.degrees)}°</div>
+          </div>
+        </div>
+      `;
+      body.appendChild(compCard);
+
+    // 6. MATRICES (DETERMINANT, INVERSE, EIGENVALUES, LINEAR SYSTEM)
+    } else if (data.operation === 'matrix_determinant' || data.operation === 'matrix_inverse' || data.operation === 'eigenvalues' || data.operation === 'solve_system') {
+      const matCard = document.createElement('div');
+      matCard.style.cssText = 'padding:12px; border-radius:10px; background:var(--g50); border:1px solid var(--g200);';
+
+      if (data.operation === 'matrix_determinant') {
+        matCard.innerHTML = `
+          <div style="font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase;">Matrix Determinant (${escapeHtml(data.dimensions)})</div>
+          <div style="font-family:var(--mono, monospace); font-weight:700; font-size:1.2rem; margin-top:4px; color:var(--black);">det(A) = ${escapeHtml(data.determinant)}</div>
+        `;
+      } else if (data.operation === 'matrix_inverse' && Array.isArray(data.inverse)) {
+        let matrixRows = data.inverse.map(row => `[ ${row.join(', ')} ]`).join('\n');
+        matCard.innerHTML = `
+          <div style="font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase;">Matrix Inverse A⁻¹ (${escapeHtml(data.dimensions)})</div>
+          <pre style="margin:6px 0 0 0; padding:8px 10px; background:var(--white); border:1px solid var(--g200); border-radius:6px; font-family:var(--mono, monospace); font-size:0.85rem; overflow-x:auto;">${escapeHtml(matrixRows)}</pre>
+          <div style="font-size:0.72rem; color:var(--g600); margin-top:4px;">Invertible det(A) = ${escapeHtml(data.determinant)} | Maximum A·A⁻¹ residual = ${escapeHtml(data.residual)}</div>
+        `;
+      } else if (data.operation === 'eigenvalues') {
+        const e1 = data.eigenvalues?.lambda1;
+        const e2 = data.eigenvalues?.lambda2;
+        matCard.innerHTML = `
+          <div style="font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase;">2×2 Characteristic Polynomial & Eigenvalues</div>
+          <div style="font-family:var(--mono, monospace); font-size:0.9rem; margin-top:4px; color:var(--black);">
+            p(λ) = ${escapeHtml(data.characteristicPolynomial)} = 0
+          </div>
+          <div style="display:flex; gap:12px; margin-top:8px; font-family:var(--mono, monospace); font-size:1.1rem; font-weight:700;">
+            <div>λ₁ = ${escapeHtml(e1?.formatted || e1?.val || '')}</div>
+            <div>λ₂ = ${escapeHtml(e2?.formatted || e2?.val || '')}</div>
+          </div>
+          <div style="font-size:0.72rem; color:var(--g600); margin-top:4px;">Trace τ = ${escapeHtml(data.trace)} | Determinant Δ = ${escapeHtml(data.determinant)} | Residual = ${escapeHtml(data.residual)}</div>
+        `;
+      } else if (data.operation === 'solve_system') {
+        const solText = Array.isArray(data.solution) ? data.solution.map((v, i) => `x<sub>${i + 1}</sub> = <strong>${escapeHtml(v)}</strong>`).join('&nbsp;&nbsp;|&nbsp;&nbsp;') : '';
+        matCard.innerHTML = `
+          <div style="font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase;">Linear System Solution (Ax = b)</div>
+          <div style="font-family:var(--mono, monospace); font-size:1.15rem; margin-top:4px; color:var(--black);">${solText}</div>
+          <div style="font-size:0.72rem; color:var(--g600); margin-top:4px;">Rank = ${escapeHtml(data.rank)} | Residual ||Ax - b|| = ${escapeHtml(data.residual)}</div>
+        `;
+      }
+      body.appendChild(matCard);
+
+    // 7. LINEAR REGRESSION
+    } else if (data.operation === 'linear_regression') {
+      const regCard = document.createElement('div');
+      regCard.style.cssText = 'padding:12px 14px; border-radius:10px; background:var(--g50); border:1px solid var(--g200);';
+      regCard.innerHTML = `
+        <div style="font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase;">Ordinary Least Squares Linear Regression</div>
+        <div style="font-family:var(--mono, monospace); font-size:1.25rem; font-weight:700; margin-top:4px; color:var(--primary, #2563eb);">
+          ${escapeHtml(data.equation)}
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:6px; margin-top:8px;">
+          <div style="padding:6px; background:var(--white); border:1px solid var(--g200); border-radius:6px; text-align:center;">
+            <div style="font-size:0.65rem; color:var(--g600); font-weight:700;">Slope (m)</div>
+            <div style="font-family:var(--mono, monospace); font-weight:700;">${escapeHtml(data.slope)}</div>
+          </div>
+          <div style="padding:6px; background:var(--white); border:1px solid var(--g200); border-radius:6px; text-align:center;">
+            <div style="font-size:0.65rem; color:var(--g600); font-weight:700;">Intercept (c)</div>
+            <div style="font-family:var(--mono, monospace); font-weight:700;">${escapeHtml(data.intercept)}</div>
+          </div>
+          <div style="padding:6px; background:var(--white); border:1px solid var(--g200); border-radius:6px; text-align:center;">
+            <div style="font-size:0.65rem; color:var(--g600); font-weight:700;">Pearson (r)</div>
+            <div style="font-family:var(--mono, monospace); font-weight:700;">${escapeHtml(data.correlationR)}</div>
+          </div>
+          <div style="padding:6px; background:var(--white); border:1px solid var(--g200); border-radius:6px; text-align:center;">
+            <div style="font-size:0.65rem; color:var(--g600); font-weight:700;">R-Squared (R²)</div>
+            <div style="font-family:var(--mono, monospace); font-weight:700;">${escapeHtml(data.rSquared)}</div>
+          </div>
+        </div>
+      `;
+      body.appendChild(regCard);
+
+    // 8. FOUR-FIGURE TABLE LOOKUP
+    } else if (data.tableValue !== undefined && data.machineValue !== undefined) {
+      const tableCard = document.createElement('div');
+      tableCard.style.cssText = 'border:1px solid var(--g200); border-radius:10px; overflow:hidden;';
+
+      const tableGrid = document.createElement('div');
+      tableGrid.style.cssText = 'display:grid; grid-template-columns:repeat(3, 1fr); background:var(--g50); text-align:center; padding:10px; gap:8px;';
+
+      tableGrid.innerHTML = `
+        <div>
+          <div style="font-size:0.65rem; font-weight:700; color:var(--g600); text-transform:uppercase;">4-Figure Table Value</div>
+          <div style="font-family:var(--mono, monospace); font-weight:700; font-size:1.1rem; color:var(--black); margin-top:2px;">${escapeHtml(data.tableValue)}</div>
+          <div style="font-size:0.68rem; color:var(--g600);">Table Approximation</div>
+        </div>
+        <div>
+          <div style="font-size:0.65rem; font-weight:700; color:var(--g600); text-transform:uppercase;">Direct Machine Value</div>
+          <div style="font-family:var(--mono, monospace); font-weight:700; font-size:1.1rem; color:var(--black); margin-top:2px;">${escapeHtml(Number(data.machineValue).toFixed(6))}</div>
+          <div style="font-size:0.68rem; color:var(--g600);">Full Floating Precision</div>
+        </div>
+        <div>
+          <div style="font-size:0.65rem; font-weight:700; color:var(--g600); text-transform:uppercase;">Approximation Error</div>
+          <div style="font-family:var(--mono, monospace); font-weight:700; font-size:1.1rem; color:var(--black); margin-top:2px;">${escapeHtml(data.difference)}</div>
+          <div style="font-size:0.68rem; color:var(--g600);">|Table - Machine|</div>
+        </div>
+      `;
+      tableCard.appendChild(tableGrid);
+      body.appendChild(tableCard);
+
+    // 9. NUMBER THEORY & MODULAR ARITHMETIC
+    } else if (data.operation === 'gcd' || data.operation === 'lcm' || data.operation === 'totient' || data.operation === 'prime_factors' || data.operation === 'modular_arithmetic') {
+      const ntCard = document.createElement('div');
+      ntCard.style.cssText = 'padding:12px; border-radius:10px; background:var(--g50); border:1px solid var(--g200);';
+
+      if (data.operation === 'gcd') {
+        ntCard.innerHTML = `
+          <div style="font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase;">Greatest Common Divisor</div>
+          <div style="font-family:var(--mono, monospace); font-weight:700; font-size:1.2rem; margin-top:4px; color:var(--black);">GCD(${data.a}, ${data.b}) = ${data.gcd}</div>
+          <div style="font-size:0.75rem; color:var(--g600); margin-top:4px;">Bézout Identity: (${data.a})(${data.bezoutCoefficients?.x}) + (${data.b})(${data.bezoutCoefficients?.y}) = ${data.gcd}</div>
+        `;
+      } else if (data.operation === 'lcm') {
+        ntCard.innerHTML = `
+          <div style="font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase;">Least Common Multiple</div>
+          <div style="font-family:var(--mono, monospace); font-weight:700; font-size:1.2rem; margin-top:4px; color:var(--black);">LCM(${data.a}, ${data.b}) = ${data.lcm}</div>
+        `;
+      } else if (data.operation === 'totient') {
+        ntCard.innerHTML = `
+          <div style="font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase;">Euler's Totient Function</div>
+          <div style="font-family:var(--mono, monospace); font-weight:700; font-size:1.2rem; margin-top:4px; color:var(--black);">φ(${data.n}) = ${data.phi}</div>
+        `;
+      } else if (data.operation === 'prime_factors') {
+        ntCard.innerHTML = `
+          <div style="font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase;">Prime Factorization</div>
+          <div style="font-family:var(--mono, monospace); font-weight:700; font-size:1.2rem; margin-top:4px; color:var(--black);">${data.input} = ${escapeHtml(data.formatted)}</div>
+        `;
+      } else if (data.operation === 'modular_arithmetic') {
+        const val = data.inverse !== undefined ? `Inverse = ${data.inverse}` : (data.crtSolution !== undefined ? `x ≡ ${data.crtSolution} (mod ${data.modulusProduct})` : data.result);
+        ntCard.innerHTML = `
+          <div style="font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase;">Modular Arithmetic (${escapeHtml(data.subOp || 'Computation')})</div>
+          <div style="font-family:var(--mono, monospace); font-weight:700; font-size:1.2rem; margin-top:4px; color:var(--black);">${escapeHtml(val)}</div>
+        `;
+      }
+      body.appendChild(ntCard);
+
+    // 10. CONSTANTS
+    } else if (data.operation === 'constant') {
+      const cCard = document.createElement('div');
+      cCard.style.cssText = 'padding:12px; border-radius:10px; background:var(--g50); border:1px solid var(--g200);';
+      cCard.innerHTML = `
+        <div style="font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase;">${escapeHtml(data.domain || 'Mathematical Constant')}</div>
+        <div style="display:flex; align-items:baseline; gap:10px; margin-top:4px;">
+          <span style="font-family:var(--mono, monospace); font-size:1.3rem; font-weight:700; color:var(--black);">${escapeHtml(data.symbol)}</span>
+          <span style="font-family:var(--mono, monospace); font-size:1rem; color:var(--primary, #2563eb); font-weight:600;">${escapeHtml(data.displayValue)}</span>
+        </div>
+        <div style="font-size:0.78rem; color:var(--g700); margin-top:6px;">${escapeHtml(data.description)}</div>
+      `;
+      body.appendChild(cCard);
+
+    // 11. GENERAL ARITHMETIC / EVALUATE / CALCULUS
+    } else {
+      const resCard = document.createElement('div');
+      resCard.style.cssText = 'padding:12px 14px; border-radius:10px; background:var(--g50); border:1px solid var(--g200);';
+
+      const mainVal = data.result !== undefined ? data.result : (data.value !== undefined ? data.value : data.message);
+      resCard.innerHTML = `
+        ${data.expression ? `<div style="font-size:0.75rem; color:var(--g600); font-family:var(--mono, monospace);">${escapeHtml(data.expression)} =</div>` : ''}
+        <div style="font-family:var(--mono, monospace); font-weight:700; font-size:1.3rem; margin-top:2px; color:var(--black);">${escapeHtml(mainVal)}</div>
+        ${data.symbolic && data.result !== data.symbolic ? `<div style="font-size:0.75rem; color:var(--g600); margin-top:4px;">Symbolic: ${escapeHtml(data.symbolic)}</div>` : ''}
+      `;
+      if (data.chart) {
+        const chartHtml = renderSvgLineChart(data.chart, data.title || data.expression);
+        if (chartHtml) {
+          const chartDiv = document.createElement('div');
+          chartDiv.innerHTML = chartHtml;
+          resCard.appendChild(chartDiv);
+        }
+      }
+      body.appendChild(resCard);
+    }
+
+    // Working Steps Accordion (if present)
+    if (Array.isArray(data.steps) && data.steps.length > 0) {
+      const details = document.createElement('details');
+      details.style.cssText = 'margin-top:4px; font-size:0.8rem; border:1px solid var(--g200); border-radius:8px; padding:6px 10px; background:var(--white);';
+
+      const summary = document.createElement('summary');
+      summary.style.cssText = 'cursor:pointer; font-weight:600; color:var(--g700); outline:none; user-select:none;';
+      summary.textContent = `Mathematical Working & Steps (${data.steps.length})`;
+      details.appendChild(summary);
+
+      const stepList = document.createElement('ol');
+      stepList.style.cssText = 'margin:8px 0 0 16px; padding:0; display:flex; flex-direction:column; gap:4px; font-family:var(--mono, monospace); font-size:0.75rem; color:var(--g700);';
+
+      data.steps.forEach(st => {
+        const li = document.createElement('li');
+        li.textContent = st;
+        stepList.appendChild(li);
+      });
+      details.appendChild(stepList);
+      body.appendChild(details);
+    }
+
+    card.appendChild(body);
+    container.appendChild(card);
+    return card;
+  }
+}
+
+function getOperationTitle(op) {
+  if (!op) return 'Mathematical Computation';
+  switch (op.toLowerCase()) {
+    case 'collatz': return 'Collatz Sequence Explorer';
+    case 'solve_quadratic': return 'Quadratic Equation Solver';
+    case 'solve_linear': return 'Linear Equation Solver';
+    case 'derivative': return 'Calculus: Differentiation';
+    case 'definite_integral': return 'Calculus: Definite Integral';
+    case 'indefinite_integral': return 'Calculus: Indefinite Integral';
+    case 'matrix_determinant': return 'Linear Algebra: Determinant';
+    case 'matrix_inverse': return 'Linear Algebra: Matrix Inverse';
+    case 'eigenvalues': return 'Linear Algebra: 2×2 Characteristic Polynomial & Eigenvalues';
+    case 'solve_system': return 'Linear Systems: Gaussian Elimination (Ax = b)';
+    case 'newton_raphson': return 'Numerical Analysis: Newton-Raphson Root Finding';
+    case 'ode_rk4': return 'Differential Equations: Runge-Kutta 4th Order (RK4)';
+    case 'ode_euler': return 'Differential Equations: Euler\'s Method';
+    case 'complex': return 'Complex Analysis: Arithmetic & Polar Form';
+    case 'modular_arithmetic': return 'Number Theory: Modular Arithmetic & Congruences';
+    case 'linear_regression': return 'Statistics: Ordinary Least Squares Linear Regression';
+    case 'gcd': return 'Number Theory: Greatest Common Divisor';
+    case 'lcm': return 'Number Theory: Least Common Multiple';
+    case 'totient': return 'Number Theory: Euler\'s Totient';
+    case 'prime_factors': return 'Number Theory: Prime Factorization';
+    case 'is_prime': return 'Number Theory: Primality Test';
+    case 'fibonacci': return 'Sequence: Fibonacci Numbers';
+    case 'permutations': return 'Combinatorics: Permutations';
+    case 'combinations': return 'Combinatorics: Combinations';
+    case 'four_figure_table': return 'Four-Figure Table Reference';
+    case 'constant': return 'Mathematical Constant';
+    case 'statistics': return 'Descriptive Statistics';
+    default: return 'Deterministic Calculation';
+  }
+}
+
+/**
+ * MATHEMATICAL KNOWLEDGE RESULT RENDERER — Definitions, theorems, formulas, proof status
+ */
+export class MathKnowledgeResultRenderer extends ResultRenderer {
+  static id = 'math-knowledge';
+  static name = 'Mathematical Knowledge Reference';
+
+  static canRender(result) {
+    const data = result.data || result;
+    return result.type === 'math-knowledge' ||
+      result.renderer === 'math-knowledge' ||
+      data.type === 'math-knowledge' ||
+      (Array.isArray(data.entries) && data.query !== undefined);
+  }
+
+  static render(result, container) {
+    const data = result.data || result;
+    const entries = Array.isArray(data.entries) ? data.entries : (data.entry ? [data.entry] : []);
+
+    const card = document.createElement('section');
+    card.className = 'assistant-result-math-knowledge-card';
+    card.style.cssText = 'margin-top:10px; padding:16px; border:1px solid var(--g200); border-radius:14px; background:var(--white); box-shadow:0 2px 8px rgba(0,0,0,.04); color:var(--black); font-family:var(--sans, sans-serif);';
+
+    // Header
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:12px;';
+
+    const titleDiv = document.createElement('div');
+    titleDiv.style.cssText = 'display:flex; align-items:center; gap:8px; font-weight:700; font-size:0.95rem; color:var(--black);';
+    titleDiv.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--primary, #2563eb)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> Mathematical Knowledge Reference';
+
+    const countSpan = document.createElement('span');
+    countSpan.style.cssText = 'font-size:0.75rem; color:var(--g600);';
+    countSpan.textContent = `${entries.length} result(s)`;
+
+    header.append(titleDiv, countSpan);
+    card.appendChild(header);
+
+    if (entries.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'font-size:0.85rem; color:var(--text-muted); padding:8px 0;';
+      empty.textContent = `No exact mathematical entries found matching "${data.query || ''}".`;
+      card.appendChild(empty);
+      container.appendChild(card);
+      return card;
+    }
+
+    const list = document.createElement('div');
+    list.style.cssText = 'display:flex; flex-direction:column; gap:12px;';
+
+    entries.forEach(entry => {
+      const item = document.createElement('div');
+      item.style.cssText = 'padding:14px; border:1px solid var(--border); border-radius:10px; background:var(--bg-subtle);';
+
+      let badgeClass = 'math-badge-axiom';
+      if (entry.proofStatus?.includes('PROVEN') || entry.proofStatus?.includes('THEOREM') || entry.proofStatus?.includes('LEMMA') || entry.proofStatus?.includes('COROLLARY')) {
+        badgeClass = 'math-badge-proven';
+      } else if (entry.proofStatus?.includes('CONJECTURE') || entry.proofStatus?.includes('OPEN')) {
+        badgeClass = 'math-badge-conjecture';
+      } else if (entry.proofStatus?.includes('IDENTITY')) {
+        badgeClass = 'math-badge-identity';
+      }
+
+      const renderedFormula = entry.formula ? renderMath(entry.formula, { displayMode: true }) : '';
+      const renderedStatement = renderMathInText(entry.statement || entry.definition || '');
+
+      item.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:700; font-size:0.95rem; color:var(--text);">${escapeHtml(entry.title)}</div>
+            <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">${escapeHtml(entry.categoryName || entry.category || '')}</div>
+          </div>
+          <span class="math-proof-badge ${badgeClass}">
+            ${escapeHtml(entry.proofStatus || 'REFERENCE')}
+          </span>
+        </div>
+        ${renderedFormula}
+        <div style="margin-top:8px; font-size:0.82rem; line-height:1.5; color:var(--text-secondary);">${renderedStatement}</div>
+        ${entry.computationalOp ? `<div style="margin-top:8px; font-size:0.72rem; color:var(--text-muted); padding-top:6px; border-top:1px solid var(--border-subtle);">Computable via Math Utility operation: <code>${escapeHtml(entry.computationalOp)}</code></div>` : ''}
+      `;
+      list.appendChild(item);
+    });
+
+    card.appendChild(list);
+    container.appendChild(card);
+    return card;
+  }
+}
+
+/**
+ * IMAGE GALLERY RESULT — Visual grid for scraped, discovered, or informational images
+ */
+export class ImageGalleryResultRenderer extends ResultRenderer {
+  static id = 'image-gallery';
+  static name = 'Image Gallery';
+
+  static canRender(result) {
+    const data = result.data || result;
+    return result.renderer === 'image-gallery' ||
+      result.type === 'image-gallery' ||
+      (Array.isArray(data.images) && data.images.length > 0 && typeof data.images[0] === 'object');
+  }
+
+  static render(result, container) {
+    const data = result.data || result;
+    const images = Array.isArray(data.images) ? data.images : [];
+    const title = data.title || result.title || `Images (${images.length})`;
+    const sourceUrl = data.url || data.sourceUrl || '';
+
+    const card = document.createElement('div');
+    card.className = 'assistant-result-gallery-card';
+    card.style.cssText = 'margin-top:10px; border:1px solid var(--border); border-radius:14px; background:var(--bg-card); box-shadow:0 4px 16px rgba(0,0,0,0.04); overflow:hidden; font-family:var(--sans);';
+
+    // Header
+    const head = document.createElement('div');
+    head.style.cssText = 'padding:12px 16px; background:var(--bg-subtle); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;';
+
+    const titleWrap = document.createElement('div');
+    titleWrap.style.cssText = 'display:flex; align-items:center; gap:8px;';
+
+    const countBadge = document.createElement('span');
+    countBadge.textContent = `${images.length} Image${images.length === 1 ? '' : 's'}`;
+    countBadge.style.cssText = 'font-size:0.72rem; padding:2px 8px; border-radius:999px; background:var(--bg-card); color:var(--text); font-weight:700; border:1px solid var(--border);';
+
+    const titleEl = document.createElement('strong');
+    titleEl.textContent = title;
+    titleEl.style.cssText = 'font-size:0.92rem; color:var(--text);';
+
+    titleWrap.append(titleEl, countBadge);
+    head.appendChild(titleWrap);
+
+    const actionsWrap = document.createElement('div');
+    actionsWrap.style.cssText = 'display:flex; align-items:center; gap:8px;';
+
+    const saveFilesBtn = document.createElement('button');
+    saveFilesBtn.type = 'button';
+    saveFilesBtn.textContent = 'Save All to Files';
+    saveFilesBtn.style.cssText = 'font-size:0.75rem; padding:4px 10px; border-radius:6px; background:var(--primary); color:#fff; border:none; font-weight:600; cursor:pointer;';
+    saveFilesBtn.onclick = async () => {
+      saveFilesBtn.disabled = true;
+      saveFilesBtn.textContent = 'Saving...';
+      try {
+        const { fs } = await import('./filesystem.js');
+        const folder = '/Images/Scraped';
+        await fs.mkdir(folder);
+        let count = 0;
+        for (let i = 0; i < images.length; i++) {
+          const img = images[i];
+          if (!img.url) continue;
+          let ext = 'jpg';
+          if (img.url.endsWith('.png')) ext = 'png';
+          else if (img.url.endsWith('.webp')) ext = 'webp';
+          const imgName = `scraped_${String(i + 1).padStart(2, '0')}.${ext}`;
+          try {
+            const res = await fetch(`/api/assistant/browser/fetch-binary?url=${encodeURIComponent(img.url)}`);
+            if (res.ok) {
+              const blob = await res.blob();
+              await fs.writeFile(`${folder}/${imgName}`, blob);
+              count++;
+              continue;
+            }
+          } catch {}
+          await fs.writeFile(`${folder}/${imgName}.url`, img.url);
+          count++;
+        }
+        saveFilesBtn.textContent = `Saved (${count}) to Files`;
+        saveFilesBtn.style.background = '#22c55e';
+      } catch (err) {
+        saveFilesBtn.textContent = 'Save Failed';
+        console.error(err);
+      }
+    };
+    actionsWrap.appendChild(saveFilesBtn);
+
+    if (sourceUrl) {
+      const srcLink = document.createElement('a');
+      srcLink.href = sourceUrl;
+      srcLink.target = '_blank';
+      srcLink.rel = 'noopener noreferrer';
+      srcLink.style.cssText = 'font-size:0.75rem; color:var(--text-secondary); text-decoration:none; display:inline-flex; align-items:center; gap:4px;';
+      srcLink.innerHTML = `<span>Source</span> ${ICONS.external}`;
+      actionsWrap.appendChild(srcLink);
+    }
+    head.appendChild(actionsWrap);
+    card.appendChild(head);
+
+    // Gallery Grid
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px; padding:14px;';
+
+    images.forEach((img, idx) => {
+      const item = document.createElement('div');
+      item.className = 'ast-gallery-item';
+      item.style.cssText = 'background:var(--bg-subtle); border:1px solid var(--border); border-radius:10px; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; transition:transform 0.15s ease, border-color 0.15s ease;';
+
+      const imgBox = document.createElement('div');
+      imgBox.style.cssText = 'height:105px; width:100%; overflow:hidden; background:rgba(0,0,0,0.03); display:flex; align-items:center; justify-content:center; position:relative;';
+
+      const imageEl = document.createElement('img');
+      imageEl.src = img.url;
+      imageEl.alt = img.alt || `Image ${idx + 1}`;
+      imageEl.loading = 'lazy';
+      imageEl.style.cssText = 'width:100%; height:100%; object-fit:cover; display:block;';
+      imageEl.onerror = () => {
+        imgBox.innerHTML = '<div style="font-size:0.7rem; color:var(--text-muted); text-align:center; padding:10px;">Image unavailable</div>';
+      };
+      imgBox.appendChild(imageEl);
+
+      const footer = document.createElement('div');
+      footer.style.cssText = 'padding:6px 8px; font-size:0.7rem; color:var(--text-secondary); display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); border-top:1px solid var(--border-subtle);';
+
+      const dim = (img.width && img.height) ? `${img.width}×${img.height}` : (img.type || 'img');
+      const dimEl = document.createElement('span');
+      dimEl.textContent = dim;
+      dimEl.style.cssText = 'font-family:var(--mono); font-size:0.65rem; color:var(--text-muted);';
+
+      const copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
+      copyBtn.textContent = 'Copy';
+      copyBtn.style.cssText = 'border:none; background:none; cursor:pointer; color:var(--text); font-size:0.68rem; font-weight:600; padding:1px 4px;';
+      copyBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(img.url);
+        copyBtn.textContent = 'Copied';
+        setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+      });
+
+      footer.append(dimEl, copyBtn);
+      item.append(imgBox, footer);
+      grid.appendChild(item);
+    });
+
+    card.appendChild(grid);
+    container.appendChild(card);
+    return card;
+  }
+}
+
+/**
  * REGISTRY OF ALL RESULT RENDERERS
  */
 export const RESULT_RENDERERS = [
   ErrorResultRenderer,
+  MathResultRenderer,
+  MathKnowledgeResultRenderer,
   InvoiceResultRenderer,
   UmlDiagramResultRenderer,
   AlgorithmResultRenderer,
@@ -3783,10 +4877,12 @@ export const RESULT_RENDERERS = [
   Anatomy3DResultRenderer,
   IllustrationResultRenderer,
   DiseaseResultRenderer,
+  FileDeletionConfirmationRenderer,
   FileListResultRenderer,
   FileSavedResultRenderer,
   FileDownloadCardRenderer,
   ImageResultRenderer,
+  ImageGalleryResultRenderer,
   ChartResultRenderer,
   CircuitResultRenderer,
   FlowchartResultRenderer,
@@ -3818,6 +4914,9 @@ export function selectRenderer(result) {
  */
 export async function renderToolResult(result, container) {
   try {
+    if (result?.silent === true || result?.type === 'map-view-ref') {
+      return null;
+    }
     if (result.success === false || result.error) {
       return ErrorResultRenderer.render(result, container);
     }

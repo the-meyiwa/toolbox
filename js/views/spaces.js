@@ -7,6 +7,7 @@
    ============================================================ */
 
 import { SpaceEngine, listJoinedSpaces, removeJoinedSpace, getUserProfile, saveUserProfile, prewarmSignaling } from '../lib/space-engine.js';
+import { getCurrentUser } from '../lib/supabase.js';
 import {
   mountDeskOverview,
   mountArtifactsView,
@@ -157,6 +158,7 @@ export function renderSpaces(host, rawPath = null) {
 
   function renderCreateForm() {
     const profile = getUserProfile();
+    const currentUser = getCurrentUser();
 
     host.innerHTML = `
       <div class="sp-landing fade-in">
@@ -176,10 +178,12 @@ export function renderSpaces(host, rawPath = null) {
               <label class="sp-form-label">Description (Optional)</label>
               <input type="text" class="tool-input" id="sp-create-desc" placeholder="What will you be working on?" autocomplete="off">
             </div>
+            ${!currentUser ? `
             <div class="sp-form-group">
               <label class="sp-form-label">Your Display Name</label>
               <input type="text" class="tool-input" id="sp-create-user" value="${escapeHtml(profile.name || '')}" placeholder="e.g. Nifemi, Alex" required autocomplete="off">
             </div>
+            ` : ''}
             <div class="sp-form-actions">
               <button type="submit" class="btn btn-primary">Create Space →</button>
               <button type="button" class="btn btn-secondary" data-act="go-directory">Cancel</button>
@@ -194,6 +198,7 @@ export function renderSpaces(host, rawPath = null) {
 
   function renderJoinForm() {
     const profile = getUserProfile();
+    const currentUser = getCurrentUser();
 
     host.innerHTML = `
       <div class="sp-landing fade-in">
@@ -209,10 +214,12 @@ export function renderSpaces(host, rawPath = null) {
               <label class="sp-form-label">Room Code</label>
               <input type="text" class="tool-input sp-input-code" id="sp-join-code" value="${escapeHtml(targetCode || '')}" required maxlength="6" placeholder="X7K2MP" autocomplete="off" spellcheck="false">
             </div>
+            ${!currentUser ? `
             <div class="sp-form-group">
               <label class="sp-form-label">Your Display Name</label>
               <input type="text" class="tool-input" id="sp-join-user" value="${escapeHtml(profile.name || '')}" placeholder="e.g. Dorcas, Jordan" required autocomplete="off">
             </div>
+            ` : ''}
             <div class="sp-form-actions">
               <button type="submit" class="btn btn-primary">Enter Space →</button>
               <button type="button" class="btn btn-secondary" data-act="go-directory">Cancel</button>
@@ -454,7 +461,10 @@ export function renderSpaces(host, rawPath = null) {
       e.preventDefault();
       const spaceName = host.querySelector('#sp-create-name').value;
       const description = host.querySelector('#sp-create-desc').value;
-      const displayName = host.querySelector('#sp-create-user').value;
+      const currentUser = getCurrentUser();
+      const displayName = currentUser
+        ? (currentUser.user_metadata?.display_name || currentUser.user_metadata?.name || (currentUser.email ? currentUser.email.split('@')[0] : 'User'))
+        : (host.querySelector('#sp-create-user')?.value.trim() || 'Anonymous');
 
       saveUserProfile({ name: displayName });
       viewState = 'connecting';
@@ -474,7 +484,10 @@ export function renderSpaces(host, rawPath = null) {
     if (e.target.id === 'form-join' && viewState === 'join') {
       e.preventDefault();
       const code = host.querySelector('#sp-join-code').value.toUpperCase().trim();
-      const displayName = host.querySelector('#sp-join-user').value.trim();
+      const currentUser = getCurrentUser();
+      const displayName = currentUser
+        ? (currentUser.user_metadata?.display_name || currentUser.user_metadata?.name || (currentUser.email ? currentUser.email.split('@')[0] : 'User'))
+        : (host.querySelector('#sp-join-user')?.value.trim() || 'Anonymous');
 
       saveUserProfile({ name: displayName });
       viewState = 'connecting';

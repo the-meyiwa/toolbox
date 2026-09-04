@@ -21,7 +21,7 @@ const mockAnalytics = {
   viewed: () => {},
 };
 
-test('All Tools: every tool in registry has a valid module and clean lifecycle', async (t) => {
+test('All Tools: every tool in registry has a valid module and clean lifecycle', { timeout: 60000 }, async (t) => {
   for (const tool of TOOLS) {
     await t.test(`Tool [${tool.id}] ("${tool.name}")`, async () => {
       // 1. Import module

@@ -45,10 +45,19 @@ export default {
       initialUrl = options.url;
     }
 
+    let initialTitle = 'Web Browser';
+    try {
+      if (initialUrl.includes('wikipedia.org')) {
+        initialTitle = 'Wikipedia';
+      } else if (initialUrl.startsWith('http')) {
+        initialTitle = new URL(initialUrl).hostname || initialUrl;
+      }
+    } catch {}
+
     let tabs = [
       {
         id: 'tab-1',
-        title: 'Wikipedia: Web browser',
+        title: initialTitle,
         url: initialUrl,
         history: [initialUrl],
         histIndex: 0,
@@ -211,8 +220,8 @@ export default {
         if (target.includes('.') && !target.includes(' ')) {
           target = 'https://' + target;
         } else {
-          // Search query
-          target = `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(target)}`;
+          // Search query: route to DuckDuckGo search
+          target = `https://duckduckgo.com/html/?q=${encodeURIComponent(target)}`;
         }
       }
 
@@ -281,31 +290,56 @@ export default {
           };
           tab.sourceHtml = JSON.stringify(data, null, 2);
         }
-        // Scenario 3: Standard Web Page or Markdown document
+        // Scenario 3: Standard Web Page or Document via Assistant Browser Proxy
         else {
           tab.title = u.hostname;
           try {
-            const resp = await fetch(url, { mode: 'cors' });
-            if (resp.ok) {
-              const text = await resp.text();
-              tab.sourceHtml = text;
+            let htmlText = '';
+            let metaTitle = '';
+
+            // 1. First try Toolbox Assistant Browser fetch proxy to bypass CORS cleanly
+            try {
+              const proxyResp = await fetch(`/api/assistant/browser/fetch?url=${encodeURIComponent(url)}`);
+              if (proxyResp.ok) {
+                const pData = await proxyResp.json();
+                htmlText = pData.html || '';
+                metaTitle = pData.title || '';
+              }
+            } catch (pErr) {
+              // Ignore proxy failure and try direct fetch
+            }
+
+            // 2. Fallback to direct CORS fetch
+            if (!htmlText) {
+              const resp = await fetch(url, { mode: 'cors' });
+              if (resp.ok) {
+                htmlText = await resp.text();
+              } else {
+                throw new Error(`Status ${resp.status}`);
+              }
+            }
+
+            if (htmlText) {
+              tab.title = metaTitle || u.hostname;
+              tab.sourceHtml = htmlText;
               tab.content = {
                 type: 'webpage',
                 url: url,
-                html: text
+                html: htmlText,
+                title: metaTitle || u.hostname
               };
             } else {
-              throw new Error(`Status ${resp.status}`);
+              throw new Error('Empty response received');
             }
-          } catch (corsErr) {
-            // CORS restricted site — render clean Sandbox Reader card with external launcher
+          } catch (fetchErr) {
+            // CORS or inaccessible site — render clean Sandbox Reader card with external launcher
             tab.content = {
               type: 'cors-sandbox',
               url: url,
               hostname: u.hostname,
               title: `${u.hostname} (Sandbox Preview)`
             };
-            tab.sourceHtml = `<!-- Cross-Origin Protected Resource -->\nURL: ${url}\nHost: ${u.hostname}\nProtocol: ${u.protocol}`;
+            tab.sourceHtml = `<!-- Cross-Origin Protected Resource -->\nURL: ${url}\nHost: ${u.hostname}\nProtocol: ${u.protocol}\nError: ${fetchErr.message}`;
           }
         }
 

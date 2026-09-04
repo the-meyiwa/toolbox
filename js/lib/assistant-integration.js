@@ -9,6 +9,8 @@
  * - Tool discovery and LLM integration
  */
 
+import { marked } from 'marked';
+import { sanitizeUserFacingText } from '../utils.js';
 import { AssistantMessage, ToolResult, conversationPersistence } from './assistant-message-persistence.js';
 import { renderToolResult, cleanupToolResult, selectRenderer } from './assistant-result-renderer.js';
 import { toolDiscovery } from './assistant-tool-discovery.js';
@@ -384,12 +386,16 @@ export class ConversationIntegrationManager {
    */
   formatMarkdown(text) {
     if (!text) return '';
+    const sanitized = sanitizeUserFacingText(text);
     try {
+      if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
+        return marked.parse(sanitized);
+      }
       if (typeof window !== 'undefined' && window.marked?.parse) {
-        return window.marked.parse(text);
+        return window.marked.parse(sanitized);
       }
     } catch {}
-    return this.escapeHtml(text).replace(/\n/g, '<br/>');
+    return this.escapeHtml(sanitized).replace(/\n/g, '<br/>');
   }
 
   /**

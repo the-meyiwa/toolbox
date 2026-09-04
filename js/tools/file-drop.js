@@ -7,7 +7,8 @@
    ============================================================ */
 
 import QRCode from 'qrcode';
-import { sendP2PSignal, pollP2PSignals } from '../lib/supabase.js';
+import { sendP2PSignal, pollP2PSignals, getCurrentUser } from '../lib/supabase.js';
+import { fs } from '../lib/filesystem.js';
 
 export default {
   pc: null,
@@ -19,6 +20,23 @@ export default {
   expectedFile: null,
 
   render(container) {
+    const user = getCurrentUser();
+    if (user) {
+      container.innerHTML = `
+        <div class="tool-section" style="max-width:540px; margin:48px auto; text-align:center; padding:36px 24px; background:var(--white); border:1px solid var(--border); border-radius:16px;">
+          <div style="width:52px; height:52px; border-radius:12px; background:var(--g100); display:flex; align-items:center; justify-content:center; margin:0 auto 16px; color:var(--black);">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <h2 style="font-size:1.2rem; font-weight:700; margin-bottom:8px; color:var(--black);">Files Synchronized</h2>
+          <p style="font-size:0.86rem; color:var(--g600); line-height:1.5; margin-bottom:24px;">
+            You are signed in. Your files are automatically synchronized across your devices via Files, eliminating the need for Local File Drop.
+          </p>
+          <a href="#files" class="btn btn-primary" style="padding:8px 20px;">Go to Files</a>
+        </div>
+      `;
+      return;
+    }
+
     // Check if opened with a room query in hash: #file-drop?room=ABC123
     const hash = window.location.hash || '';
     const queryMatch = hash.match(/[?&]room=([a-zA-Z0-9]+)/);
@@ -67,12 +85,12 @@ export default {
               
               <!-- Drop target -->
               <div id="p2p-dropzone" style="border:2px dashed var(--g300); border-radius:14px; padding:36px 20px; text-align:center; background:var(--white); cursor:pointer; transition:all 0.15s cubic-bezier(0.16,1,0.3,1);">
-                <input type="file" id="p2p-file-input" style="display:none;">
+                <input type="file" id="p2p-file-input" multiple style="display:none;">
                 <div style="width:48px; height:48px; border-radius:50%; background:var(--g100); display:flex; align-items:center; justify-content:center; margin:0 auto 12px; color:var(--black);">
                   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 </div>
-                <div style="font-weight:700; font-size:0.95rem; margin-bottom:4px;">Drop any file here to send</div>
-                <div style="font-size:0.78rem; color:var(--g500);">or click to browse from your device</div>
+                <div style="font-weight:700; font-size:0.95rem; margin-bottom:4px;">Drop files here to send</div>
+                <div style="font-size:0.78rem; color:var(--g500);">or click to browse from your device (single or multiple files)</div>
               </div>
 
               <!-- Selected File Card (Hidden initially) -->
@@ -84,7 +102,10 @@ export default {
                     <div id="p2p-file-size" style="font-size:0.75rem; color:var(--g500); font-family:var(--mono);">0 KB</div>
                   </div>
                 </div>
-                <button type="button" id="p2p-change-file" class="btn btn-secondary btn-sm" style="font-size:0.75rem;">Change</button>
+                <div style="display:flex; gap:8px;">
+                  <button type="button" id="p2p-change-file" class="btn btn-secondary btn-sm" style="font-size:0.75rem;">Change</button>
+                  <button type="button" id="p2p-cancel-transfer" class="btn btn-secondary btn-sm" style="font-size:0.75rem; display:none;">Cancel</button>
+                </div>
               </div>
 
               <!-- Transfer Progress Bar (Hidden initially) -->
@@ -149,12 +170,15 @@ export default {
 
             <!-- Receiver Status / File Incoming -->
             <div id="p2p-incoming-card" style="display:none; background:var(--g50); border:1px solid var(--g200); border-radius:12px; padding:18px; margin-bottom:16px; text-align:left;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
                 <div>
                   <div id="p2p-rx-name" style="font-weight:700; font-size:0.92rem;">file.pdf</div>
                   <div id="p2p-rx-size" style="font-size:0.75rem; color:var(--g500); font-family:var(--mono);">0 MB</div>
                 </div>
-                <button type="button" class="btn btn-primary btn-sm" id="p2p-rx-download" style="display:none;">Save / Download</button>
+                <div style="display:flex; gap:6px;">
+                  <button type="button" class="btn btn-primary btn-sm" id="p2p-rx-download" style="display:none;">Download</button>
+                  <button type="button" class="btn btn-secondary btn-sm" id="p2p-rx-save-fs" style="display:none;">Save to Offline Files</button>
+                </div>
               </div>
 
               <!-- Progress bar -->
@@ -408,35 +432,71 @@ export default {
       });
     });
 
+    const cancelTransferBtn = container.querySelector('#p2p-cancel-transfer');
+    const rxSaveFsBtn = container.querySelector('#p2p-rx-save-fs');
+
+    let fileQueue = [];
+    let isCancelled = false;
+    let peerTimeoutTimer = null;
+
+    // Start a 45-second timeout for peer connection notification
+    if (mode === 'send') {
+      peerTimeoutTimer = setTimeout(() => {
+        if (!isConnected) {
+          peerStatusText.textContent = 'Connection taking longer than usual. Ensure devices share local Wi-Fi, or enter Room Code manually.';
+        }
+      }, 45000);
+    }
+
+    cancelTransferBtn.addEventListener('click', () => {
+      isCancelled = true;
+      isTransferring = false;
+      progressLabel.textContent = 'Transfer cancelled.';
+      cancelTransferBtn.style.display = 'none';
+    });
+
     dropzone.addEventListener('drop', (e) => {
       if (e.dataTransfer.files?.length) {
-        handleFileSelect(e.dataTransfer.files[0]);
+        handleFileSelect(Array.from(e.dataTransfer.files));
       }
     });
 
     fileInput.addEventListener('change', () => {
       if (fileInput.files?.length) {
-        handleFileSelect(fileInput.files[0]);
+        handleFileSelect(Array.from(fileInput.files));
       }
     });
 
-    function handleFileSelect(file) {
-      selectedFile = file;
-      fileNameEl.textContent = file.name;
-      fileSizeEl.textContent = formatBytes(file.size);
-      const ext = file.name.split('.').pop().toUpperCase();
-      fileThumb.textContent = ext.slice(0, 4);
+    function handleFileSelect(files) {
+      if (!files || !files.length) return;
+      fileQueue = files;
+      isCancelled = false;
+      const totalSize = files.reduce((acc, f) => acc + f.size, 0);
+
+      if (files.length === 1) {
+        selectedFile = files[0];
+        fileNameEl.textContent = selectedFile.name;
+        fileSizeEl.textContent = formatBytes(selectedFile.size);
+        const ext = selectedFile.name.split('.').pop().toUpperCase();
+        fileThumb.textContent = ext.slice(0, 4);
+      } else {
+        selectedFile = files[0];
+        fileNameEl.textContent = `${files.length} files (${files[0].name}, ...)`;
+        fileSizeEl.textContent = `Total: ${formatBytes(totalSize)}`;
+        fileThumb.textContent = 'ZIP';
+      }
 
       dropzone.style.display = 'none';
       fileCard.style.display = 'flex';
+      cancelTransferBtn.style.display = 'none';
       progressWrap.style.display = 'flex';
-      progressLabel.textContent = 'File ready. Scan QR code to transfer instantly.';
+      progressLabel.textContent = 'Files ready. Scan QR code or connect room to transfer.';
       progressBar.style.width = '0%';
       progressPct.textContent = '0%';
 
       // If WebRTC is ready, send info right away
       if (isConnected && self_.dc && self_.dc.readyState === 'open') {
-        sendFileViaRTC();
+        sendFileQueueViaRTC();
       }
     }
 
@@ -448,80 +508,122 @@ export default {
     };
     window.addEventListener('storage', storageHandler);
     this._cleanupStorage = () => window.removeEventListener('storage', storageHandler);
-    this._cleanupPoll = () => { if (pollInterval) clearInterval(pollInterval); };
+    this._cleanupPoll = () => {
+      if (pollInterval) clearInterval(pollInterval);
+      if (peerTimeoutTimer) clearTimeout(peerTimeoutTimer);
+    };
 
-    // WebRTC Chunked Sender
-    async function sendFileViaRTC() {
-      if (!selectedFile || isTransferring || !self_.dc || self_.dc.readyState !== 'open') return;
+    // WebRTC Chunked Multi-File Sender
+    async function sendFileQueueViaRTC() {
+      if (!fileQueue.length || isTransferring || !self_.dc || self_.dc.readyState !== 'open') return;
       isTransferring = true;
-      progressLabel.textContent = `Streaming ${selectedFile.name} over WebRTC...`;
-      
-      self_.dc.send(JSON.stringify({
-        type: 'file-info',
-        file: { name: selectedFile.name, size: selectedFile.size, type: selectedFile.type }
-      }));
+      isCancelled = false;
+      cancelTransferBtn.style.display = 'inline-flex';
 
-      const chunkSize = 16384; // 16 KB for reliable WebRTC transmission
-      let offset = 0;
-      const total = selectedFile.size;
-      const startTime = Date.now();
+      for (let i = 0; i < fileQueue.length; i++) {
+        if (isCancelled) break;
+        const curFile = fileQueue[i];
+        const filePrefix = fileQueue.length > 1 ? `[${i + 1}/${fileQueue.length}] ` : '';
+        progressLabel.textContent = `${filePrefix}Streaming ${curFile.name} over WebRTC...`;
 
-      while (offset < total) {
-        if (self_.dc.bufferedAmount > chunkSize * 64) {
-          await new Promise(r => setTimeout(r, 50));
-          continue;
+        self_.dc.send(JSON.stringify({
+          type: 'file-info',
+          file: {
+            name: curFile.name,
+            size: curFile.size,
+            type: curFile.type,
+            index: i + 1,
+            totalFiles: fileQueue.length
+          }
+        }));
+
+        const chunkSize = 16384; // 16 KB for WebRTC DataChannel
+        let offset = 0;
+        const total = curFile.size;
+        const startTime = Date.now();
+
+        while (offset < total && !isCancelled) {
+          if (self_.dc.bufferedAmount > chunkSize * 64) {
+            await new Promise(r => setTimeout(r, 50));
+            continue;
+          }
+
+          const slice = curFile.slice(offset, offset + chunkSize);
+          const arrayBuf = await slice.arrayBuffer();
+
+          try {
+            self_.dc.send(arrayBuf);
+          } catch (err) {
+            console.error('DataChannel error', err);
+            break;
+          }
+
+          offset += arrayBuf.byteLength;
+          const pct = Math.min(100, Math.round((offset / Math.max(1, total)) * 100));
+          progressBar.style.width = `${pct}%`;
+          progressPct.textContent = `${pct}%`;
+
+          const elapsedSec = (Date.now() - startTime) / 1000;
+          const mbps = elapsedSec > 0 ? ((offset / (1024 * 1024)) / elapsedSec).toFixed(1) : '0.0';
+          progressSpeed.textContent = `${mbps} MB/s · ${formatBytes(offset)} / ${formatBytes(total)}`;
+
+          if (offset % (chunkSize * 10) === 0) {
+            await new Promise(r => setTimeout(r, 5));
+          }
         }
 
-        const slice = selectedFile.slice(offset, offset + chunkSize);
-        const arrayBuf = await slice.arrayBuffer();
-        
-        try {
-          self_.dc.send(arrayBuf);
-        } catch (err) {
-          console.error('DataChannel error', err);
-          break;
-        }
-
-        offset += arrayBuf.byteLength;
-        const pct = Math.min(100, Math.round((offset / total) * 100));
-        progressBar.style.width = `${pct}%`;
-        progressPct.textContent = `${pct}%`;
-
-        const elapsedSec = (Date.now() - startTime) / 1000;
-        const mbps = elapsedSec > 0 ? ((offset / (1024 * 1024)) / elapsedSec).toFixed(1) : '0.0';
-        progressSpeed.textContent = `${mbps} MB/s · ${formatBytes(offset)} / ${formatBytes(total)}`;
-
-        if (offset % (chunkSize * 10) === 0) {
-          await new Promise(r => setTimeout(r, 5));
+        if (!isCancelled) {
+          self_.dc.send(JSON.stringify({ type: 'file-done', name: curFile.name }));
+          await new Promise(r => setTimeout(r, 100)); // Allow receiver assembly buffer
         }
       }
 
-      self_.dc.send(JSON.stringify({ type: 'file-done' }));
-      progressLabel.textContent = 'File successfully sent!';
+      cancelTransferBtn.style.display = 'none';
+      if (!isCancelled) {
+        progressLabel.textContent = fileQueue.length > 1 ? `All ${fileQueue.length} files sent successfully!` : 'File successfully sent!';
+        progressBar.style.width = '100%';
+        progressPct.textContent = '100%';
+      }
       isTransferring = false;
     }
 
     // Assemble and trigger download on Receiver
-    function assembleReceivedFile() {
+    async function assembleReceivedFile() {
       if (!self_.expectedFile || !self_.fileChunks.length) return;
-      rxStatus.textContent = 'File transfer complete! Assembling file...';
+      rxStatus.textContent = `Assembling "${self_.expectedFile.name}"...`;
       rxBar.style.width = '100%';
 
       try {
         const blob = new Blob(self_.fileChunks, { type: self_.expectedFile.type || 'application/octet-stream' });
         const downloadUrl = URL.createObjectURL(blob);
+        const fileName = self_.expectedFile.name;
 
         rxDownloadBtn.style.display = 'inline-flex';
         rxDownloadBtn.onclick = () => {
           const a = document.createElement('a');
           a.href = downloadUrl;
-          a.download = self_.expectedFile.name;
+          a.download = fileName;
           a.click();
+        };
+
+        rxSaveFsBtn.style.display = 'inline-flex';
+        rxSaveFsBtn.onclick = async () => {
+          rxSaveFsBtn.disabled = true;
+          rxSaveFsBtn.textContent = 'Saving...';
+          try {
+            await fs.writeFile('/Downloads/' + fileName, blob);
+            rxSaveFsBtn.textContent = 'Saved to Offline Files!';
+            rxStatus.innerHTML = `<span style="color:#22c55e; font-weight:600;">Saved "${fileName}" to Offline Files (/Downloads/${fileName})</span>`;
+          } catch (err) {
+            rxSaveFsBtn.textContent = 'Save Failed';
+            console.error('Failed to save to fs:', err);
+          }
         };
 
         // Auto trigger download
         rxDownloadBtn.click();
-        rxStatus.innerHTML = `<span style="color:#22c55e; font-weight:600;">Saved "${self_.expectedFile.name}" successfully!</span>`;
+        const countInfo = self_.expectedFile.totalFiles > 1 ? ` [${self_.expectedFile.index}/${self_.expectedFile.totalFiles}]` : '';
+        rxStatus.innerHTML = `<span style="color:#22c55e; font-weight:600;">Received "${fileName}"${countInfo}! Ready to download or save to Offline Files.</span>`;
       } catch (err) {
         console.error(err);
         rxStatus.textContent = 'Error assembling file.';

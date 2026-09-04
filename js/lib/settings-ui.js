@@ -5,6 +5,7 @@
 import { THEMES, getStoredTheme, applyTheme } from './theme.js';
 import { QuotaManager } from './quota-manager.js';
 import { getCurrentUser } from './supabase.js';
+import { getSettings, updateSettings } from './settings.js';
 
 let modalEl = null;
 let isOpen = false;
@@ -112,29 +113,58 @@ function createModal() {
 }
 
 function renderAiSettings() {
-  const user = getCurrentUser();
   const container = modalEl.querySelector('#ai-settings-container');
   if (!container) return;
 
-  const hr = container.previousElementSibling;
-  if (!user) {
-    container.style.display = 'none';
-    if (hr && hr.tagName === 'HR') hr.style.display = 'none';
-    return;
-  }
+  const user = getCurrentUser();
+  const settings = getSettings();
+  const quota = user ? QuotaManager.getQuotaSummary() : null;
+  const isUnlimited = user ? QuotaManager.isUserUnlimited() : false;
 
   container.style.display = 'block';
-  if (hr && hr.tagName === 'HR') hr.style.display = 'block';
-
-  const quota = QuotaManager.getQuotaSummary();
-  const isUnlimited = QuotaManager.isUserUnlimited();
 
   container.innerHTML = `
     <div class="settings-section-header">
       <h3 class="settings-section-title">Assistant AI</h3>
-      <span class="settings-section-hint">Daily message limits and assistant status</span>
+      <span class="settings-section-hint">Response animation and assistant configuration</span>
     </div>
 
+    <!-- ASSISTANT RESPONSE ANIMATION CONTROLS -->
+    <div style="background:var(--g50); border:1px solid var(--g200); border-radius:12px; padding:14px 16px; margin-bottom:14px; display:flex; flex-direction:column; gap:12px;">
+      <label style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+        <div>
+          <div style="font-size:0.84rem; font-weight:700; color:var(--black);">Response text animation</div>
+          <div style="font-size:0.75rem; color:var(--g600); margin-top:2px;">
+            Animate assistant message text dynamically as responses are generated
+          </div>
+        </div>
+        <input type="checkbox" id="settings-ast-anim-toggle" class="pref-switch" ${settings.assistantResponseAnimation !== false ? 'checked' : ''}>
+      </label>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; padding-top:8px; border-top:1px solid var(--g200); flex-wrap:wrap; gap:8px;">
+        <div>
+          <div style="font-size:0.84rem; font-weight:700; color:var(--black);">Animation style</div>
+          <div style="font-size:0.75rem; color:var(--g600); margin-top:2px;">
+            Visual effect applied to the assistant's response text
+          </div>
+        </div>
+        <select class="tool-select pref-select" id="settings-ast-anim-style" style="min-width:160px; font-size:0.82rem;">
+          <option value="color rave" ${(settings.assistantAnimationStyle || 'color rave') === 'color rave' ? 'selected' : ''}>color rave</option>
+          <option value="glow" ${(settings.assistantAnimationStyle === 'glow' || settings.assistantAnimationStyle === 'Pixel') ? 'selected' : ''}>glow</option>
+          <option value="Plain Fade" ${settings.assistantAnimationStyle === 'Plain Fade' ? 'selected' : ''}>Plain Fade</option>
+          <option value="Pop In" ${settings.assistantAnimationStyle === 'Pop In' ? 'selected' : ''}>Pop In</option>
+        </select>
+      </div>
+
+      <!-- Animation Live Preview -->
+      <div style="padding-top:10px; border-top:1px solid var(--g200);">
+        <div class="ast-anim-preview-box" id="settings-ast-anim-preview-box" style="justify-content:center; text-align:center;">
+          <span class="ast-anim-preview-text" id="settings-ast-anim-preview-text">Animation preview</span>
+        </div>
+      </div>
+    </div>
+
+    ${user ? `
     <!-- QUOTAS & RESET -->
     <div style="background:var(--g50); border:1px solid var(--g200); border-radius:12px; padding:14px 16px; display:flex; justify-content:space-between; align-items:center;">
       <div>
@@ -149,7 +179,43 @@ function renderAiSettings() {
       </button>
       ` : ''}
     </div>
+    ` : ''}
   `;
+
+  // Attach animation preview & listeners
+  const updateSettingsAnimPreview = () => {
+    const isEnabled = container.querySelector('#settings-ast-anim-toggle')?.checked;
+    const style = container.querySelector('#settings-ast-anim-style')?.value || 'color rave';
+    const previewEl = container.querySelector('#settings-ast-anim-preview-text');
+    if (!previewEl) return;
+    previewEl.className = 'ast-anim-preview-text';
+    if (!isEnabled) {
+      previewEl.textContent = 'Animations disabled';
+      previewEl.style.opacity = '0.4';
+      previewEl.style.fontStyle = 'italic';
+    } else {
+      previewEl.textContent = 'Animation preview';
+      previewEl.style.opacity = '1';
+      previewEl.style.fontStyle = 'normal';
+      let animClass = 'ast-anim-color-rave';
+      if (style === 'glow' || style === 'Pixel') animClass = 'ast-anim-glow';
+      else if (style === 'Plain Fade') animClass = 'ast-anim-plain-fade';
+      else if (style === 'Pop In') animClass = 'ast-anim-pop-in';
+      previewEl.classList.add(animClass);
+    }
+  };
+
+  updateSettingsAnimPreview();
+
+  container.querySelector('#settings-ast-anim-toggle')?.addEventListener('change', (e) => {
+    updateSettings({ assistantResponseAnimation: e.target.checked });
+    updateSettingsAnimPreview();
+  });
+
+  container.querySelector('#settings-ast-anim-style')?.addEventListener('change', (e) => {
+    updateSettings({ assistantAnimationStyle: e.target.value });
+    updateSettingsAnimPreview();
+  });
 
   // Reset Quota
   const resetBtn = container.querySelector('#btn-reset-quota-modal');

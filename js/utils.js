@@ -28,6 +28,15 @@ export function copyText(text, btn) {
 }
 
 const ENTITY_MAP = {
+  '&nbsp;': ' ',
+  '&ensp;': ' ',
+  '&emsp;': ' ',
+  '&thinsp;': ' ',
+  '&ndash;': '–',
+  '&mdash;': '—',
+  '&hellip;': '…',
+  '&middot;': '·',
+  '&bull;': '•',
   '&rarr;': '→',
   '&larr;': '←',
   '&harr;': '↔',
@@ -45,7 +54,6 @@ const ENTITY_MAP = {
   '&approx;': '≈',
   '&asymp;': '≈',
   '&infin;': '∞',
-  '&bull;': '•',
   '&trade;': '™',
   '&copy;': '©',
   '&reg;': '®',
@@ -80,17 +88,28 @@ const ENTITY_MAP = {
 function normalizeSymbolsInText(text) {
   if (!text) return '';
 
-  // 1. Decode HTML entities for symbols
+  // 0. Unwrap double-encoded entities (e.g. &amp;#x20; -> &#x20;, &amp;nbsp; -> &nbsp;)
+  text = text.replace(/&amp;(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, '&$1;');
+
+  // 1. Decode HTML entities for symbols and spaces
   text = text.replace(/&(?:[a-zA-Z]+|#\d+|#x[0-9a-fA-F]+);/g, (match) => {
+    const lowerMatch = match.toLowerCase();
     if (ENTITY_MAP[match]) return ENTITY_MAP[match];
-    if (match.startsWith('&#x') || match.startsWith('&#X')) {
-      const hex = match.slice(3, -1);
+    if (ENTITY_MAP[lowerMatch]) return ENTITY_MAP[lowerMatch];
+    if (lowerMatch.startsWith('&#x')) {
+      const hex = lowerMatch.slice(3, -1);
       const code = parseInt(hex, 16);
-      if (!isNaN(code) && code >= 32) return String.fromCodePoint(code);
+      if (!isNaN(code)) {
+        if (code === 38 || code === 60 || code === 62) return match; // Preserve &, <, > for XSS safety
+        if (code >= 32) return String.fromCodePoint(code);
+      }
     } else if (match.startsWith('&#')) {
       const dec = match.slice(2, -1);
       const code = parseInt(dec, 10);
-      if (!isNaN(code) && code >= 32) return String.fromCodePoint(code);
+      if (!isNaN(code)) {
+        if (code === 38 || code === 60 || code === 62) return match; // Preserve &, <, > for XSS safety
+        if (code >= 32) return String.fromCodePoint(code);
+      }
     }
     return match;
   });
@@ -199,4 +218,39 @@ export function cleanText(t) {
     // Normalize Line Endings (CRLF → LF)
     .replace(/\r\n?/g, '\n');
 }
+
+export function cleanAssistantOutput(text) {
+  if (!text) return '';
+  let cleaned = String(text);
+
+  // 1. Remove raw action execution tags like [Completed Actions: ...]
+  cleaned = cleaned.replace(/\[Completed Actions:[\s\S]*?\]/gi, '');
+
+  // 2. Remove raw tool execution log lines like "Executing tool ..." or "Action result: ..."
+  cleaned = cleaned.replace(/^Executing tool\s+.*$/gim, '');
+  cleaned = cleaned.replace(/^Action result:\s+.*$/gim, '');
+
+  // 3. Remove raw JSON blocks if they are leaked tool call arguments or raw responses
+  cleaned = cleaned.replace(/```(?:json)?\s*\{[\s\S]*?"(?:operation|query|tool|action|name)":[\s\S]*?\}\s*```/gi, '');
+
+  // 4. Remove emojis strictly according to Toolbox design guidelines
+  cleaned = cleaned.replace(/[\u{1F300}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F1E0}-\u{1F1FF}]/gu, '');
+
+  // 5. Decode escaped HTML entities and normalize symbols
+  cleaned = cleaned
+    .replace(/&#x20;/gi, ' ')
+    .replace(/&#32;/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/gi, "'")
+    .replace(/&quot;/g, '"');
+  cleaned = sanitizeUserFacingText(cleaned);
+
+  // 6. Clean up multiple blank lines
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim();
+
+  return cleaned;
+}
+
 

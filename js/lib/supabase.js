@@ -276,8 +276,11 @@ export async function uploadToSupabaseStorage(bucketName, filePath, fileBlob) {
   const user = getCurrentUser();
   if (!user) throw new Error('You must be signed in to upload files to Supabase cloud storage.');
 
+  // Enforce user isolation: prefix user.id so RLS prevents cross-user access
+  const safePath = filePath.startsWith(`${user.id}/`) ? filePath : `${user.id}/${filePath.replace(/^\/+/, '')}`;
+
   if (config.url && config.anonKey) {
-    const res = await fetch(`${config.url}/storage/v1/object/${bucketName}/${filePath}`, {
+    const res = await fetch(`${config.url}/storage/v1/object/${bucketName}/${safePath}`, {
       method: 'POST',
       headers: {
         'apikey': config.anonKey,
@@ -289,11 +292,40 @@ export async function uploadToSupabaseStorage(bucketName, filePath, fileBlob) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.message || 'Cloud storage upload failed.');
     }
-    return { path: filePath, url: `${config.url}/storage/v1/object/public/${bucketName}/${filePath}` };
+    return { path: safePath, url: `${config.url}/storage/v1/object/public/${bucketName}/${safePath}` };
   }
 
   // Fallback storage URL
-  return { path: filePath, url: `https://supabase-storage-mock.local/${bucketName}/${filePath}` };
+  return { path: safePath, url: `https://supabase-storage-mock.local/${bucketName}/${safePath}` };
+}
+
+/**
+ * Delete file from Supabase Storage Bucket
+ */
+export async function deleteFromSupabaseStorage(bucketName, filePath) {
+  const config = getSupabaseConfig();
+  const user = getCurrentUser();
+  if (!user) return false;
+
+  const safePath = filePath.startsWith(`${user.id}/`) ? filePath : `${user.id}/${filePath.replace(/^\/+/, '')}`;
+
+  if (config.url && config.anonKey) {
+    try {
+      const res = await fetch(`${config.url}/storage/v1/object/${bucketName}`, {
+        method: 'DELETE',
+        headers: {
+          'apikey': config.anonKey,
+          'Authorization': `Bearer ${user.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ prefixes: [safePath] })
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+  return true;
 }
 
 /**
@@ -400,11 +432,25 @@ export async function loadSettingsFromSupabase() {
 }
 
 /**
- * P2P Signaling: Send WebRTC signal via Supabase REST
+ * P2P Signaling: Send WebRTC signal via Server Relay or Supabase REST
  */
 export async function sendP2PSignal(roomCode, senderId, messageType, payload) {
+  // First attempt local /api/filedrop relay for instant anonymous signaling
+  try {
+    const localRes = await fetch('/api/filedrop/signal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomCode, senderId, messageType, payload })
+    });
+    if (localRes.ok) {
+      const data = await localRes.json();
+      if (data && data.success) return true;
+    }
+  } catch {}
+
+  // Fallback to Supabase if configured
   const config = getSupabaseConfig();
-  if (!config.url || !config.anonKey) return;
+  if (!config.url || !config.anonKey) return false;
   try {
     await fetch(`${config.url}/rest/v1/p2p_signals`, {
       method: 'POST',
@@ -419,13 +465,28 @@ export async function sendP2PSignal(roomCode, senderId, messageType, payload) {
         payload
       })
     });
-  } catch {}
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
- * P2P Signaling: Poll WebRTC signals via Supabase REST
+ * P2P Signaling: Poll WebRTC signals via Server Relay or Supabase REST
  */
 export async function pollP2PSignals(roomCode, sinceDate) {
+  // First attempt local /api/filedrop relay
+  try {
+    const localRes = await fetch(`/api/filedrop/poll?room=${encodeURIComponent(roomCode)}&since=${encodeURIComponent(sinceDate || '')}`);
+    if (localRes.ok) {
+      const data = await localRes.json();
+      if (Array.isArray(data.signals) && data.signals.length > 0) {
+        return data.signals;
+      }
+    }
+  } catch {}
+
+  // Fallback to Supabase if configured
   const config = getSupabaseConfig();
   if (!config.url || !config.anonKey) return [];
   try {
@@ -438,3 +499,4 @@ export async function pollP2PSignals(roomCode, sinceDate) {
     return [];
   }
 }
+

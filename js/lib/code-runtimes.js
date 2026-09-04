@@ -247,11 +247,22 @@ ${FORMAT_FN}
 
 function post(type, level, text) { self.postMessage({ type: type, level: level, text: text }); }
 
-// Try to optionally load JSCPP if online, without crashing if offline
+var isOffline = true;
 try {
-  importScripts('https://cdn.jsdelivr.net/npm/jscpp@2.0.10/dist/JSCPP.es5.min.js');
-} catch (e) {
-  // Offline mode active
+  if (self.location && self.location.origin) {
+    importScripts(self.location.origin + '/js/vendor/jscpp.es5.min.js');
+  } else {
+    importScripts('/js/vendor/jscpp.es5.min.js');
+  }
+} catch (e1) {
+  try {
+    importScripts('/js/vendor/jscpp.es5.min.js');
+  } catch (e2) {
+    try {
+      importScripts('https://cdn.jsdelivr.net/npm/jscpp@2.0.10/dist/JSCPP.es5.min.js');
+      isOffline = false;
+    } catch (e3) {}
+  }
 }
 
 self.onmessage = function (e) {
@@ -260,12 +271,15 @@ self.onmessage = function (e) {
   var started = Date.now();
 
   try {
-    if (typeof JSCPP === 'undefined' || !JSCPP.run) {
-      throw new Error('JSCPP library is not loaded. Ensure you have an internet connection.');
+    var jscppInstance = typeof JSCPP !== 'undefined' ? JSCPP : (self.JSCPP || (self.window && self.window.JSCPP));
+    if (!jscppInstance || !jscppInstance.run) {
+      throw new Error('Offline compiler engine is unavailable.');
     }
     
+    post('status', null, isOffline ? 'Compiling C++ (Offline)...' : 'Compiling C++ (Online)...');
+    
     var outputBuffer = '';
-    var exitCode = JSCPP.run(code, stdin, {
+    var exitCode = jscppInstance.run(code, stdin, {
       stdio: { 
         write: function (s) {
           outputBuffer += s;
@@ -276,17 +290,17 @@ self.onmessage = function (e) {
           }
         } 
       },
-      maxTimeout: 15000
+      maxTimeout: 20000
     });
 
     if (outputBuffer.length > 0) {
       post('out', 'log', outputBuffer);
     }
     
-    post('out', 'muted', 'Process finished with exit code ' + exitCode);
+    post('out', 'muted', (isOffline ? '[Offline] ' : '[Online] ') + 'Program exited with status ' + exitCode);
     post('done', null, String(Date.now() - started));
   } catch (err) {
-    post('out', 'error', err && err.message ? err.message : String(err));
+    post('out', 'error', (isOffline ? '[Offline] ' : '[Online] ') + (err && err.message ? err.message : String(err)));
     post('done', null, String(Date.now() - started));
   }
 };`;
@@ -427,8 +441,8 @@ print("Median salary:", statistics.median(e.salary for e in team))`,
     name: 'C++',
     mono: 'cpp',
     worker: CPP_WORKER,
-    weight: 'Runs locally on your device via in-browser JSCPP engine.',
-    note: 'Interprets C++ offline in your browser with standard library support (<iostream>, <vector>, <cmath>, <string>, etc.).',
+    weight: 'Offline',
+    note: 'Compiles and runs C++ locally on your device with standard library support (<iostream>, <vector>, <cmath>, <string>).',
     sample: `// Real C++ running offline in your browser!
 #include <iostream>
 #include <vector>

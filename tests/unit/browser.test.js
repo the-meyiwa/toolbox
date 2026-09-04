@@ -44,3 +44,32 @@ test('Assistant Tool browse_web: executes search/browse and returns browser-card
   assert.ok(res.title, 'Result must contain title');
   assert.ok(res.excerpt, 'Result must contain summary excerpt');
 });
+
+test('BrowserCardRenderer: preserves target URL and title without Wikipedia substitution', async () => {
+  const { BrowserCardRenderer, renderToolResult } = await import('../../js/lib/assistant-result-renderer.js');
+  const { ToolResult } = await import('../../js/lib/assistant-message-persistence.js');
+
+  const container = document.createElement('div');
+  const mockToolResult = new ToolResult({
+    toolId: 'browse_web',
+    toolName: 'browse_web',
+    renderer: 'browser-card',
+    type: 'browser-preview',
+    data: {
+      url: 'https://www.containerbrick.com/',
+      title: 'Container Brick | Portacabins & Conversions Nigeria',
+      excerpt: 'Nigeria leading provider of container offices and conversions.',
+      verified: true
+    }
+  });
+
+  const el = await renderToolResult(mockToolResult, container);
+  assert.ok(el, 'BrowserCardRenderer must render an element');
+  const html = el.innerHTML;
+
+  assert.ok(html.includes('https://www.containerbrick.com/'), 'Must display containerbrick.com URL');
+  assert.ok(html.includes('Container Brick | Portacabins'), 'Must display containerbrick.com title');
+  assert.ok(html.includes('Nigeria leading provider'), 'Must display containerbrick.com excerpt');
+  assert.ok(!html.includes('en.wikipedia.org'), 'Must NEVER contain en.wikipedia.org when rendering an external site');
+});
+
