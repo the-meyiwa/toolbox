@@ -4,7 +4,21 @@
    Used by both standalone server.js and Vite dev server middleware.
    ============================================================ */
 
+import fs from 'fs';
 import crypto from 'crypto';
+
+function getEnvKey(keyName) {
+  try {
+    if (fs.existsSync('.env')) {
+      const content = fs.readFileSync('.env', 'utf8');
+      const match = content.match(new RegExp(`^${keyName}\\s*=\\s*(.+)$`, 'm'));
+      if (match && match[1]) {
+        return match[1].trim().replace(/^["']|["']$/g, '');
+      }
+    }
+  } catch {}
+  return process.env[keyName] || '';
+}
 
 // Idempotency store with TTL (5 minutes)
 const IDEMPOTENCY_TTL_MS = 5 * 60 * 1000;
@@ -286,7 +300,7 @@ export async function handleApiRequest(request, response) {
 
           const start = Date.now();
           if (provider === 'gemini') {
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite?key=${encodeURIComponent(key)}`);
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash?key=${encodeURIComponent(key)}`);
             if (res.ok) {
               response.writeHead(200, { 'Content-Type': 'application/json' });
               response.end(JSON.stringify({ success: true, latencyMs: Date.now() - start, message: 'Connected to Google Gemini!' }));
@@ -525,7 +539,7 @@ export async function handleApiRequest(request, response) {
           }
 
           // 3. Default: Google Gemini Proxy
-          const apiKey = process.env.GEMINI_API_KEY || body.apiKey;
+          const apiKey = getEnvKey('GEMINI_API_KEY') || body.apiKey;
           if (!apiKey) {
             if (idempotencyKey) idempotencyStore.delete(idempotencyKey);
             response.writeHead(400, { 'Content-Type': 'application/json' });
@@ -543,8 +557,10 @@ export async function handleApiRequest(request, response) {
           // Valid active Gemini models on v1beta (fastest verified first)
           const candidateModels = [
             body.model,
-            'gemini-3.5-flash-lite',
-            'gemini-3.5-flash'
+            'gemini-3.6-flash',
+            'gemini-3.1-flash-lite-preview',
+            'gemini-3-flash-preview',
+            'gemini-flash-latest'
           ].filter(Boolean);
           const uniqueModels = [...new Set(candidateModels)];
 
@@ -587,8 +603,9 @@ export async function handleApiRequest(request, response) {
                 lastErrorCode = 'QUOTA_EXCEEDED';
                 lastErrMessage = 'AI service quota temporarily exceeded. Please try again shortly.';
               } else if (fetchRes.status === 401 || fetchRes.status === 403) {
-                lastErrorCode = 'AUTHENTICATION_FAILED';
-                lastErrMessage = 'Assistant authentication check failed.';
+                lastErrorCode = 'UPSTREAM_KEY_INVALID';
+                lastErrMessage = 'The AI service API key is invalid or unauthorized.';
+                lastHttpStatus = 502;
               } else if (fetchRes.status === 503) {
                 lastErrorCode = 'MODEL_UNAVAILABLE';
                 lastErrMessage = 'AI model is currently experiencing high demand. Please retry.';

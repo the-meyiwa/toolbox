@@ -38,14 +38,20 @@ import { getCurrentUser } from '../lib/supabase.js';
 import { openAccountModal } from '../views/account-modal.js';
 import { AssistantAudioManager } from '../lib/assistant-audio.js';
 import { ConversationIntegrationManager } from '../lib/assistant-integration.js';
+import { getAssistantHistoryStorageKey } from '../lib/assistant-message-persistence.js';
 import TOOLS from '../registry/tools.js';
 const BY_ID = new Map(TOOLS.map(t => [t.id, t]));
 
-const STORAGE_HISTORY = 'toolbox_assistant_history_v2';
 const STORAGE_KEEP_CONTEXT = 'toolbox_assistant_keep_context';
+
+let activeCleanup = null;
 
 export default {
   render(container, state = {}) {
+    if (activeCleanup) {
+      activeCleanup();
+      activeCleanup = null;
+    }
     const currentToolId = state.tool?.id || null;
     let keepContext = localStorage.getItem(STORAGE_KEEP_CONTEXT) !== 'false';
     let currentAssistantAbortCtrl = null;
@@ -235,8 +241,32 @@ export default {
     const onModeChange = () => {
       refreshModeDisplay();
     };
+    const onAuthChange = async () => {
+      if (currentAssistantAbortCtrl) return;
+      refreshModeDisplay();
+      updateQuotaDisplay();
+      history = [];
+      if (keepContext) {
+        try {
+          const messages = await integrationManager.loadConversation();
+          if (messages.length) {
+            history = integrationManager.getHistory();
+          }
+        } catch (e) {
+          console.warn('[Assistant] Failed to reload conversation on auth change:', e);
+        }
+      }
+      renderMessageList();
+    };
     window.addEventListener('toolbox:aimodechange', onModeChange);
     window.addEventListener('toolbox:quotachange', updateQuotaDisplay);
+    window.addEventListener('toolbox:authchange', onAuthChange);
+
+    activeCleanup = () => {
+      window.removeEventListener('toolbox:aimodechange', onModeChange);
+      window.removeEventListener('toolbox:quotachange', updateQuotaDisplay);
+      window.removeEventListener('toolbox:authchange', onAuthChange);
+    };
 
     // Clear conversation
     btnClear?.addEventListener('click', async () => {
@@ -251,7 +281,10 @@ export default {
     chkContext?.addEventListener('change', (e) => {
       keepContext = e.target.checked;
       localStorage.setItem(STORAGE_KEEP_CONTEXT, keepContext ? 'true' : 'false');
-      if (!keepContext) localStorage.removeItem(STORAGE_HISTORY);
+      if (!keepContext) {
+        localStorage.removeItem(getAssistantHistoryStorageKey());
+        localStorage.removeItem('toolbox_assistant_history_v2');
+      }
     });
 
     // Attachments
@@ -362,6 +395,41 @@ export default {
 
     sendBtn?.addEventListener('click', handleSend);
 
+    function normalizeErrorMessage(err) {
+      if (!err) return 'Assistant failed to respond.';
+      if (typeof err === 'string') {
+        const trimmed = err.trim();
+        if (!trimmed || trimmed === '[object Object]') {
+          return 'The AI service encountered an error. Please check your connection or sign in again.';
+        }
+        return trimmed;
+      }
+      if (err instanceof Error) {
+        const msg = err.message?.trim();
+        if (msg && msg !== '[object Object]') return msg;
+      }
+      if (typeof err.message === 'string') {
+        const msg = err.message.trim();
+        if (msg && msg !== '[object Object]') return msg;
+      }
+      if (typeof err.error === 'string') {
+        const msg = err.error.trim();
+        if (msg && msg !== '[object Object]') return msg;
+      }
+      if (typeof err.error?.message === 'string') {
+        const msg = err.error.message.trim();
+        if (msg && msg !== '[object Object]') return msg;
+      }
+      if (typeof err.msg === 'string') {
+        const msg = err.msg.trim();
+        if (msg && msg !== '[object Object]') return msg;
+      }
+      if (err.error?.code) {
+        return `AI Service Error: ${err.error.code}`;
+      }
+      return 'The AI service encountered an error. Please check your connection or sign in again.';
+    }
+
     function renderMessageList() {
       if (!messagesEl) return;
       messagesEl.innerHTML = '';
@@ -445,14 +513,30 @@ export default {
 
         let bodyHtml = '';
         if (isFailed) {
+          const displayError = normalizeErrorMessage(error);
+          const errText = displayError.toLowerCase();
+          const isAuthError = errText.includes('session') ||
+            errText.includes('unauthorized') ||
+            errText.includes('sign in') ||
+            errText.includes('account') ||
+            errText.includes('authentication') ||
+            errText.includes('jwt') ||
+            errText.includes('auth');
+
           bodyHtml = `
             <div class="ast-tool-status-area" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
             <div class="ast-text-body">
-              <div style="color:#ef4444; font-weight:600; margin-bottom:8px; line-height:1.4;">${escapeHtml(error || 'Assistant failed to respond.')}</div>
+              <div style="color:#ef4444; font-weight:600; margin-bottom:8px; line-height:1.4;">${escapeHtml(displayError)}</div>
               <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
-                <button type="button" class="btn btn-secondary btn-sm ast-err-btn-retry" style="font-size:0.75rem; font-weight:700; border-radius:9999px; padding:5px 14px;">
-                  Retry Request
-                </button>
+                ${isAuthError ? `
+                  <button type="button" class="btn btn-primary btn-sm ast-err-btn-signin" style="font-size:0.75rem; font-weight:700; border-radius:9999px; padding:5px 14px;">
+                    Sign In / Switch Account
+                  </button>
+                ` : `
+                  <button type="button" class="btn btn-secondary btn-sm ast-err-btn-retry" style="font-size:0.75rem; font-weight:700; border-radius:9999px; padding:5px 14px;">
+                    Retry Request
+                  </button>
+                `}
               </div>
             </div>
             <div class="ast-tool-results-area"></div>
@@ -498,6 +582,9 @@ export default {
         if (isFailed && turnId) {
           msgDiv.querySelector('.ast-err-btn-retry')?.addEventListener('click', () => {
             retryTurn(turnId, msgDiv);
+          });
+          msgDiv.querySelector('.ast-err-btn-signin')?.addEventListener('click', () => {
+            openAccountModal();
           });
         }
 
@@ -721,8 +808,9 @@ export default {
               </a>
             </div>
             ${isPdf ? `
-              <div style="padding:14px; background:var(--g50); border:1px solid var(--g200); border-radius:8px; text-align:center; font-size:0.82rem; font-weight:600; color:var(--g800);">
-                📄 PDF Document (${result.pageCount || 1} page${(result.pageCount || 1) > 1 ? 's' : ''})
+              <div style="padding:14px; background:var(--g50); border:1px solid var(--g200); border-radius:8px; text-align:center; font-size:0.82rem; font-weight:600; color:var(--g800); display:flex; align-items:center; justify-content:center; gap:8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                PDF Document (${result.pageCount || 1} page${(result.pageCount || 1) > 1 ? 's' : ''})
               </div>
             ` : `
               <img src="${result.dataUrl}" style="max-width:100%; max-height:220px; border-radius:8px; display:block; object-fit:contain; background:#111;">
@@ -1100,12 +1188,13 @@ export default {
         });
         persistHistory();
         updateQuotaDisplay();
+        renderMessageList();
 
       } catch (err) {
         const hasTools = executedToolResults.length > 0;
         const message = err?.name === 'AbortError'
           ? 'The request took too long. Please try again.'
-          : (err?.message || 'Something went wrong.');
+          : normalizeErrorMessage(err);
 
         const finalAssistantText = accumulatedStreamText || (hasTools ? (executedToolResults.map(r => r.message).filter(Boolean).join('\n') || 'Executed action.') : '');
 
@@ -1121,28 +1210,7 @@ export default {
           timestamp: Date.now()
         });
         persistHistory();
-
-        if (textBody) {
-          if (hasTools) {
-            textBody.innerHTML = `
-              <div>${formatMarkdown(finalAssistantText)}</div>
-              <div style="font-size:0.75rem; color:var(--g500); margin-top:6px; font-style:italic;">Action completed. Note: ${escapeHtml(message)}</div>
-            `;
-          } else {
-            textBody.innerHTML = `
-              <div style="color:#ef4444; font-weight:600; margin-bottom:8px; line-height:1.4;">${escapeHtml(message)}</div>
-              <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
-                <button type="button" class="btn btn-secondary btn-sm ast-err-btn-retry" style="font-size:0.75rem; font-weight:700;">
-                  Retry Request
-                </button>
-              </div>
-            `;
-
-            assistantMsgDiv.querySelector?.('.ast-err-btn-retry')?.addEventListener('click', () => {
-              retryTurn(turnId, assistantMsgDiv);
-            });
-          }
-        }
+        renderMessageList();
       } finally {
         clearTimeout(watchdog);
         currentAssistantAbortCtrl = null;
@@ -1289,12 +1357,13 @@ export default {
         }
         persistHistory();
         updateQuotaDisplay();
+        renderMessageList();
 
       } catch (err) {
         const hasTools = executedToolResults.length > 0;
         const message = err?.name === 'AbortError'
           ? 'The request took too long. Please try again.'
-          : (err?.message || 'Something went wrong.');
+          : normalizeErrorMessage(err);
 
         const finalAssistantText = accumulatedStreamText || (hasTools ? (executedToolResults.map(r => r.message).filter(Boolean).join('\n') || 'Executed action.') : '');
 
@@ -1315,27 +1384,7 @@ export default {
           history.push(failedMsg);
         }
         persistHistory();
-
-        if (textBody) {
-          if (hasTools) {
-            textBody.innerHTML = `
-              <div>${formatMarkdown(finalAssistantText)}</div>
-              <div style="font-size:0.75rem; color:var(--g500); margin-top:6px; font-style:italic;">Action completed. Note: ${escapeHtml(message)}</div>
-            `;
-          } else {
-            textBody.innerHTML = `
-              <div style="color:#ef4444; font-weight:600; margin-bottom:8px; line-height:1.4;">${escapeHtml(message)}</div>
-              <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
-                <button type="button" class="btn btn-secondary btn-sm ast-err-btn-retry" style="font-size:0.75rem; font-weight:700;">
-                  Retry Request
-                </button>
-              </div>
-            `;
-            assistantMsgDiv.querySelector?.('.ast-err-btn-retry')?.addEventListener('click', () => {
-              retryTurn(turnId, assistantMsgDiv);
-            });
-          }
-        }
+        renderMessageList();
       } finally {
         clearTimeout(watchdog);
         currentAssistantAbortCtrl = null;
@@ -1363,5 +1412,9 @@ export default {
 
   destroy() {
     AssistantAudioManager.destroyAll();
+    if (activeCleanup) {
+      activeCleanup();
+      activeCleanup = null;
+    }
   }
 };

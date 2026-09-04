@@ -1,0 +1,31 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 164 30"
+  role="img"
+  aria-label="Toolbox"
+  shape-rendering="crispEdges"
+>
+  <path
+    fill="#000000"
+    d="
+      M4 0h14v4H4Z M78 0h5v30h-5Z M88 0h5v8h-5Z
+      M0 4h22v1H0Z M0 5h5v4H0Z M9 5h5v25H9Z M17 5h5v4h-5Z
+      M27 8h13v4H27Z M54 8h14v4H54Z M88 8h17v4H88Z
+      M118 8h14v4h-14Z M141 8h5v4h-5Z M159 8h5v4h-5Z
+      M26 12h15v1H26Z M54 12h15v1H54Z M88 12h18v1H88Z
+      M118 12h15v1h-15Z M141 12h6v1h-6Z M158 12h6v1h-6Z
+      M23 13h5v12h-5Z M39 13h6v1h-6Z M50 13h5v12h-5Z
+      M67 13h5v12h-5Z M88 13h5v12h-5Z M104 13h6v1h-6Z
+      M114 13h5v12h-5Z M131 13h5v12h-5Z M145 13h6v1h-6Z
+      M154 13h6v1h-6Z M40 14h5v11h-5Z M105 14h5v11h-5Z
+      M146 14h5v3h-5Z M154 14h5v3h-5Z M146 17h13v1h-13Z
+      M150 18h5v3h-5Z M146 21h13v1h-13Z M146 22h5v3h-5Z
+      M154 22h5v3h-5Z M23 25h22v1H23Z M50 25h22v1H50Z
+      M88 25h22v1H88Z M114 25h22v1h-22Z M141 25h10v1h-10Z
+      M154 25h9v1h-9Z M27 26h14v1H27Z M54 26h14v4H54Z
+      M92 26h14v1H92Z M118 26h14v4h-14Z M141 26h5v4h-5Z
+      M158 26h6v1h-6Z M27 27h13v3H27Z M92 27h13v3H92Z
+      M159 27h5v3h-5Z
+    "
+  />
+</svg>

@@ -133,6 +133,7 @@ export async function signInWithEmail(email, password) {
         createdAt: data.user?.created_at || new Date().toISOString()
       };
       localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
+      localStorage.setItem('supabase_auth_session', JSON.stringify(userSession));
       window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
       return { success: true, user: userSession };
     }
@@ -145,6 +146,7 @@ export async function signInWithEmail(email, password) {
       createdAt: new Date().toISOString()
     };
     localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
+    localStorage.setItem('supabase_auth_session', JSON.stringify(userSession));
     window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
     return { success: true, user: userSession };
   } catch (err) {
@@ -172,7 +174,13 @@ export async function refreshUserSession() {
       body: JSON.stringify({ refresh_token: current.refreshToken })
     });
 
-    if (!res.ok) return current;
+    if (!res.ok) {
+      if (res.status === 400 || res.status === 401) {
+        signOut();
+        return null;
+      }
+      return current;
+    }
 
     const data = await res.json();
     if (data.access_token) {
@@ -189,6 +197,45 @@ export async function refreshUserSession() {
     }
   } catch (e) {
     console.warn('Failed to refresh user session:', e);
+  }
+  return current;
+}
+
+/**
+ * Validate current user session against Supabase
+ * If account was deleted or token revoked, signs out cleanly.
+ */
+export async function validateSession() {
+  const current = getCurrentUser();
+  const config = getSupabaseConfig();
+  if (!current || !config.url || !config.anonKey) {
+    return current;
+  }
+
+  // Real Supabase access token validation
+  if (current.token && !current.token.startsWith('tok_')) {
+    try {
+      const res = await fetch(`${config.url}/auth/v1/user`, {
+        headers: {
+          'apikey': config.anonKey,
+          'Authorization': `Bearer ${current.token}`
+        }
+      });
+      if (res.ok) {
+        return current;
+      }
+      if (res.status === 401 || res.status === 403) {
+        if (current.refreshToken) {
+          const refreshed = await refreshUserSession();
+          if (refreshed) return refreshed;
+        }
+        signOut();
+        return null;
+      }
+    } catch {
+      // Keep offline/network degraded session
+      return current;
+    }
   }
   return current;
 }
@@ -225,6 +272,7 @@ export async function signUpWithEmail(email, password) {
           createdAt: new Date().toISOString()
         };
         localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
+        localStorage.setItem('supabase_auth_session', JSON.stringify(userSession));
         window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
         return { success: true, user: userSession };
       }
@@ -248,6 +296,7 @@ export async function signUpWithEmail(email, password) {
       createdAt: new Date().toISOString()
     };
     localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
+    localStorage.setItem('supabase_auth_session', JSON.stringify(userSession));
     window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
     return { success: true, user: userSession };
   } catch (err) {
@@ -261,11 +310,214 @@ export async function signUpWithEmail(email, password) {
 export function signOut() {
   try {
     localStorage.removeItem(SUPABASE_SESSION_KEY);
+    localStorage.removeItem('supabase_auth_session');
+    localStorage.removeItem('sb-ssoruyruzbvgyondxlgj-auth-token');
+    // Clear legacy un-scoped assistant history so previous user messages don't leak
+    localStorage.removeItem('toolbox_assistant_history_v2');
+    localStorage.removeItem('toolbox_assistant_history_guest');
     // Reset storage strategy to Browser/Local when signed out
     localStorage.setItem(STORAGE_MODE_KEY, 'local');
     window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: null } }));
     window.dispatchEvent(new CustomEvent('toolbox:storagemodechange', { detail: { mode: 'local' } }));
   } catch {}
+}
+
+/**
+ * Send a password reset email via Supabase Auth
+ */
+export async function resetPassword(email) {
+  const cleanEmail = (email || '').trim().toLowerCase();
+  if (!cleanEmail) return { success: false, error: 'Please enter your email address.' };
+
+  const config = getSupabaseConfig();
+  if (!config.url || !config.anonKey) {
+    return { success: false, error: 'Supabase is not configured. Password reset is unavailable.' };
+  }
+
+  try {
+    const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/` : undefined;
+    const endpoint = redirectUrl
+      ? `${config.url}/auth/v1/recover?redirect_to=${encodeURIComponent(redirectUrl)}`
+      : `${config.url}/auth/v1/recover`;
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': config.anonKey
+      },
+      body: JSON.stringify({ email: cleanEmail })
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error_description || data.message || data.msg || 'Password reset request failed.');
+    }
+
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Fetch user profile from Supabase using an access token
+ */
+export async function getUserFromToken(token) {
+  const config = getSupabaseConfig();
+  if (!config.url || !config.anonKey || !token) return null;
+  try {
+    const res = await fetch(`${config.url}/auth/v1/user`, {
+      headers: {
+        'apikey': config.anonKey,
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Update user password via Supabase Auth
+ */
+export async function updateUserPassword(newPassword, customToken = null) {
+  const cleanPassword = (newPassword || '').trim();
+  if (!cleanPassword || cleanPassword.length < 6) {
+    return { success: false, error: 'Password must be at least 6 characters.' };
+  }
+
+  const config = getSupabaseConfig();
+  const activeUser = getCurrentUser();
+  const token = customToken || activeUser?.token;
+
+  if (config.url && config.anonKey) {
+    if (!token) {
+      return { success: false, error: 'Authentication token missing. Please request a new reset link.' };
+    }
+
+    try {
+      const res = await fetch(`${config.url}/auth/v1/user`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': config.anonKey,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ password: cleanPassword })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error_description || data.message || data.msg || 'Failed to update password.');
+      }
+
+      const updatedUser = {
+        id: data.id || activeUser?.id || `usr_${Date.now()}`,
+        email: data.email || activeUser?.email,
+        token: data.access_token || token,
+        refreshToken: data.refresh_token || activeUser?.refreshToken,
+        createdAt: data.created_at || new Date().toISOString()
+      };
+
+      localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(updatedUser));
+      localStorage.setItem('supabase_auth_session', JSON.stringify(updatedUser));
+      window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: updatedUser } }));
+
+      return { success: true, user: updatedUser };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }
+
+  // Local / Simulation Mode
+  if (activeUser) {
+    activeUser.passwordUpdated = new Date().toISOString();
+    localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(activeUser));
+    localStorage.setItem('supabase_auth_session', JSON.stringify(activeUser));
+    return { success: true, user: activeUser };
+  }
+
+  return { success: true, user: { email: 'user@local.dev' } };
+}
+
+/**
+ * Parse recovery / auth redirect parameters from window.location
+ */
+export function parseAuthRedirect() {
+  if (typeof window === 'undefined') return null;
+
+  const rawHash = (window.location.hash || '').replace(/^#+/, '').replace(/#/g, '&');
+  const rawSearch = (window.location.search || '').replace(/^\?+/, '').replace(/\?/g, '&');
+
+  const parseParams = (str) => {
+    const params = {};
+    if (!str) return params;
+    const parts = str.split('&');
+    for (const part of parts) {
+      if (!part) continue;
+      const [k, ...v] = part.split('=');
+      if (k) {
+        try {
+          const cleanKey = decodeURIComponent(k.replace(/\+/g, ' '));
+          const cleanVal = decodeURIComponent(v.join('=').replace(/\+/g, ' '));
+          params[cleanKey] = cleanVal;
+        } catch {
+          params[k] = v.join('=');
+        }
+      }
+    }
+    return params;
+  };
+
+  const hashParams = parseParams(rawHash);
+  const searchParams = parseParams(rawSearch);
+  const merged = { ...searchParams, ...hashParams };
+
+  if (merged.error || merged.error_description) {
+    return {
+      type: 'error',
+      error: merged.error_description || merged.error || 'Authentication error during redirect.'
+    };
+  }
+
+  // Supabase recovery redirect
+  const isRecovery = merged.type === 'recovery' || rawHash.includes('type=recovery') || rawSearch.includes('type=recovery');
+  if (merged.access_token && isRecovery) {
+    let email = null;
+    try {
+      const parts = merged.access_token.split('.');
+      if (parts[1]) {
+        const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const jsonStr = (typeof atob === 'function')
+          ? decodeURIComponent(escape(atob(base64)))
+          : Buffer.from(base64, 'base64').toString('utf8');
+        const payload = JSON.parse(jsonStr);
+        email = payload.email || payload.user_metadata?.email || null;
+      }
+    } catch {}
+
+    return {
+      type: 'recovery',
+      accessToken: merged.access_token,
+      refreshToken: merged.refresh_token,
+      expiresIn: merged.expires_in,
+      tokenType: merged.token_type,
+      email
+    };
+  }
+
+  // PKCE code flow redirect
+  if (merged.code) {
+    return {
+      type: 'code',
+      code: merged.code
+    };
+  }
+
+  return null;
 }
 
 /**

@@ -8,9 +8,27 @@
  * - Managing lifecycle of expensive runtime resources
  */
 
-// This is the assistant's established conversation key.  Phase 2 deliberately
-// extends that store instead of creating a second, competing history.
-const STORAGE_KEY_ASSISTANT_MESSAGES = 'toolbox_assistant_history_v2';
+// User-scoped assistant history key to prevent history leaking across sessions or accounts
+export function getAssistantHistoryStorageKey() {
+  try {
+    const raw = localStorage.getItem('toolbox_supabase_session') || localStorage.getItem('supabase_auth_session');
+    if (raw) {
+      const user = JSON.parse(raw);
+      const id = user?.id || user?.user?.id;
+      const email = user?.email || user?.user?.email;
+      if (id) return `toolbox_assistant_history_${id}`;
+      if (email) return `toolbox_assistant_history_${email}`;
+    }
+  } catch {}
+  return 'toolbox_assistant_history_guest';
+}
+
+// Scrub legacy un-scoped assistant history key so old chats don't leak
+try {
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem('toolbox_assistant_history_v2');
+  }
+} catch {}
 
 /**
  * Unified Tool Result Schema — ALWAYS SERIALIZABLE
@@ -171,6 +189,17 @@ export class ConversationPersistence {
   constructor() {
     this.messageCache = new Map(); // in-memory cache
     this.reconstructionCallbacks = new Map(); // for interactive reconstruction
+
+    // Invalidate in-memory cache when user changes
+    if (typeof window !== 'undefined') {
+      window.addEventListener('toolbox:authchange', () => {
+        this.clearCache();
+      });
+    }
+  }
+
+  clearCache() {
+    this.messageCache.clear();
   }
 
   /**
@@ -182,12 +211,13 @@ export class ConversationPersistence {
     }
 
     try {
+      const storageKey = getAssistantHistoryStorageKey();
       let messages = [];
-      try { messages = JSON.parse(localStorage.getItem(STORAGE_KEY_ASSISTANT_MESSAGES) || '[]'); } catch {}
+      try { messages = JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch {}
       const index = messages.findIndex(item => item.id === message.id);
       if (index === -1) messages.push(message.toJSON());
       else messages[index] = message.toJSON();
-      localStorage.setItem(STORAGE_KEY_ASSISTANT_MESSAGES, JSON.stringify(messages.slice(-30)));
+      localStorage.setItem(storageKey, JSON.stringify(messages.slice(-30)));
       message.storage = 'local';
 
       // Cache it
@@ -209,7 +239,8 @@ export class ConversationPersistence {
     }
 
     try {
-      const messages = JSON.parse(localStorage.getItem(STORAGE_KEY_ASSISTANT_MESSAGES) || '[]');
+      const storageKey = getAssistantHistoryStorageKey();
+      const messages = JSON.parse(localStorage.getItem(storageKey) || '[]');
       const json = messages.find(m => m.id === messageId);
       if (json) {
         const msg = AssistantMessage.fromJSON(json);
@@ -228,7 +259,8 @@ export class ConversationPersistence {
     const messages = [];
 
     try {
-      const browserMessages = JSON.parse(localStorage.getItem(STORAGE_KEY_ASSISTANT_MESSAGES) || '[]');
+      const storageKey = getAssistantHistoryStorageKey();
+      const browserMessages = JSON.parse(localStorage.getItem(storageKey) || '[]');
       messages.push(...browserMessages.map(m => AssistantMessage.fromJSON(m)));
     } catch {}
 
@@ -249,9 +281,10 @@ export class ConversationPersistence {
 
     // Remove from browser storage
     try {
-      let messages = JSON.parse(localStorage.getItem(STORAGE_KEY_ASSISTANT_MESSAGES) || '[]');
+      const storageKey = getAssistantHistoryStorageKey();
+      let messages = JSON.parse(localStorage.getItem(storageKey) || '[]');
       messages = messages.filter(m => m.id !== messageId);
-      localStorage.setItem(STORAGE_KEY_ASSISTANT_MESSAGES, JSON.stringify(messages));
+      localStorage.setItem(storageKey, JSON.stringify(messages));
     } catch {}
 
     // Could also delete from cloud if needed
@@ -262,7 +295,9 @@ export class ConversationPersistence {
    */
   async clearConversation() {
     this.messageCache.clear();
-    localStorage.removeItem(STORAGE_KEY_ASSISTANT_MESSAGES);
+    const storageKey = getAssistantHistoryStorageKey();
+    localStorage.removeItem(storageKey);
+    localStorage.removeItem('toolbox_assistant_history_v2');
   }
 
   /**

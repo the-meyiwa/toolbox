@@ -75,6 +75,12 @@ class MockElement {
         const el = new MockElement(match[1]);
         if (idMatch) el.id = idMatch[1];
         if (classMatch) el.className = classMatch[1];
+        const tag = match[1];
+        const rest = this._innerHTML.slice(match.index + match[0].length);
+        const closeIdx = rest.indexOf(`</${tag}>`);
+        if (closeIdx !== -1) {
+          el._innerHTML = rest.slice(0, closeIdx);
+        }
         this.children.push(el);
       }
     }

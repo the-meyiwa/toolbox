@@ -19,7 +19,7 @@ import { copyText } from './utils.js';
 import { initTheme } from './lib/theme.js';
 import { installSettingsUI } from './lib/settings-ui.js';
 import { installHeaderMenu } from './lib/header-menu.js';
-import { getCurrentUser } from './lib/supabase.js';
+import { getCurrentUser, validateSession, parseAuthRedirect } from './lib/supabase.js';
 import { openAccountModal } from './views/account-modal.js';
 import { initFlutterwaveContribution } from './lib/flutterwave-contribution.js';
 
@@ -338,11 +338,32 @@ async function openTool(id) {
 }
 
 function handleHash() {
+  // Check for auth recovery or redirect parameters
+  const redirect = parseAuthRedirect();
+  if (redirect) {
+    if (redirect.type === 'recovery' && redirect.accessToken) {
+      try {
+        window.history.replaceState(null, '', window.location.pathname + '#home');
+      } catch {}
+      openAccountModal('set-new-password', redirect);
+      showPage('home');
+      return;
+    }
+  }
+
   const raw = decodeURIComponent(window.location.hash.slice(1) || 'home');
 
   if (raw === '' || raw === 'home') return showPage('home');
   if (raw === 'tools') { showPage('tools'); return; }
   if (raw === 'about' || raw === 'support') return showPage('about');
+  if (raw === 'set-new-password') {
+    openAccountModal('set-new-password');
+    return showPage('home');
+  }
+  if (raw === 'reset' || raw === 'reset-password') {
+    openAccountModal('reset');
+    return showPage('home');
+  }
 
   // #saved or #files, or #saved/<artifact id> / #files/<artifact id>
   if (raw === 'saved' || raw.startsWith('saved/') || raw === 'files' || raw.startsWith('files/')) {
@@ -562,7 +583,7 @@ window.addEventListener('toolbox:authchange', () => {
   const user = getCurrentUser();
   renderGrid(user ? TOOLS : TOOLS.filter(t => t.id !== 'assistant'));
   renderHomeAssistantBanner();
-  if (window.location.hash === '#assistant') {
+  if (window.location.hash === '#assistant' && user) {
     openTool('assistant');
   }
 });
@@ -787,6 +808,9 @@ const initialUser = getCurrentUser();
 renderGrid(initialUser ? TOOLS : TOOLS.filter(t => t.id !== 'assistant'));
 installCategoryChips();
 handleHash();
+
+// Prune invalid or deleted accounts against Supabase in background
+validateSession().catch(() => {});
 
 // Mobile Nav Indicator & Micro-haptics
 window.addEventListener('resize', updateMobileNavIndicator, { passive: true });

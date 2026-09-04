@@ -1135,8 +1135,11 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
         expression: { type: 'STRING', description: 'Mathematical expression (e.g. "15 * 80 + 35", "x^2 + 3*x", "sqrt(144) + sin(pi/2)").' },
         input: { type: 'NUMBER', description: 'Numeric input for single-variable sequences such as Collatz (e.g. 6).' },
         variable: { type: 'STRING', description: 'Independent variable for calculus differentiation (default "x").' },
-        at: { type: 'NUMBER', description: 'Evaluation point for derivative (e.g. 2 for derivative at x=2).' },
-        data: { type: 'ARRAY', description: 'Numerical array for statistics calculations (mean, median, stdDev).' }
+        data: {
+          type: 'ARRAY',
+          description: 'Numerical array for statistics calculations (mean, median, stdDev).',
+          items: { type: 'NUMBER' }
+        }
       }
     }
   },

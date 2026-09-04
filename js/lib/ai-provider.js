@@ -21,35 +21,35 @@ export const AI_MODES = {
     id: 'auto',
     name: 'Auto Mode',
     badge: 'Auto Reasoning',
-    model: 'gemini-3.5-flash-lite',
+    model: 'gemini-3.6-flash',
     description: 'High-speed generative intelligence with multi-tool calling, file reasoning, and code generation.'
   },
   reasoning: {
     id: 'reasoning',
     name: 'Deep Reasoning',
     badge: 'Deep Reasoning',
-    model: 'gemini-3.5-flash',
+    model: 'gemini-3.6-flash',
     description: 'Analytical problem solving, multi-step proofs, and comprehensive explanations.'
   },
   code: {
     id: 'code',
     name: 'Code & Math Engine',
     badge: 'Code Engine',
-    model: 'gemini-3.5-flash-lite',
+    model: 'gemini-3.6-flash',
     description: 'Generates and tests code in JavaScript, Python, C++, and SQL with live execution.'
   },
   science: {
     id: 'science',
     name: 'Science & Chemistry',
     badge: 'Science Engine',
-    model: 'gemini-3.5-flash-lite',
+    model: 'gemini-3.6-flash',
     description: 'Molar mass calculation, reaction balancing, stoichiometry, and compound queries.'
   },
   files: {
     id: 'files',
     name: 'File & Image Suite',
     badge: 'File Suite',
-    model: 'gemini-3.5-flash-lite',
+    model: 'gemini-3.6-flash',
     description: 'Multimodal image inspection, conversion, dataset analysis, and OCR.'
   }
 };
@@ -217,6 +217,46 @@ const BASE_SYSTEM_INSTRUCTION = `You are Toolbox Assistant, a sophisticated, hig
 - When a tool returns structured UI such as audio players, cards, notes, charts, calendar events, or interactive maps, do not narrate the existence of those controls. Only provide natural-language text when it adds useful information beyond what the UI itself communicates.
 - You have real-time access to the current date and time in the Current Environment section below. Always reference it if asked.`;
 
+// Base instructions
+export function extractErrorMessage(errData, fallback = 'Something went wrong.') {
+  if (!errData) return fallback;
+  if (typeof errData === 'string') {
+    const trimmed = errData.trim();
+    return trimmed && trimmed !== '[object Object]' ? trimmed : fallback;
+  }
+  if (errData instanceof Error) {
+    const msg = errData.message?.trim();
+    return msg && msg !== '[object Object]' ? msg : fallback;
+  }
+  if (typeof errData.error === 'string') {
+    const trimmed = errData.error.trim();
+    return trimmed && trimmed !== '[object Object]' ? trimmed : fallback;
+  }
+  if (typeof errData.error?.message === 'string') {
+    const trimmed = errData.error.message.trim();
+    return trimmed && trimmed !== '[object Object]' ? trimmed : fallback;
+  }
+  if (typeof errData.error?.msg === 'string') {
+    const trimmed = errData.error.msg.trim();
+    return trimmed && trimmed !== '[object Object]' ? trimmed : fallback;
+  }
+  if (typeof errData.message === 'string') {
+    const trimmed = errData.message.trim();
+    return trimmed && trimmed !== '[object Object]' ? trimmed : fallback;
+  }
+  if (typeof errData.msg === 'string') {
+    const trimmed = errData.msg.trim();
+    return trimmed && trimmed !== '[object Object]' ? trimmed : fallback;
+  }
+  if (typeof errData.error_description === 'string') {
+    return errData.error_description.trim();
+  }
+  if (errData.error?.code) {
+    return `AI Service Error: ${errData.error.code}`;
+  }
+  return fallback;
+}
+
 /**
  * Main Entry Point: streamChatCompletion
  * All requests route securely through Toolbox's server proxy (/api/assistant/chat).
@@ -300,10 +340,17 @@ export async function streamChatCompletion({
       };
 
       let res = await executeFetch(user?.token);
-      if (res.status === 401 && user?.refreshToken) {
-        const refreshed = await refreshUserSession();
-        if (refreshed?.token && refreshed.token !== user.token) {
-          res = await executeFetch(refreshed.token);
+      if (res.status === 401) {
+        if (user?.refreshToken) {
+          const refreshed = await refreshUserSession();
+          if (refreshed?.token && refreshed.token !== user.token) {
+            res = await executeFetch(refreshed.token);
+          }
+        }
+        if (res.status === 401) {
+          const errData = await res.json().catch(() => ({}));
+          const errMsg = extractErrorMessage(errData, 'Your account session is invalid or expired. Please sign in with your active account.');
+          throw new Error(errMsg);
         }
       }
       return res;
@@ -404,7 +451,7 @@ export async function streamChatCompletion({
       success = true;
     } else {
       const errJson = await proxyRes.json().catch(() => ({}));
-      const rawErrMsg = errJson.error?.message || errJson.error || `Service Unavailable (HTTP ${proxyRes.status})`;
+      const rawErrMsg = extractErrorMessage(errJson, `Service Unavailable (HTTP ${proxyRes.status})`);
       lastError = new Error(rawErrMsg);
     }
   } catch (err) {
@@ -433,7 +480,8 @@ export async function streamChatCompletion({
   }
 
   if (!success) {
-    throw lastError || new Error('Unable to connect to the online AI service. Please check your network connection.');
+    const finalErrMessage = extractErrorMessage(lastError, 'Unable to connect to the online AI service. Please check your network connection.');
+    throw new Error(finalErrMessage);
   }
 
   return {
@@ -519,7 +567,7 @@ export async function testAiProviderConnection(provider = 'gemini', apiKey = '')
   }
 
   const start = Date.now();
-  const modelsToTry = ['gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.7-flash'];
+  const modelsToTry = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite-preview'];
   let lastErr = 'Connection failed';
 
   for (const model of modelsToTry) {
