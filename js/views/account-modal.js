@@ -123,7 +123,7 @@ function renderAuthCard(user, authMode, recoveryContext, pendingConfirmationEmai
             <input type="password" id="new-pwd-input" class="tool-input" placeholder="New password..." required minlength="6" style="width:100%; padding:10px 36px 10px 12px; font-size:0.88rem; border-radius:8px;">
             <button type="button" class="pwd-toggle-btn" data-target="new-pwd-input" aria-label="Show password" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; padding:2px; cursor:pointer; color:var(--g500); display:flex; align-items:center;">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-open">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
                 <circle cx="12" cy="12" r="3"></circle>
               </svg>
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-closed" style="display:none;">
@@ -152,7 +152,7 @@ function renderAuthCard(user, authMode, recoveryContext, pendingConfirmationEmai
             <input type="password" id="new-pwd-confirm-input" class="tool-input" placeholder="Confirm new password..." required minlength="6" style="width:100%; padding:10px 36px 10px 12px; font-size:0.88rem; border-radius:8px;">
             <button type="button" class="pwd-toggle-btn" data-target="new-pwd-confirm-input" aria-label="Show password" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; padding:2px; cursor:pointer; color:var(--g500); display:flex; align-items:center;">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-open">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
                 <circle cx="12" cy="12" r="3"></circle>
               </svg>
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-closed" style="display:none;">
@@ -290,7 +290,7 @@ function renderAuthCard(user, authMode, recoveryContext, pendingConfirmationEmai
           <input type="password" id="auth-pwd-input" class="tool-input" placeholder="Enter your password..." required minlength="6" style="width:100%; padding:10px 36px 10px 12px; font-size:0.88rem; border-radius:8px;">
           <button type="button" class="pwd-toggle-btn" data-target="auth-pwd-input" aria-label="Show password" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; padding:2px; cursor:pointer; color:var(--g500); display:flex; align-items:center;">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-open">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
               <circle cx="12" cy="12" r="3"></circle>
             </svg>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-closed" style="display:none;">
@@ -320,7 +320,7 @@ function renderAuthCard(user, authMode, recoveryContext, pendingConfirmationEmai
             <input type="password" id="auth-pwd-confirm-input" class="tool-input" placeholder="Confirm your password..." required minlength="6" style="width:100%; padding:10px 36px 10px 12px; font-size:0.88rem; border-radius:8px;">
             <button type="button" class="pwd-toggle-btn" data-target="auth-pwd-confirm-input" aria-label="Show password" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; padding:2px; cursor:pointer; color:var(--g500); display:flex; align-items:center;">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-open">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
                 <circle cx="12" cy="12" r="3"></circle>
               </svg>
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-closed" style="display:none;">
