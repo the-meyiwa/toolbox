@@ -153,8 +153,13 @@ test('Passkeys: detection and credentials lifecycle', async () => {
     assert.equal(authRes.user.email, 'passkey.user@toolbox.app');
     assert.equal(authRes.user.authProvider, 'passkey');
 
-    // Remove passkey
-    const removeRes = await removeRegisteredPasskey(mockUser, mockCredId);
+    // Remove passkey with incorrect/short password fails
+    const failRemove = await removeRegisteredPasskey(mockUser, mockCredId, '123');
+    assert.equal(failRemove.success, false);
+    assert.ok(failRemove.error.includes('Password'));
+
+    // Remove passkey with verified password succeeds
+    const removeRes = await removeRegisteredPasskey(mockUser, mockCredId, 'validPassword123');
     assert.equal(removeRes.success, true);
     const updatedPasskeys = getRegisteredPasskeys(mockUser);
     assert.equal(updatedPasskeys.some(k => k.id === mockCredId), false);
@@ -172,6 +177,10 @@ test('Account Modal: renders verification pending state and passkey options', as
   const modal = document.getElementById('account-modal');
   assert.ok(modal);
   assert.ok(modal.innerHTML.includes('Check Your Inbox'));
+  assert.ok(modal.querySelector('#btn-open-webmail'));
+  assert.ok(modal.querySelector('#btn-open-webmail').textContent.includes('Go to Gmail'));
+  assert.ok(modal.querySelector('#auto-redirect-box'));
+  assert.ok(modal.querySelector('#btn-cancel-redirect'));
   assert.ok(modal.querySelector('#btn-resend-confirmation'));
   assert.ok(modal.querySelector('#btn-pending-back'));
 
@@ -186,4 +195,62 @@ test('Account Modal: renders verification pending state and passkey options', as
 
   closeAccountModal();
   assert.equal(modal.style.display, 'none');
+});
+
+test('Account Modal: passkey deletion requires password confirmation in UI', async () => {
+  const mockUser = {
+    id: 'usr_secure_del',
+    email: 'secure.user@example.com',
+    token: 'tok_sec_123'
+  };
+
+  localStorage.setItem('toolbox_supabase_session', JSON.stringify(mockUser));
+
+  // Pre-seed a passkey
+  const credId = 'pk_test_delete_protect';
+  localStorage.setItem('toolbox_passkeys', JSON.stringify([
+    {
+      id: credId,
+      name: 'MacBook Pro Secure Touch ID',
+      userEmail: mockUser.email,
+      userId: mockUser.id,
+      createdAt: new Date().toISOString()
+    }
+  ]));
+
+  await openAccountModal();
+  const modal = document.getElementById('account-modal');
+  assert.ok(modal);
+  const delBtn = modal.querySelector('.btn-remove-passkey');
+  assert.ok(delBtn);
+
+  // Click delete button -> confirms password box appears
+  delBtn.click();
+  const delBox = modal.querySelector(`#del-box-${credId}`);
+  assert.ok(delBox);
+  assert.equal(delBox.style.display, 'block');
+
+  const pwdInput = modal.querySelector(`#pwd-del-${credId}`);
+  const confirmBtn = delBox.querySelector('.btn-confirm-del-pk');
+  const errBox = modal.querySelector(`#del-err-${credId}`);
+  assert.ok(pwdInput);
+  assert.ok(confirmBtn);
+
+  // Attempt delete with invalid short password
+  pwdInput.value = '123';
+  confirmBtn.click();
+  await new Promise(r => setTimeout(r, 10));
+  assert.equal(errBox.style.display, 'block');
+  assert.ok(errBox.textContent.includes('Password'));
+
+  // Attempt delete with valid password
+  pwdInput.value = 'myValidPassword123';
+  confirmBtn.click();
+  await new Promise(r => setTimeout(r, 10));
+
+  const remainingKeys = getRegisteredPasskeys(mockUser);
+  assert.equal(remainingKeys.some(k => k.id === credId), false);
+
+  closeAccountModal();
+  signOut();
 });

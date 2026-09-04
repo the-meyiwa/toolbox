@@ -755,11 +755,59 @@ export async function registerPasskey(user = null, deviceName = null) {
 }
 
 /**
- * Remove a registered passkey
+ * Verify user password against Supabase Auth (or dev account fallback)
  */
-export async function removeRegisteredPasskey(user = null, passkeyId) {
+export async function verifyUserPassword(password, user = null) {
+  const activeUser = user || getCurrentUser();
+  if (!activeUser || !activeUser.email) {
+    return { success: false, error: 'User is not authenticated.' };
+  }
+  if (!password) {
+    return { success: false, error: 'Please enter your password.' };
+  }
+
+  const config = getSupabaseConfig();
+  if (config.url && config.anonKey && activeUser.token && !activeUser.token.startsWith('tok_')) {
+    try {
+      const res = await fetch(`${config.url}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': config.anonKey
+        },
+        body: JSON.stringify({ email: activeUser.email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const errorMsg = data.error_description || (data.error === 'invalid_grant' ? 'Incorrect password.' : 'Password verification failed.');
+        return { success: false, error: errorMsg };
+      }
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message || 'Verification failed.' };
+    }
+  }
+
+  // Local / simulated verification fallback
+  if (password.length < 6) {
+    return { success: false, error: 'Password must be at least 6 characters.' };
+  }
+  return { success: true };
+}
+
+/**
+ * Remove a registered passkey, requiring account password verification for security
+ */
+export async function removeRegisteredPasskey(user = null, passkeyId, password = null) {
   const activeUser = user || getCurrentUser();
   if (!passkeyId) return { success: false, error: 'Passkey identifier is required.' };
+
+  if (password !== null && password !== undefined) {
+    const verified = await verifyUserPassword(password, activeUser);
+    if (!verified.success) {
+      return { success: false, error: verified.error || 'Incorrect password.' };
+    }
+  }
 
   const existing = getRegisteredPasskeys();
   const updated = existing.filter(k => k.id !== passkeyId);

@@ -36,10 +36,32 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+function getWebmailInfo(email) {
+  const clean = (email || '').toLowerCase().trim();
+  const domain = clean.split('@')[1] || '';
+  if (domain.includes('gmail') || domain.includes('googlemail')) {
+    return { name: 'Gmail', url: 'https://mail.google.com/', isGmail: true };
+  }
+  if (domain.includes('outlook') || domain.includes('hotmail') || domain.includes('live') || domain.includes('msn')) {
+    return { name: 'Outlook', url: 'https://outlook.live.com/mail/', isGmail: false };
+  }
+  if (domain.includes('yahoo') || domain.includes('ymail')) {
+    return { name: 'Yahoo Mail', url: 'https://mail.yahoo.com/', isGmail: false };
+  }
+  if (domain.includes('icloud') || domain.includes('me.com') || domain.includes('mac.com')) {
+    return { name: 'iCloud Mail', url: 'https://www.icloud.com/mail', isGmail: false };
+  }
+  if (domain.includes('proton') || domain.includes('pm.me')) {
+    return { name: 'Proton Mail', url: 'https://mail.proton.me/', isGmail: false };
+  }
+  return { name: 'Gmail', url: 'https://mail.google.com/', isGmail: true };
+}
+
 let modalEl = null;
 let authMode = 'signin'; // 'signin' | 'signup' | 'reset' | 'set-new-password' | 'verify-pending'
 let recoveryContext = null;
 let pendingConfirmationEmail = null;
+let activeRedirectTimer = null;
 
 export async function openAccountModal(modeOrSignUp = false, context = null) {
   if (typeof modeOrSignUp === 'string') {
@@ -78,6 +100,10 @@ export async function openAccountModal(modeOrSignUp = false, context = null) {
 }
 
 export function closeAccountModal() {
+  if (activeRedirectTimer) {
+    clearInterval(activeRedirectTimer);
+    activeRedirectTimer = null;
+  }
   if (modalEl) {
     modalEl.style.display = 'none';
     modalEl.classList.remove('is-open');
@@ -152,6 +178,7 @@ function renderAuthCard(user, authMode, recoveryContext, pendingConfirmationEmai
   }
 
   if (authMode === 'verify-pending') {
+    const mailInfo = getWebmailInfo(pendingConfirmationEmail);
     return `
       <div id="verify-pending-wrap" style="text-align:center; padding:8px 4px;">
         <div style="width:48px; height:48px; border-radius:50%; background:var(--g100); display:flex; align-items:center; justify-content:center; margin:0 auto 12px; color:var(--black);">
@@ -161,43 +188,39 @@ function renderAuthCard(user, authMode, recoveryContext, pendingConfirmationEmai
           </svg>
         </div>
         <div style="font-size:0.95rem; font-weight:700; color:var(--black); margin-bottom:6px;">Check Your Inbox</div>
-        <div style="font-size:0.82rem; color:var(--g600); line-height:1.5; margin-bottom:14px;">
+        <div style="font-size:0.82rem; color:var(--g600); line-height:1.5; margin-bottom:12px;">
           We sent an activation link to:<br>
           <strong style="color:var(--black); font-family:monospace; display:inline-block; margin-top:3px;">${escapeHtml(pendingConfirmationEmail || 'your email')}</strong>
         </div>
-        <div style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:10px 12px; font-size:0.78rem; color:var(--g600); line-height:1.4; margin-bottom:14px; text-align:left;">
-          Click the confirmation link in that email to activate your account. You will be signed in automatically upon verification.
-        </div>
-        <button type="button" class="btn btn-secondary btn-sm" id="btn-resend-confirmation" style="width:100%; padding:9px; font-weight:600; font-size:0.86rem; margin-bottom:8px;">
-          Resend Confirmation Email
-        </button>
-        <div id="resend-msg" style="font-size:0.78rem; line-height:1.4; display:none; padding:4px 0; margin-bottom:6px;"></div>
-        <div>
-          <button type="button" id="btn-pending-back" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-size:0.82rem; font-weight:600; cursor:pointer;">
-            Back to Sign In
-          </button>
-        </div>
-      </div>
-    `;
-  }
 
-  if (authMode === 'verify-pending') {
-    return `
-      <div id="verify-pending-wrap" style="text-align:center; padding:8px 4px;">
-        <div style="width:48px; height:48px; border-radius:50%; background:var(--g100); display:flex; align-items:center; justify-content:center; margin:0 auto 12px; color:var(--black);">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <div id="auto-redirect-box" style="background:var(--g100); border:1px solid var(--g200); border-radius:8px; padding:9px 12px; font-size:0.78rem; color:var(--g700); margin-bottom:12px; display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span>Opening ${escapeHtml(mailInfo.name)} in <strong id="redirect-sec">3</strong>s...</span>
+          </div>
+          <button type="button" id="btn-cancel-redirect" style="background:none; border:none; padding:2px 4px; font-size:0.75rem; color:var(--g600); cursor:pointer; text-decoration:underline;">Cancel</button>
+        </div>
+
+        <a href="${mailInfo.url}" target="_blank" rel="noopener noreferrer" id="btn-open-webmail" class="btn btn-primary btn-sm" style="width:100%; padding:10px; font-weight:600; font-size:0.88rem; margin-bottom:10px; display:inline-flex; align-items:center; justify-content:center; gap:8px; text-decoration:none; box-sizing:border-box;">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
             <polyline points="22,6 12,13 2,6"></polyline>
           </svg>
-        </div>
-        <div style="font-size:0.95rem; font-weight:700; color:var(--black); margin-bottom:6px;">Check Your Inbox</div>
-        <div style="font-size:0.82rem; color:var(--g600); line-height:1.5; margin-bottom:14px;">
-          We sent an activation link to:<br>
-          <strong style="color:var(--black); font-family:monospace; display:inline-block; margin-top:3px;">${escapeHtml(pendingConfirmationEmail || 'your email')}</strong>
-        </div>
-        <div style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:10px 12px; font-size:0.78rem; color:var(--g600); line-height:1.4; margin-bottom:14px; text-align:left;">
+          <span>Go to ${escapeHtml(mailInfo.name)}</span>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.7;">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+        </a>
+
+        <div style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:10px 12px; font-size:0.78rem; color:var(--g600); line-height:1.4; margin-bottom:12px; text-align:left;">
           Click the confirmation link in that email to activate your account. You will be signed in automatically upon verification.
         </div>
+
         <button type="button" class="btn btn-secondary btn-sm" id="btn-resend-confirmation" style="width:100%; padding:9px; font-weight:600; font-size:0.86rem; margin-bottom:8px;">
           Resend Confirmation Email
         </button>
@@ -916,6 +939,58 @@ function renderModalContent() {
     });
   }
 
+  // --- Auto-redirect to Webmail Handler ---
+  if (activeRedirectTimer) {
+    clearInterval(activeRedirectTimer);
+    activeRedirectTimer = null;
+  }
+
+  const redirectSec = modalEl.querySelector('#redirect-sec');
+  const autoRedirectBox = modalEl.querySelector('#auto-redirect-box');
+  const btnCancelRedirect = modalEl.querySelector('#btn-cancel-redirect');
+  const btnOpenWebmail = modalEl.querySelector('#btn-open-webmail');
+
+  if (redirectSec && autoRedirectBox) {
+    let remaining = 3;
+    activeRedirectTimer = setInterval(() => {
+      remaining -= 1;
+      if (redirectSec) redirectSec.textContent = String(remaining);
+      if (remaining <= 0) {
+        clearInterval(activeRedirectTimer);
+        activeRedirectTimer = null;
+        if (autoRedirectBox) {
+          const mailInfo = getWebmailInfo(pendingConfirmationEmail);
+          autoRedirectBox.innerHTML = `<span style="font-size:0.75rem; color:var(--g700);">Redirecting to ${escapeHtml(mailInfo.name)}... (click button below if blocked)</span>`;
+        }
+        if (btnOpenWebmail && btnOpenWebmail.href) {
+          try {
+            window.open(btnOpenWebmail.href, '_blank', 'noopener,noreferrer');
+          } catch {}
+        }
+      }
+    }, 1000);
+
+    if (btnCancelRedirect) {
+      btnCancelRedirect.addEventListener('click', () => {
+        if (activeRedirectTimer) {
+          clearInterval(activeRedirectTimer);
+          activeRedirectTimer = null;
+        }
+        if (autoRedirectBox) autoRedirectBox.style.display = 'none';
+      });
+    }
+
+    if (btnOpenWebmail) {
+      btnOpenWebmail.addEventListener('click', () => {
+        if (activeRedirectTimer) {
+          clearInterval(activeRedirectTimer);
+          activeRedirectTimer = null;
+        }
+        if (autoRedirectBox) autoRedirectBox.style.display = 'none';
+      });
+    }
+  }
+
   // --- Resend Confirmation Email Handler ---
   const btnResend = modalEl.querySelector('#btn-resend-confirmation');
   const resendMsg = modalEl.querySelector('#resend-msg');
@@ -983,34 +1058,132 @@ function renderModalContent() {
         `;
       } else {
         passkeysContainer.innerHTML = list.map(pk => `
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:9px 12px; background:var(--white); border:1px solid var(--g200); border-radius:8px;">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--g700); flex-shrink:0;">
-                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                <line x1="8" y1="21" x2="16" y2="21"></line>
-                <line x1="12" y1="17" x2="12" y2="21"></line>
-              </svg>
-              <div>
-                <div style="font-size:0.82rem; font-weight:600; color:var(--black);">${escapeHtml(pk.name || 'Security Key')}</div>
-                <div style="font-size:0.7rem; color:var(--g500);">Registered ${new Date(pk.createdAt).toLocaleDateString()}</div>
+          <div class="passkey-item-card" data-id="${pk.id}" style="padding:10px 12px; background:var(--white); border:1px solid var(--g200); border-radius:8px; display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--g700); flex-shrink:0;">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                  <line x1="8" y1="21" x2="16" y2="21"></line>
+                  <line x1="12" y1="17" x2="12" y2="21"></line>
+                </svg>
+                <div>
+                  <div style="font-size:0.82rem; font-weight:600; color:var(--black);">${escapeHtml(pk.name || 'Security Key')}</div>
+                  <div style="font-size:0.7rem; color:var(--g500);">Registered ${new Date(pk.createdAt).toLocaleDateString()}</div>
+                </div>
               </div>
+              <button type="button" class="btn-remove-passkey" data-id="${pk.id}" aria-label="Delete passkey" style="background:none; border:none; padding:4px; cursor:pointer; color:var(--g500); border-radius:4px; display:flex; align-items:center;">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
             </div>
-            <button type="button" class="btn-remove-passkey" data-id="${pk.id}" aria-label="Remove passkey" style="background:none; border:none; padding:4px; cursor:pointer; color:var(--g500); border-radius:4px; display:flex; align-items:center;">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              </svg>
-            </button>
+
+            <div class="passkey-delete-confirm-box" id="del-box-${pk.id}" style="display:none; padding-top:8px; border-top:1px solid var(--g200);">
+              <p style="font-size:0.75rem; font-weight:600; color:var(--black); margin:0 0 4px;">
+                Enter account password to delete this passkey:
+              </p>
+              <form class="passkey-del-form" onsubmit="return false;" style="display:flex; gap:6px; margin:0;">
+                <input type="password" class="tool-input passkey-del-pwd" id="pwd-del-${pk.id}" data-id="${pk.id}" placeholder="Account password..." style="flex:1; padding:6px 10px; font-size:0.8rem; border-radius:6px;">
+                <button type="button" class="btn btn-primary btn-sm btn-confirm-del-pk" data-id="${pk.id}" style="background:#ef4444; border-color:#ef4444; color:#ffffff; font-size:0.75rem; padding:6px 12px; font-weight:600;">
+                  Delete
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm btn-cancel-del-pk" data-id="${pk.id}" style="font-size:0.75rem; padding:6px 10px;">
+                  Cancel
+                </button>
+              </form>
+              <p class="passkey-del-err" id="del-err-${pk.id}" style="font-size:0.72rem; color:#ef4444; margin:4px 0 0; display:none;"></p>
+            </div>
           </div>
         `).join('');
 
         passkeysContainer.querySelectorAll('.btn-remove-passkey').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id');
+            const delBox = passkeysContainer.querySelector(`#del-box-${id}`);
+            if (delBox) {
+              const isOpen = delBox.style.display === 'block';
+              passkeysContainer.querySelectorAll('.passkey-delete-confirm-box').forEach(b => {
+                b.style.display = 'none';
+              });
+              if (!isOpen) {
+                delBox.style.display = 'block';
+                const pwdInput = delBox.querySelector('.passkey-del-pwd');
+                if (pwdInput) {
+                  pwdInput.value = '';
+                  pwdInput.focus();
+                }
+                const errEl = delBox.querySelector('.passkey-del-err');
+                if (errEl) errEl.style.display = 'none';
+              }
+            }
+          });
+        });
+
+        passkeysContainer.querySelectorAll('.btn-cancel-del-pk').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id');
+            const delBox = passkeysContainer.querySelector(`#del-box-${id}`);
+            if (delBox) delBox.style.display = 'none';
+          });
+        });
+
+        passkeysContainer.querySelectorAll('.btn-confirm-del-pk').forEach(btn => {
           btn.addEventListener('click', async () => {
             const id = btn.getAttribute('data-id');
+            const delBox = passkeysContainer.querySelector(`#del-box-${id}`);
+            const pwdInput = delBox ? delBox.querySelector('.passkey-del-pwd') : null;
+            const errEl = delBox ? delBox.querySelector('.passkey-del-err') : null;
+            const enteredPwd = pwdInput ? pwdInput.value : '';
+
+            if (!enteredPwd) {
+              if (errEl) {
+                errEl.style.display = 'block';
+                errEl.textContent = 'Please enter your password.';
+              }
+              if (pwdInput) pwdInput.focus();
+              return;
+            }
+
             btn.disabled = true;
-            await removeRegisteredPasskey(user, id);
-            renderPasskeysList();
-            showToast('Passkey removed.', 'info');
+            const originalText = btn.textContent;
+            btn.textContent = 'Verifying...';
+            if (errEl) errEl.style.display = 'none';
+
+            try {
+              const res = await removeRegisteredPasskey(user, id, enteredPwd);
+              if (res.success) {
+                renderPasskeysList();
+                showToast('Passkey deleted successfully.', 'info');
+              } else {
+                if (errEl) {
+                  errEl.style.display = 'block';
+                  errEl.textContent = res.error || 'Incorrect password.';
+                }
+                btn.disabled = false;
+                btn.textContent = originalText;
+                if (pwdInput) pwdInput.focus();
+              }
+            } catch (err) {
+              if (errEl) {
+                errEl.style.display = 'block';
+                errEl.textContent = err.message || 'Verification error.';
+              }
+              btn.disabled = false;
+              btn.textContent = originalText;
+            }
+          });
+        });
+
+        passkeysContainer.querySelectorAll('.passkey-del-pwd').forEach(input => {
+          input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              const id = input.getAttribute('data-id');
+              const delBox = passkeysContainer.querySelector(`#del-box-${id}`);
+              const confirmBtn = delBox ? delBox.querySelector('.btn-confirm-del-pk') : null;
+              if (confirmBtn) confirmBtn.click();
+            }
           });
         });
       }
