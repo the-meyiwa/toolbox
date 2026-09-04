@@ -248,13 +248,18 @@ export async function signUpWithEmail(email, password) {
   const config = getSupabaseConfig();
   try {
     if (config.url && config.anonKey) {
+      const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/` : undefined;
       const res = await fetch(`${config.url}/auth/v1/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'apikey': config.anonKey
         },
-        body: JSON.stringify({ email: cleanEmail, password })
+        body: JSON.stringify({
+          email: cleanEmail,
+          password,
+          ...(redirectUrl ? { redirect_to: redirectUrl } : {})
+        })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -262,7 +267,7 @@ export async function signUpWithEmail(email, password) {
         throw new Error(errorMsg);
       }
 
-      // If Supabase returned an access_token directly (instant confirmation)
+      // If Supabase returned an access_token directly (instant confirmation or email confirmation disabled)
       if (data.access_token) {
         const userSession = {
           id: data.user?.id || `usr_${Date.now()}`,
@@ -277,14 +282,7 @@ export async function signUpWithEmail(email, password) {
         return { success: true, user: userSession };
       }
 
-      // If no token was returned in signup, try immediate sign in
-      // (works automatically if auto-confirm trigger is installed or account is active)
-      const immediateLogin = await signInWithEmail(cleanEmail, password);
-      if (immediateLogin.success) {
-        return immediateLogin;
-      }
-
-      // Otherwise, the auth provider strictly enforces email confirmation link
+      // Otherwise, the auth provider requires email confirmation
       return { success: true, requiresConfirmation: true };
     }
 

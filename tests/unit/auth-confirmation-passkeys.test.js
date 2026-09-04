@@ -179,8 +179,7 @@ test('Account Modal: renders verification pending state and passkey options', as
   assert.ok(modal.innerHTML.includes('Check Your Inbox'));
   assert.ok(modal.querySelector('#btn-open-webmail'));
   assert.ok(modal.querySelector('#btn-open-webmail').textContent.includes('Go to Gmail'));
-  assert.ok(modal.querySelector('#auto-redirect-box'));
-  assert.ok(modal.querySelector('#btn-cancel-redirect'));
+  assert.equal(modal.querySelector('#auto-redirect-box'), null);
   assert.ok(modal.querySelector('#btn-resend-confirmation'));
   assert.ok(modal.querySelector('#btn-pending-back'));
 

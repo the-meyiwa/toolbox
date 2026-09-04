@@ -61,7 +61,6 @@ let modalEl = null;
 let authMode = 'signin'; // 'signin' | 'signup' | 'reset' | 'set-new-password' | 'verify-pending'
 let recoveryContext = null;
 let pendingConfirmationEmail = null;
-let activeRedirectTimer = null;
 
 export async function openAccountModal(modeOrSignUp = false, context = null) {
   if (typeof modeOrSignUp === 'string') {
@@ -100,10 +99,6 @@ export async function openAccountModal(modeOrSignUp = false, context = null) {
 }
 
 export function closeAccountModal() {
-  if (activeRedirectTimer) {
-    clearInterval(activeRedirectTimer);
-    activeRedirectTimer = null;
-  }
   if (modalEl) {
     modalEl.style.display = 'none';
     modalEl.classList.remove('is-open');
@@ -188,23 +183,12 @@ function renderAuthCard(user, authMode, recoveryContext, pendingConfirmationEmai
           </svg>
         </div>
         <div style="font-size:0.95rem; font-weight:700; color:var(--black); margin-bottom:6px;">Check Your Inbox</div>
-        <div style="font-size:0.82rem; color:var(--g600); line-height:1.5; margin-bottom:12px;">
+        <div style="font-size:0.82rem; color:var(--g600); line-height:1.5; margin-bottom:14px;">
           We sent an activation link to:<br>
           <strong style="color:var(--black); font-family:monospace; display:inline-block; margin-top:3px;">${escapeHtml(pendingConfirmationEmail || 'your email')}</strong>
         </div>
 
-        <div id="auto-redirect-box" style="background:var(--g100); border:1px solid var(--g200); border-radius:8px; padding:9px 12px; font-size:0.78rem; color:var(--g700); margin-bottom:12px; display:flex; align-items:center; justify-content:space-between;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
-            <span>Opening ${escapeHtml(mailInfo.name)} in <strong id="redirect-sec">3</strong>s...</span>
-          </div>
-          <button type="button" id="btn-cancel-redirect" style="background:none; border:none; padding:2px 4px; font-size:0.75rem; color:var(--g600); cursor:pointer; text-decoration:underline;">Cancel</button>
-        </div>
-
-        <a href="${mailInfo.url}" target="_blank" rel="noopener noreferrer" id="btn-open-webmail" class="btn btn-primary btn-sm" style="width:100%; padding:10px; font-weight:600; font-size:0.88rem; margin-bottom:10px; display:inline-flex; align-items:center; justify-content:center; gap:8px; text-decoration:none; box-sizing:border-box;">
+        <a href="${mailInfo.url}" target="_blank" rel="noopener noreferrer" id="btn-open-webmail" class="btn btn-primary btn-sm" style="width:100%; padding:10px; font-weight:600; font-size:0.88rem; margin-bottom:12px; display:inline-flex; align-items:center; justify-content:center; gap:8px; text-decoration:none; box-sizing:border-box;">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
             <polyline points="22,6 12,13 2,6"></polyline>
@@ -939,57 +923,7 @@ function renderModalContent() {
     });
   }
 
-  // --- Auto-redirect to Webmail Handler ---
-  if (activeRedirectTimer) {
-    clearInterval(activeRedirectTimer);
-    activeRedirectTimer = null;
-  }
 
-  const redirectSec = modalEl.querySelector('#redirect-sec');
-  const autoRedirectBox = modalEl.querySelector('#auto-redirect-box');
-  const btnCancelRedirect = modalEl.querySelector('#btn-cancel-redirect');
-  const btnOpenWebmail = modalEl.querySelector('#btn-open-webmail');
-
-  if (redirectSec && autoRedirectBox) {
-    let remaining = 3;
-    activeRedirectTimer = setInterval(() => {
-      remaining -= 1;
-      if (redirectSec) redirectSec.textContent = String(remaining);
-      if (remaining <= 0) {
-        clearInterval(activeRedirectTimer);
-        activeRedirectTimer = null;
-        if (autoRedirectBox) {
-          const mailInfo = getWebmailInfo(pendingConfirmationEmail);
-          autoRedirectBox.innerHTML = `<span style="font-size:0.75rem; color:var(--g700);">Redirecting to ${escapeHtml(mailInfo.name)}... (click button below if blocked)</span>`;
-        }
-        if (btnOpenWebmail && btnOpenWebmail.href) {
-          try {
-            window.open(btnOpenWebmail.href, '_blank', 'noopener,noreferrer');
-          } catch {}
-        }
-      }
-    }, 1000);
-
-    if (btnCancelRedirect) {
-      btnCancelRedirect.addEventListener('click', () => {
-        if (activeRedirectTimer) {
-          clearInterval(activeRedirectTimer);
-          activeRedirectTimer = null;
-        }
-        if (autoRedirectBox) autoRedirectBox.style.display = 'none';
-      });
-    }
-
-    if (btnOpenWebmail) {
-      btnOpenWebmail.addEventListener('click', () => {
-        if (activeRedirectTimer) {
-          clearInterval(activeRedirectTimer);
-          activeRedirectTimer = null;
-        }
-        if (autoRedirectBox) autoRedirectBox.style.display = 'none';
-      });
-    }
-  }
 
   // --- Resend Confirmation Email Handler ---
   const btnResend = modalEl.querySelector('#btn-resend-confirmation');
