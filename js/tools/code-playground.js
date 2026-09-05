@@ -3017,36 +3017,7 @@ if (container) {
         return { stdout: 'Displayed help commands.', exitCode: 0 };
       }
 
-      // 1. Scaffolding for React / Vite
-      if ((main === 'npx' && (parts[1]?.includes('create-react-app') || parts[1]?.includes('create-vite'))) ||
-          main === 'create-react-app' ||
-          (main === 'npm' && parts[1] === 'create' && (parts[2]?.includes('react') || parts[2]?.includes('vite')))) {
-        const appName = parts[2] && !parts[2].startsWith('-') ? parts[2] : (parts[3] || state.projectName || 'my-react-app');
-        scaffoldReactApp(appName);
-        await syncWorkspaceToDisk(state.workspaceId, state.files).catch(() => {});
-        return { stdout: `Successfully created ${appName} with React 18 and Vitest suites.`, exitCode: 0 };
-      }
-
-      // 2. Workspace Unit Test Runner
-      if (main === 'test' || (main === 'npm' && (parts[1] === 'test' || parts[1] === 't' || (parts[1] === 'run' && parts[2] === 'test')))) {
-        const res = runWorkspaceTests();
-        return {
-          stdout: `Executed ${res.total} tests: ${res.passed} passed, ${res.failed} failed.`,
-          exitCode: res.failed === 0 ? 0 : 1
-        };
-      }
-
-      // 3. Git Version Control Management
-      if (main === 'git') {
-        return handleGitCommand(parts.slice(1));
-      }
-
-      // 4. NPM Package Registry Operations (install, view, list, init)
-      if (main === 'npm' && parts[1] && !['start', 'dev', 'run', 'build'].includes(parts[1])) {
-        return await handleNpmCommand(parts.slice(1));
-      }
-
-      // 5. Real Execution Backend Check
+      // 1. Check Real Execution Backend First (Phase 1: True Shell Execution)
       const health = await checkIdeBackend();
       if (health.available) {
         // Ensure disk workspace is synchronized with active files
@@ -3093,36 +3064,33 @@ if (container) {
           state.activeProcess = null;
           updateProcessStatus('IDLE');
 
-          // Synchronize files created or modified on disk
+          // Synchronize files created or modified on disk by the real process
           await refreshFilesFromDisk();
 
-          if (exitRes.exitCode === 0 || stdoutAccum || stderrAccum) {
-            return {
-              stdout: stdoutAccum,
-              stderr: stderrAccum,
-              exitCode: exitRes.exitCode ?? 0
-            };
-          }
+          return {
+            stdout: stdoutAccum,
+            stderr: stderrAccum,
+            exitCode: exitRes.exitCode ?? 0
+          };
         } catch (err) {
           state.activeProcess = null;
           updateProcessStatus('IDLE');
-          // If remote command failed or tool not present on host, try local fallbacks
-          if (main === 'npm' && (parts[1] === 'test' || parts[1] === 't' || (parts[1] === 'run' && parts[2] === 'test'))) {
-            const res = runWorkspaceTests();
-            return {
-              stdout: `Executed ${res.total} tests: ${res.passed} passed, ${res.failed} failed.`,
-              exitCode: res.failed === 0 ? 0 : 1
-            };
-          }
-          if (main === 'git') {
-            return handleGitCommand(parts.slice(1));
-          }
-          if (main === 'npm') {
-            return await handleNpmCommand(parts.slice(1));
-          }
           printTerm(`[Execution Error]: ${err.message}`, '#ef4444');
           return { stderr: err.message, exitCode: 1 };
         }
+      }
+
+      // 2. Offline Fallback Execution (Only when backend server is completely unavailable)
+      printTerm('[Offline Mode] Real execution server is not connected. Running in browser-local sandbox.', '#eab308');
+
+      // Offline scaffolding for React / Vite
+      if ((main === 'npx' && (parts[1]?.includes('create-react-app') || parts[1]?.includes('create-vite'))) ||
+          main === 'create-react-app' ||
+          (main === 'npm' && parts[1] === 'create' && (parts[2]?.includes('react') || parts[2]?.includes('vite')))) {
+        const appName = parts[2] && !parts[2].startsWith('-') ? parts[2] : (parts[3] || state.projectName || 'my-react-app');
+        scaffoldReactApp(appName);
+        printTerm(`[Offline Sandbox] Scaffolding local browser workspace ${appName}`, '#22c55e');
+        return { stdout: `Successfully created ${appName} with React 18 and Vitest suites.`, exitCode: 0 };
       }
 
       // 3. Fallback Execution when Backend Offline
@@ -3147,10 +3115,9 @@ if (container) {
           togglePreview(true);
           updateWorkspacePreview();
           persist();
-          printTerm(`[Vite v5.2.0] ready in 148 ms`, '#22c55e');
-          printTerm(`➜ Local:   http://localhost:5173/preview`, '#38bdf8');
-          printTerm(`➜ React 18 live preview mounted and running in preview pane.`, 'var(--cpg-text)');
-          return { stdout: 'Development preview server active.', exitCode: 0 };
+          printTerm('[Offline Sandbox] Mounted browser-local preview document.', '#22c55e');
+          printTerm('➜ Live preview active in side pane.', 'var(--cpg-text)');
+          return { stdout: 'Mounted offline browser-local preview.', exitCode: 0 };
         }
         return await handleNpmCommand(parts.slice(1));
       }
@@ -3462,10 +3429,8 @@ if (container) {
         }
         persist();
 
-        line('log', `[Vite v5.2.0] ready in 135 ms`);
-        line('log', `➜ Local:   http://localhost:5173/preview`);
-        line('muted', `✓ React 18 application compiled & active in preview pane.`);
-        timingEl.textContent = 'React 18 · Live Preview';
+        line('muted', 'Browser client sandbox preview mounted.');
+        timingEl.textContent = 'Sandbox Preview';
         idle();
         self_.analytics?.completed?.({ outputKind: 'react' });
         return;

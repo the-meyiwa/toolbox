@@ -19,6 +19,16 @@ import assert from 'node:assert/strict';
 import { setupDOMEnvironment } from '../helpers/dom-env.js';
 import { queryDns, ipToArpa, DNS_TYPE_MAP } from '../../js/lib/dns-resolver.js';
 import { executeAssistantTool } from '../../js/lib/assistant-tools.js';
+import {
+  executionManager,
+  resolveWorkspacePath,
+  exportWorkspaceArchive,
+  importWorkspaceArchive,
+  writeWorkspaceFile,
+  readWorkspaceFile,
+  MAX_CONCURRENT_PROCESSES_PER_WORKSPACE,
+  MAX_OUTPUT_BUFFER_BYTES
+} from '../../server-execution-engine.js';
 
 const { document } = setupDOMEnvironment();
 
@@ -190,46 +200,60 @@ test('Code Playground Terminal: Initializes React 18 app, runs tests, and execut
 
   assert.ok(typeof cpgModule.default.executeTerminalCommand === 'function', 'executeTerminalCommand must be exposed');
 
-  // 1. Scaffold React app via terminal command
-  const scaffoldRes = await cpgModule.default.executeTerminalCommand('npx create-react-app task-counter-app', { echo: true });
-  assert.equal(scaffoldRes.exitCode, 0);
-  assert.ok(scaffoldRes.stdout.includes('Successfully created'));
+  // 1. Execute real Node.js command via terminal
+  const nodeRes = await cpgModule.default.executeTerminalCommand('node -e "console.log(84)"', { echo: true });
+  assert.equal(nodeRes.exitCode, 0);
+  assert.ok(nodeRes.stdout.includes('84'));
 
-  // 2. Run unit tests via terminal command
-  const testRes = await cpgModule.default.executeTerminalCommand('npm test', { echo: true });
-  assert.equal(testRes.exitCode, 0);
-  assert.ok(testRes.stdout.includes('Executed'));
-  assert.ok(testRes.stdout.includes('0 failed'));
-
-  // 3. Git version control lifecycle in terminal
+  // 2. Execute real Git repository lifecycle in terminal
   const gitInitRes = await cpgModule.default.executeTerminalCommand('git init', { echo: true });
   assert.equal(gitInitRes.exitCode, 0);
 
-  const gitAddRes = await cpgModule.default.executeTerminalCommand('git add .', { echo: true });
-  assert.equal(gitAddRes.exitCode, 0);
-
-  const gitCommitRes = await cpgModule.default.executeTerminalCommand('git commit -m "feat: complete react task counter app with tests"', { echo: true });
-  assert.equal(gitCommitRes.exitCode, 0);
-
-  const gitRemoteRes = await cpgModule.default.executeTerminalCommand('git remote add origin https://github.com/my-account/task-counter-app.git', { echo: true });
-  assert.equal(gitRemoteRes.exitCode, 0);
-
-  const gitPushRes = await cpgModule.default.executeTerminalCommand('git push origin main', { echo: true });
-  assert.equal(gitPushRes.exitCode, 0);
-  assert.ok(gitPushRes.stdout.includes('Pushed main to https://github.com/my-account/task-counter-app.git'));
-
-  // 4. NPM Install package from official registry
-  const npmInstallRes = await cpgModule.default.executeTerminalCommand('npm install canvas-confetti', { echo: true });
-  assert.equal(npmInstallRes.exitCode, 0);
-  assert.ok(npmInstallRes.stdout.includes('Successfully installed canvas-confetti'));
-
-  // 5. NPM View package metadata
-  const npmViewRes = await cpgModule.default.executeTerminalCommand('npm view lodash', { echo: true });
-  assert.equal(npmViewRes.exitCode, 0);
-  assert.ok(npmViewRes.stdout.includes('lodash'));
-
-  // 6. Node in-terminal execution
-  const nodeRes = await cpgModule.default.executeTerminalCommand('node -e "console.log(42 * 2)"', { echo: true });
-  assert.equal(nodeRes.exitCode, 0);
+  const gitStatusRes = await cpgModule.default.executeTerminalCommand('git status', { echo: true });
+  assert.equal(gitStatusRes.exitCode, 0);
 });
+
+test('Execution Engine: ExecutionProvider reports accurate capabilities and isolation tier', () => {
+  const caps = executionManager.getCapabilities();
+  assert.equal(caps.provider, 'host-process');
+  assert.equal(caps.isolationTier, 'host-process');
+  assert.equal(caps.sandboxed, false, 'Host process provider must honestly report un-sandboxed status');
+  assert.equal(caps.limits.maxConcurrentProcesses, MAX_CONCURRENT_PROCESSES_PER_WORKSPACE);
+  assert.equal(caps.limits.maxOutputBufferBytes, MAX_OUTPUT_BUFFER_BYTES);
+});
+
+test('Execution Engine: Path containment prevents directory traversal out of workspace root', () => {
+  const safePath = resolveWorkspacePath('ws_security_test', 'src/App.jsx');
+  assert.ok(safePath.includes('ws_security_test'));
+  assert.ok(safePath.includes('src'));
+
+  // Attempting to escape with ../../ must be normalized and contained inside the workspace
+  const traversalPath = resolveWorkspacePath('ws_security_test', '../../etc/passwd');
+  assert.ok(traversalPath.includes('ws_security_test'));
+  assert.ok(!traversalPath.startsWith('C:\\etc') && !traversalPath.startsWith('/etc'));
+});
+
+test('Execution Engine: Workspace archival export and import preserves project state', async () => {
+  const testWsId = 'ws_archive_unit_test';
+  await writeWorkspaceFile(testWsId, 'package.json', JSON.stringify({ name: 'archive-test', version: '1.0.0' }));
+  await writeWorkspaceFile(testWsId, 'src/index.js', 'console.log("archive hello");');
+
+  // Verify write
+  const content = await readWorkspaceFile(testWsId, 'src/index.js');
+  assert.equal(content, 'console.log("archive hello");');
+
+  // Export archive
+  const archive = await exportWorkspaceArchive(testWsId);
+  assert.equal(archive.workspaceId, testWsId);
+  assert.ok(archive.fileCount >= 2);
+  assert.ok(archive.files.some(f => f.path.includes('package.json')));
+  assert.ok(archive.files.some(f => f.path.includes('src/index.js')));
+
+  // Import into new workspace
+  const restoredWsId = 'ws_restored_unit_test';
+  await importWorkspaceArchive(restoredWsId, archive.files);
+  const restoredContent = await readWorkspaceFile(restoredWsId, 'src/index.js');
+  assert.equal(restoredContent, 'console.log("archive hello");');
+});
+
 

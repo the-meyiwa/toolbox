@@ -30,16 +30,22 @@ try {
 // In-memory process table
 const processes = new Map();
 
-// Sensitive environment variable names that must NEVER be passed to child processes
-const SENSITIVE_ENV_KEYS = new Set([
-  'GEMINI_API_KEY',
-  'SUPABASE_SERVICE_ROLE_KEY',
-  'SUPABASE_KEY',
-  'TOOLBOX_WEBHOOK_SECRET',
-  'PAYSTACK_SECRET_KEY',
-  'STRIPE_SECRET_KEY',
-  'DATABASE_URL',
-  'PORT'
+// Maximum concurrent running processes allowed per workspace (Fork bomb / DoS protection)
+export const MAX_CONCURRENT_PROCESSES_PER_WORKSPACE = 5;
+
+// Output history caps to prevent memory exhaustion from infinite logging loops
+export const MAX_OUTPUT_HISTORY_ENTRIES = 500;
+export const MAX_OUTPUT_BUFFER_BYTES = 1024 * 1024; // 1MB
+
+// Strict Whitelist of environment variable keys permitted in child processes.
+// Absolutely no application secrets, database URLs, payment keys, or IDE agent tokens are ever passed.
+const WHITELISTED_ENV_VARS = new Set([
+  'PATH', 'Path', 'PATHEXT',
+  'NODE_ENV', 'TERM', 'COLORTERM', 'FORCE_COLOR', 'LANG', 'LC_ALL',
+  'HOME', 'USERPROFILE', 'TEMP', 'TMP',
+  'SystemRoot', 'COMSPEC', 'ComSpec', 'OS', 'PROCESSOR_ARCHITECTURE',
+  'windir', 'APPDATA', 'LOCALAPPDATA', 'PROGRAMFILES', 'ProgramFiles',
+  'SHELL'
 ]);
 
 // Regexes to extract exposed server ports from stdout/stderr logs
@@ -192,7 +198,7 @@ export async function syncWorkspace(workspaceId, files = []) {
   const synced = [];
 
   for (const f of files) {
-    if (!f || !f.name) continue;
+    if (!f || (!f.name && !f.path)) continue;
     const rel = f.path || f.name;
     const meta = await writeWorkspaceFile(workspaceId, rel, f.content ?? f.text ?? '');
     synced.push(meta);
@@ -248,24 +254,35 @@ export function spawnProcess(workspaceId, commandLine, { cwd = '', env = {}, tim
   const wsRoot = getWorkspaceDir(workspaceId);
   const effectiveCwd = cwd ? resolveWorkspacePath(workspaceId, cwd) : wsRoot;
 
+  // Enforce workspace concurrency limits to prevent fork bombs
+  const activeWorkspaceProcs = listWorkspaceProcesses(workspaceId).filter(p => p.status === 'RUNNING');
+  if (activeWorkspaceProcs.length >= MAX_CONCURRENT_PROCESSES_PER_WORKSPACE) {
+    throw new Error(`Concurrency limit reached: workspace already has ${activeWorkspaceProcs.length} active processes (maximum: ${MAX_CONCURRENT_PROCESSES_PER_WORKSPACE}). Terminate existing processes before spawning new ones.`);
+  }
+
   const processId = `proc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-  // Construct isolated environment variables
+  // Construct strictly scrubbed environment variables
   const cleanEnv = {
-    PATH: process.env.PATH || '',
-    HOME: os.homedir(),
-    USERPROFILE: process.env.USERPROFILE || os.homedir(),
     NODE_ENV: 'development',
     TERM: 'xterm-256color',
-    FORCE_COLOR: '1'
+    FORCE_COLOR: '1',
+    CI: 'true',
+    GIT_AUTHOR_NAME: 'Toolbox Developer',
+    GIT_AUTHOR_EMAIL: 'developer@toolbox.local',
+    GIT_COMMITTER_NAME: 'Toolbox Developer',
+    GIT_COMMITTER_EMAIL: 'developer@toolbox.local'
   };
 
-  // Copy safe host env variables
-  for (const [key, val] of Object.entries(process.env)) {
-    if (!SENSITIVE_ENV_KEYS.has(key) && val !== undefined) {
-      cleanEnv[key] = val;
+  // Only pass whitelisted environment keys from host OS
+  for (const key of WHITELISTED_ENV_VARS) {
+    if (process.env[key] !== undefined) {
+      cleanEnv[key] = process.env[key];
     }
   }
+
+  // Ensure workspace directory is set as PWD
+  cleanEnv.PWD = effectiveCwd;
 
   // Overlay user custom env
   Object.assign(cleanEnv, env);
@@ -306,11 +323,24 @@ export function spawnProcess(workspaceId, commandLine, { cwd = '', env = {}, tim
     });
   }
 
-  // Output handler
+  let totalBufferedChars = 0;
+
+  // Output handler with buffer cap
   function handleOutput(type, data) {
     const text = data.toString('utf8');
     const entry = { type, text, timestamp: Date.now() };
-    procRecord.outputHistory.push(entry);
+
+    // Prevent buffer blowup from infinite logging loops
+    if (procRecord.outputHistory.length < MAX_OUTPUT_HISTORY_ENTRIES && totalBufferedChars < MAX_OUTPUT_BUFFER_BYTES) {
+      procRecord.outputHistory.push(entry);
+      totalBufferedChars += text.length;
+    } else if (procRecord.outputHistory.length === MAX_OUTPUT_HISTORY_ENTRIES) {
+      procRecord.outputHistory.push({
+        type: 'system',
+        text: '\n[Notice: Output history truncated to prevent memory exhaustion]\n',
+        timestamp: Date.now()
+      });
+    }
 
     // Scan for exposed ports
     for (const regex of PORT_DETECTION_REGEXES) {
@@ -473,3 +503,143 @@ export function proxyDevServerRequest(port, req, res) {
 
   req.pipe(proxyReq, { end: true });
 }
+
+/* ============================================================
+   Execution Provider Abstraction Layer (Phase 6, 8, 9)
+   Decouples the IDE execution interface from the underlying runtime
+   and provides a replaceable migration boundary for microVMs/containers.
+   ============================================================ */
+
+/**
+ * Base abstract interface for an execution provider
+ */
+export class ExecutionProvider {
+  constructor(name = 'base', isolationTier = 'none') {
+    this.name = name;
+    this.isolationTier = isolationTier; // 'none' | 'host-process' | 'container' | 'microvm'
+  }
+
+  async detectTools() {
+    throw new Error('detectTools() not implemented');
+  }
+
+  spawnProcess(workspaceId, commandLine, options) {
+    throw new Error('spawnProcess() not implemented');
+  }
+
+  killProcess(processId, signal) {
+    throw new Error('killProcess() not implemented');
+  }
+
+  getProcess(processId) {
+    throw new Error('getProcess() not implemented');
+  }
+
+  listWorkspaceProcesses(workspaceId) {
+    throw new Error('listWorkspaceProcesses() not implemented');
+  }
+}
+
+/**
+ * Host OS Process Execution Provider (Staging / Development)
+ * Operates on the local server with environment scrubbing and process limits.
+ */
+export class HostExecutionProvider extends ExecutionProvider {
+  constructor() {
+    super('host-process', 'host-process');
+  }
+
+  async detectTools() {
+    return detectSystemTools();
+  }
+
+  spawnProcess(workspaceId, commandLine, options) {
+    return spawnProcess(workspaceId, commandLine, options);
+  }
+
+  killProcess(processId, signal) {
+    return killProcess(processId, signal);
+  }
+
+  getProcess(processId) {
+    return getProcess(processId);
+  }
+
+  listWorkspaceProcesses(workspaceId) {
+    return listWorkspaceProcesses(workspaceId);
+  }
+}
+
+/**
+ * Execution Manager Singleton
+ * Manages active provider and reports truthful execution capabilities
+ */
+class ExecutionManager {
+  constructor() {
+    this.provider = new HostExecutionProvider();
+  }
+
+  setProvider(provider) {
+    if (!(provider instanceof ExecutionProvider)) {
+      throw new Error('Invalid provider: must inherit from ExecutionProvider');
+    }
+    this.provider = provider;
+  }
+
+  getProvider() {
+    return this.provider;
+  }
+
+  getCapabilities() {
+    return {
+      provider: this.provider.name,
+      isolationTier: this.provider.isolationTier,
+      sandboxed: this.provider.isolationTier === 'container' || this.provider.isolationTier === 'microvm',
+      limits: {
+        maxConcurrentProcesses: MAX_CONCURRENT_PROCESSES_PER_WORKSPACE,
+        maxOutputBufferBytes: MAX_OUTPUT_BUFFER_BYTES,
+        defaultTimeoutMs: 300000
+      }
+    };
+  }
+}
+
+export const executionManager = new ExecutionManager();
+
+/**
+ * Exports all source files in a workspace for durable persistence
+ * Filters out transient node_modules and internal VCS directories
+ */
+export async function exportWorkspaceArchive(workspaceId) {
+  const files = await listWorkspaceFiles(workspaceId);
+  const archiveFiles = [];
+
+  for (const f of files) {
+    if (f.isDirectory || f.isIgnored) continue;
+    try {
+      const content = await readWorkspaceFile(workspaceId, f.path);
+      archiveFiles.push({
+        name: f.name || f.path,
+        path: f.path,
+        content,
+        size: f.size,
+        updatedAt: f.updatedAt
+      });
+    } catch {}
+  }
+
+  return {
+    workspaceId,
+    exportedAt: Date.now(),
+    fileCount: archiveFiles.length,
+    files: archiveFiles
+  };
+}
+
+/**
+ * Imports an archive of files into the workspace directory
+ */
+export async function importWorkspaceArchive(workspaceId, files = []) {
+  return syncWorkspace(workspaceId, files);
+}
+

@@ -18,7 +18,10 @@ import {
   killProcess,
   getProcess,
   listWorkspaceProcesses,
-  proxyDevServerRequest
+  proxyDevServerRequest,
+  executionManager,
+  exportWorkspaceArchive,
+  importWorkspaceArchive
 } from './server-execution-engine.js';
 
 // Idempotency store with TTL (5 minutes)
@@ -94,12 +97,32 @@ export async function handleApiRequest(request, response) {
           status: 'ok',
           platform: process.platform,
           arch: process.arch,
-          tools
+          tools,
+          capabilities: executionManager.getCapabilities()
         }));
         return true;
       }
 
-      // 3. Workspace File Synchronization
+      // 3. Workspace Archive Export & Import (Durable Storage Sync)
+      if (url.pathname === '/api/ide/workspace/archive') {
+        const wsId = url.searchParams.get('workspaceId') || url.searchParams.get('id') || 'default';
+        if (request.method === 'GET') {
+          const archive = await exportWorkspaceArchive(wsId);
+          response.writeHead(200, { 'Content-Type': 'application/json' });
+          response.end(JSON.stringify({ success: true, archive }));
+          return true;
+        }
+        if (request.method === 'POST') {
+          const data = await readJsonBody();
+          const files = Array.isArray(data.files) ? data.files : [];
+          const result = await importWorkspaceArchive(wsId, files);
+          response.writeHead(200, { 'Content-Type': 'application/json' });
+          response.end(JSON.stringify({ success: true, ...result }));
+          return true;
+        }
+      }
+
+      // 4. Workspace File Synchronization
       if (url.pathname === '/api/ide/workspace/sync' && request.method === 'POST') {
         const data = await readJsonBody();
         const wsId = data.workspaceId || data.id || 'default';

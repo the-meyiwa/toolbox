@@ -56,7 +56,8 @@ export async function checkIdeBackend(forceRefresh = false) {
     try {
       const res = await fetch('/api/ide/health', {
         headers: { 'Accept': 'application/json' },
-        cache: 'no-store'
+        cache: 'no-store',
+        signal: typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(1500) : undefined
       });
       if (!res.ok) {
         cachedHealth = { available: false, error: `HTTP ${res.status}` };
