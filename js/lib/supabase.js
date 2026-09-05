@@ -120,6 +120,56 @@ export function getCurrentUser() {
 }
 
 /**
+ * Build a usable user session from an auth redirect access token.
+ */
+export async function hydrateUserSessionFromAccessToken(accessToken, refreshToken = '', fallbackEmail = '') {
+  const cleanEmail = (fallbackEmail || '').trim().toLowerCase();
+  const fallbackUsername = ((cleanEmail.split('@')[0]) || 'user').replace(/[^a-z0-9_-]/gi, '').toLowerCase();
+  const fallbackSession = {
+    token: accessToken,
+    refreshToken,
+    id: `usr_${Date.now()}`,
+    email: cleanEmail,
+    username: fallbackUsername || 'user',
+    displayName: fallbackUsername || 'user',
+    createdAt: new Date().toISOString()
+  };
+
+  const config = getSupabaseConfig();
+  if (!accessToken || !config.url || !config.anonKey) return fallbackSession;
+
+  try {
+    const res = await fetch(`${config.url}/auth/v1/user`, {
+      headers: {
+        'apikey': config.anonKey,
+        'Authorization': 'Bearer ' + accessToken
+      }
+    });
+    if (!res.ok) return fallbackSession;
+
+    const data = await res.json();
+    const email = (data?.email || cleanEmail || '').toLowerCase().trim();
+    const isOwner = MADSELKIE_EMAILS.includes(email);
+    const baseName = email.split('@')[0] || fallbackUsername || 'user';
+    const username = isOwner ? 'madselkie' : (data?.user_metadata?.username || baseName).replace(/[^a-z0-9_-]/gi, '').toLowerCase();
+    const displayName = isOwner ? 'madselkie' : (data?.user_metadata?.display_name || data?.user_metadata?.name || baseName);
+
+    return {
+      id: data?.id || fallbackSession.id,
+      email,
+      token: accessToken,
+      refreshToken,
+      username,
+      displayName,
+      createdAt: data?.created_at || fallbackSession.createdAt,
+      user_metadata: data?.user_metadata || {}
+    };
+  } catch {
+    return fallbackSession;
+  }
+}
+
+/**
  * Check if a username is available across the system
  */
 export function isUsernameAvailable(username, currentEmail = null) {
@@ -759,4 +809,3 @@ export async function fetchAssistantConversationsFromCloud() {
 
   return localData;
 }
-

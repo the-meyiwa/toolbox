@@ -19,7 +19,7 @@ import { copyText } from './utils.js';
 import { initTheme } from './lib/theme.js';
 import { installSettingsUI } from './lib/settings-ui.js';
 import { installHeaderMenu } from './lib/header-menu.js';
-import { getCurrentUser, getSupabaseConfig } from './lib/supabase.js';
+import { getCurrentUser, hydrateUserSessionFromAccessToken } from './lib/supabase.js';
 import { openAccountModal } from './views/account-modal.js';
 import { initFlutterwaveContribution } from './lib/flutterwave-contribution.js';
 
@@ -372,51 +372,6 @@ async function openTool(id) {
   }
 }
 
-async function hydrateSessionFromAccessToken(accessToken, refreshToken = '', fallbackEmail = '') {
-  const config = getSupabaseConfig();
-  const fallbackUsername = ((fallbackEmail || '').split('@')[0] || 'user').replace(/[^a-z0-9_-]/gi, '').toLowerCase();
-
-  const fallbackSession = {
-    token: accessToken,
-    refreshToken,
-    id: `usr_${Date.now()}`,
-    email: fallbackEmail,
-    username: fallbackUsername || 'user',
-    displayName: fallbackUsername || 'user',
-    createdAt: new Date().toISOString()
-  };
-
-  if (!config.url || !config.anonKey) return fallbackSession;
-
-  try {
-    const res = await fetch(`${config.url}/auth/v1/user`, {
-      headers: {
-        'apikey': config.anonKey,
-        'Authorization': `******
-      }
-    });
-    if (!res.ok) return fallbackSession;
-
-    const data = await res.json();
-    const email = (data?.email || fallbackEmail || '').toLowerCase().trim();
-    const username = data?.user_metadata?.username || (email.split('@')[0] || fallbackUsername || 'user').replace(/[^a-z0-9_-]/gi, '').toLowerCase();
-    const displayName = data?.user_metadata?.display_name || data?.user_metadata?.name || email.split('@')[0] || username;
-
-    return {
-      id: data?.id || fallbackSession.id,
-      email,
-      token: accessToken,
-      refreshToken,
-      username,
-      displayName,
-      createdAt: data?.created_at || fallbackSession.createdAt,
-      user_metadata: data?.user_metadata || {}
-    };
-  } catch {
-    return fallbackSession;
-  }
-}
-
 function handleHash() {
   const hash = window.location.hash || '';
   const searchParams = new URLSearchParams(window.location.search || '');
@@ -437,7 +392,7 @@ function handleHash() {
     const email = hashParams.get('email') || searchParams.get('email') || '';
 
     if (accessToken) {
-      void hydrateSessionFromAccessToken(accessToken, refreshToken, email).then((userSession) => {
+      void hydrateUserSessionFromAccessToken(accessToken, refreshToken, email).then((userSession) => {
         localStorage.setItem('toolbox_supabase_session', JSON.stringify(userSession));
         window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
       });
