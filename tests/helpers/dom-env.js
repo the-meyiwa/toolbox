@@ -209,6 +209,15 @@ class MockNode {
     return idx > 0 ? siblings[idx - 1] : null;
   }
 
+  contains(other) {
+    let cur = other;
+    while (cur) {
+      if (cur === this) return true;
+      cur = cur.parentNode;
+    }
+    return false;
+  }
+
   appendChild(child) {
     if (child.parentNode) child.parentNode.removeChild(child);
     this.childNodes.push(child);
@@ -485,6 +494,16 @@ class MockElement extends MockNode {
   _matchesSelector(sel) {
     if (!sel) return false;
     sel = sel.trim();
+    if (sel.includes(',')) {
+      return sel.split(',').some(part => this._matchesSelector(part.trim()));
+    }
+    if (sel === '*') return true;
+    const tagMatch = sel.match(/^([a-zA-Z0-9\-]+)/);
+    if (tagMatch) {
+      if (this.tagName.toLowerCase() !== tagMatch[1].toLowerCase()) return false;
+      sel = sel.slice(tagMatch[1].length).trim();
+      if (!sel) return true;
+    }
     if (sel.startsWith('#')) return this.id === sel.slice(1);
     if (sel.startsWith('.')) {
       const parts = sel.split('.').filter(Boolean);
@@ -519,20 +538,38 @@ class MockElement extends MockNode {
 
   _parseHTML(html) {
     if (!html) return;
-    const tagRegex = /<([a-zA-Z0-9\-]+)([^>]*)>([\s\S]*?)<\/\1>|<([a-zA-Z0-9\-]+)([^>]*)\/?>|([^<]+)/g;
+    const voidTags = new Set([
+      'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'
+    ]);
+    const tokenRegex = /<!--[\s\S]*?-->|<!DOCTYPE[^>]*>|<(\/)?([a-zA-Z0-9\-]+)([^>]*)>|([^<]+)/gi;
+    const stack = [this];
     let match;
-    while ((match = tagRegex.exec(html)) !== null) {
-      if (match[6]) {
-        this.appendChild(new MockTextNode(match[6]));
-      } else if (match[1]) {
-        const el = new MockElement(match[1]);
-        this._parseAttrs(el, match[2]);
-        el.innerHTML = match[3];
-        this.appendChild(el);
-      } else if (match[4]) {
-        const el = new MockElement(match[4]);
-        this._parseAttrs(el, match[5]);
-        this.appendChild(el);
+    while ((match = tokenRegex.exec(html)) !== null) {
+      if (match[4]) {
+        const current = stack[stack.length - 1];
+        if (current) current.appendChild(new MockTextNode(match[4]));
+      } else if (match[2]) {
+        const isClosing = Boolean(match[1]);
+        const tagName = match[2].toLowerCase();
+        const attrStr = match[3] || '';
+        const isSelfClosing = attrStr.trim().endsWith('/') || voidTags.has(tagName);
+
+        if (isClosing) {
+          for (let i = stack.length - 1; i > 0; i--) {
+            if (stack[i].tagName && stack[i].tagName.toLowerCase() === tagName) {
+              stack.length = i;
+              break;
+            }
+          }
+        } else {
+          const el = new MockElement(tagName);
+          this._parseAttrs(el, attrStr);
+          const current = stack[stack.length - 1];
+          if (current) current.appendChild(el);
+          if (!isSelfClosing) {
+            stack.push(el);
+          }
+        }
       }
     }
   }
