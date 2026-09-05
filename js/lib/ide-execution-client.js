@@ -8,22 +8,23 @@
    to the execution engine for zero-overhead local execution.
    ============================================================ */
 
-const isNodeEnv = typeof window === 'undefined' || !globalThis.window?.location?.host;
+const isNodeEnv = typeof process !== 'undefined' && Boolean(process.versions?.node);
 
 let nodeEngine = null;
+
+/**
+ * Explicitly binds an in-memory execution engine (used in test runners)
+ */
+export function setNodeExecutionEngine(engine) {
+  nodeEngine = engine;
+}
+
 async function getNodeEngine() {
   if (!nodeEngine && isNodeEnv) {
     try {
-      nodeEngine = await import('../../server-execution-engine.js');
-    } catch {
-      try {
-        nodeEngine = await import('../../server-execution-engine.js');
-      } catch {
-        try {
-          nodeEngine = await import('./server-execution-engine.js');
-        } catch {}
-      }
-    }
+      const serverModulePath = '../../server-execution-engine.js';
+      nodeEngine = await import(/* @vite-ignore */ serverModulePath);
+    } catch {}
   }
   return nodeEngine;
 }
