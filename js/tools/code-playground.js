@@ -519,7 +519,7 @@ export default {
       minimapOpen: true,
       terminalDrawerOpen: false,
       activeDrawerTab: 'terminal', // 'terminal' | 'output' | 'problems'
-      splitMode: 'code-only', // 'code-only' | 'split' | 'preview-only'
+      splitMode: workspace.splitMode || (workspace.files?.some(f => f.name.includes('.jsx') || f.name.toLowerCase() === 'index.html' || f.name.toLowerCase().endsWith('.html')) ? 'split' : 'code-only'),
       assistantOpen: false,
       git: { initialized: true, branch: 'main', staged: [], commits: [] },
       packages: {}
@@ -685,6 +685,11 @@ export default {
               <kbd class="cpg-kbd" style="font-size:0.68rem;">⌘⇧P</kbd>
             </button>
 
+            <button type="button" class="ide-btn-preview" id="cpg-top-preview-btn" title="Toggle Live Preview" style="background:var(--cpg-bg-subtle); color:var(--cpg-text); font-weight:600; border:1px solid var(--cpg-border); border-radius:9999px; padding:4px 11px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; font-size:0.78rem; transition:all 0.15s ease;">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+              <span>Preview</span>
+            </button>
+
             <button type="button" class="ide-btn-run" id="cpg-run" style="background:var(--cpg-accent); color:#ffffff; font-weight:600; border:none; border-radius:9999px; padding:4px 12px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; font-size:0.78rem; transition:background 0.15s ease;">
               Run <kbd style="font-size:0.66rem; background:rgba(255,255,255,0.25); padding:1px 4px; border-radius:3px; margin-left:2px;">⌃↵</kbd>
             </button>
@@ -755,7 +760,7 @@ export default {
 
               <!-- Live Preview Pane (Hidden by default unless HTML preview is open) -->
               <div id="cpg-preview-pane" style="width:45%; background:#ffffff; border-left:1px solid var(--cpg-border); display:none; flex-direction:column; overflow:hidden;">
-                <iframe id="cpg-preview" style="flex:1; width:100%; border:none; background:#fff;" sandbox="allow-scripts allow-modals allow-popups allow-forms"></iframe>
+                <iframe id="cpg-preview" style="flex:1; width:100%; border:none; background:#fff;" sandbox="allow-scripts allow-modals allow-popups allow-forms allow-same-origin"></iframe>
               </div>
             </div>
 
@@ -902,6 +907,8 @@ export default {
     const plusBtn = container.querySelector('#cpg-plus-btn');
     const plusDropdown = container.querySelector('#cpg-plus-dropdown');
     const runBtn = container.querySelector('#cpg-run');
+    const topPrevBtn = container.querySelector('#cpg-top-preview-btn');
+    topPrevBtn?.addEventListener('click', () => togglePreview());
     const noteEl = container.querySelector('#cpg-note');
     const timingEl = container.querySelector('#cpg-timing');
     const consoleEl = container.querySelector('#cpg-console');
@@ -1220,40 +1227,124 @@ export default {
     function updateWorkspacePreview() {
       if (!previewEl) return;
       const indexHtmlFile = state.files.find(f => f.name.toLowerCase() === 'index.html');
-      const appCssFile = state.files.find(f => f.name.toLowerCase() === 'src/app.css' || f.name.toLowerCase() === 'style.css');
-      const appJsxFile = state.files.find(f => f.name.toLowerCase() === 'src/app.jsx' || f.name.toLowerCase() === 'app.jsx');
-      const indexJsxFile = state.files.find(f => f.name.toLowerCase() === 'src/index.jsx' || f.name.toLowerCase() === 'index.jsx' || f.name.toLowerCase() === 'main.jsx');
+      const cssFiles = state.files.filter(f => f.name.toLowerCase().endsWith('.css'));
+      const appJsxFile = state.files.find(f => f.name.toLowerCase().endsWith('app.jsx') || f.name.toLowerCase().endsWith('app.js'));
+      const indexJsxFile = state.files.find(f => f.name.toLowerCase().endsWith('index.jsx') || f.name.toLowerCase().endsWith('main.jsx') || f.name.toLowerCase().endsWith('index.js'));
 
-      if (indexHtmlFile) {
-        let doc = indexHtmlFile.content;
+      const isReactProject = state.framework === 'react' ||
+        state.files.some(f => f.name.includes('.jsx') || (f.name === 'package.json' && f.content.includes('react')));
+
+      if (indexHtmlFile || isReactProject) {
+        let doc = indexHtmlFile ? indexHtmlFile.content : `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(state.projectName)}</title>
+</head>
+<body>
+  <div id="root"></div>
+</body>
+</html>`;
+
+        // Strip any relative script or stylesheet links that cause 404 network fetches in iframe
+        doc = doc.replace(/<script[^>]*src=["']\.\/[^"']*["'][^>]*><\/script>/gi, '');
+        doc = doc.replace(/<link[^>]*rel=["']stylesheet["'][^>]*href=["']\.\/[^"']*["'][^>]*>/gi, '');
+
         const reactCdn = `
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
         `;
-        if (!doc.includes('react@18') && !doc.includes('react.development.js')) {
+        if (!doc.includes('react.development.js') && !doc.includes('react@18')) {
           if (doc.includes('<head>')) doc = doc.replace('<head>', `<head>\n${reactCdn}`);
           else doc = reactCdn + '\n' + doc;
         }
-        if (appCssFile && !doc.includes(appCssFile.content)) {
-          if (doc.includes('</head>')) doc = doc.replace('</head>', `<style>\n${appCssFile.content}\n</style>\n</head>`);
-          else doc = `<style>\n${appCssFile.content}\n</style>\n` + doc;
+
+        // Collect and inject all CSS from workspace
+        const combinedCss = cssFiles.map(c => `/* ${c.name} */\n${c.content}`).join('\n\n');
+        if (combinedCss) {
+          const styleTag = `<style id="workspace-styles">\n${combinedCss}\n</style>`;
+          if (doc.includes('</head>')) doc = doc.replace('</head>', `${styleTag}\n</head>`);
+          else doc = styleTag + '\n' + doc;
         }
-        if (appJsxFile || indexJsxFile) {
-          const combinedJsx = `
-            ${appJsxFile ? appJsxFile.content.replace(/import\s+[^;]+;/g, '').replace(/export\s+default\s+function\s+App/g, 'function App') : ''}
-            ${indexJsxFile ? indexJsxFile.content.replace(/import\s+[^;]+;/g, '') : `
-              const rootEl = document.getElementById('root') || document.body;
-              ReactDOM.createRoot(rootEl).render(React.createElement(App));
-            `}
-          `;
-          const scriptTag = `<script type="text/babel">\n${combinedJsx}\n</script>`;
-          if (doc.includes('</body>')) {
-            doc = doc.replace('</body>', `${scriptTag}\n</body>`);
-          } else {
-            doc += '\n' + scriptTag;
+
+        // Clean imports & exports for in-browser Babel execution
+        function cleanJsForBrowser(code) {
+          if (!code) return '';
+          return code
+            .replace(/import\s+[\s\S]*?from\s+['"][^'"]+['"];?/g, '')
+            .replace(/import\s+['"][^'"]+['"];?/g, '')
+            .replace(/export\s+default\s+function\s+([a-zA-Z0-9_$]+)/g, 'function $1')
+            .replace(/export\s+default\s+class\s+([a-zA-Z0-9_$]+)/g, 'class $1')
+            .replace(/export\s+default\s+[a-zA-Z0-9_$]+;?/g, '')
+            .replace(/export\s+(const|let|var|function|class)\s+/g, '$1 ')
+            .replace(/export\s*\{[^}]*\};?/g, '');
+        }
+
+        const cleanedApp = cleanJsForBrowser(appJsxFile?.content || '');
+        const cleanedIndex = cleanJsForBrowser(indexJsxFile?.content || '');
+
+        // Expose all React hooks and ReactDOM helpers to the local scope
+        const scopeShims = `
+          const {
+            useState, useEffect, useContext, useReducer, useCallback,
+            useMemo, useRef, useImperativeHandle, useLayoutEffect,
+            useDebugValue, useDeferredValue, useTransition, useId,
+            createContext, cloneElement, Children, Fragment, StrictMode
+          } = (typeof React !== 'undefined' ? React : {});
+          const { createRoot, hydrateRoot } = (typeof ReactDOM !== 'undefined' && ReactDOM.createRoot) ? ReactDOM : {
+            createRoot: (el) => ({ render: (v) => ReactDOM.render(v, el) })
+          };
+          window.createRoot = createRoot;
+          window.React = typeof React !== 'undefined' ? React : {};
+          window.ReactDOM = typeof ReactDOM !== 'undefined' ? ReactDOM : {};
+        `;
+
+        const autoMountScript = `
+          try {
+            const rootEl = document.getElementById('root') || document.body;
+            if (rootEl && !rootEl.hasChildNodes() && typeof App !== 'undefined') {
+              createRoot(rootEl).render(React.createElement(App));
+            }
+          } catch (e) {
+            console.error('React mount error:', e);
           }
+        `;
+
+        const errorHandlerScript = `
+          <script>
+            window.addEventListener('error', function(e) {
+              console.error('Runtime Error:', e.message);
+              var rootEl = document.getElementById('root') || document.body;
+              if (rootEl && !rootEl.hasChildNodes()) {
+                rootEl.innerHTML = '<div style="padding:16px; margin:16px; background:#450a0a; border:1px solid #dc2626; border-radius:8px; color:#fecaca; font-family:sans-serif; font-size:13px;"><strong>Build / Runtime Error:</strong><br>' + e.message + '</div>';
+              }
+            });
+          </script>
+        `;
+
+        const scriptTag = `
+          ${errorHandlerScript}
+          <script type="text/babel">
+            ${scopeShims}
+            ${cleanedApp}
+            ${cleanedIndex}
+            ${autoMountScript}
+          </script>
+        `;
+
+        if (!doc.includes('id="root"')) {
+          if (doc.includes('<body>')) doc = doc.replace('<body>', '<body>\n<div id="root"></div>');
+          else doc = '<div id="root"></div>\n' + doc;
         }
+
+        if (doc.includes('</body>')) {
+          doc = doc.replace('</body>', `${scriptTag}\n</body>`);
+        } else {
+          doc += '\n' + scriptTag;
+        }
+
         previewEl.srcdoc = doc;
         return;
       }
@@ -1271,9 +1362,20 @@ export default {
         state.splitMode = state.splitMode === 'code-only' ? 'split' : 'code-only';
       }
       previewPane.style.display = state.splitMode !== 'code-only' ? 'flex' : 'none';
+      const topPrevBtn = container.querySelector('#cpg-top-preview-btn');
+      if (topPrevBtn) {
+        if (state.splitMode !== 'code-only') {
+          topPrevBtn.style.borderColor = 'var(--cpg-accent)';
+          topPrevBtn.style.color = 'var(--cpg-accent)';
+        } else {
+          topPrevBtn.style.borderColor = 'var(--cpg-border)';
+          topPrevBtn.style.color = 'var(--cpg-text)';
+        }
+      }
       if (state.splitMode !== 'code-only') {
         updateWorkspacePreview();
       }
+      persist();
     }
 
     function getActiveFile() {
@@ -1351,6 +1453,9 @@ export default {
       langsSelect.value = file.lang || 'javascript';
       applyLanguage(file.lang || 'javascript');
       renderGutterAndMinimap();
+      if (state.splitMode !== 'code-only') {
+        updateWorkspacePreview();
+      }
     }
 
     function persist() {
@@ -1363,6 +1468,7 @@ export default {
           files: state.files,
           activeFileId: state.activeFileId,
           framework: state.framework,
+          splitMode: state.splitMode,
           git: state.git,
           packages: state.packages,
           updatedAt: Date.now()
@@ -1385,6 +1491,12 @@ export default {
         persist();
       }
       renderGutterAndMinimap();
+      if (state.splitMode !== 'code-only') {
+        clearTimeout(self_._previewDebounce);
+        self_._previewDebounce = setTimeout(() => {
+          updateWorkspacePreview();
+        }, 300);
+      }
     });
 
     codeEl.addEventListener('scroll', () => {
@@ -1777,7 +1889,6 @@ Always execute the necessary terminal commands to fulfill user requests so the u
   </head>
   <body>
     <div id="root"></div>
-    <script type="text/babel" data-presets="react,env" src="./src/index.jsx"></script>
   </body>
 </html>`
         },
@@ -2054,6 +2165,7 @@ if (container) {
       }
 
       state.framework = 'react';
+      state.splitMode = 'split';
       const targetAppFile = state.files.find(f => f.name === 'src/App.jsx');
       if (targetAppFile) state.activeFileId = targetAppFile.id;
 
@@ -2570,9 +2682,27 @@ if (container) {
           };
         }
         if (sub === 'start' || sub === 'dev' || (sub === 'run' && (parts[2] === 'dev' || parts[2] === 'start'))) {
+          state.splitMode = 'split';
           togglePreview(true);
-          printTerm(`[Vite/React dev server live at http://localhost:5173/preview]`, '#22c55e');
+          updateWorkspacePreview();
+          persist();
+          printTerm(`[Vite v5.2.0] ready in 148 ms`, '#22c55e');
+          printTerm(`➜ Local:   http://localhost:5173/preview`, '#38bdf8');
+          printTerm(`➜ React 18 live preview mounted and running in preview pane.`, 'var(--cpg-text)');
           return { stdout: 'Development preview server active.', exitCode: 0 };
+        }
+        if (sub === 'build' || (sub === 'run' && parts[2] === 'build')) {
+          togglePreview(true);
+          updateWorkspacePreview();
+          persist();
+          printTerm(`\n> ${state.projectName}@0.1.0 build`, 'var(--cpg-text-muted)');
+          printTerm(`> vite build\n`, 'var(--cpg-text-muted)');
+          printTerm(`✓ 12 modules transformed.`, '#22c55e');
+          printTerm(`dist/index.html                   0.54 kB │ gzip:  0.32 kB`, 'var(--cpg-text)');
+          printTerm(`dist/assets/index-DkL3mKq_.css    1.28 kB │ gzip:  0.64 kB`, 'var(--cpg-text)');
+          printTerm(`dist/assets/index-BpR98xZ2.js   142.15 kB │ gzip: 45.32 kB`, 'var(--cpg-text)');
+          printTerm(`✓ built in 142ms`, '#22c55e');
+          return { stdout: 'Build successful. Artifacts generated in dist/', exitCode: 0 };
         }
         if (sub === 'init') {
           const pkg = {
@@ -2919,6 +3049,29 @@ if (container) {
 
       if (!source.trim()) { line('muted', 'Nothing to run.'); idle(); return; }
 
+      const isReactProject = state.framework === 'react' ||
+        state.files.some(f => f.name.includes('.jsx') || f.name.toLowerCase() === 'index.html' || (f.name === 'package.json' && f.content.includes('react')));
+
+      if (isReactProject) {
+        state.splitMode = 'split';
+        previewPane.style.display = 'flex';
+        updateWorkspacePreview();
+        const topPrevBtn = container.querySelector('#cpg-top-preview-btn');
+        if (topPrevBtn) {
+          topPrevBtn.style.borderColor = 'var(--cpg-accent)';
+          topPrevBtn.style.color = 'var(--cpg-accent)';
+        }
+        persist();
+
+        line('log', `[Vite v5.2.0] ready in 135 ms`);
+        line('log', `➜ Local:   http://localhost:5173/preview`);
+        line('muted', `✓ React 18 application compiled & active in preview pane.`);
+        timingEl.textContent = 'React 18 · Live Preview';
+        idle();
+        self_.analytics?.completed?.({ outputKind: 'react' });
+        return;
+      }
+
       if (isPreview(lang)) {
         previewPane.style.display = 'flex';
         previewEl.srcdoc = buildPreviewDocument(source, state.framework);
@@ -3004,7 +3157,13 @@ if (container) {
         previewEl.srcdoc = buildPreviewDocument(codeEl.value, state.framework);
         fwEl.hidden = false;
       } else {
-        if (state.splitMode === 'code-only') previewPane.style.display = 'none';
+        const isReactApp = state.framework === 'react' || state.files.some(f => f.name.includes('.jsx') || (f.name === 'package.json' && f.content.includes('react')));
+        if (state.splitMode !== 'code-only' || isReactApp) {
+          previewPane.style.display = 'flex';
+          updateWorkspacePreview();
+        } else {
+          previewPane.style.display = 'none';
+        }
         fwEl.hidden = true;
       }
 
@@ -3029,6 +3188,11 @@ if (container) {
     renderTabs();
     renderFileTree();
     loadFile();
+
+    const isReactAppBoot = state.framework === 'react' || state.files.some(f => f.name.includes('.jsx') || f.name.toLowerCase() === 'index.html');
+    if (state.splitMode !== 'code-only' || isReactAppBoot) {
+      togglePreview(true);
+    }
   },
 
   setArtifact(incoming) {
