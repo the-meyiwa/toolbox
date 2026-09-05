@@ -10687,3 +10687,38 @@ body.standalone-mode .notes-app-wrapper {
   transform: scale(1.08);
   border-color: var(--accent, #3b82f6) !important;
 }
+
+/* Files View: "Open in..." pop-up menu */
+.sv-open-dropdown-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.sv-open-dropdown-menu {
+  animation: finderMenuPop 0.12s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  user-select: none;
+}
+
+.sv-open-menu-item {
+  color: var(--text);
+  border-radius: 6px;
+  text-decoration: none;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.sv-open-menu-item:hover {
+  background: var(--bg-subtle, rgba(255, 255, 255, 0.08)) !important;
+}
+
+.sv-open-menu-item:hover strong {
+  color: var(--text) !important;
+}
+
+.sv-open-dropdown-arrow {
+  transition: transform 0.15s ease;
+}
+
+.sv-open-dropdown-toggle[aria-expanded="true"] .sv-open-dropdown-arrow {
+  transform: rotate(180deg);
+}
+

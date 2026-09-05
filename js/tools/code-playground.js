@@ -1271,6 +1271,47 @@ export default {
     loadFile();
   },
 
+  setArtifact(incoming) {
+    if (!incoming) return;
+    const fileName = incoming.name || 'script.js';
+    const text = incoming.text || incoming.content || '';
+    const ext = fileName.includes('.') ? fileName.split('.').pop().toLowerCase() : 'js';
+    const langMap = {
+      js: 'javascript', mjs: 'javascript', cjs: 'javascript',
+      ts: 'typescript',
+      py: 'python',
+      cpp: 'cpp', c: 'c', h: 'cpp', hpp: 'cpp',
+      html: 'html', htm: 'html',
+      css: 'css',
+      json: 'json',
+      sql: 'sql',
+      lua: 'lua',
+      rust: 'rust', rs: 'rust',
+      go: 'go',
+      java: 'java',
+      php: 'php',
+      sh: 'bash', bash: 'bash'
+    };
+    const lang = langMap[ext] || (ALL[ext] ? ext : 'javascript');
+    const wsId = `ws-file-${Date.now()}`;
+    const newWs = {
+      id: wsId,
+      name: fileName,
+      files: [{ id: 'f-1', name: fileName, lang, content: text }],
+      activeFileId: 'f-1',
+      framework: 'none',
+      theme: 'monokai',
+      updatedAt: Date.now()
+    };
+    const list = getSavedWorkspaces();
+    list.unshift(newWs);
+    saveWorkspaces(list);
+    setActiveWorkspaceId(wsId);
+    if (this.container) {
+      this.checkAndRender();
+    }
+  },
+
   destroy() {
     this._alive = false;
     this._remote?.abort();

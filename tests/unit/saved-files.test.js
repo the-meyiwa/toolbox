@@ -92,3 +92,116 @@ test('Files View: items are draggable for drag-and-drop re-organization and uplo
   unmount();
 });
 
+test('Files View: getToolsForFile dynamically recommends tools based on file type and registry capabilities', async () => {
+  const { getToolsForFile } = await import('../../js/views/saved.js');
+
+  const cases = [
+    { file: { name: 'photo.png' }, expectedId: 'image-compressor' },
+    { file: { name: 'document.pdf' }, expectedId: 'pdf-editor' },
+    { file: { name: 'sales.csv' }, expectedId: 'csv-to-json' },
+    { file: { name: 'readme.md' }, expectedId: 'markdown-preview' },
+    { file: { name: 'config.json' }, expectedId: 'json-formatter' },
+    { file: { name: 'app.js' }, expectedId: 'code-playground' },
+    { file: { name: 'bundle.zip' }, expectedId: 'file-decompressor' },
+  ];
+
+  for (const tc of cases) {
+    const tools = getToolsForFile(tc.file);
+    assert.ok(Array.isArray(tools), `Tools for ${tc.file.name} must be an array`);
+    assert.ok(tools.length > 0, `Tools for ${tc.file.name} should not be empty`);
+    assert.ok(
+      tools.some(t => t.id === tc.expectedId),
+      `Tools for ${tc.file.name} should include '${tc.expectedId}', got ${tools.map(t => t.id).join(', ')}`
+    );
+    // Ensure all returned items are valid Tool objects with id, name, and description
+    for (const t of tools) {
+      assert.ok(t.id, 'Tool item must have an id');
+      assert.ok(t.name, 'Tool item must have a name');
+      assert.notEqual(t.name, '[object Object]', 'Tool name must never be [object Object]');
+    }
+  }
+});
+
+test('Files View: Open in… popup menu toggles, renders rich items, and avoids [object Object]', () => {
+  for (const item of artifacts.list()) artifacts.remove(item.id);
+
+  const doc = artifacts.save({
+    name: 'architecture.md',
+    kind: 'markdown',
+    text: '# Architecture\nDetailed plan here.',
+    from: 'markdown-preview'
+  });
+
+  const host = document.createElement('div');
+  const unmount = renderSaved(host, doc.id);
+
+  // Strict check: No "[object Object]" anywhere in the rendered HTML
+  assert.equal(host.innerHTML.includes('[object Object]'), false, 'Files UI must never contain "[object Object]"');
+
+  // Verify dropdown toggle exists with proper attributes
+  const toggleBtn = host.querySelector('#sv-open-dropdown-toggle');
+  assert.ok(toggleBtn, 'Open in… toggle button must exist in detail pane');
+  assert.equal(toggleBtn.getAttribute('aria-expanded'), 'false');
+  assert.ok(toggleBtn.textContent.includes('Open in…'));
+
+  // Verify dropdown menu starts hidden
+  const menu = host.querySelector('#sv-open-dropdown-menu');
+  assert.ok(menu, 'Open in… dropdown menu must exist');
+  assert.ok(menu.hidden, 'Open in… dropdown menu must be hidden by default');
+
+  // Verify menu items are present with icons and descriptions
+  const menuItems = host.querySelectorAll('.sv-open-menu-item');
+  assert.ok(menuItems.length > 0, 'Open in… menu must have at least one tool option for markdown');
+  const firstItem = menuItems[0];
+  assert.ok(firstItem.classList.contains('sv-open-btn'), 'Menu item must have .sv-open-btn class for routing integration');
+  assert.ok(firstItem.dataset.open, 'Menu item must have data-open attribute');
+  assert.ok(firstItem.querySelector('strong'), 'Menu item must have bold tool name');
+
+  // Click toggle to open
+  toggleBtn.click();
+  assert.equal(menu.hidden, false, 'Dropdown menu should be visible after clicking toggle');
+  assert.equal(toggleBtn.getAttribute('aria-expanded'), 'true');
+
+  // Click toggle to close
+  toggleBtn.click();
+  assert.equal(menu.hidden, true, 'Dropdown menu should be hidden after second toggle click');
+  assert.equal(toggleBtn.getAttribute('aria-expanded'), 'false');
+
+  unmount();
+  artifacts.remove(doc.id);
+});
+
+test('Files View: Search empty state shows clear button and restores search on click', () => {
+  for (const item of artifacts.list()) artifacts.remove(item.id);
+
+  artifacts.save({
+    name: 'project_notes.txt',
+    kind: 'text',
+    text: 'Important project details',
+    from: 'code-playground'
+  });
+
+  const host = document.createElement('div');
+  const unmount = renderSaved(host);
+
+  const searchBox = host.querySelector('#sv-search-box');
+  assert.ok(searchBox, 'Search box must exist');
+
+  // Type non-matching search
+  searchBox.value = 'zz_non_existent_file_query_12345';
+  searchBox.dispatchEvent(new Event('input', { bubbles: true }));
+
+  // Confirm empty search state is displayed
+  const clearBtn = host.querySelector('#sv-clear-search');
+  assert.ok(clearBtn, 'Clear search button must be rendered in empty search state');
+  assert.ok(host.textContent.includes('zz_non_existent_file_query_12345'));
+
+  // Click clear search
+  clearBtn.click();
+  const refreshedBox = host.querySelector('#sv-search-box');
+  assert.equal(refreshedBox.value, '', 'Search box input should be cleared');
+  assert.equal(host.querySelector('#sv-clear-search'), null, 'Clear search button should disappear after clearing');
+
+  unmount();
+});
+

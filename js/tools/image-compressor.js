@@ -186,6 +186,29 @@ export default {
     });
 
     this._revoke = revokeAll;
+    this._addFiles = addFiles;
+  },
+
+  async setArtifact(a) {
+    if (!a || !this._addFiles) return;
+    try {
+      let blob;
+      if (a.content instanceof Blob) {
+        blob = a.content;
+      } else if (typeof a.content === 'string' && a.content.startsWith('data:')) {
+        const res = await fetch(a.content);
+        blob = await res.blob();
+      } else if (a.path) {
+        const { fs } = await import('../lib/filesystem.js');
+        blob = await fs.readFile(a.path, { encoding: 'blob' });
+      }
+      if (blob) {
+        const file = new File([blob], a.name || 'image.png', { type: blob.type || 'image/png' });
+        await this._addFiles([file]);
+      }
+    } catch (err) {
+      console.warn('Could not load artifact into image compressor', err);
+    }
   },
 
   destroy() {

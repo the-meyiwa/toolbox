@@ -85,13 +85,17 @@ export function renderSaved(host, selectedId = null) {
     currentStorage = 'offline';
   }
 
+  let unmounted = false;
+
   const refresh = (nextId = null) => {
+    if (unmounted) return;
     teardown();
     teardown = paint(host, nextId, refresh);
   };
 
   // Listen to auth state changes to update Online storage tab
   const authHandler = () => {
+    if (unmounted) return;
     const u = getCurrentUser();
     if (!u && currentStorage === 'online') {
       currentStorage = 'offline';
@@ -102,6 +106,7 @@ export function renderSaved(host, selectedId = null) {
 
   // Listen to filesystem changes
   const unFs = fs.onChange(() => {
+    if (unmounted) return;
     refresh(selectedId);
   });
 
@@ -109,10 +114,12 @@ export function renderSaved(host, selectedId = null) {
 
   // Background full initialization & hydration
   fs.init().then(() => {
+    if (unmounted) return;
     refresh(selectedId);
   }).catch(() => {});
 
   return () => {
+    unmounted = true;
     teardown();
     unFs();
     window.removeEventListener('toolbox:authchange', authHandler);
@@ -179,7 +186,7 @@ function paint(host, selectedId, refresh) {
   }
 
   host.innerHTML = full(user, itemsInDir, items, selected);
-  return wire(host, selected, refresh);
+  return wire(host, selected, refresh, itemsInDir);
 }
 
 function empty() {
@@ -204,10 +211,6 @@ function empty() {
         <button type="button" class="btn btn-secondary" data-act="upload" style="display:inline-flex; align-items:center; gap:6px;">
           ${ICONS.upload}
           <span>Upload</span>
-        </button>
-        <button type="button" class="btn btn-secondary" data-act="import" style="display:inline-flex; align-items:center; gap:6px;">
-          ${ICONS.upload}
-          <span>Open a saved file</span>
         </button>
         <a class="btn btn-secondary" href="#tools">Browse tools</a>
       </div>
@@ -311,18 +314,14 @@ function full(user, allItems, filteredItems, selected) {
           }).join('')}
         </div>
 
-        <!-- Folder Actions (Up, Import) -->
+        <!-- Folder Actions (Up) -->
         <div style="display:flex; align-items:center; gap:8px;">
-          ${currentPath !== '/' ? `
+          ${currentPath !== '/' && currentPath !== '/Home' ? `
             <button type="button" class="btn btn-secondary btn-sm" data-act="nav-up" title="Go up one folder" style="padding:4px 8px; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px;">
               ${ICONS.arrowUp}
               <span>Up</span>
             </button>
           ` : ''}
-          <button type="button" class="btn btn-secondary btn-sm" data-act="import" title="Open JSON backup bundle" style="padding:4px 8px; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px;">
-            ${ICONS.upload}
-            <span>Import</span>
-          </button>
         </div>
       </div>
 
@@ -349,13 +348,28 @@ function full(user, allItems, filteredItems, selected) {
 
 function renderExplorerBody(items, selected) {
   if (items.length === 0) {
+    if (currentSearch) {
+      return `
+        <div style="text-align:center; padding:50px 20px; background:var(--bg-card); border:1px solid var(--border); border-radius:14px;">
+          <div style="color:var(--text-muted); margin-bottom:10px;">
+            ${ICONS.search}
+          </div>
+          <h3 style="margin:0 0 6px; font-size:1rem; color:var(--text);">No files match "${escapeHtml(currentSearch)}"</h3>
+          <p style="margin:0 0 16px; font-size:0.84rem; color:var(--text-secondary);">Check your spelling or clear the search filter.</p>
+          <button type="button" class="btn btn-secondary btn-sm" id="sv-clear-search" style="display:inline-flex; align-items:center; gap:5px;">
+            <span>Clear search</span>
+          </button>
+        </div>
+      `;
+    }
+
     return `
       <div style="text-align:center; padding:50px 20px; background:var(--bg-card); border:1px solid var(--border); border-radius:14px;">
         <div style="color:var(--text-muted); margin-bottom:10px;">
           ${ICONS.folder}
         </div>
         <h3 style="margin:0 0 6px; font-size:1rem; color:var(--text);">This folder is empty</h3>
-        <p style="margin:0 0 16px; font-size:0.84rem; color:var(--text-secondary);">Right-click or hold on files/folders to access the Finder menu.</p>
+        <p style="margin:0 0 16px; font-size:0.84rem; color:var(--text-secondary);">Right-click or hold on files/folders to access options.</p>
         <div style="display:flex; justify-content:center; gap:8px;">
           <button type="button" class="btn btn-secondary btn-sm" data-act="new-file" style="display:inline-flex; align-items:center; gap:5px;">
             ${ICONS.plus}
@@ -528,11 +542,65 @@ function renderSplitItem(item, selected) {
   `;
 }
 
+/**
+ * Resolves available tools for opening a file dynamically based on its extension, kind, and registry capabilities.
+ * @param {object} file
+ * @returns {import('../registry/schema.js').Tool[]}
+ */
+export function getToolsForFile(file) {
+  if (!file) return [];
+  const fileName = (file.name || '').toLowerCase();
+  const ext = fileName.includes('.') ? fileName.split('.').pop() : '';
+  const kind = file.kind || kindFromFilename(fileName);
+
+  const seen = new Set();
+  const result = [];
+
+  const add = (toolOrId) => {
+    if (!toolOrId) return;
+    const tool = typeof toolOrId === 'string' ? BY_ID.get(toolOrId) : toolOrId;
+    if (tool && tool.id && !seen.has(tool.id)) {
+      seen.add(tool.id);
+      result.push(tool);
+    }
+  };
+
+  // 1. Domain-specific prioritization based on file extension and detected kind
+  if (['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'bmp', 'avif'].includes(ext) || kind === 'image') {
+    ['image-compressor', 'image-converter', 'image-resizer', 'image-cropper', 'image-metadata', 'image-to-pdf'].forEach(add);
+  } else if (ext === 'pdf' || kind === 'pdf') {
+    ['pdf-editor', 'pdf-merge', 'pdf-split', 'legal-pdf'].forEach(add);
+  } else if (ext === 'csv' || ext === 'tsv' || kind === 'csv') {
+    ['csv-to-json', 'sort-lines', 'remove-duplicates', 'find-replace', 'text-diff', 'word-counter'].forEach(add);
+  } else if (ext === 'md' || ext === 'markdown' || kind === 'markdown') {
+    ['markdown-preview', 'word-counter', 'pdf-editor', 'code-playground', 'find-replace', 'text-diff', 'document-analyzer'].forEach(add);
+  } else if (ext === 'json' || kind === 'json') {
+    ['json-formatter', 'code-playground', 'find-replace', 'text-diff', 'invoice-generator'].forEach(add);
+  } else if (['js', 'ts', 'jsx', 'tsx', 'py', 'cpp', 'c', 'h', 'cs', 'java', 'go', 'rs', 'php', 'rb', 'html', 'css', 'sql', 'sh', 'bash'].includes(ext) || kind === 'code') {
+    ['code-playground', 'find-replace', 'case-converter', 'text-diff', 'word-counter'].forEach(add);
+    if (ext === 'html') add('html-entity-codec');
+  } else if (['zip', 'tar', 'gz', 'bz2'].includes(ext) || kind === 'archive') {
+    ['file-decompressor', 'file-compressor'].forEach(add);
+  }
+
+  // 2. Include all registry tools that accept this kind
+  for (const t of toolsAccepting(kind)) {
+    add(t);
+  }
+
+  // 3. Fallback for general text documents
+  if (result.length === 0) {
+    ['word-counter', 'find-replace', 'text-cleaner', 'code-playground'].forEach(add);
+  }
+
+  return result;
+}
+
 function renderDetailPane(selected) {
   const isCsv = selected.name.endsWith('.csv') || selected.kind === 'csv';
   const isImage = /\.(png|jpe?g|webp|gif|svg)$/i.test(selected.name);
   const isZip = selected.name.endsWith('.zip') || selected.kind === 'archive';
-  const tools = toolsAccepting(selected.kind || kindFromFilename(selected.name));
+  const tools = getToolsForFile(selected);
 
   return `
     <div style="display:flex; flex-direction:column; height:100%;">
@@ -553,7 +621,7 @@ function renderDetailPane(selected) {
         </div>
 
         <!-- Content View Switcher & Action Buttons -->
-        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           ${!isImage ? `
             <div class="sv-content-view-switcher" style="display:flex; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:2px;">
               <button type="button" class="sv-cview-btn ${currentContentView === 'formatted' ? 'active' : ''}" data-cview="formatted" title="Formatted Render" style="padding:3px 7px; border:none; background:none; cursor:pointer; font-size:0.75rem; border-radius:5px; color:var(--text);">
@@ -570,11 +638,32 @@ function renderDetailPane(selected) {
             </div>
           ` : ''}
 
-          <!-- Open in tool handoff buttons -->
-          ${tools.slice(0, 2).map(toolId => {
-            const t = BY_ID[toolId];
-            return `<button type="button" class="btn btn-secondary btn-sm sv-open-btn" data-open="${toolId}" title="Open in ${t?.title || toolId}" style="font-size:0.75rem; padding:4px 8px;">Open in ${escapeHtml(t?.title || toolId)}</button>`;
-          }).join('')}
+          <!-- Open in Tool Pop-up Menu -->
+          ${tools.length > 0 ? `
+            <div class="sv-open-dropdown-wrap" style="position:relative;">
+              <button type="button" class="btn btn-secondary btn-sm sv-open-dropdown-toggle" id="sv-open-dropdown-toggle" aria-haspopup="true" aria-expanded="false" title="Open this file in a tool" style="font-size:0.75rem; padding:4px 10px; display:inline-flex; align-items:center; gap:5px;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                <span>Open in…</span>
+                <svg class="sv-open-dropdown-arrow" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div id="sv-open-dropdown-menu" class="sv-open-dropdown-menu" hidden style="position:absolute; right:0; top:calc(100% + 5px); z-index:1000; min-width:230px; max-width:300px; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:6px; box-shadow:0 12px 28px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.1); font-family:var(--sans);">
+                <div style="padding:4px 8px 6px; font-size:0.7rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; border-bottom:1px solid var(--border); margin-bottom:4px;">
+                  Open with tool (${tools.length})
+                </div>
+                <div style="max-height:260px; overflow-y:auto; display:flex; flex-direction:column; gap:2px;">
+                  ${tools.map(t => `
+                    <button type="button" class="sv-open-btn sv-open-menu-item" data-open="${escapeHtml(t.id)}" title="${escapeHtml(t.description || t.name)}" style="width:100%; border:none; background:transparent; display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:6px; cursor:pointer; text-align:left; color:var(--text); transition:background 0.12s ease;">
+                      <span style="flex-shrink:0; color:var(--text); display:inline-flex; align-items:center; width:18px; height:18px;">${t.icon || ICONS.file}</span>
+                      <span style="display:flex; flex-direction:column; overflow:hidden;">
+                        <strong style="font-size:0.82rem; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(t.name)}</strong>
+                        <span style="font-size:0.7rem; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(t.description || '')}</span>
+                      </span>
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          ` : ''}
 
           ${isZip ? `
             <button type="button" class="btn btn-secondary btn-sm" data-act="extract-archive" data-file-path="${escapeHtml(selected.path)}" title="Unpack archive into current directory" style="font-size:0.75rem; padding:4px 8px; display:inline-flex; align-items:center; gap:4px;">
@@ -673,7 +762,7 @@ function storageNote() {
 
 /* ---------------- Event Wiring ---------------- */
 
-function wire(host, selected, refresh) {
+function wire(host, selected, refresh, itemsInDir = []) {
   let current = selected;
 
   const importer = document.createElement('input');
@@ -719,6 +808,8 @@ function wire(host, selected, refresh) {
     const baseName = getBaseName(targetPath);
     const itemRecord = fs.statSync(targetPath) || {};
     const tags = itemRecord.tags || [];
+    const targetTools = isDir ? [] : getToolsForFile({ name: baseName, path: targetPath, kind: itemRecord.kind });
+    const topTool = targetTools[0];
 
     const menu = document.createElement('div');
     menu.id = 'sv-finder-menu';
@@ -743,9 +834,16 @@ function wire(host, selected, refresh) {
       </div>
       
       <div class="finder-menu-item" data-cmenu="open" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; margin-top: 4px;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-        <span>Open</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/></svg>
+        <span>${isDir ? 'Open Folder' : 'Preview'}</span>
       </div>
+
+      ${topTool ? `
+        <div class="finder-menu-item sv-open-btn" data-cmenu="open-tool" data-open="${escapeHtml(topTool.id)}" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          <span>Open in ${escapeHtml(topTool.name)}</span>
+        </div>
+      ` : ''}
 
       <div class="finder-menu-item" data-cmenu="rename" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -816,6 +914,24 @@ function wire(host, selected, refresh) {
           refresh(null);
         } else {
           refresh(targetPath);
+        }
+      } else if (act === 'open-tool') {
+        const toolId = itemTarget.dataset.open || topTool?.id;
+        if (toolId) {
+          let text = '';
+          try {
+            text = await fs.readFile(targetPath, { encoding: 'utf8', storage: currentStorage });
+          } catch {}
+          store.handOff({
+            id: itemRecord.id || targetPath,
+            name: baseName,
+            path: targetPath,
+            kind: itemRecord.kind || kindFromFilename(baseName),
+            text,
+            content: text
+          });
+          window.location.hash = `#${toolId}`;
+          return;
         }
       } else if (act === 'rename') {
         const nextName = prompt('New name:', baseName);
@@ -1026,14 +1142,46 @@ function wire(host, selected, refresh) {
   host.addEventListener('touchmove', onTouchMove, { passive: true });
   host.addEventListener('touchend', onTouchEnd, { passive: true });
 
+  // Dismiss finder context menu and open-in dropdown menu on outside click or scroll
   const dismissMenu = (me) => {
     const menu = document.getElementById('sv-finder-menu');
-    if (menu && !menu.contains(me.target)) {
+    if (menu && (menu.contains ? !menu.contains(me.target) : !me.target?.closest?.('#sv-finder-menu'))) {
       menu.remove();
+    }
+    const openMenu = host.querySelector('#sv-open-dropdown-menu');
+    const isInsideOpen = me.target?.closest?.('.sv-open-dropdown-wrap');
+    if (openMenu && !openMenu.hidden && !isInsideOpen) {
+      openMenu.hidden = true;
+      const btn = host.querySelector('#sv-open-dropdown-toggle');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
     }
   };
   window.addEventListener('click', dismissMenu);
   window.addEventListener('scroll', dismissMenu, { passive: true });
+
+  // Async preview loading if file content is not yet in memory
+  if (current && current.path && !current.text && !current.content) {
+    const isImg = /\.(png|jpe?g|webp|gif|svg)$/i.test(current.name);
+    if (isImg) {
+      fs.readFile(current.path, { encoding: 'blob', storage: currentStorage })
+        .then(blob => {
+          const url = URL.createObjectURL(blob);
+          current.dataUrl = url;
+          const imgEl = host.querySelector('.sv-preview img');
+          if (imgEl) imgEl.src = url;
+        }).catch(() => {});
+    } else {
+      fs.readFile(current.path, { encoding: 'utf8', storage: currentStorage })
+        .then(text => {
+          current.text = text;
+          current.content = text;
+          const previewEl = host.querySelector('.sv-preview');
+          if (previewEl && currentContentView !== 'table') {
+            previewEl.innerHTML = renderContentBody(current);
+          }
+        }).catch(() => {});
+    }
+  }
 
   const onClick = async (e) => {
     // Tag filter pill click
@@ -1078,6 +1226,29 @@ function wire(host, selected, refresh) {
       return;
     }
 
+    // Clear search button in empty state
+    if (e.target.closest('#sv-clear-search')) {
+      e.stopPropagation?.();
+      currentSearch = '';
+      const box = host.querySelector('#sv-search-box');
+      if (box) box.value = '';
+      refresh(current?.id || null);
+      return;
+    }
+
+    // Open in Tool dropdown toggle
+    const openToggle = e.target.closest('#sv-open-dropdown-toggle');
+    if (openToggle) {
+      e.stopPropagation?.();
+      const menu = host.querySelector('#sv-open-dropdown-menu');
+      if (menu) {
+        const willBeOpen = menu.hidden;
+        menu.hidden = !willBeOpen;
+        openToggle.setAttribute('aria-expanded', String(willBeOpen));
+      }
+      return;
+    }
+
     // Pick file
     const pick = e.target.closest('[data-pick]')?.dataset.pick;
     if (pick) {
@@ -1086,12 +1257,23 @@ function wire(host, selected, refresh) {
       return;
     }
 
-    // Open in other tool
-    const openIn = e.target.closest('[data-open]')?.dataset.open;
-    if (openIn && current) {
-      store.handOff({ ...current });
-      window.location.hash = `#${openIn}`;
-      return;
+    // Open in other tool (from detail pane dropdown or context menu)
+    const openInBtn = e.target.closest('[data-open]');
+    if (openInBtn && current) {
+      const openIn = openInBtn.dataset.open;
+      if (openIn) {
+        let text = current.text || current.content || '';
+        if (!text && current.path && !/\.(png|jpe?g|webp|gif|svg)$/i.test(current.name)) {
+          try {
+            text = await fs.readFile(current.path, { encoding: 'utf8', storage: currentStorage });
+            current.text = text;
+            current.content = text;
+          } catch {}
+        }
+        store.handOff({ ...current, text, content: text });
+        window.location.hash = `#${openIn}`;
+        return;
+      }
     }
 
     const actBtn = e.target.closest('[data-act]');
@@ -1276,14 +1458,59 @@ function wire(host, selected, refresh) {
     }
   };
 
+  // Double click: open folder or launch file into top tool
+  const onDblClick = async (e) => {
+    const folderEl = e.target.closest('[data-is-dir="true"]');
+    if (folderEl) {
+      const path = folderEl.dataset.path || folderEl.dataset.navPath;
+      if (path) {
+        currentPath = path;
+        refresh(null);
+        return;
+      }
+    }
+
+    const fileEl = e.target.closest('[data-pick]');
+    if (fileEl) {
+      const targetPick = fileEl.dataset.pick;
+      const targetFile = itemsInDir.find(f => f.path === targetPick || f.id === targetPick) || current;
+      if (targetFile && !targetFile.isDirectory) {
+        const tools = getToolsForFile(targetFile);
+        if (tools.length > 0) {
+          const topTool = tools[0];
+          let text = targetFile.text || targetFile.content || '';
+          if (!text && targetFile.path && !/\.(png|jpe?g|webp|gif|svg)$/i.test(targetFile.name)) {
+            try {
+              text = await fs.readFile(targetFile.path, { encoding: 'utf8', storage: currentStorage });
+            } catch {}
+          }
+          store.handOff({ ...targetFile, text, content: text });
+          window.location.hash = `#${topTool.id}`;
+        }
+      }
+    }
+  };
+
+  // Enter key commits inline rename
+  const onKeyDown = (e) => {
+    if (e.target.classList.contains('sv-rename') && e.key === 'Enter') {
+      e.preventDefault();
+      e.target.blur();
+    }
+  };
+
   host.addEventListener('click', onClick);
   host.addEventListener('change', onRename);
+  host.addEventListener('dblclick', onDblClick);
+  host.addEventListener('keydown', onKeyDown);
   uploader.addEventListener('change', onUpload);
   importer.addEventListener('change', onImport);
 
   return () => {
     host.removeEventListener('click', onClick);
     host.removeEventListener('change', onRename);
+    host.removeEventListener('dblclick', onDblClick);
+    host.removeEventListener('keydown', onKeyDown);
     host.removeEventListener('dragenter', onDragEnter);
     host.removeEventListener('dragover', onDragOver);
     host.removeEventListener('dragleave', onDragLeave);
