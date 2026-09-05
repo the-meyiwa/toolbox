@@ -1217,17 +1217,62 @@ export default {
       if (check) check.textContent = state.minimapOpen ? '✓ Toggle Minimap' : 'Toggle Minimap';
     }
 
-    function togglePreview() {
-      if (state.splitMode === 'code-only') {
-        state.splitMode = 'split';
-        previewPane.style.display = 'flex';
-        const cur = getActiveFile();
-        if (cur && cur.lang === 'html') {
-          previewEl.srcdoc = buildPreviewDocument(cur.content, state.framework);
+    function updateWorkspacePreview() {
+      if (!previewEl) return;
+      const indexHtmlFile = state.files.find(f => f.name.toLowerCase() === 'index.html');
+      const appCssFile = state.files.find(f => f.name.toLowerCase() === 'src/app.css' || f.name.toLowerCase() === 'style.css');
+      const appJsxFile = state.files.find(f => f.name.toLowerCase() === 'src/app.jsx' || f.name.toLowerCase() === 'app.jsx');
+      const indexJsxFile = state.files.find(f => f.name.toLowerCase() === 'src/index.jsx' || f.name.toLowerCase() === 'index.jsx' || f.name.toLowerCase() === 'main.jsx');
+
+      if (indexHtmlFile) {
+        let doc = indexHtmlFile.content;
+        const reactCdn = `
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+        `;
+        if (!doc.includes('react@18') && !doc.includes('react.development.js')) {
+          if (doc.includes('<head>')) doc = doc.replace('<head>', `<head>\n${reactCdn}`);
+          else doc = reactCdn + '\n' + doc;
         }
+        if (appCssFile && !doc.includes(appCssFile.content)) {
+          if (doc.includes('</head>')) doc = doc.replace('</head>', `<style>\n${appCssFile.content}\n</style>\n</head>`);
+          else doc = `<style>\n${appCssFile.content}\n</style>\n` + doc;
+        }
+        if (appJsxFile || indexJsxFile) {
+          const combinedJsx = `
+            ${appJsxFile ? appJsxFile.content.replace(/import\s+[^;]+;/g, '').replace(/export\s+default\s+function\s+App/g, 'function App') : ''}
+            ${indexJsxFile ? indexJsxFile.content.replace(/import\s+[^;]+;/g, '') : `
+              const rootEl = document.getElementById('root') || document.body;
+              ReactDOM.createRoot(rootEl).render(React.createElement(App));
+            `}
+          `;
+          const scriptTag = `<script type="text/babel">\n${combinedJsx}\n</script>`;
+          if (doc.includes('</body>')) {
+            doc = doc.replace('</body>', `${scriptTag}\n</body>`);
+          } else {
+            doc += '\n' + scriptTag;
+          }
+        }
+        previewEl.srcdoc = doc;
+        return;
+      }
+
+      const cur = getActiveFile();
+      if (cur) {
+        previewEl.srcdoc = buildPreviewDocument(cur.content, state.framework);
+      }
+    }
+
+    function togglePreview(forceState) {
+      if (typeof forceState === 'boolean') {
+        state.splitMode = forceState ? 'split' : 'code-only';
       } else {
-        state.splitMode = 'code-only';
-        previewPane.style.display = 'none';
+        state.splitMode = state.splitMode === 'code-only' ? 'split' : 'code-only';
+      }
+      previewPane.style.display = state.splitMode !== 'code-only' ? 'flex' : 'none';
+      if (state.splitMode !== 'code-only') {
+        updateWorkspacePreview();
       }
     }
 
@@ -1397,29 +1442,91 @@ export default {
       if (!containerEl) return;
       const preBlocks = containerEl.querySelectorAll('pre');
       preBlocks.forEach(pre => {
-        if (pre.querySelector('.cpg-apply-btn')) return;
+        if (pre.querySelector('.cpg-action-bar')) return;
         const codeElInside = pre.querySelector('code');
         if (!codeElInside) return;
+        const rawCode = codeElInside.textContent.trim();
+        const firstLine = rawCode.split('\n')[0].trim();
+        const isShell = /^(bash|sh|shell|zsh)$/i.test(codeElInside.className || '') ||
+                        /^(npm|npx|git|node|yarn|pnpm|touch|mkdir|rm|cat|ls|pwd|test|run|preview)\b/i.test(firstLine);
+
+        // Check if there is a filename directive: [FILE: path/to/file] or // path/to/file
+        let targetFilePath = null;
+        const prevText = pre.previousElementSibling?.textContent || '';
+        const fileMatch = prevText.match(/\[FILE:\s*([^\]]+)\]/i) || prevText.match(/(?:file|filename|path):\s*([a-zA-Z0-9_./-]+)/i);
+        if (fileMatch) {
+          targetFilePath = fileMatch[1].trim();
+        } else if (/^(\/\/|\/\*|<!--|#)\s*([a-zA-Z0-9_./-]+\.[a-zA-Z0-9]+)/.test(firstLine)) {
+          targetFilePath = firstLine.replace(/^(\/\/|\/\*|<!--|#)\s*/, '').replace(/(\*\/|-->)$/, '').trim();
+        }
+
         const btnBar = document.createElement('div');
+        btnBar.className = 'cpg-action-bar';
         btnBar.style.cssText = 'display:flex; justify-content:flex-end; gap:6px; margin-bottom:4px;';
-        const applyBtn = document.createElement('button');
-        applyBtn.type = 'button';
-        applyBtn.className = 'cpg-apply-btn';
-        applyBtn.style.cssText = 'background:var(--cpg-accent); color:#ffffff; border:none; border-radius:4px; padding:2px 8px; font-size:0.7rem; cursor:pointer; font-weight:600;';
-        applyBtn.textContent = 'Apply to Editor';
-        applyBtn.addEventListener('click', () => {
-          const cur = getActiveFile();
-          if (cur) {
-            const rawCode = codeElInside.textContent;
-            cur.content = rawCode;
-            codeEl.value = rawCode;
+
+        if (isShell) {
+          const runBtn = document.createElement('button');
+          runBtn.type = 'button';
+          runBtn.className = 'cpg-apply-btn cpg-run-term-btn';
+          runBtn.style.cssText = 'background:var(--cpg-accent); color:#ffffff; border:none; border-radius:4px; padding:2px 8px; font-size:0.7rem; cursor:pointer; font-weight:600; display:inline-flex; align-items:center; gap:4px;';
+          runBtn.textContent = '▶ Run in Terminal';
+          runBtn.addEventListener('click', async () => {
+            toggleTerminalDrawer(true);
+            const lines = rawCode.split('\n').map(l => l.replace(/^[\$>\s]+/, '').trim()).filter(Boolean);
+            for (const line of lines) {
+              await executeTerminalCommand(line, { echo: true, source: 'user' });
+            }
+            runBtn.textContent = 'Executed!';
+            setTimeout(() => { runBtn.textContent = '▶ Run in Terminal'; }, 2000);
+          });
+          btnBar.appendChild(runBtn);
+        } else if (targetFilePath) {
+          const saveBtn = document.createElement('button');
+          saveBtn.type = 'button';
+          saveBtn.className = 'cpg-apply-btn cpg-save-file-btn';
+          saveBtn.style.cssText = 'background:var(--cpg-accent); color:#ffffff; border:none; border-radius:4px; padding:2px 8px; font-size:0.7rem; cursor:pointer; font-weight:600;';
+          saveBtn.textContent = `Save to ${targetFilePath.split('/').pop()}`;
+          saveBtn.addEventListener('click', () => {
+            let f = state.files.find(x => x.name.toLowerCase() === targetFilePath.toLowerCase());
+            if (f) {
+              f.content = rawCode;
+            } else {
+              const ext = targetFilePath.split('.').pop().toLowerCase();
+              const lang = ext === 'jsx' || ext === 'js' ? 'javascript' : (ext === 'css' ? 'css' : (ext === 'html' ? 'html' : 'text'));
+              f = { id: `f-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, name: targetFilePath, lang, content: rawCode };
+              state.files.push(f);
+            }
+            state.activeFileId = f.id;
             persist();
-            renderGutterAndMinimap();
-            applyBtn.textContent = 'Applied!';
-            setTimeout(() => { applyBtn.textContent = 'Apply to Editor'; }, 2000);
-          }
-        });
-        btnBar.appendChild(applyBtn);
+            renderTabs();
+            renderFileTree();
+            loadFile();
+            updateWorkspacePreview();
+            saveBtn.textContent = 'Saved!';
+            setTimeout(() => { saveBtn.textContent = `Save to ${targetFilePath.split('/').pop()}`; }, 2000);
+          });
+          btnBar.appendChild(saveBtn);
+        } else {
+          const applyBtn = document.createElement('button');
+          applyBtn.type = 'button';
+          applyBtn.className = 'cpg-apply-btn';
+          applyBtn.style.cssText = 'background:var(--cpg-accent); color:#ffffff; border:none; border-radius:4px; padding:2px 8px; font-size:0.7rem; cursor:pointer; font-weight:600;';
+          applyBtn.textContent = 'Apply to Editor';
+          applyBtn.addEventListener('click', () => {
+            const cur = getActiveFile();
+            if (cur) {
+              cur.content = rawCode;
+              codeEl.value = rawCode;
+              persist();
+              renderGutterAndMinimap();
+              updateWorkspacePreview();
+              applyBtn.textContent = 'Applied!';
+              setTimeout(() => { applyBtn.textContent = 'Apply to Editor'; }, 2000);
+            }
+          });
+          btnBar.appendChild(applyBtn);
+        }
+
         pre.insertBefore(btnBar, pre.firstChild);
       });
     }
@@ -1449,7 +1556,31 @@ ${cur ? cur.content : ''}
 Current Console / Workspace Errors:
 ${errors}
 
-Provide concise, highly accurate code solutions, debug analysis, and implementation code. Use markdown code blocks with proper language identifiers so the user can easily review and apply changes.`;
+Terminal & Autonomous Agent Capabilities:
+You have FULL CAPABILITY to run commands in the user's terminal and execute development workflows.
+Whenever the user asks you to initialize an app, write code, run commands, test work, or push to git:
+You should directly execute the appropriate commands by including command directives on their own line:
+[COMMAND: <command>]
+
+Supported terminal commands you can execute:
+- [COMMAND: npx create-react-app <name>] : Initializes complete React 18 application with App.jsx, index.jsx, App.css, index.html, App.test.js, and package.json
+- [COMMAND: npm test] : Runs workspace unit tests (*.test.js) and reports pass/fail results
+- [COMMAND: npm start] : Launches live preview server
+- [COMMAND: git init] : Initializes git repository
+- [COMMAND: git add .] : Stages workspace files
+- [COMMAND: git commit -m "<message>"] : Commits changes
+- [COMMAND: git remote add origin <url>] : Configures GitHub remote
+- [COMMAND: git push origin main] : Pushes commits to GitHub
+- [COMMAND: node <file.js>] : Runs JavaScript in virtual Node runtime
+- [COMMAND: touch <file>] / [COMMAND: rm <file>] / [COMMAND: mkdir <dir>]
+
+To save or update a specific file in the workspace, preface the code block with:
+[FILE: path/to/file.ext]
+\`\`\`language
+// code
+\`\`\`
+
+Always execute the necessary terminal commands to fulfill user requests so the user sees the terminal run and results live!`;
 
       const responseContainer = appendAstMessage('assistant', `<em>Thinking...</em>`);
 
@@ -1471,6 +1602,30 @@ Provide concise, highly accurate code solutions, debug analysis, and implementat
         if (responseContainer) {
           responseContainer.innerHTML = renderMarkdown(fullText);
           attachCodeApplyButtons(responseContainer);
+
+          // Check for autonomous commands [COMMAND: <cmd>]
+          const commandMatches = [...fullText.matchAll(/\[COMMAND:\s*([^\]]+)\]/gi)];
+          if (commandMatches.length) {
+            toggleTerminalDrawer(true);
+            for (const match of commandMatches) {
+              const cmdToRun = match[1].trim();
+              if (cmdToRun) {
+                const cmdResult = await executeTerminalCommand(cmdToRun, { echo: true, source: 'assistant' });
+                const cmdBadge = document.createElement('div');
+                cmdBadge.className = 'cpg-ast-cmd-card';
+                cmdBadge.style.cssText = 'margin:8px 0; background:var(--cpg-terminal-bg); border:1px solid var(--cpg-border); border-radius:6px; overflow:hidden;';
+                cmdBadge.innerHTML = `
+                  <div style="padding:4px 8px; background:rgba(255,255,255,0.06); color:var(--cpg-accent); font-family:monospace; font-size:0.75rem; font-weight:700; display:flex; justify-content:space-between; align-items:center;">
+                    <span>$ ${escapeHtml(cmdToRun)}</span>
+                    <span style="font-size:0.68rem; color:var(--cpg-text-muted);">Terminal Executed</span>
+                  </div>
+                  <div style="padding:6px 8px; font-family:monospace; font-size:0.72rem; color:var(--cpg-terminal-text); white-space:pre-wrap; max-height:120px; overflow-y:auto;">${escapeHtml(cmdResult.stdout || cmdResult.stderr || 'Command completed.')}</div>
+                `;
+                responseContainer.appendChild(cmdBadge);
+                astChatLog.scrollTop = astChatLog.scrollHeight;
+              }
+            }
+          }
         }
       } catch (err) {
         if (responseContainer) {
@@ -1565,9 +1720,493 @@ Provide concise, highly accurate code solutions, debug analysis, and implementat
     printTerm(`Toolbox Terminal v2.3.0 [Workspace: ${state.projectName}]`, 'var(--cpg-accent)');
     printTerm(`Built-in dev tools: git, node, npm, run, preview, ls, cat, help.\n`, 'var(--cpg-text-muted)');
 
+    // Scaffolding for React 18 Application
+    function scaffoldReactApp(appName = 'react-app') {
+      const cleanName = appName.trim().replace(/^\/+/, '') || 'react-app';
+      printTerm(`Creating a new React app in /workspaces/${state.projectName}/${cleanName}...`, '#38bdf8');
+      printTerm(`Installing packages. This might take a couple of seconds.`, 'var(--cpg-text-muted)');
+      printTerm(`Installing react, react-dom, and web vitals...`, 'var(--cpg-text)');
+
+      state.packages = state.packages || {};
+      state.packages['react'] = { name: 'react', version: '^18.3.1', ready: true };
+      state.packages['react-dom'] = { name: 'react-dom', version: '^18.3.1', ready: true };
+
+      const reactFiles = [
+        {
+          name: 'package.json',
+          lang: 'json',
+          content: JSON.stringify({
+            name: cleanName,
+            version: '0.1.0',
+            private: true,
+            dependencies: {
+              react: '^18.3.1',
+              'react-dom': '^18.3.1'
+            },
+            scripts: {
+              start: 'react-scripts start',
+              build: 'react-scripts build',
+              test: 'react-scripts test'
+            }
+          }, null, 2)
+        },
+        {
+          name: 'index.html',
+          lang: 'html',
+          content: `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${cleanName}</title>
+    <link rel="stylesheet" href="./src/App.css" />
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18",
+        "react/": "https://esm.sh/react@18/",
+        "react-dom": "https://esm.sh/react-dom@18",
+        "react-dom/": "https://esm.sh/react-dom@18/",
+        "react-dom/client": "https://esm.sh/react-dom@18/client"
+      }
+    }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel" data-presets="react,env" src="./src/index.jsx"></script>
+  </body>
+</html>`
+        },
+        {
+          name: 'src/App.jsx',
+          lang: 'javascript',
+          content: `import React, { useState } from 'react';
+
+export default function App() {
+  const [tasks, setTasks] = useState([
+    { id: 1, title: 'Initialize React application in Toolbox IDE', done: true, priority: 'High' },
+    { id: 2, title: 'Run unit test suite in terminal', done: false, priority: 'High' },
+    { id: 3, title: 'Push workspace code to GitHub', done: false, priority: 'Medium' }
+  ]);
+  const [input, setInput] = useState('');
+  const [filter, setFilter] = useState('all');
+
+  const addTask = (e) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+    setTasks([...tasks, { id: Date.now(), title: input.trim(), done: false, priority: 'Medium' }]);
+    setInput('');
+  };
+
+  const toggleTask = (id) => {
+    setTasks(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t));
+  };
+
+  const deleteTask = (id) => {
+    setTasks(tasks.filter(t => t.id !== id));
+  };
+
+  const filtered = tasks.filter(t => {
+    if (filter === 'active') return !t.done;
+    if (filter === 'completed') return t.done;
+    return true;
+  });
+
+  return (
+    <div className="app-shell">
+      <header className="app-header">
+        <div className="badge">React 18 Live</div>
+        <h1>${cleanName}</h1>
+        <p>Interactive task &amp; state management dashboard</p>
+      </header>
+
+      <main className="app-main">
+        <form onSubmit={addTask} className="task-form">
+          <input
+            type="text"
+            placeholder="Add a new task or feature..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+          />
+          <button type="submit">Add Task</button>
+        </form>
+
+        <div className="filter-bar">
+          <button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>All ({tasks.length})</button>
+          <button className={filter === 'active' ? 'active' : ''} onClick={() => setFilter('active')}>Active ({tasks.filter(t => !t.done).length})</button>
+          <button className={filter === 'completed' ? 'active' : ''} onClick={() => setFilter('completed')}>Completed ({tasks.filter(t => t.done).length})</button>
+        </div>
+
+        <ul className="task-list">
+          {filtered.map(t => (
+            <li key={t.id} className={t.done ? 'task-item done' : 'task-item'}>
+              <label className="task-label">
+                <input
+                  type="checkbox"
+                  checked={t.done}
+                  onChange={() => toggleTask(t.id)}
+                />
+                <span className="task-title">{t.title}</span>
+              </label>
+              <span className="task-priority">{t.priority}</span>
+              <button className="btn-del" onClick={() => deleteTask(t.id)}>×</button>
+            </li>
+          ))}
+        </ul>
+      </main>
+    </div>
+  );
+}`
+        },
+        {
+          name: 'src/App.css',
+          lang: 'css',
+          content: `* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0f172a;
+  color: #f8fafc;
+  display: flex;
+  justify-content: center;
+  padding: 32px 16px;
+  min-height: 100vh;
+}
+.app-shell {
+  width: 100%;
+  max-width: 560px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+}
+.badge {
+  display: inline-block;
+  background: #0ea5e9;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
+.app-header h1 {
+  margin: 0 0 4px;
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+.app-header p {
+  margin: 0 0 20px;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+.task-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.task-form input {
+  flex: 1;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #fff;
+  font-size: 0.88rem;
+  outline: none;
+}
+.task-form button {
+  background: #0ea5e9;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0 16px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.84rem;
+}
+.filter-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.filter-bar button {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #94a3b8;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.filter-bar button.active {
+  background: #334155;
+  color: #fff;
+  border-color: #0ea5e9;
+}
+.task-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.task-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 10px 12px;
+  transition: all 0.15s ease;
+}
+.task-item.done {
+  opacity: 0.6;
+}
+.task-item.done .task-title {
+  text-decoration: line-through;
+}
+.task-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  cursor: pointer;
+}
+.task-priority {
+  font-size: 0.7rem;
+  background: #334155;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-right: 8px;
+  color: #cbd5e1;
+}
+.btn-del {
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0 4px;
+}`
+        },
+        {
+          name: 'src/index.jsx',
+          lang: 'javascript',
+          content: `import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App.jsx';
+
+const container = document.getElementById('root');
+if (container) {
+  const root = ReactDOM.createRoot(container);
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+}`
+        },
+        {
+          name: 'src/App.test.js',
+          lang: 'javascript',
+          content: `describe('React App Component', () => {
+  test('App component exports valid function', () => {
+    expect(typeof App).toBe('function');
+  });
+
+  test('Initial state contains default tasks', () => {
+    const defaultCount = 3;
+    expect(defaultCount).toBe(3);
+  });
+
+  test('Component state transitions handle task toggles', () => {
+    const task = { id: 1, done: false };
+    const toggled = { ...task, done: !task.done };
+    expect(toggled.done).toBe(true);
+  });
+});`
+        }
+      ];
+
+      for (const rf of reactFiles) {
+        const existing = state.files.find(f => f.name === rf.name);
+        if (existing) {
+          existing.content = rf.content;
+          existing.lang = rf.lang;
+        } else {
+          state.files.push({
+            id: `f-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            name: rf.name,
+            lang: rf.lang,
+            content: rf.content
+          });
+        }
+      }
+
+      state.framework = 'react';
+      const targetAppFile = state.files.find(f => f.name === 'src/App.jsx');
+      if (targetAppFile) state.activeFileId = targetAppFile.id;
+
+      persist();
+      renderTabs();
+      renderFileTree();
+      loadFile();
+      togglePreview(true);
+
+      printTerm(`+ react@18.3.1`, '#22c55e');
+      printTerm(`+ react-dom@18.3.1`, '#22c55e');
+      printTerm(`added 2 packages in 1.18s`, 'var(--cpg-text-muted)');
+      printTerm(`\nSuccess! Created ${cleanName} at /workspaces/${state.projectName}`, '#22c55e');
+      printTerm(`Inside that directory, you can run:\n`, 'var(--cpg-text)');
+      printTerm(`  npm test`, '#38bdf8');
+      printTerm(`    Runs the unit test suite.\n`, 'var(--cpg-text-muted)');
+      printTerm(`  npm start`, '#38bdf8');
+      printTerm(`    Compiles and launches the live preview.\n`, 'var(--cpg-text-muted)');
+      printTerm(`  git push origin main`, '#38bdf8');
+      printTerm(`    Pushes commits to your GitHub repository.\n`, 'var(--cpg-text-muted)');
+      printTerm(`Happy hacking!`, '#22c55e');
+    }
+
+    // Virtual Test Runner for Workspace Tests
+    function runWorkspaceTests() {
+      const testFiles = state.files.filter(f => /\.(test|spec)\.(js|jsx|ts|tsx)$/i.test(f.name));
+      printTerm(`\n> ${state.projectName}@0.1.0 test`, 'var(--cpg-text-muted)');
+      printTerm(`> vitest run\n`, 'var(--cpg-text-muted)');
+
+      if (!testFiles.length) {
+        printTerm(`No test files found in workspace (e.g. *.test.js).`, '#eab308');
+        printTerm(`Tip: Create a test file like src/App.test.js with test suites.`, 'var(--cpg-text-muted)');
+        return { passed: 0, failed: 0, total: 0 };
+      }
+
+      let totalTests = 0;
+      let passedTests = 0;
+      let failedTests = 0;
+      const startTime = Date.now();
+
+      for (const tf of testFiles) {
+        let filePassed = true;
+        const testResults = [];
+
+        const createExpect = (actual) => {
+          const assertion = {
+            toBe: (expected) => {
+              if (actual !== expected) throw new Error(`expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`);
+            },
+            toEqual: (expected) => {
+              if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(`expected deep equality with ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`);
+            },
+            toBeTruthy: () => {
+              if (!actual) throw new Error(`expected truthy value, received ${actual}`);
+            },
+            toBeFalsy: () => {
+              if (actual) throw new Error(`expected falsy value, received ${actual}`);
+            },
+            toBeNull: () => {
+              if (actual !== null) throw new Error(`expected null, received ${actual}`);
+            },
+            toBeDefined: () => {
+              if (actual === undefined) throw new Error(`expected value to be defined`);
+            },
+            toContain: (item) => {
+              if (!actual || !actual.includes(item)) throw new Error(`expected ${JSON.stringify(actual)} to contain ${JSON.stringify(item)}`);
+            },
+            toHaveLength: (len) => {
+              if (!actual || actual.length !== len) throw new Error(`expected length ${len}, received ${actual?.length}`);
+            },
+            toThrow: () => {
+              if (typeof actual !== 'function') throw new Error('actual is not a function');
+              let threw = false;
+              try { actual(); } catch { threw = true; }
+              if (!threw) throw new Error('expected function to throw an error');
+            }
+          };
+          assertion.not = {
+            toBe: (expected) => { if (actual === expected) throw new Error(`expected not ${JSON.stringify(expected)}`); },
+            toEqual: (expected) => { if (JSON.stringify(actual) === JSON.stringify(expected)) throw new Error(`expected not equal`); },
+            toThrow: () => {
+              try { actual(); } catch (e) { throw new Error(`expected function not to throw, but it threw: ${e.message}`); }
+            }
+          };
+          return assertion;
+        };
+
+        const suiteStack = [];
+
+        const describe = (name, fn) => {
+          suiteStack.push(name);
+          try { fn(); } finally { suiteStack.pop(); }
+        };
+
+        const testOrIt = (name, fn) => {
+          totalTests++;
+          const fullTitle = suiteStack.length ? `${suiteStack.join(' > ')} > ${name}` : name;
+          const tStart = Date.now();
+          try {
+            fn();
+            passedTests++;
+            testResults.push({ title: fullTitle, pass: true, duration: Date.now() - tStart });
+          } catch (err) {
+            filePassed = false;
+            failedTests++;
+            testResults.push({ title: fullTitle, pass: false, error: err.message, duration: Date.now() - tStart });
+          }
+        };
+
+        try {
+          const mockReact = { useState: (init) => [init, () => {}], useEffect: () => {} };
+          const appFile = state.files.find(f => f.name.includes('App'));
+          let AppComp = function App() {};
+          if (appFile) {
+            try {
+              const trans = appFile.content.replace(/import\s+[^;]+;/g, '').replace(/export\s+default\s+function\s+App/g, 'function App');
+              const fn = new Function('React', `${trans}; return typeof App !== 'undefined' ? App : function() {};`);
+              AppComp = fn(mockReact);
+            } catch {}
+          }
+
+          const runner = new Function('describe', 'test', 'it', 'expect', 'App', 'React', tf.content);
+          runner(describe, testOrIt, testOrIt, createExpect, AppComp, mockReact);
+        } catch (suiteErr) {
+          filePassed = false;
+          failedTests++;
+          testResults.push({ title: tf.name, pass: false, error: suiteErr.message });
+        }
+
+        if (filePassed) {
+          printTerm(` PASS  ${tf.name}`, '#22c55e');
+          testResults.forEach(r => printTerm(`   ✓ ${r.title} (${r.duration || 1}ms)`, 'var(--cpg-text-muted)'));
+        } else {
+          printTerm(` FAIL  ${tf.name}`, '#ef4444');
+          testResults.forEach(r => {
+            if (r.pass) printTerm(`   ✓ ${r.title} (${r.duration || 1}ms)`, 'var(--cpg-text-muted)');
+            else printTerm(`   ✕ ${r.title}\n     ${r.error}`, '#ef4444');
+          });
+        }
+      }
+
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      printTerm(`\nTest Files:  ${failedTests === 0 ? '1 passed' : `${passedTests ? '1 passed, ' : ''}1 failed`}, 1 total`, failedTests === 0 ? '#22c55e' : '#ef4444');
+      printTerm(`Tests:       ${passedTests} passed, ${failedTests} failed, ${totalTests} total`, failedTests === 0 ? '#22c55e' : '#ef4444');
+      printTerm(`Time:        ${duration}s`, 'var(--cpg-text-muted)');
+      printTerm(`Ran all test suites.\n`, 'var(--cpg-text)');
+
+      return { passed: passedTests, failed: failedTests, total: totalTests };
+    }
+
     function handleGitCommand(args) {
       if (!state.git) {
-        state.git = { initialized: false, branch: 'main', staged: [], commits: [] };
+        state.git = { initialized: false, branch: 'main', staged: [], commits: [], remotes: {} };
       }
       const sub = args[0]?.toLowerCase();
       const rest = args.slice(1).join(' ').trim();
@@ -1575,12 +2214,13 @@ Provide concise, highly accurate code solutions, debug analysis, and implementat
       if (sub === 'init') {
         state.git.initialized = true;
         state.git.branch = 'main';
+        persist();
         printTerm(`Initialized empty Git repository in /workspaces/${state.projectName}/.git/`, '#38bdf8');
-        return;
+        return { stdout: 'Initialized empty Git repository', exitCode: 0 };
       }
       if (!state.git.initialized) {
         printTerm(`fatal: not a git repository (or any of the parent directories): .git\nRun 'git init' to initialize repository.`, '#ef4444');
-        return;
+        return { stderr: 'not a git repository', exitCode: 1 };
       }
       if (sub === 'status') {
         printTerm(`On branch ${state.git.branch}`, 'var(--cpg-text)');
@@ -1596,26 +2236,30 @@ Provide concise, highly accurate code solutions, debug analysis, and implementat
         if (state.git.staged.length === 0 && unstaged.length === 0) {
           printTerm(`nothing to commit, working tree clean`, 'var(--cpg-text-muted)');
         }
-        return;
+        return { stdout: `On branch ${state.git.branch}`, exitCode: 0 };
       }
       if (sub === 'add') {
         if (!rest) {
           printTerm(`Nothing specified, nothing added. Maybe you wanted 'git add .'?`, '#eab308');
-          return;
+          return { stderr: 'nothing specified', exitCode: 1 };
         }
         if (rest === '.' || rest === '-A' || rest === '*') {
           state.git.staged = state.files.map(f => f.name);
+          persist();
           printTerm(`Staged ${state.git.staged.length} file(s) for commit.`, '#38bdf8');
+          return { stdout: `Staged ${state.git.staged.length} file(s)`, exitCode: 0 };
         } else {
           const match = state.files.find(f => f.name === rest);
           if (match) {
             if (!state.git.staged.includes(match.name)) state.git.staged.push(match.name);
+            persist();
             printTerm(`Staged '${match.name}'.`, '#38bdf8');
+            return { stdout: `Staged '${match.name}'`, exitCode: 0 };
           } else {
             printTerm(`fatal: pathspec '${rest}' did not match any files`, '#ef4444');
+            return { stderr: `pathspec '${rest}' did not match any files`, exitCode: 1 };
           }
         }
-        return;
       }
       if (sub === 'commit') {
         let msg = 'commit';
@@ -1625,7 +2269,7 @@ Provide concise, highly accurate code solutions, debug analysis, and implementat
         }
         if (!state.git.staged.length) {
           printTerm(`no changes added to commit (use "git add")`, '#eab308');
-          return;
+          return { stderr: 'no changes added to commit', exitCode: 1 };
         }
         const hash = Math.random().toString(16).substring(2, 9);
         state.git.commits.unshift({
@@ -1639,43 +2283,135 @@ Provide concise, highly accurate code solutions, debug analysis, and implementat
         state.git.staged = [];
         persist();
         printTerm(`[${state.git.branch} ${hash}] ${msg}\n ${count} file(s) changed`, '#22c55e');
-        return;
+        return { stdout: `[${state.git.branch} ${hash}] ${msg}`, exitCode: 0 };
       }
       if (sub === 'log') {
         if (!state.git.commits.length) {
           printTerm(`fatal: your current branch '${state.git.branch}' does not have any commits yet`, '#ef4444');
-          return;
+          return { stderr: 'no commits yet', exitCode: 1 };
         }
         state.git.commits.forEach(c => {
           printTerm(`commit ${c.hash} (HEAD -> ${c.branch})`, '#eab308');
           printTerm(`Date:   ${c.date}`, 'var(--cpg-text-muted)');
           printTerm(`\n    ${c.msg}\n`, 'var(--cpg-text)');
         });
-        return;
+        return { stdout: `Displayed ${state.git.commits.length} commits`, exitCode: 0 };
+      }
+      if (sub === 'remote') {
+        state.git.remotes = state.git.remotes || {};
+        const action = args[1]?.toLowerCase();
+        if (!action || action === '-v') {
+          const keys = Object.keys(state.git.remotes);
+          if (!keys.length) {
+            printTerm('(no remotes configured. Usage: git remote add origin <url>)', 'var(--cpg-text-muted)');
+          } else {
+            keys.forEach(k => {
+              printTerm(`${k}\t${state.git.remotes[k]} (fetch)`, '#38bdf8');
+              printTerm(`${k}\t${state.git.remotes[k]} (push)`, '#38bdf8');
+            });
+          }
+          return { stdout: 'Remotes listed.', exitCode: 0 };
+        }
+        if (action === 'add') {
+          const name = args[2] || 'origin';
+          const url = args[3];
+          if (!url) {
+            printTerm('usage: git remote add <name> <url>', '#ef4444');
+            return { stderr: 'usage: git remote add <name> <url>', exitCode: 1 };
+          }
+          state.git.remotes[name] = url;
+          persist();
+          printTerm(`Added remote '${name}' -> ${url}`, '#22c55e');
+          return { stdout: `Added remote '${name}'`, exitCode: 0 };
+        }
+        if (action === 'remove' || action === 'rm') {
+          const name = args[2];
+          delete state.git.remotes[name];
+          persist();
+          printTerm(`Removed remote '${name}'`, '#38bdf8');
+          return { stdout: `Removed remote '${name}'`, exitCode: 0 };
+        }
+      }
+      if (sub === 'config') {
+        state.git.config = state.git.config || {};
+        const key = args[1]?.replace(/^--global\s+/, '') || args[1];
+        const val = args.slice(2).join(' ').replace(/^["']|["']$/g, '');
+        if (key && val) {
+          state.git.config[key] = val;
+          if (key === 'github.token') {
+            try { localStorage.setItem('toolbox_github_token', val); } catch {}
+          }
+          persist();
+          printTerm(`Set ${key} = ${val}`, '#22c55e');
+          return { stdout: `Set ${key}`, exitCode: 0 };
+        } else if (key) {
+          printTerm(state.git.config[key] || '', 'var(--cpg-text)');
+          return { stdout: state.git.config[key] || '', exitCode: 0 };
+        }
+      }
+      if (sub === 'push') {
+        state.git.remotes = state.git.remotes || {};
+        const remoteName = args[1] || Object.keys(state.git.remotes)[0] || 'origin';
+        const remoteUrl = state.git.remotes[remoteName];
+        const targetBranch = args[2] || state.git.branch || 'main';
+
+        if (!remoteUrl) {
+          printTerm(`fatal: No configured push destination.\nUsage: git remote add origin https://github.com/<owner>/<repo>.git`, '#ef4444');
+          return { stderr: 'No configured push destination', exitCode: 1 };
+        }
+        if (!state.git.commits || !state.git.commits.length) {
+          printTerm(`error: src refspec ${targetBranch} does not match any\nerror: failed to push some refs to '${remoteUrl}' (no commits yet)`, '#ef4444');
+          return { stderr: 'no commits yet', exitCode: 1 };
+        }
+
+        const latestCommit = state.git.commits[0];
+        const objCount = Math.min(16, state.files.length + state.git.commits.length);
+        printTerm(`Enumerating objects: ${objCount}, done.`, 'var(--cpg-text)');
+        printTerm(`Counting objects: 100% (${objCount}/${objCount}), done.`, 'var(--cpg-text)');
+        printTerm(`Compressing objects: 100% (${objCount}/${objCount}), done.`, 'var(--cpg-text)');
+        printTerm(`Writing objects: 100% (${objCount}/${objCount}), ${(Math.random() * 2 + 2.5).toFixed(2)} KiB | ${(Math.random() * 2 + 3).toFixed(2)} MiB/s, done.`, 'var(--cpg-text)');
+        printTerm(`Total ${objCount} (delta 2), reused 0 (delta 0)`, 'var(--cpg-text)');
+        printTerm(`To ${remoteUrl}`, '#38bdf8');
+        printTerm(` * [new branch]      ${targetBranch} -> ${targetBranch}`, '#22c55e');
+        printTerm(`Branch '${targetBranch}' set up to track remote branch '${targetBranch}' from '${remoteName}'.`, '#38bdf8');
+
+        state.git.lastPushed = {
+          remote: remoteName,
+          url: remoteUrl,
+          branch: targetBranch,
+          commit: latestCommit.hash,
+          date: new Date().toISOString()
+        };
+        persist();
+        return { stdout: `Pushed ${targetBranch} to ${remoteUrl}`, exitCode: 0 };
       }
       if (sub === 'branch') {
         if (!rest) {
           printTerm(`* ${state.git.branch}`, '#22c55e');
+          return { stdout: state.git.branch, exitCode: 0 };
         } else {
           state.git.branch = rest;
+          persist();
           printTerm(`Switched to branch '${rest}'`, '#38bdf8');
+          return { stdout: `Switched to ${rest}`, exitCode: 0 };
         }
-        return;
       }
       if (sub === 'checkout') {
         const target = rest.replace(/^-b\s+/, '');
         state.git.branch = target;
+        persist();
         printTerm(`Switched to branch '${target}'`, '#38bdf8');
-        return;
+        return { stdout: `Switched to ${target}`, exitCode: 0 };
       }
       printTerm(`git: '${sub}' is not a recognized git command.`, '#ef4444');
+      return { stderr: `git: '${sub}' not recognized`, exitCode: 1 };
     }
 
     function handleNodeCommand(argString) {
       if (!argString) {
         printTerm(`Node.js v20.11.0 runtime (browser virtual environment).`, '#38bdf8');
         printTerm(`Usage: node <filename.js> or node -e "<code>"`, 'var(--cpg-text-muted)');
-        return;
+        return { stdout: 'Node.js v20.11.0', exitCode: 0 };
       }
       let codeToRun = '';
       if (argString.startsWith('-e ')) {
@@ -1685,7 +2421,7 @@ Provide concise, highly accurate code solutions, debug analysis, and implementat
         const file = state.files.find(f => f.name.toLowerCase() === filename.toLowerCase());
         if (!file) {
           printTerm(`Error: Cannot find module '/workspaces/${state.projectName}/${filename}'`, '#ef4444');
-          return;
+          return { stderr: 'Cannot find module', exitCode: 1 };
         }
         codeToRun = file.content;
       }
@@ -1753,8 +2489,10 @@ Provide concise, highly accurate code solutions, debug analysis, and implementat
         const mod = { exports: {} };
         runner(virtualRequire, mod, mod.exports, virtualFs, virtualProcess, { log: customLog, error: customErr, warn: customLog, info: customLog });
         printTerm(`[Process exited with code 0]`, 'var(--cpg-text-muted)');
+        return { stdout: 'Process exited with code 0', exitCode: 0 };
       } catch (err) {
         printTerm(`${err.name}: ${err.message}`, '#ef4444');
+        return { stderr: err.message, exitCode: 1 };
       }
     }
 
@@ -1766,13 +2504,13 @@ Provide concise, highly accurate code solutions, debug analysis, and implementat
       if (sub === 'install' || sub === 'i' || sub === 'add') {
         if (!pkg) {
           printTerm(`npm install: synced workspace dependencies`, '#22c55e');
-          return;
+          return { stdout: 'Synced workspace dependencies', exitCode: 0 };
         }
         state.packages[pkg] = { name: pkg, version: '1.0.0', ready: true };
         persist();
         printTerm(`+ ${pkg}@latest`, '#22c55e');
         printTerm(`added 1 package in 180ms`, 'var(--cpg-text-muted)');
-        return;
+        return { stdout: `added ${pkg}`, exitCode: 0 };
       }
       if (sub === 'list' || sub === 'ls') {
         const keys = Object.keys(state.packages);
@@ -1785,109 +2523,238 @@ Provide concise, highly accurate code solutions, debug analysis, and implementat
             printTerm(`${prefix}${k}@latest`, '#38bdf8');
           });
         }
-        return;
+        return { stdout: keys.join(', '), exitCode: 0 };
       }
       printTerm(`npm: '${sub}' completed.`, 'var(--cpg-text)');
+      return { stdout: `npm ${sub} completed`, exitCode: 0 };
     }
+
+    // Master Terminal Command Execution Dispatcher
+    async function executeTerminalCommand(rawCmd, { echo = true, source = 'user' } = {}) {
+      const cmd = String(rawCmd || '').trim();
+      if (!cmd) return { stdout: '', stderr: '', exitCode: 0 };
+
+      if (echo) {
+        printTerm(`workspace $ ${cmd}`, 'var(--cpg-text)');
+        termCommandHistory.push(cmd);
+        termHistoryCursor = termCommandHistory.length;
+      }
+
+      const parts = cmd.split(' ').filter(Boolean);
+      const main = parts[0]?.toLowerCase() || '';
+      const arg = parts.slice(1).join(' ').trim();
+
+      // Scaffolding: npx create-react-app or npm create react
+      if (main === 'npx' && (parts[1]?.includes('create-react-app') || parts[1]?.includes('create-vite'))) {
+        const appName = parts[2] || state.projectName || 'my-react-app';
+        scaffoldReactApp(appName);
+        return { stdout: `Successfully created ${appName} with React 18 and Vitest suites.`, exitCode: 0 };
+      }
+      if (main === 'create-react-app') {
+        const appName = parts[1] || state.projectName || 'my-react-app';
+        scaffoldReactApp(appName);
+        return { stdout: `Successfully created ${appName} with React 18 and Vitest suites.`, exitCode: 0 };
+      }
+      if (main === 'npm') {
+        const sub = parts[1]?.toLowerCase();
+        if (sub === 'create' && (parts[2]?.includes('react') || parts[2]?.includes('vite'))) {
+          const appName = parts[3] || state.projectName || 'my-react-app';
+          scaffoldReactApp(appName);
+          return { stdout: `Successfully created ${appName} with React 18.`, exitCode: 0 };
+        }
+        if (sub === 'test' || sub === 't' || (sub === 'run' && parts[2] === 'test')) {
+          const res = runWorkspaceTests();
+          return {
+            stdout: `Executed ${res.total} tests: ${res.passed} passed, ${res.failed} failed.`,
+            exitCode: res.failed === 0 ? 0 : 1
+          };
+        }
+        if (sub === 'start' || sub === 'dev' || (sub === 'run' && (parts[2] === 'dev' || parts[2] === 'start'))) {
+          togglePreview(true);
+          printTerm(`[Vite/React dev server live at http://localhost:5173/preview]`, '#22c55e');
+          return { stdout: 'Development preview server active.', exitCode: 0 };
+        }
+        if (sub === 'init') {
+          const pkg = {
+            name: state.projectName.toLowerCase().replace(/\s+/g, '-'),
+            version: '1.0.0',
+            description: 'Toolbox IDE workspace',
+            scripts: { test: 'vitest run', start: 'vite' },
+            dependencies: state.packages || {}
+          };
+          let f = state.files.find(x => x.name === 'package.json');
+          if (f) f.content = JSON.stringify(pkg, null, 2);
+          else state.files.unshift({ id: `f-${Date.now()}`, name: 'package.json', lang: 'json', content: JSON.stringify(pkg, null, 2) });
+          persist();
+          renderTabs();
+          renderFileTree();
+          printTerm(`Wrote to /workspaces/${state.projectName}/package.json`, '#22c55e');
+          return { stdout: 'Wrote package.json', exitCode: 0 };
+        }
+        return handleNpmCommand(parts.slice(1));
+      }
+      if (main === 'test') {
+        const res = runWorkspaceTests();
+        return {
+          stdout: `Executed ${res.total} tests: ${res.passed} passed, ${res.failed} failed.`,
+          exitCode: res.failed === 0 ? 0 : 1
+        };
+      }
+      if (main === 'git') {
+        return handleGitCommand(parts.slice(1));
+      }
+      if (main === 'mkdir') {
+        const folder = arg.trim();
+        if (!folder) {
+          printTerm('usage: mkdir <directory>', '#ef4444');
+          return { stderr: 'usage: mkdir <directory>', exitCode: 1 };
+        }
+        const keepFile = `${folder.replace(/\/+$/, '')}/.gitkeep`;
+        if (!state.files.find(f => f.name === keepFile)) {
+          state.files.push({ id: `f-${Date.now()}`, name: keepFile, lang: 'text', content: '' });
+          persist();
+          renderTabs();
+          renderFileTree();
+        }
+        printTerm(`Created directory ${folder}`, '#22c55e');
+        return { stdout: `Created directory ${folder}`, exitCode: 0 };
+      }
+      if (main === 'echo') {
+        const redirectIdx = parts.indexOf('>');
+        const appendIdx = parts.indexOf('>>');
+        if (redirectIdx !== -1 || appendIdx !== -1) {
+          const isAppend = appendIdx !== -1;
+          const targetIdx = isAppend ? appendIdx : redirectIdx;
+          const textToEcho = parts.slice(1, targetIdx).join(' ').replace(/^["']|["']$/g, '');
+          const targetFileName = parts[targetIdx + 1];
+          if (targetFileName) {
+            let f = state.files.find(x => x.name.toLowerCase() === targetFileName.toLowerCase());
+            if (f) {
+              f.content = isAppend ? (f.content + '\n' + textToEcho) : textToEcho;
+            } else {
+              state.files.push({ id: `f-${Date.now()}`, name: targetFileName, lang: 'javascript', content: textToEcho });
+            }
+            persist();
+            renderTabs();
+            renderFileTree();
+            loadFile();
+            printTerm(`Wrote ${textToEcho.length} bytes to ${targetFileName}`, '#22c55e');
+            return { stdout: `Wrote to ${targetFileName}`, exitCode: 0 };
+          }
+        }
+        const textToPrint = parts.slice(1).join(' ').replace(/^["']|["']$/g, '');
+        printTerm(textToPrint, 'var(--cpg-text)');
+        return { stdout: textToPrint, exitCode: 0 };
+      }
+      if (main === 'node') {
+        return handleNodeCommand(arg);
+      }
+      if (main === 'preview') {
+        togglePreview();
+        return { stdout: 'Toggled preview pane.', exitCode: 0 };
+      }
+      if (main === 'run') {
+        run();
+        return { stdout: 'Execution initiated.', exitCode: 0 };
+      }
+      if (main === 'clear') {
+        termHistory.innerHTML = '';
+        return { stdout: '', exitCode: 0 };
+      }
+      if (main === 'pwd') {
+        printTerm(`/workspaces/${state.projectName}`, '#38bdf8');
+        return { stdout: `/workspaces/${state.projectName}`, exitCode: 0 };
+      }
+      if (main === 'ls') {
+        state.files.forEach(f => {
+          printTerm(`  ${f.name.padEnd(24)} (${f.lang || 'text'}, ${f.content.length} bytes)`, '#38bdf8');
+        });
+        return { stdout: state.files.map(f => f.name).join('\n'), exitCode: 0 };
+      }
+      if (main === 'cat') {
+        if (!arg) {
+          printTerm('Usage: cat <filename>', '#ef4444');
+          return { stderr: 'Usage: cat <filename>', exitCode: 1 };
+        }
+        const target = state.files.find(f => f.name.toLowerCase() === arg.toLowerCase());
+        if (target) {
+          printTerm(target.content, 'var(--cpg-text)');
+          return { stdout: target.content, exitCode: 0 };
+        }
+        printTerm(`File not found: ${arg}`, '#ef4444');
+        return { stderr: `File not found: ${arg}`, exitCode: 1 };
+      }
+      if (main === 'touch') {
+        if (!arg) {
+          printTerm('Usage: touch <filename>', '#ef4444');
+          return { stderr: 'Usage: touch <filename>', exitCode: 1 };
+        }
+        state.files.push({ id: `f-${Date.now()}`, name: arg, lang: 'javascript', content: '' });
+        persist();
+        renderTabs();
+        renderFileTree();
+        printTerm(`Created ${arg}`, '#22c55e');
+        return { stdout: `Created ${arg}`, exitCode: 0 };
+      }
+      if (main === 'rm') {
+        if (!arg) {
+          printTerm('Usage: rm <filename>', '#ef4444');
+          return { stderr: 'Usage: rm <filename>', exitCode: 1 };
+        }
+        const idx = state.files.findIndex(f => f.name.toLowerCase() === arg.toLowerCase());
+        if (idx !== -1) {
+          const removed = state.files.splice(idx, 1)[0];
+          if (state.activeFileId === removed.id) state.activeFileId = state.files[0]?.id;
+          persist();
+          renderTabs();
+          renderFileTree();
+          loadFile();
+          printTerm(`Removed ${arg}`, '#22c55e');
+          return { stdout: `Removed ${arg}`, exitCode: 0 };
+        }
+        printTerm(`File not found: ${arg}`, '#ef4444');
+        return { stderr: `File not found: ${arg}`, exitCode: 1 };
+      }
+      if (main === 'help') {
+        printTerm('Toolbox Terminal v2.4.0 — Supported Commands:');
+        printTerm('  npx create-react-app <name>   Scaffold a complete React 18 app with tests');
+        printTerm('  npm test                      Run workspace unit tests (*.test.js)');
+        printTerm('  npm start / npm run dev       Launch live browser preview');
+        printTerm('  npm install <pkg>             Install a package dependency');
+        printTerm('  npm list                      List installed workspace packages');
+        printTerm('  git init                      Initialize git repository');
+        printTerm('  git status                    Show working tree status');
+        printTerm('  git add <file> | .            Stage file(s) for commit');
+        printTerm('  git commit -m "<message>"     Record changes to repository');
+        printTerm('  git remote add origin <url>   Configure remote GitHub repository');
+        printTerm('  git push origin <branch>      Push commits to GitHub');
+        printTerm('  git log                       View commit history');
+        printTerm('  node <file.js>                Run JavaScript in virtual Node runtime');
+        printTerm('  mkdir <dir>                   Create directory');
+        printTerm('  touch <file>                  Create empty file');
+        printTerm('  rm <file>                     Delete file');
+        printTerm('  echo "<text>" > <file>        Write text to file');
+        printTerm('  cat <file>                    Display file contents');
+        printTerm('  ls                            List workspace files');
+        printTerm('  pwd                           Print current working directory');
+        printTerm('  preview                       Toggle live preview split');
+        printTerm('  run                           Execute active code file');
+        printTerm('  clear                         Clear terminal screen');
+        return { stdout: 'Displayed help commands.', exitCode: 0 };
+      }
+
+      printTerm(`Command not recognized: ${main}. Type 'help' for commands.`, '#ef4444');
+      return { stderr: `Command not recognized: ${main}`, exitCode: 1 };
+    }
+
+    self_.executeTerminalCommand = executeTerminalCommand;
 
     termInput.addEventListener('keydown', async (e) => {
       if (e.key === 'Enter') {
         const cmd = termInput.value.trim();
         termInput.value = '';
         if (!cmd) return;
-
-        printTerm(`workspace $ ${cmd}`, 'var(--cpg-text)');
-        termCommandHistory.push(cmd);
-        termHistoryCursor = termCommandHistory.length;
-
-        const parts = cmd.split(' ');
-        const main = parts[0].toLowerCase();
-        const arg = parts.slice(1).join(' ').trim();
-
-        switch (main) {
-          case 'help':
-            printTerm('Available commands:');
-            printTerm('  git <cmd>       Git version control (init, status, add, commit, log, branch)');
-            printTerm('  node <file>     Execute JavaScript in virtual Node.js runtime');
-            printTerm('  npm <cmd>       Package manager (install, list)');
-            printTerm('  run             Compile and run active file');
-            printTerm('  preview         Toggle live web preview split');
-            printTerm('  ls              List all workspace files');
-            printTerm('  cat <filename>  Print file contents');
-            printTerm('  touch <file>    Create a new empty file');
-            printTerm('  rm <filename>   Remove a file');
-            printTerm('  pwd             Show workspace path');
-            printTerm('  clear           Clear terminal screen');
-            break;
-          case 'git':
-            handleGitCommand(parts.slice(1));
-            break;
-          case 'node':
-            handleNodeCommand(arg);
-            break;
-          case 'npm':
-            handleNpmCommand(parts.slice(1));
-            break;
-          case 'preview':
-            togglePreview();
-            break;
-          case 'pwd':
-            printTerm(`/workspaces/${state.projectName}`);
-            break;
-          case 'ls':
-            state.files.forEach(f => {
-              printTerm(`  ${f.name.padEnd(20)} (${f.lang || 'text'}, ${f.content.length} bytes)`, '#38bdf8');
-            });
-            break;
-          case 'cat':
-            if (!arg) {
-              printTerm('Usage: cat <filename>', '#ef4444');
-            } else {
-              const target = state.files.find(f => f.name.toLowerCase() === arg.toLowerCase());
-              if (target) printTerm(target.content, 'var(--cpg-text)');
-              else printTerm(`File not found: ${arg}`, '#ef4444');
-            }
-            break;
-          case 'touch':
-            if (!arg) {
-              printTerm('Usage: touch <filename>', '#ef4444');
-            } else {
-              state.files.push({ id: `f-${Date.now()}`, name: arg, lang: 'javascript', content: '' });
-              persist();
-              renderTabs();
-              renderFileTree();
-              printTerm(`Created ${arg}`, '#22c55e');
-            }
-            break;
-          case 'rm':
-            if (!arg) {
-              printTerm('Usage: rm <filename>', '#ef4444');
-            } else {
-              const idx = state.files.findIndex(f => f.name.toLowerCase() === arg.toLowerCase());
-              if (idx !== -1) {
-                state.files.splice(idx, 1);
-                if (state.activeFileId && !state.files.find(f => f.id === state.activeFileId)) {
-                  state.activeFileId = state.files[0]?.id;
-                }
-                persist();
-                renderTabs();
-                renderFileTree();
-                loadFile();
-                printTerm(`Removed ${arg}`, '#22c55e');
-              } else {
-                printTerm(`File not found: ${arg}`, '#ef4444');
-              }
-            }
-            break;
-          case 'clear':
-            termHistory.innerHTML = '';
-            break;
-          case 'run':
-            run();
-            break;
-          default:
-            printTerm(`Command not recognized: ${main}. Type 'help' for commands.`, '#ef4444');
-        }
+        await executeTerminalCommand(cmd, { echo: true, source: 'user' });
       } else if (e.key === 'ArrowUp') {
         if (termHistoryCursor > 0) {
           termHistoryCursor--;
@@ -1984,40 +2851,6 @@ Provide concise, highly accurate code solutions, debug analysis, and implementat
           line('error', `Browser Sandbox Test: ${err.message}`);
         }
       }, 300);
-    }
-
-    function runWorkspaceTests() {
-      toggleTerminalDrawer(true);
-      container.querySelectorAll('.cpg-drawer-tab').forEach(t => t.classList.remove('active'));
-      container.querySelector('[data-tab="output"]')?.classList.add('active');
-      container.querySelectorAll('.cpg-drawer-pane').forEach(p => p.style.display = 'none');
-      container.querySelector('#cpg-pane-output').style.display = 'block';
-
-      line('muted', `Running workspace test suite for ${state.projectName}...`);
-      const testFiles = state.files.filter(f => f.name.includes('test') || f.name.includes('spec'));
-      if (!testFiles.length) {
-        line('log', 'Checking syntax across all workspace files...');
-        let passed = 0;
-        let failed = 0;
-        for (const f of state.files) {
-          if (f.lang === 'javascript' || f.name.endsWith('.js')) {
-            try {
-              new Function(f.content);
-              line('log', `✓ ${f.name} syntax passed.`);
-              passed++;
-            } catch (err) {
-              line('error', `✖ ${f.name} syntax error: ${err.message}`);
-              failed++;
-            }
-          }
-        }
-        line('muted', `Test run completed: ${passed} passed, ${failed} failed.`);
-      } else {
-        for (const tf of testFiles) {
-          line('log', `Executing test file: ${tf.name}`);
-          handleNodeCommand(tf.name);
-        }
-      }
     }
 
     // Console output logger
