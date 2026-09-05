@@ -19,6 +19,17 @@ import { getCurrentUser } from '../lib/supabase.js';
 import { streamChatCompletion } from '../lib/ai-provider.js';
 import { marked } from 'marked';
 import { fetchPackageMetadata, searchNpmPackages, extractPackageImports, buildImportMap } from '../lib/npm-client.js';
+import {
+  checkIdeBackend,
+  syncWorkspaceToDisk,
+  fetchWorkspaceDiskFiles,
+  readWorkspaceDiskFile,
+  writeWorkspaceDiskFile,
+  deleteWorkspaceDiskFile,
+  executeRemoteCommand,
+  killRemoteProcess,
+  getDevServerPreviewUrl
+} from '../lib/ide-execution-client.js';
 
 const ALL = { ...LANGUAGES, ...REMOTE_LANGUAGES };
 const isRemote = (id) => Object.hasOwn(REMOTE_LANGUAGES, id);
@@ -523,7 +534,10 @@ export default {
       splitMode: workspace.splitMode || (workspace.files?.some(f => f.name.includes('.jsx') || f.name.toLowerCase() === 'index.html' || f.name.toLowerCase().endsWith('.html')) ? 'split' : 'code-only'),
       assistantOpen: false,
       git: { initialized: true, branch: 'main', staged: [], commits: [] },
-      packages: {}
+      packages: {},
+      cwd: '',
+      activeProcess: null,
+      backendOnline: false
     };
 
     if (!state.files.length) {
@@ -775,6 +789,8 @@ export default {
                   <button type="button" class="cpg-drawer-tab" data-tab="problems">Problems</button>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
+                  <span id="cpg-proc-status" style="display:none; font-size:0.7rem; padding:2px 7px; border-radius:4px; font-weight:600; background:rgba(34,197,94,0.15); color:#22c55e;">RUNNING</span>
+                  <button type="button" id="cpg-proc-stop-btn" style="display:none; padding:2px 8px; font-size:0.72rem; border-radius:4px; background:#ef4444; color:#fff; border:none; cursor:pointer; font-weight:600;" title="Cancel active command">■ Stop</button>
                   <span id="cpg-timing" style="color:var(--cpg-text-muted); font-size:0.72rem; font-family:monospace;"></span>
                   <button type="button" class="ide-btn-icon" id="cpg-term-clear-btn" title="Clear Console">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
@@ -789,7 +805,7 @@ export default {
               <div id="cpg-pane-terminal" class="cpg-drawer-pane" style="flex:1; overflow:auto; padding:8px 12px; font-family:'Fira Code', Consolas, monospace; font-size:0.8rem; background:var(--cpg-terminal-bg); color:var(--cpg-terminal-text);">
                 <div id="cpg-term-history" style="white-space:pre-wrap; line-height:1.45;"></div>
                 <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
-                  <span style="color:var(--cpg-text-muted); font-weight:600;">workspace $</span>
+                  <span id="cpg-term-prompt" style="color:var(--cpg-text-muted); font-weight:600; font-family:inherit;">workspace $</span>
                   <input type="text" id="cpg-term-input" autocomplete="off" spellcheck="false" style="flex:1; background:transparent; border:none; outline:none; color:var(--cpg-text); font-family:inherit; font-size:inherit;" />
                 </div>
               </div>
@@ -1845,8 +1861,77 @@ Always execute the necessary terminal commands to fulfill user requests so the u
       termHistory.parentElement.scrollTop = termHistory.parentElement.scrollHeight;
     }
 
-    printTerm(`Toolbox Terminal v2.3.0 [Workspace: ${state.projectName}]`, 'var(--cpg-accent)');
-    printTerm(`Built-in dev tools: git, node, npm, run, preview, ls, cat, help.\n`, 'var(--cpg-text-muted)');
+    function updatePrompt() {
+      const promptEl = container.querySelector('#cpg-term-prompt');
+      if (promptEl) {
+        promptEl.textContent = state.cwd ? `workspace/${state.cwd} $` : 'workspace $';
+      }
+    }
+
+    function updateProcessStatus(status) {
+      const badge = container.querySelector('#cpg-proc-status');
+      const stop = container.querySelector('#cpg-proc-stop-btn');
+      if (status === 'RUNNING') {
+        if (badge) { badge.style.display = 'inline-block'; badge.textContent = 'RUNNING'; }
+        if (stop) { stop.style.display = 'inline-block'; }
+      } else {
+        if (badge) { badge.style.display = 'none'; }
+        if (stop) { stop.style.display = 'none'; }
+      }
+    }
+
+    async function refreshFilesFromDisk() {
+      try {
+        const diskFiles = await fetchWorkspaceDiskFiles(state.workspaceId);
+        if (!Array.isArray(diskFiles) || !diskFiles.length) return;
+
+        let changed = false;
+        for (const df of diskFiles) {
+          if (df.isDirectory) continue;
+          let existing = state.files.find(f => f.name === df.path || f.name === df.name);
+          if (!existing) {
+            const content = await readWorkspaceDiskFile(state.workspaceId, df.path).catch(() => '');
+            const ext = (df.path || '').split('.').pop().toLowerCase();
+            const lang = ext === 'jsx' || ext === 'js' ? 'javascript' : (ext === 'css' ? 'css' : (ext === 'html' ? 'html' : (ext === 'json' ? 'json' : 'text')));
+            state.files.push({
+              id: `f-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              name: df.path,
+              lang,
+              content
+            });
+            changed = true;
+          }
+        }
+
+        if (changed) {
+          persist();
+          renderTabs();
+          renderFileTree();
+        }
+      } catch (err) {}
+    }
+
+    // Connect to real execution backend
+    checkIdeBackend().then(health => {
+      if (health.available) {
+        state.backendOnline = true;
+        syncWorkspaceToDisk(state.workspaceId, state.files).catch(() => {});
+        const toolList = Object.entries(health.tools || {})
+          .filter(([k, v]) => v)
+          .map(([k, v]) => `${k} (${v})`)
+          .join(', ');
+        printTerm(`Toolbox Development Shell [Workspace: ${state.projectName}]`, 'var(--cpg-accent)');
+        printTerm(`Real Execution Substrate: ${health.platform} (${health.arch || 'x64'}) | ${toolList || 'node'}\n`, 'var(--cpg-text-muted)');
+      } else {
+        state.backendOnline = false;
+        printTerm(`Toolbox Terminal [Workspace: ${state.projectName}]`, 'var(--cpg-accent)');
+        printTerm(`Execution backend offline. Local in-browser WebAssembly runtimes available (JS, Python, SQLite, Lua).\n`, 'var(--cpg-text-muted)');
+      }
+    }).catch(() => {
+      state.backendOnline = false;
+      printTerm(`Toolbox Terminal [Workspace: ${state.projectName}]`, 'var(--cpg-accent)');
+      printTerm(`In-browser execution mode.\n`, 'var(--cpg-text-muted)');
+    });
 
     // Scaffolding for React 18 Application
     function scaffoldReactApp(appName = 'react-app') {
@@ -2866,8 +2951,9 @@ if (container) {
       const cmd = String(rawCmd || '').trim();
       if (!cmd) return { stdout: '', stderr: '', exitCode: 0 };
 
+      const promptStr = state.cwd ? `workspace/${state.cwd} $` : 'workspace $';
       if (echo) {
-        printTerm(`workspace $ ${cmd}`, 'var(--cpg-text)');
+        printTerm(`${promptStr} ${cmd}`, 'var(--cpg-text)');
         termCommandHistory.push(cmd);
         termHistoryCursor = termCommandHistory.length;
       }
@@ -2876,24 +2962,179 @@ if (container) {
       const main = parts[0]?.toLowerCase() || '';
       const arg = parts.slice(1).join(' ').trim();
 
-      // Scaffolding: npx create-react-app or npm create react
-      if (main === 'npx' && (parts[1]?.includes('create-react-app') || parts[1]?.includes('create-vite'))) {
-        const appName = parts[2] || state.projectName || 'my-react-app';
+      // Client Built-in Controls
+      if (main === 'clear') {
+        termHistory.innerHTML = '';
+        return { stdout: '', exitCode: 0 };
+      }
+
+      if (main === 'preview') {
+        togglePreview();
+        return { stdout: 'Toggled preview pane.', exitCode: 0 };
+      }
+
+      if (main === 'run' && !arg) {
+        run();
+        return { stdout: 'Execution initiated.', exitCode: 0 };
+      }
+
+      if (main === 'cd') {
+        const target = arg.trim();
+        if (!target || target === '~' || target === '/') {
+          state.cwd = '';
+        } else if (target === '..') {
+          const segs = state.cwd.split('/').filter(Boolean);
+          segs.pop();
+          state.cwd = segs.join('/');
+        } else {
+          const cleanSub = target.replace(/^\/+/, '').replace(/\/+$/, '');
+          state.cwd = state.cwd ? `${state.cwd}/${cleanSub}` : cleanSub;
+        }
+        updatePrompt();
+        return { stdout: state.cwd ? `/${state.cwd}` : '/', exitCode: 0 };
+      }
+
+      if (main === 'pwd') {
+        const dir = state.cwd ? `/workspaces/${state.projectName}/${state.cwd}` : `/workspaces/${state.projectName}`;
+        printTerm(dir, '#38bdf8');
+        return { stdout: dir, exitCode: 0 };
+      }
+
+      if (main === 'help') {
+        printTerm('Toolbox Terminal — Real Execution Shell:');
+        printTerm('  npx create-react-app <name>   Scaffold a complete React 18 app with tests');
+        printTerm('  node <file.js> | node -e "..."     Run Node.js execution');
+        printTerm('  npm install <pkg>             Install packages to workspace');
+        printTerm('  npm test                      Execute workspace unit test suites');
+        printTerm('  npm start / npm run dev       Launch live dev server and preview');
+        printTerm('  npm run build                 Compile and bundle project');
+        printTerm('  git status | add | commit     Full git version control lifecycle');
+        printTerm('  git remote add | git push     Configure remote and push to repository');
+        printTerm('  cd <dir> | pwd | ls | mkdir   Filesystem navigation & management');
+        printTerm('  touch <file> | rm <file>      File management');
+        printTerm('  preview                       Toggle live preview pane');
+        printTerm('  clear                         Clear terminal screen');
+        return { stdout: 'Displayed help commands.', exitCode: 0 };
+      }
+
+      // 1. Scaffolding for React / Vite
+      if ((main === 'npx' && (parts[1]?.includes('create-react-app') || parts[1]?.includes('create-vite'))) ||
+          main === 'create-react-app' ||
+          (main === 'npm' && parts[1] === 'create' && (parts[2]?.includes('react') || parts[2]?.includes('vite')))) {
+        const appName = parts[2] && !parts[2].startsWith('-') ? parts[2] : (parts[3] || state.projectName || 'my-react-app');
         scaffoldReactApp(appName);
+        await syncWorkspaceToDisk(state.workspaceId, state.files).catch(() => {});
         return { stdout: `Successfully created ${appName} with React 18 and Vitest suites.`, exitCode: 0 };
       }
-      if (main === 'create-react-app') {
-        const appName = parts[1] || state.projectName || 'my-react-app';
-        scaffoldReactApp(appName);
-        return { stdout: `Successfully created ${appName} with React 18 and Vitest suites.`, exitCode: 0 };
+
+      // 2. Workspace Unit Test Runner
+      if (main === 'test' || (main === 'npm' && (parts[1] === 'test' || parts[1] === 't' || (parts[1] === 'run' && parts[2] === 'test')))) {
+        const res = runWorkspaceTests();
+        return {
+          stdout: `Executed ${res.total} tests: ${res.passed} passed, ${res.failed} failed.`,
+          exitCode: res.failed === 0 ? 0 : 1
+        };
+      }
+
+      // 3. Git Version Control Management
+      if (main === 'git') {
+        return handleGitCommand(parts.slice(1));
+      }
+
+      // 4. NPM Package Registry Operations (install, view, list, init)
+      if (main === 'npm' && parts[1] && !['start', 'dev', 'run', 'build'].includes(parts[1])) {
+        return await handleNpmCommand(parts.slice(1));
+      }
+
+      // 5. Real Execution Backend Check
+      const health = await checkIdeBackend();
+      if (health.available) {
+        // Ensure disk workspace is synchronized with active files
+        await syncWorkspaceToDisk(state.workspaceId, state.files).catch(() => {});
+
+        updateProcessStatus('RUNNING');
+        let stdoutAccum = '';
+        let stderrAccum = '';
+
+        try {
+          const remoteExec = await executeRemoteCommand(state.workspaceId, cmd, {
+            cwd: state.cwd,
+            onStdout: (text) => {
+              stdoutAccum += text;
+              printTerm(text, 'var(--cpg-terminal-text)');
+            },
+            onStderr: (text) => {
+              stderrAccum += text;
+              printTerm(text, '#ef4444');
+            },
+            onSystem: (text) => {
+              printTerm(text, '#eab308');
+            },
+            onPort: (port) => {
+              printTerm(`\n➜ Development server running on port ${port}`, '#22c55e');
+              printTerm(`➜ Live preview mounted: ${getDevServerPreviewUrl(port)}\n`, '#38bdf8');
+              const previewIframe = container.querySelector('#cpg-preview');
+              if (previewIframe) {
+                previewIframe.src = getDevServerPreviewUrl(port);
+              }
+              state.splitMode = 'split';
+              togglePreview(true);
+            },
+            onExit: (exitInfo) => {
+              updateProcessStatus('IDLE');
+              if (exitInfo.exitCode !== 0 && exitInfo.status !== 'CANCELLED') {
+                printTerm(`\n[Process exited with code ${exitInfo.exitCode}]`, '#ef4444');
+              }
+            }
+          });
+
+          state.activeProcess = remoteExec;
+          const exitRes = await remoteExec.promise;
+          state.activeProcess = null;
+          updateProcessStatus('IDLE');
+
+          // Synchronize files created or modified on disk
+          await refreshFilesFromDisk();
+
+          if (exitRes.exitCode === 0 || stdoutAccum || stderrAccum) {
+            return {
+              stdout: stdoutAccum,
+              stderr: stderrAccum,
+              exitCode: exitRes.exitCode ?? 0
+            };
+          }
+        } catch (err) {
+          state.activeProcess = null;
+          updateProcessStatus('IDLE');
+          // If remote command failed or tool not present on host, try local fallbacks
+          if (main === 'npm' && (parts[1] === 'test' || parts[1] === 't' || (parts[1] === 'run' && parts[2] === 'test'))) {
+            const res = runWorkspaceTests();
+            return {
+              stdout: `Executed ${res.total} tests: ${res.passed} passed, ${res.failed} failed.`,
+              exitCode: res.failed === 0 ? 0 : 1
+            };
+          }
+          if (main === 'git') {
+            return handleGitCommand(parts.slice(1));
+          }
+          if (main === 'npm') {
+            return await handleNpmCommand(parts.slice(1));
+          }
+          printTerm(`[Execution Error]: ${err.message}`, '#ef4444');
+          return { stderr: err.message, exitCode: 1 };
+        }
+      }
+
+      // 3. Fallback Execution when Backend Offline
+      if (main === 'test') {
+        const res = runWorkspaceTests();
+        return {
+          stdout: `Executed ${res.total} tests: ${res.passed} passed, ${res.failed} failed.`,
+          exitCode: res.failed === 0 ? 0 : 1
+        };
       }
       if (main === 'npm') {
         const sub = parts[1]?.toLowerCase();
-        if (sub === 'create' && (parts[2]?.includes('react') || parts[2]?.includes('vite'))) {
-          const appName = parts[3] || state.projectName || 'my-react-app';
-          scaffoldReactApp(appName);
-          return { stdout: `Successfully created ${appName} with React 18.`, exitCode: 0 };
-        }
         if (sub === 'test' || sub === 't' || (sub === 'run' && parts[2] === 'test')) {
           const res = runWorkspaceTests();
           return {
@@ -2911,47 +3152,13 @@ if (container) {
           printTerm(`➜ React 18 live preview mounted and running in preview pane.`, 'var(--cpg-text)');
           return { stdout: 'Development preview server active.', exitCode: 0 };
         }
-        if (sub === 'build' || (sub === 'run' && parts[2] === 'build')) {
-          togglePreview(true);
-          updateWorkspacePreview();
-          persist();
-          printTerm(`\n> ${state.projectName}@0.1.0 build`, 'var(--cpg-text-muted)');
-          printTerm(`> vite build\n`, 'var(--cpg-text-muted)');
-          printTerm(`✓ 12 modules transformed.`, '#22c55e');
-          printTerm(`dist/index.html                   0.54 kB │ gzip:  0.32 kB`, 'var(--cpg-text)');
-          printTerm(`dist/assets/index-DkL3mKq_.css    1.28 kB │ gzip:  0.64 kB`, 'var(--cpg-text)');
-          printTerm(`dist/assets/index-BpR98xZ2.js   142.15 kB │ gzip: 45.32 kB`, 'var(--cpg-text)');
-          printTerm(`✓ built in 142ms`, '#22c55e');
-          return { stdout: 'Build successful. Artifacts generated in dist/', exitCode: 0 };
-        }
-        if (sub === 'init') {
-          const pkg = {
-            name: state.projectName.toLowerCase().replace(/\s+/g, '-'),
-            version: '1.0.0',
-            description: 'Toolbox IDE workspace',
-            scripts: { test: 'vitest run', start: 'vite' },
-            dependencies: state.packages || {}
-          };
-          let f = state.files.find(x => x.name === 'package.json');
-          if (f) f.content = JSON.stringify(pkg, null, 2);
-          else state.files.unshift({ id: `f-${Date.now()}`, name: 'package.json', lang: 'json', content: JSON.stringify(pkg, null, 2) });
-          persist();
-          renderTabs();
-          renderFileTree();
-          printTerm(`Wrote to /workspaces/${state.projectName}/package.json`, '#22c55e');
-          return { stdout: 'Wrote package.json', exitCode: 0 };
-        }
         return await handleNpmCommand(parts.slice(1));
-      }
-      if (main === 'test') {
-        const res = runWorkspaceTests();
-        return {
-          stdout: `Executed ${res.total} tests: ${res.passed} passed, ${res.failed} failed.`,
-          exitCode: res.failed === 0 ? 0 : 1
-        };
       }
       if (main === 'git') {
         return handleGitCommand(parts.slice(1));
+      }
+      if (main === 'node') {
+        return await handleNodeCommand(arg);
       }
       if (main === 'mkdir') {
         const folder = arg.trim();
@@ -2995,25 +3202,6 @@ if (container) {
         const textToPrint = parts.slice(1).join(' ').replace(/^["']|["']$/g, '');
         printTerm(textToPrint, 'var(--cpg-text)');
         return { stdout: textToPrint, exitCode: 0 };
-      }
-      if (main === 'node') {
-        return await handleNodeCommand(arg);
-      }
-      if (main === 'preview') {
-        togglePreview();
-        return { stdout: 'Toggled preview pane.', exitCode: 0 };
-      }
-      if (main === 'run') {
-        run();
-        return { stdout: 'Execution initiated.', exitCode: 0 };
-      }
-      if (main === 'clear') {
-        termHistory.innerHTML = '';
-        return { stdout: '', exitCode: 0 };
-      }
-      if (main === 'pwd') {
-        printTerm(`/workspaces/${state.projectName}`, '#38bdf8');
-        return { stdout: `/workspaces/${state.projectName}`, exitCode: 0 };
       }
       if (main === 'ls') {
         state.files.forEach(f => {
@@ -3065,33 +3253,6 @@ if (container) {
         printTerm(`File not found: ${arg}`, '#ef4444');
         return { stderr: `File not found: ${arg}`, exitCode: 1 };
       }
-      if (main === 'help') {
-        printTerm('Toolbox Terminal v2.4.0 — Supported Commands:');
-        printTerm('  npx create-react-app <name>   Scaffold a complete React 18 app with tests');
-        printTerm('  npm test                      Run workspace unit tests (*.test.js)');
-        printTerm('  npm start / npm run dev       Launch live browser preview');
-        printTerm('  npm install <pkg>             Install a package dependency');
-        printTerm('  npm list                      List installed workspace packages');
-        printTerm('  git init                      Initialize git repository');
-        printTerm('  git status                    Show working tree status');
-        printTerm('  git add <file> | .            Stage file(s) for commit');
-        printTerm('  git commit -m "<message>"     Record changes to repository');
-        printTerm('  git remote add origin <url>   Configure remote GitHub repository');
-        printTerm('  git push origin <branch>      Push commits to GitHub');
-        printTerm('  git log                       View commit history');
-        printTerm('  node <file.js>                Run JavaScript in virtual Node runtime');
-        printTerm('  mkdir <dir>                   Create directory');
-        printTerm('  touch <file>                  Create empty file');
-        printTerm('  rm <file>                     Delete file');
-        printTerm('  echo "<text>" > <file>        Write text to file');
-        printTerm('  cat <file>                    Display file contents');
-        printTerm('  ls                            List workspace files');
-        printTerm('  pwd                           Print current working directory');
-        printTerm('  preview                       Toggle live preview split');
-        printTerm('  run                           Execute active code file');
-        printTerm('  clear                         Clear terminal screen');
-        return { stdout: 'Displayed help commands.', exitCode: 0 };
-      }
 
       printTerm(`Command not recognized: ${main}. Type 'help' for commands.`, '#ef4444');
       return { stderr: `Command not recognized: ${main}`, exitCode: 1 };
@@ -3099,7 +3260,25 @@ if (container) {
 
     self_.executeTerminalCommand = executeTerminalCommand;
 
+    const stopBtn = container.querySelector('#cpg-proc-stop-btn');
+    if (stopBtn) {
+      stopBtn.addEventListener('click', () => {
+        if (state.activeProcess) {
+          state.activeProcess.kill('SIGINT');
+          printTerm('^C [Process stopped by user]', '#eab308');
+        }
+      });
+    }
+
     termInput.addEventListener('keydown', async (e) => {
+      if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) {
+        if (state.activeProcess) {
+          e.preventDefault();
+          state.activeProcess.kill('SIGINT');
+          printTerm('^C [Process interrupted]', '#eab308');
+          return;
+        }
+      }
       if (e.key === 'Enter') {
         const cmd = termInput.value.trim();
         termInput.value = '';

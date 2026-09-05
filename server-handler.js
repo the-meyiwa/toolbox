@@ -6,6 +6,20 @@
 
 import crypto from 'crypto';
 import { isBlockedHost, parseWebPage, haversineDistanceKm } from './js/lib/web-scraper-engine.js';
+import {
+  getWorkspaceDir,
+  listWorkspaceFiles,
+  writeWorkspaceFile,
+  readWorkspaceFile,
+  deleteWorkspaceFile,
+  syncWorkspace,
+  detectSystemTools,
+  spawnProcess,
+  killProcess,
+  getProcess,
+  listWorkspaceProcesses,
+  proxyDevServerRequest
+} from './server-execution-engine.js';
 
 // Idempotency store with TTL (5 minutes)
 const IDEMPOTENCY_TTL_MS = 5 * 60 * 1000;
@@ -45,6 +59,213 @@ export async function handleApiRequest(request, response) {
     response.writeHead(204);
     response.end();
     return true;
+  }
+
+  // --- Toolbox IDE Real Code Execution & Workspace API ---
+  if (url.pathname.startsWith('/api/ide/')) {
+    // 1. Dev Server Reverse Proxy Preview (/api/ide/preview/:port/*)
+    const previewMatch = url.pathname.match(/^\/api\/ide\/preview\/(\d+)/);
+    if (previewMatch) {
+      proxyDevServerRequest(previewMatch[1], request, response);
+      return true;
+    }
+
+    // Helper to read request body as JSON
+    const readJsonBody = () => new Promise((resolve, reject) => {
+      let body = '';
+      request.on('data', chunk => { body += chunk; });
+      request.on('end', () => {
+        try {
+          resolve(body ? JSON.parse(body) : {});
+        } catch (err) {
+          reject(new Error('Invalid JSON payload'));
+        }
+      });
+      request.on('error', reject);
+    });
+
+    try {
+      // 2. Health & Toolchain Detection
+      if (url.pathname === '/api/ide/health' && request.method === 'GET') {
+        const tools = await detectSystemTools();
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({
+          success: true,
+          status: 'ok',
+          platform: process.platform,
+          arch: process.arch,
+          tools
+        }));
+        return true;
+      }
+
+      // 3. Workspace File Synchronization
+      if (url.pathname === '/api/ide/workspace/sync' && request.method === 'POST') {
+        const data = await readJsonBody();
+        const wsId = data.workspaceId || data.id || 'default';
+        const files = Array.isArray(data.files) ? data.files : [];
+        const result = await syncWorkspace(wsId, files);
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: true, ...result }));
+        return true;
+      }
+
+      // 4. List Workspace Files on Disk
+      if (url.pathname === '/api/ide/workspace/files' && request.method === 'GET') {
+        const wsId = url.searchParams.get('workspaceId') || url.searchParams.get('id') || 'default';
+        const files = await listWorkspaceFiles(wsId);
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: true, files }));
+        return true;
+      }
+
+      // 5. Read Workspace File
+      if (url.pathname === '/api/ide/workspace/file' && request.method === 'GET') {
+        const wsId = url.searchParams.get('workspaceId') || url.searchParams.get('id') || 'default';
+        const filePath = url.searchParams.get('path') || '';
+        const content = await readWorkspaceFile(wsId, filePath);
+        response.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+        response.end(content);
+        return true;
+      }
+
+      // 6. Write Workspace File
+      if (url.pathname === '/api/ide/workspace/file' && request.method === 'POST') {
+        const data = await readJsonBody();
+        const wsId = data.workspaceId || data.id || 'default';
+        const filePath = data.path || '';
+        const content = data.content ?? '';
+        const meta = await writeWorkspaceFile(wsId, filePath, content);
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: true, file: meta }));
+        return true;
+      }
+
+      // 7. Delete Workspace File
+      if (url.pathname === '/api/ide/workspace/file' && request.method === 'DELETE') {
+        const wsId = url.searchParams.get('workspaceId') || 'default';
+        const filePath = url.searchParams.get('path') || '';
+        const deleted = await deleteWorkspaceFile(wsId, filePath);
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: true, deleted }));
+        return true;
+      }
+
+      // 8. Real Command Execution (Spawn)
+      if (url.pathname === '/api/ide/exec' && request.method === 'POST') {
+        const data = await readJsonBody();
+        const wsId = data.workspaceId || data.id || 'default';
+        const cmd = String(data.command || data.cmd || '').trim();
+        if (!cmd) {
+          response.writeHead(400, { 'Content-Type': 'application/json' });
+          response.end(JSON.stringify({ success: false, error: 'Command is required' }));
+          return true;
+        }
+
+        const proc = spawnProcess(wsId, cmd, {
+          cwd: data.cwd || '',
+          env: data.env || {},
+          timeoutMs: data.timeoutMs || 300000
+        });
+
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({
+          success: true,
+          processId: proc.id,
+          pid: proc.pid,
+          status: proc.status,
+          cwd: proc.cwd,
+          startedAt: proc.startedAt
+        }));
+        return true;
+      }
+
+      // 9. Real-time Output Streaming via Server-Sent Events (SSE)
+      if (url.pathname === '/api/ide/exec/stream' && request.method === 'GET') {
+        const processId = url.searchParams.get('processId');
+        const proc = getProcess(processId);
+
+        if (!proc) {
+          response.writeHead(404, { 'Content-Type': 'application/json' });
+          response.end(JSON.stringify({ success: false, error: `Process ${processId} not found` }));
+          return true;
+        }
+
+        response.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache, no-transform',
+          'Connection': 'keep-alive',
+          'X-Accel-Buffering': 'no'
+        });
+
+        // Flush any past output buffer
+        for (const entry of proc.outputHistory) {
+          response.write(`event: output\ndata: ${JSON.stringify(entry)}\n\n`);
+        }
+
+        // Flush any already-detected ports
+        for (const port of proc.detectedPorts) {
+          response.write(`event: port\ndata: ${JSON.stringify({ type: 'port', port })}\n\n`);
+        }
+
+        // If process already finished, send exit event and close stream
+        if (proc.status !== 'RUNNING') {
+          response.write(`event: exit\ndata: ${JSON.stringify({
+            type: 'exit',
+            exitCode: proc.exitCode,
+            status: proc.status,
+            durationMs: (proc.endedAt || Date.now()) - proc.startedAt
+          })}\n\n`);
+          response.end();
+          return true;
+        }
+
+        // Listen for live events
+        const listener = (event) => {
+          try {
+            response.write(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
+            if (event.type === 'exit') {
+              proc.listeners.delete(listener);
+              response.end();
+            }
+          } catch (err) {
+            proc.listeners.delete(listener);
+          }
+        };
+
+        proc.listeners.add(listener);
+        request.on('close', () => {
+          proc.listeners.delete(listener);
+        });
+
+        return true;
+      }
+
+      // 10. Kill / Terminate Process
+      if (url.pathname === '/api/ide/exec/kill' && request.method === 'POST') {
+        const data = await readJsonBody();
+        const processId = data.processId;
+        const signal = data.signal || 'SIGTERM';
+        const killed = killProcess(processId, signal);
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: true, killed }));
+        return true;
+      }
+
+      // 11. List Active & Recent Processes
+      if (url.pathname === '/api/ide/processes' && request.method === 'GET') {
+        const wsId = url.searchParams.get('workspaceId') || 'default';
+        const list = listWorkspaceProcesses(wsId);
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: true, processes: list }));
+        return true;
+      }
+    } catch (err) {
+      console.error('[API /api/ide Error]:', err);
+      response.writeHead(500, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify({ success: false, error: err.message }));
+      return true;
+    }
   }
 
   // --- Anonymous File Drop Signaling Relay ---
