@@ -17,6 +17,7 @@ import {
   importFromICS,
   CATEGORIES
 } from '../lib/calendar-store.js';
+import { attachSegmentedSlider } from '../lib/segmented-slider.js';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -692,12 +693,16 @@ export default {
     });
 
     // View Switching
+    const calSwitcher = container.querySelector('.cal-view-switcher');
+    const updateCalSlider = calSwitcher ? attachSegmentedSlider(calSwitcher, '.cal-view-btn') : null;
+
     viewBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         viewBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentView = btn.dataset.view;
         renderCurrentView();
+        updateCalSlider?.();
       });
     });
 

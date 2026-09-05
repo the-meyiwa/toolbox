@@ -70,7 +70,11 @@ function createModal() {
       <!-- Modal Header -->
       <div class="settings-modal-header" style="flex-shrink: 0; padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
         <div class="settings-title-wrap" style="display: flex; align-items: center; gap: 12px;">
-          <div class="settings-title-icon" style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-subtle); display: flex; align-items: center; justify-content: center; color: var(--text);">
+          <button type="button" id="settings-back-btn" aria-label="Back to Settings" style="display: none; background: none; border: 1px solid var(--border); cursor: pointer; color: var(--text); padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; align-items: center; gap: 6px;">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            <span>Back</span>
+          </button>
+          <div class="settings-title-icon" id="settings-title-icon" style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-subtle); display: flex; align-items: center; justify-content: center; color: var(--text);">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="3"></circle>
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
@@ -78,7 +82,7 @@ function createModal() {
           </div>
           <div>
             <h2 id="settings-modal-title" class="settings-modal-title" style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text);">Toolbox Settings</h2>
-            <p class="settings-modal-subtitle" style="margin: 2px 0 0; font-size: 0.76rem; color: var(--text-muted);">Appearance, Preferences, AI, and Profile Identity</p>
+            <p id="settings-modal-subtitle" class="settings-modal-subtitle" style="margin: 2px 0 0; font-size: 0.76rem; color: var(--text-muted);">Appearance, Preferences, AI, and Profile Identity</p>
           </div>
         </div>
         <button type="button" class="settings-modal-close" id="close-settings" aria-label="Close Settings" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 6px; border-radius: 6px;">
@@ -89,7 +93,7 @@ function createModal() {
         </button>
       </div>
 
-      <!-- Scrollable Modal Body -->
+      <!-- View 1: Main Settings Scrollable Body -->
       <div class="settings-modal-body" id="settings-modal-scroll" style="flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 32px;">
         
         <!-- SECTION 1: PROFILE & IDENTITY -->
@@ -126,18 +130,126 @@ function createModal() {
         </section>
 
       </div>
+
+      <!-- View 2: Dedicated Avatars Page -->
+      <div class="settings-modal-body settings-avatar-page" id="settings-avatars-view" style="display: none; flex: 1; overflow-y: auto; padding: 24px; flex-direction: column; gap: 20px;">
+        <div style="background:var(--bg-subtle); border:1px solid var(--border); border-radius:14px; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h3 style="margin:0 0 4px; font-size:1.05rem; font-weight:700; color:var(--text);">Personalities &amp; Legends</h3>
+            <p style="margin:0; font-size:0.8rem; color:var(--text-secondary); line-height:1.4;">
+              Choose an avatar that fits your persona. Selected avatars update immediately across your workspace, file explorer, and Spaces.
+            </p>
+          </div>
+        </div>
+        <div class="settings-avatar-grid-gallery" id="settings-avatar-gallery"></div>
+      </div>
     </div>
   `;
 
   document.body.appendChild(modalEl);
 
-  // Close triggers
+  // Header button triggers
   modalEl.querySelector('#close-settings').addEventListener('click', closeSettings);
+  modalEl.querySelector('#settings-back-btn')?.addEventListener('click', showMainView);
   modalEl.addEventListener('click', (e) => {
     if (e.target === modalEl) closeSettings();
   });
 
   return modalEl;
+}
+
+export function showMainView() {
+  if (!modalEl) return;
+  const mainScroll = modalEl.querySelector('#settings-modal-scroll');
+  const avatarsView = modalEl.querySelector('#settings-avatars-view');
+  const backBtn = modalEl.querySelector('#settings-back-btn');
+  const titleIcon = modalEl.querySelector('#settings-title-icon');
+  const title = modalEl.querySelector('#settings-modal-title');
+  const subtitle = modalEl.querySelector('#settings-modal-subtitle');
+
+  if (mainScroll) mainScroll.style.display = 'flex';
+  if (avatarsView) avatarsView.style.display = 'none';
+  if (backBtn) backBtn.style.display = 'none';
+  if (titleIcon) titleIcon.style.display = 'flex';
+  if (title) title.textContent = 'Toolbox Settings';
+  if (subtitle) subtitle.textContent = 'Appearance, Preferences, AI, and Profile Identity';
+
+  renderProfileSettings();
+}
+
+export function showAvatarView() {
+  if (!modalEl) return;
+  const mainScroll = modalEl.querySelector('#settings-modal-scroll');
+  const avatarsView = modalEl.querySelector('#settings-avatars-view');
+  const backBtn = modalEl.querySelector('#settings-back-btn');
+  const titleIcon = modalEl.querySelector('#settings-title-icon');
+  const title = modalEl.querySelector('#settings-modal-title');
+  const subtitle = modalEl.querySelector('#settings-modal-subtitle');
+
+  if (mainScroll) mainScroll.style.display = 'none';
+  if (avatarsView) avatarsView.style.display = 'flex';
+  if (backBtn) backBtn.style.display = 'inline-flex';
+  if (titleIcon) titleIcon.style.display = 'none';
+  if (title) title.textContent = 'Choose Your Avatar';
+  if (subtitle) subtitle.textContent = 'Character bios and personal companions';
+
+  renderAvatarGallery();
+}
+
+function renderAvatarGallery() {
+  if (!modalEl) return;
+  const gallery = modalEl.querySelector('#settings-avatar-gallery');
+  if (!gallery) return;
+
+  const user = getCurrentUser();
+  const settings = getSettings();
+  const activePicId = user?.profilePicture || user?.user_metadata?.profile_picture || settings.profilePicture || 'default';
+
+  gallery.innerHTML = PROFILE_PICTURES.map(pic => {
+    const isSelected = pic.id === activePicId;
+    const src = getProfilePictureSrc(pic.id);
+    return `
+      <div class="avatar-story-card ${isSelected ? 'is-active' : ''}" data-avatar-id="${escapeHtml(pic.id)}">
+        <div class="avatar-story-header">
+          <div class="avatar-story-avatar-wrap">
+            ${src ? `
+              <img src="${src}" alt="${escapeHtml(pic.name)}">
+            ` : `
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text);">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            `}
+          </div>
+          <div>
+            <h4 class="avatar-story-name">${escapeHtml(pic.name)}</h4>
+            ${isSelected ? `<span class="avatar-story-badge">Current Avatar</span>` : ''}
+          </div>
+        </div>
+        <p class="avatar-story-bio">${escapeHtml(pic.story || 'A loyal profile avatar for Toolbox.')}</p>
+        <div class="avatar-story-action">
+          <button type="button" class="btn ${isSelected ? 'btn-secondary' : 'btn-primary'} btn-sm btn-pick-avatar" data-avatar-id="${escapeHtml(pic.id)}" style="padding:4px 14px; font-size:0.78rem; font-weight:600;">
+            ${isSelected ? 'Active' : 'Choose'}
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const pickAvatar = (id) => {
+    const found = PROFILE_PICTURES.find(p => p.id === id);
+    const src = getProfilePictureSrc(id);
+    updateUserProfile({ profilePicture: id, avatarUrl: src });
+    updateSettings({ profilePicture: id });
+    renderAvatarGallery();
+  };
+
+  gallery.querySelectorAll('.avatar-story-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const id = card.getAttribute('data-avatar-id');
+      if (id) pickAvatar(id);
+    });
+  });
 }
 
 function renderProfileSettings() {
@@ -240,29 +352,28 @@ function renderProfileSettings() {
         </div>
       </div>
 
-      <!-- Avatar Picker Grid -->
-      <div style="border-top:1px solid var(--border); padding-top:14px;">
-        <div style="font-size:0.78rem; font-weight:700; color:var(--text); margin-bottom:10px;">
-          Choose Display Picture
+      <!-- Avatar Preview & Dedicated Change Avatar Action -->
+      <div style="border-top:1px solid var(--border); padding-top:14px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div id="settings-avatar-current-preview" style="flex-shrink:0;">
+            ${getUserAvatarHtml(activePicId, 56)}
+          </div>
+          <div>
+            <div style="font-size:0.88rem; font-weight:700; color:var(--text);">
+              ${escapeHtml(PROFILE_PICTURES.find(p => p.id === activePicId)?.name || 'Minimal Silhouette')}
+            </div>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
+              Personal avatar shown across your tools, files, and Spaces
+            </div>
+          </div>
         </div>
-        <div class="settings-avatar-grid" id="settings-avatar-picker-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(44px, 1fr)); gap:10px;">
-          ${PROFILE_PICTURES.map(pic => {
-            const isSelected = pic.id === activePicId;
-            const src = getProfilePictureSrc(pic.id);
-            return `
-              <button type="button" class="avatar-option-btn ${isSelected ? 'is-selected' : ''}" data-avatar-id="${pic.id}" title="${escapeHtml(pic.name)}" style="width:44px; height:44px; border-radius:50%; padding:0; border:${isSelected ? '2px solid var(--text)' : '1px solid var(--border)'}; background:var(--bg-card); cursor:pointer; position:relative; display:flex; align-items:center; justify-content:center; box-shadow:${isSelected ? '0 0 0 2px var(--accent)' : 'none'}; transition:all 0.15s ease; overflow:hidden;">
-                ${src ? `
-                  <img src="${src}" alt="${escapeHtml(pic.name)}" style="width:100%; height:100%; object-fit:cover;">
-                ` : `
-                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text);">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                  </svg>
-                `}
-              </button>
-            `;
-          }).join('')}
-        </div>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-settings-change-avatar" style="padding:6px 14px; font-size:0.8rem; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span>Change Avatar</span>
+        </button>
       </div>
 
     </div>
@@ -332,15 +443,9 @@ function renderProfileSettings() {
     });
   }
 
-  // Wire Avatar selection
-  container.querySelectorAll('.avatar-option-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.getAttribute('data-avatar-id');
-      const src = getProfilePictureSrc(id);
-      updateUserProfile({ profilePicture: id, avatarUrl: src });
-      updateSettings({ profilePicture: id });
-      renderProfileSettings();
-    });
+  // Wire Change Avatar button
+  container.querySelector('#btn-settings-change-avatar')?.addEventListener('click', () => {
+    showAvatarView();
   });
 }
 
@@ -627,11 +732,17 @@ export function openSettings(targetSection = null) {
   renderAiSettings();
   renderStorageSettings();
 
+  if (targetSection === 'avatars') {
+    showAvatarView();
+  } else {
+    showMainView();
+  }
+
   modalEl.style.display = 'flex';
   requestAnimationFrame(() => {
     modalEl.classList.add('is-open');
 
-    if (targetSection) {
+    if (targetSection && targetSection !== 'avatars') {
       const sectionEl = modalEl.querySelector(`#sec-${targetSection}`);
       if (sectionEl) {
         sectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });

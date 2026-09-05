@@ -14,6 +14,7 @@ import { kindLabel, kindFromFilename } from '../registry/kinds.js';
 import { BY_ID, toolsAccepting } from '../registry/index.js';
 import { getFileTypeIcon, detectFileCategory } from '../lib/file-icons.js';
 import { getCurrentUser } from '../lib/supabase.js';
+import { attachSegmentedSlider } from '../lib/segmented-slider.js';
 
 const escapeHtml = (s) => String(s || '').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -259,7 +260,7 @@ function full(user, allItems, filteredItems, selected) {
   const pathSegments = currentPath.split('/').filter(Boolean);
 
   return `
-    <div class="sv" style="max-width:1280px; margin:0 auto; display:flex; flex-direction:column; gap:14px;">
+    <div class="sv" style="max-width:1280px; margin:18px auto 28px; display:flex; flex-direction:column; gap:14px; padding:0 16px;">
       
       <!-- TOOLBAR & HEADER -->
       <header class="sv-head" style="background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:0 4px 16px rgba(0,0,0,0.03);">
@@ -277,7 +278,7 @@ function full(user, allItems, filteredItems, selected) {
                 </button>
                 ${user ? `
                   <button type="button" class="sv-storage-btn ${isOnline ? 'active' : ''}" data-storage="online" style="padding:3px 12px; border:none; border-radius:999px; font-size:0.75rem; font-weight:600; cursor:pointer; background:${isOnline ? 'var(--bg-card)' : 'transparent'}; color:${isOnline ? 'var(--text)' : 'var(--text-secondary)'}; box-shadow:${isOnline ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'};">
-                    Online (Cloud)
+                    Online
                   </button>
                 ` : ''}
               </div>
@@ -1049,7 +1050,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
           </div>
           <div style="display:flex; justify-content:space-between; padding-bottom:4px;">
             <span style="color:var(--text-secondary);">Storage</span>
-            <span style="color:var(--text);">${currentStorage === 'online' ? 'Online (Cloud)' : 'Local Browser'}</span>
+            <span style="color:var(--text);">${currentStorage === 'online' ? 'Online' : 'Local Browser'}</span>
           </div>
         </div>
         <div style="padding:12px 20px; background:var(--bg-subtle); border-top:1px solid var(--border); display:flex; justify-content:flex-end;">
@@ -2249,6 +2250,16 @@ function wire(host, selected, refresh, itemsInDir = []) {
   uploader.addEventListener('change', onUpload);
   importer.addEventListener('change', onImport);
   window.addEventListener('keydown', onWindowKeyDown);
+
+  // Segmented switcher slider animations
+  const storageSwitch = host.querySelector('.sv-storage-switch');
+  if (storageSwitch) attachSegmentedSlider(storageSwitch, '.sv-storage-btn');
+
+  const viewSwitcher = host.querySelector('.sv-view-switcher');
+  if (viewSwitcher) attachSegmentedSlider(viewSwitcher, '.sv-layout-btn');
+
+  const cviewSwitcher = host.querySelector('.sv-content-view-switcher');
+  if (cviewSwitcher) attachSegmentedSlider(cviewSwitcher, '.sv-cview-btn');
 
   return () => {
     host.removeEventListener('click', onClick);

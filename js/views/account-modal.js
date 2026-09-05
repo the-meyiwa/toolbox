@@ -119,24 +119,25 @@ function renderModalContent() {
                 <div style="font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">
                   Display Picture
                 </div>
-                <div class="acc-avatar-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(42px, 1fr)); gap:8px;">
-                  ${PROFILE_PICTURES.map(pic => {
-                    const activePic = user.profilePicture || user.user_metadata?.profile_picture || 'default';
-                    const isSelected = activePic === pic.id;
-                    const src = getProfilePictureSrc(pic.id);
-                    return `
-                      <button type="button" class="acc-avatar-btn ${isSelected ? 'is-selected' : ''}" data-avatar-id="${pic.id}" title="${escapeHtml(pic.name)}" style="width:42px; height:42px; border-radius:50%; padding:0; border:${isSelected ? '2px solid var(--black, #000)' : '1px solid var(--border)'}; background:var(--bg-card); cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:${isSelected ? '0 0 0 2px var(--accent, #3b82f6)' : 'none'}; overflow:hidden; transition:all 0.15s ease;">
-                        ${src ? `
-                          <img src="${src}" alt="${escapeHtml(pic.name)}" style="width:100%; height:100%; object-fit:cover;">
-                        ` : `
-                          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text);">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="12" cy="7" r="4"></circle>
-                          </svg>
-                        `}
-                      </button>
-                    `;
-                  }).join('')}
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                  <div style="display:flex; align-items:center; gap:12px;">
+                    ${getUserAvatarHtml(user, 48)}
+                    <div>
+                      <div style="font-size:0.84rem; font-weight:700; color:var(--black);">
+                        ${escapeHtml(PROFILE_PICTURES.find(p => p.id === (user.profilePicture || user.user_metadata?.profile_picture || 'default'))?.name || 'Minimal Silhouette')}
+                      </div>
+                      <div style="font-size:0.72rem; color:var(--g600); margin-top:2px;">
+                        Synced across all tools and collaborative Spaces
+                      </div>
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-acc-change-avatar" style="font-size:0.78rem; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <span>Change Avatar</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -245,14 +246,9 @@ function renderModalContent() {
       }
     });
 
-    modalEl.querySelectorAll('.acc-avatar-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-avatar-id');
-        const src = getProfilePictureSrc(id);
-        updateUserProfile({ profilePicture: id, avatarUrl: src });
-        updateSettings({ profilePicture: id });
-        renderModalContent();
-      });
+    modalEl.querySelector('#btn-acc-change-avatar')?.addEventListener('click', () => {
+      closeAccountModal();
+      openSettings('avatars');
     });
   }
 

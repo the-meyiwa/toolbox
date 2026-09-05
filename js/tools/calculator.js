@@ -7,6 +7,8 @@
    RPN 4-Level Stack, and Universal Unit & Physical Constants Library.
    ============================================================ */
 
+import { attachSegmentedSlider } from '../lib/segmented-slider.js';
+
 export default {
   keyListener: null,
 
@@ -671,6 +673,9 @@ export default {
    1. MODE SWITCHER
    ============================================================ */
 function initModeSwitcher(container) {
+  const modeBar = container.querySelector('#calc-mode-bar');
+  const updateSlider = modeBar ? attachSegmentedSlider(modeBar, '.calc-mode-btn') : null;
+
   const modeBtns = container.querySelectorAll('.calc-mode-btn');
   const panes = container.querySelectorAll('.calc-pane');
 
@@ -682,6 +687,7 @@ function initModeSwitcher(container) {
         b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
       });
       panes.forEach(p => p.classList.toggle('active', p.id === `pane-${mode}`));
+      updateSlider?.();
 
       if (mode === 'graphing') {
         const plotBtn = container.querySelector('#graph-plot-btn');

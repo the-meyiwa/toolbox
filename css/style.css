@@ -11202,6 +11202,130 @@ body.standalone-mode .notes-app-wrapper {
     display: none;
   }
 }
+/* Segmented Switcher Slider Pill Animation */
+.segmented-slider-pill {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  border-radius: 999px;
+  background: var(--bg-card, #ffffff);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.06);
+  pointer-events: none;
+  z-index: 0;
+  transition: transform 0.22s cubic-bezier(0.2, 0.85, 0.2, 1), width 0.22s cubic-bezier(0.2, 0.85, 0.2, 1), opacity 0.15s ease;
+  opacity: 0;
+}
 
+/* When switcher container contains the slider pill, the pill provides the background & shadow */
+.sv-storage-switch:has(.segmented-slider-pill) .sv-storage-btn.active,
+.sv-view-switcher:has(.segmented-slider-pill) .sv-layout-btn.active,
+.sv-content-view-switcher:has(.segmented-slider-pill) .sv-cview-btn.active,
+.cal-view-switcher:has(.segmented-slider-pill) .cal-view-btn.active,
+.calc-mode-bar:has(.segmented-slider-pill) .calc-mode-btn.active {
+  background: transparent !important;
+  box-shadow: none !important;
+}
 
+/* Dedicated Avatar Gallery Page in Settings */
+.settings-avatar-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
 
+.settings-avatar-grid-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 16px;
+  padding-bottom: 24px;
+}
+
+.avatar-story-card {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  position: relative;
+  cursor: pointer;
+}
+
+.avatar-story-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--g400, #999);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+}
+
+.avatar-story-card.is-active {
+  border-color: var(--text, #000);
+  box-shadow: 0 0 0 2px var(--accent, #3b82f6), 0 4px 14px rgba(0, 0, 0, 0.08);
+  background: var(--bg-card);
+}
+
+.avatar-story-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.avatar-story-avatar-wrap {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card);
+}
+
+.avatar-story-card.is-active .avatar-story-avatar-wrap {
+  border-color: var(--text, #000);
+}
+
+.avatar-story-avatar-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-story-name {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.25;
+}
+
+.avatar-story-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #000;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.avatar-story-bio {
+  font-size: 0.81rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  margin: 0;
+  flex: 1;
+}
+
+.avatar-story-action {
+  margin-top: auto;
+  padding-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+}

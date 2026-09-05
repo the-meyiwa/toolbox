@@ -3119,7 +3119,67 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
       await fs.mkdir(projDir);
 
       const title = args.title || `${name.charAt(0).toUpperCase() + name.slice(1)} App`;
-      const html = `<!DOCTYPE html>
+      const isReact = (args.template || '').toLowerCase() === 'react' || name.includes('react') || title.toLowerCase().includes('react');
+
+      let html = '';
+      let js = '';
+
+      if (isReact) {
+        html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18",
+      "react-dom": "https://esm.sh/react-dom@18",
+      "react-dom/client": "https://esm.sh/react-dom@18/client"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-presets="react,env" data-type="module" src="app.js"></script>
+</body>
+</html>`;
+
+        js = `// ${title} — Interactive React Component
+const { useState } = React;
+
+function App() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div className="app-container">
+      <header>
+        <h1>${title}</h1>
+        <p className="subtitle">Built with React 18 &amp; Toolbox IDE</p>
+      </header>
+      <div class="card">
+        <h2>React State Counter</h2>
+        <p>Dynamic reactive state powered by React hooks and JSX.</p>
+        <button type="button" className="btn" onClick={() => setCount(c => c + 1)}>
+          Clicks: {count}
+        </button>
+        <div className="status-box">State Value: {count}</div>
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+`;
+      } else {
+        html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -3145,6 +3205,22 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
   <script src="app.js"></script>
 </body>
 </html>`;
+
+        js = `// ${title} Application Logic
+document.addEventListener('DOMContentLoaded', () => {
+  let count = 0;
+  const btn = document.getElementById('action-btn');
+  const counterEl = document.getElementById('counter');
+
+  if (btn && counterEl) {
+    btn.addEventListener('click', () => {
+      count++;
+      counterEl.textContent = \`Clicks: \${count}\`;
+    });
+  }
+});
+`;
+      }
 
       const css = `/* ${title} Stylesheet */
 :root {
@@ -3201,21 +3277,6 @@ header h1 { font-size: 2rem; margin-bottom: 6px; }
 }
 `;
 
-      const js = `// ${title} Application Logic
-document.addEventListener('DOMContentLoaded', () => {
-  let count = 0;
-  const btn = document.getElementById('action-btn');
-  const counterEl = document.getElementById('counter');
-
-  if (btn && counterEl) {
-    btn.addEventListener('click', () => {
-      count++;
-      counterEl.textContent = \`Clicks: \${count}\`;
-    });
-  }
-});
-`;
-
       await fs.writeFile(`${projDir}/index.html`, html);
       await fs.writeFile(`${projDir}/style.css`, css);
       await fs.writeFile(`${projDir}/app.js`, js);
@@ -3245,7 +3306,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     case 'ide_build_and_preview': {
-      const projName = (args.projectName || '').trim();
+      const projName = (args.projectName || args.project_path || args.name || args.project || '').trim();
       if (!projName) throw new Error('projectName is required.');
       const cleanName = projName.replace(/^\/Projects\//, '').replace(/^\//, '');
       const projDir = `/Projects/${cleanName}`;
@@ -3253,10 +3314,25 @@ document.addEventListener('DOMContentLoaded', () => {
       let html = '';
       let css = '';
       let js = '';
+      let entryFile = 'app.js';
 
       try { html = await fs.readFile(`${projDir}/index.html`, 'text'); } catch {}
-      try { css = await fs.readFile(`${projDir}/style.css`, 'text'); } catch {}
-      try { js = await fs.readFile(`${projDir}/app.js`, 'text'); } catch {}
+
+      // Locate CSS file
+      for (const f of ['style.css', 'styles.css', 'index.css', 'main.css']) {
+        try {
+          const content = await fs.readFile(`${projDir}/${f}`, 'text');
+          if (content) { css = content; break; }
+        } catch {}
+      }
+
+      // Locate JS / JSX entry file
+      for (const f of ['app.jsx', 'app.js', 'main.jsx', 'main.js', 'index.jsx', 'index.js', 'app.tsx', 'main.tsx', 'index.tsx']) {
+        try {
+          const content = await fs.readFile(`${projDir}/${f}`, 'text');
+          if (content) { js = content; entryFile = f; break; }
+        } catch {}
+      }
 
       if (!html) {
         return {
@@ -3266,17 +3342,80 @@ document.addEventListener('DOMContentLoaded', () => {
         };
       }
 
-      // Syntax and diagnostics check on JavaScript
+      // Detect JSX, React, or modern ES Modules
+      const isJsx = /\.(jsx|tsx)$/i.test(entryFile) ||
+        /<[A-Za-z][A-Za-z0-9]*(\s+[^>]*)?>[\s\S]*<\/[A-Za-z][A-Za-z0-9]*>|<[A-Za-z][A-Za-z0-9]*(\s+[^>]*)?\/>/.test(js) ||
+        /\b(React|ReactDOM|createRoot|useState|useEffect|useRef|useMemo|useCallback)\b/.test(js) ||
+        /['"]react['"]|['"]react-dom['"]/.test(js);
+
+      const isEsm = /^\s*import\s+/m.test(js) || /^\s*export\s+/m.test(js);
+
+      // Syntax and diagnostics check
       const diagnostics = [];
       if (js) {
-        try {
-          new Function(js);
-        } catch (syntaxErr) {
-          diagnostics.push({
-            file: 'app.js',
-            type: 'error',
-            message: syntaxErr.message
-          });
+        if (isJsx || isEsm) {
+          let validated = false;
+          // 1. In Node environment, use esbuild
+          if (typeof process !== 'undefined' && process.versions?.node) {
+            try {
+              const esbuild = await import('esbuild');
+              esbuild.transformSync(js, { loader: isJsx ? 'jsx' : 'js' });
+              validated = true;
+            } catch (esErr) {
+              if (esErr.errors?.[0]?.text) {
+                diagnostics.push({
+                  file: entryFile,
+                  type: 'error',
+                  message: esErr.errors[0].text
+                });
+                validated = true;
+              }
+            }
+          }
+          // 2. In browser environment, check window.Babel
+          if (!validated && typeof window !== 'undefined' && window.Babel) {
+            try {
+              window.Babel.transform(js, { presets: ['react', 'env'] });
+              validated = true;
+            } catch (babelErr) {
+              diagnostics.push({
+                file: entryFile,
+                type: 'error',
+                message: babelErr.message
+              });
+              validated = true;
+            }
+          }
+          // 3. Fallback bracket balance check
+          if (!validated) {
+            const openBraces = (js.match(/\{/g) || []).length;
+            const closeBraces = (js.match(/\}/g) || []).length;
+            const openParens = (js.match(/\(/g) || []).length;
+            const closeParens = (js.match(/\)/g) || []).length;
+            if (openBraces !== closeBraces) {
+              diagnostics.push({
+                file: entryFile,
+                type: 'error',
+                message: `Unmatched curly braces (opened: ${openBraces}, closed: ${closeBraces})`
+              });
+            } else if (openParens !== closeParens) {
+              diagnostics.push({
+                file: entryFile,
+                type: 'error',
+                message: `Unmatched parentheses (opened: ${openParens}, closed: ${closeParens})`
+              });
+            }
+          }
+        } else {
+          try {
+            new Function(js);
+          } catch (syntaxErr) {
+            diagnostics.push({
+              file: entryFile,
+              type: 'error',
+              message: syntaxErr.message
+            });
+          }
         }
       }
 
@@ -3291,11 +3430,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Bundle preview HTML
       let bundle = html;
-      if (css && !bundle.includes(css)) {
-        bundle = bundle.replace('</head>', `<style>\n${css}\n</style>\n</head>`);
+
+      // Inject React 18, ReactDOM 18, Babel Standalone & importmap if React/JSX is used
+      if (isJsx || js.includes('React') || js.includes('react')) {
+        const hasReactCdn = bundle.includes('react.development.js') || bundle.includes('react.production.min.js') || bundle.includes('esm.sh/react');
+        if (!hasReactCdn) {
+          const reactCdnTags = `
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18",
+      "react/": "https://esm.sh/react@18/",
+      "react-dom": "https://esm.sh/react-dom@18",
+      "react-dom/": "https://esm.sh/react-dom@18/",
+      "react-dom/client": "https://esm.sh/react-dom@18/client"
+    }
+  }
+  </script>`;
+          if (bundle.includes('</head>')) {
+            bundle = bundle.replace('</head>', `${reactCdnTags}\n</head>`);
+          } else {
+            bundle = reactCdnTags + '\n' + bundle;
+          }
+        }
+
+        if (!bundle.includes('id="root"') && !bundle.includes("id='root'") && !bundle.includes('id="app"') && !bundle.includes("id='app'")) {
+          if (bundle.includes('<body>')) {
+            bundle = bundle.replace('<body>', '<body>\n  <div id="root"></div>');
+          }
+        }
       }
+
+      if (css && !bundle.includes(css)) {
+        if (bundle.includes('</head>')) {
+          bundle = bundle.replace('</head>', `<style>\n${css}\n</style>\n</head>`);
+        } else {
+          bundle = `<style>\n${css}\n</style>\n` + bundle;
+        }
+      }
+
       if (js && !bundle.includes(js)) {
-        bundle = bundle.replace('</body>', `<script>\n${js}\n</script>\n</body>`);
+        const scriptTag = (isJsx || isEsm)
+          ? `<script type="text/babel" data-presets="react,env" data-type="module">\n${js}\n</script>`
+          : `<script>\n${js}\n</script>`;
+        if (bundle.includes('</body>')) {
+          bundle = bundle.replace('</body>', `${scriptTag}\n</body>`);
+        } else {
+          bundle += '\n' + scriptTag;
+        }
       }
 
       return {
