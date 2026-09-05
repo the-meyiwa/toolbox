@@ -19,7 +19,7 @@ import { copyText } from './utils.js';
 import { initTheme } from './lib/theme.js';
 import { installSettingsUI } from './lib/settings-ui.js';
 import { installHeaderMenu } from './lib/header-menu.js';
-import { getCurrentUser } from './lib/supabase.js';
+import { getCurrentUser, getSupabaseConfig } from './lib/supabase.js';
 import { openAccountModal } from './views/account-modal.js';
 import { initFlutterwaveContribution } from './lib/flutterwave-contribution.js';
 
@@ -372,31 +372,76 @@ async function openTool(id) {
   }
 }
 
+async function hydrateSessionFromAccessToken(accessToken, refreshToken = '', fallbackEmail = '') {
+  const config = getSupabaseConfig();
+  const fallbackUsername = ((fallbackEmail || '').split('@')[0] || 'user').replace(/[^a-z0-9_-]/gi, '').toLowerCase();
+
+  const fallbackSession = {
+    token: accessToken,
+    refreshToken,
+    id: `usr_${Date.now()}`,
+    email: fallbackEmail,
+    username: fallbackUsername || 'user',
+    displayName: fallbackUsername || 'user',
+    createdAt: new Date().toISOString()
+  };
+
+  if (!config.url || !config.anonKey) return fallbackSession;
+
+  try {
+    const res = await fetch(`${config.url}/auth/v1/user`, {
+      headers: {
+        'apikey': config.anonKey,
+        'Authorization': `******
+      }
+    });
+    if (!res.ok) return fallbackSession;
+
+    const data = await res.json();
+    const email = (data?.email || fallbackEmail || '').toLowerCase().trim();
+    const username = data?.user_metadata?.username || (email.split('@')[0] || fallbackUsername || 'user').replace(/[^a-z0-9_-]/gi, '').toLowerCase();
+    const displayName = data?.user_metadata?.display_name || data?.user_metadata?.name || email.split('@')[0] || username;
+
+    return {
+      id: data?.id || fallbackSession.id,
+      email,
+      token: accessToken,
+      refreshToken,
+      username,
+      displayName,
+      createdAt: data?.created_at || fallbackSession.createdAt,
+      user_metadata: data?.user_metadata || {}
+    };
+  } catch {
+    return fallbackSession;
+  }
+}
+
 function handleHash() {
   const hash = window.location.hash || '';
+  const searchParams = new URLSearchParams(window.location.search || '');
+  const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
 
   // Handle Supabase Auth redirect fragments (e.g. #access_token=...&refresh_token=...)
-  if (hash.includes('access_token=') || hash.includes('id_token=') || hash.includes('error_description=')) {
-    const params = new URLSearchParams(hash.slice(1));
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-    const errorMsg = params.get('error_description');
+  const hasAuthParams = (
+    hash.includes('access_token=') ||
+    hash.includes('id_token=') ||
+    hash.includes('error_description=') ||
+    searchParams.has('access_token') ||
+    searchParams.has('error_description')
+  );
+  if (hasAuthParams) {
+    const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token') || '';
+    const errorMsg = hashParams.get('error_description') || searchParams.get('error_description');
+    const email = hashParams.get('email') || searchParams.get('email') || '';
 
     if (accessToken) {
-      // Extract basic user info from the hash/token if possible, 
-      // or set a placeholder to be hydrated by the next getCurrentUser call.
-      const userSession = {
-        token: accessToken,
-        refreshToken: refreshToken || '',
-        id: 'confirming...', // Will be updated on first use or refresh
-        email: params.get('email') || '',
-        createdAt: new Date().toISOString()
-      };
-      
-      // Save session and notify app
-      localStorage.setItem('toolbox_supabase_session', JSON.stringify(userSession));
-      window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
-      
+      void hydrateSessionFromAccessToken(accessToken, refreshToken, email).then((userSession) => {
+        localStorage.setItem('toolbox_supabase_session', JSON.stringify(userSession));
+        window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
+      });
+
       // Clean URL and go to assistant
       window.location.hash = '#assistant';
       return;
@@ -869,4 +914,3 @@ document.getElementById('mobile-nav')?.addEventListener('click', (e) => {
   }
 });
 requestAnimationFrame(updateMobileNavIndicator);
-
