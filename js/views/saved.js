@@ -311,7 +311,7 @@ function full(user, allItems, filteredItems, selected) {
           }).join('')}
         </div>
 
-        <!-- Folder Actions (Up, Zip, Export) -->
+        <!-- Folder Actions (Up, Import) -->
         <div style="display:flex; align-items:center; gap:8px;">
           ${currentPath !== '/' ? `
             <button type="button" class="btn btn-secondary btn-sm" data-act="nav-up" title="Go up one folder" style="padding:4px 8px; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px;">
@@ -319,14 +319,6 @@ function full(user, allItems, filteredItems, selected) {
               <span>Up</span>
             </button>
           ` : ''}
-          <button type="button" class="btn btn-secondary btn-sm" data-act="compress-current" title="Zip this folder" style="padding:4px 8px; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px;">
-            ${ICONS.zip}
-            <span>Zip Folder</span>
-          </button>
-          <button type="button" class="btn btn-secondary btn-sm" data-act="export-all" title="Download backup bundle" style="padding:4px 8px; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px;">
-            ${ICONS.download}
-            <span>Export All</span>
-          </button>
           <button type="button" class="btn btn-secondary btn-sm" data-act="import" title="Open JSON backup bundle" style="padding:4px 8px; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px;">
             ${ICONS.upload}
             <span>Import</span>
@@ -449,6 +441,7 @@ function renderGridIcon(item, selected) {
          data-context-target="true" 
          data-path="${escapeHtml(item.path)}" 
          data-is-dir="${item.isDirectory ? 'true' : 'false'}"
+         draggable="true"
          ${clickAction}
          style="display:flex; flex-direction:column; align-items:center; text-align:center; width:110px; padding:12px 8px; border-radius:10px; cursor:pointer; user-select:none; transition:all 0.15s ease; position:relative; background:${isSelected ? 'rgba(59,130,246,0.12)' : 'transparent'}; border:1px solid ${isSelected ? 'rgba(59,130,246,0.35)' : 'transparent'};">
       
@@ -483,6 +476,7 @@ function renderListRow(item, selected) {
          data-context-target="true"
          data-path="${escapeHtml(item.path)}"
          data-is-dir="${item.isDirectory ? 'true' : 'false'}"
+         draggable="true"
          ${clickAction} 
          style="padding:10px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; cursor:pointer; background:${isSelected ? 'var(--bg-subtle)' : 'transparent'};">
       <div style="flex:2; display:flex; align-items:center; gap:10px; overflow:hidden; padding-right:12px;">
@@ -514,6 +508,7 @@ function renderSplitItem(item, selected) {
          data-context-target="true"
          data-path="${escapeHtml(item.path)}"
          data-is-dir="${item.isDirectory ? 'true' : 'false'}"
+         draggable="true"
          ${clickAction} 
          style="padding:10px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; cursor:pointer; background:${isSelected ? 'var(--bg-subtle)' : 'transparent'};">
       <div style="display:flex; align-items:center; gap:8px; overflow:hidden;">
@@ -586,14 +581,6 @@ function renderDetailPane(selected) {
               ${ICONS.zip} Extract
             </button>
           ` : ''}
-
-          <button type="button" class="btn btn-primary btn-sm" data-act="export-one" data-file-id="${escapeHtml(selected.id || '')}" data-file-path="${escapeHtml(selected.path || '')}" title="Download file" style="padding:4px 8px; font-size:0.75rem;">
-            ${ICONS.download} Download
-          </button>
-          
-          <button type="button" class="btn btn-secondary btn-sm" data-act="delete" data-file-id="${escapeHtml(selected.id || '')}" data-file-path="${escapeHtml(selected.path || '')}" title="Delete file" style="padding:4px 8px; font-size:0.75rem; color:#ef4444;">
-            ${ICONS.delete}
-          </button>
         </div>
       </div>
 
@@ -883,6 +870,114 @@ function wire(host, selected, refresh) {
       }
     });
   }
+
+  // ---------------- Drag & Drop in Files ----------------
+  let dragCounter = 0;
+
+  const onDragEnter = (e) => {
+    e.preventDefault();
+    dragCounter++;
+    host.classList.add('sv-drag-active');
+  };
+
+  const onDragOver = (e) => {
+    e.preventDefault();
+    const folderTarget = e.target.closest('[data-is-dir="true"]');
+    if (folderTarget) {
+      folderTarget.classList.add('sv-folder-drop-hover');
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    } else {
+      host.querySelectorAll('.sv-folder-drop-hover').forEach(el => el.classList.remove('sv-folder-drop-hover'));
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    }
+  };
+
+  const onDragLeave = (e) => {
+    dragCounter--;
+    if (dragCounter <= 0) {
+      dragCounter = 0;
+      host.classList.remove('sv-drag-active');
+    }
+    const folderTarget = e.target.closest('[data-is-dir="true"]');
+    if (folderTarget) {
+      folderTarget.classList.remove('sv-folder-drop-hover');
+    }
+  };
+
+  const onDrop = async (e) => {
+    e.preventDefault();
+    dragCounter = 0;
+    host.classList.remove('sv-drag-active');
+    host.querySelectorAll('.sv-folder-drop-hover').forEach(el => el.classList.remove('sv-folder-drop-hover'));
+
+    // 1. Check if internal item was dropped onto a folder
+    const internalSource = e.dataTransfer ? (e.dataTransfer.getData('application/toolbox-path') || e.dataTransfer.getData('text/plain')) : null;
+    const folderTarget = e.target.closest('[data-is-dir="true"]') || e.target.closest('[data-nav-path]');
+
+    if (internalSource && folderTarget) {
+      const targetDir = folderTarget.dataset.path || folderTarget.dataset.navPath;
+      if (targetDir && targetDir !== internalSource && targetDir !== getParentPath(internalSource)) {
+        try {
+          const dest = normalizePath(`${targetDir}/${getBaseName(internalSource)}`);
+          await fs.rename(internalSource, dest);
+          flash(`Moved "${getBaseName(internalSource)}" to "${getBaseName(targetDir) || 'Root'}".`);
+          refresh(null);
+          return;
+        } catch (err) {
+          flash(`Move failed: ${err.message}`, 'bad');
+          return;
+        }
+      }
+    }
+
+    // 2. Check if desktop/OS files were dropped
+    const droppedFiles = Array.from(e.dataTransfer?.files || []);
+    if (droppedFiles.length > 0) {
+      const destDir = (folderTarget && folderTarget.dataset.isDir === 'true') ? folderTarget.dataset.path : currentPath;
+      let successCount = 0;
+      for (const f of droppedFiles) {
+        try {
+          const dest = normalizePath(`${destDir}/${f.name}`);
+          await fs.writeFile(dest, f, {
+            mimeType: f.type || 'application/octet-stream',
+            storage: currentStorage
+          });
+          successCount++;
+        } catch (err) {
+          console.warn(`Failed to save dropped file ${f.name}:`, err);
+        }
+      }
+      if (successCount > 0) {
+        flash(`Added ${successCount} file${successCount === 1 ? '' : 's'} to ${escapeHtml(getBaseName(destDir) || 'Files')}.`);
+        refresh(null);
+      }
+    }
+  };
+
+  const onDragStart = (e) => {
+    const itemEl = e.target.closest('[data-path]');
+    if (!itemEl) return;
+    const itemPath = itemEl.dataset.path;
+    if (itemPath && e.dataTransfer) {
+      e.dataTransfer.setData('application/toolbox-path', itemPath);
+      e.dataTransfer.setData('text/plain', itemPath);
+      e.dataTransfer.effectAllowed = 'move';
+      itemEl.classList.add('is-dragging');
+    }
+  };
+
+  const onDragEnd = (e) => {
+    const itemEl = e.target.closest('[data-path]');
+    if (itemEl) itemEl.classList.remove('is-dragging');
+    host.querySelectorAll('.sv-folder-drop-hover').forEach(el => el.classList.remove('sv-folder-drop-hover'));
+  };
+
+  host.addEventListener('dragenter', onDragEnter);
+  host.addEventListener('dragover', onDragOver);
+  host.addEventListener('dragleave', onDragLeave);
+  host.addEventListener('drop', onDrop);
+  host.addEventListener('dragstart', onDragStart);
+  host.addEventListener('dragend', onDragEnd);
 
   // Right-click contextmenu event
   const onContextMenu = (e) => {
@@ -1189,6 +1284,12 @@ function wire(host, selected, refresh) {
   return () => {
     host.removeEventListener('click', onClick);
     host.removeEventListener('change', onRename);
+    host.removeEventListener('dragenter', onDragEnter);
+    host.removeEventListener('dragover', onDragOver);
+    host.removeEventListener('dragleave', onDragLeave);
+    host.removeEventListener('drop', onDrop);
+    host.removeEventListener('dragstart', onDragStart);
+    host.removeEventListener('dragend', onDragEnd);
     host.removeEventListener('contextmenu', onContextMenu);
     host.removeEventListener('touchstart', onTouchStart);
     host.removeEventListener('touchmove', onTouchMove);

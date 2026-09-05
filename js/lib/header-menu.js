@@ -7,6 +7,8 @@ import { openSettings } from './settings-ui.js';
 import { openStorageModal } from './storage-ui.js';
 import { openAccountModal } from '../views/account-modal.js';
 import { getSettings, updateSettings, exportSettings, importSettings } from './settings.js';
+import { getCurrentUser } from './supabase.js';
+import { getProfilePictureSrc } from './profile-pictures.js';
 
 let menuEl = null;
 let isMenuOpen = false;
@@ -352,4 +354,31 @@ export function installHeaderMenu() {
       if (prefModalEl?.classList.contains('is-open')) closePreferencesModal();
     }
   });
+
+  updateHeaderAvatar();
+  window.addEventListener('toolbox:authchange', updateHeaderAvatar);
+}
+
+export function updateHeaderAvatar() {
+  const btn = document.getElementById('header-menu-btn');
+  if (!btn) return;
+  const user = getCurrentUser();
+  const settings = getSettings();
+  const activePic = user?.profilePicture || user?.user_metadata?.profile_picture || settings?.profilePicture;
+
+  if (user && activePic && activePic !== 'default') {
+    const src = getProfilePictureSrc(activePic);
+    if (src) {
+      btn.innerHTML = `<img src="${src}" alt="Avatar" style="width:24px; height:24px; border-radius:50%; object-fit:cover; display:block;">`;
+      return;
+    }
+  }
+
+  btn.innerHTML = `
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="1"></circle>
+      <circle cx="12" cy="5" r="1"></circle>
+      <circle cx="12" cy="19" r="1"></circle>
+    </svg>
+  `;
 }

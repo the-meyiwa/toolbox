@@ -4,8 +4,10 @@
 
 import { THEMES, getStoredTheme, applyTheme } from './theme.js';
 import { QuotaManager } from './quota-manager.js';
-import { getCurrentUser } from './supabase.js';
+import { getCurrentUser, updateUserProfile } from './supabase.js';
 import { getSettings, updateSettings } from './settings.js';
+import { PROFILE_PICTURES, getProfilePictureSrc, getUserAvatarHtml } from './profile-pictures.js';
+import { openAccountModal } from '../views/account-modal.js';
 
 let modalEl = null;
 let isOpen = false;
@@ -80,6 +82,13 @@ function createModal() {
       </div>
 
       <div class="settings-modal-body" style="flex: 1; overflow-y: auto; padding-bottom: 40px;">
+        <!-- PROFILE & DISPLAY PICTURE -->
+        <section class="settings-section" id="profile-settings-container">
+          <!-- Rendered dynamically -->
+        </section>
+
+        <hr style="border: none; border-top: 1px solid var(--g200); margin: 30px 0;">
+
         <!-- APPEARANCE -->
         <section class="settings-section">
           <div class="settings-section-header">
@@ -110,6 +119,137 @@ function createModal() {
   });
 
   return modalEl;
+}
+
+function renderProfileSettings() {
+  const container = modalEl.querySelector('#profile-settings-container');
+  if (!container) return;
+
+  const user = getCurrentUser();
+  const settings = getSettings();
+  const activePicId = user?.profilePicture || user?.user_metadata?.profile_picture || settings.profilePicture || 'default';
+  const currentDisplayName = user?.displayName || user?.user_metadata?.display_name || settings.displayName || '';
+
+  if (!user) {
+    container.innerHTML = `
+      <div class="settings-section-header">
+        <h3 class="settings-section-title">Profile &amp; Display Picture</h3>
+        <span class="settings-section-hint">Signed-in users can customize display name and avatar</span>
+      </div>
+      <div style="background:var(--g50); border:1px solid var(--g200); border-radius:12px; padding:16px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          ${getUserAvatarHtml('default', 42)}
+          <div>
+            <div style="font-size:0.86rem; font-weight:700; color:var(--black);">Sign in to customize your profile</div>
+            <div style="font-size:0.75rem; color:var(--g600); margin-top:2px;">Set your display name and choose a minimal profile picture.</div>
+          </div>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-settings-signin" style="font-size:0.8rem; padding:6px 14px;">
+          Sign In
+        </button>
+      </div>
+    `;
+
+    container.querySelector('#btn-settings-signin')?.addEventListener('click', () => {
+      closeSettings();
+      openAccountModal();
+    });
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="settings-section-header">
+      <h3 class="settings-section-title">Profile &amp; Display Picture</h3>
+      <span class="settings-section-hint">Customize how your name and avatar appear across Toolbox</span>
+    </div>
+
+    <div style="background:var(--g50); border:1px solid var(--g200); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:16px;">
+      
+      <!-- Top Row: Current Avatar & Display Name Input -->
+      <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+        <div id="settings-avatar-current-preview" style="flex-shrink:0;">
+          ${getUserAvatarHtml(activePicId, 54)}
+        </div>
+        <div style="flex:1; min-width:200px;">
+          <label for="settings-profile-display-name" style="display:block; font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">
+            Display Name
+          </label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="settings-profile-display-name" class="tool-input" placeholder="e.g. Alex" value="${escapeHtml(currentDisplayName)}" style="flex:1; height:36px; padding:0 12px; font-size:0.86rem; border-radius:8px;">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-settings-save-name" style="padding:0 14px; height:36px; font-size:0.8rem; font-weight:600;">
+              Save
+            </button>
+          </div>
+          <div id="settings-profile-msg" style="font-size:0.74rem; color:var(--g600); margin-top:4px;">
+            ${escapeHtml(user.email)} · Saved to your account session.
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Row: Avatar Selection Grid -->
+      <div style="border-top:1px solid var(--g200); padding-top:14px;">
+        <div style="font-size:0.78rem; font-weight:700; color:var(--black); margin-bottom:10px;">
+          Choose Display Picture
+        </div>
+        <div class="settings-avatar-grid" id="settings-avatar-picker-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(46px, 1fr)); gap:10px;">
+          ${PROFILE_PICTURES.map(pic => {
+            const isSelected = pic.id === activePicId;
+            const src = getProfilePictureSrc(pic.id);
+            return `
+              <button type="button" class="avatar-option-btn ${isSelected ? 'is-selected' : ''}" data-avatar-id="${pic.id}" title="${escapeHtml(pic.name)}" style="width:46px; height:46px; border-radius:50%; padding:0; border:${isSelected ? '2px solid var(--black, #000)' : '1px solid var(--border)'}; background:var(--bg-card); cursor:pointer; position:relative; display:flex; align-items:center; justify-content:center; box-shadow:${isSelected ? '0 0 0 2px var(--accent, #3b82f6)' : 'none'}; transition:all 0.15s ease; overflow:hidden;">
+                ${src ? `
+                  <img src="${src}" alt="${escapeHtml(pic.name)}" style="width:100%; height:100%; object-fit:cover;">
+                ` : `
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text);">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                `}
+              </button>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Wire Save Name button and Enter key
+  const nameInput = container.querySelector('#settings-profile-display-name');
+  const saveNameBtn = container.querySelector('#btn-settings-save-name');
+  const msgEl = container.querySelector('#settings-profile-msg');
+
+  const handleSaveName = () => {
+    const val = nameInput.value.trim();
+    updateUserProfile({ displayName: val });
+    updateSettings({ displayName: val });
+    if (msgEl) {
+      msgEl.textContent = 'Display name saved!';
+      msgEl.style.color = '#10b981';
+      setTimeout(() => {
+        msgEl.textContent = `${user.email} · Saved to your account session.`;
+        msgEl.style.color = 'var(--g600)';
+      }, 2500);
+    }
+  };
+
+  saveNameBtn?.addEventListener('click', handleSaveName);
+  nameInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveName();
+    }
+  });
+
+  // Wire Avatar selection
+  container.querySelectorAll('.avatar-option-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-avatar-id');
+      const src = getProfilePictureSrc(id);
+      updateUserProfile({ profilePicture: id, avatarUrl: src });
+      updateSettings({ profilePicture: id });
+      renderProfileSettings();
+    });
+  });
 }
 
 function renderAiSettings() {
@@ -248,6 +388,7 @@ function updateThemeList() {
 
 export function openSettings() {
   createModal();
+  renderProfileSettings();
   updateThemeList();
   renderAiSettings();
   modalEl.style.display = 'flex';

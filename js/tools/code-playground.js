@@ -16,6 +16,9 @@ const ALL = { ...LANGUAGES, ...REMOTE_LANGUAGES };
 const isRemote = (id) => Object.hasOwn(REMOTE_LANGUAGES, id);
 const isPreview = (id) => !!LANGUAGES[id]?.preview;
 
+const escapeHtml = (s) => String(s || '').replace(/[&<>"']/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
 const STORAGE_WORKSPACES_KEY = 'toolbox_cpg_workspaces_v2';
 const STORAGE_ACTIVE_WS_KEY = 'toolbox_cpg_active_ws_v2';
 
@@ -308,46 +311,46 @@ export default {
     const workspaces = getSavedWorkspaces();
 
     container.innerHTML = `
-      <div class="cpg-landing" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:680px; padding:48px 20px; background:var(--bg, #18181b); color:#e4e4e7; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-        <div style="max-width:680px; width:100%;">
+      <div class="cpg-landing" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:680px; padding:40px 20px; background:var(--bg, #121214); color:var(--text, #e4e4e7); font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <div style="max-width:640px; width:100%;">
           
-          <!-- Brand Header -->
-          <div style="display:flex; align-items:center; gap:16px; margin-bottom:36px;">
-            <div style="width:52px; height:52px; border-radius:14px; background:linear-gradient(135deg, #3b82f6, #6366f1); display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(59,130,246,0.35);">
-              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#ffffff" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          <!-- Minimal Brand Header -->
+          <div style="display:flex; align-items:center; gap:14px; margin-bottom:32px;">
+            <div style="width:44px; height:44px; border-radius:12px; background:var(--bg-card, #1c1c1f); border:1px solid var(--border, #27272a); display:flex; align-items:center; justify-content:center; color:var(--text, #ffffff);">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
             </div>
             <div>
-              <h1 style="margin:0; font-size:1.75rem; font-weight:700; color:#ffffff; letter-spacing:-0.02em;">Code Playground</h1>
-              <p style="margin:4px 0 0; font-size:0.88rem; color:#a1a1aa;">Integrated in-browser workspace environment</p>
+              <h1 style="margin:0; font-size:1.5rem; font-weight:700; color:var(--text, #ffffff); letter-spacing:-0.02em;">Code Playground</h1>
+              <p style="margin:3px 0 0; font-size:0.84rem; color:var(--text-secondary, #a1a1aa);">Lightweight, in-browser workspace environment</p>
             </div>
           </div>
 
-          <!-- Primary Actions -->
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:36px;">
-            <div class="cpg-card-action" id="cpg-action-new" style="background:#27272a; border:1px solid #3f3f46; border-radius:12px; padding:22px; cursor:pointer; transition:all 0.15s ease;">
-              <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                <div style="width:30px; height:30px; border-radius:8px; background:rgba(56,189,248,0.15); display:flex; align-items:center; justify-content:center; color:#38bdf8;">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <!-- Primary Actions (Minimal Cards) -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:32px;">
+            <div class="cpg-card-action" id="cpg-action-new" style="background:var(--bg-card, #18181b); border:1px solid var(--border, #27272a); border-radius:12px; padding:18px 20px; cursor:pointer; transition:all 0.15s ease;">
+              <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+                <div style="width:28px; height:28px; border-radius:8px; background:rgba(255,255,255,0.06); border:1px solid var(--border, #27272a); display:flex; align-items:center; justify-content:center; color:var(--text, #ffffff);">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 </div>
-                <span style="font-weight:600; font-size:1rem; color:#ffffff;">New Workspace</span>
+                <span style="font-weight:600; font-size:0.95rem; color:var(--text, #ffffff);">New Workspace</span>
               </div>
-              <p style="margin:0; font-size:0.8rem; color:#a1a1aa; line-height:1.45;">Create an empty workspace or start with a custom template.</p>
+              <p style="margin:0; font-size:0.78rem; color:var(--text-secondary, #a1a1aa); line-height:1.4;">Create a blank workspace or start fresh.</p>
             </div>
 
-            <div class="cpg-card-action" id="cpg-action-open" style="background:#27272a; border:1px solid #3f3f46; border-radius:12px; padding:22px; cursor:pointer; transition:all 0.15s ease;">
-              <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                <div style="width:30px; height:30px; border-radius:8px; background:rgba(167,139,250,0.15); display:flex; align-items:center; justify-content:center; color:#a78bfa;">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <div class="cpg-card-action" id="cpg-action-open" style="background:var(--bg-card, #18181b); border:1px solid var(--border, #27272a); border-radius:12px; padding:18px 20px; cursor:pointer; transition:all 0.15s ease;">
+              <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+                <div style="width:28px; height:28px; border-radius:8px; background:rgba(255,255,255,0.06); border:1px solid var(--border, #27272a); display:flex; align-items:center; justify-content:center; color:var(--text, #ffffff);">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                 </div>
-                <span style="font-weight:600; font-size:1rem; color:#ffffff;">Open Workspace</span>
+                <span style="font-weight:600; font-size:0.95rem; color:var(--text, #ffffff);">Open Workspace</span>
               </div>
-              <p style="margin:0; font-size:0.8rem; color:#a1a1aa; line-height:1.45;">Browse saved workspaces or open directly from Toolbox Files.</p>
+              <p style="margin:0; font-size:0.78rem; color:var(--text-secondary, #a1a1aa); line-height:1.4;">Open an existing saved workspace.</p>
             </div>
           </div>
 
-          <!-- Quick Templates -->
-          <div style="margin-bottom:36px;">
-            <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:#71717a; font-weight:700; margin-bottom:12px;">Quick Templates</div>
+          <!-- Quick Templates (Minimal Pill Group) -->
+          <div style="margin-bottom:32px;">
+            <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted, #71717a); font-weight:700; margin-bottom:10px;">Quick Templates</div>
             <div style="display:flex; flex-wrap:wrap; gap:8px;">
               <button type="button" class="cpg-tpl-pill" data-tpl="cpp">C++ Algorithm</button>
               <button type="button" class="cpg-tpl-pill" data-tpl="web">Web App</button>
@@ -358,23 +361,23 @@ export default {
 
           <!-- Recent Workspaces -->
           <div>
-            <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:#71717a; font-weight:700; margin-bottom:12px;">Recent Workspaces</div>
+            <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted, #71717a); font-weight:700; margin-bottom:10px;">Recent Workspaces</div>
             ${workspaces.length === 0 ? `
-              <div style="background:#27272a; border:1px dashed #3f3f46; border-radius:10px; padding:24px; text-align:center; color:#71717a; font-size:0.84rem;">
+              <div style="background:var(--bg-card, #18181b); border:1px dashed var(--border, #27272a); border-radius:10px; padding:22px; text-align:center; color:var(--text-muted, #71717a); font-size:0.82rem;">
                 No open workspaces. Create a workspace or select a template above to begin.
               </div>
             ` : `
               <div style="display:flex; flex-direction:column; gap:6px;">
-                ${workspaces.slice(0, 5).map(w => `
-                  <div class="cpg-recent-row" data-ws-id="${w.id}" style="display:flex; justify-content:space-between; align-items:center; background:#27272a; border:1px solid #3f3f46; border-radius:8px; padding:10px 14px; cursor:pointer; transition:all 0.15s ease;">
+                ${workspaces.slice(0, 6).map(w => `
+                  <div class="cpg-recent-row" data-ws-id="${w.id}" style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card, #18181b); border:1px solid var(--border, #27272a); border-radius:8px; padding:9px 14px; cursor:pointer; transition:all 0.15s ease;">
                     <div style="display:flex; align-items:center; gap:10px;">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                      <span style="font-size:0.88rem; font-weight:600; color:#fff;">${escapeHtml(w.name)}</span>
-                      <span style="font-size:0.74rem; color:#71717a; font-family:monospace;">${w.files?.length || 0} files</span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted, #71717a);"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                      <span style="font-size:0.85rem; font-weight:600; color:var(--text, #fff);">${escapeHtml(w.name)}</span>
+                      <span style="font-size:0.72rem; color:var(--text-muted, #71717a); font-family:monospace;">${w.files?.length || 0} file${w.files?.length === 1 ? '' : 's'}</span>
                     </div>
                     <div style="display:flex; align-items:center; gap:10px;">
-                      <span style="font-size:0.74rem; color:#71717a;">${new Date(w.updatedAt || Date.now()).toLocaleDateString()}</span>
-                      <button type="button" class="cpg-del-ws-btn" data-del-id="${w.id}" title="Delete workspace" style="background:none; border:none; color:#71717a; cursor:pointer; padding:4px; border-radius:4px;">
+                      <span style="font-size:0.72rem; color:var(--text-muted, #71717a);">${new Date(w.updatedAt || Date.now()).toLocaleDateString()}</span>
+                      <button type="button" class="cpg-del-ws-btn" data-del-id="${w.id}" title="Delete workspace" style="background:none; border:none; color:var(--text-muted, #71717a); cursor:pointer; padding:4px; border-radius:4px;">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
                       </button>
                     </div>
@@ -413,11 +416,12 @@ export default {
 
     // Hook action buttons
     container.querySelector('#cpg-action-new')?.addEventListener('click', () => {
-      const name = prompt('Enter workspace name:', 'My Workspace');
-      if (!name || !name.trim()) return;
+      const defaultName = `Workspace ${workspaces.length + 1}`;
+      const name = prompt('Enter workspace name:', defaultName) || defaultName;
+      const cleanName = name.trim() || defaultName;
       const newWs = {
         id: `ws-${Date.now()}`,
-        name: name.trim(),
+        name: cleanName,
         files: JSON.parse(JSON.stringify(TEMPLATES.blank.files)),
         activeFileId: 'f-1',
         framework: 'none',
@@ -434,17 +438,25 @@ export default {
     container.querySelector('#cpg-action-open')?.addEventListener('click', () => {
       const list = getSavedWorkspaces();
       if (!list.length) {
-        alert('No saved workspaces found. Create a new workspace first.');
+        // If none saved, create one immediately
+        const newWs = {
+          id: `ws-${Date.now()}`,
+          name: 'My Workspace',
+          files: JSON.parse(JSON.stringify(TEMPLATES.blank.files)),
+          activeFileId: 'f-1',
+          framework: 'none',
+          theme: 'monokai',
+          updatedAt: Date.now()
+        };
+        list.unshift(newWs);
+        saveWorkspaces(list);
+        setActiveWorkspaceId(newWs.id);
+        this.checkAndRender();
         return;
       }
-      const names = list.map((w, idx) => `${idx + 1}. ${w.name}`).join('\n');
-      const pick = prompt(`Select workspace number:\n\n${names}`);
-      if (!pick) return;
-      const idx = parseInt(pick, 10) - 1;
-      if (list[idx]) {
-        setActiveWorkspaceId(list[idx].id);
-        this.checkAndRender();
-      }
+      // Open the most recent one or cycle
+      setActiveWorkspaceId(list[0].id);
+      this.checkAndRender();
     });
 
     // Hook recent workspace clicks
@@ -462,7 +474,7 @@ export default {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const wsId = btn.dataset.delId;
-        if (confirm('Are you sure you want to delete this workspace?')) {
+        if (confirm('Delete this workspace?')) {
           let list = getSavedWorkspaces();
           list = list.filter(w => w.id !== wsId);
           saveWorkspaces(list);
@@ -500,10 +512,10 @@ export default {
     }
 
     container.innerHTML = `
-      <div class="ide-root" id="cpg-root" style="display:flex; flex-direction:column; height:760px; background:#1e1e1e; border:1px solid #333; border-radius:14px; overflow:hidden; box-shadow:0 12px 40px rgba(0,0,0,0.4); color:#d4d4d4; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; transition:all 0.2s ease;">
+      <div class="ide-root" id="cpg-root" style="display:flex; flex-direction:column; height:760px; background:#18181b; border:1px solid #27272a; border-radius:14px; overflow:hidden; color:#d4d4d4; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; transition:all 0.2s ease;">
         
         <!-- TOP TOOLBAR & CONTROLS -->
-        <div id="cpg-header" style="background:#252526; border-bottom:1px solid #333; padding:6px 12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div id="cpg-header" style="background:#1f1f23; border-bottom:1px solid #27272a; padding:6px 12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
           <!-- Left: Workspaces back button, Sidebar toggle, Workspace Name, Language -->
           <div style="display:flex; align-items:center; gap:8px;">
             <button type="button" class="ide-btn" id="cpg-close-ws-btn" title="Close workspace and return to workspaces list" style="font-weight:600;">
@@ -513,7 +525,7 @@ export default {
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
             </button>
             <span style="font-weight:700; font-size:0.82rem; color:#fff; display:flex; align-items:center; gap:6px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-              <span id="cpg-logo-dot" style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e;"></span>
+              <span id="cpg-logo-dot" style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#a1a1aa;"></span>
               ${escapeHtml(state.projectName)}
             </span>
 
@@ -548,13 +560,13 @@ export default {
             </select>
 
             <button type="button" class="ide-btn" id="cpg-cmd-palette" title="Command Palette (Ctrl+Shift+P)">
-              <kbd style="font-size:0.68rem; background:#333; padding:2px 5px; border-radius:3px;">⌘⇧P</kbd>
+              <kbd style="font-size:0.68rem; background:#27272a; padding:2px 5px; border-radius:3px;">⌘⇧P</kbd>
             </button>
             <button type="button" class="ide-btn" id="cpg-layout-btn" title="Toggle Live Preview">Preview</button>
             <button type="button" class="ide-btn" id="cpg-package-zip" title="Package Workspace to ZIP">Package ZIP</button>
             <button type="button" class="ide-btn" id="cpg-sample">Example</button>
-            <button type="button" class="ide-btn ide-btn-run" id="cpg-run" style="background:#22c55e; color:#000; font-weight:700;">
-              Run <kbd style="font-size:0.68rem; background:rgba(0,0,0,0.2); padding:1px 4px; border-radius:3px; margin-left:4px;">⌃↵</kbd>
+            <button type="button" class="ide-btn ide-btn-run" id="cpg-run" style="background:rgba(255,255,255,0.12); color:#ffffff; font-weight:600;">
+              Run <kbd style="font-size:0.68rem; background:rgba(255,255,255,0.15); padding:1px 4px; border-radius:3px; margin-left:4px;">⌃↵</kbd>
             </button>
           </div>
         </div>
@@ -617,7 +629,7 @@ export default {
                   <button type="button" class="cpg-drawer-tab" data-tab="problems">Problems</button>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
-                  <span id="cpg-timing" style="color:#22c55e; font-size:0.72rem; font-family:monospace;"></span>
+                  <span id="cpg-timing" style="color:#a1a1aa; font-size:0.72rem; font-family:monospace;"></span>
                   <button type="button" class="ide-btn-icon" id="cpg-term-clear-btn" title="Clear Console">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
                   </button>
@@ -628,10 +640,10 @@ export default {
               </div>
 
               <!-- Tab Panes -->
-              <div id="cpg-pane-terminal" class="cpg-drawer-pane" style="flex:1; overflow:auto; padding:8px 12px; font-family:'Fira Code', Consolas, monospace; font-size:0.8rem; color:#a6e22e;">
+              <div id="cpg-pane-terminal" class="cpg-drawer-pane" style="flex:1; overflow:auto; padding:8px 12px; font-family:'Fira Code', Consolas, monospace; font-size:0.8rem; color:#e4e4e7;">
                 <div id="cpg-term-history" style="white-space:pre-wrap; line-height:1.45;"></div>
                 <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
-                  <span style="color:#38bdf8; font-weight:600;">workspace $</span>
+                  <span style="color:#a1a1aa; font-weight:600;">workspace $</span>
                   <input type="text" id="cpg-term-input" autocomplete="off" spellcheck="false" style="flex:1; background:transparent; border:none; outline:none; color:#ffffff; font-family:inherit; font-size:inherit;" />
                 </div>
               </div>
@@ -650,9 +662,9 @@ export default {
         </div>
 
         <!-- STATUS BAR -->
-        <div id="cpg-status-bar" style="background:#007acc; color:#fff; padding:3px 12px; font-size:0.72rem; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display:flex; justify-content:space-between; align-items:center;">
+        <div id="cpg-status-bar" style="background:#18181b; border-top:1px solid #27272a; color:#a1a1aa; padding:4px 12px; font-size:0.72rem; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display:flex; justify-content:space-between; align-items:center;">
           <div style="display:flex; gap:14px; align-items:center;">
-            <button type="button" id="cpg-status-term-toggle" style="background:none; border:none; color:#fff; cursor:pointer; font-size:inherit; display:flex; align-items:center; gap:5px; padding:0;">
+            <button type="button" id="cpg-status-term-toggle" style="background:none; border:none; color:#a1a1aa; cursor:pointer; font-size:inherit; display:flex; align-items:center; gap:5px; padding:0;">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
               Terminal
             </button>
@@ -661,7 +673,7 @@ export default {
             <span id="cpg-status-encoding">UTF-8</span>
           </div>
           <div style="display:flex; gap:14px; align-items:center;">
-            <span id="cpg-note" style="color:#e0f2fe; max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+            <span id="cpg-note" style="color:#a1a1aa; max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
             <span id="cpg-status-lang" style="font-weight:600; text-transform:uppercase;">JAVASCRIPT</span>
           </div>
         </div>

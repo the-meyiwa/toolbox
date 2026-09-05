@@ -11,13 +11,20 @@ import {
   signOut,
   getSupabaseConfig,
   saveSupabaseConfig,
-  testSupabaseConnection
+  testSupabaseConnection,
+  updateUserProfile
 } from '../lib/supabase.js';
 import { QuotaManager } from '../lib/quota-manager.js';
 import { openSettings } from '../lib/settings-ui.js';
+import { PROFILE_PICTURES, getProfilePictureSrc, getUserAvatarHtml } from '../lib/profile-pictures.js';
+import { getSettings, updateSettings } from '../lib/settings.js';
 
 let modalEl = null;
 let isSignUpMode = false;
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 
 export function openAccountModal(signUp = false) {
   isSignUpMode = signUp;
@@ -81,13 +88,57 @@ function renderModalContent() {
         <!-- USER AUTH CARD -->
         <div style="background:var(--g50); border:1px solid var(--g200); border-radius:14px; padding:16px;">
           ${user ? `
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <div>
-                <div style="font-size:0.75rem; color:var(--g500); font-weight:600;">SIGNED IN AS</div>
-                <div style="font-size:0.95rem; font-weight:700; color:var(--black); margin-top:2px;">${user.email}</div>
-                <div style="font-size:0.72rem; color:var(--g600); font-family:monospace; margin-top:2px;">ID: ${user.id}</div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+              <div style="display:flex; align-items:center; gap:12px;">
+                ${getUserAvatarHtml(user, 48)}
+                <div>
+                  <div style="font-size:0.75rem; color:var(--g500); font-weight:600;">SIGNED IN AS</div>
+                  <div style="font-size:0.95rem; font-weight:700; color:var(--black); margin-top:2px;">
+                    ${user.displayName ? `${escapeHtml(user.displayName)} <span style="font-size:0.78rem; font-weight:400; color:var(--g600);">(${escapeHtml(user.email)})</span>` : escapeHtml(user.email)}
+                  </div>
+                  <div style="font-size:0.72rem; color:var(--g600); font-family:monospace; margin-top:2px;">ID: ${user.id}</div>
+                </div>
               </div>
               <button type="button" class="btn btn-secondary btn-sm" id="btn-auth-signout" style="color:#ef4444;">Sign Out</button>
+            </div>
+
+            <!-- Profile Settings (Display Name & Avatar) -->
+            <div style="margin-top:16px; border-top:1px solid var(--g200); padding-top:14px; display:flex; flex-direction:column; gap:12px;">
+              <div>
+                <label for="acc-display-name-input" style="display:block; font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">
+                  Display Name
+                </label>
+                <div style="display:flex; gap:8px;">
+                  <input type="text" id="acc-display-name-input" class="tool-input" placeholder="Enter your display name..." value="${escapeHtml(user.displayName || user.user_metadata?.display_name || '')}" style="flex:1; height:34px; padding:0 10px; font-size:0.84rem; border-radius:8px;">
+                  <button type="button" class="btn btn-primary btn-sm" id="btn-acc-save-name" style="padding:0 12px; height:34px; font-size:0.78rem; font-weight:600;">Save</button>
+                </div>
+                <div id="acc-name-status" style="font-size:0.72rem; color:var(--g600); margin-top:3px;">Custom name shown across Toolbox tools and conversations.</div>
+              </div>
+
+              <div>
+                <div style="font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">
+                  Display Picture
+                </div>
+                <div class="acc-avatar-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(42px, 1fr)); gap:8px;">
+                  ${PROFILE_PICTURES.map(pic => {
+                    const activePic = user.profilePicture || user.user_metadata?.profile_picture || 'default';
+                    const isSelected = activePic === pic.id;
+                    const src = getProfilePictureSrc(pic.id);
+                    return `
+                      <button type="button" class="acc-avatar-btn ${isSelected ? 'is-selected' : ''}" data-avatar-id="${pic.id}" title="${escapeHtml(pic.name)}" style="width:42px; height:42px; border-radius:50%; padding:0; border:${isSelected ? '2px solid var(--black, #000)' : '1px solid var(--border)'}; background:var(--bg-card); cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:${isSelected ? '0 0 0 2px var(--accent, #3b82f6)' : 'none'}; overflow:hidden; transition:all 0.15s ease;">
+                        ${src ? `
+                          <img src="${src}" alt="${escapeHtml(pic.name)}" style="width:100%; height:100%; object-fit:cover;">
+                        ` : `
+                          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text);">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                          </svg>
+                        `}
+                      </button>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
             </div>
           ` : `
             <div>
@@ -164,6 +215,44 @@ function renderModalContent() {
     btnSignout.addEventListener('click', () => {
       signOut();
       renderModalContent();
+    });
+  }
+
+  // Handle Display Name & Avatar updates
+  if (user) {
+    const nameInput = modalEl.querySelector('#acc-display-name-input');
+    const saveNameBtn = modalEl.querySelector('#btn-acc-save-name');
+    const statusEl = modalEl.querySelector('#acc-name-status');
+
+    const handleSaveAccName = () => {
+      const val = nameInput?.value.trim() || '';
+      updateUserProfile({ displayName: val });
+      updateSettings({ displayName: val });
+      if (statusEl) {
+        statusEl.textContent = 'Display name saved!';
+        statusEl.style.color = '#10b981';
+        setTimeout(() => {
+          renderModalContent();
+        }, 800);
+      }
+    };
+
+    saveNameBtn?.addEventListener('click', handleSaveAccName);
+    nameInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSaveAccName();
+      }
+    });
+
+    modalEl.querySelectorAll('.acc-avatar-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-avatar-id');
+        const src = getProfilePictureSrc(id);
+        updateUserProfile({ profilePicture: id, avatarUrl: src });
+        updateSettings({ profilePicture: id });
+        renderModalContent();
+      });
     });
   }
 

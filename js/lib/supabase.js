@@ -104,6 +104,36 @@ export function getCurrentUser() {
 }
 
 /**
+ * Updates user profile metadata (displayName, profilePicture, avatarUrl)
+ */
+export function updateUserProfile({ displayName, avatarUrl, profilePicture } = {}) {
+  const current = getCurrentUser();
+  if (!current) return null;
+
+  const user_metadata = {
+    ...(current.user_metadata || {}),
+    ...(displayName !== undefined ? { display_name: displayName, name: displayName } : {}),
+    ...(avatarUrl !== undefined ? { avatar_url: avatarUrl, picture: avatarUrl } : {}),
+    ...(profilePicture !== undefined ? { profile_picture: profilePicture } : {})
+  };
+
+  const updated = {
+    ...current,
+    displayName: displayName !== undefined ? displayName : (current.displayName || user_metadata.display_name),
+    avatarUrl: avatarUrl !== undefined ? avatarUrl : (current.avatarUrl || user_metadata.avatar_url),
+    profilePicture: profilePicture !== undefined ? profilePicture : (current.profilePicture || user_metadata.profile_picture || 'default'),
+    user_metadata
+  };
+
+  try {
+    localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: updated } }));
+  } catch {}
+
+  return updated;
+}
+
+/**
  * Sign in with email and password
  */
 export async function signInWithEmail(email, password) {

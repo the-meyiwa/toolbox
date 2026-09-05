@@ -75,3 +75,20 @@ test('Files View: icon system recognizes categories and renders SVGs without emo
     assert.equal(emojiRegex.test(iconSvg), false, `Icon for ${tc.name} must not contain emojis`);
   }
 });
+
+test('Files View: items are draggable for drag-and-drop re-organization and upload', () => {
+  const host = document.createElement('div');
+  const unmount = renderSaved(host);
+
+  // Check that item rows/icons have draggable="true"
+  const draggableElements = host.querySelectorAll('[draggable="true"]');
+  assert.ok(draggableElements.length > 0, 'Files items must be marked draggable for drag-and-drop');
+
+  // Verify excess buttons that duplicate context menu actions are removed
+  assert.equal(host.querySelector('.sv-detail-pane [data-act="export-one"]'), null, 'Redundant download button must be removed from detail pane');
+  assert.equal(host.querySelector('.sv-detail-pane [data-act="delete"]'), null, 'Redundant delete button must be removed from detail pane');
+  assert.equal(host.querySelector('[data-act="compress-current"]'), null, 'Redundant zip button must be removed from folder toolbar');
+
+  unmount();
+});
+

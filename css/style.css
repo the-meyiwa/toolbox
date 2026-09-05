@@ -10663,5 +10663,27 @@ body.standalone-mode .notes-app-wrapper {
   border-color: var(--text);
 }
 
+/* Drag and Drop in Files */
+.sv-drag-active {
+  outline: 2px dashed var(--accent, #3b82f6) !important;
+  outline-offset: -4px;
+  border-radius: 16px;
+  background: var(--bg-subtle, rgba(0, 0, 0, 0.02));
+}
 
+.sv-folder-drop-hover {
+  background: rgba(59, 130, 246, 0.12) !important;
+  outline: 2px solid var(--accent, #3b82f6) !important;
+  border-radius: 8px;
+}
 
+[data-context-target].is-dragging {
+  opacity: 0.45;
+  transform: scale(0.96);
+}
+
+.avatar-option-btn:hover,
+.acc-avatar-btn:hover {
+  transform: scale(1.08);
+  border-color: var(--accent, #3b82f6) !important;
+}

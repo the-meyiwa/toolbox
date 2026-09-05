@@ -18,6 +18,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   offlineFirst: true,
   assistantResponseAnimation: true,
   assistantAnimationStyle: 'color rave', // 'color rave' | 'glow' | 'Plain Fade' | 'Pop In'
+  displayName: '',
+  profilePicture: 'default', // 'default' | '<image_file_name>'
 });
 
 let currentSettings = { ...DEFAULT_SETTINGS };
