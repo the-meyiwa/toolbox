@@ -323,16 +323,36 @@ export function spawnProcess(workspaceId, commandLine, { cwd = '', env = {}, tim
     });
   }
 
+  // Broadcast process start event
+  broadcast({
+    type: 'start',
+    eventType: 'PROCESS_STARTED',
+    processId,
+    workspaceId,
+    pid: child.pid,
+    command: commandLine,
+    timestamp: procRecord.startedAt
+  });
+
   let totalBufferedChars = 0;
 
   // Output handler with buffer cap
   function handleOutput(type, data) {
     const text = data.toString('utf8');
-    const entry = { type, text, timestamp: Date.now() };
+    const entry = {
+      type: 'output',
+      eventType: 'PROCESS_OUTPUT',
+      processId,
+      workspaceId,
+      stream: type, // 'stdout' | 'stderr' | 'system'
+      data: text,
+      text,
+      timestamp: Date.now()
+    };
 
     // Prevent buffer blowup from infinite logging loops
     if (procRecord.outputHistory.length < MAX_OUTPUT_HISTORY_ENTRIES && totalBufferedChars < MAX_OUTPUT_BUFFER_BYTES) {
-      procRecord.outputHistory.push(entry);
+      procRecord.outputHistory.push({ type, text, timestamp: entry.timestamp });
       totalBufferedChars += text.length;
     } else if (procRecord.outputHistory.length === MAX_OUTPUT_HISTORY_ENTRIES) {
       procRecord.outputHistory.push({
@@ -349,12 +369,20 @@ export function spawnProcess(workspaceId, commandLine, { cwd = '', env = {}, tim
         const port = parseInt(match[1], 10);
         if (port > 0 && port < 65536 && !procRecord.detectedPorts.has(port)) {
           procRecord.detectedPorts.add(port);
-          broadcast({ type: 'port', port, timestamp: Date.now() });
+          broadcast({
+            type: 'port',
+            eventType: 'PORT_DETECTED',
+            processId,
+            workspaceId,
+            port,
+            url: `/api/ide/preview/${port}/`,
+            timestamp: Date.now()
+          });
         }
       }
     }
 
-    broadcast({ type: 'output', ...entry });
+    broadcast(entry);
   }
 
   if (child.stdout) {
@@ -382,7 +410,17 @@ export function spawnProcess(workspaceId, commandLine, { cwd = '', env = {}, tim
     procRecord.endedAt = Date.now();
     procRecord.exitCode = -1;
     if (timeoutTimer) clearTimeout(timeoutTimer);
-    broadcast({ type: 'exit', exitCode: -1, status: 'FAILED', durationMs: procRecord.endedAt - procRecord.startedAt });
+    broadcast({
+      type: 'exit',
+      eventType: 'PROCESS_FAILED',
+      processId,
+      workspaceId,
+      exitCode: -1,
+      status: 'FAILED',
+      error: { code: 'ERR_PROCESS_SPAWN', message: err.message },
+      durationMs: procRecord.endedAt - procRecord.startedAt,
+      timestamp: procRecord.endedAt
+    });
   });
 
   child.on('close', (code) => {
@@ -392,11 +430,21 @@ export function spawnProcess(workspaceId, commandLine, { cwd = '', env = {}, tim
     }
     procRecord.endedAt = Date.now();
     procRecord.exitCode = code;
+
+    let eventType = 'PROCESS_EXITED';
+    if (procRecord.status === 'TIMED_OUT') eventType = 'PROCESS_TIMEOUT';
+    else if (procRecord.status === 'CANCELLED') eventType = 'PROCESS_CANCELLED';
+    else if (procRecord.status === 'FAILED') eventType = 'PROCESS_FAILED';
+
     broadcast({
       type: 'exit',
+      eventType,
+      processId,
+      workspaceId,
       exitCode: code,
       status: procRecord.status,
-      durationMs: procRecord.endedAt - procRecord.startedAt
+      durationMs: procRecord.endedAt - procRecord.startedAt,
+      timestamp: procRecord.endedAt
     });
   });
 
@@ -412,11 +460,27 @@ export function killProcess(processId, signal = 'SIGTERM') {
 
   if (proc.status === 'RUNNING') {
     proc.status = 'CANCELLED';
+    proc.endedAt = Date.now();
     proc.outputHistory.push({
       type: 'system',
       text: `\n[Toolbox Process] Terminated by user (${signal}).\n`,
-      timestamp: Date.now()
+      timestamp: proc.endedAt
     });
+    for (const fn of proc.listeners) {
+      try {
+        fn({
+          type: 'exit',
+          eventType: 'PROCESS_CANCELLED',
+          processId,
+          workspaceId: proc.workspaceId,
+          signal,
+          exitCode: 130,
+          status: 'CANCELLED',
+          durationMs: proc.endedAt - proc.startedAt,
+          timestamp: proc.endedAt
+        });
+      } catch {}
+    }
   }
 
   try {
@@ -464,6 +528,21 @@ export function listWorkspaceProcesses(workspaceId) {
 }
 
 /**
+ * Security: Checks if a port is an authorized dev server port actively registered to a running process.
+ * Rejects requests to arbitrary or unexposed host system ports (e.g. 22, 5432, 6379, 3000).
+ */
+export function isAuthorizedPreviewPort(port) {
+  const targetPort = parseInt(port, 10);
+  if (!targetPort || targetPort <= 1024 || targetPort >= 65536) return false;
+  for (const proc of processes.values()) {
+    if (proc.status === 'RUNNING' && proc.detectedPorts?.has(targetPort)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Proxies live dev server requests from localhost into the IDE Preview pane
  */
 export function proxyDevServerRequest(port, req, res) {
@@ -471,6 +550,18 @@ export function proxyDevServerRequest(port, req, res) {
   if (!targetPort || targetPort <= 0 || targetPort >= 65536) {
     res.writeHead(400, { 'Content-Type': 'text/plain' });
     res.end('Invalid port number');
+    return;
+  }
+
+  // Security: only proxy ports actively detected and registered to running workspace processes
+  if (!isAuthorizedPreviewPort(targetPort)) {
+    res.writeHead(403, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(`
+      <div style="font-family:sans-serif; padding:24px; color:#ef4444; background:#18181b; height:100vh; box-sizing:border-box;">
+        <h2 style="margin:0 0 8px;">Unauthorized Preview Port</h2>
+        <p style="color:#a1a1aa; font-size:14px;">Port <strong>${targetPort}</strong> is not authorized. Only ports exposed by active workspace processes can be previewed.</p>
+      </div>
+    `);
     return;
   }
 
@@ -503,6 +594,56 @@ export function proxyDevServerRequest(port, req, res) {
 
   req.pipe(proxyReq, { end: true });
 }
+
+/* ============================================================
+   Resource Policy Abstraction Layer (Section 11)
+   Defines enforceable resource controls and policies per isolation tier.
+   ============================================================ */
+
+export class ResourcePolicy {
+  constructor(config = {}) {
+    this.maxConcurrentProcesses = config.maxConcurrentProcesses ?? MAX_CONCURRENT_PROCESSES_PER_WORKSPACE;
+    this.defaultTimeoutMs = config.defaultTimeoutMs ?? 300000;
+    this.maxTimeoutMs = config.maxTimeoutMs ?? 600000;
+    this.maxOutputBufferBytes = config.maxOutputBufferBytes ?? MAX_OUTPUT_BUFFER_BYTES;
+    this.maxOutputHistoryEntries = config.maxOutputHistoryEntries ?? MAX_OUTPUT_HISTORY_ENTRIES;
+    this.maxMemoryMb = config.maxMemoryMb ?? null;
+    this.maxCpuShares = config.maxCpuShares ?? null;
+    this.maxDiskBytes = config.maxDiskBytes ?? null;
+    this.networkPolicy = config.networkPolicy ?? 'host-unrestricted';
+  }
+
+  getEnforceableLimits(isolationTier) {
+    if (isolationTier === 'host-process') {
+      return {
+        concurrencyEnforced: true,
+        maxConcurrentProcesses: this.maxConcurrentProcesses,
+        timeoutEnforced: true,
+        maxTimeoutMs: this.maxTimeoutMs,
+        outputBufferEnforced: true,
+        maxOutputBufferBytes: this.maxOutputBufferBytes,
+        memoryCgroupsEnforced: false,
+        cpuQuotaEnforced: false,
+        diskQuotaEnforced: false,
+        networkIsolationEnforced: false
+      };
+    }
+    return {
+      concurrencyEnforced: true,
+      maxConcurrentProcesses: this.maxConcurrentProcesses,
+      timeoutEnforced: true,
+      maxTimeoutMs: this.maxTimeoutMs,
+      outputBufferEnforced: true,
+      maxOutputBufferBytes: this.maxOutputBufferBytes,
+      memoryCgroupsEnforced: Boolean(this.maxMemoryMb),
+      cpuQuotaEnforced: Boolean(this.maxCpuShares),
+      diskQuotaEnforced: Boolean(this.maxDiskBytes),
+      networkIsolationEnforced: this.networkPolicy !== 'host-unrestricted'
+    };
+  }
+}
+
+export const defaultResourcePolicy = new ResourcePolicy();
 
 /* ============================================================
    Execution Provider Abstraction Layer (Phase 6, 8, 9)
@@ -591,14 +732,17 @@ class ExecutionManager {
   }
 
   getCapabilities() {
+    const provider = this.provider;
     return {
-      provider: this.provider.name,
-      isolationTier: this.provider.isolationTier,
-      sandboxed: this.provider.isolationTier === 'container' || this.provider.isolationTier === 'microvm',
+      provider: provider.name,
+      isolationTier: provider.isolationTier,
+      sandboxed: provider.isolationTier === 'container' || provider.isolationTier === 'microvm',
+      resourcePolicy: defaultResourcePolicy.getEnforceableLimits(provider.isolationTier),
       limits: {
-        maxConcurrentProcesses: MAX_CONCURRENT_PROCESSES_PER_WORKSPACE,
-        maxOutputBufferBytes: MAX_OUTPUT_BUFFER_BYTES,
-        defaultTimeoutMs: 300000
+        maxConcurrentProcesses: defaultResourcePolicy.maxConcurrentProcesses,
+        maxOutputBufferBytes: defaultResourcePolicy.maxOutputBufferBytes,
+        defaultTimeoutMs: defaultResourcePolicy.defaultTimeoutMs,
+        maxTimeoutMs: defaultResourcePolicy.maxTimeoutMs
       }
     };
   }

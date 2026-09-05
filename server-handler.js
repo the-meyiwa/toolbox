@@ -88,8 +88,8 @@ export async function handleApiRequest(request, response) {
     });
 
     try {
-      // 2. Health & Toolchain Detection
-      if (url.pathname === '/api/ide/health' && request.method === 'GET') {
+      // 2. Health & Capabilities Toolchain Detection
+      if ((url.pathname === '/api/ide/health' || url.pathname === '/api/ide/capabilities') && request.method === 'GET') {
         const tools = await detectSystemTools();
         response.writeHead(200, { 'Content-Type': 'application/json' });
         response.end(JSON.stringify({

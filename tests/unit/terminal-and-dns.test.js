@@ -19,7 +19,9 @@ import assert from 'node:assert/strict';
 import { setupDOMEnvironment } from '../helpers/dom-env.js';
 import { queryDns, ipToArpa, DNS_TYPE_MAP } from '../../js/lib/dns-resolver.js';
 import { executeAssistantTool } from '../../js/lib/assistant-tools.js';
-import {
+import { setExecutionAdapter } from '../../js/lib/ide-execution-client.js';
+import * as serverEngine from '../../server-execution-engine.js';
+const {
   executionManager,
   resolveWorkspacePath,
   exportWorkspaceArchive,
@@ -28,7 +30,9 @@ import {
   readWorkspaceFile,
   MAX_CONCURRENT_PROCESSES_PER_WORKSPACE,
   MAX_OUTPUT_BUFFER_BYTES
-} from '../../server-execution-engine.js';
+} = serverEngine;
+
+setExecutionAdapter(serverEngine);
 
 const { document } = setupDOMEnvironment();
 
