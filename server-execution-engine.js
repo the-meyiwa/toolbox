@@ -362,9 +362,10 @@ export function spawnProcess(workspaceId, commandLine, { cwd = '', env = {}, tim
       });
     }
 
-    // Scan for exposed ports
+    // Scan for exposed ports (strip ANSI escape codes to ensure reliable port detection)
+    const cleanForPort = text.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '');
     for (const regex of PORT_DETECTION_REGEXES) {
-      const match = text.match(regex);
+      const match = cleanForPort.match(regex);
       if (match && match[1]) {
         const port = parseInt(match[1], 10);
         if (port > 0 && port < 65536 && !procRecord.detectedPorts.has(port)) {

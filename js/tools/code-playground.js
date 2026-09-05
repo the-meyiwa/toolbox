@@ -1243,6 +1243,14 @@ export default {
 
     function updateWorkspacePreview() {
       if (!previewEl) return;
+      if (state.activeDevServerPort && state.backendOnline) {
+        const targetUrl = getDevServerPreviewUrl(state.activeDevServerPort);
+        if (previewEl.src !== targetUrl) {
+          previewEl.removeAttribute('srcdoc');
+          previewEl.src = targetUrl;
+        }
+        return;
+      }
       const indexHtmlFile = state.files.find(f => f.name.toLowerCase() === 'index.html');
       const cssFiles = state.files.filter(f => f.name.toLowerCase().endsWith('.css'));
       const appJsxFile = state.files.find(f => f.name.toLowerCase().endsWith('app.jsx') || f.name.toLowerCase().endsWith('app.js'));
@@ -1439,12 +1447,16 @@ export default {
         closeBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           const id = closeBtn.dataset.id;
+          const targetFile = state.files.find(f => f.id === id);
           state.files = state.files.filter(f => f.id !== id);
           if (state.activeFileId === id) state.activeFileId = state.files[0]?.id;
           renderTabs();
           renderFileTree();
           loadFile();
           persist();
+          if (targetFile && state.backendOnline) {
+            deleteWorkspaceDiskFile(state.workspaceId, targetFile.name).catch(() => {});
+          }
         });
       });
     }
@@ -1453,19 +1465,40 @@ export default {
       fileTree.innerHTML = state.files.map(f => {
         const isActive = f.id === state.activeFileId;
         return `
-          <div class="ide-tree-item ${isActive ? 'active' : ''}" data-id="${f.id}" style="padding:5px 14px; font-size:0.78rem; font-family:monospace; color:${isActive ? 'var(--cpg-text)' : 'var(--cpg-text-secondary)'}; background:${isActive ? 'var(--cpg-bg-subtle)' : 'transparent'}; cursor:pointer; display:flex; align-items:center; gap:6px;">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
-            <span>${escapeHtml(f.name)}</span>
+          <div class="ide-tree-item ${isActive ? 'active' : ''}" data-id="${f.id}" style="padding:5px 14px; font-size:0.78rem; font-family:monospace; color:${isActive ? 'var(--cpg-text)' : 'var(--cpg-text-secondary)'}; background:${isActive ? 'var(--cpg-bg-subtle)' : 'transparent'}; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:6px;">
+            <div style="display:flex; align-items:center; gap:6px; overflow:hidden; text-overflow:ellipsis;">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+              <span>${escapeHtml(f.name)}</span>
+            </div>
+            ${state.files.length > 1 ? `<span class="ide-tree-delete" data-id="${f.id}" title="Delete file" style="color:var(--cpg-text-muted); cursor:pointer; font-size:0.85rem; padding:0 4px; line-height:1;">&times;</span>` : ''}
           </div>
         `;
       }).join('');
 
       fileTree.querySelectorAll('.ide-tree-item').forEach(item => {
-        item.addEventListener('click', () => {
+        item.addEventListener('click', (e) => {
+          if (e.target.classList.contains('ide-tree-delete')) return;
           state.activeFileId = item.dataset.id;
           loadFile();
           renderTabs();
           renderFileTree();
+        });
+      });
+
+      fileTree.querySelectorAll('.ide-tree-delete').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          const targetFile = state.files.find(f => f.id === id);
+          state.files = state.files.filter(f => f.id !== id);
+          if (state.activeFileId === id) state.activeFileId = state.files[0]?.id;
+          renderTabs();
+          renderFileTree();
+          loadFile();
+          persist();
+          if (targetFile && state.backendOnline) {
+            deleteWorkspaceDiskFile(state.workspaceId, targetFile.name).catch(() => {});
+          }
         });
       });
     }
@@ -1513,6 +1546,9 @@ export default {
       const cur = getActiveFile();
       if (cur) {
         fs.writeFile(`/Projects/${state.projectName}/${cur.name}`, cur.content).catch(() => {});
+        if (state.backendOnline) {
+          writeWorkspaceDiskFile(state.workspaceId, cur.name, cur.content).catch(() => {});
+        }
       }
     }
 
@@ -1883,11 +1919,14 @@ Always execute the necessary terminal commands to fulfill user requests so the u
     async function refreshFilesFromDisk() {
       try {
         const diskFiles = await fetchWorkspaceDiskFiles(state.workspaceId);
-        if (!Array.isArray(diskFiles) || !diskFiles.length) return;
+        if (!Array.isArray(diskFiles)) return;
 
         let changed = false;
+        const diskPaths = new Set();
+
         for (const df of diskFiles) {
           if (df.isDirectory) continue;
+          diskPaths.add(df.path);
           let existing = state.files.find(f => f.name === df.path || f.name === df.name);
           if (!existing) {
             const content = await readWorkspaceDiskFile(state.workspaceId, df.path).catch(() => '');
@@ -1900,6 +1939,23 @@ Always execute the necessary terminal commands to fulfill user requests so the u
               content
             });
             changed = true;
+          } else {
+            const diskContent = await readWorkspaceDiskFile(state.workspaceId, df.path).catch(() => null);
+            if (diskContent !== null && diskContent !== existing.content) {
+              existing.content = diskContent;
+              changed = true;
+            }
+          }
+        }
+
+        if (diskPaths.size > 0) {
+          const validFiles = state.files.filter(f => diskPaths.has(f.name));
+          if (validFiles.length > 0 && validFiles.length !== state.files.length) {
+            state.files = validFiles;
+            if (!state.files.some(f => f.id === state.activeFileId)) {
+              state.activeFileId = state.files[0]?.id;
+            }
+            changed = true;
           }
         }
 
@@ -1907,6 +1963,7 @@ Always execute the necessary terminal commands to fulfill user requests so the u
           persist();
           renderTabs();
           renderFileTree();
+          loadFile();
         }
       } catch (err) {}
     }
