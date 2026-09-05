@@ -252,21 +252,12 @@ function renderPreferencesContent() {
   });
 }
 
-export function openPreferencesModal() {
-  createPreferencesModal();
-  renderPreferencesContent();
-  prefModalEl.style.display = 'flex';
-  requestAnimationFrame(() => {
-    prefModalEl.classList.add('is-open');
-  });
+export function openPreferencesModal(section = 'preferences') {
+  openSettings(section);
 }
 
 export function closePreferencesModal() {
-  if (!prefModalEl) return;
-  prefModalEl.classList.remove('is-open');
-  setTimeout(() => {
-    prefModalEl.style.display = 'none';
-  }, 200);
+  closeSettings();
 }
 
 export function toggleHeaderMenu() {
@@ -306,35 +297,11 @@ export function installHeaderMenu() {
   }
 
   // Handle menu item actions
-  const itemAccount = document.getElementById('menu-item-account');
-  if (itemAccount) {
-    itemAccount.addEventListener('click', () => {
-      closeHeaderMenu();
-      openAccountModal();
-    });
-  }
-
-  const itemTheme = document.getElementById('menu-item-theme');
-  if (itemTheme) {
-    itemTheme.addEventListener('click', () => {
-      closeHeaderMenu();
-      openSettings();
-    });
-  }
-
-  const itemStorage = document.getElementById('menu-item-storage');
-  if (itemStorage) {
-    itemStorage.addEventListener('click', () => {
-      closeHeaderMenu();
-      openStorageModal();
-    });
-  }
-
   const itemSettings = document.getElementById('menu-item-settings');
   if (itemSettings) {
     itemSettings.addEventListener('click', () => {
       closeHeaderMenu();
-      openPreferencesModal();
+      openSettings('preferences');
     });
   }
 

@@ -114,6 +114,30 @@ export const THEMES = [
     },
     description: 'Dark roasted coffee beans with velvety caramel cream.',
   },
+  {
+    id: 'linux-mint',
+    name: 'Linux Mint (Mint-Y)',
+    category: 'standard',
+    preview: {
+      bg: '#2f343f',
+      card: '#262930',
+      text: '#f3f4f6',
+      accent: '#87cf3e',
+    },
+    description: 'Iconic Cinnamon desktop with charcoal slate & fresh mint green.',
+  },
+  {
+    id: 'ubuntu',
+    name: 'Ubuntu (Yaru)',
+    category: 'standard',
+    preview: {
+      bg: '#242424',
+      card: '#2c2c2c',
+      text: '#f7f7f7',
+      accent: '#e95420',
+    },
+    description: 'Authentic Yaru dark desktop with warm aubergine and vibrant orange.',
+  },
 
   // --- Experimental & Cyberpunk UI Options ---
   {

@@ -248,21 +248,28 @@ ${FORMAT_FN}
 function post(type, level, text) { self.postMessage({ type: type, level: level, text: text }); }
 
 var isOffline = true;
-try {
-  if (self.location && self.location.origin) {
-    importScripts(self.location.origin + '/js/vendor/jscpp.es5.min.js');
-  } else {
-    importScripts('/js/vendor/jscpp.es5.min.js');
-  }
-} catch (e1) {
+var baseOrigin = (typeof APP_ORIGIN !== 'undefined' && APP_ORIGIN) ? APP_ORIGIN : ((self.location && self.location.origin !== 'null') ? self.location.origin : '');
+var candidates = [
+  baseOrigin ? (baseOrigin + '/vendor/jscpp.es5.min.js') : null,
+  baseOrigin ? (baseOrigin + '/js/vendor/jscpp.es5.min.js') : null,
+  '/vendor/jscpp.es5.min.js',
+  '/js/vendor/jscpp.es5.min.js'
+].filter(Boolean);
+
+for (var i = 0; i < candidates.length; i++) {
   try {
-    importScripts('/js/vendor/jscpp.es5.min.js');
-  } catch (e2) {
-    try {
-      importScripts('https://cdn.jsdelivr.net/npm/jscpp@2.0.10/dist/JSCPP.es5.min.js');
-      isOffline = false;
-    } catch (e3) {}
-  }
+    importScripts(candidates[i]);
+    if (typeof JSCPP !== 'undefined' || (self.JSCPP && self.JSCPP.run)) {
+      break;
+    }
+  } catch (err) {}
+}
+
+if (typeof JSCPP === 'undefined' && (!self.JSCPP || !self.JSCPP.run)) {
+  try {
+    importScripts('https://cdn.jsdelivr.net/npm/jscpp@2.0.10/dist/JSCPP.es5.min.js');
+    isOffline = false;
+  } catch (e3) {}
 }
 
 self.onmessage = function (e) {
@@ -504,7 +511,9 @@ const blobUrls = new Map();
 export function makeWorker(languageId) {
   const lang = LANGUAGES[languageId];
   if (!blobUrls.has(languageId)) {
-    blobUrls.set(languageId, URL.createObjectURL(new Blob([lang.worker], { type: 'text/javascript' })));
+    const origin = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : '';
+    const code = `var APP_ORIGIN = ${JSON.stringify(origin)};\n` + lang.worker;
+    blobUrls.set(languageId, URL.createObjectURL(new Blob([code], { type: 'text/javascript' })));
   }
   // wasmoon ships as an ES module, so its worker must be a module
   // worker; the others stay classic so importScripts keeps working.

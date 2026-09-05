@@ -6,7 +6,7 @@ import { loadPdfJs, renderPageToCanvas, renderPageThumbnail, flattenAnnotations,
 import { handOff } from '../lib/artifacts.js';
 
 export default {
-  async render(container, { analytics } = {}) {
+  async render(container, { analytics, artifact } = {}) {
     this._cleanup = [];
 
     container.innerHTML = `
@@ -103,6 +103,13 @@ export default {
     }
 
     this._cleanup.push(attachFileInput(zone, input, load, { accept: /pdf/i }));
+    this._load = load;
+
+    if (artifact) {
+      this.setArtifact(artifact);
+    } else if (this._incomingArtifact) {
+      this.setArtifact(this._incomingArtifact);
+    }
 
     async function renderThumbs() {
       thumbs.innerHTML = '';
@@ -528,9 +535,28 @@ export default {
     return this._getArtifact?.() || null;
   },
 
-  setArtifact(incoming) {
-    if (incoming?.text) {
+  async setArtifact(incoming) {
+    if (!incoming) return;
+    this._incomingArtifact = incoming;
+    if (incoming.text) {
       this._incomingText = incoming.text;
+    }
+    if (this._load) {
+      try {
+        let fileObj = null;
+        if (incoming.content instanceof Blob || incoming.content instanceof File) {
+          fileObj = incoming.content;
+        } else if (incoming.blob instanceof Blob) {
+          fileObj = incoming.blob;
+        } else if (incoming.path) {
+          const { fs } = await import('../lib/filesystem.js');
+          const blob = await fs.readFile(incoming.path, { encoding: 'blob' });
+          if (blob) fileObj = new File([blob], incoming.name || 'document.pdf', { type: 'application/pdf' });
+        }
+        if (fileObj) await this._load([fileObj]);
+      } catch (err) {
+        console.warn('Could not load PDF artifact', err);
+      }
     }
   },
 

@@ -51,7 +51,13 @@ const ICONS = {
   zip: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>',
   chevronRight: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
   arrowUp: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>',
-  plus: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>'
+  plus: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+  copy: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  scissors: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>',
+  paste: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>',
+  info: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+  eye: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+  checkAll: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>'
 };
 
 // UI state preserved across refreshes in current session
@@ -61,6 +67,8 @@ let currentSearch = '';
 let currentPath = '/Home'; // Hierarchical directory pointer
 let currentStorage = 'offline'; // 'offline' | 'online'
 let currentTagFilter = null; // null | 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple'
+let selectedPaths = new Set(); // Multi-selection paths
+let fileClipboard = { op: null, paths: [] }; // { op: 'copy'|'cut'|null, paths: string[] }
 
 function renderTagDots(tags = []) {
   if (!tags || !tags.length) return '';
@@ -78,6 +86,14 @@ function renderTagDots(tags = []) {
  */
 export function renderSaved(host, selectedId = null) {
   let teardown = () => {};
+
+  // If a specific file or artifact was requested, initialize selection
+  if (selectedId && selectedId !== false && selectedId !== 'none') {
+    selectedPaths.clear();
+    selectedPaths.add(selectedId);
+  } else if (selectedId === false) {
+    selectedPaths.clear();
+  }
 
   // Verify authentication if online requested
   const user = getCurrentUser();
@@ -123,6 +139,7 @@ export function renderSaved(host, selectedId = null) {
     teardown();
     unFs();
     window.removeEventListener('toolbox:authchange', authHandler);
+    selectedPaths.clear();
   };
 }
 
@@ -155,23 +172,39 @@ function paint(host, selectedId, refresh) {
 
   // Find selected item synchronously
   let selected = null;
-  if (selectedId) {
+  if (selectedPaths.size === 1) {
+    const targetP = [...selectedPaths][0];
+    const rec = fs.statSync(targetP);
+    if (rec && !rec.isDirectory) {
+      const art = store.get(rec.id || targetP);
+      selected = { ...rec, text: art?.text || '', id: rec.id || rec.path };
+    } else {
+      const art = store.get(targetP);
+      if (art) selected = art;
+    }
+  } else if (selectedPaths.size === 0 && selectedId && selectedId !== false && selectedId !== 'none') {
     const rec = fs.statSync(selectedId);
     if (rec && !rec.isDirectory) {
       const art = store.get(rec.id || selectedId);
       selected = { ...rec, text: art?.text || '', id: rec.id || rec.path };
+      selectedPaths.add(rec.path);
     } else {
       const art = store.get(selectedId);
-      if (art) selected = art;
+      if (art) {
+        selected = art;
+        if (art.path) selectedPaths.add(art.path);
+      }
     }
   }
 
-  // Default selection if none active
-  if (!selected && items.length > 0) {
+  // Default selection on initial load if not explicitly deselected
+  if (!selected && items.length > 0 && selectedPaths.size === 0 && selectedId !== false && selectedId !== 'none') {
     const firstFile = items.find(f => !f.isDirectory);
     if (firstFile) {
       const art = store.get(firstFile.id || firstFile.path);
-      selected = { ...firstFile, text: art?.text || '' };
+      selected = { ...firstFile, text: art?.text || '', id: firstFile.id || firstFile.path };
+      if (firstFile.path) selectedPaths.add(firstFile.path);
+      else if (firstFile.id) selectedPaths.add(firstFile.id);
     }
   }
 
@@ -251,12 +284,12 @@ function full(user, allItems, filteredItems, selected) {
             </div>
             
             <p class="sv-lede" style="margin:4px 0 0; font-size:0.78rem; color:var(--text-secondary);">
-              ${isOnline ? 'Synchronized to your authenticated Supabase Cloud storage' : `${size(use.used)} stored offline in this browser`}
+              ${isOnline ? "these files aren't going anywhere" : `${size(use.used)} stored offline in this browser`}
             </p>
           </div>
         </div>
 
-        <!-- Right: Search and View Controls -->
+        <!-- Right: Search, Views and File Operations -->
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
           <!-- Search input -->
           <div style="position:relative; width:180px;">
@@ -276,6 +309,26 @@ function full(user, allItems, filteredItems, selected) {
             </button>
             <button type="button" class="sv-layout-btn ${currentLayout === 'list' ? 'active' : ''}" data-layout="list" title="Tabular List View" style="padding:4px 7px; background:none; border:none; cursor:pointer; color:var(--text); border-radius:6px;">
               ${ICONS.list}
+            </button>
+          </div>
+
+          <!-- File Operations (Cut, Copy, Paste, Delete) -->
+          <div class="sv-op-btn-group" style="display:inline-flex; align-items:center; background:var(--bg-subtle); padding:2px; border-radius:8px; border:1px solid var(--border); gap:2px;">
+            <button type="button" class="btn btn-secondary btn-sm sv-tb-btn" data-act="cut" title="Cut selected (Ctrl+X)" style="padding:4px 8px; font-size:0.75rem; border:none; background:none; display:inline-flex; align-items:center; gap:4px; ${selectedPaths.size === 0 && !selected ? 'opacity:0.4; pointer-events:none;' : ''}">
+              ${ICONS.scissors}
+              <span class="sv-btn-txt">Cut</span>
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm sv-tb-btn" data-act="copy" title="Copy selected (Ctrl+C)" style="padding:4px 8px; font-size:0.75rem; border:none; background:none; display:inline-flex; align-items:center; gap:4px; ${selectedPaths.size === 0 && !selected ? 'opacity:0.4; pointer-events:none;' : ''}">
+              ${ICONS.copy}
+              <span class="sv-btn-txt">Copy</span>
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm sv-tb-btn" data-act="paste" title="Paste into folder (Ctrl+V)" style="padding:4px 8px; font-size:0.75rem; border:none; background:none; display:inline-flex; align-items:center; gap:4px; ${fileClipboard.paths.length === 0 ? 'opacity:0.4; pointer-events:none;' : ''}">
+              ${ICONS.paste}
+              <span class="sv-btn-txt">Paste${fileClipboard.paths.length > 0 ? ` (${fileClipboard.paths.length})` : ''}</span>
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm sv-tb-btn" data-act="delete-selected" title="Delete selected (Delete)" style="padding:4px 8px; font-size:0.75rem; border:none; background:none; color:#ef4444; display:inline-flex; align-items:center; gap:4px; ${selectedPaths.size === 0 && !selected ? 'opacity:0.4; pointer-events:none;' : ''}">
+              ${ICONS.delete}
+              <span class="sv-btn-txt">Delete</span>
             </button>
           </div>
 
@@ -314,8 +367,16 @@ function full(user, allItems, filteredItems, selected) {
           }).join('')}
         </div>
 
-        <!-- Folder Actions (Up) -->
-        <div style="display:flex; align-items:center; gap:8px;">
+        <!-- Folder Actions (Select All, Properties, Up) -->
+        <div style="display:flex; align-items:center; gap:6px;">
+          <button type="button" class="btn btn-secondary btn-sm" data-act="select-all" title="Select All (Ctrl+A)" style="padding:4px 8px; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px;">
+            ${ICONS.checkAll}
+            <span>Select All</span>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" data-act="folder-properties" title="Folder Properties" style="padding:4px 8px; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px;">
+            ${ICONS.info}
+            <span>Properties</span>
+          </button>
           ${currentPath !== '/' && currentPath !== '/Home' ? `
             <button type="button" class="btn btn-secondary btn-sm" data-act="nav-up" title="Go up one folder" style="padding:4px 8px; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px;">
               ${ICONS.arrowUp}
@@ -386,7 +447,7 @@ function renderExplorerBody(items, selected) {
 
   if (currentLayout === 'grid') {
     return `
-      <div class="sv-grid-view" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:16px 12px; justify-items:center; padding:12px; background:var(--bg-card); border:1px solid var(--border); border-radius:14px; min-height:360px;">
+      <div class="sv-grid-view" data-canvas="true" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:16px 12px; justify-items:center; align-items:start; padding:16px; background:var(--bg-card); border:1px solid var(--border); border-radius:14px; min-height:360px;">
         ${items.map(item => renderGridIcon(item, selected)).join('')}
       </div>
     `;
@@ -394,14 +455,14 @@ function renderExplorerBody(items, selected) {
 
   if (currentLayout === 'list') {
     return `
-      <div class="sv-list-view" style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; overflow:hidden;">
+      <div class="sv-list-view" data-canvas="true" style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; overflow:hidden;">
         <div style="padding:10px 16px; background:var(--bg-subtle); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">
           <span style="flex:2;">Name</span>
           <span style="width:100px;">Size</span>
           <span style="width:140px;">Modified</span>
           <span style="width:90px; text-align:right;">Tags</span>
         </div>
-        <div style="display:flex; flex-direction:column;">
+        <div data-canvas="true" style="display:flex; flex-direction:column;">
           ${items.map(item => renderListRow(item, selected)).join('')}
         </div>
       </div>
@@ -410,24 +471,38 @@ function renderExplorerBody(items, selected) {
 
   // Default: Split Master/Detail View
   return `
-    <div class="sv-split-view" style="display:grid; grid-template-columns:360px 1fr; gap:16px; min-height:560px; align-items:start;">
+    <div class="sv-split-view" data-canvas="true" style="display:grid; grid-template-columns:360px 1fr; gap:16px; min-height:560px; align-items:start;">
       <!-- Master: Files List -->
-      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; overflow:hidden; max-height:680px; overflow-y:auto; display:flex; flex-direction:column;">
+      <div class="sv-split-master" data-canvas="true" style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; overflow:hidden; max-height:680px; overflow-y:auto; display:flex; flex-direction:column;">
         <div style="padding:10px 14px; background:var(--bg-subtle); border-bottom:1px solid var(--border); font-size:0.75rem; font-weight:700; color:var(--text-secondary);">
           ITEMS IN ${escapeHtml(currentPath.toUpperCase())} (${items.length})
         </div>
-        <div style="display:flex; flex-direction:column;">
+        <div data-canvas="true" style="display:flex; flex-direction:column; min-height:200px;">
           ${items.map(item => renderSplitItem(item, selected)).join('')}
         </div>
       </div>
 
       <!-- Detail: File Inspector / Content Preview Pane -->
       <div class="sv-detail-pane" style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; overflow:hidden; min-height:560px; display:flex; flex-direction:column;">
-        ${selected ? renderDetailPane(selected) : `
+        ${selectedPaths.size > 1 ? `
+          <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; padding:40px 20px; text-align:center; gap:14px;">
+            <div style="color:var(--text); width:48px; height:48px; border-radius:12px; background:var(--bg-subtle); display:flex; align-items:center; justify-content:center;">
+              ${ICONS.checkAll}
+            </div>
+            <h3 style="margin:0; font-size:1.05rem; color:var(--text); font-weight:700;">${selectedPaths.size} items selected</h3>
+            <p style="margin:0; font-size:0.82rem; color:var(--text-secondary); max-width:300px;">Perform operations using the toolbar buttons or shortcuts (Ctrl+C, Ctrl+X, Delete).</p>
+            <div style="display:flex; gap:8px; margin-top:6px;">
+              <button type="button" class="btn btn-secondary btn-sm" data-act="cut">${ICONS.scissors} Cut</button>
+              <button type="button" class="btn btn-secondary btn-sm" data-act="copy">${ICONS.copy} Copy</button>
+              <button type="button" class="btn btn-secondary btn-sm" data-act="delete-selected" style="color:#ef4444;">${ICONS.delete} Delete</button>
+              <button type="button" class="btn btn-secondary btn-sm" data-act="clear-selection">Clear</button>
+            </div>
+          </div>
+        ` : (selected ? renderDetailPane(selected) : `
           <div style="display:flex; align-items:center; justify-content:center; flex:1; color:var(--text-muted); font-size:0.88rem; padding:40px;">
             Select a file to view and inspect its contents. Right-click or hold for options.
           </div>
-        `}
+        `)}
       </div>
     </div>
   `;
@@ -435,7 +510,7 @@ function renderExplorerBody(items, selected) {
 
 /* OS-Style Vertical Icon Grid Item (Mac Finder / Windows Explorer) */
 function renderGridIcon(item, selected) {
-  const isSelected = selected && (selected.path === item.path || selected.id === item.id);
+  const isSelected = selectedPaths.has(item.path) || (selected && (selected.path === item.path || selected.id === item.id));
   const clickAction = item.isDirectory ? `data-nav-path="${escapeHtml(item.path)}"` : `data-pick="${escapeHtml(item.id || item.path)}"`;
 
   // Image thumbnail support
@@ -443,11 +518,10 @@ function renderGridIcon(item, selected) {
   let iconHtml;
   if (isImg && (item.dataUrl || item.thumbnail || (typeof item.content === 'string' && item.content.startsWith('data:image')))) {
     const src = item.thumbnail || item.dataUrl || item.content;
-    iconHtml = `<img src="${escapeHtml(src)}" alt="${escapeHtml(item.name)}" style="max-width:54px; max-height:54px; object-fit:contain; border-radius:6px; box-shadow:0 2px 6px rgba(0,0,0,0.12);" />`;
-  } else if (item.isDirectory) {
-    iconHtml = `<div style="color:var(--text); transform:scale(1.4);">${ICONS.folder}</div>`;
+    iconHtml = `<img src="${escapeHtml(src)}" alt="${escapeHtml(item.name)}" style="width:36px; height:36px; object-fit:contain; border-radius:4px; box-shadow:0 1px 4px rgba(0,0,0,0.12);" />`;
   } else {
-    iconHtml = getFileTypeIcon(item.name, item.kind, 44);
+    // Uniform vector icons with stroke=currentColor (automatically dark on light themes, light on dark themes)
+    iconHtml = getFileTypeIcon(item.name, item.isDirectory ? 'folder' : item.kind, 32);
   }
 
   return `
@@ -457,20 +531,20 @@ function renderGridIcon(item, selected) {
          data-is-dir="${item.isDirectory ? 'true' : 'false'}"
          draggable="true"
          ${clickAction}
-         style="display:flex; flex-direction:column; align-items:center; text-align:center; width:110px; padding:12px 8px; border-radius:10px; cursor:pointer; user-select:none; transition:all 0.15s ease; position:relative; background:${isSelected ? 'rgba(59,130,246,0.12)' : 'transparent'}; border:1px solid ${isSelected ? 'rgba(59,130,246,0.35)' : 'transparent'};">
+         style="display:flex; flex-direction:column; align-items:center; text-align:center; width:110px; height:124px; max-height:124px; padding:10px 8px; border-radius:10px; cursor:pointer; user-select:none; transition:all 0.15s ease; position:relative; overflow:hidden; box-sizing:border-box; align-self:start; background:${isSelected ? 'rgba(59,130,246,0.12)' : 'transparent'}; border:1px solid ${isSelected ? 'rgba(59,130,246,0.4)' : 'transparent'};">
       
-      <!-- Icon / Thumbnail Container -->
-      <div style="width:58px; height:58px; display:flex; align-items:center; justify-content:center; margin-bottom:6px; position:relative;">
+      <!-- Icon / Thumbnail Container (Consistent 44x44 Box) -->
+      <div style="width:44px; height:44px; display:flex; align-items:center; justify-content:center; color:var(--text); margin-bottom:8px; flex-shrink:0;">
         ${iconHtml}
       </div>
 
       <!-- Centered Filename underneath -->
-      <div style="font-size:0.8rem; font-weight:600; color:var(--text); width:100%; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; word-break:break-word; line-height:1.25; margin-bottom:2px;" title="${escapeHtml(item.name)}">
+      <div style="font-size:0.78rem; font-weight:500; color:var(--text); width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:1.3; margin-bottom:2px;" title="${escapeHtml(item.name)}">
         ${escapeHtml(item.name)}
       </div>
 
       <!-- Centered Metadata underneath (Size or Folder) -->
-      <div style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono); width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+      <div style="font-size:0.68rem; color:var(--text-muted); font-family:var(--mono); width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
         ${item.isDirectory ? 'Folder' : size(item.size || 0)}
       </div>
 
@@ -481,7 +555,7 @@ function renderGridIcon(item, selected) {
 }
 
 function renderListRow(item, selected) {
-  const isSelected = selected && (selected.path === item.path || selected.id === item.id);
+  const isSelected = selectedPaths.has(item.path) || (selected && (selected.path === item.path || selected.id === item.id));
   const icon = item.isDirectory ? ICONS.folder : getFileTypeIcon(item.name, item.kind, 16);
   const clickAction = item.isDirectory ? `data-nav-path="${escapeHtml(item.path)}"` : `data-pick="${escapeHtml(item.id || item.path)}"`;
 
@@ -513,7 +587,7 @@ function renderListRow(item, selected) {
 }
 
 function renderSplitItem(item, selected) {
-  const isSelected = selected && (selected.path === item.path || selected.id === item.id);
+  const isSelected = selectedPaths.has(item.path) || (selected && (selected.path === item.path || selected.id === item.id));
   const icon = item.isDirectory ? ICONS.folder : getFileTypeIcon(item.name, item.kind, 16);
   const clickAction = item.isDirectory ? `data-nav-path="${escapeHtml(item.path)}"` : `data-pick="${escapeHtml(item.id || item.path)}"`;
 
@@ -637,6 +711,12 @@ function renderDetailPane(selected) {
               </button>
             </div>
           ` : ''}
+
+          <!-- Quick Look Preview Button -->
+          <button type="button" class="btn btn-secondary btn-sm" data-act="quicklook" title="Quick Look preview (Space)" style="font-size:0.75rem; padding:4px 9px; display:inline-flex; align-items:center; gap:4px;">
+            ${ICONS.eye}
+            <span>Preview</span>
+          </button>
 
           <!-- Open in Tool Pop-up Menu -->
           ${tools.length > 0 ? `
@@ -800,7 +880,451 @@ function wire(host, selected, refresh, itemsInDir = []) {
     });
   }
 
-  // Context Menu: Mac Finder style popup
+  // ---------------- Operations & Modals ----------------
+  function openFileInTool(fileOrPath, toolId) {
+    if (!fileOrPath || !toolId) return;
+    let fileObj = typeof fileOrPath === 'string' ? (itemsInDir.find(f => f.path === fileOrPath || f.id === fileOrPath) || fs.statSync(fileOrPath)) : fileOrPath;
+    if (!fileObj && typeof fileOrPath === 'string') {
+      const art = store.get(fileOrPath);
+      if (art) fileObj = art;
+      else fileObj = { path: fileOrPath, name: getBaseName(fileOrPath) };
+    }
+    if (!fileObj) return;
+
+    const path = fileObj.path;
+    const name = fileObj.name || getBaseName(path);
+    let text = fileObj.text || fileObj.content || '';
+    let blob = fileObj.blob || null;
+
+    store.handOff({
+      id: fileObj.id || path,
+      name,
+      path,
+      kind: fileObj.kind || kindFromFilename(name),
+      text: typeof text === 'string' ? text : '',
+      content: typeof text === 'string' ? text : blob,
+      blob,
+      from: 'files'
+    });
+
+    if (window.location.hash === `#${toolId}`) {
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    } else {
+      window.location.hash = `#${toolId}`;
+    }
+
+    if (path && !text && !blob) {
+      const isBinary = /\.(png|jpe?g|webp|gif|svg|pdf|zip|docx|xlsx|pptx)$/i.test(name);
+      if (isBinary) {
+        fs.readFile(path, { encoding: 'blob', storage: currentStorage }).then(b => {
+          if (b) {
+            fileObj.blob = b;
+            fileObj.content = b;
+          }
+        }).catch(() => {});
+      } else {
+        fs.readFile(path, { encoding: 'utf8', storage: currentStorage }).then(t => {
+          if (t) {
+            fileObj.text = t;
+            fileObj.content = t;
+          }
+        }).catch(() => {});
+      }
+    }
+  }
+
+  async function executePaste(targetDir) {
+    if (!fileClipboard.paths.length || !fileClipboard.op) return;
+    const isCut = fileClipboard.op === 'cut';
+    let successCount = 0;
+    for (const src of fileClipboard.paths) {
+      try {
+        const fileName = getBaseName(src);
+        let dest = normalizePath(`${targetDir}/${fileName}`);
+        if (src === dest) {
+          if (isCut) continue;
+          const ext = fileName.includes('.') ? '.' + fileName.split('.').pop() : '';
+          const nameWithoutExt = fileName.replace(new RegExp(`${ext}$`), '');
+          dest = normalizePath(`${targetDir}/${nameWithoutExt}-copy${ext}`);
+        }
+        if (isCut) {
+          await fs.rename(src, dest);
+        } else {
+          await fs.copy(src, dest);
+        }
+        successCount++;
+      } catch (err) {
+        console.warn('Paste error:', err);
+      }
+    }
+    if (isCut) {
+      fileClipboard = { op: null, paths: [] };
+    }
+    flash(`Pasted ${successCount} item(s).`);
+    refresh(null);
+  }
+
+  async function executeDelete(paths) {
+    if (!paths || !paths.length) return;
+    const count = paths.length;
+    const msg = count === 1
+      ? `Are you sure you want to permanently delete "${getBaseName(paths[0])}"?`
+      : `Are you sure you want to permanently delete ${count} selected items?`;
+    if (confirm(msg)) {
+      let deletedCount = 0;
+      for (const p of paths) {
+        try {
+          await fs.delete(p);
+          deletedCount++;
+          selectedPaths.delete(p);
+        } catch (err) {
+          console.warn('Delete error:', err);
+        }
+      }
+      flash(`Deleted ${deletedCount} item(s).`);
+      refresh(null);
+    }
+  }
+
+  function openDirectoryProperties(dirPath) {
+    const existing = document.getElementById('sv-properties-modal');
+    if (existing) existing.remove();
+
+    const dirName = getBaseName(dirPath) || 'Root';
+    let fileCount = 0;
+    let folderCount = 0;
+    let totalBytes = 0;
+
+    function walk(p) {
+      const children = fs.listSync(p);
+      for (const c of children) {
+        if (c.isDirectory) {
+          folderCount++;
+          walk(c.path);
+        } else {
+          fileCount++;
+          totalBytes += (c.size || c.bytes || 0);
+        }
+      }
+    }
+    walk(dirPath);
+
+    const modal = document.createElement('div');
+    modal.id = 'sv-properties-modal';
+    modal.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 10001;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(6px);
+      padding: 20px;
+    `;
+
+    modal.innerHTML = `
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:16px; width:100%; max-width:400px; box-shadow:0 24px 48px rgba(0,0,0,0.3); overflow:hidden; font-family:var(--sans);">
+        <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="color:var(--text);">${ICONS.folder}</span>
+            <strong style="font-size:0.95rem; color:var(--text);">${escapeHtml(dirName)} Properties</strong>
+          </div>
+          <button type="button" id="sv-prop-close" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:4px; border-radius:6px; display:inline-flex;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div style="padding:20px; display:flex; flex-direction:column; gap:12px; font-size:0.84rem;">
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:8px;">
+            <span style="color:var(--text-secondary);">Location</span>
+            <span style="color:var(--text); font-family:var(--mono); font-size:0.8rem;">${escapeHtml(dirPath)}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:8px;">
+            <span style="color:var(--text-secondary);">Contains</span>
+            <span style="color:var(--text); font-weight:600;">${fileCount} file(s), ${folderCount} folder(s)</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:8px;">
+            <span style="color:var(--text-secondary);">Total Size</span>
+            <span style="color:var(--text); font-family:var(--mono); font-weight:600;">${size(totalBytes)}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding-bottom:4px;">
+            <span style="color:var(--text-secondary);">Storage</span>
+            <span style="color:var(--text);">${currentStorage === 'online' ? 'Online (Cloud)' : 'Local Browser'}</span>
+          </div>
+        </div>
+        <div style="padding:12px 20px; background:var(--bg-subtle); border-top:1px solid var(--border); display:flex; justify-content:flex-end;">
+          <button type="button" class="btn btn-secondary btn-sm" id="sv-prop-ok" style="padding:5px 16px;">Close</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const closeModal = () => modal.remove();
+    modal.querySelector('#sv-prop-close')?.addEventListener('click', closeModal);
+    modal.querySelector('#sv-prop-ok')?.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+  }
+
+  function openQuickLook(fileOrPath) {
+    const existing = document.getElementById('sv-quicklook-modal');
+    if (existing) {
+      existing.remove();
+      return;
+    }
+
+    let fileObj = typeof fileOrPath === 'string' ? fs.statSync(fileOrPath) : fileOrPath;
+    if (!fileObj && typeof fileOrPath === 'string') {
+      fileObj = { path: fileOrPath, name: getBaseName(fileOrPath) };
+    }
+    if (!fileObj) return;
+
+    const path = fileObj.path;
+    const name = fileObj.name || getBaseName(path);
+    const isImg = /\.(png|jpe?g|webp|gif|svg)$/i.test(name);
+    const tools = getToolsForFile(fileObj);
+    const topTool = tools[0];
+
+    let content = fileObj.content || fileObj.text || '';
+    if (!content && path && typeof fs.readFileSync === 'function') {
+      content = fs.readFileSync(path, { encoding: 'utf8' }) || '';
+    }
+    let imgSrc = fileObj.dataUrl || (typeof content === 'string' && content.startsWith('data:image') ? content : null);
+
+    const modal = document.createElement('div');
+    modal.id = 'sv-quicklook-modal';
+    modal.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 10002;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(8px);
+      padding: 20px;
+      font-family: var(--sans);
+    `;
+
+    modal.innerHTML = `
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:18px; width:100%; max-width:620px; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 28px 60px rgba(0,0,0,0.35); overflow:hidden;">
+        
+        <!-- Quick Look Header -->
+        <div style="padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--bg-subtle);">
+          <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
+            <span style="color:var(--text); flex-shrink:0;">${getFileTypeIcon(name, fileObj.kind, 22)}</span>
+            <div style="overflow:hidden;">
+              <div style="font-weight:700; font-size:0.92rem; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                ${escapeHtml(name)}
+              </div>
+              <div style="font-size:0.72rem; color:var(--text-muted); font-family:var(--mono);">
+                ${size(fileObj.size || fileObj.bytes || 0)} · ${fileObj.updatedAt ? when(fileObj.updatedAt) : 'Ready'}
+              </div>
+            </div>
+          </div>
+          <button type="button" id="sv-ql-close" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:6px; border-radius:8px; display:inline-flex;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <!-- Quick Look Preview Body -->
+        <div style="padding:18px; flex:1; overflow-y:auto; max-height:55vh;">
+          ${isImg ? `
+            <div id="sv-ql-img-area" style="display:flex; align-items:center; justify-content:center; background:var(--bg-subtle); border-radius:10px; padding:16px; min-height:240px;">
+              ${imgSrc ? `<img id="sv-ql-img" src="${escapeHtml(imgSrc)}" alt="${escapeHtml(name)}" style="max-width:100%; max-height:360px; object-fit:contain; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.1);" />` : '<span style="color:var(--text-muted);">Loading preview…</span>'}
+            </div>
+          ` : `
+            <pre id="sv-ql-pre" style="margin:0; padding:14px; background:var(--bg-subtle); border:1px solid var(--border); border-radius:10px; font-family:var(--mono); font-size:0.8rem; line-height:1.5; color:var(--text); overflow-x:auto; white-space:pre-wrap; word-break:break-word; max-height:360px;">${escapeHtml(typeof content === 'string' ? content : JSON.stringify(content, null, 2))}</pre>
+          `}
+        </div>
+
+        <!-- Quick Look Footer -->
+        <div style="padding:12px 18px; border-top:1px solid var(--border); background:var(--bg-subtle); display:flex; align-items:center; justify-content:space-between; gap:10px;">
+          <span style="font-size:0.75rem; color:var(--text-muted);">
+            Press <kbd style="background:var(--bg-card); border:1px solid var(--border); padding:2px 5px; border-radius:4px; font-family:var(--mono); font-size:0.7rem;">Space</kbd> or <kbd style="background:var(--bg-card); border:1px solid var(--border); padding:2px 5px; border-radius:4px; font-family:var(--mono); font-size:0.7rem;">Esc</kbd> to close
+          </span>
+          <div style="display:flex; gap:8px;">
+            ${topTool ? `
+              <button type="button" class="btn btn-primary btn-sm" id="sv-ql-open-tool" style="display:inline-flex; align-items:center; gap:5px; font-size:0.8rem;">
+                <span>Open in ${escapeHtml(topTool.name)}</span>
+              </button>
+            ` : ''}
+            <button type="button" class="btn btn-secondary btn-sm" id="sv-ql-close-btn">Close</button>
+          </div>
+        </div>
+
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Hydrate async blob or text if not loaded synchronously
+    if (isImg && !imgSrc && path) {
+      fs.readFile(path, { encoding: 'blob', storage: currentStorage }).then(blob => {
+        if (blob) {
+          imgSrc = URL.createObjectURL(blob);
+          const area = modal.querySelector('#sv-ql-img-area');
+          if (area) {
+            area.innerHTML = `<img id="sv-ql-img" src="${escapeHtml(imgSrc)}" alt="${escapeHtml(name)}" style="max-width:100%; max-height:360px; object-fit:contain; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.1);" />`;
+          }
+        }
+      }).catch(() => {});
+    } else if (!isImg && !content && path) {
+      fs.readFile(path, { encoding: 'utf8', storage: currentStorage }).then(txt => {
+        if (txt !== undefined) {
+          const pre = modal.querySelector('#sv-ql-pre');
+          if (pre) pre.textContent = txt;
+        }
+      }).catch(() => {});
+    }
+
+    const closeQL = () => {
+      if (imgSrc && imgSrc.startsWith('blob:')) {
+        try { URL.revokeObjectURL(imgSrc); } catch {}
+      }
+      modal.remove();
+    };
+
+    modal.querySelector('#sv-ql-close')?.addEventListener('click', closeQL);
+    modal.querySelector('#sv-ql-close-btn')?.addEventListener('click', closeQL);
+    modal.querySelector('#sv-ql-open-tool')?.addEventListener('click', () => {
+      closeQL();
+      openFileInTool(fileObj, topTool.id);
+    });
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeQL();
+    });
+  }
+
+  function openCanvasContextMenu(x, y) {
+    const existing = document.getElementById('sv-finder-menu');
+    if (existing) existing.remove();
+
+    const menu = document.createElement('div');
+    menu.id = 'sv-finder-menu';
+    menu.className = 'finder-context-menu';
+    menu.style.cssText = `
+      position: fixed;
+      z-index: 10000;
+      min-width: 210px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 6px;
+      box-shadow: 0 16px 36px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.12);
+      backdrop-filter: blur(16px);
+      font-family: var(--sans);
+      font-size: 0.84rem;
+    `;
+
+    const folderTitle = getBaseName(currentPath) || 'Files';
+
+    menu.innerHTML = `
+      <div style="padding: 4px 10px 8px; font-size: 0.72rem; color: var(--text-muted); font-weight: 700; border-bottom: 1px solid var(--border); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+        ${escapeHtml(folderTitle)}
+      </div>
+
+      <div class="finder-menu-item" data-canvas-act="select-all" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          ${ICONS.checkAll}
+          <span>Select All</span>
+        </div>
+        <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Ctrl+A</span>
+      </div>
+
+      <div class="finder-menu-item" data-canvas-act="properties" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+        ${ICONS.info}
+        <span>Properties</span>
+      </div>
+
+      <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
+
+      <div class="finder-menu-item" data-canvas-act="new-folder" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+        ${ICONS.folderPlus}
+        <span>New Folder</span>
+      </div>
+
+      <div class="finder-menu-item" data-canvas-act="new-file" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+        ${ICONS.plus}
+        <span>New File</span>
+      </div>
+
+      <div class="finder-menu-item" data-canvas-act="upload" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+        ${ICONS.upload}
+        <span>Upload Files</span>
+      </div>
+
+      ${fileClipboard.paths.length > 0 ? `
+        <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
+        <div class="finder-menu-item" data-canvas-act="paste" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            ${ICONS.paste}
+            <span>Paste (${fileClipboard.paths.length})</span>
+          </div>
+          <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Ctrl+V</span>
+        </div>
+      ` : ''}
+    `;
+
+    document.body.appendChild(menu);
+
+    const rect = menu.getBoundingClientRect();
+    let left = x;
+    let top = y;
+    if (left + rect.width > window.innerWidth - 10) left = window.innerWidth - rect.width - 10;
+    if (top + rect.height > window.innerHeight - 10) top = window.innerHeight - rect.height - 10;
+    menu.style.left = `${Math.max(10, left)}px`;
+    menu.style.top = `${Math.max(10, top)}px`;
+
+    menu.addEventListener('click', async (me) => {
+      const itemTarget = me.target.closest('[data-canvas-act]');
+      if (!itemTarget) return;
+      const act = itemTarget.dataset.canvasAct;
+      menu.remove();
+
+      if (act === 'select-all') {
+        const items = fs.listSync(currentPath);
+        selectedPaths = new Set(items.map(i => i.path));
+        refresh(items[0]?.path || null);
+      } else if (act === 'properties') {
+        openDirectoryProperties(currentPath);
+      } else if (act === 'new-folder') {
+        const name = prompt('Folder Name:');
+        if (name && name.trim()) {
+          const clean = name.trim().replace(/[/\\?%*:|"<>]/g, '-');
+          const target = normalizePath(`${currentPath}/${clean}`);
+          try {
+            await fs.mkdir(target, { storage: currentStorage });
+            flash(`Folder "${clean}" created.`);
+            refresh(null);
+          } catch (err) {
+            flash(err.message, 'bad');
+          }
+        }
+      } else if (act === 'new-file') {
+        const name = prompt('File Name (with extension, e.g. document.txt):');
+        if (name && name.trim()) {
+          const clean = name.trim().replace(/[/\\?%*:|"<>]/g, '-');
+          const target = normalizePath(`${currentPath}/${clean}`);
+          try {
+            await fs.writeFile(target, '', { storage: currentStorage });
+            flash(`File "${clean}" created.`);
+            refresh(target);
+          } catch (err) {
+            flash(err.message, 'bad');
+          }
+        }
+      } else if (act === 'upload') {
+        uploader.click();
+      } else if (act === 'paste') {
+        await executePaste(currentPath);
+      }
+    });
+  }
+
+  // Context Menu: Mac Finder style popup for items
   function openContextMenu(x, y, targetPath, isDir) {
     const existing = document.getElementById('sv-finder-menu');
     if (existing) existing.remove();
@@ -817,7 +1341,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
     menu.style.cssText = `
       position: fixed;
       z-index: 10000;
-      min-width: 200px;
+      min-width: 210px;
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: 12px;
@@ -833,9 +1357,12 @@ function wire(host, selected, refresh, itemsInDir = []) {
         ${escapeHtml(baseName)}
       </div>
       
-      <div class="finder-menu-item" data-cmenu="open" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; margin-top: 4px;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/></svg>
-        <span>${isDir ? 'Open Folder' : 'Preview'}</span>
+      <div class="finder-menu-item" data-cmenu="open" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/></svg>
+          <span>${isDir ? 'Open Folder' : 'Preview'}</span>
+        </div>
+        ${!isDir ? '<span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Space</span>' : ''}
       </div>
 
       ${topTool ? `
@@ -845,9 +1372,40 @@ function wire(host, selected, refresh, itemsInDir = []) {
         </div>
       ` : ''}
 
+      <div class="finder-menu-item" data-cmenu="cut" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          ${ICONS.scissors}
+          <span>Cut</span>
+        </div>
+        <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Ctrl+X</span>
+      </div>
+
+      <div class="finder-menu-item" data-cmenu="copy" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          ${ICONS.copy}
+          <span>Copy</span>
+        </div>
+        <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Ctrl+C</span>
+      </div>
+
+      ${isDir && fileClipboard.paths.length > 0 ? `
+        <div class="finder-menu-item" data-cmenu="paste-into" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            ${ICONS.paste}
+            <span>Paste into Folder (${fileClipboard.paths.length})</span>
+          </div>
+          <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Ctrl+V</span>
+        </div>
+      ` : ''}
+
       <div class="finder-menu-item" data-cmenu="rename" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         <span>Rename</span>
+      </div>
+
+      <div class="finder-menu-item" data-cmenu="properties" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+        ${ICONS.info}
+        <span>Properties</span>
       </div>
 
       <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
@@ -913,26 +1471,29 @@ function wire(host, selected, refresh, itemsInDir = []) {
           currentPath = targetPath;
           refresh(null);
         } else {
-          refresh(targetPath);
+          openQuickLook(targetPath);
         }
       } else if (act === 'open-tool') {
         const toolId = itemTarget.dataset.open || topTool?.id;
         if (toolId) {
-          let text = '';
-          try {
-            text = await fs.readFile(targetPath, { encoding: 'utf8', storage: currentStorage });
-          } catch {}
-          store.handOff({
-            id: itemRecord.id || targetPath,
-            name: baseName,
-            path: targetPath,
-            kind: itemRecord.kind || kindFromFilename(baseName),
-            text,
-            content: text
-          });
-          window.location.hash = `#${toolId}`;
+          await openFileInTool(targetPath, toolId);
           return;
         }
+      } else if (act === 'cut') {
+        const paths = selectedPaths.has(targetPath) && selectedPaths.size > 0 ? [...selectedPaths] : [targetPath];
+        fileClipboard = { op: 'cut', paths };
+        flash(`Cut ${paths.length} item(s).`);
+        refresh(current?.id || null);
+      } else if (act === 'copy') {
+        const paths = selectedPaths.has(targetPath) && selectedPaths.size > 0 ? [...selectedPaths] : [targetPath];
+        fileClipboard = { op: 'copy', paths };
+        flash(`Copied ${paths.length} item(s).`);
+        refresh(current?.id || null);
+      } else if (act === 'paste-into') {
+        await executePaste(targetPath);
+      } else if (act === 'properties') {
+        if (isDir) openDirectoryProperties(targetPath);
+        else openQuickLook(targetPath);
       } else if (act === 'rename') {
         const nextName = prompt('New name:', baseName);
         if (nextName && nextName.trim() && nextName.trim() !== baseName) {
@@ -1095,7 +1656,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
   host.addEventListener('dragstart', onDragStart);
   host.addEventListener('dragend', onDragEnd);
 
-  // Right-click contextmenu event
+  // Right-click contextmenu event (items or blank canvas)
   const onContextMenu = (e) => {
     const target = e.target.closest('[data-context-target]');
     if (target) {
@@ -1103,6 +1664,13 @@ function wire(host, selected, refresh, itemsInDir = []) {
       const p = target.dataset.path;
       const isDir = target.dataset.isDir === 'true';
       openContextMenu(e.clientX, e.clientY, p, isDir);
+      return;
+    }
+
+    const canvas = e.target.closest('[data-canvas="true"]');
+    if (canvas && !e.target.closest('button, input, a, .sv-tag-pill, .btn')) {
+      e.preventDefault();
+      openCanvasContextMenu(e.clientX, e.clientY);
     }
   };
   host.addEventListener('contextmenu', onContextMenu);
@@ -1112,19 +1680,25 @@ function wire(host, selected, refresh, itemsInDir = []) {
   let touchMoved = false;
 
   const onTouchStart = (e) => {
-    const target = e.target.closest('[data-context-target]');
-    if (!target) return;
+    const itemTarget = e.target.closest('[data-context-target]');
+    const canvasTarget = !itemTarget ? e.target.closest('[data-canvas="true"]') : null;
+    if (!itemTarget && !canvasTarget) return;
+
     touchMoved = false;
     const touch = e.touches[0];
     const cx = touch.clientX;
     const cy = touch.clientY;
-    const p = target.dataset.path;
-    const isDir = target.dataset.isDir === 'true';
 
     touchTimer = setTimeout(() => {
       if (!touchMoved) {
         try { navigator.vibrate?.(20); } catch {}
-        openContextMenu(cx, cy, p, isDir);
+        if (itemTarget) {
+          const p = itemTarget.dataset.path;
+          const isDir = itemTarget.dataset.isDir === 'true';
+          openContextMenu(cx, cy, p, isDir);
+        } else if (canvasTarget) {
+          openCanvasContextMenu(cx, cy);
+        }
       }
     }, 500);
   };
@@ -1198,14 +1772,16 @@ function wire(host, selected, refresh, itemsInDir = []) {
     if (storageBtn) {
       currentStorage = storageBtn.dataset.storage || 'offline';
       currentPath = currentStorage === 'online' ? '/Online' : '/Home';
+      selectedPaths.clear();
       refresh(null);
       return;
     }
 
     // Breadcrumb navigation
     const navPathBtn = e.target.closest('[data-nav-path]');
-    if (navPathBtn) {
+    if (navPathBtn && !navPathBtn.closest('[data-context-target]')) {
       currentPath = navPathBtn.dataset.navPath || '/Home';
+      selectedPaths.clear();
       refresh(null);
       return;
     }
@@ -1249,38 +1825,123 @@ function wire(host, selected, refresh, itemsInDir = []) {
       return;
     }
 
-    // Pick file
-    const pick = e.target.closest('[data-pick]')?.dataset.pick;
-    if (pick) {
-      history.replaceState(null, '', `#files/${encodeURIComponent(pick)}`);
-      refresh(pick);
-      return;
-    }
-
-    // Open in other tool (from detail pane dropdown or context menu)
+    // Open in other tool (from detail pane dropdown or button)
     const openInBtn = e.target.closest('[data-open]');
-    if (openInBtn && current) {
+    if (openInBtn) {
       const openIn = openInBtn.dataset.open;
-      if (openIn) {
-        let text = current.text || current.content || '';
-        if (!text && current.path && !/\.(png|jpe?g|webp|gif|svg)$/i.test(current.name)) {
-          try {
-            text = await fs.readFile(current.path, { encoding: 'utf8', storage: currentStorage });
-            current.text = text;
-            current.content = text;
-          } catch {}
-        }
-        store.handOff({ ...current, text, content: text });
-        window.location.hash = `#${openIn}`;
+      const targetObj = current || (selectedPaths.size > 0 ? itemsInDir.find(f => selectedPaths.has(f.path)) : null);
+      if (openIn && targetObj) {
+        await openFileInTool(targetObj, openIn);
         return;
       }
+    }
+
+    // Item selection with Ctrl/Cmd or normal click
+    const itemEl = e.target.closest('[data-context-target]');
+    if (itemEl && !e.target.closest('.sv-rename, button, input')) {
+      const itemPath = itemEl.dataset.path;
+      const isDir = itemEl.dataset.isDir === 'true';
+
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        if (selectedPaths.has(itemPath)) {
+          selectedPaths.delete(itemPath);
+        } else {
+          selectedPaths.add(itemPath);
+        }
+        refresh(selectedPaths.size === 1 ? [...selectedPaths][0] : null);
+        return;
+      }
+
+      // Normal click
+      if (isDir) {
+        selectedPaths.clear();
+        currentPath = itemPath;
+        refresh(null);
+        return;
+      } else {
+        selectedPaths.clear();
+        selectedPaths.add(itemPath);
+        history.replaceState(null, '', `#files/${encodeURIComponent(itemPath)}`);
+        refresh(itemPath);
+        return;
+      }
+    }
+
+    // Clicking blank canvas deselects items
+    const canvasEl = e.target.closest('[data-canvas="true"]');
+    if (canvasEl && !itemEl && !e.target.closest('button, input, a, .sv-tag-pill, .btn')) {
+      if (selectedPaths.size > 0 || current) {
+        selectedPaths.clear();
+        refresh(null);
+      }
+      return;
     }
 
     const actBtn = e.target.closest('[data-act]');
     const act = actBtn?.dataset.act;
 
+    if (act === 'cut') {
+      const paths = selectedPaths.size > 0 ? [...selectedPaths] : (current?.path ? [current.path] : []);
+      if (paths.length > 0) {
+        fileClipboard = { op: 'cut', paths };
+        flash(`Cut ${paths.length} item(s).`);
+        refresh(current?.id || null);
+      }
+      return;
+    }
+
+    if (act === 'copy') {
+      const paths = selectedPaths.size > 0 ? [...selectedPaths] : (current?.path ? [current.path] : []);
+      if (paths.length > 0) {
+        fileClipboard = { op: 'copy', paths };
+        flash(`Copied ${paths.length} item(s).`);
+        refresh(current?.id || null);
+      }
+      return;
+    }
+
+    if (act === 'paste') {
+      await executePaste(currentPath);
+      return;
+    }
+
+    if (act === 'delete-selected') {
+      const paths = selectedPaths.size > 0 ? [...selectedPaths] : (current?.path ? [current.path] : []);
+      if (paths.length > 0) {
+        await executeDelete(paths);
+      }
+      return;
+    }
+
+    if (act === 'select-all') {
+      selectedPaths = new Set(itemsInDir.map(i => i.path));
+      refresh(itemsInDir[0]?.path || null);
+      return;
+    }
+
+    if (act === 'folder-properties') {
+      openDirectoryProperties(currentPath);
+      return;
+    }
+
+    if (act === 'clear-selection') {
+      selectedPaths.clear();
+      refresh(null);
+      return;
+    }
+
+    if (act === 'quicklook') {
+      const targetP = current?.path || (selectedPaths.size > 0 ? [...selectedPaths][0] : null);
+      if (targetP) {
+        openQuickLook(targetP);
+      }
+      return;
+    }
+
     if (act === 'nav-up') {
       currentPath = getParentPath(currentPath);
+      selectedPaths.clear();
       refresh(null);
       return;
     }
@@ -1390,8 +2051,10 @@ function wire(host, selected, refresh, itemsInDir = []) {
         try {
           if (filePath) {
             await fs.delete(filePath);
+            selectedPaths.delete(filePath);
           } else if (current?.id) {
             store.remove(current.id);
+            if (current.path) selectedPaths.delete(current.path);
           }
           flash(`Deleted "${targetName}".`);
           history.replaceState(null, '', '#files');
@@ -1465,27 +2128,20 @@ function wire(host, selected, refresh, itemsInDir = []) {
       const path = folderEl.dataset.path || folderEl.dataset.navPath;
       if (path) {
         currentPath = path;
+        selectedPaths.clear();
         refresh(null);
         return;
       }
     }
 
-    const fileEl = e.target.closest('[data-pick]');
+    const fileEl = e.target.closest('[data-context-target]:not([data-is-dir="true"])');
     if (fileEl) {
-      const targetPick = fileEl.dataset.pick;
-      const targetFile = itemsInDir.find(f => f.path === targetPick || f.id === targetPick) || current;
-      if (targetFile && !targetFile.isDirectory) {
+      const p = fileEl.dataset.path;
+      const targetFile = itemsInDir.find(f => f.path === p || f.id === p) || current;
+      if (targetFile) {
         const tools = getToolsForFile(targetFile);
         if (tools.length > 0) {
-          const topTool = tools[0];
-          let text = targetFile.text || targetFile.content || '';
-          if (!text && targetFile.path && !/\.(png|jpe?g|webp|gif|svg)$/i.test(targetFile.name)) {
-            try {
-              text = await fs.readFile(targetFile.path, { encoding: 'utf8', storage: currentStorage });
-            } catch {}
-          }
-          store.handOff({ ...targetFile, text, content: text });
-          window.location.hash = `#${topTool.id}`;
+          await openFileInTool(targetFile, tools[0].id);
         }
       }
     }
@@ -1499,12 +2155,100 @@ function wire(host, selected, refresh, itemsInDir = []) {
     }
   };
 
+  // Window-level keyboard shortcuts: Space (QuickLook), Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+A, Delete, Esc
+  const onWindowKeyDown = (e) => {
+    const tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) {
+      return;
+    }
+
+    const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform);
+    const mod = isMac ? e.metaKey : e.ctrlKey;
+
+    // QuickLook toggle: Spacebar
+    if (e.code === 'Space' && !mod && !e.shiftKey && !e.altKey) {
+      e.preventDefault();
+      const qlModal = document.getElementById('sv-quicklook-modal');
+      if (qlModal) {
+        qlModal.remove();
+        return;
+      }
+      const targetP = current?.path || (selectedPaths.size > 0 ? [...selectedPaths][0] : null);
+      if (targetP) {
+        openQuickLook(targetP);
+      }
+      return;
+    }
+
+    // Escape closes quicklook or properties
+    if (e.key === 'Escape') {
+      const qlModal = document.getElementById('sv-quicklook-modal');
+      if (qlModal) { qlModal.remove(); return; }
+      const propModal = document.getElementById('sv-properties-modal');
+      if (propModal) { propModal.remove(); return; }
+      const fMenu = document.getElementById('sv-finder-menu');
+      if (fMenu) { fMenu.remove(); return; }
+    }
+
+    // Ctrl+A / Cmd+A: Select All
+    if (mod && (e.key === 'a' || e.key === 'A')) {
+      e.preventDefault();
+      selectedPaths = new Set(itemsInDir.map(i => i.path));
+      refresh(itemsInDir[0]?.path || null);
+      return;
+    }
+
+    // Ctrl+C / Cmd+C: Copy
+    if (mod && (e.key === 'c' || e.key === 'C')) {
+      const paths = selectedPaths.size > 0 ? [...selectedPaths] : (current?.path ? [current.path] : []);
+      if (paths.length > 0) {
+        e.preventDefault();
+        fileClipboard = { op: 'copy', paths };
+        flash(`Copied ${paths.length} item(s).`);
+        refresh(current?.id || null);
+      }
+      return;
+    }
+
+    // Ctrl+X / Cmd+X: Cut
+    if (mod && (e.key === 'x' || e.key === 'X')) {
+      const paths = selectedPaths.size > 0 ? [...selectedPaths] : (current?.path ? [current.path] : []);
+      if (paths.length > 0) {
+        e.preventDefault();
+        fileClipboard = { op: 'cut', paths };
+        flash(`Cut ${paths.length} item(s).`);
+        refresh(current?.id || null);
+      }
+      return;
+    }
+
+    // Ctrl+V / Cmd+V: Paste
+    if (mod && (e.key === 'v' || e.key === 'V')) {
+      if (fileClipboard.paths.length > 0) {
+        e.preventDefault();
+        executePaste(currentPath);
+      }
+      return;
+    }
+
+    // Delete or Cmd+Backspace
+    if (e.key === 'Delete' || (e.key === 'Backspace' && mod)) {
+      const paths = selectedPaths.size > 0 ? [...selectedPaths] : (current?.path ? [current.path] : []);
+      if (paths.length > 0) {
+        e.preventDefault();
+        executeDelete(paths);
+      }
+      return;
+    }
+  };
+
   host.addEventListener('click', onClick);
   host.addEventListener('change', onRename);
   host.addEventListener('dblclick', onDblClick);
   host.addEventListener('keydown', onKeyDown);
   uploader.addEventListener('change', onUpload);
   importer.addEventListener('change', onImport);
+  window.addEventListener('keydown', onWindowKeyDown);
 
   return () => {
     host.removeEventListener('click', onClick);
@@ -1523,7 +2267,12 @@ function wire(host, selected, refresh, itemsInDir = []) {
     host.removeEventListener('touchend', onTouchEnd);
     window.removeEventListener('click', dismissMenu);
     window.removeEventListener('scroll', dismissMenu);
+    window.removeEventListener('keydown', onWindowKeyDown);
     const m = document.getElementById('sv-finder-menu');
     if (m) m.remove();
+    const ql = document.getElementById('sv-quicklook-modal');
+    if (ql) ql.remove();
+    const pr = document.getElementById('sv-properties-modal');
+    if (pr) pr.remove();
   };
 }

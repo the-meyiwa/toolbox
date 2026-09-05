@@ -459,6 +459,35 @@ export class ToolboxFilesystem {
   }
 
   /**
+   * Synchronous file read from memory/fallback cache
+   */
+  readFileSync(filePath, { encoding = 'utf-8' } = {}) {
+    const norm = normalizePath(filePath);
+    const rec = dbDriver.getFallback(norm);
+    if (!rec || rec.isDirectory) {
+      try {
+        const art = legacyArtifacts.get(filePath);
+        if (art && art.text != null) return art.text;
+      } catch {}
+      return null;
+    }
+    if (typeof rec.content === 'string') {
+      return rec.content;
+    }
+    if (rec.binaryData) {
+      const bytes = rec.binaryData instanceof Uint8Array ? rec.binaryData : new Uint8Array(Object.values(rec.binaryData));
+      if (encoding === 'utf8' || encoding === 'utf-8') {
+        try {
+          return new TextDecoder().decode(bytes);
+        } catch {
+          return '';
+        }
+      }
+    }
+    return rec.content != null ? String(rec.content) : null;
+  }
+
+  /**
    * List files and folders inside a given directory path
    * @param {string} dirPath
    * @param {{storage?: 'offline'|'online'}} options

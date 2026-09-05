@@ -143,6 +143,10 @@ function renderGrid(originalList, { query = '', noResult = false } = {}) {
   grid.innerHTML = sections.join('');
 }
 
+let prevNavIndicatorLeft = null;
+let prevNavIndicatorWidth = null;
+let stretchTimer = null;
+
 export function updateMobileNavIndicator() {
   const nav = document.getElementById('mobile-nav');
   const indicator = document.getElementById('mob-nav-indicator');
@@ -152,12 +156,38 @@ export function updateMobileNavIndicator() {
     indicator.style.opacity = '0';
     return;
   }
-  const left = activeItem.offsetLeft;
-  const width = activeItem.offsetWidth;
-  if (!width) return;
+  const targetLeft = activeItem.offsetLeft;
+  const targetWidth = activeItem.offsetWidth;
+  if (!targetWidth) return;
+
   indicator.style.opacity = '1';
-  indicator.style.transform = `translate3d(${left}px, 0, 0)`;
-  indicator.style.width = `${width}px`;
+
+  if (prevNavIndicatorLeft !== null && prevNavIndicatorLeft !== targetLeft) {
+    if (stretchTimer) clearTimeout(stretchTimer);
+    // Dynamic Microsoft Store stretch effect
+    const movingRight = targetLeft > prevNavIndicatorLeft;
+    const stretchLeft = movingRight ? prevNavIndicatorLeft : targetLeft;
+    const stretchWidth = (Math.max(prevNavIndicatorLeft + (prevNavIndicatorWidth || targetWidth), targetLeft + targetWidth)) - stretchLeft;
+
+    // Phase 1: Rapid stretch towards target
+    indicator.style.transition = 'transform 0.14s cubic-bezier(0.3, 0, 0.2, 1), width 0.14s cubic-bezier(0.3, 0, 0.2, 1)';
+    indicator.style.transform = `translate3d(${stretchLeft}px, 0, 0)`;
+    indicator.style.width = `${stretchWidth}px`;
+
+    // Phase 2: Snap tail cleanly into active item
+    stretchTimer = setTimeout(() => {
+      indicator.style.transition = 'transform 0.20s cubic-bezier(0.2, 0.85, 0.2, 1), width 0.20s cubic-bezier(0.2, 0.85, 0.2, 1)';
+      indicator.style.transform = `translate3d(${targetLeft}px, 0, 0)`;
+      indicator.style.width = `${targetWidth}px`;
+    }, 110);
+  } else {
+    indicator.style.transition = 'opacity 0.15s ease';
+    indicator.style.transform = `translate3d(${targetLeft}px, 0, 0)`;
+    indicator.style.width = `${targetWidth}px`;
+  }
+
+  prevNavIndicatorLeft = targetLeft;
+  prevNavIndicatorWidth = targetWidth;
 }
 
 function installCategoryChips() {

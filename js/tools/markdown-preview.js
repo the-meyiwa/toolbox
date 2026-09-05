@@ -4,7 +4,7 @@ import { marked } from 'marked';
 marked.setOptions({ breaks: true, gfm: true });
 
 export default {
-  render(container) {
+  render(container, { artifact } = {}) {
     container.innerHTML = `
       <div class="tool-split">
         <div class="tool-section">
@@ -64,10 +64,26 @@ function hello() {
 
     this._read = () => input.value;
     this._write = (text) => { input.value = text; update(); input.setSelectionRange(0, 0); };
+
+    if (artifact) {
+      this.setArtifact(artifact);
+    }
   },
 
   getArtifact() { return { kind: 'markdown', text: this._read?.() ?? '' }; },
-  setArtifact(a) { this._write?.(a.text); },
+  async setArtifact(a) {
+    if (!a) return;
+    let text = a.text || a.content;
+    if (typeof text !== 'string' && a.path) {
+      try {
+        const { fs } = await import('../lib/filesystem.js');
+        text = await fs.readFile(a.path, { encoding: 'utf8' });
+      } catch {}
+    }
+    if (typeof text === 'string') {
+      this._write?.(text);
+    }
+  },
 
   destroy() { this._read = this._write = null; }
 };

@@ -407,7 +407,7 @@ class MockElement extends MockNode {
     while (node) {
       const listeners = node._listeners.get(event.type);
       if (listeners) {
-        for (const fn of listeners) {
+        for (const fn of Array.from(listeners)) {
           try {
             fn.call(node, event);
           } catch (e) {
@@ -486,7 +486,10 @@ class MockElement extends MockNode {
     if (!sel) return false;
     sel = sel.trim();
     if (sel.startsWith('#')) return this.id === sel.slice(1);
-    if (sel.startsWith('.')) return this.classList.contains(sel.slice(1));
+    if (sel.startsWith('.')) {
+      const parts = sel.split('.').filter(Boolean);
+      return parts.every(c => this.classList.contains(c));
+    }
     if (sel.startsWith('[') && sel.endsWith(']')) {
       const inner = sel.slice(1, -1);
       const [attr, val] = inner.split('=');
@@ -627,6 +630,28 @@ class MockCustomEvent extends MockEvent {
   constructor(type, options = {}) {
     super(type, options);
     this.detail = options.detail ?? null;
+  }
+}
+
+class MockMouseEvent extends MockEvent {
+  constructor(type, options = {}) {
+    super(type, options);
+    this.clientX = options.clientX ?? 0;
+    this.clientY = options.clientY ?? 0;
+    this.button = options.button ?? 0;
+    this.buttons = options.buttons ?? 0;
+  }
+}
+
+class MockKeyboardEvent extends MockEvent {
+  constructor(type, options = {}) {
+    super(type, options);
+    this.key = options.key ?? '';
+    this.code = options.code ?? '';
+    this.ctrlKey = Boolean(options.ctrlKey);
+    this.metaKey = Boolean(options.metaKey);
+    this.shiftKey = Boolean(options.shiftKey);
+    this.altKey = Boolean(options.altKey);
   }
 }
 
@@ -786,6 +811,8 @@ export function setupDOMEnvironment() {
     Node: MockNode,
     Event: MockEvent,
     CustomEvent: MockCustomEvent,
+    MouseEvent: MockMouseEvent,
+    KeyboardEvent: MockKeyboardEvent,
     AudioContext: MockAudioContext,
     webkitAudioContext: MockAudioContext,
     URL: globalThis.URL,
@@ -840,6 +867,8 @@ export function setupDOMEnvironment() {
   defineGlobal('Node', MockNode);
   defineGlobal('Event', MockEvent);
   defineGlobal('CustomEvent', MockCustomEvent);
+  defineGlobal('MouseEvent', MockMouseEvent);
+  defineGlobal('KeyboardEvent', MockKeyboardEvent);
   defineGlobal('AudioContext', MockAudioContext);
   defineGlobal('webkitAudioContext', MockAudioContext);
   defineGlobal('ResizeObserver', win.ResizeObserver);

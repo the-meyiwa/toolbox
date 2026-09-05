@@ -671,6 +671,154 @@ export default {
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
+    const BROWSER_SEARCH_TOOLS = new Set([
+      'browse_web',
+      'browser_navigate',
+      'browser_scrape',
+      'browser_extract_images',
+      'browser_crawl',
+      'search_images',
+      'web_search',
+      'dns_lookup',
+      'run_speed_test'
+    ]);
+
+    function renderToolResultsWithPipeline(results, container) {
+      if (!container) return;
+      container.innerHTML = '';
+      if (!results || !results.length) return;
+
+      // Single tool result: render directly as normal
+      if (results.length === 1) {
+        const res = results[0];
+        void integrationManager.renderToolResult(res, container, res.toolName || null);
+        return;
+      }
+
+      // Check if any results are browser/search tools or browser cards
+      const hasBrowserOrSearch = results.some(r =>
+        BROWSER_SEARCH_TOOLS.has(r?.toolName) ||
+        r?.renderer === 'browser-card' ||
+        r?.type === 'browser-preview'
+      );
+
+      if (!hasBrowserOrSearch) {
+        for (const res of results) {
+          void integrationManager.renderToolResult(res, container, res.toolName || null);
+        }
+        return;
+      }
+
+      // Multi-step browser/search pipeline:
+      // Group intermediate steps into a collapsible pipeline tracker tray (.ast-pipeline-tracker)
+      // Check if the final tool result is a distinct structured deliverable (e.g. chart, file, csv, image)
+      const lastRes = results[results.length - 1];
+      const isLastStructuredDeliverable = lastRes && (
+        lastRes.renderer === 'file' || lastRes.renderer === 'image' || lastRes.renderer === 'chart' ||
+        lastRes.renderer === 'circuit' || lastRes.renderer === 'flowchart' || lastRes.renderer === 'code-execution' ||
+        lastRes.renderer === 'transform' || lastRes.renderer === 'json' || lastRes.renderer === 'map-view'
+      );
+
+      const pipelineSteps = isLastStructuredDeliverable ? results.slice(0, -1) : results;
+      const finalDeliverable = isLastStructuredDeliverable ? lastRes : null;
+
+      const trackerEl = document.createElement('div');
+      trackerEl.className = 'ast-pipeline-tracker';
+
+      const stepCount = pipelineSteps.length;
+      const countLabel = stepCount === 1 ? '1 research step' : `${stepCount} research steps`;
+
+      trackerEl.innerHTML = `
+        <div class="ast-pipeline-tracker-header" role="button" tabindex="0" aria-expanded="false" title="Click to toggle research pipeline steps">
+          <div class="ast-pipeline-tracker-left">
+            <span class="ast-pipeline-tracker-icon">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+              </svg>
+            </span>
+            <span class="ast-pipeline-tracker-title">Research Pipeline</span>
+            <span class="ast-pipeline-tracker-badge">${countLabel} completed</span>
+          </div>
+          <span class="ast-pipeline-tracker-toggle">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </span>
+        </div>
+        <div class="ast-pipeline-tracker-body">
+          ${pipelineSteps.map((step, idx) => {
+            const name = step.toolName || (step.renderer === 'browser-card' ? 'browse_web' : 'tool');
+            let detailText = '';
+            if (step.query) detailText = `Search: "${escapeHtml(step.query)}"`;
+            else if (step.url) detailText = `Inspected: ${escapeHtml(step.url)}`;
+            else if (step.title) detailText = escapeHtml(step.title);
+            else if (step.message) detailText = escapeHtml(step.message.slice(0, 100));
+            else detailText = 'Action completed successfully';
+
+            const hasDrawer = !!(step.url || step.excerpt || step.extractedContent);
+
+            return `
+              <div class="ast-pipeline-step-item" data-step-idx="${idx}">
+                <div class="ast-pipeline-step-header">
+                  <span class="ast-pipeline-step-status">
+                    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </span>
+                  <div class="ast-pipeline-step-content">
+                    <div class="ast-pipeline-step-label">${escapeHtml(name)}</div>
+                    <div class="ast-pipeline-step-detail">${detailText}</div>
+                  </div>
+                  ${hasDrawer ? `<button type="button" class="ast-pipeline-step-drawer-toggle">Details</button>` : ''}
+                </div>
+                ${hasDrawer ? `
+                  <div class="ast-pipeline-step-drawer">
+                    ${step.url ? `<div style="margin-bottom:4px; font-weight:600;"><a href="${escapeHtml(step.url)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent); text-decoration:underline;">${escapeHtml(step.url)}</a></div>` : ''}
+                    <div>${escapeHtml(step.excerpt || (step.extractedContent ? step.extractedContent.slice(0, 300) + '...' : ''))}</div>
+                  </div>
+                ` : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+
+      const header = trackerEl.querySelector('.ast-pipeline-tracker-header');
+      const toggleTracker = () => {
+        const isExpanded = trackerEl.classList.toggle('expanded');
+        header.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+      };
+      header.addEventListener('click', toggleTracker);
+      header.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggleTracker();
+        }
+      });
+
+      trackerEl.querySelectorAll('.ast-pipeline-step-drawer-toggle').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const item = btn.closest('.ast-pipeline-step-item');
+          const drawer = item?.querySelector('.ast-pipeline-step-drawer');
+          if (drawer) {
+            const isOpen = drawer.classList.toggle('open');
+            btn.textContent = isOpen ? 'Hide' : 'Details';
+          }
+        });
+      });
+
+      container.appendChild(trackerEl);
+
+      if (finalDeliverable) {
+        const deliverableWrapper = document.createElement('div');
+        deliverableWrapper.className = 'ast-pipeline-final-deliverable';
+        deliverableWrapper.style.marginTop = '8px';
+        container.appendChild(deliverableWrapper);
+        void integrationManager.renderToolResult(finalDeliverable, deliverableWrapper, finalDeliverable.toolName || null);
+      }
+    }
+
     function appendRenderedMessage(role, text, toolResults = [], filePreview = null, turnId = null, error = null, status = null) {
       if (!messagesEl) return;
       const msgDiv = document.createElement('div');
@@ -799,10 +947,8 @@ export default {
 
       messagesEl.appendChild(msgDiv);
       const resultsArea = msgDiv.querySelector('.ast-tool-results-area');
-      if (role === 'assistant' && resultsArea) {
-        for (const result of toolResults) {
-          void integrationManager.renderToolResult(result, resultsArea);
-        }
+      if (role === 'assistant' && resultsArea && toolResults?.length) {
+        renderToolResultsWithPipeline(toolResults, resultsArea);
       }
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
@@ -1277,9 +1423,12 @@ export default {
             if (toolStatusArea) {
               toolStatusArea.innerHTML = '';
             }
+            if (result && typeof result === 'object' && !result.toolName) {
+              result.toolName = toolName;
+            }
             executedToolResults.push(result);
             if (toolResultsArea) {
-              void integrationManager.renderToolResult(result, toolResultsArea, toolName);
+              renderToolResultsWithPipeline(executedToolResults, toolResultsArea);
             }
           },
           signal: abortCtrl.signal
@@ -1517,9 +1666,12 @@ export default {
             if (toolStatusArea) {
               toolStatusArea.innerHTML = '';
             }
+            if (result && typeof result === 'object' && !result.toolName) {
+              result.toolName = toolName;
+            }
             executedToolResults.push(result);
             if (toolResultsArea) {
-              void integrationManager.renderToolResult(result, toolResultsArea, toolName);
+              renderToolResultsWithPipeline(executedToolResults, toolResultsArea);
             }
           },
           signal: abortCtrl.signal
