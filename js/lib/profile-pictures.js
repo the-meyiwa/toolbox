@@ -125,6 +125,72 @@ export const PROFILE_PICTURES = [
     src: '/profile-pictures/v.jpg',
     story: 'Night City mercenary surviving with a legendary rockerboy in their head. Wake up, samurai—we\'ve got an entire production codebase to burn.'
   },
+  {
+    id: 'amelie(fitgirl).jpg',
+    name: 'Amélie (FitGirl)',
+    src: '/profile-pictures/amelie(fitgirl).jpg',
+    story: 'The undisputed empress of ultra-repacks. Compresses 100-gigabyte enterprise monoliths into lean, zero-bloat bundles while listening to whimsical French accordion tunes.'
+  },
+  {
+    id: 'billybutcher.jpg',
+    name: 'Billy Butcher',
+    src: '/profile-pictures/billybutcher.jpg',
+    story: 'Diabolical. A trenchcoat-wearing anti-supe vigilante who treats bloated npm dependencies and memory leaks like rogue Vought experiments that need putting down.'
+  },
+  {
+    id: 'colsanders.jpg',
+    name: 'Colonel Sanders',
+    src: '/profile-pictures/colsanders.jpg',
+    story: 'White suit, black string tie, and 11 herbs and spices locked in an impenetrable cryptographic safe. Proves that consistent recipe execution scales to 150 countries.'
+  },
+  {
+    id: 'drlisasu.jpg',
+    name: 'Dr. Lisa Su',
+    src: '/profile-pictures/drlisasu.jpg',
+    story: 'Semiconductor visionary and engineering titan. Engineered the chiplet revolution, turning silicon architecture into high-performance multi-threaded dominance.'
+  },
+  {
+    id: 'homelander.jpg',
+    name: 'Homelander',
+    src: '/profile-pictures/homelander.jpg',
+    story: 'Laser eyes, red-white-and-blue cape, and a glass of milk. Convinced he is the real hero and can merge directly into production main whenever he feels like it.'
+  },
+  {
+    id: 'jensen.jpg',
+    name: 'Jensen Huang',
+    src: '/profile-pictures/jensen.jpg',
+    story: 'Perennial leather jacket, accelerated computing prophet, and trillion-dollar silicon architect. "The more you buy, the more you save." Your GPU fan is already spinning.'
+  },
+  {
+    id: 'lebron.jpg',
+    name: 'LeBron James',
+    src: '/profile-pictures/lebron.jpg',
+    story: 'The King. Four championships, all-time scoring crown, and generational athletic durability. Entering his 22nd season without missing a single pull request.'
+  },
+  {
+    id: 'monalisa.jpg',
+    name: 'Mona Lisa',
+    src: '/profile-pictures/monalisa.jpg',
+    story: 'Leonardo da Vinci\'s timeless Renaissance masterpiece. Sitting behind bulletproof Louvre glass with an enigmatic half-smile, silently judging your variable naming.'
+  },
+  {
+    id: 'silverhand.jpg',
+    name: 'Johnny Silverhand',
+    src: '/profile-pictures/silverhand.jpg',
+    story: 'Cybernetic silver forearm, aviator shades, and pure anti-corpo attitude. "Wake up, samurai—we\'ve got an entire legacy infrastructure stack to burn to the ground."'
+  },
+  {
+    id: 'tiabillinger.jpg',
+    name: 'Tia Billinger',
+    src: '/profile-pictures/tiabillinger.jpg',
+    story: 'Effortless high-glamour aesthetics and razor-sharp charisma. Elevates everyday interfaces into front-row runway statements where every pixel looks tailored.'
+  },
+  {
+    id: 'timcook.jpg',
+    name: 'Tim Cook',
+    src: '/profile-pictures/timcook.jpg',
+    story: 'Master of global logistics, quiet discipline, and the iconic "Good morning!" Ships two billion active devices with clockwork precision and seamless ecosystem lock-in.'
+  }
 ];
 
 export function getProfilePictureSrc(id) {

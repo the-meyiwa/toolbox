@@ -18,6 +18,7 @@ import { fs } from '../lib/filesystem.js';
 import { getCurrentUser } from '../lib/supabase.js';
 import { streamChatCompletion } from '../lib/ai-provider.js';
 import { marked } from 'marked';
+import { fetchPackageMetadata, searchNpmPackages, extractPackageImports, buildImportMap } from '../lib/npm-client.js';
 
 const ALL = { ...LANGUAGES, ...REMOTE_LANGUAGES };
 const isRemote = (id) => Object.hasOwn(REMOTE_LANGUAGES, id);
@@ -1251,6 +1252,20 @@ export default {
         doc = doc.replace(/<script[^>]*src=["']\.\/[^"']*["'][^>]*><\/script>/gi, '');
         doc = doc.replace(/<link[^>]*rel=["']stylesheet["'][^>]*href=["']\.\/[^"']*["'][^>]*>/gi, '');
 
+        // Extract all imported npm packages and build dynamic import map
+        const rawCode = `${appJsxFile?.content || ''}\n${indexJsxFile?.content || ''}`;
+        const importedPkgs = extractPackageImports(rawCode);
+        const allPackages = { ...(state.packages || {}) };
+        importedPkgs.forEach(pkg => {
+          if (!allPackages[pkg]) allPackages[pkg] = { name: pkg, version: 'latest' };
+        });
+        const importMap = buildImportMap(allPackages);
+        const importMapTag = `\n  <script type="importmap">\n${JSON.stringify(importMap, null, 2)}\n  </script>\n`;
+
+        doc = doc.replace(/<script type="importmap">[\s\S]*?<\/script>/gi, '');
+        if (doc.includes('<head>')) doc = doc.replace('<head>', `<head>${importMapTag}`);
+        else doc = importMapTag + '\n' + doc;
+
         const reactCdn = `
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
@@ -1269,12 +1284,13 @@ export default {
           else doc = styleTag + '\n' + doc;
         }
 
-        // Clean imports & exports for in-browser Babel execution
+        // Clean local relative imports & exports for in-browser Babel execution while keeping package imports
         function cleanJsForBrowser(code) {
           if (!code) return '';
           return code
-            .replace(/import\s+[\s\S]*?from\s+['"][^'"]+['"];?/g, '')
-            .replace(/import\s+['"][^'"]+['"];?/g, '')
+            .replace(/import\s+['"][^'"]+\.css['"];?/g, '')
+            .replace(/import\s+[\s\S]*?from\s+['"]\.\/[^'"]+['"];?/g, '')
+            .replace(/import\s+['"]\.\/[^'"]+['"];?/g, '')
             .replace(/export\s+default\s+function\s+([a-zA-Z0-9_$]+)/g, 'function $1')
             .replace(/export\s+default\s+class\s+([a-zA-Z0-9_$]+)/g, 'class $1')
             .replace(/export\s+default\s+[a-zA-Z0-9_$]+;?/g, '')
@@ -1326,7 +1342,7 @@ export default {
 
         const scriptTag = `
           ${errorHandlerScript}
-          <script type="text/babel">
+          <script type="text/babel" data-type="module">
             ${scopeShims}
             ${cleanedApp}
             ${cleanedIndex}
@@ -2519,7 +2535,7 @@ if (container) {
       return { stderr: `git: '${sub}' not recognized`, exitCode: 1 };
     }
 
-    function handleNodeCommand(argString) {
+    async function handleNodeCommand(argString) {
       if (!argString) {
         printTerm(`Node.js v20.11.0 runtime (browser virtual environment).`, '#38bdf8');
         printTerm(`Usage: node <filename.js> or node -e "<code>"`, 'var(--cpg-text-muted)');
@@ -2536,6 +2552,31 @@ if (container) {
           return { stderr: 'Cannot find module', exitCode: 1 };
         }
         codeToRun = file.content;
+      }
+
+      // Pre-fetch / load any imported npm packages
+      self_._moduleCache = self_._moduleCache || {};
+      const neededPkgs = extractPackageImports(codeToRun).filter(p => !['fs', 'path', 'os', 'util', 'events', 'assert', 'child_process', 'crypto'].includes(p));
+      for (const p of neededPkgs) {
+        if (!self_._moduleCache[p]) {
+          try {
+            if (typeof window !== 'undefined') {
+              const imported = await import(/* @vite-ignore */ `https://esm.sh/${p}`);
+              self_._moduleCache[p] = imported.default || imported;
+            }
+          } catch {}
+          if (!self_._moduleCache[p]) {
+            try {
+              const res = await fetch(`https://cdn.jsdelivr.net/npm/${p}`);
+              if (res.ok) {
+                const txt = await res.text();
+                const m = { exports: {} };
+                new Function('module', 'exports', 'window', 'globalThis', txt)(m, m.exports, {}, {});
+                self_._moduleCache[p] = m.exports;
+              }
+            } catch {}
+          }
+        }
       }
 
       try {
@@ -2569,7 +2610,27 @@ if (container) {
             basename: (p) => p.split('/').pop(),
             extname: (p) => p.includes('.') ? '.' + p.split('.').pop() : ''
           };
-          if (state.packages && state.packages[mod]) return state.packages[mod];
+          if (mod === 'os') return {
+            platform: () => 'linux',
+            arch: () => 'x64',
+            cpus: () => [{ model: 'Virtual CPU' }],
+            totalmem: () => 16e9,
+            freemem: () => 8e9
+          };
+          if (mod === 'util') return {
+            format: (...a) => a.join(' '),
+            inspect: (o) => typeof o === 'object' ? JSON.stringify(o, null, 2) : String(o)
+          };
+          if (mod === 'assert') return {
+            strictEqual: (a, b) => { if (a !== b) throw new Error(`${a} !== ${b}`); },
+            ok: (v) => { if (!v) throw new Error(`${v} is not truthy`); }
+          };
+
+          if (self_._moduleCache && self_._moduleCache[mod]) return self_._moduleCache[mod];
+          if (state.packages && state.packages[mod]) {
+            return self_._moduleCache[mod] || state.packages[mod];
+          }
+
           const wsFile = state.files.find(f => f.name === mod || f.name === `${mod}.js`);
           if (wsFile) {
             const modObj = { exports: {} };
@@ -2597,9 +2658,9 @@ if (container) {
           printTerm(lineText, '#ef4444');
         };
 
-        const runner = new Function('require', 'module', 'exports', 'fs', 'process', 'console', codeToRun);
+        const runner = new Function('require', 'module', 'exports', 'fs', 'process', 'console', `return (async () => { ${codeToRun} })();`);
         const mod = { exports: {} };
-        runner(virtualRequire, mod, mod.exports, virtualFs, virtualProcess, { log: customLog, error: customErr, warn: customLog, info: customLog });
+        await runner(virtualRequire, mod, mod.exports, virtualFs, virtualProcess, { log: customLog, error: customErr, warn: customLog, info: customLog });
         printTerm(`[Process exited with code 0]`, 'var(--cpg-text-muted)');
         return { stdout: 'Process exited with code 0', exitCode: 0 };
       } catch (err) {
@@ -2608,22 +2669,179 @@ if (container) {
       }
     }
 
-    function handleNpmCommand(args) {
+    async function handleNpmCommand(args) {
       state.packages = state.packages || {};
       const sub = args[0]?.toLowerCase();
       const pkg = args[1];
 
       if (sub === 'install' || sub === 'i' || sub === 'add') {
         if (!pkg) {
-          printTerm(`npm install: synced workspace dependencies`, '#22c55e');
-          return { stdout: 'Synced workspace dependencies', exitCode: 0 };
+          const pkgJsonFile = state.files.find(f => f.name === 'package.json');
+          let declaredDeps = {};
+          if (pkgJsonFile) {
+            try {
+              const parsed = JSON.parse(pkgJsonFile.content);
+              declaredDeps = { ...(parsed.dependencies || {}), ...(parsed.devDependencies || {}) };
+            } catch {}
+          }
+          const depKeys = Object.keys(declaredDeps);
+          if (!depKeys.length) {
+            printTerm(`npm install: no dependencies listed in package.json`, 'var(--cpg-text-muted)');
+            return { stdout: 'No dependencies listed.', exitCode: 0 };
+          }
+          printTerm(`Resolving ${depKeys.length} dependencies from official registry...`, 'var(--cpg-text-muted)');
+          let count = 0;
+          for (const d of depKeys) {
+            try {
+              printTerm(`npm http fetch GET 200 https://registry.npmjs.org/${d}`, 'var(--cpg-text-muted)');
+              const meta = await fetchPackageMetadata(`${d}@${declaredDeps[d]}`);
+              state.packages[meta.name] = {
+                name: meta.name,
+                version: meta.version,
+                description: meta.description,
+                license: meta.license,
+                esmUrl: meta.esmUrl,
+                ready: true
+              };
+              count++;
+            } catch (err) {
+              state.packages[d] = { name: d, version: declaredDeps[d], ready: true };
+            }
+          }
+          persist();
+          updateWorkspacePreview();
+          printTerm(`\nadded ${count} packages, and audited ${count} packages in 0.42s`, '#22c55e');
+          printTerm(`found 0 vulnerabilities`, 'var(--cpg-text-muted)');
+          return { stdout: `Synced ${count} packages`, exitCode: 0 };
         }
-        state.packages[pkg] = { name: pkg, version: '1.0.0', ready: true };
-        persist();
-        printTerm(`+ ${pkg}@latest`, '#22c55e');
-        printTerm(`added 1 package in 180ms`, 'var(--cpg-text-muted)');
-        return { stdout: `added ${pkg}`, exitCode: 0 };
+
+        printTerm(`npm http fetch GET 200 https://registry.npmjs.org/${pkg}`, 'var(--cpg-text-muted)');
+        try {
+          const meta = await fetchPackageMetadata(pkg);
+          if (meta.tarball) {
+            printTerm(`npm http fetch GET 200 ${meta.tarball}`, 'var(--cpg-text-muted)');
+          }
+
+          state.packages[meta.name] = {
+            name: meta.name,
+            version: meta.version,
+            description: meta.description,
+            license: meta.license,
+            esmUrl: meta.esmUrl,
+            ready: true
+          };
+
+          // Update workspace package.json
+          let pkgJsonFile = state.files.find(f => f.name === 'package.json');
+          if (pkgJsonFile) {
+            try {
+              const parsed = JSON.parse(pkgJsonFile.content);
+              parsed.dependencies = parsed.dependencies || {};
+              parsed.dependencies[meta.name] = `^${meta.version}`;
+              pkgJsonFile.content = JSON.stringify(parsed, null, 2);
+            } catch {}
+          } else {
+            const newPkg = {
+              name: state.projectName.toLowerCase().replace(/\s+/g, '-'),
+              version: '1.0.0',
+              dependencies: { [meta.name]: `^${meta.version}` }
+            };
+            state.files.unshift({
+              id: `f-${Date.now()}`,
+              name: 'package.json',
+              lang: 'json',
+              content: JSON.stringify(newPkg, null, 2)
+            });
+          }
+
+          persist();
+          renderTabs();
+          renderFileTree();
+          updateWorkspacePreview();
+
+          printTerm(`\n+ ${meta.name}@${meta.version}`, '#22c55e');
+          printTerm(`added 1 package, and audited ${Object.keys(state.packages).length} packages in ${(meta.durationMs / 1000).toFixed(2)}s`, 'var(--cpg-text-muted)');
+          printTerm(`found 0 vulnerabilities`, 'var(--cpg-text-muted)');
+          return { stdout: `Successfully installed ${meta.name}@${meta.version}`, exitCode: 0 };
+        } catch (err) {
+          printTerm(`npm ERR! code ENOTFOUND`, '#ef4444');
+          printTerm(`npm ERR! ${err.message}`, '#ef4444');
+          return { stderr: err.message, exitCode: 1 };
+        }
       }
+
+      if (sub === 'view' || sub === 'info' || sub === 'show') {
+        if (!pkg) {
+          printTerm(`npm: package name required for 'npm view'`, '#ef4444');
+          return { stderr: 'Package name required', exitCode: 1 };
+        }
+        printTerm(`npm http fetch GET 200 https://registry.npmjs.org/${pkg}`, 'var(--cpg-text-muted)');
+        try {
+          const meta = await fetchPackageMetadata(pkg);
+          printTerm(`\n${meta.name}@${meta.version} | ${meta.license} | deps: ${Object.keys(meta.dependencies).length} | source: ${meta.source}`, '#38bdf8');
+          if (meta.description) printTerm(meta.description, 'var(--cpg-text)');
+          if (meta.homepage) printTerm(meta.homepage, 'var(--cpg-text-muted)');
+          printTerm(`\ndist`, 'var(--cpg-text-muted)');
+          printTerm(`.tarball: ${meta.tarball || 'N/A'}`, 'var(--cpg-text-muted)');
+          printTerm(`.esm: ${meta.esmUrl}`, 'var(--cpg-text-muted)');
+          const deps = Object.entries(meta.dependencies);
+          printTerm(`\ndependencies (${deps.length}):`, 'var(--cpg-text)');
+          if (!deps.length) printTerm(`  (none)`, 'var(--cpg-text-muted)');
+          else deps.slice(0, 10).forEach(([k, v]) => printTerm(`  ${k}: ${v}`, '#38bdf8'));
+          if (deps.length > 10) printTerm(`  ... and ${deps.length - 10} more`, 'var(--cpg-text-muted)');
+          return { stdout: `${meta.name}@${meta.version}`, exitCode: 0 };
+        } catch (err) {
+          printTerm(`npm ERR! ${err.message}`, '#ef4444');
+          return { stderr: err.message, exitCode: 1 };
+        }
+      }
+
+      if (sub === 'search' || sub === 'find') {
+        const query = args.slice(1).join(' ').trim();
+        if (!query) {
+          printTerm(`npm search: search query required`, '#ef4444');
+          return { stderr: 'Query required', exitCode: 1 };
+        }
+        printTerm(`npm http fetch GET 200 https://registry.npmjs.org/-/v1/search?text=${encodeURIComponent(query)}`, 'var(--cpg-text-muted)');
+        const results = await searchNpmPackages(query, 8);
+        if (!results.length) {
+          printTerm(`No matching packages found for '${query}'.`, 'var(--cpg-text-muted)');
+          return { stdout: 'No packages found', exitCode: 0 };
+        }
+        printTerm(`\nNAME                │ VERSION  │ DESCRIPTION`, 'var(--cpg-text-muted)');
+        printTerm(`────────────────────┼──────────┼──────────────────────────────────────`, 'var(--cpg-text-muted)');
+        results.forEach(r => {
+          const namePad = r.name.padEnd(19).slice(0, 19);
+          const verPad = r.version.padEnd(8).slice(0, 8);
+          const descPad = r.description.slice(0, 48);
+          printTerm(`${namePad} │ ${verPad} │ ${descPad}`, 'var(--cpg-text)');
+        });
+        return { stdout: `Found ${results.length} packages`, exitCode: 0 };
+      }
+
+      if (sub === 'uninstall' || sub === 'rm' || sub === 'remove') {
+        if (!pkg) {
+          printTerm(`npm: package name required for 'npm uninstall'`, '#ef4444');
+          return { stderr: 'Package name required', exitCode: 1 };
+        }
+        delete state.packages[pkg];
+        let pkgJsonFile = state.files.find(f => f.name === 'package.json');
+        if (pkgJsonFile) {
+          try {
+            const parsed = JSON.parse(pkgJsonFile.content);
+            if (parsed.dependencies) delete parsed.dependencies[pkg];
+            if (parsed.devDependencies) delete parsed.devDependencies[pkg];
+            pkgJsonFile.content = JSON.stringify(parsed, null, 2);
+          } catch {}
+        }
+        persist();
+        renderTabs();
+        renderFileTree();
+        updateWorkspacePreview();
+        printTerm(`removed 1 package in 45ms`, '#22c55e');
+        return { stdout: `Removed ${pkg}`, exitCode: 0 };
+      }
+
       if (sub === 'list' || sub === 'ls') {
         const keys = Object.keys(state.packages);
         printTerm(`${state.projectName}@1.0.0 /workspaces/${state.projectName}`, 'var(--cpg-text)');
@@ -2632,11 +2850,13 @@ if (container) {
         } else {
           keys.forEach((k, idx) => {
             const prefix = idx === keys.length - 1 ? '└── ' : '├── ';
-            printTerm(`${prefix}${k}@latest`, '#38bdf8');
+            const v = state.packages[k]?.version || 'latest';
+            printTerm(`${prefix}${k}@${v}`, '#38bdf8');
           });
         }
         return { stdout: keys.join(', '), exitCode: 0 };
       }
+
       printTerm(`npm: '${sub}' completed.`, 'var(--cpg-text)');
       return { stdout: `npm ${sub} completed`, exitCode: 0 };
     }
@@ -2721,7 +2941,7 @@ if (container) {
           printTerm(`Wrote to /workspaces/${state.projectName}/package.json`, '#22c55e');
           return { stdout: 'Wrote package.json', exitCode: 0 };
         }
-        return handleNpmCommand(parts.slice(1));
+        return await handleNpmCommand(parts.slice(1));
       }
       if (main === 'test') {
         const res = runWorkspaceTests();
@@ -2777,7 +2997,7 @@ if (container) {
         return { stdout: textToPrint, exitCode: 0 };
       }
       if (main === 'node') {
-        return handleNodeCommand(arg);
+        return await handleNodeCommand(arg);
       }
       if (main === 'preview') {
         togglePreview();

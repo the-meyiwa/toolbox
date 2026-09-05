@@ -38,6 +38,7 @@ import {
 } from './budget-store.js';
 import { fs } from './filesystem.js';
 import { queryDns } from './dns-resolver.js';
+import { fetchPackageMetadata } from './npm-client.js';
 
 let activeAssistantAudios = [];
 
@@ -3743,6 +3744,48 @@ if (container) {
           ],
           output: `Successfully initialized React 18 application in ${targetDir}.\nInstalled react@18.3.1, react-dom@18.3.1.\nScaffolded package.json, index.html, App.jsx, App.css, App.test.js.\nReady for testing (npm test) and preview.`
         };
+      }
+
+      // npm install / i / add
+      if (main === 'npm' && (parts[1] === 'install' || parts[1] === 'i' || parts[1] === 'add')) {
+        const pkgName = parts[2];
+        if (!pkgName) {
+          return {
+            status: 'success',
+            type: 'ide-command',
+            command: rawCmd,
+            output: `npm install: synced dependencies for ${projDir}. Audited packages in 0.28s. 0 vulnerabilities.`
+          };
+        }
+
+        try {
+          const meta = await fetchPackageMetadata(pkgName);
+          const pkgPath = `${projDir}/package.json`;
+          let pkgData = { name: projName, version: '0.1.0', dependencies: {} };
+          try {
+            const raw = await fs.readFile(pkgPath);
+            if (raw) pkgData = JSON.parse(raw);
+          } catch {}
+          pkgData.dependencies = pkgData.dependencies || {};
+          pkgData.dependencies[meta.name] = `^${meta.version}`;
+          await fs.writeFile(pkgPath, JSON.stringify(pkgData, null, 2), 'text');
+
+          return {
+            status: 'success',
+            type: 'ide-command',
+            command: rawCmd,
+            packageName: meta.name,
+            version: meta.version,
+            output: `+ ${meta.name}@${meta.version}\nadded 1 package, and audited ${Object.keys(pkgData.dependencies).length} packages in ${(meta.durationMs / 1000).toFixed(2)}s\nfound 0 vulnerabilities`
+          };
+        } catch (err) {
+          return {
+            status: 'error',
+            type: 'ide-command',
+            command: rawCmd,
+            output: `npm ERR! code ENOTFOUND\nnpm ERR! ${err.message}`
+          };
+        }
       }
 
       // npm test

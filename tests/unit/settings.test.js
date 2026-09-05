@@ -46,7 +46,7 @@ test('Settings: importSettings validates JSON schema', () => {
 });
 
 test('Profile Pictures: registry includes minimal silhouette and all picture options', () => {
-  assert.equal(PROFILE_PICTURES.length, 20);
+  assert.equal(PROFILE_PICTURES.length, 31);
   const defaultPic = PROFILE_PICTURES.find(p => p.id === 'default');
   assert.ok(defaultPic, 'Default minimal silhouette must exist');
   assert.equal(defaultPic.src, null);
@@ -55,7 +55,10 @@ test('Profile Pictures: registry includes minimal silhouette and all picture opt
     'Lara.jpg', 'Tanya.jpg', 'adalovelace.jpg', 'beethoven.jpg', 'burnaboy.jpg',
     'cr7.jpg', 'davido.jpg', 'donald.jpg', 'elon.jpg', 'ezio.jpg',
     'khabylame.jpg', 'kratos.jpg', 'messi.jpg', 'miakhalifa.jpg', 'mrbeast.jpg',
-    'scorpion.jpg', 'tinubu.jpg', 'triborg.jpg', 'v.jpg'
+    'scorpion.jpg', 'tinubu.jpg', 'triborg.jpg', 'v.jpg',
+    'amelie(fitgirl).jpg', 'billybutcher.jpg', 'colsanders.jpg', 'drlisasu.jpg',
+    'homelander.jpg', 'jensen.jpg', 'lebron.jpg', 'monalisa.jpg', 'silverhand.jpg',
+    'tiabillinger.jpg', 'timcook.jpg'
   ];
 
   for (const id of expectedIds) {

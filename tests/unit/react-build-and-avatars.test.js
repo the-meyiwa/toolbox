@@ -9,8 +9,8 @@ import { openSettings, showAvatarView, showMainView, closeSettings } from '../..
 
 const { document } = setupDOMEnvironment();
 
-test('Avatars: all 20 character personas have names and witty bios', () => {
-  assert.equal(PROFILE_PICTURES.length, 20, 'Should have exactly 20 avatars (minimal silhouette + 19 characters)');
+test('Avatars: all 31 character personas have names and witty bios', () => {
+  assert.equal(PROFILE_PICTURES.length, 31, 'Should have exactly 31 avatars (minimal silhouette + 30 characters)');
   for (const pic of PROFILE_PICTURES) {
     assert.ok(pic.id, 'Avatar must have an id');
     assert.ok(pic.name, `Avatar ${pic.id} must have a name`);
@@ -34,7 +34,7 @@ test('Avatars: getUserAvatarHtml renders valid SVG / image markup without emojis
   assert.equal(emojiRegex.test(namedHtml), false, 'Avatar HTML must not contain emojis');
 });
 
-test('Settings: dedicated avatar subpage renders all 20 cards and supports navigation', () => {
+test('Settings: dedicated avatar subpage renders all 31 cards and supports navigation', () => {
   openSettings();
   const modal = document.getElementById('settings-modal');
   assert.ok(modal, 'Settings modal must exist');
@@ -51,7 +51,7 @@ test('Settings: dedicated avatar subpage renders all 20 cards and supports navig
   assert.equal(backBtn.style.display, 'inline-flex', 'Back button must be visible');
 
   const cards = gallery.querySelectorAll('.avatar-story-card');
-  assert.equal(cards.length, 20, 'Must render cards for all 20 character personas');
+  assert.equal(cards.length, 31, 'Must render cards for all 31 character personas');
 
   // Test back navigation
   showMainView();

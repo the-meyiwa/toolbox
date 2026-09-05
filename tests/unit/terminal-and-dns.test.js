@@ -217,4 +217,19 @@ test('Code Playground Terminal: Initializes React 18 app, runs tests, and execut
   const gitPushRes = await cpgModule.default.executeTerminalCommand('git push origin main', { echo: true });
   assert.equal(gitPushRes.exitCode, 0);
   assert.ok(gitPushRes.stdout.includes('Pushed main to https://github.com/my-account/task-counter-app.git'));
+
+  // 4. NPM Install package from official registry
+  const npmInstallRes = await cpgModule.default.executeTerminalCommand('npm install canvas-confetti', { echo: true });
+  assert.equal(npmInstallRes.exitCode, 0);
+  assert.ok(npmInstallRes.stdout.includes('Successfully installed canvas-confetti'));
+
+  // 5. NPM View package metadata
+  const npmViewRes = await cpgModule.default.executeTerminalCommand('npm view lodash', { echo: true });
+  assert.equal(npmViewRes.exitCode, 0);
+  assert.ok(npmViewRes.stdout.includes('lodash'));
+
+  // 6. Node in-terminal execution
+  const nodeRes = await cpgModule.default.executeTerminalCommand('node -e "console.log(42 * 2)"', { echo: true });
+  assert.equal(nodeRes.exitCode, 0);
 });
+
