@@ -373,7 +373,43 @@ async function openTool(id) {
 }
 
 function handleHash() {
-  const raw = decodeURIComponent(window.location.hash.slice(1) || 'home');
+  const hash = window.location.hash || '';
+
+  // Handle Supabase Auth redirect fragments (e.g. #access_token=...&refresh_token=...)
+  if (hash.includes('access_token=') || hash.includes('id_token=') || hash.includes('error_description=')) {
+    const params = new URLSearchParams(hash.slice(1));
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    const errorMsg = params.get('error_description');
+
+    if (accessToken) {
+      // Extract basic user info from the hash/token if possible, 
+      // or set a placeholder to be hydrated by the next getCurrentUser call.
+      const userSession = {
+        token: accessToken,
+        refreshToken: refreshToken || '',
+        id: 'confirming...', // Will be updated on first use or refresh
+        email: params.get('email') || '',
+        createdAt: new Date().toISOString()
+      };
+      
+      // Save session and notify app
+      localStorage.setItem('toolbox_supabase_session', JSON.stringify(userSession));
+      window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
+      
+      // Clean URL and go to assistant
+      window.location.hash = '#assistant';
+      return;
+    }
+    
+    if (errorMsg) {
+      console.error('Auth error:', errorMsg);
+      window.location.hash = '#home';
+      return;
+    }
+  }
+
+  const raw = decodeURIComponent(hash.slice(1) || 'home');
 
   if (raw === '' || raw === 'home') return showPage('home');
   if (raw === 'tools') { showPage('tools'); return; }

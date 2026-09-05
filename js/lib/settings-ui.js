@@ -410,7 +410,7 @@ function renderProfileSettings() {
   const signoutBtn = container.querySelector('#btn-settings-signout');
   signoutBtn?.addEventListener('click', () => {
     signOut();
-    renderSettingsContent();
+    renderProfileSettings();
   });
 
   // Wire Username save
@@ -426,7 +426,7 @@ function renderProfileSettings() {
         usernameMsg.textContent = `Username claimed: @${res.user.username}. Changes allowed once a week.`;
         usernameMsg.style.color = '#10b981';
         setTimeout(() => {
-          renderSettingsContent();
+          renderProfileSettings();
         }, 1200);
       } else {
         usernameMsg.textContent = res.error || 'Username not available.';
