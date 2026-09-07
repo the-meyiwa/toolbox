@@ -391,21 +391,27 @@ function handleHash() {
       } catch {}
 
       const isOwner = (redirect.email && ['meyigbenee@gmail.com', 'meyigbenee@icloud.com', 'laoluwaabiodun1@gmail.com'].includes(redirect.email.toLowerCase()));
+      const meta = redirect.userMetadata || {};
+      const rawUsername = meta.user_name || meta.preferred_username || meta.username || (redirect.email ? redirect.email.split('@')[0].replace(/[^a-z0-9_-]/gi, '').toLowerCase() : 'user');
+      const rawDisplayName = meta.full_name || meta.name || meta.display_name || (redirect.email ? redirect.email.split('@')[0] : 'Toolbox User');
+
       const userSession = {
         id: redirect.userId || `usr_${Date.now()}`,
         email: redirect.email || 'user@toolbox.app',
         token: redirect.accessToken,
         refreshToken: redirect.refreshToken || '',
-        username: isOwner ? 'madselkie' : (redirect.email ? redirect.email.split('@')[0].replace(/[^a-z0-9_-]/gi, '').toLowerCase() : 'user'),
-        displayName: isOwner ? 'madselkie' : (redirect.email ? redirect.email.split('@')[0] : 'Toolbox User'),
+        username: isOwner ? 'madselkie' : rawUsername,
+        displayName: isOwner ? 'madselkie' : rawDisplayName,
+        avatarUrl: meta.avatar_url || meta.picture || '',
         createdAt: new Date().toISOString()
       };
       localStorage.setItem('toolbox_supabase_session', JSON.stringify(userSession));
+      localStorage.setItem('supabase_auth_session', JSON.stringify(userSession));
       window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
 
       const successMsg = redirect.type === 'email_change'
         ? 'Email address confirmed and updated successfully.'
-        : 'Email verified successfully! Welcome to Toolbox.';
+        : 'Welcome to Toolbox!';
       showToast(successMsg, 'success');
       showPage('home');
       return;

@@ -21,6 +21,7 @@ import {
   registerPasskey,
   removeRegisteredPasskey,
   authenticateWithPasskey,
+  signInWithOAuth,
   updateUserProfile
 } from '../lib/supabase.js';
 import { QuotaManager } from '../lib/quota-manager.js';
@@ -313,23 +314,43 @@ function renderAuthCard(user, authMode, recoveryContext, pendingConfirmationEmai
   return `
     <div>
       <div style="font-size:0.88rem; font-weight:700; color:var(--black); margin-bottom:12px;">
-        ${isSignUp ? 'Create a New Account' : 'Sign In with Email'}
+        ${isSignUp ? 'Create a New Account' : 'Sign In'}
       </div>
 
-      ${(!isSignUp && isPasskeySupported()) ? `
-        <button type="button" class="btn btn-secondary btn-sm" id="btn-auth-passkey" style="width:100%; padding:10px; font-weight:600; font-size:0.88rem; display:flex; align-items:center; justify-content:center; gap:8px; border:1px solid var(--g300); background:var(--white); color:var(--black); margin-bottom:12px;">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+      <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
+        <button type="button" class="btn btn-secondary btn-sm btn-oauth" id="btn-oauth-google" data-provider="google" style="width:100%; padding:9px 12px; font-weight:600; font-size:0.86rem; display:flex; align-items:center; justify-content:center; gap:10px; border:1px solid var(--g300); background:var(--white); color:var(--black); border-radius:8px; cursor:pointer;">
+          <svg viewBox="0 0 24 24" width="16" height="16" style="flex-shrink:0;">
+            <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.9C6.2 7.4 8.9 5 12 5z"/>
+            <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
+            <path fill="#FBBC05" d="M5.3 14.7c-.2-.7-.4-1.5-.4-2.7s.1-2 .4-2.7L1.6 6.4C.6 8.4 0 10.6 0 13s.6 4.6 1.6 6.6l3.7-4.9z"/>
+            <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.4-6.7-5.3L1.6 16C3.5 19.8 7.4 23 12 23z"/>
           </svg>
-          Continue with Passkey
+          <span>Continue with Google</span>
         </button>
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
-          <div style="flex:1; height:1px; background:var(--g200);"></div>
-          <span style="font-size:0.72rem; color:var(--g500); text-transform:uppercase; letter-spacing:0.5px;">or</span>
-          <div style="flex:1; height:1px; background:var(--g200);"></div>
-        </div>
-      ` : ''}
+
+        <button type="button" class="btn btn-secondary btn-sm btn-oauth" id="btn-oauth-github" data-provider="github" style="width:100%; padding:9px 12px; font-weight:600; font-size:0.86rem; display:flex; align-items:center; justify-content:center; gap:10px; border:1px solid var(--g300); background:var(--white); color:var(--black); border-radius:8px; cursor:pointer;">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="flex-shrink:0;">
+            <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2Z"></path>
+          </svg>
+          <span>Continue with GitHub</span>
+        </button>
+
+        ${(!isSignUp && isPasskeySupported()) ? `
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-auth-passkey" style="width:100%; padding:9px 12px; font-weight:600; font-size:0.86rem; display:flex; align-items:center; justify-content:center; gap:10px; border:1px solid var(--g300); background:var(--white); color:var(--black); border-radius:8px; cursor:pointer;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <span>Continue with Passkey</span>
+          </button>
+        ` : ''}
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+        <div style="flex:1; height:1px; background:var(--g200);"></div>
+        <span style="font-size:0.72rem; color:var(--g500); text-transform:uppercase; letter-spacing:0.5px;">or with email</span>
+        <div style="flex:1; height:1px; background:var(--g200);"></div>
+      </div>
 
       <form id="auth-form" style="display:flex; flex-direction:column; gap:10px;">
         <input type="email" id="auth-email-input" class="tool-input" placeholder="Enter your email..." required autocomplete="username webauthn" style="width:100%; padding:10px 12px; font-size:0.88rem; border-radius:8px;">
@@ -573,6 +594,22 @@ function renderModalContent() {
   const pwdIn = modalEl.querySelector('#auth-pwd-input');
   const authMsg = modalEl.querySelector('#auth-msg');
   const btnSubmit = modalEl.querySelector('#btn-auth-submit');
+
+  // --- OAuth Social Logins (Google, GitHub) ---
+  modalEl.querySelectorAll('.btn-oauth').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const provider = btn.getAttribute('data-provider');
+      try {
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+        signInWithOAuth(provider);
+      } catch (err) {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        showToast(err.message || `Failed to initiate ${provider} authentication.`, 'error');
+      }
+    });
+  });
 
   // --- Password show/hide toggles ---
   modalEl.querySelectorAll('.pwd-toggle-btn').forEach(btn => {

@@ -26,6 +26,7 @@ const {
   registerPasskey,
   removeRegisteredPasskey,
   authenticateWithPasskey,
+  signInWithOAuth,
   signOut
 } = await import('../../js/lib/supabase.js');
 
@@ -252,4 +253,39 @@ test('Account Modal: passkey deletion requires password confirmation in UI', asy
 
   closeAccountModal();
   signOut();
+});
+
+test('signInWithOAuth: builds valid authorization URL for Google and GitHub', () => {
+  const origHref = window.location.href;
+  try {
+    const googleUrl = signInWithOAuth('google');
+    assert.ok(googleUrl.includes('/auth/v1/authorize?provider=google'));
+    assert.ok(googleUrl.includes('redirect_to='));
+
+    const githubUrl = signInWithOAuth('github');
+    assert.ok(githubUrl.includes('/auth/v1/authorize?provider=github'));
+    assert.ok(githubUrl.includes('redirect_to='));
+
+    assert.throws(() => signInWithOAuth('unsupported_provider'), /Unsupported/);
+  } finally {
+    window.location.href = origHref;
+  }
+});
+
+test('Account Modal: renders Google and GitHub OAuth buttons', async () => {
+  localStorage.removeItem('toolbox_supabase_session');
+  localStorage.removeItem('supabase_auth_session');
+
+  await openAccountModal();
+  const modal = document.getElementById('account-modal');
+  assert.ok(modal);
+
+  const googleBtn = modal.querySelector('#btn-oauth-google');
+  const githubBtn = modal.querySelector('#btn-oauth-github');
+  assert.ok(googleBtn, 'Google OAuth button must exist');
+  assert.ok(githubBtn, 'GitHub OAuth button must exist');
+  assert.ok(googleBtn.textContent.includes('Google'));
+  assert.ok(githubBtn.textContent.includes('GitHub'));
+
+  closeAccountModal();
 });

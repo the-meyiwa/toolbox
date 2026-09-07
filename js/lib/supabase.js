@@ -282,6 +282,30 @@ export function updateUserProfile({ username, displayName, avatarUrl, profilePic
 }
 
 /**
+ * Initiate OAuth sign-in with Google or GitHub
+ * @param {'google'|'github'} provider
+ */
+export function signInWithOAuth(provider) {
+  const config = getSupabaseConfig();
+  const cleanProvider = String(provider || '').trim().toLowerCase();
+  if (!cleanProvider || !['google', 'github'].includes(cleanProvider)) {
+    throw new Error('Unsupported authentication provider.');
+  }
+
+  if (!config.url || !config.anonKey) {
+    throw new Error('Supabase project is not configured.');
+  }
+
+  const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/` : '';
+  const authorizeUrl = `${config.url}/auth/v1/authorize?provider=${encodeURIComponent(cleanProvider)}&redirect_to=${encodeURIComponent(redirectTo)}`;
+
+  if (typeof window !== 'undefined') {
+    window.location.href = authorizeUrl;
+  }
+  return authorizeUrl;
+}
+
+/**
  * Sign in with email and password
  */
 export async function signInWithEmail(email, password) {
@@ -980,6 +1004,7 @@ export function parseAuthRedirect() {
   if (merged.access_token) {
     let email = null;
     let userId = null;
+    let userMetadata = {};
     try {
       const parts = merged.access_token.split('.');
       if (parts[1]) {
@@ -990,6 +1015,7 @@ export function parseAuthRedirect() {
         const payload = JSON.parse(jsonStr);
         email = payload.email || payload.user_metadata?.email || null;
         userId = payload.sub || payload.id || null;
+        userMetadata = payload.user_metadata || {};
       }
     } catch {}
 
@@ -1013,7 +1039,8 @@ export function parseAuthRedirect() {
       expiresIn: merged.expires_in,
       tokenType: merged.token_type,
       email,
-      userId
+      userId,
+      userMetadata: userMetadata || {}
     };
   }
 
