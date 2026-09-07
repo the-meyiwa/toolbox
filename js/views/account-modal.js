@@ -9,25 +9,73 @@ import {
   signInWithEmail,
   signUpWithEmail,
   signOut,
+  resetPassword,
+  updateUserPassword,
+  getUserFromToken,
   getSupabaseConfig,
   saveSupabaseConfig,
   testSupabaseConnection,
+  resendConfirmationEmail,
+  isPasskeySupported,
+  getRegisteredPasskeys,
+  registerPasskey,
+  removeRegisteredPasskey,
+  authenticateWithPasskey,
   updateUserProfile
 } from '../lib/supabase.js';
 import { QuotaManager } from '../lib/quota-manager.js';
 import { openSettings } from '../lib/settings-ui.js';
-import { PROFILE_PICTURES, getProfilePictureSrc, getUserAvatarHtml } from '../lib/profile-pictures.js';
-import { getSettings, updateSettings } from '../lib/settings.js';
+import { PROFILE_PICTURES, getUserAvatarHtml } from '../lib/profile-pictures.js';
+import { updateSettings } from '../lib/settings.js';
+import { showToast } from '../utils.js';
 
-let modalEl = null;
-let isSignUpMode = false;
-
-function escapeHtml(s) {
-  return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
-export function openAccountModal(signUp = false) {
-  isSignUpMode = signUp;
+function getWebmailInfo(email) {
+  const clean = (email || '').toLowerCase().trim();
+  const domain = clean.split('@')[1] || '';
+  if (domain.includes('gmail') || domain.includes('googlemail')) {
+    return { name: 'Gmail', url: 'https://mail.google.com/', isGmail: true };
+  }
+  if (domain.includes('outlook') || domain.includes('hotmail') || domain.includes('live') || domain.includes('msn')) {
+    return { name: 'Outlook', url: 'https://outlook.live.com/mail/', isGmail: false };
+  }
+  if (domain.includes('yahoo') || domain.includes('ymail')) {
+    return { name: 'Yahoo Mail', url: 'https://mail.yahoo.com/', isGmail: false };
+  }
+  if (domain.includes('icloud') || domain.includes('me.com') || domain.includes('mac.com')) {
+    return { name: 'iCloud Mail', url: 'https://www.icloud.com/mail', isGmail: false };
+  }
+  if (domain.includes('proton') || domain.includes('pm.me')) {
+    return { name: 'Proton Mail', url: 'https://mail.proton.me/', isGmail: false };
+  }
+  return { name: 'Gmail', url: 'https://mail.google.com/', isGmail: true };
+}
+
+let modalEl = null;
+let authMode = 'signin'; // 'signin' | 'signup' | 'reset' | 'set-new-password' | 'verify-pending'
+let recoveryContext = null;
+let pendingConfirmationEmail = null;
+
+export async function openAccountModal(modeOrSignUp = false, context = null) {
+  if (typeof modeOrSignUp === 'string') {
+    authMode = modeOrSignUp;
+    if (modeOrSignUp === 'verify-pending' && typeof context === 'string') {
+      pendingConfirmationEmail = context;
+    }
+  } else {
+    authMode = modeOrSignUp ? 'signup' : 'signin';
+  }
+  recoveryContext = context;
+
   if (!modalEl) {
     modalEl = document.createElement('div');
     modalEl.id = 'account-modal';
@@ -41,6 +89,19 @@ export function openAccountModal(signUp = false) {
   renderModalContent();
   modalEl.style.display = 'flex';
   modalEl.classList.add('is-open');
+
+  if (authMode === 'set-new-password' && recoveryContext?.accessToken && !recoveryContext.email) {
+    try {
+      const u = await getUserFromToken(recoveryContext.accessToken);
+      if (u?.email) {
+        recoveryContext.email = u.email;
+        const sub = modalEl.querySelector('.settings-modal-subtitle');
+        if (sub) sub.textContent = `Choose a new password for ${u.email}.`;
+        const emailLabel = modalEl.querySelector('#set-pwd-email-label');
+        if (emailLabel) emailLabel.textContent = u.email;
+      }
+    } catch {}
+  }
 }
 
 export function closeAccountModal() {
@@ -48,6 +109,299 @@ export function closeAccountModal() {
     modalEl.style.display = 'none';
     modalEl.classList.remove('is-open');
   }
+}
+
+function renderAuthCard(user, authMode, recoveryContext, pendingConfirmationEmail) {
+  if (authMode === 'set-new-password') {
+    return `
+      <div>
+        <div style="font-size:0.88rem; font-weight:700; color:var(--black); margin-bottom:4px;">
+          Set New Password
+        </div>
+        <div style="font-size:0.8rem; color:var(--g600); margin-bottom:14px; line-height:1.5;">
+          ${recoveryContext?.email ? `Update password for <strong id="set-pwd-email-label" style="color:var(--black);">${escapeHtml(recoveryContext.email)}</strong>.` : 'Enter and confirm your new password below.'}
+        </div>
+        <form id="set-pwd-form" style="display:flex; flex-direction:column; gap:10px;">
+          <div style="position:relative;">
+            <input type="password" id="new-pwd-input" class="tool-input" placeholder="New password..." required minlength="6" style="width:100%; padding:10px 36px 10px 12px; font-size:0.88rem; border-radius:8px;">
+            <button type="button" class="pwd-toggle-btn" data-target="new-pwd-input" aria-label="Show password" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; padding:2px; cursor:pointer; color:var(--g500); display:flex; align-items:center;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-open">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-closed" style="display:none;">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+                <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div id="new-pwd-strength-container" style="margin-top:-2px; margin-bottom:2px; display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <span style="font-size:0.72rem; color:var(--g500);">Strength:</span>
+              <span id="new-pwd-strength-label" style="font-size:0.72rem; font-weight:600; color:var(--g500);">Weak</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:4px; height:4px;">
+              <div class="new-pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
+              <div class="new-pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
+              <div class="new-pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
+              <div class="new-pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
+            </div>
+          </div>
+
+          <div style="position:relative;">
+            <input type="password" id="new-pwd-confirm-input" class="tool-input" placeholder="Confirm new password..." required minlength="6" style="width:100%; padding:10px 36px 10px 12px; font-size:0.88rem; border-radius:8px;">
+            <button type="button" class="pwd-toggle-btn" data-target="new-pwd-confirm-input" aria-label="Show password" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; padding:2px; cursor:pointer; color:var(--g500); display:flex; align-items:center;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-open">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-closed" style="display:none;">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+                <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path>
+              </svg>
+            </button>
+          </div>
+          <div id="new-pwd-match-hint" style="font-size:0.72rem; color:var(--g500); margin-top:-4px;">Password must be at least 6 characters.</div>
+
+          <button type="submit" class="btn btn-primary btn-sm" id="btn-set-pwd-submit" style="width:100%; padding:10px; font-weight:600; font-size:0.9rem; margin-top:4px;">
+            Update Password
+          </button>
+
+          <div id="set-pwd-msg" style="font-size:0.8rem; line-height:1.4; display:none; padding:4px 0;"></div>
+        </form>
+      </div>
+    `;
+  }
+
+  if (authMode === 'verify-pending') {
+    const mailInfo = getWebmailInfo(pendingConfirmationEmail);
+    return `
+      <div id="verify-pending-wrap" style="text-align:center; padding:8px 4px;">
+        <div style="width:48px; height:48px; border-radius:50%; background:var(--g100); display:flex; align-items:center; justify-content:center; margin:0 auto 12px; color:var(--black);">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+            <polyline points="22,6 12,13 2,6"></polyline>
+          </svg>
+        </div>
+        <div style="font-size:0.95rem; font-weight:700; color:var(--black); margin-bottom:6px;">Check Your Inbox</div>
+        <div style="font-size:0.82rem; color:var(--g600); line-height:1.5; margin-bottom:14px;">
+          We sent an activation link to:<br>
+          <strong style="color:var(--black); font-family:monospace; display:inline-block; margin-top:3px;">${escapeHtml(pendingConfirmationEmail || 'your email')}</strong>
+        </div>
+
+        <a href="${mailInfo.url}" target="_blank" rel="noopener noreferrer" id="btn-open-webmail" class="btn btn-primary btn-sm" style="width:100%; padding:10px; font-weight:600; font-size:0.88rem; margin-bottom:12px; display:inline-flex; align-items:center; justify-content:center; gap:8px; text-decoration:none; box-sizing:border-box;">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+            <polyline points="22,6 12,13 2,6"></polyline>
+          </svg>
+          <span>Go to ${escapeHtml(mailInfo.name)}</span>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.7;">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+        </a>
+
+        <div style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:10px 12px; font-size:0.78rem; color:var(--g600); line-height:1.4; margin-bottom:12px; text-align:left;">
+          Click the confirmation link in that email to activate your account. You will be signed in automatically upon verification.
+        </div>
+
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-resend-confirmation" style="width:100%; padding:9px; font-weight:600; font-size:0.86rem; margin-bottom:8px;">
+          Resend Confirmation Email
+        </button>
+        <div id="resend-msg" style="font-size:0.78rem; line-height:1.4; display:none; padding:4px 0; margin-bottom:6px;"></div>
+        <div>
+          <button type="button" id="btn-pending-back" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-size:0.82rem; font-weight:600; cursor:pointer;">
+            Back to Sign In
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  if (user) {
+    return `
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          ${typeof getUserAvatarHtml === 'function' ? getUserAvatarHtml(user, 48) : ''}
+          <div>
+            <div style="font-size:0.75rem; color:var(--g500); font-weight:600;">SIGNED IN AS</div>
+            <div style="font-size:0.95rem; font-weight:700; color:var(--black); margin-top:2px;">
+              ${user.displayName ? `${escapeHtml(user.displayName)} <span style="font-size:0.78rem; font-weight:400; color:var(--g600);">(${escapeHtml(user.email)})</span>` : escapeHtml(user.email)}
+            </div>
+            <div style="font-size:0.72rem; color:var(--g600); font-family:monospace; margin-top:2px;">ID: ${escapeHtml(user.id)}</div>
+          </div>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-auth-signout" style="color:#ef4444;">Sign Out</button>
+      </div>
+
+      <!-- Profile Settings (Display Name & Avatar) -->
+      <div style="margin-top:16px; border-top:1px solid var(--g200); padding-top:14px; display:flex; flex-direction:column; gap:12px;">
+        <div>
+          <label for="acc-display-name-input" style="display:block; font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">
+            Display Name
+          </label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="acc-display-name-input" class="tool-input" placeholder="Enter your display name..." value="${escapeHtml(user.displayName || user.user_metadata?.display_name || '')}" style="flex:1; height:34px; padding:0 10px; font-size:0.84rem; border-radius:8px;">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-acc-save-name" style="padding:0 12px; height:34px; font-size:0.78rem; font-weight:600;">Save</button>
+          </div>
+          <div id="acc-name-status" style="font-size:0.72rem; color:var(--g600); margin-top:3px;">Custom name shown across Toolbox tools and conversations.</div>
+        </div>
+
+        <div>
+          <div style="font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">
+            Display Picture
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              ${typeof getUserAvatarHtml === 'function' ? getUserAvatarHtml(user, 48) : ''}
+              <div>
+                <div style="font-size:0.84rem; font-weight:700; color:var(--black);">
+                  ${escapeHtml((Array.isArray(PROFILE_PICTURES) ? PROFILE_PICTURES.find(p => p.id === (user.profilePicture || user.user_metadata?.profile_picture || 'default'))?.name : null) || 'Minimal Silhouette')}
+                </div>
+                <div style="font-size:0.72rem; color:var(--g600); margin-top:2px;">
+                  Synced across all tools and collaborative Spaces
+                </div>
+              </div>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-acc-change-avatar" style="font-size:0.78rem; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              <span>Change Avatar</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (authMode === 'reset') {
+    return `
+      <div>
+        <div style="font-size:0.88rem; font-weight:700; color:var(--black); margin-bottom:4px;">
+          Reset Your Password
+        </div>
+        <div style="font-size:0.8rem; color:var(--g600); margin-bottom:14px; line-height:1.5;">
+          Enter the email address associated with your account and we will send you a recovery link.
+        </div>
+        <form id="reset-form" style="display:flex; flex-direction:column; gap:12px;">
+          <input type="email" id="reset-email-input" class="tool-input" placeholder="Enter your email..." required style="width:100%; padding:10px 12px; font-size:0.88rem; border-radius:8px;">
+          
+          <button type="submit" class="btn btn-primary btn-sm" id="btn-reset-submit" style="width:100%; padding:10px; font-weight:600; font-size:0.9rem;">
+            Send Reset Link
+          </button>
+          
+          <div id="reset-msg" style="font-size:0.8rem; line-height:1.4; display:none; padding:4px 0;"></div>
+          
+          <div style="text-align:center; font-size:0.82rem; color:var(--g600); margin-top:4px;">
+            Remember your password? <button type="button" id="btn-back-to-signin" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-weight:600; cursor:pointer; text-decoration:underline;">Back to sign in</button>
+          </div>
+        </form>
+      </div>
+    `;
+  }
+
+  // signin or signup mode
+  const isSignUp = authMode === 'signup';
+  return `
+    <div>
+      <div style="font-size:0.88rem; font-weight:700; color:var(--black); margin-bottom:12px;">
+        ${isSignUp ? 'Create a New Account' : 'Sign In with Email'}
+      </div>
+
+      ${(!isSignUp && isPasskeySupported()) ? `
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-auth-passkey" style="width:100%; padding:10px; font-weight:600; font-size:0.88rem; display:flex; align-items:center; justify-content:center; gap:8px; border:1px solid var(--g300); background:var(--white); color:var(--black); margin-bottom:12px;">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          Continue with Passkey
+        </button>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+          <div style="flex:1; height:1px; background:var(--g200);"></div>
+          <span style="font-size:0.72rem; color:var(--g500); text-transform:uppercase; letter-spacing:0.5px;">or</span>
+          <div style="flex:1; height:1px; background:var(--g200);"></div>
+        </div>
+      ` : ''}
+
+      <form id="auth-form" style="display:flex; flex-direction:column; gap:10px;">
+        <input type="email" id="auth-email-input" class="tool-input" placeholder="Enter your email..." required autocomplete="username webauthn" style="width:100%; padding:10px 12px; font-size:0.88rem; border-radius:8px;">
+        
+        <div style="position:relative;">
+          <input type="password" id="auth-pwd-input" class="tool-input" placeholder="Enter your password..." required minlength="6" style="width:100%; padding:10px 36px 10px 12px; font-size:0.88rem; border-radius:8px;">
+          <button type="button" class="pwd-toggle-btn" data-target="auth-pwd-input" aria-label="Show password" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; padding:2px; cursor:pointer; color:var(--g500); display:flex; align-items:center;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-open">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-closed" style="display:none;">
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
+              <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
+              <line x1="1" y1="1" x2="23" y2="23"></line>
+              <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path>
+            </svg>
+          </button>
+        </div>
+
+        ${isSignUp ? `
+          <div id="pwd-strength-container" style="margin-top:-2px; margin-bottom:2px; display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <span style="font-size:0.72rem; color:var(--g500);">Strength:</span>
+              <span id="pwd-strength-label" style="font-size:0.72rem; font-weight:600; color:var(--g500);">Weak</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:4px; height:4px;">
+              <div class="pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
+              <div class="pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
+              <div class="pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
+              <div class="pwd-meter-bar" style="background:var(--g200); border-radius:2px; height:100%; transition:background 0.2s ease;"></div>
+            </div>
+          </div>
+
+          <div style="position:relative;">
+            <input type="password" id="auth-pwd-confirm-input" class="tool-input" placeholder="Confirm your password..." required minlength="6" style="width:100%; padding:10px 36px 10px 12px; font-size:0.88rem; border-radius:8px;">
+            <button type="button" class="pwd-toggle-btn" data-target="auth-pwd-confirm-input" aria-label="Show password" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; padding:2px; cursor:pointer; color:var(--g500); display:flex; align-items:center;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-open">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon-closed" style="display:none;">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+                <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path>
+              </svg>
+            </button>
+          </div>
+          <div id="pwd-match-hint" style="font-size:0.72rem; color:var(--g500); margin-top:-4px;">Password must be at least 6 characters.</div>
+        ` : `
+          <div style="text-align:right; margin-top:-4px;">
+            <button type="button" id="btn-forgot-password" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-size:0.78rem; font-weight:500; cursor:pointer; text-decoration:none;">Forgot password?</button>
+          </div>
+        `}
+
+        <button type="submit" class="btn btn-primary btn-sm" id="btn-auth-submit" style="width:100%; padding:10px; font-weight:600; font-size:0.9rem; margin-top:4px;">
+          ${isSignUp ? 'Create Account' : 'Sign In'}
+        </button>
+        
+        <div id="auth-msg" style="font-size:0.8rem; line-height:1.4; display:none; padding:4px 0;"></div>
+        
+        <div style="text-align:center; font-size:0.82rem; color:var(--g600); margin-top:6px;">
+          ${isSignUp ? `
+            Already have an account? <button type="button" id="btn-toggle-auth" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-weight:600; cursor:pointer; text-decoration:underline;">Sign in</button>
+          ` : `
+            Don't have an account? <button type="button" id="btn-toggle-auth" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-weight:600; cursor:pointer; text-decoration:underline;">Create one</button>
+          `}
+        </div>
+      </form>
+    </div>
+  `;
 }
 
 function renderModalContent() {
@@ -68,10 +422,10 @@ function renderModalContent() {
           </div>
           <div>
             <h2 class="settings-modal-title" style="font-size:1.15rem; font-weight:800;">
-              ${user ? 'Account & Storage' : (isSignUpMode ? 'Create an Account' : 'Sign In')}
+              ${(user && authMode !== 'set-new-password') ? 'Account & Storage' : (authMode === 'set-new-password' ? 'Set New Password' : (authMode === 'verify-pending' ? 'Verify Your Email' : (authMode === 'reset' ? 'Reset Password' : (authMode === 'signup' ? 'Create an Account' : 'Sign In'))))}
             </h2>
             <p class="settings-modal-subtitle">
-              ${user ? 'Manage cloud sync, dual storage preferences, and AI quotas.' : (isSignUpMode ? 'Sign up to access Assistant and sync your workspaces.' : 'Sign in to access Assistant, sync files, and manage spaces.')}
+              ${(user && authMode !== 'set-new-password') ? 'Manage cloud sync, dual storage preferences, passkeys, and AI quotas.' : (authMode === 'set-new-password' ? (recoveryContext?.email ? `Choose a new password for ${recoveryContext.email}.` : 'Choose a new password for your account.') : (authMode === 'verify-pending' ? `An activation link was sent to ${pendingConfirmationEmail || 'your email'}.` : (authMode === 'reset' ? 'Enter your email to receive a password recovery link.' : (authMode === 'signup' ? 'Sign up to access Assistant and sync your workspaces.' : 'Sign in to access Assistant, sync files, and manage spaces.'))))}
             </p>
           </div>
         </div>
@@ -87,88 +441,40 @@ function renderModalContent() {
         
         <!-- USER AUTH CARD -->
         <div style="background:var(--g50); border:1px solid var(--g200); border-radius:14px; padding:16px;">
-          ${user ? `
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
-              <div style="display:flex; align-items:center; gap:12px;">
-                ${getUserAvatarHtml(user, 48)}
-                <div>
-                  <div style="font-size:0.75rem; color:var(--g500); font-weight:600;">SIGNED IN AS</div>
-                  <div style="font-size:0.95rem; font-weight:700; color:var(--black); margin-top:2px;">
-                    ${user.displayName ? `${escapeHtml(user.displayName)} <span style="font-size:0.78rem; font-weight:400; color:var(--g600);">(${escapeHtml(user.email)})</span>` : escapeHtml(user.email)}
-                  </div>
-                  <div style="font-size:0.72rem; color:var(--g600); font-family:monospace; margin-top:2px;">ID: ${user.id}</div>
-                </div>
-              </div>
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-auth-signout" style="color:#ef4444;">Sign Out</button>
-            </div>
-
-            <!-- Profile Settings (Display Name & Avatar) -->
-            <div style="margin-top:16px; border-top:1px solid var(--g200); padding-top:14px; display:flex; flex-direction:column; gap:12px;">
-              <div>
-                <label for="acc-display-name-input" style="display:block; font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">
-                  Display Name
-                </label>
-                <div style="display:flex; gap:8px;">
-                  <input type="text" id="acc-display-name-input" class="tool-input" placeholder="Enter your display name..." value="${escapeHtml(user.displayName || user.user_metadata?.display_name || '')}" style="flex:1; height:34px; padding:0 10px; font-size:0.84rem; border-radius:8px;">
-                  <button type="button" class="btn btn-primary btn-sm" id="btn-acc-save-name" style="padding:0 12px; height:34px; font-size:0.78rem; font-weight:600;">Save</button>
-                </div>
-                <div id="acc-name-status" style="font-size:0.72rem; color:var(--g600); margin-top:3px;">Custom name shown across Toolbox tools and conversations.</div>
-              </div>
-
-              <div>
-                <div style="font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">
-                  Display Picture
-                </div>
-                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-                  <div style="display:flex; align-items:center; gap:12px;">
-                    ${getUserAvatarHtml(user, 48)}
-                    <div>
-                      <div style="font-size:0.84rem; font-weight:700; color:var(--black);">
-                        ${escapeHtml(PROFILE_PICTURES.find(p => p.id === (user.profilePicture || user.user_metadata?.profile_picture || 'default'))?.name || 'Minimal Silhouette')}
-                      </div>
-                      <div style="font-size:0.72rem; color:var(--g600); margin-top:2px;">
-                        Synced across all tools and collaborative Spaces
-                      </div>
-                    </div>
-                  </div>
-                  <button type="button" class="btn btn-secondary btn-sm" id="btn-acc-change-avatar" style="font-size:0.78rem; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                      <circle cx="12" cy="7" r="4"></circle>
-                    </svg>
-                    <span>Change Avatar</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          ` : `
-            <div>
-              <div style="font-size:0.88rem; font-weight:700; color:var(--black); margin-bottom:12px;">
-                ${isSignUpMode ? 'Create a New Account' : 'Sign In with Email'}
-              </div>
-              <form id="auth-form" style="display:flex; flex-direction:column; gap:10px;" onsubmit="return false;">
-                <input type="email" id="auth-email-input" class="tool-input" placeholder="Enter your email..." required style="width:100%; padding:10px 12px; font-size:0.88rem; border-radius:8px;">
-                <input type="password" id="auth-pwd-input" class="tool-input" placeholder="Enter your password..." required style="width:100%; padding:10px 12px; font-size:0.88rem; border-radius:8px;">
-                
-                <button type="submit" class="btn btn-primary btn-sm" id="btn-auth-submit" style="width:100%; padding:10px; font-weight:600; font-size:0.9rem; margin-top:4px;">
-                  ${isSignUpMode ? 'Create Account' : 'Sign In'}
-                </button>
-                
-                <div id="auth-msg" style="font-size:0.8rem; line-height:1.4; display:none; padding:4px 0;"></div>
-                
-                <div style="text-align:center; font-size:0.82rem; color:var(--g600); margin-top:6px;">
-                  ${isSignUpMode ? `
-                    Already have an account? <button type="button" id="btn-toggle-auth" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-weight:600; cursor:pointer; text-decoration:underline;">Sign in</button>
-                  ` : `
-                    Don't have an account? <button type="button" id="btn-toggle-auth" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-weight:600; cursor:pointer; text-decoration:underline;">Create one</button>
-                  `}
-                </div>
-              </form>
-            </div>
-          `}
+          ${renderAuthCard(user, authMode, recoveryContext, pendingConfirmationEmail)}
         </div>
 
         ${user ? `
+        <!-- PASSKEYS & BIOMETRICS -->
+        <div style="background:var(--g50); border:1px solid var(--g200); border-radius:14px; padding:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="width:24px; height:24px; border-radius:6px; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center;">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </div>
+              <span style="font-size:0.85rem; font-weight:700; color:var(--black);">Passkeys &amp; Biometrics</span>
+            </div>
+            ${isPasskeySupported() ? `
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-add-passkey" style="padding:4px 10px; font-size:0.76rem; font-weight:600; display:flex; align-items:center; gap:4px;">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Add Passkey
+              </button>
+            ` : `
+              <span style="font-size:0.72rem; color:var(--g500);">Not supported</span>
+            `}
+          </div>
+
+          <p style="font-size:0.78rem; color:var(--g600); margin-bottom:12px; line-height:1.4;">
+            Authenticate instantly using Touch ID, Face ID, Windows Hello, or FIDO2 keys without typing a password.
+          </p>
+
+          <div id="passkeys-list-container" style="display:flex; flex-direction:column; gap:8px;"></div>
+          <div id="passkey-feedback" style="font-size:0.78rem; line-height:1.4; display:none; padding:4px 0; margin-top:8px;"></div>
+        </div>
+
         <!-- QUOTA & RATE LIMITS SUMMARY -->
         <div style="background:var(--g50); border:1px solid var(--g200); border-radius:14px; padding:14px;">
           <div style="font-size:0.82rem; font-weight:700; color:var(--black); margin-bottom:8px; display:flex; justify-content:space-between;">
@@ -227,8 +533,8 @@ function renderModalContent() {
 
     const handleSaveAccName = () => {
       const val = nameInput?.value.trim() || '';
-      updateUserProfile({ displayName: val });
-      updateSettings({ displayName: val });
+      if (typeof updateUserProfile === 'function') updateUserProfile({ displayName: val });
+      if (typeof updateSettings === 'function') updateSettings({ displayName: val });
       if (statusEl) {
         statusEl.textContent = 'Display name saved!';
         statusEl.style.color = '#10b981';
@@ -255,7 +561,7 @@ function renderModalContent() {
   const btnToggleAuth = modalEl.querySelector('#btn-toggle-auth');
   if (btnToggleAuth) {
     btnToggleAuth.addEventListener('click', () => {
-      isSignUpMode = !isSignUpMode;
+      authMode = authMode === 'signup' ? 'signin' : 'signup';
       renderModalContent();
       const emailInput = modalEl.querySelector('#auth-email-input');
       if (emailInput) emailInput.focus();
@@ -268,6 +574,321 @@ function renderModalContent() {
   const authMsg = modalEl.querySelector('#auth-msg');
   const btnSubmit = modalEl.querySelector('#btn-auth-submit');
 
+  // --- Password show/hide toggles ---
+  modalEl.querySelectorAll('.pwd-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-target');
+      const input = modalEl.querySelector(`#${targetId}`);
+      if (!input) return;
+      const isVisible = input.type === 'text';
+      input.type = isVisible ? 'password' : 'text';
+      const openIcon = btn.querySelector('.eye-icon-open');
+      const closedIcon = btn.querySelector('.eye-icon-closed');
+      if (openIcon) openIcon.style.display = isVisible ? '' : 'none';
+      if (closedIcon) closedIcon.style.display = isVisible ? 'none' : '';
+      btn.setAttribute('aria-label', isVisible ? 'Show password' : 'Hide password');
+    });
+  });
+
+  // --- Password strength and confirmation indicators (Sign Up mode) ---
+  if (authMode === 'signup') {
+    const strengthContainer = modalEl.querySelector('#pwd-strength-container');
+    const strengthLabel = modalEl.querySelector('#pwd-strength-label');
+    const meterBars = modalEl.querySelectorAll('.pwd-meter-bar');
+    const pwdConfirmIn = modalEl.querySelector('#auth-pwd-confirm-input');
+    const matchHint = modalEl.querySelector('#pwd-match-hint');
+
+    const updateStrength = () => {
+      const val = pwdIn?.value || '';
+      if (!val) {
+        if (strengthContainer) strengthContainer.style.display = 'none';
+        return;
+      }
+      if (strengthContainer) strengthContainer.style.display = 'block';
+
+      let score = 0;
+      if (val.length >= 6) score += 1;
+      if (val.length >= 10) score += 1;
+      if (/[A-Z]/.test(val) && /[a-z]/.test(val)) score += 1;
+      if (/[0-9]/.test(val)) score += 0.5;
+      if (/[^A-Za-z0-9]/.test(val)) score += 0.5;
+
+      let level = 1;
+      let label = 'Weak';
+      let color = '#ef4444';
+
+      if (score < 1.5) {
+        level = 1;
+        label = 'Weak';
+        color = '#ef4444';
+      } else if (score < 2.5) {
+        level = 2;
+        label = 'Fair';
+        color = '#f59e0b';
+      } else if (score < 3.5) {
+        level = 3;
+        label = 'Good';
+        color = '#3b82f6';
+      } else {
+        level = 4;
+        label = 'Strong';
+        color = '#10b981';
+      }
+
+      if (strengthLabel) {
+        strengthLabel.textContent = label;
+        strengthLabel.style.color = color;
+      }
+
+      meterBars.forEach((bar, idx) => {
+        bar.style.background = idx < level ? color : 'var(--g200)';
+      });
+    };
+
+    const updateMatch = () => {
+      if (!matchHint) return;
+      const p1 = pwdIn?.value || '';
+      const p2 = pwdConfirmIn?.value || '';
+      if (!p2) {
+        matchHint.textContent = 'Password must be at least 6 characters.';
+        matchHint.style.color = 'var(--g500)';
+        return;
+      }
+      if (p1 === p2) {
+        matchHint.textContent = 'Passwords match.';
+        matchHint.style.color = '#10b981';
+      } else {
+        matchHint.textContent = 'Passwords do not match.';
+        matchHint.style.color = '#ef4444';
+      }
+    };
+
+    if (pwdIn) {
+      pwdIn.addEventListener('input', () => {
+        updateStrength();
+        updateMatch();
+      });
+    }
+    if (pwdConfirmIn) {
+      pwdConfirmIn.addEventListener('input', updateMatch);
+    }
+  }
+
+  // --- Set New Password Form Handlers ---
+  const setPwdForm = modalEl.querySelector('#set-pwd-form');
+  const newPwdIn = modalEl.querySelector('#new-pwd-input');
+  const newPwdConfirmIn = modalEl.querySelector('#new-pwd-confirm-input');
+  const btnSetPwdSubmit = modalEl.querySelector('#btn-set-pwd-submit');
+  const setPwdMsg = modalEl.querySelector('#set-pwd-msg');
+
+  if (setPwdForm && btnSetPwdSubmit) {
+    const strengthContainer = modalEl.querySelector('#new-pwd-strength-container');
+    const strengthLabel = modalEl.querySelector('#new-pwd-strength-label');
+    const meterBars = modalEl.querySelectorAll('.new-pwd-meter-bar');
+    const matchHint = modalEl.querySelector('#new-pwd-match-hint');
+
+    const updateStrength = () => {
+      const val = newPwdIn?.value || '';
+      if (!val) {
+        if (strengthContainer) strengthContainer.style.display = 'none';
+        return;
+      }
+      if (strengthContainer) strengthContainer.style.display = 'block';
+
+      let score = 0;
+      if (val.length >= 6) score += 1;
+      if (val.length >= 10) score += 1;
+      if (/[A-Z]/.test(val) && /[a-z]/.test(val)) score += 1;
+      if (/[0-9]/.test(val)) score += 0.5;
+      if (/[^A-Za-z0-9]/.test(val)) score += 0.5;
+
+      let level = 1;
+      let label = 'Weak';
+      let color = '#ef4444';
+
+      if (score < 1.5) {
+        level = 1; label = 'Weak'; color = '#ef4444';
+      } else if (score < 2.5) {
+        level = 2; label = 'Fair'; color = '#f59e0b';
+      } else if (score < 3.5) {
+        level = 3; label = 'Good'; color = '#3b82f6';
+      } else {
+        level = 4; label = 'Strong'; color = '#10b981';
+      }
+
+      if (strengthLabel) {
+        strengthLabel.textContent = label;
+        strengthLabel.style.color = color;
+      }
+
+      meterBars.forEach((bar, idx) => {
+        bar.style.background = idx < level ? color : 'var(--g200)';
+      });
+    };
+
+    const updateMatch = () => {
+      if (!matchHint) return;
+      const p1 = newPwdIn?.value || '';
+      const p2 = newPwdConfirmIn?.value || '';
+      if (!p2) {
+        matchHint.textContent = 'Password must be at least 6 characters.';
+        matchHint.style.color = 'var(--g500)';
+        return;
+      }
+      if (p1 === p2) {
+        matchHint.textContent = 'Passwords match.';
+        matchHint.style.color = '#10b981';
+      } else {
+        matchHint.textContent = 'Passwords do not match.';
+        matchHint.style.color = '#ef4444';
+      }
+    };
+
+    if (newPwdIn) {
+      newPwdIn.addEventListener('input', () => {
+        updateStrength();
+        updateMatch();
+      });
+    }
+    if (newPwdConfirmIn) {
+      newPwdConfirmIn.addEventListener('input', updateMatch);
+    }
+
+    setPwdForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const p1 = newPwdIn?.value || '';
+      const p2 = newPwdConfirmIn?.value || '';
+
+      if (!p1 || p1.length < 6) {
+        if (setPwdMsg) {
+          setPwdMsg.style.display = 'block';
+          setPwdMsg.style.color = '#ef4444';
+          setPwdMsg.textContent = 'Password must be at least 6 characters.';
+        }
+        return;
+      }
+
+      if (p1 !== p2) {
+        if (setPwdMsg) {
+          setPwdMsg.style.display = 'block';
+          setPwdMsg.style.color = '#ef4444';
+          setPwdMsg.textContent = 'Passwords do not match.';
+        }
+        return;
+      }
+
+      btnSetPwdSubmit.disabled = true;
+      btnSetPwdSubmit.textContent = 'Updating...';
+      if (setPwdMsg) setPwdMsg.style.display = 'none';
+
+      try {
+        const token = recoveryContext?.accessToken;
+        const res = await updateUserPassword(p1, token);
+        if (res.success) {
+          if (setPwdMsg) {
+            setPwdMsg.style.display = 'block';
+            setPwdMsg.style.color = '#10b981';
+            setPwdMsg.textContent = 'Password updated successfully! Signing you in...';
+          }
+          recoveryContext = null;
+          authMode = 'signin';
+          setTimeout(() => {
+            renderModalContent();
+          }, 1200);
+        } else {
+          if (setPwdMsg) {
+            setPwdMsg.style.display = 'block';
+            setPwdMsg.style.color = '#ef4444';
+            setPwdMsg.textContent = res.error || 'Failed to update password.';
+          }
+          btnSetPwdSubmit.disabled = false;
+          btnSetPwdSubmit.textContent = 'Update Password';
+        }
+      } catch (err) {
+        if (setPwdMsg) {
+          setPwdMsg.style.display = 'block';
+          setPwdMsg.style.color = '#ef4444';
+          setPwdMsg.textContent = err.message || 'Failed to update password.';
+        }
+        btnSetPwdSubmit.disabled = false;
+        btnSetPwdSubmit.textContent = 'Update Password';
+      }
+    });
+  }
+
+  // --- Reset Password Form (Dedicated view) ---
+  const resetForm = modalEl.querySelector('#reset-form');
+  const resetEmailIn = modalEl.querySelector('#reset-email-input');
+  const btnResetSubmit = modalEl.querySelector('#btn-reset-submit');
+  const resetMsg = modalEl.querySelector('#reset-msg');
+  const btnBackToSignin = modalEl.querySelector('#btn-back-to-signin');
+
+  if (resetForm && btnResetSubmit) {
+    resetForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const resetEmail = resetEmailIn?.value?.trim();
+      if (!resetEmail) {
+        if (resetMsg) {
+          resetMsg.style.display = 'block';
+          resetMsg.style.color = '#ef4444';
+          resetMsg.textContent = 'Please enter your email address.';
+        }
+        return;
+      }
+      btnResetSubmit.disabled = true;
+      btnResetSubmit.textContent = 'Sending...';
+      if (resetMsg) resetMsg.style.display = 'none';
+
+      try {
+        const res = await resetPassword(resetEmail);
+        if (resetMsg) {
+          resetMsg.style.display = 'block';
+          if (res.success) {
+            resetMsg.style.color = '#10b981';
+            resetMsg.textContent = 'Password reset link sent! Check your email inbox.';
+          } else {
+            resetMsg.style.color = '#ef4444';
+            resetMsg.textContent = res.error || 'Failed to send reset link.';
+          }
+        }
+      } catch (err) {
+        if (resetMsg) {
+          resetMsg.style.display = 'block';
+          resetMsg.style.color = '#ef4444';
+          resetMsg.textContent = err.message || 'Failed to send reset link.';
+        }
+      } finally {
+        btnResetSubmit.disabled = false;
+        btnResetSubmit.textContent = 'Send Reset Link';
+      }
+    });
+  }
+
+  if (btnBackToSignin) {
+    btnBackToSignin.addEventListener('click', () => {
+      authMode = 'signin';
+      renderModalContent();
+      const emailInput = modalEl.querySelector('#auth-email-input');
+      if (emailInput) emailInput.focus();
+    });
+  }
+
+  // --- Switch to Reset Password view ---
+  const btnForgot = modalEl.querySelector('#btn-forgot-password');
+  if (btnForgot) {
+    btnForgot.addEventListener('click', () => {
+      const emailVal = emailIn?.value?.trim() || '';
+      authMode = 'reset';
+      renderModalContent();
+      const resetEmailInput = modalEl.querySelector('#reset-email-input');
+      if (resetEmailInput) {
+        if (emailVal) resetEmailInput.value = emailVal;
+        resetEmailInput.focus();
+      }
+    });
+  }
+
+  // --- Form submission ---
   if (authForm && btnSubmit) {
     authForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -281,21 +902,40 @@ function renderModalContent() {
         return;
       }
 
+      const isSignUp = authMode === 'signup';
+
+      // Confirm password validation for sign-up
+      if (isSignUp) {
+        const pwdConfirmIn = modalEl.querySelector('#auth-pwd-confirm-input');
+        const confirmPwd = pwdConfirmIn?.value?.trim() || '';
+        if (pwd !== confirmPwd) {
+          authMsg.style.display = 'block';
+          authMsg.style.color = '#ef4444';
+          authMsg.textContent = 'Passwords do not match.';
+          if (pwdConfirmIn) pwdConfirmIn.focus();
+          return;
+        }
+        if (pwd.length < 6) {
+          authMsg.style.display = 'block';
+          authMsg.style.color = '#ef4444';
+          authMsg.textContent = 'Password must be at least 6 characters.';
+          return;
+        }
+      }
+
       authMsg.style.display = 'none';
       btnSubmit.disabled = true;
       const originalText = btnSubmit.textContent;
-      btnSubmit.textContent = isSignUpMode ? 'Creating Account...' : 'Signing In...';
+      btnSubmit.textContent = isSignUp ? 'Creating Account...' : 'Signing In...';
 
       try {
-        if (isSignUpMode) {
+        if (isSignUp) {
           const res = await signUpWithEmail(email, pwd);
           if (res.success) {
             if (res.requiresConfirmation) {
-              authMsg.style.display = 'block';
-              authMsg.style.color = '#10b981';
-              authMsg.textContent = 'Account created! Please check your email inbox to confirm your account before signing in.';
-              btnSubmit.textContent = originalText;
-              btnSubmit.disabled = false;
+              pendingConfirmationEmail = email;
+              authMode = 'verify-pending';
+              renderModalContent();
             } else {
               closeAccountModal();
               window.location.hash = '#assistant';
@@ -328,5 +968,277 @@ function renderModalContent() {
         btnSubmit.disabled = false;
       }
     });
+  }
+
+  // --- Passkey Sign-In Handler ---
+  const btnAuthPasskey = modalEl.querySelector('#btn-auth-passkey');
+  if (btnAuthPasskey) {
+    btnAuthPasskey.addEventListener('click', async () => {
+      btnAuthPasskey.disabled = true;
+      const origHtml = btnAuthPasskey.innerHTML;
+      btnAuthPasskey.textContent = 'Verifying Biometrics...';
+      if (authMsg) authMsg.style.display = 'none';
+
+      const emailVal = emailIn?.value?.trim() || null;
+      try {
+        const res = await authenticateWithPasskey(emailVal);
+        if (res.success) {
+          closeAccountModal();
+          showToast('Signed in with Passkey.', 'success');
+          window.location.hash = '#assistant';
+        } else {
+          if (authMsg) {
+            authMsg.style.display = 'block';
+            authMsg.style.color = '#ef4444';
+            authMsg.textContent = res.error || 'Passkey authentication failed.';
+          }
+          btnAuthPasskey.disabled = false;
+          btnAuthPasskey.innerHTML = origHtml;
+        }
+      } catch (err) {
+        if (authMsg) {
+          authMsg.style.display = 'block';
+          authMsg.style.color = '#ef4444';
+          authMsg.textContent = err.message || 'Passkey verification failed.';
+        }
+        btnAuthPasskey.disabled = false;
+        btnAuthPasskey.innerHTML = origHtml;
+      }
+    });
+  }
+
+
+
+  // --- Resend Confirmation Email Handler ---
+  const btnResend = modalEl.querySelector('#btn-resend-confirmation');
+  const resendMsg = modalEl.querySelector('#resend-msg');
+  const btnPendingBack = modalEl.querySelector('#btn-pending-back');
+
+  if (btnResend) {
+    btnResend.addEventListener('click', async () => {
+      btnResend.disabled = true;
+      btnResend.textContent = 'Sending...';
+      if (resendMsg) resendMsg.style.display = 'none';
+
+      const targetEmail = pendingConfirmationEmail || emailIn?.value?.trim() || '';
+      const res = await resendConfirmationEmail(targetEmail);
+      if (resendMsg) {
+        resendMsg.style.display = 'block';
+        if (res.success) {
+          resendMsg.style.color = '#10b981';
+          resendMsg.textContent = 'Verification email resent. Please check your inbox.';
+        } else {
+          resendMsg.style.color = '#ef4444';
+          resendMsg.textContent = res.error || 'Failed to resend confirmation email.';
+        }
+      }
+
+      let count = 30;
+      btnResend.textContent = `Resend in ${count}s`;
+      const interval = setInterval(() => {
+        count -= 1;
+        if (count <= 0) {
+          clearInterval(interval);
+          btnResend.disabled = false;
+          btnResend.textContent = 'Resend Confirmation Email';
+        } else {
+          btnResend.textContent = `Resend in ${count}s`;
+        }
+      }, 1000);
+    });
+  }
+
+  if (btnPendingBack) {
+    btnPendingBack.addEventListener('click', () => {
+      authMode = 'signin';
+      renderModalContent();
+      const emailInput = modalEl.querySelector('#auth-email-input');
+      if (emailInput) {
+        if (pendingConfirmationEmail) emailInput.value = pendingConfirmationEmail;
+        emailInput.focus();
+      }
+    });
+  }
+
+  // --- Passkeys List & Registration (Logged-In View) ---
+  const passkeysContainer = modalEl.querySelector('#passkeys-list-container');
+  const btnAddPasskey = modalEl.querySelector('#btn-add-passkey');
+  const passkeyFeedback = modalEl.querySelector('#passkey-feedback');
+
+  if (passkeysContainer && user) {
+    const renderPasskeysList = () => {
+      const list = getRegisteredPasskeys(user);
+      if (list.length === 0) {
+        passkeysContainer.innerHTML = `
+          <div style="font-size:0.78rem; color:var(--g500); padding:10px 12px; background:var(--white); border:1px dashed var(--g300); border-radius:8px; text-align:center;">
+            No passkeys enrolled on this device. Click "+ Add Passkey" to register Touch ID / Face ID.
+          </div>
+        `;
+      } else {
+        passkeysContainer.innerHTML = list.map(pk => `
+          <div class="passkey-item-card" data-id="${pk.id}" style="padding:10px 12px; background:var(--white); border:1px solid var(--g200); border-radius:8px; display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--g700); flex-shrink:0;">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                  <line x1="8" y1="21" x2="16" y2="21"></line>
+                  <line x1="12" y1="17" x2="12" y2="21"></line>
+                </svg>
+                <div>
+                  <div style="font-size:0.82rem; font-weight:600; color:var(--black);">${escapeHtml(pk.name || 'Security Key')}</div>
+                  <div style="font-size:0.7rem; color:var(--g500);">Registered ${new Date(pk.createdAt).toLocaleDateString()}</div>
+                </div>
+              </div>
+              <button type="button" class="btn-remove-passkey" data-id="${pk.id}" aria-label="Delete passkey" style="background:none; border:none; padding:4px; cursor:pointer; color:var(--g500); border-radius:4px; display:flex; align-items:center;">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+
+            <div class="passkey-delete-confirm-box" id="del-box-${pk.id}" style="display:none; padding-top:8px; border-top:1px solid var(--g200);">
+              <p style="font-size:0.75rem; font-weight:600; color:var(--black); margin:0 0 4px;">
+                Enter account password to delete this passkey:
+              </p>
+              <form class="passkey-del-form" onsubmit="return false;" style="display:flex; gap:6px; margin:0;">
+                <input type="password" class="tool-input passkey-del-pwd" id="pwd-del-${pk.id}" data-id="${pk.id}" placeholder="Account password..." style="flex:1; padding:6px 10px; font-size:0.8rem; border-radius:6px;">
+                <button type="button" class="btn btn-primary btn-sm btn-confirm-del-pk" data-id="${pk.id}" style="background:#ef4444; border-color:#ef4444; color:#ffffff; font-size:0.75rem; padding:6px 12px; font-weight:600;">
+                  Delete
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm btn-cancel-del-pk" data-id="${pk.id}" style="font-size:0.75rem; padding:6px 10px;">
+                  Cancel
+                </button>
+              </form>
+              <p class="passkey-del-err" id="del-err-${pk.id}" style="font-size:0.72rem; color:#ef4444; margin:4px 0 0; display:none;"></p>
+            </div>
+          </div>
+        `).join('');
+
+        passkeysContainer.querySelectorAll('.btn-remove-passkey').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id');
+            const delBox = passkeysContainer.querySelector(`#del-box-${id}`);
+            if (delBox) {
+              const isOpen = delBox.style.display === 'block';
+              passkeysContainer.querySelectorAll('.passkey-delete-confirm-box').forEach(b => {
+                b.style.display = 'none';
+              });
+              if (!isOpen) {
+                delBox.style.display = 'block';
+                const pwdInput = delBox.querySelector('.passkey-del-pwd');
+                if (pwdInput) {
+                  pwdInput.value = '';
+                  pwdInput.focus();
+                }
+                const errEl = delBox.querySelector('.passkey-del-err');
+                if (errEl) errEl.style.display = 'none';
+              }
+            }
+          });
+        });
+
+        passkeysContainer.querySelectorAll('.btn-cancel-del-pk').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id');
+            const delBox = passkeysContainer.querySelector(`#del-box-${id}`);
+            if (delBox) delBox.style.display = 'none';
+          });
+        });
+
+        passkeysContainer.querySelectorAll('.btn-confirm-del-pk').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            const delBox = passkeysContainer.querySelector(`#del-box-${id}`);
+            const pwdInput = delBox ? delBox.querySelector('.passkey-del-pwd') : null;
+            const errEl = delBox ? delBox.querySelector('.passkey-del-err') : null;
+            const enteredPwd = pwdInput ? pwdInput.value : '';
+
+            if (!enteredPwd) {
+              if (errEl) {
+                errEl.style.display = 'block';
+                errEl.textContent = 'Please enter your password.';
+              }
+              if (pwdInput) pwdInput.focus();
+              return;
+            }
+
+            btn.disabled = true;
+            const originalText = btn.textContent;
+            btn.textContent = 'Verifying...';
+            if (errEl) errEl.style.display = 'none';
+
+            try {
+              const res = await removeRegisteredPasskey(user, id, enteredPwd);
+              if (res.success) {
+                renderPasskeysList();
+                showToast('Passkey deleted successfully.', 'info');
+              } else {
+                if (errEl) {
+                  errEl.style.display = 'block';
+                  errEl.textContent = res.error || 'Incorrect password.';
+                }
+                btn.disabled = false;
+                btn.textContent = originalText;
+                if (pwdInput) pwdInput.focus();
+              }
+            } catch (err) {
+              if (errEl) {
+                errEl.style.display = 'block';
+                errEl.textContent = err.message || 'Verification error.';
+              }
+              btn.disabled = false;
+              btn.textContent = originalText;
+            }
+          });
+        });
+
+        passkeysContainer.querySelectorAll('.passkey-del-pwd').forEach(input => {
+          input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              const id = input.getAttribute('data-id');
+              const delBox = passkeysContainer.querySelector(`#del-box-${id}`);
+              const confirmBtn = delBox ? delBox.querySelector('.btn-confirm-del-pk') : null;
+              if (confirmBtn) confirmBtn.click();
+            }
+          });
+        });
+      }
+    };
+
+    renderPasskeysList();
+
+    if (btnAddPasskey) {
+      btnAddPasskey.addEventListener('click', async () => {
+        btnAddPasskey.disabled = true;
+        const origText = btnAddPasskey.innerHTML;
+        btnAddPasskey.textContent = 'Enrolling...';
+        if (passkeyFeedback) passkeyFeedback.style.display = 'none';
+
+        try {
+          const res = await registerPasskey(user);
+          if (res.success) {
+            showToast('Passkey registered successfully!', 'success');
+            renderPasskeysList();
+          } else {
+            if (passkeyFeedback) {
+              passkeyFeedback.style.display = 'block';
+              passkeyFeedback.style.color = '#ef4444';
+              passkeyFeedback.textContent = res.error || 'Failed to register passkey.';
+            }
+          }
+        } catch (err) {
+          if (passkeyFeedback) {
+            passkeyFeedback.style.display = 'block';
+            passkeyFeedback.style.color = '#ef4444';
+            passkeyFeedback.textContent = err.message || 'Passkey enrollment error.';
+          }
+        } finally {
+          btnAddPasskey.disabled = false;
+          btnAddPasskey.innerHTML = origText;
+        }
+      });
+    }
   }
 }

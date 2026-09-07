@@ -15,11 +15,11 @@ import { installPalette, openPalette, detectAiIntent } from './lib/palette.js';
 import { renderSaved } from './views/saved.js';
 import { renderSpaces } from './views/spaces.js';
 import { kindLabel } from './registry/kinds.js';
-import { copyText } from './utils.js';
+import { copyText, showToast } from './utils.js';
 import { initTheme } from './lib/theme.js';
 import { installSettingsUI } from './lib/settings-ui.js';
 import { installHeaderMenu } from './lib/header-menu.js';
-import { getCurrentUser } from './lib/supabase.js';
+import { getCurrentUser, parseAuthRedirect } from './lib/supabase.js';
 import { openAccountModal } from './views/account-modal.js';
 import { initFlutterwaveContribution } from './lib/flutterwave-contribution.js';
 
@@ -373,47 +373,71 @@ async function openTool(id) {
 }
 
 function handleHash() {
-  const hash = window.location.hash || '';
-
-  // Handle Supabase Auth redirect fragments (e.g. #access_token=...&refresh_token=...)
-  if (hash.includes('access_token=') || hash.includes('id_token=') || hash.includes('error_description=')) {
-    const params = new URLSearchParams(hash.slice(1));
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-    const errorMsg = params.get('error_description');
-
-    if (accessToken) {
-      // Extract basic user info from the hash/token if possible, 
-      // or set a placeholder to be hydrated by the next getCurrentUser call.
-      const userSession = {
-        token: accessToken,
-        refreshToken: refreshToken || '',
-        id: 'confirming...', // Will be updated on first use or refresh
-        email: params.get('email') || '',
-        createdAt: new Date().toISOString()
-      };
-      
-      // Save session and notify app
-      localStorage.setItem('toolbox_supabase_session', JSON.stringify(userSession));
-      window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
-      
-      // Clean URL and go to assistant
-      window.location.hash = '#assistant';
+  // Check for auth recovery, email confirmation, or redirect parameters
+  const redirect = parseAuthRedirect();
+  if (redirect) {
+    if (redirect.type === 'recovery' && redirect.accessToken) {
+      try {
+        window.history.replaceState(null, '', window.location.pathname + '#home');
+      } catch {}
+      openAccountModal('set-new-password', redirect);
+      showPage('home');
       return;
     }
-    
-    if (errorMsg) {
-      console.error('Auth error:', errorMsg);
-      window.location.hash = '#home';
+
+    if ((redirect.type === 'signup' || redirect.type === 'email_change' || redirect.type === 'token') && redirect.accessToken) {
+      try {
+        window.history.replaceState(null, '', window.location.pathname + '#home');
+      } catch {}
+
+      const isOwner = (redirect.email && ['meyigbenee@gmail.com', 'meyigbenee@icloud.com', 'laoluwaabiodun1@gmail.com'].includes(redirect.email.toLowerCase()));
+      const userSession = {
+        id: redirect.userId || `usr_${Date.now()}`,
+        email: redirect.email || 'user@toolbox.app',
+        token: redirect.accessToken,
+        refreshToken: redirect.refreshToken || '',
+        username: isOwner ? 'madselkie' : (redirect.email ? redirect.email.split('@')[0].replace(/[^a-z0-9_-]/gi, '').toLowerCase() : 'user'),
+        displayName: isOwner ? 'madselkie' : (redirect.email ? redirect.email.split('@')[0] : 'Toolbox User'),
+        createdAt: new Date().toISOString()
+      };
+      localStorage.setItem('toolbox_supabase_session', JSON.stringify(userSession));
+      window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
+
+      const successMsg = redirect.type === 'email_change'
+        ? 'Email address confirmed and updated successfully.'
+        : 'Email verified successfully! Welcome to Toolbox.';
+      showToast(successMsg, 'success');
+      showPage('home');
+      return;
+    }
+
+    if (redirect.type === 'error') {
+      try {
+        window.history.replaceState(null, '', window.location.pathname + '#home');
+      } catch {}
+      showToast(redirect.error || 'Authentication error during verification.', 'error', 5000);
+      showPage('home');
       return;
     }
   }
 
-  const raw = decodeURIComponent(hash.slice(1) || 'home');
+  const raw = decodeURIComponent(window.location.hash.slice(1) || 'home');
 
   if (raw === '' || raw === 'home') return showPage('home');
   if (raw === 'tools') { showPage('tools'); return; }
   if (raw === 'about' || raw === 'support') return showPage('about');
+  if (raw === 'set-new-password') {
+    openAccountModal('set-new-password');
+    return showPage('home');
+  }
+  if (raw === 'reset' || raw === 'reset-password') {
+    openAccountModal('reset');
+    return showPage('home');
+  }
+  if (raw === 'verify-pending') {
+    openAccountModal('verify-pending');
+    return showPage('home');
+  }
 
   // #saved or #files, or #saved/<artifact id> / #files/<artifact id>
   if (raw === 'saved' || raw.startsWith('saved/') || raw === 'files' || raw.startsWith('files/')) {

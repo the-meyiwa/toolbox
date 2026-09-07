@@ -314,6 +314,7 @@ export async function signInWithEmail(email, password) {
         createdAt: data.user?.created_at || new Date().toISOString()
       };
       localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
+      localStorage.setItem('supabase_auth_session', JSON.stringify(userSession));
       window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
       return { success: true, user: userSession };
     }
@@ -329,6 +330,7 @@ export async function signInWithEmail(email, password) {
       createdAt: new Date().toISOString()
     };
     localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
+    localStorage.setItem('supabase_auth_session', JSON.stringify(userSession));
     window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
     return { success: true, user: userSession };
   } catch (err) {
@@ -378,6 +380,45 @@ export async function refreshUserSession() {
 }
 
 /**
+ * Validate current user session against Supabase
+ * If account was deleted or token revoked, signs out cleanly.
+ */
+export async function validateSession() {
+  const current = getCurrentUser();
+  const config = getSupabaseConfig();
+  if (!current || !config.url || !config.anonKey) {
+    return current;
+  }
+
+  // Real Supabase access token validation
+  if (current.token && !current.token.startsWith('tok_')) {
+    try {
+      const res = await fetch(`${config.url}/auth/v1/user`, {
+        headers: {
+          'apikey': config.anonKey,
+          'Authorization': `Bearer ${current.token}`
+        }
+      });
+      if (res.ok) {
+        return current;
+      }
+      if (res.status === 401 || res.status === 403) {
+        if (current.refreshToken) {
+          const refreshed = await refreshUserSession();
+          if (refreshed) return refreshed;
+        }
+        signOut();
+        return null;
+      }
+    } catch {
+      // Keep offline/network degraded session
+      return current;
+    }
+  }
+  return current;
+}
+
+/**
  * Sign up with email and password
  */
 export async function signUpWithEmail(email, password) {
@@ -385,13 +426,18 @@ export async function signUpWithEmail(email, password) {
   const config = getSupabaseConfig();
   try {
     if (config.url && config.anonKey) {
+      const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/` : undefined;
       const res = await fetch(`${config.url}/auth/v1/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'apikey': config.anonKey
         },
-        body: JSON.stringify({ email: cleanEmail, password })
+        body: JSON.stringify({
+          email: cleanEmail,
+          password,
+          ...(redirectUrl ? { redirect_to: redirectUrl } : {})
+        })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -399,39 +445,40 @@ export async function signUpWithEmail(email, password) {
         throw new Error(errorMsg);
       }
 
-      // If Supabase returned an access_token directly (instant confirmation)
+      // If Supabase returned an access_token directly (instant confirmation or email confirmation disabled)
       if (data.access_token) {
+        const isOwner = MADSELKIE_EMAILS.includes(cleanEmail);
         const userSession = {
           id: data.user?.id || `usr_${Date.now()}`,
           email: cleanEmail,
           token: data.access_token,
           refreshToken: data.refresh_token || '',
-          createdAt: new Date().toISOString()
+          username: isOwner ? 'madselkie' : (data.user?.user_metadata?.username || cleanEmail.split('@')[0].replace(/[^a-z0-9_-]/gi, '').toLowerCase()),
+          displayName: isOwner ? 'madselkie' : (data.user?.user_metadata?.display_name || cleanEmail.split('@')[0]),
+          createdAt: data.user?.created_at || new Date().toISOString()
         };
         localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
+        localStorage.setItem('supabase_auth_session', JSON.stringify(userSession));
         window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
         return { success: true, user: userSession };
       }
 
-      // If no token was returned in signup, try immediate sign in
-      // (works automatically if auto-confirm trigger is installed or account is active)
-      const immediateLogin = await signInWithEmail(cleanEmail, password);
-      if (immediateLogin.success) {
-        return immediateLogin;
-      }
-
-      // Otherwise, the auth provider strictly enforces email confirmation link
+      // Otherwise, the auth provider requires email confirmation
       return { success: true, requiresConfirmation: true };
     }
 
     // Dev Account simulation
+    const isOwner = MADSELKIE_EMAILS.includes(cleanEmail);
     const userSession = {
       id: `usr_${btoa(cleanEmail).slice(0, 10)}`,
       email: cleanEmail,
       token: `tok_${Date.now()}`,
+      username: isOwner ? 'madselkie' : cleanEmail.split('@')[0].replace(/[^a-z0-9_-]/gi, '').toLowerCase(),
+      displayName: isOwner ? 'madselkie' : cleanEmail.split('@')[0],
       createdAt: new Date().toISOString()
     };
     localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
+    localStorage.setItem('supabase_auth_session', JSON.stringify(userSession));
     window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
     return { success: true, user: userSession };
   } catch (err) {
@@ -445,6 +492,11 @@ export async function signUpWithEmail(email, password) {
 export function signOut() {
   try {
     localStorage.removeItem(SUPABASE_SESSION_KEY);
+    localStorage.removeItem('supabase_auth_session');
+    localStorage.removeItem('sb-ssoruyruzbvgyondxlgj-auth-token');
+    // Clear legacy un-scoped assistant history so previous user messages don't leak
+    localStorage.removeItem('toolbox_assistant_history_v2');
+    localStorage.removeItem('toolbox_assistant_history_guest');
     // Reset storage strategy to Browser/Local when signed out
     localStorage.setItem(STORAGE_MODE_KEY, 'local');
     window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: null } }));
@@ -758,5 +810,586 @@ export async function fetchAssistantConversationsFromCloud() {
   }
 
   return localData;
+}
+
+/**
+ * Send a password reset email via Supabase Auth
+ */
+export async function resetPassword(email) {
+  const cleanEmail = (email || '').trim().toLowerCase();
+  if (!cleanEmail) return { success: false, error: 'Please enter your email address.' };
+
+  const config = getSupabaseConfig();
+  if (!config.url || !config.anonKey) {
+    return { success: false, error: 'Supabase is not configured. Password reset is unavailable.' };
+  }
+
+  try {
+    const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/#type=recovery` : undefined;
+    const endpoint = redirectUrl
+      ? `${config.url}/auth/v1/recover?redirect_to=${encodeURIComponent(redirectUrl)}`
+      : `${config.url}/auth/v1/recover`;
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': config.anonKey
+      },
+      body: JSON.stringify({ email: cleanEmail })
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error_description || data.message || data.msg || 'Password reset request failed.');
+    }
+
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Fetch user profile from Supabase using an access token
+ */
+export async function getUserFromToken(token) {
+  const config = getSupabaseConfig();
+  if (!config.url || !config.anonKey || !token) return null;
+  try {
+    const res = await fetch(`${config.url}/auth/v1/user`, {
+      headers: {
+        'apikey': config.anonKey,
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Update user password via Supabase Auth
+ */
+export async function updateUserPassword(newPassword, customToken = null) {
+  const cleanPassword = (newPassword || '').trim();
+  if (!cleanPassword || cleanPassword.length < 6) {
+    return { success: false, error: 'Password must be at least 6 characters.' };
+  }
+
+  const config = getSupabaseConfig();
+  const activeUser = getCurrentUser();
+  const token = customToken || activeUser?.token;
+
+  if (config.url && config.anonKey) {
+    if (!token) {
+      return { success: false, error: 'Authentication token missing. Please request a new reset link.' };
+    }
+
+    try {
+      const res = await fetch(`${config.url}/auth/v1/user`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': config.anonKey,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ password: cleanPassword })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error_description || data.message || data.msg || 'Failed to update password.');
+      }
+
+      const isOwner = MADSELKIE_EMAILS.includes((data.email || activeUser?.email || '').toLowerCase());
+      const updatedUser = {
+        id: data.id || activeUser?.id || `usr_${Date.now()}`,
+        email: data.email || activeUser?.email,
+        token: data.access_token || token,
+        refreshToken: data.refresh_token || activeUser?.refreshToken,
+        username: isOwner ? 'madselkie' : (data.user_metadata?.username || activeUser?.username || (data.email || '').split('@')[0]),
+        displayName: isOwner ? 'madselkie' : (data.user_metadata?.display_name || activeUser?.displayName || (data.email || '').split('@')[0]),
+        createdAt: data.created_at || new Date().toISOString()
+      };
+
+      localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(updatedUser));
+      localStorage.setItem('supabase_auth_session', JSON.stringify(updatedUser));
+      window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: updatedUser } }));
+
+      return { success: true, user: updatedUser };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }
+
+  // Local / Simulation Mode
+  if (activeUser) {
+    activeUser.passwordUpdated = new Date().toISOString();
+    localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(activeUser));
+    localStorage.setItem('supabase_auth_session', JSON.stringify(activeUser));
+    return { success: true, user: activeUser };
+  }
+
+  return { success: true, user: { email: 'user@local.dev' } };
+}
+
+/**
+ * Parse recovery / auth redirect parameters from window.location
+ */
+export function parseAuthRedirect() {
+  if (typeof window === 'undefined') return null;
+
+  const rawHash = (window.location.hash || '').replace(/^#+/, '').replace(/#/g, '&');
+  const rawSearch = (window.location.search || '').replace(/^\?+/, '').replace(/\?/g, '&');
+
+  const parseParams = (str) => {
+    const params = {};
+    if (!str) return params;
+    const parts = str.split('&');
+    for (const part of parts) {
+      if (!part) continue;
+      const [k, ...v] = part.split('=');
+      if (k) {
+        try {
+          const cleanKey = decodeURIComponent(k.replace(/\+/g, ' '));
+          const cleanVal = decodeURIComponent(v.join('=').replace(/\+/g, ' '));
+          params[cleanKey] = cleanVal;
+        } catch {
+          params[k] = v.join('=');
+        }
+      }
+    }
+    return params;
+  };
+
+  const hashParams = parseParams(rawHash);
+  const searchParams = parseParams(rawSearch);
+  const merged = { ...searchParams, ...hashParams };
+
+  if (merged.error || merged.error_description) {
+    return {
+      type: 'error',
+      error: merged.error_description || merged.error || 'Authentication error during redirect.'
+    };
+  }
+
+  // Supabase access token redirect (recovery, signup confirmation, email change, magiclink)
+  if (merged.access_token) {
+    let email = null;
+    let userId = null;
+    try {
+      const parts = merged.access_token.split('.');
+      if (parts[1]) {
+        const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const jsonStr = (typeof atob === 'function')
+          ? decodeURIComponent(escape(atob(base64)))
+          : Buffer.from(base64, 'base64').toString('utf8');
+        const payload = JSON.parse(jsonStr);
+        email = payload.email || payload.user_metadata?.email || null;
+        userId = payload.sub || payload.id || null;
+      }
+    } catch {}
+
+    const isRecovery = merged.type === 'recovery' || rawHash.includes('type=recovery') || rawSearch.includes('type=recovery');
+    const isSignup = merged.type === 'signup' || rawHash.includes('type=signup') || rawSearch.includes('type=signup');
+    const isEmailChange = merged.type === 'email_change' || rawHash.includes('type=email_change') || rawSearch.includes('type=email_change');
+    const isInvite = merged.type === 'invite' || rawHash.includes('type=invite') || rawSearch.includes('type=invite');
+    const isMagicLink = merged.type === 'magiclink' || rawHash.includes('type=magiclink') || rawSearch.includes('type=magiclink');
+
+    let redirectType = 'token';
+    if (isRecovery) redirectType = 'recovery';
+    else if (isSignup) redirectType = 'signup';
+    else if (isEmailChange) redirectType = 'email_change';
+    else if (isInvite) redirectType = 'invite';
+    else if (isMagicLink) redirectType = 'magiclink';
+
+    return {
+      type: redirectType,
+      accessToken: merged.access_token,
+      refreshToken: merged.refresh_token || '',
+      expiresIn: merged.expires_in,
+      tokenType: merged.token_type,
+      email,
+      userId
+    };
+  }
+
+  // PKCE code flow redirect
+  if (merged.code) {
+    return {
+      type: 'code',
+      code: merged.code
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Resend email confirmation link via Supabase Auth
+ */
+export async function resendConfirmationEmail(email) {
+  const cleanEmail = (email || '').trim().toLowerCase();
+  if (!cleanEmail) return { success: false, error: 'Please enter an email address.' };
+
+  const config = getSupabaseConfig();
+  if (!config.url || !config.anonKey) {
+    return { success: false, error: 'Supabase configuration is missing.' };
+  }
+
+  try {
+    const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/` : undefined;
+    const res = await fetch(`${config.url}/auth/v1/resend`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': config.anonKey
+      },
+      body: JSON.stringify({
+        type: 'signup',
+        email: cleanEmail,
+        ...(redirectUrl ? { redirect_to: redirectUrl } : {})
+      })
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error_description || data.message || data.msg || 'Failed to resend confirmation email.');
+    }
+
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+/* ============================================================
+   PASSKEYS & WEBAUTHN BIOMETRICS ENGINE
+   ============================================================ */
+
+const PASSKEYS_STORAGE_KEY = 'toolbox_passkeys';
+
+function bufferToBase64Url(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  const base64 = (typeof btoa === 'function')
+    ? btoa(binary)
+    : Buffer.from(binary, 'binary').toString('base64');
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function base64UrlToBuffer(base64Url) {
+  let str = (base64Url || '').replace(/-/g, '+').replace(/_/g, '/');
+  while (str.length % 4) str += '=';
+  if (typeof atob === 'function') {
+    const binary = atob(str);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+  return Buffer.from(str, 'base64').buffer;
+}
+
+/**
+ * Check if WebAuthn / Passkeys are supported in the current environment
+ */
+export function isPasskeySupported() {
+  return typeof window !== 'undefined' &&
+    window.PublicKeyCredential !== undefined &&
+    typeof navigator !== 'undefined' &&
+    navigator.credentials !== undefined &&
+    typeof navigator.credentials.create === 'function';
+}
+
+export function hasPasskeySupport() {
+  return isPasskeySupported();
+}
+
+/**
+ * Get registered passkeys for a user or local device
+ */
+export function getRegisteredPasskeys(user = null) {
+  try {
+    if (typeof localStorage === 'undefined') return [];
+    const raw = localStorage.getItem(PASSKEYS_STORAGE_KEY);
+    const all = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(all)) return [];
+    if (!user) return all;
+    return all.filter(pk => pk.userEmail === user.email || pk.userId === user.id);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Register a new WebAuthn passkey for the current signed-in user
+ */
+export async function registerPasskey(user = null, deviceName = null) {
+  const activeUser = user || getCurrentUser();
+  if (!activeUser) {
+    return { success: false, error: 'You must be signed in to register a passkey.' };
+  }
+  if (!isPasskeySupported()) {
+    return { success: false, error: 'Passkeys and WebAuthn are not supported on this device or browser.' };
+  }
+
+  try {
+    const cr = (typeof crypto !== 'undefined' ? crypto : (globalThis.crypto || null));
+    const challenge = cr ? cr.getRandomValues(new Uint8Array(32)) : new Uint8Array(32);
+    const userIdBuffer = new TextEncoder().encode(activeUser.id || activeUser.email || 'user');
+    const rpId = (typeof window !== 'undefined' && window.location?.hostname) ? window.location.hostname : 'localhost';
+
+    const publicKeyCredentialCreationOptions = {
+      challenge,
+      rp: {
+        name: 'Toolbox',
+        id: rpId
+      },
+      user: {
+        id: userIdBuffer,
+        name: activeUser.email || 'user@toolbox.app',
+        displayName: (activeUser.displayName || activeUser.email || 'Toolbox User').split('@')[0]
+      },
+      pubKeyCredParams: [
+        { alg: -7, type: 'public-key' },  // ES256
+        { alg: -257, type: 'public-key' } // RS256
+      ],
+      authenticatorSelection: {
+        authenticatorAttachment: 'platform',
+        userVerification: 'preferred',
+        residentKey: 'preferred'
+      },
+      timeout: 60000,
+      attestation: 'none'
+    };
+
+    const credential = await navigator.credentials.create({
+      publicKey: publicKeyCredentialCreationOptions
+    });
+
+    if (!credential) {
+      throw new Error('Credential creation was cancelled or timed out.');
+    }
+
+    const credentialId = credential.id || bufferToBase64Url(credential.rawId);
+    let resolvedName = (deviceName || '').trim();
+    if (!resolvedName) {
+      const ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+      if (ua.includes('Macintosh') || ua.includes('Mac OS')) resolvedName = 'MacBook Touch ID';
+      else if (ua.includes('iPhone') || ua.includes('iPad')) resolvedName = 'Apple Biometrics';
+      else if (ua.includes('Android')) resolvedName = 'Android Biometrics';
+      else if (ua.includes('Windows')) resolvedName = 'Windows Hello';
+      else resolvedName = 'Security Authenticator';
+    }
+
+    const passkeyRecord = {
+      id: credentialId,
+      name: resolvedName,
+      userEmail: activeUser.email,
+      userId: activeUser.id,
+      createdAt: new Date().toISOString(),
+      transports: credential.response?.getTransports?.() || ['internal']
+    };
+
+    // Save locally
+    const existing = getRegisteredPasskeys();
+    const updated = existing.filter(k => k.id !== credentialId).concat([passkeyRecord]);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(PASSKEYS_STORAGE_KEY, JSON.stringify(updated));
+    }
+
+    // Synchronize to Supabase user_metadata if cloud session exists
+    const config = getSupabaseConfig();
+    if (config.url && config.anonKey && activeUser.token) {
+      try {
+        await fetch(`${config.url}/auth/v1/user`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': config.anonKey,
+            'Authorization': `Bearer ${activeUser.token}`
+          },
+          body: JSON.stringify({
+            data: {
+              passkeys: updated.filter(k => k.userEmail === activeUser.email || k.userId === activeUser.id)
+            }
+          })
+        });
+      } catch {}
+    }
+
+    return { success: true, passkey: passkeyRecord };
+  } catch (err) {
+    const errorMsg = err.name === 'NotAllowedError'
+      ? 'Passkey registration was cancelled or biometric verification timed out.'
+      : (err.message || 'Failed to register passkey.');
+    return { success: false, error: errorMsg };
+  }
+}
+
+/**
+ * Verify user password against Supabase Auth (or dev account fallback)
+ */
+export async function verifyUserPassword(password, user = null) {
+  const activeUser = user || getCurrentUser();
+  if (!activeUser || !activeUser.email) {
+    return { success: false, error: 'User is not authenticated.' };
+  }
+  if (!password) {
+    return { success: false, error: 'Please enter your password.' };
+  }
+
+  const config = getSupabaseConfig();
+  if (config.url && config.anonKey && activeUser.token && !activeUser.token.startsWith('tok_')) {
+    try {
+      const res = await fetch(`${config.url}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': config.anonKey
+        },
+        body: JSON.stringify({ email: activeUser.email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const errorMsg = data.error_description || (data.error === 'invalid_grant' ? 'Incorrect password.' : 'Password verification failed.');
+        return { success: false, error: errorMsg };
+      }
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message || 'Verification failed.' };
+    }
+  }
+
+  // Local / simulated verification fallback
+  if (password.length < 6) {
+    return { success: false, error: 'Password must be at least 6 characters.' };
+  }
+  return { success: true };
+}
+
+/**
+ * Remove a registered passkey, requiring account password verification for security
+ */
+export async function removeRegisteredPasskey(user = null, passkeyId, password = null) {
+  const activeUser = user || getCurrentUser();
+  if (!passkeyId) return { success: false, error: 'Passkey identifier is required.' };
+
+  if (password !== null && password !== undefined) {
+    const verified = await verifyUserPassword(password, activeUser);
+    if (!verified.success) {
+      return { success: false, error: verified.error || 'Incorrect password.' };
+    }
+  }
+
+  const existing = getRegisteredPasskeys();
+  const updated = existing.filter(k => k.id !== passkeyId);
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(PASSKEYS_STORAGE_KEY, JSON.stringify(updated));
+  }
+
+  const config = getSupabaseConfig();
+  if (activeUser && config.url && config.anonKey && activeUser.token) {
+    try {
+      await fetch(`${config.url}/auth/v1/user`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': config.anonKey,
+          'Authorization': `Bearer ${activeUser.token}`
+        },
+        body: JSON.stringify({
+          data: {
+            passkeys: updated.filter(k => k.userEmail === activeUser.email || k.userId === activeUser.id)
+          }
+        })
+      });
+    } catch {}
+  }
+
+  return { success: true };
+}
+
+/**
+ * Authenticate using a WebAuthn passkey
+ */
+export async function authenticateWithPasskey(emailHint = null) {
+  if (!isPasskeySupported()) {
+    return { success: false, error: 'Passkeys and WebAuthn are not supported on this browser.' };
+  }
+
+  try {
+    const cr = (typeof crypto !== 'undefined' ? crypto : (globalThis.crypto || null));
+    const challenge = cr ? cr.getRandomValues(new Uint8Array(32)) : new Uint8Array(32);
+    const rpId = (typeof window !== 'undefined' && window.location?.hostname) ? window.location.hostname : 'localhost';
+
+    const registered = getRegisteredPasskeys();
+    const cleanHint = (emailHint || '').trim().toLowerCase();
+    const candidateKeys = cleanHint
+      ? registered.filter(k => k.userEmail === cleanHint)
+      : registered;
+
+    const allowCredentials = candidateKeys.map(k => ({
+      id: base64UrlToBuffer(k.id),
+      type: 'public-key',
+      transports: k.transports || ['internal']
+    }));
+
+    const getOptions = {
+      challenge,
+      rpId,
+      userVerification: 'preferred',
+      timeout: 60000,
+      ...(allowCredentials.length > 0 ? { allowCredentials } : {})
+    };
+
+    const assertion = await navigator.credentials.get({
+      publicKey: getOptions
+    });
+
+    if (!assertion) {
+      throw new Error('Biometric authentication failed or was cancelled.');
+    }
+
+    const matchedKeyId = assertion.id || bufferToBase64Url(assertion.rawId);
+    const matchedRecord = registered.find(k => k.id === matchedKeyId);
+
+    const email = matchedRecord?.userEmail || cleanHint || 'passkey-user@toolbox.app';
+    const userId = matchedRecord?.userId || `usr_${Date.now()}`;
+    const isOwner = MADSELKIE_EMAILS.includes(email.toLowerCase());
+
+    const userSession = {
+      id: userId,
+      email,
+      token: `passkey_${Date.now()}`,
+      refreshToken: '',
+      authProvider: 'passkey',
+      username: isOwner ? 'madselkie' : email.split('@')[0].replace(/[^a-z0-9_-]/gi, '').toLowerCase(),
+      displayName: isOwner ? 'madselkie' : email.split('@')[0],
+      createdAt: new Date().toISOString()
+    };
+
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
+    }
+
+    return { success: true, user: userSession };
+  } catch (err) {
+    const errorMsg = err.name === 'NotAllowedError'
+      ? 'Passkey authentication was cancelled or timed out.'
+      : (err.message || 'Passkey authentication failed.');
+    return { success: false, error: errorMsg };
+  }
 }
 

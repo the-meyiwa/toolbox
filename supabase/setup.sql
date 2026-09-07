@@ -174,9 +174,11 @@ create trigger on_auth_user_created
   for each row execute procedure public.handle_new_user();
 
 
--- 8. AUTO-CONFIRM TRIGGER & EXISTING ACCOUNT MIGRATION
--- Ensures newly created accounts and existing accounts can authenticate immediately
--- without being blocked by unconfirmed email state or SMTP rate limits.
+-- 8. EMAIL CONFIRMATION & ACCOUNT ACTIVATION
+-- Note: Auto-confirm trigger is disabled by default to allow Supabase Auth
+-- to dispatch email verification messages using the configured SMTP / Resend provider.
+-- If local dev bypass is needed, run supabase/disable-auto-confirm.sql or toggle settings.
+/*
 create or replace function public.auto_confirm_user()
 returns trigger as $$
 begin
@@ -189,11 +191,7 @@ drop trigger if exists on_auth_user_auto_confirm on auth.users;
 create trigger on_auth_user_auto_confirm
   before insert on auth.users
   for each row execute procedure public.auto_confirm_user();
-
--- Ensure all existing accounts are marked as confirmed so they can log in immediately
-update auth.users
-set email_confirmed_at = coalesce(email_confirmed_at, now())
-where email_confirmed_at is null;
+*/
 
 
 -- 9. GRANT PERMISSIONS
