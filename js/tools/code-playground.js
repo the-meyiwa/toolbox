@@ -15,7 +15,7 @@ import { LANGUAGES, makeWorker, transpileTypeScript } from '../lib/code-runtimes
 import { WEB_FRAMEWORKS, buildPreviewDocument } from '../lib/runtimes-extra.js';
 import { REMOTE_LANGUAGES, compileRemote } from '../lib/remote-compile.js';
 import { fs } from '../lib/filesystem.js';
-import { getCurrentUser } from '../lib/supabase.js';
+import { getCurrentUser, onAuthChange } from '../lib/supabase.js';
 import { streamChatCompletion } from '../lib/ai-provider.js';
 import { marked } from 'marked';
 import { fetchPackageMetadata, searchNpmPackages, extractPackageImports, buildImportMap } from '../lib/npm-client.js';
@@ -82,17 +82,19 @@ const TEMPLATES = {
         name: 'main.cpp',
         lang: 'cpp',
         content: `#include <iostream>
-#include <vector>
-#include <numeric>
+using namespace std;
 
 int main() {
-    std::vector<int> nums = {12, 45, 67, 89, 23, 56};
-    long long sum = std::accumulate(nums.begin(), nums.end(), 0LL);
-    double avg = static_cast<double>(sum) / nums.size();
+    int nums[6] = {12, 45, 67, 89, 23, 56};
+    long sum = 0;
+    for (int i = 0; i < 6; i++) {
+        sum += nums[i];
+    }
+    double avg = 1.0 * sum / 6;
 
-    std::cout << "Numbers count: " << nums.size() << "\\n";
-    std::cout << "Sum: " << sum << "\\n";
-    std::cout << "Average: " << avg << "\\n";
+    cout << "Numbers count: " << 6 << endl;
+    cout << "Sum: " << sum << endl;
+    cout << "Average: " << avg << endl;
     return 0;
 }
 `
@@ -946,6 +948,18 @@ export default {
     const astBuildBtn = container.querySelector('#cpg-ast-build');
     const astExamineBtn = container.querySelector('#cpg-ast-examine');
 
+    // Authentication is reactive: if the user signs out while inside Code
+    // Playground, unmount the assistant panel immediately rather than
+    // waiting for the next navigation/render (it is authenticated-only UI).
+    self_._authUnsub?.();
+    self_._authUnsub = onAuthChange((user) => {
+      if (!user && astPanel && astPanel.isConnected) {
+        astPanel.remove();
+        astStatusBtn?.remove();
+        state.assistantOpen = false;
+      }
+    });
+
     // Return to Workspaces Landing
     container.querySelector('#cpg-close-ws-btn')?.addEventListener('click', () => {
       persist();
@@ -1722,7 +1736,8 @@ export default {
       const filesSummary = state.files.map(f => `File: ${f.name} (${f.lang || 'text'}, ${f.content ? f.content.split('\n').length : 0} lines)`).join('\n');
       const errors = problemsContent.textContent !== 'No errors detected in workspace.' ? problemsContent.textContent : 'None';
 
-      const systemPrompt = `You are the AI Assistant inside the Toolbox Code Playground IDE.
+      const systemPrompt = `You are the Code Playground Assistant: a coding assistant SCOPED STRICTLY to this in-browser IDE. You are not the general Toolbox assistant and you do not have access to Toolbox's other 100+ tools (no math/chemistry/disease/finance/media/networking tools, no web browsing, no calendar, no unrelated file storage). If asked what you can do, or anything outside coding/this workspace, say plainly that you are scoped to Code Playground only: writing, running, and debugging code in this workspace, explaining code, and managing this workspace's files -- and offer to help with one of those instead.
+
 Current Workspace: "${state.projectName}"
 Workspace Files:
 ${filesSummary}
@@ -1769,6 +1784,11 @@ Always execute the necessary terminal commands to fulfill user requests so the u
         await streamChatCompletion({
           history: astHistory,
           systemInstruction: systemPrompt,
+          // Scope enforcement: no global tool declarations are sent, so the
+          // model cannot invoke any of Toolbox's other 100+ tools from
+          // inside Code Playground, regardless of what it is asked.
+          scope: 'code-playground',
+          toolDeclarations: [],
           onToken: (tok) => {
             fullText += tok;
             if (responseContainer) {
@@ -3671,6 +3691,7 @@ if (container) {
 
   destroy() {
     this._alive = false;
+    this._authUnsub?.();
     this._remote?.abort();
     this._cleanup?.();
     for (const w of Object.values(this._workers || {})) w.terminate();

@@ -529,6 +529,23 @@ export function signOut() {
 }
 
 /**
+ * Subscribe to authentication state changes (sign-in, sign-out, session
+ * refresh). Fires immediately with the current user, then again on every
+ * 'toolbox:authchange' event, so authenticated-only UI can react (e.g. hide
+ * or unmount itself) as soon as the session actually changes, instead of
+ * only re-checking on next navigation/render. Returns an unsubscribe function.
+ */
+export function onAuthChange(callback) {
+  if (typeof callback !== 'function' || typeof window === 'undefined') return () => {};
+  const handler = () => {
+    try { callback(getCurrentUser()); } catch {}
+  };
+  window.addEventListener('toolbox:authchange', handler);
+  handler();
+  return () => window.removeEventListener('toolbox:authchange', handler);
+}
+
+/**
  * Upload file to Supabase Storage Bucket
  */
 export async function uploadToSupabaseStorage(bucketName, filePath, fileBlob) {

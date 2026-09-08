@@ -240,77 +240,90 @@ self.onmessage = async function (e) {
   }
 };`;
 
-/* ---------------- C++ (In-Browser Offline Engine) ---------------- */
+/* ---------------- C++ (In-Browser Offline Engine) ----------------
+   The vendored JSCPP bundle detects its environment at load time: when
+   `importScripts` exists (i.e. it is loaded inside a Worker) it installs
+   its own competing `onmessage` handler and never exposes a `run` API;
+   it only assigns `window.JSCPP` when loaded on the main thread. So,
+   unlike the other languages, C++ cannot run inside an isolated Worker
+   with this build -- it is loaded and run on the main thread instead,
+   behind a Worker-shaped shim (same postMessage/onmessage/terminate
+   surface) so the rest of the IDE does not need to special-case it. */
 
-const CPP_WORKER = `
-${FORMAT_FN}
+let jscppLoadPromise = null;
 
-function post(type, level, text) { self.postMessage({ type: type, level: level, text: text }); }
-
-var isOffline = true;
-var baseOrigin = (typeof APP_ORIGIN !== 'undefined' && APP_ORIGIN) ? APP_ORIGIN : ((self.location && self.location.origin !== 'null') ? self.location.origin : '');
-var candidates = [
-  baseOrigin ? (baseOrigin + '/vendor/jscpp.es5.min.js') : null,
-  baseOrigin ? (baseOrigin + '/js/vendor/jscpp.es5.min.js') : null,
-  '/vendor/jscpp.es5.min.js',
-  '/js/vendor/jscpp.es5.min.js'
-].filter(Boolean);
-
-for (var i = 0; i < candidates.length; i++) {
-  try {
-    importScripts(candidates[i]);
-    if (typeof JSCPP !== 'undefined' || (self.JSCPP && self.JSCPP.run)) {
-      break;
+function loadJscppMainThread() {
+  if (jscppLoadPromise) return jscppLoadPromise;
+  jscppLoadPromise = (async () => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return null;
+    if (window.JSCPP && typeof window.JSCPP.run === 'function') return window.JSCPP;
+    const candidates = ['/vendor/jscpp.es5.min.js', '/js/vendor/jscpp.es5.min.js'];
+    for (const src of candidates) {
+      try {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = src;
+          script.onload = resolve;
+          script.onerror = () => reject(new Error('Could not load ' + src));
+          document.head.appendChild(script);
+        });
+        if (window.JSCPP && typeof window.JSCPP.run === 'function') return window.JSCPP;
+      } catch {}
     }
-  } catch (err) {}
+    return null;
+  })();
+  return jscppLoadPromise;
 }
 
-if (typeof JSCPP === 'undefined' && (!self.JSCPP || !self.JSCPP.run)) {
-  try {
-    importScripts('https://cdn.jsdelivr.net/npm/jscpp@2.0.10/dist/JSCPP.es5.min.js');
-    isOffline = false;
-  } catch (e3) {}
-}
-
-self.onmessage = function (e) {
-  var code = e.data.code;
-  var stdin = e.data.stdin || '';
-  var started = Date.now();
-
-  try {
-    var jscppInstance = typeof JSCPP !== 'undefined' ? JSCPP : (self.JSCPP || (self.window && self.window.JSCPP));
-    if (!jscppInstance || !jscppInstance.run) {
-      throw new Error('Offline compiler engine is unavailable.');
-    }
-    
-    post('status', null, isOffline ? 'Compiling C++ (Offline)...' : 'Compiling C++ (Online)...');
-    
-    var outputBuffer = '';
-    var exitCode = jscppInstance.run(code, stdin, {
-      stdio: { 
-        write: function (s) {
-          outputBuffer += s;
-          var nIdx;
-          while ((nIdx = outputBuffer.indexOf('\\n')) !== -1) {
-            post('out', 'log', outputBuffer.substring(0, nIdx));
-            outputBuffer = outputBuffer.substring(nIdx + 1);
+/* A Worker-shaped shim: exposes postMessage/onmessage/terminate so the
+   IDE's generic run() code path works unmodified, while actually
+   executing JSCPP synchronously on the main thread. */
+function createCppRunner() {
+  const target = {
+    onmessage: null,
+    postMessage(data) {
+      Promise.resolve().then(async () => {
+        const post = (type, level, text) => {
+          if (typeof target.onmessage === 'function') target.onmessage({ data: { type, level, text } });
+        };
+        const started = Date.now();
+        try {
+          post('status', null, 'Compiling C++ (Offline)...');
+          const jscpp = await loadJscppMainThread();
+          if (!jscpp || typeof jscpp.run !== 'function') {
+            throw new Error('Offline compiler engine is unavailable.');
           }
-        } 
-      },
-      maxTimeout: 20000
-    });
-
-    if (outputBuffer.length > 0) {
-      post('out', 'log', outputBuffer);
-    }
-    
-    post('out', 'muted', (isOffline ? '[Offline] ' : '[Online] ') + 'Program exited with status ' + exitCode);
-    post('done', null, String(Date.now() - started));
-  } catch (err) {
-    post('out', 'error', (isOffline ? '[Offline] ' : '[Online] ') + (err && err.message ? err.message : String(err)));
-    post('done', null, String(Date.now() - started));
-  }
-};`;
+          let outputBuffer = '';
+          const flush = (s) => {
+            outputBuffer += s;
+            let nIdx;
+            while ((nIdx = outputBuffer.indexOf('\n')) !== -1) {
+              post('out', 'log', outputBuffer.slice(0, nIdx));
+              outputBuffer = outputBuffer.slice(nIdx + 1);
+            }
+          };
+          let exitCode;
+          try {
+            exitCode = jscpp.run(data.code, data.stdin || '', { stdio: { write: flush }, maxTimeout: 20000 });
+          } catch (runErr) {
+            if (outputBuffer.length) post('out', 'log', outputBuffer);
+            post('out', 'error', runErr && runErr.message ? runErr.message : String(runErr));
+            post('done', null, String(Date.now() - started));
+            return;
+          }
+          if (outputBuffer.length) post('out', 'log', outputBuffer);
+          post('out', 'muted', 'Program exited with status ' + exitCode);
+          post('done', null, String(Date.now() - started));
+        } catch (err) {
+          post('out', 'error', err && err.message ? err.message : String(err));
+          post('done', null, String(Date.now() - started));
+        }
+      });
+    },
+    terminate() { /* runs on the main thread; nothing to forcibly kill */ }
+  };
+  return target;
+}
 
 /* ---------------- TypeScript ---------------- */
 
@@ -447,14 +460,10 @@ print("Median salary:", statistics.median(e.salary for e in team))`,
   cpp: {
     name: 'C++',
     mono: 'cpp',
-    worker: CPP_WORKER,
     weight: 'Offline',
-    note: 'Compiles and runs C++ locally on your device with standard library support (<iostream>, <vector>, <cmath>, <string>).',
+    note: 'Compiles and runs C++ locally on your device via a lightweight interpreter (not a full compiler). Supports <iostream>, <cmath>, <cstdio>, <cstdlib>, <cstring>, <ctime>, <cctype>, arrays, functions and recursion. Use "using namespace std;" with bare cout/endl -- STL containers (vector, map, string), templates and casts (static_cast) are not supported.',
     sample: `// Real C++ running offline in your browser!
 #include <iostream>
-#include <vector>
-#include <cmath>
-
 using namespace std;
 
 int fibonacci(int n) {
@@ -466,12 +475,12 @@ int main() {
     cout << "=== C++ In-Browser Offline Engine ===" << endl;
     cout << "Fibonacci(10) = " << fibonacci(10) << endl;
 
-    vector<int> numbers = {10, 20, 30, 40, 50};
+    int numbers[5] = {10, 20, 30, 40, 50};
     int sum = 0;
-    for (int num : numbers) {
-        sum += num;
+    for (int i = 0; i < 5; i++) {
+        sum += numbers[i];
     }
-    cout << "Sum of vector elements: " << sum << endl;
+    cout << "Sum of array elements: " << sum << endl;
     return 0;
 }`,
   },
@@ -509,6 +518,10 @@ export const LANGUAGES = { ...BASE_LANGUAGES, ...EXTRA_LANGUAGES };
 const blobUrls = new Map();
 
 export function makeWorker(languageId) {
+  // C++ cannot run inside a real Worker with the vendored JSCPP build (see
+  // note above createCppRunner), so it gets a Worker-shaped main-thread shim.
+  if (languageId === 'cpp') return createCppRunner();
+
   const lang = LANGUAGES[languageId];
   if (!blobUrls.has(languageId)) {
     const origin = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : '';

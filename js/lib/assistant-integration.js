@@ -10,7 +10,7 @@
  */
 
 import { marked } from 'marked';
-import { sanitizeUserFacingText } from '../utils.js';
+import { sanitizeUserFacingText, balanceMarkdownDelimiters, sanitizeRenderedHtml, extractMathSegments } from '../utils.js';
 import { AssistantMessage, ToolResult, conversationPersistence } from './assistant-message-persistence.js';
 import { renderToolResult, cleanupToolResult, selectRenderer } from './assistant-result-renderer.js';
 import { toolDiscovery } from './assistant-tool-discovery.js';
@@ -386,16 +386,17 @@ export class ConversationIntegrationManager {
    */
   formatMarkdown(text) {
     if (!text) return '';
-    const sanitized = sanitizeUserFacingText(text);
+    const sanitized = balanceMarkdownDelimiters(sanitizeUserFacingText(text));
+    const { text: mathMasked, restore } = extractMathSegments(sanitized);
     try {
       if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
-        return marked.parse(sanitized);
+        return restore(sanitizeRenderedHtml(marked.parse(mathMasked)));
       }
       if (typeof window !== 'undefined' && window.marked?.parse) {
-        return window.marked.parse(sanitized);
+        return restore(sanitizeRenderedHtml(window.marked.parse(mathMasked)));
       }
     } catch {}
-    return this.escapeHtml(sanitized).replace(/\n/g, '<br/>');
+    return restore(this.escapeHtml(mathMasked)).replace(/\n/g, '<br/>');
   }
 
   /**

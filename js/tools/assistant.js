@@ -6,7 +6,7 @@
 
 import { marked } from 'marked';
 import { openSettings } from '../lib/settings-ui.js';
-import { sanitizeUserFacingText, cleanAssistantOutput } from '../utils.js';
+import { sanitizeUserFacingText, cleanAssistantOutput, balanceMarkdownDelimiters, sanitizeRenderedHtml, extractMathSegments } from '../utils.js';
 
 function escapeHtml(str) {
   if (!str) return '';
@@ -20,13 +20,14 @@ function escapeHtml(str) {
 
 function formatMarkdown(text) {
   if (!text) return '';
-  const cleaned = cleanAssistantOutput(text);
+  const cleaned = balanceMarkdownDelimiters(cleanAssistantOutput(text));
+  const { text: mathMasked, restore } = extractMathSegments(cleaned);
   try {
     if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
-      return marked.parse(cleaned);
+      return restore(sanitizeRenderedHtml(marked.parse(mathMasked)));
     }
   } catch {}
-  return escapeHtml(cleaned).replace(/\n/g, '<br/>');
+  return restore(escapeHtml(mathMasked)).replace(/\n/g, '<br/>');
 }
 import {
   streamChatCompletion,
@@ -847,15 +848,11 @@ export default {
         `;
       } else {
         const isFailed = status === 'failed' || (error && !text && !toolResults?.length);
-        const lower = (text || '').toLowerCase();
-        const needsFilePrompt = !isFailed && (
-          lower.includes('upload') ||
-          lower.includes('drag & drop') ||
-          lower.includes('attach your') ||
-          lower.includes('attach the') ||
-          lower.includes('attach a') ||
-          toolResults.some(r => r?.status === 'needs_file')
-        );
+        // Only show the upload dropzone when a tool explicitly signalled it
+        // needs a file -- never from keyword-matching the assistant's own
+        // prose (e.g. mentioning "upload" while listing capabilities must
+        // not spawn an unrelated upload control).
+        const needsFilePrompt = !isFailed && toolResults.some(r => r?.status === 'needs_file');
 
         let bodyHtml = '';
         const animClass = getAssistantAnimationClass();
@@ -1467,15 +1464,9 @@ export default {
             textBody.style.display = 'none';
           }
           
-          const lower = finalText.toLowerCase();
-          const needsFilePrompt = (
-            lower.includes('upload') ||
-            lower.includes('drag & drop') ||
-            lower.includes('attach your') ||
-            lower.includes('attach the') ||
-            lower.includes('attach a') ||
-            executedToolResults.some(r => r?.status === 'needs_file')
-          );
+          // Only show the upload dropzone when a tool explicitly signalled it
+          // needs a file -- never from keyword-matching the response prose.
+          const needsFilePrompt = executedToolResults.some(r => r?.status === 'needs_file');
 
           if (needsFilePrompt) {
             const dropDiv = document.createElement('div');
@@ -1681,15 +1672,9 @@ export default {
         if (textBody) {
           textBody.innerHTML = formatMarkdown(finalText);
 
-          const lower = finalText.toLowerCase();
-          const needsFilePrompt = (
-            lower.includes('upload') ||
-            lower.includes('drag & drop') ||
-            lower.includes('attach your') ||
-            lower.includes('attach the') ||
-            lower.includes('attach a') ||
-            executedToolResults.some(r => r?.status === 'needs_file')
-          );
+          // Only show the upload dropzone when a tool explicitly signalled it
+          // needs a file -- never from keyword-matching the response prose.
+          const needsFilePrompt = executedToolResults.some(r => r?.status === 'needs_file');
 
           if (needsFilePrompt) {
             const dropDiv = document.createElement('div');

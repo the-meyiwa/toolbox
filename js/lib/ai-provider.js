@@ -229,7 +229,7 @@ const BASE_SYSTEM_INSTRUCTION = `You are Toolbox Assistant, a sophisticated, hig
   3. Strict Proof Status: NEVER state that unproven conjectures (such as the 3x+1 Collatz conjecture, Goldbach conjecture, Riemann hypothesis) are proven facts. Always clearly distinguish PROVEN THEOREMS from UNPROVEN CONJECTURES or OPEN PROBLEMS. For example, Collatz is an unproven conjecture even if a specific input like 12 or 27 reaches 1.
   4. Chemistry & Domain Separation: For chemical formulas, molar masses, and chemical reactions, use \`calculate_chemistry\`. The chemistry engine remains authoritative for chemical data.
   5. Contextual, Non-Barebones Mathematical Responses: Provide clear, complete mathematical answers. For formula/concept questions, state the exact formula in clean math notation ($$...$$) and explain variable meanings and conditions. For equations and numerical problems, state the equation, roots/values, working steps, and residual verification. For sequences (Collatz), state the sequence, steps to 1, maximum excursion, and explicitly mention unproven conjecture status. Never output raw tool JSON, raw tool execution strings, internal renderer names, or barebones one-line unexplained answers.
-  6. Demonstrating Math Capabilities: When prompted with challenges like "Impress me with math skills" or "What is the most complex math thing you can do?", do NOT output a README-style capability brochure or generic list of features. Instead, briefly introduce Toolbox's deterministic mathematical authority and perform an actual, impressive verified computation (such as calculating a Collatz trajectory with peak excursions, stopping times, and SVG visualization, or solving a complex ODE/equation) using \`calculate_math\`.
+  6. Demonstrating Math Capabilities: When prompted with challenges like "Impress me with math skills" or "What is the most complex math thing you can do?", do NOT output a README-style capability brochure or generic list of features, and do NOT default to the same worked example every time (e.g. do not always reach for the Collatz conjecture). Vary the demonstration across the conversation and pick an example that fits the immediate context -- algorithms, simulations, statistics, optimization, data analysis, visualization, numerical methods, or a genuinely hard equation/ODE -- and perform an actual, impressive verified computation using \`calculate_math\`, not a canned one.
 - 3D Anatomy Explorer & Structure Isolation:
   - When the user asks to view or isolate specific organs or bones (e.g. C1 vertebra/Atlas, C2/Axis, cervical vertebrae, lungs, trachea, heart), invoke \`explore_anatomy\` with the exact structure name so the 3D model isolates and zooms in directly on that specific organ or vertebra without rendering extraneous body parts.
 - When a user asks you to create a note, save a note, write a note, or record information, invoke the \`create_note\` tool directly with the requested title and content.
@@ -282,7 +282,18 @@ export async function streamChatCompletion({
   onToken = () => {},
   onToolCallStart = () => {},
   onToolCallResult = () => {},
-  signal = null
+  signal = null,
+  // Capability scoping: a non-'global' scope replaces the base system
+  // instruction entirely (instead of appending to it) and, when
+  // toolDeclarations is provided, restricts which functions are sent to
+  // the model at all -- so a tool-scoped assistant (e.g. Code Playground)
+  // cannot describe or invoke capabilities outside its own domain, even
+  // if asked. toolExecutor lets the caller handle its own scoped tool
+  // calls locally, falling back to the global executor only when it
+  // returns undefined (i.e. the tool name is not one of its own).
+  scope = 'global',
+  toolDeclarations = null,
+  toolExecutor = null
 }) {
   QuotaManager.recordMessage();
 
@@ -293,7 +304,10 @@ export async function streamChatCompletion({
   const currentTime = new Date().toLocaleString();
   const currentUrl = isRealBrowser ? window.location.href.split('#')[0] : 'https://toolbox-gold-six.vercel.app';
   const dynamicContext = `\nCurrent Environment:\n- Time: ${currentTime}\n- App URL: ${currentUrl}\n`;
-  const fullSystemInstruction = BASE_SYSTEM_INSTRUCTION + dynamicContext;
+  const fullSystemInstruction = scope === 'global'
+    ? BASE_SYSTEM_INSTRUCTION + dynamicContext
+    : dynamicContext;
+  const activeToolDeclarations = toolDeclarations || ASSISTANT_TOOL_DECLARATIONS;
 
   if (!isRealBrowser) {
     const lastUser = [...history].reverse().find(m => m.role === 'user')?.content || 'Hello';
@@ -347,7 +361,7 @@ export async function streamChatCompletion({
             turnId: stepIdx > 0 ? `${turnId}_step_${stepIdx}` : turnId,
             idempotencyKey: stepIdempotencyKey,
             systemInstruction: { parts: [{ text: systemInstruction ? `${fullSystemInstruction}\n\n${systemInstruction}` : fullSystemInstruction }] },
-            tools: [{ functionDeclarations: ASSISTANT_TOOL_DECLARATIONS }]
+            tools: [{ functionDeclarations: activeToolDeclarations }]
           }),
           signal
         });
@@ -385,7 +399,14 @@ export async function streamChatCompletion({
       onToolCallStart(toolName, toolArgs);
       let toolRes;
       try {
-        toolRes = await executeAssistantTool(toolName, toolArgs, { currentFile, taskState });
+        // A scope's own executor gets first refusal so it can serve tools
+        // local to its domain (e.g. Code Playground's workspace files)
+        // without routing through the global tool dispatcher. Returning
+        // undefined means "not one of mine" and falls back to the global set.
+        toolRes = toolExecutor ? await toolExecutor(toolName, toolArgs) : undefined;
+        if (toolRes === undefined) {
+          toolRes = await executeAssistantTool(toolName, toolArgs, { currentFile, taskState });
+        }
         if (!toolRes || typeof toolRes !== 'object') {
           toolRes = { status: 'success', message: String(toolRes || 'Action completed.') };
         }

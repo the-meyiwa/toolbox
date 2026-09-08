@@ -1,3 +1,5 @@
+import { renderMath } from './lib/math-renderer.js';
+
 export function copyText(text, btn) {
   navigator.clipboard.writeText(text).then(() => {
     const prev = btn.textContent;
@@ -217,6 +219,106 @@ export function cleanText(t) {
     .replace(/[ \t]+$/gm, '')
     // Normalize Line Endings (CRLF → LF)
     .replace(/\r\n?/g, '\n');
+}
+
+/**
+ * Closes unbalanced markdown delimiters (code fences, bold, display math) so
+ * partial/streamed LLM output never leaves a stray "**", "```", or "$$" visible.
+ * Runs outside already-matched code blocks to avoid corrupting real code.
+ */
+export function balanceMarkdownDelimiters(text) {
+  if (!text) return '';
+  return processWithCodeBlocksPreserved(text, (t) => {
+    const fenceCount = (t.match(/```/g) || []).length;
+    if (fenceCount % 2 !== 0) t += '\n```';
+
+    const balancePair = (str, marker) => {
+      const escaped = marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const count = (str.match(new RegExp(escaped, 'g')) || []).length;
+      return count % 2 !== 0 ? str + marker : str;
+    };
+    t = balancePair(t, '**');
+    t = balancePair(t, '__');
+    t = balancePair(t, '$$');
+    return t;
+  });
+}
+
+const SANITIZE_DISALLOWED_TAGS = new Set([
+  'script', 'style', 'iframe', 'object', 'embed', 'link', 'meta', 'base', 'form', 'svg', 'math', 'template'
+]);
+
+/**
+ * Strips dangerous tags/attributes from markdown-rendered HTML before it is
+ * assigned to innerHTML. Uses an inert <template> so scripts/styles/images
+ * never execute or load during sanitization.
+ */
+export function sanitizeRenderedHtml(html) {
+  if (!html) return '';
+  if (typeof document === 'undefined') return html;
+  const template = document.createElement('template');
+  template.innerHTML = html;
+
+  const clean = (root) => {
+    Array.from(root.childNodes).forEach((node) => {
+      if (node.nodeType !== 1) return;
+      const tag = node.tagName.toLowerCase();
+      if (SANITIZE_DISALLOWED_TAGS.has(tag)) {
+        node.remove();
+        return;
+      }
+      Array.from(node.attributes).forEach((attr) => {
+        const name = attr.name.toLowerCase();
+        const value = attr.value || '';
+        if (name.startsWith('on')) {
+          node.removeAttribute(attr.name);
+        } else if ((name === 'href' || name === 'src' || name === 'xlink:href') && /^\s*javascript:/i.test(value)) {
+          node.removeAttribute(attr.name);
+        } else if (name === 'style' && /expression\s*\(|javascript:/i.test(value)) {
+          node.removeAttribute(attr.name);
+        }
+      });
+      if (tag === 'a' && node.getAttribute('target') === '_blank') {
+        node.setAttribute('rel', 'noopener noreferrer');
+      }
+      clean(node);
+    });
+  };
+  clean(template.content);
+  return template.innerHTML;
+}
+
+/**
+ * Extracts LaTeX math segments ($$...$$, \[...\], $...$, \(...\)) outside of
+ * code blocks and replaces each with an opaque placeholder token, rendering
+ * the real math to safe HTML up front via the existing math-renderer engine.
+ * This lets markdown parsing run on math-free text (so marked cannot mangle
+ * LaTeX or leave raw "$$H_2O$$"-style text visible), then `restore()` swaps
+ * the placeholders back in after markdown parsing + sanitization.
+ */
+export function extractMathSegments(text) {
+  if (!text) return { text: '', restore: (html) => html };
+  const stash = [];
+  const store = (html) => {
+    // U+E000/U+E001 (Private Use Area) survive control-character stripping,
+    // HTML escaping and markdown parsing untouched, unlike NUL-based tokens.
+    const token = `\uE000MATHSEG${stash.length}\uE001`;
+    stash.push(html);
+    return token;
+  };
+  const masked = processWithCodeBlocksPreserved(text, (t) => {
+    let out = t.replace(/\$\$([\s\S]*?)\$\$/g, (_, eq) => store(renderMath(eq, { displayMode: true })));
+    out = out.replace(/\\\[([\s\S]*?)\\\]/g, (_, eq) => store(renderMath(eq, { displayMode: true })));
+    out = out.replace(/\$([^\$\n]+?)\$/g, (_, eq) => store(renderMath(eq, { displayMode: false })));
+    out = out.replace(/\\\(([\s\S]*?)\\\)/g, (_, eq) => store(renderMath(eq, { displayMode: false })));
+    return out;
+  });
+  return {
+    text: masked,
+    restore(html) {
+      return html.replace(/\uE000MATHSEG(\d+)\uE001/g, (_, idx) => (stash[Number(idx)] !== undefined ? stash[Number(idx)] : ''));
+    }
+  };
 }
 
 export function cleanAssistantOutput(text) {

@@ -799,7 +799,10 @@ function renderCsvTable(csvText) {
     return '<p style="color:var(--text-muted);">Empty table.</p>';
   }
   const headers = lines[0];
-  const rows = lines.slice(1, 40);
+  const totalRows = lines.length - 1;
+  const rowLimit = 500;
+  const rows = lines.slice(1, 1 + rowLimit);
+  const truncated = totalRows > rowLimit;
 
   return `
     <div style="overflow-x:auto; border:1px solid var(--border); border-radius:8px;">
@@ -818,6 +821,7 @@ function renderCsvTable(csvText) {
         </tbody>
       </table>
     </div>
+    ${truncated ? `<p style="margin-top:6px; font-size:0.75rem; color:var(--text-muted);">Showing ${rowLimit} of ${totalRows} rows.</p>` : ''}
   `;
 }
 
