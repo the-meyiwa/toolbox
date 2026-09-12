@@ -106,15 +106,23 @@ function collect(query) {
   }));
 
   const user = getCurrentUser();
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
   const availableTools = TOOLS.filter(t => {
+    if (t.hidden) return false;
     if (!user && t.id === 'assistant') return false;
+    if (!user && isMobile && t.id === 'code-playground') return false;
     if (user && t.id === 'file-drop') return false;
     return true;
   });
 
   const toolRows = (q
     ? search(q, availableTools, { labels: CATEGORY_LABELS }).results.map(r => r.tool)
-    : popular(6).filter(t => (!user ? t.id !== 'assistant' : t.id !== 'file-drop'))
+    : popular(6).filter(t => {
+        if (!user && t.id === 'assistant') return false;
+        if (!user && isMobile && t.id === 'code-playground') return false;
+        if (user && t.id === 'file-drop') return false;
+        return true;
+      })
   ).slice(0, 8).map(t => ({
     group: q ? 'Tools' : 'Most used',
     title: t.name,

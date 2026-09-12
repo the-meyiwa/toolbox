@@ -8,6 +8,7 @@
 
 import { createZip, extractZip } from './archive-engine.js';
 import * as legacyArtifacts from './artifacts.js';
+import { kindFromFilename } from '../registry/kinds.js';
 import { getCurrentUser, uploadToSupabaseStorage, getSupabaseConfig } from './supabase.js';
 
 const DB_NAME = 'toolbox_filesystem_db_v1';
@@ -674,7 +675,7 @@ export class ToolboxFilesystem {
         legacyArtifacts.save({
           id: record.id,
           name: record.name,
-          kind: legacyArtifacts.kindFromFilename ? legacyArtifacts.kindFromFilename(record.name) : 'text',
+          kind: kindFromFilename(record.name) || 'text',
           text: textContent,
           from: 'filesystem'
         });

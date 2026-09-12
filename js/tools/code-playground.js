@@ -31,9 +31,20 @@ import {
   getDevServerPreviewUrl
 } from '../lib/ide-execution-client.js';
 
-const ALL = { ...LANGUAGES, ...REMOTE_LANGUAGES };
+const ALL = {
+  ...LANGUAGES,
+  ...REMOTE_LANGUAGES,
+  html: LANGUAGES.web || { name: 'HTML', preview: true, note: 'Rendered in live browser sandbox preview.' },
+  htm: LANGUAGES.web || { name: 'HTML', preview: true, note: 'Rendered in live browser sandbox preview.' },
+  css: { name: 'CSS', preview: true, note: 'Stylesheet' },
+  json: { name: 'JSON', note: 'JSON Data' },
+  markdown: { name: 'Markdown', preview: true, note: 'Markdown Document' },
+  md: { name: 'Markdown', preview: true, note: 'Markdown Document' },
+  txt: { name: 'Plain Text', note: 'Plain Text' },
+  text: { name: 'Plain Text', note: 'Plain Text' }
+};
 const isRemote = (id) => Object.hasOwn(REMOTE_LANGUAGES, id);
-const isPreview = (id) => !!LANGUAGES[id]?.preview;
+const isPreview = (id) => !!LANGUAGES[id]?.preview || id === 'web' || id === 'html' || id === 'htm';
 
 const escapeHtml = (s) => String(s || '').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -107,7 +118,7 @@ int main() {
       {
         id: 'f-1',
         name: 'index.html',
-        lang: 'html',
+        lang: 'web',
         content: `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -687,13 +698,13 @@ export default {
           </div>
 
           <!-- Right: Project Breadcrumb, Command Palette, Primary Run Button -->
-          <div style="display:flex; align-items:center; gap:8px;">
+          <div id="cpg-header-controls" style="display:flex; align-items:center; gap:8px;">
             <select class="cpg-status-select" id="cpg-fw" hidden aria-label="CSS framework" style="font-size:0.72rem;">
               ${Object.entries(WEB_FRAMEWORKS).map(([id, f]) =>
                 `<option value="${id}"${id === state.framework ? ' selected' : ''}>${f.name}</option>`).join('')}
             </select>
 
-            <span style="font-weight:600; font-size:0.8rem; color:var(--cpg-text-secondary); display:flex; align-items:center; gap:6px; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            <span id="cpg-project-name" style="font-weight:600; font-size:0.8rem; color:var(--cpg-text-secondary); display:flex; align-items:center; gap:6px; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
               <span id="cpg-logo-dot" style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--cpg-accent);"></span>
               /workspaces/${escapeHtml(state.projectName)}
             </span>
@@ -878,7 +889,7 @@ export default {
           </div>
 
           <!-- Right Status: Assistant Button (Signed in only) + Language Selector -->
-          <div style="display:flex; gap:10px; align-items:center;">
+          <div id="cpg-status-langs-wrap" style="display:flex; gap:10px; align-items:center;">
             ${isUserSignedIn ? `
             <button type="button" class="cpg-status-btn" id="cpg-status-ast-btn" title="Toggle AI Assistant" style="background:none; border:1px solid var(--cpg-border); color:var(--cpg-text); border-radius:9999px; padding:2px 8px; font-size:0.72rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--cpg-accent);"><path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><rect x="4" y="8" width="16" height="12" rx="2"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M10 17h4"/></svg>
@@ -935,6 +946,28 @@ export default {
     const termHistory = container.querySelector('#cpg-term-history');
     const termInput = container.querySelector('#cpg-term-input');
     const problemsContent = container.querySelector('#cpg-problems-content');
+
+    // Mobile Runner Header: Move language selector into top header next to Run button on small viewports
+    const headerControls = container.querySelector('#cpg-header-controls');
+    const statusLangsWrap = container.querySelector('#cpg-status-langs-wrap');
+
+    const updateMobileLayout = () => {
+      if (!self_._alive) return;
+      if (window.innerWidth <= 768) {
+        if (langsSelect && headerControls && langsSelect.parentElement !== headerControls) {
+          headerControls.insertBefore(langsSelect, topPrevBtn || runBtn);
+        }
+      } else {
+        if (langsSelect && statusLangsWrap && langsSelect.parentElement !== statusLangsWrap) {
+          statusLangsWrap.appendChild(langsSelect);
+        }
+      }
+    };
+    updateMobileLayout();
+    window.addEventListener('resize', updateMobileLayout);
+    self_._cleanup = () => {
+      window.removeEventListener('resize', updateMobileLayout);
+    };
 
     // Assistant Elements (if signed in)
     const astPanel = container.querySelector('#cpg-assistant-panel');
@@ -1025,8 +1058,113 @@ export default {
       if (!e.target.closest('.cpg-menu-item') && !e.target.closest('#cpg-plus-btn') && !e.target.closest('#cpg-plus-dropdown')) {
         closeAllMenus();
       }
+    const cm = document.getElementById('cpg-context-menu');
+      if (cm && !e.target.closest('#cpg-context-menu')) cm.remove();
     };
     document.addEventListener('click', onDocClick);
+
+    const onDocKeydown = (e) => {
+      if (e.key === 'Escape') {
+        closeAllMenus();
+        const cm = document.getElementById('cpg-context-menu');
+        if (cm) cm.remove();
+      }
+    };
+    document.addEventListener('keydown', onDocKeydown);
+
+    // Context menu for Editor Tabs and File Tree
+    rootEl.addEventListener('contextmenu', (e) => {
+      const treeItem = e.target.closest('.ide-tree-item');
+      const tabItem = e.target.closest('.ide-tab');
+      const sidebar = e.target.closest('.ide-sidebar');
+      
+      if (treeItem || tabItem || sidebar) {
+        e.preventDefault();
+        const cmExists = document.getElementById('cpg-context-menu');
+        if (cmExists) cmExists.remove();
+        
+        let targetFile = null;
+        let fileId = null;
+
+        if (treeItem || tabItem) {
+          fileId = (treeItem || tabItem).dataset.id;
+          targetFile = state.files.find(f => f.id === fileId);
+        }
+
+        const cm = document.createElement('div');
+        cm.id = 'cpg-context-menu';
+        cm.className = 'cpg-dropdown-menu';
+        cm.style.cssText = `display:flex; position:fixed; top:${e.clientY}px; left:${e.clientX}px; min-width:160px; z-index:100; flex-direction:column; background:var(--cpg-bg-card); border:1px solid var(--cpg-border); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.3); padding:4px;`;
+        
+        if (targetFile) {
+          cm.innerHTML = `
+            <div style="padding: 4px 8px; font-size: 0.72rem; color: var(--cpg-text-muted); font-weight: 700; border-bottom: 1px solid var(--cpg-border); margin-bottom:4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              ${escapeHtml(targetFile.name)}
+            </div>
+            <button type="button" class="cpg-dropdown-item" data-act="rename" style="padding:6px 8px; text-align:left; background:transparent; border:none; color:var(--cpg-text); cursor:pointer; font-size:0.8rem;">Rename</button>
+            <button type="button" class="cpg-dropdown-item" data-act="delete" style="padding:6px 8px; text-align:left; background:transparent; border:none; color:#ef4444; cursor:pointer; font-size:0.8rem;">Delete</button>
+          `;
+        } else {
+          cm.innerHTML = `
+            <button type="button" class="cpg-dropdown-item" data-add="file" style="padding:6px 8px; text-align:left; background:transparent; border:none; color:var(--cpg-text); cursor:pointer; font-size:0.8rem;">New File...</button>
+            <button type="button" class="cpg-dropdown-item" data-add="folder" style="padding:6px 8px; text-align:left; background:transparent; border:none; color:var(--cpg-text); cursor:pointer; font-size:0.8rem;">New Folder...</button>
+          `;
+        }
+        
+        cm.addEventListener('click', (me) => {
+          const act = me.target.closest('[data-act]')?.dataset.act;
+          const add = me.target.closest('[data-add]')?.dataset.add;
+          cm.remove();
+
+          if (add) {
+            const plusDropdown = document.getElementById('cpg-plus-dropdown');
+            const targetBtn = plusDropdown?.querySelector(`[data-add="${add}"]`);
+            if (targetBtn) targetBtn.click();
+            return;
+          }
+          
+          if (!act || !targetFile) return;
+          
+          if (act === 'rename') {
+            const newName = prompt('Rename file:', targetFile.name);
+            if (newName && newName.trim()) {
+              targetFile.name = newName.trim();
+              if (targetFile.name.endsWith('.js')) targetFile.lang = 'javascript';
+              else if (targetFile.name.endsWith('.ts')) targetFile.lang = 'typescript';
+              else if (targetFile.name.endsWith('.html') || targetFile.name.endsWith('.htm')) targetFile.lang = 'web';
+              else if (targetFile.name.endsWith('.css')) targetFile.lang = 'css';
+              else if (targetFile.name.endsWith('.py')) targetFile.lang = 'python';
+              
+              renderTabs();
+              renderFileTree();
+              persist();
+            }
+          } else if (act === 'delete') {
+            if (confirm('Delete ' + targetFile.name + '?')) {
+              state.files = state.files.filter(f => f.id !== fileId);
+              if (state.activeFileId === fileId) state.activeFileId = state.files[0]?.id;
+              renderTabs();
+              renderFileTree();
+              loadFile();
+              persist();
+              if (state.backendOnline) {
+                deleteWorkspaceDiskFile(state.workspaceId, targetFile.name).catch(() => {});
+              }
+            }
+          }
+        });
+        
+        document.body.appendChild(cm);
+        
+        const rect = cm.getBoundingClientRect();
+        let left = e.clientX;
+        let top = e.clientY;
+        if (left + rect.width > window.innerWidth - 10) left = window.innerWidth - rect.width - 10;
+        if (top + rect.height > window.innerHeight - 10) top = window.innerHeight - rect.height - 10;
+        cm.style.left = left + 'px';
+        cm.style.top = top + 'px';
+      }
+    });
 
     // Menu Actions Handler
     container.querySelectorAll('.cpg-dropdown-item').forEach(item => {
@@ -1529,8 +1667,9 @@ export default {
       const file = getActiveFile();
       if (!file) return;
       codeEl.value = file.content;
-      langsSelect.value = file.lang || 'javascript';
-      applyLanguage(file.lang || 'javascript');
+      const effectiveLang = (file.lang === 'html' || file.lang === 'htm') ? 'web' : (file.lang || 'javascript');
+      langsSelect.value = ALL[effectiveLang] ? effectiveLang : (ALL[file.lang] ? file.lang : 'javascript');
+      applyLanguage(effectiveLang);
       renderGutterAndMinimap();
       if (state.splitMode !== 'code-only') {
         updateWorkspacePreview();
@@ -3585,13 +3724,16 @@ if (container) {
     runBtn.addEventListener('click', run);
 
     function applyLanguage(id) {
-      const l = ALL[id];
-      const remote = isRemote(id);
-      const preview = isPreview(id);
+      const langId = (id === 'html' || id === 'htm') ? 'web' : id;
+      const l = ALL[langId] || ALL[id] || { name: id, note: '', compiler: '' };
+      const remote = isRemote(langId) || isRemote(id);
+      const preview = isPreview(langId) || isPreview(id);
 
-      noteEl.innerHTML = remote
-        ? `Compiled with ${l.compiler} on remote server.`
-        : `${l.note || ''}`;
+      if (noteEl) {
+        noteEl.innerHTML = remote
+          ? `Compiled with ${l?.compiler || 'remote compiler'} on remote server.`
+          : `${l?.note || ''}`;
+      }
 
       if (preview) {
         previewPane.style.display = 'flex';
@@ -3608,7 +3750,7 @@ if (container) {
         fwEl.hidden = true;
       }
 
-      stdinWrap.hidden = !remote && id !== 'cpp';
+      stdinWrap.hidden = !remote && langId !== 'cpp' && id !== 'cpp';
     }
 
     langsSelect.addEventListener('change', (e) => {
@@ -3646,7 +3788,7 @@ if (container) {
       ts: 'typescript',
       py: 'python',
       cpp: 'cpp', c: 'c', h: 'cpp', hpp: 'cpp',
-      html: 'html', htm: 'html',
+      html: 'web', htm: 'web',
       css: 'css',
       json: 'json',
       sql: 'sql',
@@ -3898,6 +4040,85 @@ function injectIdeStyles() {
       background: var(--cpg-bg-app);
       border-color: var(--cpg-accent);
       color: var(--cpg-accent);
+    }
+
+    /* Mobile Plain Code Runner Responsive Overrides */
+    @media (max-width: 768px) {
+      .ide-root#cpg-root {
+        height: 100% !important;
+        border-radius: 0 !important;
+        border: none !important;
+        min-height: 0 !important;
+        flex: 1 !important;
+      }
+      .cpg-landing {
+        min-height: 0 !important;
+        padding: 20px 14px !important;
+      }
+      .cpg-menubar {
+        display: none !important;
+      }
+      #cpg-cmd-palette {
+        display: none !important;
+      }
+      #cpg-minimap {
+        display: none !important;
+      }
+      #cpg-sidebar {
+        display: none !important;
+      }
+      #cpg-project-name {
+        display: none !important;
+      }
+      #cpg-header {
+        padding: 6px 10px !important;
+        gap: 6px !important;
+      }
+      #cpg-gutter {
+        width: 32px !important;
+        padding: 10px 4px !important;
+        font-size: 0.72rem !important;
+      }
+      #cpg-code {
+        font-size: 16px !important;
+        padding: 10px 8px !important;
+        line-height: 1.45 !important;
+      }
+      #cpg-status-bar {
+        padding: 6px 10px !important;
+      }
+      #cpg-status-pos,
+      #cpg-status-spaces,
+      #cpg-status-encoding,
+      #cpg-note {
+        display: none !important;
+      }
+      #cpg-bottom-drawer {
+        height: 240px !important;
+        max-height: 50% !important;
+      }
+      #cpg-preview-pane {
+        width: 100% !important;
+        height: 100% !important;
+        position: absolute !important;
+        inset: 0 !important;
+        z-index: 20 !important;
+      }
+      .cpg-status-select#cpg-langs {
+        font-size: 0.8rem !important;
+        padding: 4px 8px !important;
+        min-height: 36px !important;
+      }
+      .ide-btn-run#cpg-run {
+        min-height: 36px !important;
+        padding: 4px 14px !important;
+        font-size: 0.84rem !important;
+      }
+      .ide-btn-preview#cpg-top-preview-btn {
+        min-height: 36px !important;
+        padding: 4px 10px !important;
+        font-size: 0.8rem !important;
+      }
     }
   `;
   document.head.appendChild(style);

@@ -86,11 +86,25 @@ function toolCard(tool, { compact = false } = {}) {
 
 /* --------------- rendering --------------- */
 
-function renderGrid(originalList, { query = '', noResult = false } = {}) {
+export function getVisibleTools({ isMobile = (typeof window !== 'undefined' && window.innerWidth <= 768) } = {}) {
   const user = getCurrentUser();
-  const list = originalList.filter(t => {
+  return TOOLS.filter(t => {
     if (t.hidden) return false;
     if (!user && t.id === 'assistant') return false;
+    if (!user && isMobile && t.id === 'code-playground') return false;
+    if (user && t.id === 'file-drop') return false;
+    return true;
+  });
+}
+
+function renderGrid(originalList, { query = '', noResult = false } = {}) {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  const user = getCurrentUser();
+  const source = originalList || getVisibleTools({ isMobile });
+  const list = source.filter(t => {
+    if (t.hidden) return false;
+    if (!user && t.id === 'assistant') return false;
+    if (!user && isMobile && t.id === 'code-playground') return false;
     if (user && t.id === 'file-drop') return false;
     return true;
   });
@@ -131,7 +145,7 @@ function renderGrid(originalList, { query = '', noResult = false } = {}) {
     `<section class="grid-category fade-in" id="cat-popular">
        <h2 class="category-label">Popular</h2>
        <p class="category-blurb">What people open most.</p>
-       <div class="category-tools">${popular(8).filter(t => (!user ? t.id !== 'assistant' : t.id !== 'file-drop')).map(t => toolCard(t)).join('')}</div>
+       <div class="category-tools">${popular(8).filter(t => list.some(lt => lt.id === t.id)).map(t => toolCard(t)).join('')}</div>
      </section>`,
     ...categorised(list).map(c => `
       <section class="grid-category fade-in" id="cat-${c.id}">
@@ -224,8 +238,9 @@ function installCategoryChips() {
 
 function renderRelated(tool) {
   if (!relatedBar) return;
-  const user = getCurrentUser();
-  const rel = relatedTools(tool, TOOLS, 4).filter(t => (!user ? t.id !== 'assistant' : t.id !== 'file-drop'));
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  const visible = getVisibleTools({ isMobile });
+  const rel = relatedTools(tool, visible, 4);
   if (!rel.length) { relatedBar.innerHTML = ''; relatedBar.hidden = true; return; }
   relatedBar.hidden = false;
   relatedBar.innerHTML = `
@@ -251,17 +266,44 @@ function showPage(page) {
   }
 
   currentPage = page;
+  document.body.classList.remove('in-tool');
   for (const link of navLinks) {
     link.classList.toggle('active', link.dataset.page === page || (page === 'about' && link.dataset.page === 'support') || (page === 'support' && link.dataset.page === 'about'));
   }
   searchWrapper.style.display = page === 'tools' ? '' : 'none';
   if (page === 'about' || page === 'support') {
     initFlutterwaveContribution();
+    initAboutShowcase();
   }
   requestAnimationFrame(updateMobileNavIndicator);
 }
 
+function initAboutShowcase() {
+  const nav = document.getElementById('pipeline-flow-nav');
+  const details = document.getElementById('pipeline-details');
+  if (!nav || !details || nav.dataset.installed) return;
+  nav.dataset.installed = 'true';
+
+  nav.addEventListener('click', (e) => {
+    const btn = e.target.closest('.pipeline-step-btn');
+    if (!btn) return;
+    try { navigator.vibrate?.(6); } catch {}
+    const step = btn.dataset.step;
+    nav.querySelectorAll('.pipeline-step-btn').forEach(b => b.classList.toggle('active', b === btn));
+    details.querySelectorAll('[data-step-panel]').forEach(panel => {
+      if (panel.dataset.stepPanel === step) {
+        panel.style.display = 'block';
+        panel.classList.add('fade-in');
+      } else {
+        panel.style.display = 'none';
+        panel.classList.remove('fade-in');
+      }
+    });
+  });
+}
+
 function teardownTool() {
+  document.body.classList.remove('in-tool');
   unmountArtifacts?.();
   unmountArtifacts = null;
   unmountSaved?.();
@@ -284,6 +326,14 @@ async function openTool(id) {
     window.location.hash = '';
     showPage('home');
     openAccountModal();
+    return;
+  }
+
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  if (id === 'code-playground' && !getCurrentUser() && isMobile) {
+    window.location.hash = '#tools';
+    showPage('tools');
+    showToast('Sign in to access Code Playground on mobile');
     return;
   }
 
@@ -323,6 +373,7 @@ async function openTool(id) {
   requestAnimationFrame(updateMobileNavIndicator);
 
   currentPage = 'tool';
+  document.body.classList.add('in-tool');
   currentToolObj = tool;
   currentToolId = id;
 
@@ -477,8 +528,8 @@ let lastLoggedQuery = '';
 
 function runSearch() {
   const q = searchInput.value.trim();
-  const user = getCurrentUser();
-  const filteredTools = user ? TOOLS : TOOLS.filter(t => t.id !== 'assistant');
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  const filteredTools = getVisibleTools({ isMobile });
 
   if (!q) { renderGrid(filteredTools); return; }
 
@@ -660,9 +711,10 @@ updateSearchPlaceholder();
 renderHomeAssistantBanner();
 window.addEventListener('toolbox:authchange', () => {
   updateSearchPlaceholder();
-  const user = getCurrentUser();
-  renderGrid(user ? TOOLS : TOOLS.filter(t => t.id !== 'assistant'));
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  renderGrid(getVisibleTools({ isMobile }));
   renderHomeAssistantBanner();
+  renderQuickRow();
   if (window.location.hash === '#assistant') {
     openTool('assistant');
   }
@@ -676,8 +728,8 @@ if (homeHeroInput && homeHeroDropdown) {
       return;
     }
 
-    const user = getCurrentUser();
-    const availableTools = user ? TOOLS : TOOLS.filter(t => t.id !== 'assistant');
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+    const availableTools = getVisibleTools({ isMobile });
     const isAi = detectAiIntent(q);
     const searchRes = search(q, availableTools, { labels: CATEGORY_LABELS }).results.map(r => r.tool).slice(0, 6);
 
@@ -730,8 +782,8 @@ if (homeHeroInput && homeHeroDropdown) {
   function submitHomeHero() {
     const q = homeHeroInput.value.trim();
     if (!q) return;
-    const user = getCurrentUser();
-    const availableTools = user ? TOOLS : TOOLS.filter(t => t.id !== 'assistant');
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+    const availableTools = getVisibleTools({ isMobile });
     const isAi = detectAiIntent(q);
     const searchRes = search(q, availableTools, { labels: CATEGORY_LABELS }).results;
 
@@ -815,14 +867,20 @@ for (const id of ['home-tool-count', 'home-eyebrow-count']) {
 const onlineCount = $('home-online-count');
 if (onlineCount) onlineCount.textContent = `${TOOLS.length - OFFLINE_TOOLS.length}`;
 
-const quickRow = $('home-quick');
-if (quickRow) {
-  quickRow.innerHTML = popular(6).map(t => `
-    <a class="home-quick-item" href="#${t.id}">
-      <span class="home-quick-icon">${t.icon}</span>
-      <span>${escapeHtml(t.name)}</span>
-    </a>`).join('');
+function renderQuickRow() {
+  const quickRow = $('home-quick');
+  if (!quickRow) return;
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  const visible = getVisibleTools({ isMobile });
+  quickRow.innerHTML = popular(6)
+    .filter(t => visible.some(v => v.id === t.id))
+    .map(t => `
+      <a class="home-quick-item" href="#${t.id}">
+        <span class="home-quick-icon">${t.icon}</span>
+        <span>${escapeHtml(t.name)}</span>
+      </a>`).join('');
 }
+renderQuickRow();
 
 /* The task lens. Categories answer "what subject is this?"; the home page
    has to answer "what am I trying to do?", which is a different question
@@ -885,8 +943,8 @@ if (isStandalone) {
   document.body.classList.add('standalone-mode');
 }
 
-const initialUser = getCurrentUser();
-renderGrid(initialUser ? TOOLS : TOOLS.filter(t => t.id !== 'assistant'));
+const isMobileInit = typeof window !== 'undefined' && window.innerWidth <= 768;
+renderGrid(getVisibleTools({ isMobile: isMobileInit }));
 installCategoryChips();
 handleHash();
 

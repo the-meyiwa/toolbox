@@ -178,14 +178,14 @@ export default {
                 </svg>
               </div>
               <div>
-                <span style="font-size:0.96rem; font-weight:800; color:var(--black); letter-spacing:-0.01em;">Assistant</span>
+                <span style="font-size:0.96rem; font-weight:800; color:var(--black); letter-spacing:-0.01em; line-height:1; display:block;">Assistant</span>
               </div>
             </div>
 
-            <div style="height:22px; width:1px; background:var(--g300);"></div>
+            <div style="height:22px; width:1px; background:var(--g300);" class="brw-hide-mobile"></div>
 
             <!-- Keep Context Toggle -->
-            <label style="display:flex; align-items:center; gap:6px; font-size:0.76rem; font-weight:600; cursor:pointer; user-select:none; color:var(--g700);" title="Preserve multi-turn memory across follow-ups">
+            <label class="brw-hide-mobile" style="display:flex; align-items:center; gap:6px; font-size:0.76rem; font-weight:600; cursor:pointer; user-select:none; color:var(--g700);" title="Preserve multi-turn memory across follow-ups">
               <input type="checkbox" id="ast-chk-context" ${keepContext ? 'checked' : ''} style="cursor:pointer; accent-color:var(--black);">
               Keep Context
             </label>
@@ -228,7 +228,7 @@ export default {
         </div>
 
         <!-- BOTTOM INPUT FORM -->
-        <div style="padding:14px 20px; background:var(--white); border-top:1px solid var(--g200); display:flex; align-items:flex-end; gap:12px; flex-shrink:0;">
+        <div class="ast-composer" style="padding:14px 20px; background:var(--white); border-top:1px solid var(--g200); display:flex; align-items:flex-end; gap:12px; flex-shrink:0;">
           
           <input type="file" id="ast-file-input" style="display:none;" />
 
@@ -264,18 +264,18 @@ export default {
             </div>
           </div>
 
-          <div style="flex:1; display:flex; align-items:flex-end;">
+          <div style="flex:1; display:flex; align-items:flex-end; gap:8px;">
             <div style="flex:1; position:relative; display:flex;">
               <textarea
                 id="ast-user-input"
                 class="tool-input"
                 placeholder="Ask anything, drag & drop a file, request code, or trigger tools..."
                 rows="1"
-                style="display:block; margin:0; width:100%; min-height:44px; max-height:140px; padding:11px 16px; resize:none; border-radius:24px 0 0 24px; font-size:0.92rem; line-height:1.45; font-family:inherit; border:1px solid var(--g300); border-right:none; background:var(--white); box-sizing:border-box; scrollbar-width:none; outline:none;"
+                style="display:block; margin:0; width:100%; min-height:44px; max-height:140px; padding:11px 16px; resize:none; border-radius:20px; font-size:0.92rem; line-height:1.45; font-family:inherit; border:1px solid var(--g300); background:var(--white); box-sizing:border-box; scrollbar-width:none; outline:none;"
               ></textarea>
             </div>
 
-            <button type="button" class="btn btn-primary" id="ast-send-btn" style="height:44px; padding:0 22px; border-radius:0 24px 24px 0; font-weight:700; display:flex; align-items:center; gap:6px; flex-shrink:0; border:1px solid var(--black); border-left:none; box-sizing:border-box; margin:0;">
+            <button type="button" class="btn btn-primary" id="ast-send-btn" style="height:44px; padding:0 20px; border-radius:20px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:6px; flex-shrink:0; border:1px solid var(--black); box-sizing:border-box; margin:0;">
               <span>Send</span>
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
             </button>

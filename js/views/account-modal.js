@@ -66,7 +66,9 @@ let authMode = 'signin'; // 'signin' | 'signup' | 'reset' | 'set-new-password' |
 let recoveryContext = null;
 let pendingConfirmationEmail = null;
 
+let previousFocus = null;
 export async function openAccountModal(modeOrSignUp = false, context = null) {
+  previousFocus = document.activeElement;
   if (typeof modeOrSignUp === 'string') {
     authMode = modeOrSignUp;
     if (modeOrSignUp === 'verify-pending' && typeof context === 'string') {
@@ -85,6 +87,12 @@ export async function openAccountModal(modeOrSignUp = false, context = null) {
     modalEl.setAttribute('aria-modal', 'true');
     modalEl.style.display = 'none';
     document.body.appendChild(modalEl);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modalEl.style.display === 'flex') {
+        closeAccountModal();
+      }
+    });
   }
 
   renderModalContent();
@@ -109,6 +117,10 @@ export function closeAccountModal() {
   if (modalEl) {
     modalEl.style.display = 'none';
     modalEl.classList.remove('is-open');
+    if (previousFocus) {
+      previousFocus.focus();
+      previousFocus = null;
+    }
   }
 }
 

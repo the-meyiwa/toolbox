@@ -9,6 +9,7 @@
    ============================================================ */
 
 import { fs, normalizePath, getParentPath, getBaseName } from '../lib/filesystem.js';
+import { createZip } from '../lib/archive-engine.js';
 import * as store from '../lib/artifacts.js';
 import { kindLabel, kindFromFilename } from '../registry/kinds.js';
 import { BY_ID, toolsAccepting } from '../registry/index.js';
@@ -402,6 +403,35 @@ function full(user, allItems, filteredItems, selected) {
       <!-- MAIN EXPLORER AREA (Split, Grid, or List) -->
       ${renderExplorerBody(filteredItems, selected)}
 
+      <!-- MOBILE CONTEXTUAL ACTION BAR (For Multi-Selection on Mobile) -->
+      ${selectedPaths.size > 1 ? `
+        <div class="mobile-action-bar" id="sv-mobile-action-bar">
+          <div style="font-size:0.84rem; font-weight:700; color:var(--text); white-space:nowrap;">
+            ${selectedPaths.size} selected
+          </div>
+          <div style="display:flex; gap:6px; align-items:center; overflow-x:auto; scrollbar-width:none;">
+            <button type="button" class="btn btn-secondary btn-sm" data-act="cut" style="min-height:38px; padding:6px 10px; display:inline-flex; align-items:center; gap:4px;">
+              ${ICONS.scissors} <span>Cut</span>
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" data-act="copy" style="min-height:38px; padding:6px 10px; display:inline-flex; align-items:center; gap:4px;">
+              ${ICONS.copy} <span>Copy</span>
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" data-act="multi-properties" style="min-height:38px; padding:6px 10px; display:inline-flex; align-items:center; gap:4px;">
+              ${ICONS.info} <span>Info</span>
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" data-act="multi-download" style="min-height:38px; padding:6px 10px; display:inline-flex; align-items:center; gap:4px;">
+              ${ICONS.download} <span>ZIP</span>
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" data-act="delete-selected" style="min-height:38px; padding:6px 10px; color:#ef4444; display:inline-flex; align-items:center; gap:4px;">
+              ${ICONS.delete} <span>Delete</span>
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" data-act="clear-selection" style="min-height:38px; padding:6px 10px;">
+              Clear
+            </button>
+          </div>
+        </div>
+      ` : ''}
+
       <!-- STORAGE FOOTER NOTE -->
       ${storageNote()}
     </div>
@@ -492,9 +522,11 @@ function renderExplorerBody(items, selected) {
             </div>
             <h3 style="margin:0; font-size:1.05rem; color:var(--text); font-weight:700;">${selectedPaths.size} items selected</h3>
             <p style="margin:0; font-size:0.82rem; color:var(--text-secondary); max-width:300px;">Perform operations using the toolbar buttons or shortcuts (Ctrl+C, Ctrl+X, Delete).</p>
-            <div style="display:flex; gap:8px; margin-top:6px;">
+            <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap; justify-content:center;">
               <button type="button" class="btn btn-secondary btn-sm" data-act="cut">${ICONS.scissors} Cut</button>
               <button type="button" class="btn btn-secondary btn-sm" data-act="copy">${ICONS.copy} Copy</button>
+              <button type="button" class="btn btn-secondary btn-sm" data-act="multi-properties">${ICONS.info} Properties</button>
+              <button type="button" class="btn btn-secondary btn-sm" data-act="multi-download">${ICONS.download} Download ZIP</button>
               <button type="button" class="btn btn-secondary btn-sm" data-act="delete-selected" style="color:#ef4444;">${ICONS.delete} Delete</button>
               <button type="button" class="btn btn-secondary btn-sm" data-act="clear-selection">Clear</button>
             </div>
@@ -630,11 +662,16 @@ export function getToolsForFile(file) {
 
   const seen = new Set();
   const result = [];
+  const user = getCurrentUser();
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
   const add = (toolOrId) => {
     if (!toolOrId) return;
     const tool = typeof toolOrId === 'string' ? BY_ID.get(toolOrId) : toolOrId;
     if (tool && tool.id && !seen.has(tool.id)) {
+      if (!user && tool.id === 'assistant') return;
+      if (!user && isMobile && tool.id === 'code-playground') return;
+      if (user && tool.id === 'file-drop') return;
       seen.add(tool.id);
       result.push(tool);
     }
@@ -1073,6 +1110,141 @@ function wire(host, selected, refresh, itemsInDir = []) {
     });
   }
 
+  function openMultiProperties(paths) {
+    if (!paths || !paths.length) return;
+    const existing = document.getElementById('sv-properties-modal');
+    if (existing) existing.remove();
+
+    let fileCount = 0;
+    let folderCount = 0;
+    let totalBytes = 0;
+
+    function walk(p) {
+      const children = fs.listSync(p);
+      for (const c of children) {
+        if (c.isDirectory) {
+          folderCount++;
+          walk(c.path);
+        } else {
+          fileCount++;
+          totalBytes += (c.size || c.bytes || 0);
+        }
+      }
+    }
+
+    for (const p of paths) {
+      const stat = fs.statSync(p);
+      if (stat?.isDirectory) {
+        folderCount++;
+        walk(p);
+      } else {
+        fileCount++;
+        totalBytes += (stat?.size || stat?.bytes || 0);
+      }
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'sv-properties-modal';
+    modal.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 10001;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(6px);
+      padding: 20px;
+    `;
+
+    modal.innerHTML = `
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:16px; width:100%; max-width:420px; box-shadow:0 24px 48px rgba(0,0,0,0.3); overflow:hidden; font-family:var(--sans);">
+        <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="color:var(--text);">${ICONS.checkAll}</span>
+            <strong style="font-size:0.95rem; color:var(--text);">${paths.length} Items Selected</strong>
+          </div>
+          <button type="button" id="sv-prop-close" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:4px; border-radius:6px; display:inline-flex;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div style="padding:20px; display:flex; flex-direction:column; gap:12px; font-size:0.84rem;">
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:8px;">
+            <span style="color:var(--text-secondary);">Location</span>
+            <span style="color:var(--text); font-family:var(--mono); font-size:0.8rem;">${escapeHtml(currentPath || '/')}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:8px;">
+            <span style="color:var(--text-secondary);">Contains</span>
+            <span style="color:var(--text); font-weight:600;">${fileCount} file(s), ${folderCount} folder(s)</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:8px;">
+            <span style="color:var(--text-secondary);">Total Size</span>
+            <span style="color:var(--text); font-family:var(--mono); font-weight:600;">${size(totalBytes)}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding-bottom:4px;">
+            <span style="color:var(--text-secondary);">Storage</span>
+            <span style="color:var(--text);">${currentStorage === 'online' ? 'Online' : 'Local Browser'}</span>
+          </div>
+        </div>
+        <div style="padding:12px 20px; background:var(--bg-subtle); border-top:1px solid var(--border); display:flex; justify-content:flex-end;">
+          <button type="button" class="btn btn-secondary btn-sm" id="sv-prop-ok" style="padding:5px 16px;">Close</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const closeModal = () => modal.remove();
+    modal.querySelector('#sv-prop-close')?.addEventListener('click', closeModal);
+    modal.querySelector('#sv-prop-ok')?.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+  }
+
+  async function downloadPathsAsZip(paths) {
+    if (!paths || !paths.length) return;
+    try {
+      const zipEntries = [];
+      async function addDirEntries(dirP, prefix = '') {
+        const children = fs.listSync(dirP);
+        for (const c of children) {
+          if (c.isDirectory) {
+            await addDirEntries(c.path, `${prefix}${c.name}/`);
+          } else {
+            const data = await fs.readFile(c.path, { encoding: 'binary' });
+            zipEntries.push({ path: `${prefix}${c.name}`, data });
+          }
+        }
+      }
+      for (const p of paths) {
+        const stat = fs.statSync(p);
+        const bName = getBaseName(p);
+        if (stat?.isDirectory) {
+          await addDirEntries(p, `${bName}/`);
+        } else {
+          const data = await fs.readFile(p, { encoding: 'binary' });
+          zipEntries.push({ path: bName, data });
+        }
+      }
+      if (!zipEntries.length) {
+        flash('Selected items are empty.', 'warn');
+        return;
+      }
+      const zipBlob = await createZip(zipEntries);
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `archive-${paths.length}-items.zip`;
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      flash(`Downloaded ${paths.length} item(s) as ZIP.`);
+    } catch (err) {
+      flash(`Download failed: ${err.message}`, 'bad');
+    }
+  }
+
   function openQuickLook(fileOrPath) {
     const existing = document.getElementById('sv-quicklook-modal');
     if (existing) {
@@ -1334,10 +1506,12 @@ function wire(host, selected, refresh, itemsInDir = []) {
     const existing = document.getElementById('sv-finder-menu');
     if (existing) existing.remove();
 
+    const isMulti = selectedPaths.has(targetPath) && selectedPaths.size > 1;
+    const multiCount = selectedPaths.size;
     const baseName = getBaseName(targetPath);
     const itemRecord = fs.statSync(targetPath) || {};
     const tags = itemRecord.tags || [];
-    const targetTools = isDir ? [] : getToolsForFile({ name: baseName, path: targetPath, kind: itemRecord.kind });
+    const targetTools = (isDir || isMulti) ? [] : getToolsForFile({ name: baseName, path: targetPath, kind: itemRecord.kind });
     const topTool = targetTools[0];
 
     const menu = document.createElement('div');
@@ -1357,88 +1531,143 @@ function wire(host, selected, refresh, itemsInDir = []) {
       font-size: 0.84rem;
     `;
 
-    menu.innerHTML = `
-      <div style="padding: 4px 10px 8px; font-size: 0.72rem; color: var(--text-muted); font-weight: 700; border-bottom: 1px solid var(--border); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-        ${escapeHtml(baseName)}
-      </div>
-      
-      <div class="finder-menu-item" data-cmenu="open" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
-        <div style="display:flex; align-items:center; gap:8px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/></svg>
-          <span>${isDir ? 'Open Folder' : 'Preview'}</span>
+    if (isMulti) {
+      menu.innerHTML = `
+        <div style="padding: 4px 10px 8px; font-size: 0.72rem; color: var(--text-muted); font-weight: 700; border-bottom: 1px solid var(--border); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          ${multiCount} items selected
         </div>
-        ${!isDir ? '<span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Space</span>' : ''}
-      </div>
 
-      ${topTool ? `
-        <div class="finder-menu-item sv-open-btn" data-cmenu="open-tool" data-open="${escapeHtml(topTool.id)}" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          <span>Open in ${escapeHtml(topTool.name)}</span>
-        </div>
-      ` : ''}
-
-      <div class="finder-menu-item" data-cmenu="cut" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
-        <div style="display:flex; align-items:center; gap:8px;">
-          ${ICONS.scissors}
-          <span>Cut</span>
-        </div>
-        <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Ctrl+X</span>
-      </div>
-
-      <div class="finder-menu-item" data-cmenu="copy" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
-        <div style="display:flex; align-items:center; gap:8px;">
-          ${ICONS.copy}
-          <span>Copy</span>
-        </div>
-        <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Ctrl+C</span>
-      </div>
-
-      ${isDir && fileClipboard.paths.length > 0 ? `
-        <div class="finder-menu-item" data-cmenu="paste-into" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+        <div class="finder-menu-item" data-cmenu="cut" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
           <div style="display:flex; align-items:center; gap:8px;">
-            ${ICONS.paste}
-            <span>Paste into Folder (${fileClipboard.paths.length})</span>
+            ${ICONS.scissors}
+            <span>Cut (${multiCount})</span>
           </div>
-          <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Ctrl+V</span>
+          <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Ctrl+X</span>
         </div>
-      ` : ''}
 
-      <div class="finder-menu-item" data-cmenu="rename" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        <span>Rename</span>
-      </div>
-
-      <div class="finder-menu-item" data-cmenu="properties" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-        ${ICONS.info}
-        <span>Properties</span>
-      </div>
-
-      <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
-
-      <!-- Tags Row -->
-      <div style="padding: 6px 10px; display: flex; align-items: center; justify-content: space-between;">
-        <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Tags</span>
-        <div style="display: flex; gap: 6px;">
-          ${Object.entries(TAG_COLORS).map(([tKey, color]) => `
-            <span class="finder-tag-dot" data-set-tag="${tKey}" title="Tag ${tKey}" style="width: 14px; height: 14px; border-radius: 50%; background: ${color}; cursor: pointer; box-shadow: ${tags.includes(tKey) ? '0 0 0 2px var(--text)' : 'none'};"></span>
-          `).join('')}
+        <div class="finder-menu-item" data-cmenu="copy" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            ${ICONS.copy}
+            <span>Copy (${multiCount})</span>
+          </div>
+          <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Ctrl+C</span>
         </div>
-      </div>
 
-      <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
+        <div class="finder-menu-item" data-cmenu="properties" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+          ${ICONS.info}
+          <span>Properties (${multiCount} items)</span>
+        </div>
 
-      <div class="finder-menu-item" data-cmenu="download" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        <span>${isDir ? 'Download as ZIP' : 'Download'}</span>
-      </div>
+        <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
 
-      <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
+        <!-- Tags Row (Batch Tagging) -->
+        <div style="padding: 6px 10px; display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Tag Selected</span>
+          <div style="display: flex; gap: 6px;">
+            ${Object.entries(TAG_COLORS).map(([tKey, color]) => `
+              <span class="finder-tag-dot" data-set-tag="${tKey}" title="Tag ${tKey}" style="width: 14px; height: 14px; border-radius: 50%; background: ${color}; cursor: pointer;"></span>
+            `).join('')}
+          </div>
+        </div>
 
-      <div class="finder-menu-item" data-cmenu="delete" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #ef4444;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-        <span>Delete ${isDir ? 'Folder' : 'File'}</span>
-      </div>
-    `;
+        <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
+
+        <div class="finder-menu-item" data-cmenu="download" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Download as ZIP (${multiCount})</span>
+        </div>
+
+        <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
+
+        <div class="finder-menu-item" data-cmenu="delete" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #ef4444;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          <span>Delete ${multiCount} Items</span>
+        </div>
+      `;
+    } else {
+      menu.innerHTML = `
+        <div style="padding: 4px 10px 8px; font-size: 0.72rem; color: var(--text-muted); font-weight: 700; border-bottom: 1px solid var(--border); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          ${escapeHtml(baseName)}
+        </div>
+        
+        <div class="finder-menu-item" data-cmenu="open" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/></svg>
+            <span>${isDir ? 'Open Folder' : 'Preview'}</span>
+          </div>
+          ${!isDir ? '<span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Space</span>' : ''}
+        </div>
+
+        ${topTool ? `
+          <div class="finder-menu-item sv-open-btn" data-cmenu="open-tool" data-open="${escapeHtml(topTool.id)}" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            <span>Open in ${escapeHtml(topTool.name)}</span>
+          </div>
+        ` : ''}
+
+        <div class="finder-menu-item" data-cmenu="cut" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            ${ICONS.scissors}
+            <span>Cut</span>
+          </div>
+          <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Ctrl+X</span>
+        </div>
+
+        <div class="finder-menu-item" data-cmenu="copy" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            ${ICONS.copy}
+            <span>Copy</span>
+          </div>
+          <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Ctrl+C</span>
+        </div>
+
+        ${isDir && fileClipboard.paths.length > 0 ? `
+          <div class="finder-menu-item" data-cmenu="paste-into" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              ${ICONS.paste}
+              <span>Paste into Folder (${fileClipboard.paths.length})</span>
+            </div>
+            <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Ctrl+V</span>
+          </div>
+        ` : ''}
+
+        <div class="finder-menu-item" data-cmenu="rename" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          <span>Rename</span>
+        </div>
+
+        <div class="finder-menu-item" data-cmenu="properties" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+          ${ICONS.info}
+          <span>Properties</span>
+        </div>
+
+        <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
+
+        <!-- Tags Row -->
+        <div style="padding: 6px 10px; display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Tags</span>
+          <div style="display: flex; gap: 6px;">
+            ${Object.entries(TAG_COLORS).map(([tKey, color]) => `
+              <span class="finder-tag-dot" data-set-tag="${tKey}" title="Tag ${tKey}" style="width: 14px; height: 14px; border-radius: 50%; background: ${color}; cursor: pointer; box-shadow: ${tags.includes(tKey) ? '0 0 0 2px var(--text)' : 'none'};"></span>
+            `).join('')}
+          </div>
+        </div>
+
+        <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
+
+        <div class="finder-menu-item" data-cmenu="download" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>${isDir ? 'Download as ZIP' : 'Download'}</span>
+        </div>
+
+        <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
+
+        <div class="finder-menu-item" data-cmenu="delete" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #ef4444;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          <span>Delete ${isDir ? 'Folder' : 'File'}</span>
+        </div>
+      `;
+    }
 
     document.body.appendChild(menu);
 
@@ -1455,12 +1684,15 @@ function wire(host, selected, refresh, itemsInDir = []) {
       const tagTarget = me.target.closest('[data-set-tag]');
       if (tagTarget) {
         const clickedTag = tagTarget.dataset.setTag;
-        const currentTags = await fs.getTags(targetPath);
-        const nextTags = currentTags.includes(clickedTag)
-          ? currentTags.filter(t => t !== clickedTag)
-          : [...currentTags, clickedTag];
-        await fs.setTags(targetPath, nextTags);
-        flash(`Updated tags for "${baseName}".`);
+        const paths = isMulti ? [...selectedPaths] : [targetPath];
+        for (const p of paths) {
+          const currentTags = await fs.getTags(p);
+          const nextTags = currentTags.includes(clickedTag)
+            ? currentTags.filter(t => t !== clickedTag)
+            : [...currentTags, clickedTag];
+          await fs.setTags(p, nextTags);
+        }
+        flash(`Updated tags for ${paths.length} item(s).`);
         menu.remove();
         refresh(null);
         return;
@@ -1485,19 +1717,20 @@ function wire(host, selected, refresh, itemsInDir = []) {
           return;
         }
       } else if (act === 'cut') {
-        const paths = selectedPaths.has(targetPath) && selectedPaths.size > 0 ? [...selectedPaths] : [targetPath];
+        const paths = isMulti ? [...selectedPaths] : [targetPath];
         fileClipboard = { op: 'cut', paths };
         flash(`Cut ${paths.length} item(s).`);
         refresh(current?.id || null);
       } else if (act === 'copy') {
-        const paths = selectedPaths.has(targetPath) && selectedPaths.size > 0 ? [...selectedPaths] : [targetPath];
+        const paths = isMulti ? [...selectedPaths] : [targetPath];
         fileClipboard = { op: 'copy', paths };
         flash(`Copied ${paths.length} item(s).`);
         refresh(current?.id || null);
       } else if (act === 'paste-into') {
         await executePaste(targetPath);
       } else if (act === 'properties') {
-        if (isDir) openDirectoryProperties(targetPath);
+        if (isMulti) openMultiProperties([...selectedPaths]);
+        else if (isDir) openDirectoryProperties(targetPath);
         else openQuickLook(targetPath);
       } else if (act === 'rename') {
         const nextName = prompt('New name:', baseName);
@@ -1512,7 +1745,9 @@ function wire(host, selected, refresh, itemsInDir = []) {
         }
       } else if (act === 'download') {
         try {
-          if (isDir) {
+          if (isMulti) {
+            await downloadPathsAsZip([...selectedPaths]);
+          } else if (isDir) {
             const destZip = normalizePath(`${targetPath}.zip`);
             await fs.compressDirectory(targetPath, destZip);
             const blob = await fs.readFile(destZip, { encoding: 'blob' });
@@ -1539,14 +1774,18 @@ function wire(host, selected, refresh, itemsInDir = []) {
           flash(`Download failed: ${err.message}`, 'bad');
         }
       } else if (act === 'delete') {
-        const itemType = isDir ? 'folder' : 'file';
-        if (confirm(`Are you sure you want to permanently delete ${itemType} "${baseName}"${isDir ? ' and all its contents' : ''}?`)) {
-          try {
-            await fs.delete(targetPath);
-            flash(`Deleted ${itemType} "${baseName}".`);
-            refresh(null);
-          } catch (err) {
-            flash(err.message, 'bad');
+        if (isMulti) {
+          await executeDelete([...selectedPaths]);
+        } else {
+          const itemType = isDir ? 'folder' : 'file';
+          if (confirm(`Are you sure you want to permanently delete ${itemType} "${baseName}"${isDir ? ' and all its contents' : ''}?`)) {
+            try {
+              await fs.delete(targetPath);
+              flash(`Deleted ${itemType} "${baseName}".`);
+              refresh(null);
+            } catch (err) {
+              flash(err.message, 'bad');
+            }
           }
         }
       }
@@ -1668,6 +1907,11 @@ function wire(host, selected, refresh, itemsInDir = []) {
       e.preventDefault();
       const p = target.dataset.path;
       const isDir = target.dataset.isDir === 'true';
+      if (!selectedPaths.has(p)) {
+        selectedPaths.clear();
+        selectedPaths.add(p);
+        refresh(p);
+      }
       openContextMenu(e.clientX, e.clientY, p, isDir);
       return;
     }
@@ -1680,9 +1924,13 @@ function wire(host, selected, refresh, itemsInDir = []) {
   };
   host.addEventListener('contextmenu', onContextMenu);
 
-  // Touchscreen long-press (500ms)
+  // Touchscreen long-press (450ms) with jitter threshold & haptic feedback
   let touchTimer = null;
   let touchMoved = false;
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let activeTouchItem = null;
+  let isLongPressTriggered = false;
 
   const onTouchStart = (e) => {
     const itemTarget = e.target.closest('[data-context-target]');
@@ -1690,31 +1938,63 @@ function wire(host, selected, refresh, itemsInDir = []) {
     if (!itemTarget && !canvasTarget) return;
 
     touchMoved = false;
+    isLongPressTriggered = false;
     const touch = e.touches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
     const cx = touch.clientX;
     const cy = touch.clientY;
 
+    if (itemTarget) {
+      activeTouchItem = itemTarget;
+      itemTarget.classList.add('sv-touch-active');
+    }
+
     touchTimer = setTimeout(() => {
       if (!touchMoved) {
-        try { navigator.vibrate?.(20); } catch {}
+        isLongPressTriggered = true;
+        try { navigator.vibrate?.(25); } catch {}
+        if (activeTouchItem) {
+          activeTouchItem.classList.remove('sv-touch-active');
+          activeTouchItem = null;
+        }
         if (itemTarget) {
           const p = itemTarget.dataset.path;
           const isDir = itemTarget.dataset.isDir === 'true';
+          if (!selectedPaths.has(p)) {
+            selectedPaths.clear();
+            selectedPaths.add(p);
+            refresh(p);
+          }
           openContextMenu(cx, cy, p, isDir);
         } else if (canvasTarget) {
           openCanvasContextMenu(cx, cy);
         }
       }
-    }, 500);
+    }, 450);
   };
 
-  const onTouchMove = () => {
-    touchMoved = true;
-    if (touchTimer) clearTimeout(touchTimer);
+  const onTouchMove = (e) => {
+    if (touchMoved) return;
+    if (e.touches && e.touches[0]) {
+      const dist = Math.hypot(e.touches[0].clientX - touchStartX, e.touches[0].clientY - touchStartY);
+      if (dist > 8) {
+        touchMoved = true;
+        if (touchTimer) clearTimeout(touchTimer);
+        if (activeTouchItem) {
+          activeTouchItem.classList.remove('sv-touch-active');
+          activeTouchItem = null;
+        }
+      }
+    }
   };
 
   const onTouchEnd = () => {
     if (touchTimer) clearTimeout(touchTimer);
+    if (activeTouchItem) {
+      activeTouchItem.classList.remove('sv-touch-active');
+      activeTouchItem = null;
+    }
   };
 
   host.addEventListener('touchstart', onTouchStart, { passive: true });
@@ -1844,6 +2124,10 @@ function wire(host, selected, refresh, itemsInDir = []) {
     // Item selection with Ctrl/Cmd or normal click
     const itemEl = e.target.closest('[data-context-target]');
     if (itemEl && !e.target.closest('.sv-rename, button, input')) {
+      if (isLongPressTriggered) {
+        isLongPressTriggered = false;
+        return;
+      }
       const itemPath = itemEl.dataset.path;
       const isDir = itemEl.dataset.isDir === 'true';
 
@@ -1859,18 +2143,15 @@ function wire(host, selected, refresh, itemsInDir = []) {
       }
 
       // Normal click
-      if (isDir) {
-        selectedPaths.clear();
-        currentPath = itemPath;
-        refresh(null);
-        return;
-      } else {
-        selectedPaths.clear();
-        selectedPaths.add(itemPath);
+      selectedPaths.clear();
+      selectedPaths.add(itemPath);
+      if (!isDir) {
         history.replaceState(null, '', `#files/${encodeURIComponent(itemPath)}`);
         refresh(itemPath);
-        return;
+      } else {
+        refresh(null);
       }
+      return;
     }
 
     // Clicking blank canvas deselects items
@@ -1927,6 +2208,26 @@ function wire(host, selected, refresh, itemsInDir = []) {
 
     if (act === 'folder-properties') {
       openDirectoryProperties(currentPath);
+      return;
+    }
+
+    if (act === 'multi-properties') {
+      const paths = selectedPaths.size > 0 ? [...selectedPaths] : (current?.path ? [current.path] : []);
+      if (paths.length > 1) {
+        openMultiProperties(paths);
+      } else if (paths.length === 1) {
+        const stat = fs.statSync(paths[0]);
+        if (stat?.isDirectory) openDirectoryProperties(paths[0]);
+        else openQuickLook(paths[0]);
+      }
+      return;
+    }
+
+    if (act === 'multi-download') {
+      const paths = selectedPaths.size > 0 ? [...selectedPaths] : (current?.path ? [current.path] : []);
+      if (paths.length > 0) {
+        await downloadPathsAsZip(paths);
+      }
       return;
     }
 
@@ -2116,8 +2417,8 @@ function wire(host, selected, refresh, itemsInDir = []) {
     if (!file) return;
 
     try {
-      const text = await file.text();
-      const n = store.importAll(text);
+      const res = store.importBundle(text);
+      const n = res?.imported || 0;
       flash(`Imported ${n} artifact${n === 1 ? '' : 's'}.`);
       e.target.value = '';
       refresh(null);
@@ -2170,12 +2471,21 @@ function wire(host, selected, refresh, itemsInDir = []) {
     const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform);
     const mod = isMac ? e.metaKey : e.ctrlKey;
 
-    // QuickLook toggle: Spacebar
+    // QuickLook / Properties toggle: Spacebar
     if (e.code === 'Space' && !mod && !e.shiftKey && !e.altKey) {
       e.preventDefault();
       const qlModal = document.getElementById('sv-quicklook-modal');
       if (qlModal) {
         qlModal.remove();
+        return;
+      }
+      const propModal = document.getElementById('sv-properties-modal');
+      if (propModal) {
+        propModal.remove();
+        return;
+      }
+      if (selectedPaths.size > 1) {
+        openMultiProperties([...selectedPaths]);
         return;
       }
       const targetP = current?.path || (selectedPaths.size > 0 ? [...selectedPaths][0] : null);

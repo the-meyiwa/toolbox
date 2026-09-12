@@ -91,7 +91,7 @@ export const PROFILE_PICTURES = [
   },
   {
     id: 'miakhalifa.jpg',
-    name: 'Mia',
+    name: 'Mia Khalifa',
     src: '/profile-pictures/miakhalifa.jpg',
     story: 'Cultural icon, internet royalty, and spectacles enthusiast. Always commands 100% of the room\'s attention, regardless of what\'s in the commit logs.'
   },
@@ -127,9 +127,9 @@ export const PROFILE_PICTURES = [
   },
   {
     id: 'amelie(fitgirl).jpg',
-    name: 'Amélie (FitGirl)',
+    name: 'Amélie',
     src: '/profile-pictures/amelie(fitgirl).jpg',
-    story: 'The undisputed empress of ultra-repacks. Compresses 100-gigabyte enterprise monoliths into lean, zero-bloat bundles while listening to whimsical French accordion tunes.'
+    story: 'Whimsical Parisian soul with an imaginative spirit and a knack for orchestrating quiet magic across the everyday world.'
   },
   {
     id: 'billybutcher.jpg',
@@ -181,9 +181,9 @@ export const PROFILE_PICTURES = [
   },
   {
     id: 'tiabillinger.jpg',
-    name: 'Tia Billinger',
+    name: 'Bonnie Blue',
     src: '/profile-pictures/tiabillinger.jpg',
-    story: 'Effortless high-glamour aesthetics and razor-sharp charisma. Elevates everyday interfaces into front-row runway statements where every pixel looks tailored.'
+    story: 'Bold, unapologetic, and unforgettable. High-voltage energy and magnetic screen presence that commands any room without asking for permission.'
   },
   {
     id: 'timcook.jpg',
