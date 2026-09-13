@@ -3428,8 +3428,11 @@ mark.regex-match {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: center;
-  margin-top: 26px;
+  align-items: center;
+  width: 100%;
   max-width: 620px;
+  margin: 18px auto 0;
+  box-sizing: border-box;
 }
 .home-quick-item {
   display: inline-flex;

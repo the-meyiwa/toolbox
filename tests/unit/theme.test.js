@@ -161,13 +161,20 @@ test('Pill Buttons, Segmented Switchers & Typography Smoothing', async () => {
   );
 });
 
-test('Home Page Suggested Tools: excludes Assistant from #home-quick row', async () => {
+test('Home Page Suggested Tools: excludes Assistant from #home-quick row and is centered', async () => {
   const fs = await import('fs');
   const path = await import('path');
   const appJs = fs.readFileSync(path.resolve('js/app.js'), 'utf8');
+  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf8');
 
   assert.ok(
     appJs.includes("t.id !== 'assistant'") && appJs.includes('popular(8)'),
     'renderQuickRow in js/app.js must query popular tools and explicitly filter out assistant'
+  );
+
+  assert.ok(
+    /\.home-quick\s*\{[^}]*margin:\s*[^;]*auto/i.test(css) ||
+    /\.home-quick\s*\{[^}]*margin-left:\s*auto/i.test(css),
+    '.home-quick must have auto horizontal margins to center under search bar'
   );
 });
