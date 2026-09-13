@@ -608,7 +608,6 @@ body {
   }
 }
 
-
 .viewport-header {
   display: flex;
   align-items: center;
@@ -1363,14 +1362,11 @@ mark.regex-match {
   color: var(--text);
 }
 
-/* Capabilities Matrix */
-.showcase-matrix-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 16px;
 }
 
-.matrix-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -1381,7 +1377,6 @@ mark.regex-match {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
 }
 
-.matrix-tag {
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -1391,21 +1386,18 @@ mark.regex-match {
   display: block;
 }
 
-.matrix-title {
   font-size: 1.1rem;
   font-weight: 700;
   margin: 0 0 8px;
   color: var(--text);
 }
 
-.matrix-desc {
   font-size: 0.86rem;
   line-height: 1.55;
   color: var(--text-secondary);
   margin: 0 0 16px;
 }
 
-.matrix-meta {
   border-top: 1px solid var(--border);
   padding-top: 12px;
   display: flex;
@@ -2408,7 +2400,6 @@ mark.regex-match {
   .t3d-list { max-height: 220px; }
 }
 
-
 /* ============================================================
    CONTAINER & CABIN PLANNER
    Larger type and hit areas than the rest of the app — this tool is
@@ -2595,7 +2586,6 @@ mark.regex-match {
   .cp-add-grid { grid-template-columns: 1fr; }
 }
 
-
 /* ============================================================
    CODE PLAYGROUND
    ============================================================ */
@@ -2754,7 +2744,6 @@ mark.regex-match {
   .cpg-bar-right { justify-content: stretch; }
   .cpg-bar-right .btn { flex: 1; }
 }
-
 
 /* ============================================================
    BUSINESS & FINANCE TOOLS
@@ -3060,7 +3049,6 @@ mark.regex-match {
   .ts-controls { grid-template-columns: 1fr; }
 }
 
-
 /* ============================================================
    ACCESSIBILITY & MOTION
    ============================================================ */
@@ -3105,7 +3093,6 @@ mark.regex-match {
   white-space: nowrap;
   border: 0;
 }
-
 
 /* ============================================================
    CONTAINER QUOTE BUILDER
@@ -6093,47 +6080,7 @@ input, select, textarea {
   --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.7);
 }
 
-/* 2. Burgundy Gradient */
-
-
-/* 3. Cozy Pink */
-
-
-/* 4. Solar Blue */
-
-
-/* 5. Nocturne Blue */
-
-
-/* 6. Alpine Green */
-
-
-/* 7. Canary Yellow */
-
-
-/* 8. Espresso with Cream */
-
-
-/* 9. Neon Tokyo (Cyberpunk Synthwave) */
-
-
-/* 10. Cyber Matrix (Phosphor Green Terminal) */
-
-
-/* 11. Akira Crimson (Warning Scarlet Neon) */
-
-
-/* 12. Cyber Cyan (Holographic Neural) */
-
-
-/* 13. Nordic Slate & Teal */
-
-
-/* 14. Sunset Ember */
-
-
 /* 15. Paper & Ink */
-
 
 /* 16. Linux Mint (Mint-Y Cinnamon Dark) */
 [data-theme="linux-mint"] {
@@ -6392,157 +6339,7 @@ input, select, textarea {
   color: #ffffff;
 }
 
-/* --- 2. Burgundy Gradient --- */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* --- 3. Cozy Pink --- */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* --- 4. Solar Blue --- */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* --- 5. Nocturne Blue --- */
-
-
-
-
-
-
-
-
-
-/* --- 6. Alpine Green --- */
-
-
-
-
-
-
-
-
-/* --- 7. Canary Yellow --- */
-
-
-
-
-
-
-
-
-
-/* --- 8. Espresso with Cream --- */
-
-
-
-
-
-
-
-
-/* --- 9. Neon Tokyo (Cyberpunk Synthwave) --- */
-
-
-
-
-
-
-
-
-
-/* --- 10. Cyber Matrix (Phosphor Green Terminal) --- */
-
-
-
-
-
-
-
-
-/* --- 11. Akira Crimson (Warning Scarlet Neon) --- */
-
-
-
-
-
-
-
-
-/* --- 12. Cyber Cyan (Holographic Neural) --- */
-
-
-
-
-
-
-
-
-/* --- 13. Nordic Slate & Teal --- */
-
-
-
-
-
-
-/* --- 14. Sunset Ember --- */
-
-
-
-
-
-
 /* --- 15. Paper & Ink --- */
-
-
-
-
-
-
-
-
 
 /* ============================================================
    PER-THEME POLISH — CODE PLAYGROUND & EDITORS
@@ -6588,154 +6385,7 @@ input, select, textarea {
   color: #e5e5e5;
 }
 
-/* 2. Burgundy Gradient */
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* 3. Cozy Pink */
-
-
-
-
-
-
-
-
-
-
-
-/* 4. Solar Blue */
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* 5. Nocturne Blue */
-
-
-
-
-
-
-
-
-
-/* 6. Alpine Green */
-
-
-
-
-
-
-
-
-
-/* 7. Canary Yellow */
-
-
-
-
-
-
-
-
-
-/* 8. Espresso with Cream */
-
-
-
-
-
-
-
-
-
-/* 9. Neon Tokyo */
-
-
-
-
-
-
-
-
-
-
-
-/* 10. Cyber Matrix */
-
-
-
-
-
-
-
-
-
-
-
-/* 11. Akira Crimson */
-
-
-
-
-
-
-
-
-
-/* 12. Cyber Cyan */
-
-
-
-
-
-
-
-
-
-/* 13. Nordic Slate & Teal */
-
-
-
-
-
-
-
-
-/* 14. Sunset Ember */
-
-
-
-
-
-
-
-
 /* 15. Paper & Ink */
-
-
-
-
-
 
 /* ============================================================
    CALCULATOR TOOL — Universal Calculating Engine Styles
@@ -7215,13 +6865,12 @@ input, select, textarea {
   border-color: var(--black);
 }
 
-.calc-bit-matrix-card {
   background: var(--white);
   border: 1px solid var(--g200);
   border-radius: 14px;
   padding: 12px 14px;
 }
-.calc-bit-matrix-header {
+
   display: flex;
   justify-content: space-between;
   font-size: 0.74rem;
@@ -8236,57 +7885,6 @@ input, select, textarea {
   border-color: #383838;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* ============================================================
    PER-THEME MOBILE DOCKED NAV, UNDERLINE INDICATOR & CHIP STYLES
    ============================================================ */
@@ -8324,117 +7922,7 @@ input, select, textarea {
     border-color: #ffffff;
   }
 
-  /* 2. Burgundy */
-  
-  
-  
-  
-  
-  
-
-  /* 3. Cozy Pink */
-  
-  
-  
-  
-  
-  
-
-  /* 4. Solar Blue */
-  
-  
-  
-  
-  
-  
-
-  /* 5. Nocturne Blue */
-  
-  
-  
-  
-  
-  
-
-  /* 6. Alpine Green */
-  
-  
-  
-  
-  
-  
-
-  /* 7. Canary Yellow */
-  
-  
-  
-  
-  
-  
-
-  /* 8. Espresso */
-  
-  
-  
-  
-  
-  
-
-  /* 9. Neon Tokyo */
-  
-  
-  
-  
-  
-  
-
-  /* 10. Cyber Matrix */
-  
-  
-  
-  
-  
-  
-
-  /* 11. Akira Crimson */
-  
-  
-  
-  
-  
-  
-
-  /* 12. Cyber Cyan */
-  
-  
-  
-  
-  
-  
-
-  /* 13. Nordic Slate */
-  
-  
-  
-  
-  
-  
-
-  /* 14. Sunset Ember */
-  
-  
-  
-  
-  
-  
-
   /* 15. Paper & Ink */
-  
-  
-  
-  
-  
-  
 
   /* 16. Linux Mint (Mint-Y) */
   [data-theme="linux-mint"] .mobile-nav,
@@ -8531,84 +8019,6 @@ input, select, textarea {
 [data-theme="white-on-black"] .dropdown-divider {
   background: #242424;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 [data-theme="linux-mint"] .header-dropdown-menu,
 [data-theme="linux-mint"] .settings-modal-window,
@@ -8922,7 +8332,6 @@ input, select, textarea {
   margin: 0 !important;
   padding: 0 !important;
 }
-
 
 /* ============================================================
    STANDALONE MODE (Pop-out fullscreen tools)
@@ -9438,7 +8847,6 @@ body.standalone-mode .notes-app-wrapper {
   line-height: 1.4;
   transition: all 0.2s ease;
 }
-
 
 /* 3. Plain Fade Animation (Smooth graceful lift with theme-aware shadow) */
 .ast-anim-plain-fade {
