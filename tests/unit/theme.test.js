@@ -61,3 +61,43 @@ test('Theme: initTheme hydrates theme on boot', () => {
   assert.equal(active, 'linux-mint');
   assert.equal(document.documentElement.getAttribute('data-theme'), 'linux-mint');
 });
+
+test('Desktop Tool Viewport: width matches Files (940px) with exceptions for container-planner and assistant', async () => {
+  const fs = await import('fs');
+  const path = await import('path');
+  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf8');
+
+  // 1. Tool viewport standard max-width is 940px
+  assert.ok(
+    /#tool-viewport\s*\{[^}]*max-width:\s*940px/i.test(css),
+    '#tool-viewport must have desktop max-width of 940px to match Files'
+  );
+
+  // 2. Full-width exceptions for container-planner and assistant
+  assert.ok(
+    css.includes('body[data-tool-id="container-planner"] #tool-viewport') &&
+    css.includes('body[data-tool-id="assistant"] #tool-viewport'),
+    'css/style.css must define full-width exceptions for container-planner and assistant'
+  );
+
+  assert.ok(
+    css.includes('max-width: 100% !important'),
+    'Full-width tool exceptions must specify max-width: 100% !important'
+  );
+
+  // 3. Files page single-page lock (no vertical scroll on page)
+  assert.ok(
+    css.includes('body.in-files'),
+    'css/style.css must define body.in-files rules to lock page scrolling'
+  );
+
+  assert.ok(
+    css.includes('.sv-fade-bottom'),
+    'css/style.css must define .sv-fade-bottom styles'
+  );
+
+  assert.ok(
+    css.includes('.sv-fade-wrapper'),
+    'css/style.css must define .sv-fade-wrapper styles'
+  );
+});

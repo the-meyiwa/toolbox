@@ -64,8 +64,15 @@ const ICONS = {
   checkAll: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>'
 };
 
-// UI state preserved across refreshes in current session
-let currentLayout = 'split'; // 'split' | 'grid' | 'list'
+// UI state preserved across refreshes in current session & stored preferences
+const STORAGE_FILES_VIEW_MODE = 'toolbox_files_view_mode';
+let currentLayout = (() => {
+  try {
+    const saved = localStorage.getItem(STORAGE_FILES_VIEW_MODE);
+    if (saved === 'split' || saved === 'grid' || saved === 'list') return saved;
+  } catch {}
+  return 'split';
+})();
 let currentContentView = 'formatted'; // 'formatted' | 'table' | 'raw'
 let currentSearch = '';
 let currentPath = '/Home'; // Hierarchical directory pointer
@@ -263,7 +270,7 @@ function full(user, allItems, filteredItems, selected) {
   const pathSegments = currentPath.split('/').filter(Boolean);
 
   return `
-    <div class="sv" style="max-width:1280px; margin:18px auto 28px; display:flex; flex-direction:column; gap:14px; padding:0 16px;">
+    <div class="sv" style="max-width:940px; width:100%; margin:18px auto 0; display:flex; flex-direction:column; gap:10px; padding:0 16px; height:100%; box-sizing:border-box; overflow:hidden;">
       
       <!-- TOOLBAR & HEADER -->
       <header class="sv-head" style="background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:0 4px 16px rgba(0,0,0,0.03);">
@@ -434,7 +441,9 @@ function full(user, allItems, filteredItems, selected) {
       ` : ''}
 
       <!-- STORAGE FOOTER NOTE -->
-      ${storageNote()}
+      <div style="flex-shrink:0; margin-top:2px;">
+        ${storageNote()}
+      </div>
     </div>
   `;
 }
@@ -443,7 +452,7 @@ function renderExplorerBody(items, selected) {
   if (items.length === 0) {
     if (currentSearch) {
       return `
-        <div style="text-align:center; padding:50px 20px; background:var(--bg-card); border:1px solid var(--border); border-radius:14px;">
+        <div class="sv-fade-wrapper" style="text-align:center; padding:50px 20px; background:var(--bg-card); border:1px solid var(--border); border-radius:14px; flex:1; min-height:0; display:flex; flex-direction:column; justify-content:center; align-items:center;">
           <div style="color:var(--text-muted); margin-bottom:10px;">
             ${ICONS.search}
           </div>
@@ -457,7 +466,7 @@ function renderExplorerBody(items, selected) {
     }
 
     return `
-      <div data-canvas="true" style="text-align:center; padding:50px 20px; background:var(--bg-card); border:1px solid var(--border); border-radius:14px; min-height: 300px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: context-menu;">
+      <div class="sv-fade-wrapper" data-canvas="true" style="text-align:center; padding:50px 20px; background:var(--bg-card); border:1px solid var(--border); border-radius:14px; flex:1; min-height:0; display:flex; flex-direction:column; justify-content:center; align-items:center; cursor:context-menu;">
         <div style="color:var(--text-muted); margin-bottom:10px; pointer-events:none;">
           ${ICONS.folder}
         </div>
@@ -479,64 +488,78 @@ function renderExplorerBody(items, selected) {
 
   if (currentLayout === 'grid') {
     return `
-      <div class="sv-grid-view" data-canvas="true" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:16px 12px; justify-items:center; align-items:start; padding:16px; background:var(--bg-card); border:1px solid var(--border); border-radius:14px; min-height:360px;">
-        ${items.map(item => renderGridIcon(item, selected)).join('')}
+      <div class="sv-fade-wrapper sv-grid-wrap-container" style="flex:1; min-height:0; height:100%; display:flex; flex-direction:column; position:relative; overflow:hidden; background:var(--bg-card); border:1px solid var(--border); border-radius:14px;">
+        <div class="sv-fade-scroll sv-grid-scroll" data-canvas="true" style="flex:1; min-height:0; overflow-y:auto; padding:16px;">
+          <div class="sv-grid-view" data-canvas="true" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:16px 12px; justify-items:center; align-items:start;">
+            ${items.map(item => renderGridIcon(item, selected)).join('')}
+          </div>
+        </div>
+        <div class="sv-fade-bottom"></div>
       </div>
     `;
   }
 
   if (currentLayout === 'list') {
     return `
-      <div class="sv-list-view" data-canvas="true" style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; overflow:hidden;">
-        <div style="padding:10px 16px; background:var(--bg-subtle); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">
+      <div class="sv-fade-wrapper sv-list-wrap-container" style="flex:1; min-height:0; height:100%; display:flex; flex-direction:column; position:relative; overflow:hidden; background:var(--bg-card); border:1px solid var(--border); border-radius:14px;">
+        <div style="padding:10px 16px; background:var(--bg-subtle); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em; flex-shrink:0;">
           <span style="flex:2;">Name</span>
           <span style="width:100px;">Size</span>
           <span style="width:140px;">Modified</span>
           <span style="width:90px; text-align:right;">Tags</span>
         </div>
-        <div data-canvas="true" style="display:flex; flex-direction:column;">
-          ${items.map(item => renderListRow(item, selected)).join('')}
+        <div class="sv-fade-scroll sv-list-scroll sv-list-view" data-canvas="true" style="flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column;">
+          <div data-canvas="true" style="display:flex; flex-direction:column;">
+            ${items.map(item => renderListRow(item, selected)).join('')}
+          </div>
         </div>
+        <div class="sv-fade-bottom"></div>
       </div>
     `;
   }
 
   // Default: Split Master/Detail View
   return `
-    <div class="sv-split-view" data-canvas="true" style="display:grid; grid-template-columns:360px 1fr; gap:16px; height:calc(100vh - 210px); min-height:600px; align-items:stretch;">
+    <div class="sv-split-view" data-canvas="true" style="display:grid; grid-template-columns:340px 1fr; gap:14px; flex:1; min-height:0; height:100%; align-items:stretch; overflow:hidden;">
       <!-- Master: Files List -->
-      <div class="sv-split-master" data-canvas="true" style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; overflow:hidden; height:100%; overflow-y:auto; display:flex; flex-direction:column;">
-        <div style="padding:10px 14px; background:var(--bg-subtle); border-bottom:1px solid var(--border); font-size:0.75rem; font-weight:700; color:var(--text-secondary);">
+      <div class="sv-fade-wrapper sv-split-master-wrap" style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; overflow:hidden; height:100%; display:flex; flex-direction:column; position:relative;">
+        <div style="padding:10px 14px; background:var(--bg-subtle); border-bottom:1px solid var(--border); font-size:0.75rem; font-weight:700; color:var(--text-secondary); flex-shrink:0;">
           ITEMS IN ${escapeHtml(currentPath.toUpperCase())} (${items.length})
         </div>
-        <div data-canvas="true" style="display:flex; flex-direction:column; min-height:200px;">
-          ${items.map(item => renderSplitItem(item, selected)).join('')}
+        <div class="sv-fade-scroll sv-split-master" data-canvas="true" style="flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column;">
+          <div data-canvas="true" style="display:flex; flex-direction:column; min-height:100%;">
+            ${items.map(item => renderSplitItem(item, selected)).join('')}
+          </div>
         </div>
+        <div class="sv-fade-bottom"></div>
       </div>
 
       <!-- Detail: File Inspector / Content Preview Pane -->
-      <div class="sv-detail-pane" style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; overflow:hidden; height:100%; display:flex; flex-direction:column;">
-        ${selectedPaths.size > 1 ? `
-          <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; padding:40px 20px; text-align:center; gap:14px;">
-            <div style="color:var(--text); width:48px; height:48px; border-radius:12px; background:var(--bg-subtle); display:flex; align-items:center; justify-content:center;">
-              ${ICONS.checkAll}
+      <div class="sv-fade-wrapper sv-detail-pane" style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; overflow:hidden; height:100%; display:flex; flex-direction:column; position:relative;">
+        <div class="sv-fade-scroll sv-detail-scroll" style="flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column;">
+          ${selectedPaths.size > 1 ? `
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; padding:40px 20px; text-align:center; gap:14px;">
+              <div style="color:var(--text); width:48px; height:48px; border-radius:12px; background:var(--bg-subtle); display:flex; align-items:center; justify-content:center;">
+                ${ICONS.checkAll}
+              </div>
+              <h3 style="margin:0; font-size:1.05rem; color:var(--text); font-weight:700;">${selectedPaths.size} items selected</h3>
+              <p style="margin:0; font-size:0.82rem; color:var(--text-secondary); max-width:300px;">Perform operations using the toolbar buttons or shortcuts (Ctrl+C, Ctrl+X, Delete).</p>
+              <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap; justify-content:center;">
+                <button type="button" class="btn btn-secondary btn-sm" data-act="cut">${ICONS.scissors} Cut</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-act="copy">${ICONS.copy} Copy</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-act="multi-properties">${ICONS.info} Properties</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-act="multi-download">${ICONS.download} Download ZIP</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-act="delete-selected" style="color:#ef4444;">${ICONS.delete} Delete</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-act="clear-selection">Clear</button>
+              </div>
             </div>
-            <h3 style="margin:0; font-size:1.05rem; color:var(--text); font-weight:700;">${selectedPaths.size} items selected</h3>
-            <p style="margin:0; font-size:0.82rem; color:var(--text-secondary); max-width:300px;">Perform operations using the toolbar buttons or shortcuts (Ctrl+C, Ctrl+X, Delete).</p>
-            <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap; justify-content:center;">
-              <button type="button" class="btn btn-secondary btn-sm" data-act="cut">${ICONS.scissors} Cut</button>
-              <button type="button" class="btn btn-secondary btn-sm" data-act="copy">${ICONS.copy} Copy</button>
-              <button type="button" class="btn btn-secondary btn-sm" data-act="multi-properties">${ICONS.info} Properties</button>
-              <button type="button" class="btn btn-secondary btn-sm" data-act="multi-download">${ICONS.download} Download ZIP</button>
-              <button type="button" class="btn btn-secondary btn-sm" data-act="delete-selected" style="color:#ef4444;">${ICONS.delete} Delete</button>
-              <button type="button" class="btn btn-secondary btn-sm" data-act="clear-selection">Clear</button>
+          ` : (selected ? renderDetailPane(selected) : `
+            <div style="display:flex; align-items:center; justify-content:center; flex:1; color:var(--text-muted); font-size:0.88rem; padding:40px;">
+              Select a file to view and inspect its contents. Right-click or hold for options.
             </div>
-          </div>
-        ` : (selected ? renderDetailPane(selected) : `
-          <div style="display:flex; align-items:center; justify-content:center; flex:1; color:var(--text-muted); font-size:0.88rem; padding:40px;">
-            Select a file to view and inspect its contents. Right-click or hold for options.
-          </div>
-        `)}
+          `)}
+        </div>
+        <div class="sv-fade-bottom"></div>
       </div>
     </div>
   `;
@@ -2102,6 +2125,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
     const layoutBtn = e.target.closest('.sv-layout-btn');
     if (layoutBtn) {
       currentLayout = layoutBtn.dataset.layout || 'grid';
+      try { localStorage.setItem(STORAGE_FILES_VIEW_MODE, currentLayout); } catch {}
       refresh(current?.id || null);
       return;
     }
@@ -2602,7 +2626,39 @@ function wire(host, selected, refresh, itemsInDir = []) {
   const cviewSwitcher = host.querySelector('.sv-content-view-switcher');
   if (cviewSwitcher) attachSegmentedSlider(cviewSwitcher, '.sv-cview-btn');
 
+  // Initialize and observe bottom fade borders for overflowing lists
+  const fadeWrappers = host.querySelectorAll('.sv-fade-wrapper');
+  const fadeCleanups = [];
+
+  const updateAllFades = () => {
+    fadeWrappers.forEach(wrapper => {
+      const scrollEl = wrapper.querySelector('.sv-fade-scroll');
+      if (!scrollEl) return;
+      const hasOverflow = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight > 4;
+      wrapper.classList.toggle('has-overflow-bottom', hasOverflow);
+    });
+  };
+
+  fadeWrappers.forEach(wrapper => {
+    const scrollEl = wrapper.querySelector('.sv-fade-scroll');
+    if (!scrollEl) return;
+    const onScroll = () => {
+      const hasOverflow = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight > 4;
+      wrapper.classList.toggle('has-overflow-bottom', hasOverflow);
+    };
+    scrollEl.addEventListener('scroll', onScroll, { passive: true });
+    fadeCleanups.push(() => scrollEl.removeEventListener('scroll', onScroll));
+  });
+
+  requestAnimationFrame(updateAllFades);
+  setTimeout(updateAllFades, 80);
+
+  const onWindowResize = () => updateAllFades();
+  window.addEventListener('resize', onWindowResize, { passive: true });
+
   return () => {
+    fadeCleanups.forEach(fn => fn());
+    window.removeEventListener('resize', onWindowResize);
     host.removeEventListener('click', onClick);
     host.removeEventListener('change', onRename);
     host.removeEventListener('dblclick', onDblClick);

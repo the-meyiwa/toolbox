@@ -164,122 +164,128 @@ export default {
     }
 
     container.innerHTML = `
-      <div class="toolbox-assistant-root" style="width:100%; max-width:1320px; margin:0 auto; display:flex; flex-direction:column; height:calc(100vh - 160px); min-height:580px; max-height:920px; background:var(--white); border:1px solid var(--g200); border-radius:18px; overflow:hidden; box-shadow:0 16px 48px rgba(0,0,0,0.08); position:relative; font-family:var(--sans);">
+      <div class="toolbox-assistant-root" style="width:100%; max-width:100%; margin:0 auto; display:flex; flex-direction:column; height:calc(100vh - 160px); min-height:580px; max-height:920px; background:var(--white); border:1px solid var(--g200); border-radius:18px; overflow:hidden; box-shadow:0 16px 48px rgba(0,0,0,0.08); position:relative; font-family:var(--sans);">
         
         <!-- HEADER BAR -->
-        <div style="padding:12px 20px; border-bottom:1px solid var(--g200); background:var(--g50); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; flex-shrink:0;">
-          
-          <!-- Left: Logo, Active Context -->
-          <div style="display:flex; align-items:center; gap:12px;">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <div style="width:36px; height:36px; border-radius:50%; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="3"/>
-                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-                </svg>
+        <div style="padding:12px 20px; border-bottom:1px solid var(--g200); background:var(--g50); flex-shrink:0;">
+          <div class="ast-head-inner" style="max-width:860px; width:100%; margin:0 auto; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <!-- Left: Logo, Active Context -->
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:36px; height:36px; border-radius:50%; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                  </svg>
+                </div>
+                <div>
+                  <span style="font-size:0.96rem; font-weight:800; color:var(--black); letter-spacing:-0.01em; line-height:1; display:block;">Assistant</span>
+                </div>
               </div>
-              <div>
-                <span style="font-size:0.96rem; font-weight:800; color:var(--black); letter-spacing:-0.01em; line-height:1; display:block;">Assistant</span>
-              </div>
+
+              <div style="height:22px; width:1px; background:var(--g300);" class="brw-hide-mobile"></div>
+
+              <!-- Keep Context Toggle -->
+              <label class="brw-hide-mobile" style="display:flex; align-items:center; gap:6px; font-size:0.76rem; font-weight:600; cursor:pointer; user-select:none; color:var(--g700);" title="Preserve multi-turn memory across follow-ups">
+                <input type="checkbox" id="ast-chk-context" ${keepContext ? 'checked' : ''} style="cursor:pointer; accent-color:var(--black);">
+                Keep Context
+              </label>
             </div>
 
-            <div style="height:22px; width:1px; background:var(--g300);" class="brw-hide-mobile"></div>
+            <!-- Right: Account, Clear -->
+            <div style="display:flex; align-items:center; gap:8px;">
+              <button type="button" class="btn btn-secondary btn-sm" id="ast-btn-account" style="font-size:0.74rem;" title="${user ? 'Signed in as ' + user.email : 'Sign in for cloud sync'}">
+                ${user ? 'Account' : 'Cloud Sync'}
+              </button>
 
-            <!-- Keep Context Toggle -->
-            <label class="brw-hide-mobile" style="display:flex; align-items:center; gap:6px; font-size:0.76rem; font-weight:600; cursor:pointer; user-select:none; color:var(--g700);" title="Preserve multi-turn memory across follow-ups">
-              <input type="checkbox" id="ast-chk-context" ${keepContext ? 'checked' : ''} style="cursor:pointer; accent-color:var(--black);">
-              Keep Context
-            </label>
-          </div>
-
-          <!-- Right: Account, Clear -->
-          <div style="display:flex; align-items:center; gap:8px;">
-            <button type="button" class="btn btn-secondary btn-sm" id="ast-btn-account" style="font-size:0.74rem;" title="${user ? 'Signed in as ' + user.email : 'Sign in for cloud sync'}">
-              ${user ? 'Account' : 'Cloud Sync'}
-            </button>
-
-            <button type="button" class="btn btn-secondary btn-sm" id="ast-btn-clear" style="font-size:0.74rem; color:#ef4444;" title="Clear Conversation">
-              Clear
-            </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="ast-btn-clear" style="font-size:0.74rem; color:#ef4444;" title="Clear Conversation">
+                Clear
+              </button>
+            </div>
           </div>
         </div>
 
         <!-- CHAT MESSAGE STREAM -->
-        <div id="ast-messages" style="flex:1; overflow-y:auto; padding:24px; display:flex; flex-direction:column; gap:20px; background:var(--white);">
+        <div id="ast-messages" style="flex:1; overflow-y:auto; padding:24px 20px; display:flex; flex-direction:column; gap:20px; background:var(--white); max-width:860px; width:100%; margin:0 auto; box-sizing:border-box;">
           <!-- Messages will be rendered here -->
         </div>
 
         <!-- ATTACHED FILE PREVIEW BAR -->
-        <div id="ast-attached-bar" style="display:none; padding:8px 20px; background:var(--g100); border-top:1px solid var(--g200); align-items:center; justify-content:space-between; flex-shrink:0;">
-          <div style="display:flex; align-items:center; gap:8px; font-size:0.78rem; font-weight:600; color:var(--g800);">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-            <span id="ast-attached-name">image.png</span>
-            <span id="ast-attached-size" style="color:var(--g500); font-weight:400;">(240 KB)</span>
+        <div id="ast-attached-bar" style="display:none; padding:8px 20px; background:var(--g100); border-top:1px solid var(--g200); flex-shrink:0;">
+          <div class="ast-attached-inner" style="max-width:820px; width:100%; margin:0 auto; display:flex; align-items:center; justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:8px; font-size:0.78rem; font-weight:600; color:var(--g800);">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              <span id="ast-attached-name">image.png</span>
+              <span id="ast-attached-size" style="color:var(--g500); font-weight:400;">(240 KB)</span>
+            </div>
+            <button type="button" id="ast-attached-remove" style="background:none; border:none; color:var(--g500); cursor:pointer; font-size:1.1rem; line-height:1;">&times;</button>
           </div>
-          <button type="button" id="ast-attached-remove" style="background:none; border:none; color:var(--g500); cursor:pointer; font-size:1.1rem; line-height:1;">&times;</button>
         </div>
 
         <!-- QUICK PROMPT CHIPS -->
-        <div style="padding:6px 20px; background:var(--g50); border-top:1px solid var(--g200); display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; flex-shrink:0;" id="ast-chips">
-          <button type="button" class="btn btn-secondary btn-sm ast-chip" style="font-size:0.74rem;">Convert this image to WebP and resize to 1200px</button>
-          <button type="button" class="btn btn-secondary btn-sm ast-chip" style="font-size:0.74rem;">Calculate $10,000 compound interest at 7% for 10 years</button>
-          <button type="button" class="btn btn-secondary btn-sm ast-chip" style="font-size:0.74rem;">Balance chemical equation: H2 + O2 = H2O</button>
-          <button type="button" class="btn btn-secondary btn-sm ast-chip" style="font-size:0.74rem;">Analyze and chart this CSV dataset</button>
-          <button type="button" class="btn btn-secondary btn-sm ast-chip" style="font-size:0.74rem;">Run Python script to find prime numbers</button>
+        <div style="padding:6px 20px; background:var(--g50); border-top:1px solid var(--g200); flex-shrink:0;" id="ast-chips">
+          <div class="ast-chips-inner" style="max-width:820px; width:100%; margin:0 auto; display:flex; gap:8px; overflow-x:auto; scrollbar-width:none;">
+            <button type="button" class="btn btn-secondary btn-sm ast-chip" style="font-size:0.74rem;">Convert this image to WebP and resize to 1200px</button>
+            <button type="button" class="btn btn-secondary btn-sm ast-chip" style="font-size:0.74rem;">Calculate $10,000 compound interest at 7% for 10 years</button>
+            <button type="button" class="btn btn-secondary btn-sm ast-chip" style="font-size:0.74rem;">Balance chemical equation: H2 + O2 = H2O</button>
+            <button type="button" class="btn btn-secondary btn-sm ast-chip" style="font-size:0.74rem;">Analyze and chart this CSV dataset</button>
+            <button type="button" class="btn btn-secondary btn-sm ast-chip" style="font-size:0.74rem;">Run Python script to find prime numbers</button>
+          </div>
         </div>
 
         <!-- BOTTOM INPUT FORM -->
-        <div class="ast-composer" style="padding:14px 20px; background:var(--white); border-top:1px solid var(--g200); display:flex; align-items:flex-end; gap:12px; flex-shrink:0;">
-          
-          <input type="file" id="ast-file-input" style="display:none;" />
+        <div class="ast-composer" style="padding:14px 20px; background:var(--white); border-top:1px solid var(--g200); flex-shrink:0;">
+          <div class="ast-composer-inner" style="max-width:820px; width:100%; margin:0 auto; display:flex; align-items:flex-end; gap:12px;">
+            <input type="file" id="ast-file-input" style="display:none;" />
 
-          <div class="ast-attach-menu-wrap" style="position:relative; display:inline-flex;">
-            <button type="button" class="btn btn-secondary" id="ast-attach-btn" style="height:44px; width:44px; padding:0; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;" title="Attach file" aria-haspopup="true" aria-expanded="false">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-            </button>
-
-            <div class="ast-attach-popup" id="ast-attach-popup" style="display:none;">
-              <button type="button" class="ast-attach-popup-item" id="ast-attach-opt-computer">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                  <line x1="8" y1="21" x2="16" y2="21"></line>
-                  <line x1="12" y1="17" x2="12" y2="21"></line>
+            <div class="ast-attach-menu-wrap" style="position:relative; display:inline-flex;">
+              <button type="button" class="btn btn-secondary" id="ast-attach-btn" style="height:44px; width:44px; padding:0; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;" title="Attach file" aria-haspopup="true" aria-expanded="false">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
-                <div>
-                  <div style="font-weight:700; font-size:0.83rem; color:var(--black);">Upload from computer</div>
-                  <div style="font-size:0.71rem; color:var(--g500); font-weight:400;">Browse device files</div>
-                </div>
               </button>
-              <button type="button" class="ast-attach-popup-item" id="ast-attach-opt-toolbox">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                </svg>
-                <div>
-                  <div style="font-weight:700; font-size:0.83rem; color:var(--black);">Import from Toolbox files</div>
-                  <div style="font-size:0.71rem; color:var(--g500); font-weight:400;">Saved Work & filesystem</div>
-                </div>
-              </button>
-            </div>
-          </div>
 
-          <div style="flex:1; display:flex; align-items:flex-end; gap:8px;">
-            <div style="flex:1; position:relative; display:flex;">
-              <textarea
-                id="ast-user-input"
-                class="tool-input"
-                placeholder="Ask anything, drag & drop a file, request code, or trigger tools..."
-                rows="1"
-                style="display:block; margin:0; width:100%; min-height:44px; max-height:140px; padding:11px 16px; resize:none; border-radius:20px; font-size:0.92rem; line-height:1.45; font-family:inherit; border:1px solid var(--g300); background:var(--white); box-sizing:border-box; scrollbar-width:none; outline:none;"
-              ></textarea>
+              <div class="ast-attach-popup" id="ast-attach-popup" style="display:none;">
+                <button type="button" class="ast-attach-popup-item" id="ast-attach-opt-computer">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                  </svg>
+                  <div>
+                    <div style="font-weight:700; font-size:0.83rem; color:var(--black);">Upload from computer</div>
+                    <div style="font-size:0.71rem; color:var(--g500); font-weight:400;">Browse device files</div>
+                  </div>
+                </button>
+                <button type="button" class="ast-attach-popup-item" id="ast-attach-opt-toolbox">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  <div>
+                    <div style="font-weight:700; font-size:0.83rem; color:var(--black);">Import from Toolbox files</div>
+                    <div style="font-size:0.71rem; color:var(--g500); font-weight:400;">Saved Work & filesystem</div>
+                  </div>
+                </button>
+              </div>
             </div>
 
-            <button type="button" class="btn btn-primary" id="ast-send-btn" style="height:44px; padding:0 20px; border-radius:20px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:6px; flex-shrink:0; border:1px solid var(--black); box-sizing:border-box; margin:0;">
-              <span>Send</span>
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-            </button>
+            <div style="flex:1; display:flex; align-items:flex-end; gap:8px;">
+              <div style="flex:1; position:relative; display:flex;">
+                <textarea
+                  id="ast-user-input"
+                  class="tool-input"
+                  placeholder="Ask anything, drag & drop a file, request code, or trigger tools..."
+                  rows="1"
+                  style="display:block; margin:0; width:100%; min-height:44px; max-height:140px; padding:11px 16px; resize:none; border-radius:20px; font-size:0.92rem; line-height:1.45; font-family:inherit; border:1px solid var(--g300); background:var(--white); box-sizing:border-box; scrollbar-width:none; outline:none;"
+                ></textarea>
+              </div>
+
+              <button type="button" class="btn btn-primary" id="ast-send-btn" style="height:44px; padding:0 20px; border-radius:20px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:6px; flex-shrink:0; border:1px solid var(--black); box-sizing:border-box; margin:0;">
+                <span>Send</span>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+              </button>
+            </div>
           </div>
         </div>
 

@@ -205,3 +205,37 @@ test('Files View: Search empty state shows clear button and restores search on c
   unmount();
 });
 
+test('Files View: layout preference is saved to localStorage and bottom fade border is rendered', () => {
+  for (const item of artifacts.list()) artifacts.remove(item.id);
+
+  artifacts.save({
+    name: 'test_doc.txt',
+    kind: 'text',
+    text: 'Line 1\nLine 2',
+    from: 'code-playground'
+  });
+
+  const host = document.createElement('div');
+  const unmount = renderSaved(host);
+
+  // Assert fade bottom border element exists
+  const fadeBottom = host.querySelector('.sv-fade-bottom');
+  assert.ok(fadeBottom, '.sv-fade-bottom must exist for scrollable lists');
+
+  // Click grid layout button
+  const gridBtn = host.querySelector('[data-layout="grid"]');
+  assert.ok(gridBtn, 'Grid layout button must exist');
+  gridBtn.click();
+
+  // Assert localStorage saved the layout preference
+  assert.equal(localStorage.getItem('toolbox_files_view_mode'), 'grid', 'Selected layout must be persisted to localStorage');
+
+  // Click list layout button
+  const listBtn = host.querySelector('[data-layout="list"]');
+  assert.ok(listBtn, 'List layout button must exist');
+  listBtn.click();
+  assert.equal(localStorage.getItem('toolbox_files_view_mode'), 'list', 'Selected layout must update in localStorage');
+
+  unmount();
+});
+

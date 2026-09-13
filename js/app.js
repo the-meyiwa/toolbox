@@ -306,6 +306,8 @@ function showPage(page) {
 
   currentPage = page;
   document.body.classList.remove('in-tool');
+  document.body.removeAttribute('data-tool-id');
+  document.body.classList.toggle('in-files', page === 'saved' || page === 'files');
   for (const link of navLinks) {
     link.classList.toggle('active', link.dataset.page === page || (page === 'about' && link.dataset.page === 'support') || (page === 'support' && link.dataset.page === 'about'));
   }
@@ -352,6 +354,7 @@ function initAboutShowcase() {
 function teardownTool() {
   toggleToolFullscreen(false);
   document.body.classList.remove('in-tool');
+  document.body.removeAttribute('data-tool-id');
   unmountArtifacts?.();
   unmountArtifacts = null;
   unmountSaved?.();
@@ -426,6 +429,8 @@ async function openTool(id) {
 
   currentPage = 'tool';
   document.body.classList.add('in-tool');
+  document.body.classList.remove('in-files');
+  document.body.setAttribute('data-tool-id', id);
   currentToolObj = tool;
   currentToolId = id;
 
