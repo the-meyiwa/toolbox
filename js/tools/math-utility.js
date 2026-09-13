@@ -428,15 +428,8 @@ export default {
 
         const formulaLen = entry.formula ? entry.formula.length : 0;
         const textLen = (entry.statement || entry.definition || '').length;
-        
-        let tileClass = 'tile-1x1';
-        if (formulaLen > 90 || textLen > 250) {
-          tileClass = 'tile-2x2';
-        } else if (formulaLen > 40) {
-          tileClass = 'tile-2x1';
-        } else if (textLen > 120) {
-          tileClass = 'tile-1x2';
-        }
+        const isWide = (formulaLen > 70 || textLen > 240);
+        const tileClass = isWide ? 'tile-wide' : 'tile-standard';
 
         const renderedFormula = entry.formula ? renderMath(entry.formula, { displayMode: true }) : '';
         const renderedStatement = renderMathInText(entry.statement || entry.definition || '');

@@ -64,7 +64,7 @@ const navSaved = $('nav-saved');
 const spacesView = $('spaces-view');
 const donateView = $('donate-view');
 
-const VIEWS = { home: homeView, tools: toolsView, about: supportView, support: supportView, saved: savedView, files: savedView, spaces: spacesView, donate: donateView, tool: viewport };
+const VIEWS = { home: homeView, tools: toolsView, about: supportView, support: supportView, saved: savedView, files: savedView, spaces: spacesView, donate: supportView, tool: viewport };
 
 const toolModules = import.meta.glob('./tools/*.js');
 
@@ -274,8 +274,16 @@ function showPage(page) {
     link.classList.toggle('active', link.dataset.page === page || (page === 'about' && link.dataset.page === 'support') || (page === 'support' && link.dataset.page === 'about'));
   }
   searchWrapper.style.display = page === 'tools' ? '' : 'none';
-  if (page === 'donate') {
+  if (page === 'donate' || page === 'about' || page === 'support') {
     initFlutterwaveContribution();
+    if (page === 'donate') {
+      setTimeout(() => {
+        const tile2 = document.getElementById('about-tile-2');
+        if (tile2) {
+          tile2.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 50);
+    }
   }
   
   if (page === 'home') {

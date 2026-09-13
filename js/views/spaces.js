@@ -61,8 +61,8 @@ export function renderSpaces(host, rawPath = null) {
         <div class="sp-landing">
           <div class="sp-connecting-card">
             <div class="sp-pulse-ring"></div>
-            <h2 class="sp-landing-title" style="margin-top:16px;">Connecting to Space…</h2>
-            <p class="sp-landing-desc">Establishing peer-to-peer data channels.</p>
+            <h2 class="sp-landing-title" style="margin-top:16px;">Opening Workspace…</h2>
+            <p class="sp-landing-desc">Preparing your workspace data…</p>
             <div class="sp-connecting-hint">Code: <strong>${escapeHtml(engine.roomCode || targetCode || '')}</strong></div>
           </div>
         </div>
@@ -74,6 +74,7 @@ export function renderSpaces(host, rawPath = null) {
 
   /* --------------- Directory / Landing --------------- */
 
+
   function renderDirectory() {
     const joined = listJoinedSpaces();
     const profile = getUserProfile();
@@ -82,52 +83,40 @@ export function renderSpaces(host, rawPath = null) {
       <div class="sp-directory">
         <!-- Hero Header -->
         <header class="sp-dir-hero">
-          <div class="sp-dir-eyebrow">Toolbox Collaboration</div>
-          <h1 class="sp-dir-title">Spaces</h1>
-          <p class="sp-dir-sub">Persistent, real-time shared desks for groups. Local by default, shared by intention.</p>
+          <h1 class="sp-dir-title">Workspaces</h1>
+          <p class="sp-dir-sub">Organize your active tools, files, and ongoing projects in dedicated workspaces.</p>
           <div class="sp-dir-actions">
             <button class="btn btn-primary" data-act="go-create">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              Create a Space
+              Create Workspace
             </button>
             <button class="btn btn-secondary" data-act="go-join">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
-              Join with Code
+              Open with Code
             </button>
           </div>
         </header>
 
-        <!-- Privacy & Security Tag Strip -->
-        <div class="sp-privacy-card">
-          <div class="sp-privacy-pill">
-            <span class="sp-dot-live"></span>
-            <strong>Peer-to-Peer</strong>
-          </div>
-          <div class="sp-privacy-text">
-            Everything in Personal Toolbox remains 100% on your device. Data is only transmitted when you explicitly click <em>"Share to Space"</em>.
-          </div>
-        </div>
-
         ${joined.length ? `
           <div class="sp-section-head" style="margin-top:36px;">
             <div>
-              <h2 class="sp-section-title">Your Spaces</h2>
-              <span class="sp-section-sub">Spaces saved on this browser</span>
+              <h2 class="sp-section-title">Your Workspaces</h2>
+              <span class="sp-section-sub">Workspaces saved on this device</span>
             </div>
-            <span class="sp-badge">${joined.length} Space${joined.length === 1 ? '' : 's'}</span>
+            <span class="sp-badge">${joined.length} Workspace${joined.length === 1 ? '' : 's'}</span>
           </div>
           <div class="sp-spaces-grid">
             ${joined.map(s => `
               <div class="sp-card" data-code="${s.id}">
                 <div class="sp-card-top">
-                  <span class="sp-code-badge" title="Room Code">${s.id}</span>
+                  <span class="sp-code-badge" title="Workspace Code">${s.id}</span>
                   <span class="sp-role-pill is-${s.role}">${s.role}</span>
                 </div>
                 <h3 class="sp-card-name">${escapeHtml(s.name)}</h3>
-                <p class="sp-card-desc">${escapeHtml(s.description || 'Collaborative project desk')}</p>
+                <p class="sp-card-desc">${escapeHtml(s.description || 'Project workspace')}</p>
                 <div class="sp-card-footer">
                   <button class="btn btn-primary btn-sm" data-open-space="${s.id}">
-                    Enter Desk
+                    Open Workspace
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
                   </button>
                   <button class="sp-card-remove-btn" data-remove-space="${s.id}" title="Remove from list">
@@ -142,11 +131,11 @@ export function renderSpaces(host, rawPath = null) {
             <div class="sp-empty-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
             </div>
-            <h3 class="sp-empty-title">No spaces joined yet</h3>
-            <p class="sp-empty-desc">Create a space for your team or study group, or enter a room code from a colleague to get started.</p>
+            <h3 class="sp-empty-title">No workspaces created yet</h3>
+            <p class="sp-empty-desc">Create a workspace to organize your tools and projects, or enter a workspace code to open an existing one.</p>
             <div style="display:flex; gap:10px; margin-top:8px;">
-              <button class="btn btn-primary btn-sm" data-act="go-create">Create Space</button>
-              <button class="btn btn-secondary btn-sm" data-act="go-join">Join with Code</button>
+              <button class="btn btn-primary btn-sm" data-act="go-create">Create Workspace</button>
+              <button class="btn btn-secondary btn-sm" data-act="go-join">Open with Code</button>
             </div>
           </div>
         `}
@@ -165,14 +154,14 @@ export function renderSpaces(host, rawPath = null) {
         <div class="sp-form-card">
           <div class="sp-form-card-head">
             <button class="sp-back-btn" data-act="go-directory">← Back</button>
-            <span class="sp-badge">New Space</span>
+            <span class="sp-badge">New Workspace</span>
           </div>
-          <h2 class="sp-landing-title">Create a Space</h2>
-          <p class="sp-landing-desc">Set up a shared desk for your team, study room, or project.</p>
+          <h2 class="sp-landing-title">Create Workspace</h2>
+          <p class="sp-landing-desc">Set up a workspace for your project, workflow, or notes.</p>
           <form class="sp-create-form" id="form-create">
             <div class="sp-form-group">
-              <label class="sp-form-label">Space Name</label>
-              <input type="text" class="tool-input" id="sp-create-name" placeholder="e.g. Engineering, Biology Lab, Study Group" required autocomplete="off">
+              <label class="sp-form-label">Workspace Name</label>
+              <input type="text" class="tool-input" id="sp-create-name" placeholder="e.g. Engineering, Research, Daily Notes" required autocomplete="off">
             </div>
             <div class="sp-form-group">
               <label class="sp-form-label">Description (Optional)</label>
@@ -180,12 +169,12 @@ export function renderSpaces(host, rawPath = null) {
             </div>
             ${!currentUser ? `
             <div class="sp-form-group">
-              <label class="sp-form-label">Your Display Name</label>
+              <label class="sp-form-label">Your Name</label>
               <input type="text" class="tool-input" id="sp-create-user" value="${escapeHtml(profile.name || '')}" placeholder="e.g. Nifemi, Alex" required autocomplete="off">
             </div>
             ` : ''}
             <div class="sp-form-actions">
-              <button type="submit" class="btn btn-primary">Create Space →</button>
+              <button type="submit" class="btn btn-primary">Create Workspace →</button>
               <button type="button" class="btn btn-secondary" data-act="go-directory">Cancel</button>
             </div>
           </form>
@@ -205,23 +194,23 @@ export function renderSpaces(host, rawPath = null) {
         <div class="sp-form-card">
           <div class="sp-form-card-head">
             <button class="sp-back-btn" data-act="go-directory">← Back</button>
-            <span class="sp-badge">Join</span>
+            <span class="sp-badge">Open</span>
           </div>
-          <h2 class="sp-landing-title">Join a Space</h2>
-          <p class="sp-landing-desc">Enter the 6-character room code shared by your peer.</p>
+          <h2 class="sp-landing-title">Open a Workspace</h2>
+          <p class="sp-landing-desc">Enter the 6-character workspace code to load your workspace.</p>
           <form class="sp-join-form" id="form-join">
             <div class="sp-form-group">
-              <label class="sp-form-label">Room Code</label>
+              <label class="sp-form-label">Workspace Code</label>
               <input type="text" class="tool-input sp-input-code" id="sp-join-code" value="${escapeHtml(targetCode || '')}" required maxlength="6" placeholder="X7K2MP" autocomplete="off" spellcheck="false">
             </div>
             ${!currentUser ? `
             <div class="sp-form-group">
-              <label class="sp-form-label">Your Display Name</label>
+              <label class="sp-form-label">Your Name</label>
               <input type="text" class="tool-input" id="sp-join-user" value="${escapeHtml(profile.name || '')}" placeholder="e.g. Dorcas, Jordan" required autocomplete="off">
             </div>
             ` : ''}
             <div class="sp-form-actions">
-              <button type="submit" class="btn btn-primary">Enter Space →</button>
+              <button type="submit" class="btn btn-primary">Open Workspace →</button>
               <button type="button" class="btn btn-secondary" data-act="go-directory">Cancel</button>
             </div>
           </form>
@@ -230,7 +219,7 @@ export function renderSpaces(host, rawPath = null) {
     `;
   }
 
-  /* --------------- Space Room (Desk) --------------- */
+  /* --------------- Workspace Room --------------- */
 
   function renderRoom() {
     const onlineCount = engine.onlineMembers.size;
@@ -241,13 +230,13 @@ export function renderSpaces(host, rawPath = null) {
         <header class="sp-room-header">
           <div class="sp-room-title-area">
             <div class="sp-title-row">
-              <button class="sp-back-btn" data-act="go-directory" title="Back to Spaces directory">
+              <button class="sp-back-btn" data-act="go-directory" title="Back to Workspaces">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-                Spaces
+                Workspaces
               </button>
               <div class="sp-title-group">
                 <h2 class="sp-room-title">${escapeHtml(engine.spaceName)}</h2>
-                <button class="sp-code-pill" data-act="copy-code" title="Click to copy room code">
+                <button class="sp-code-pill" data-act="copy-code" title="Click to copy workspace code">
                   <span>${engine.roomCode}</span>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                 </button>
@@ -256,21 +245,18 @@ export function renderSpaces(host, rawPath = null) {
             </div>
             <div class="sp-room-sub">
               <span class="sp-online-tag">
-                <span class="sp-dot-live"></span>
-                ${onlineCount} active peer${onlineCount === 1 ? '' : 's'}
+                ${onlineCount} active member${onlineCount === 1 ? '' : 's'}
               </span>
-              <span class="sp-sub-sep">·</span>
-              <span>Encrypted P2P Session</span>
             </div>
           </div>
 
           <div class="sp-room-header-actions">
             <button class="btn btn-secondary btn-sm" data-act="copy-invite">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
-              Share Invite
+              Share Code
             </button>
             <button class="btn btn-secondary btn-sm sp-leave-btn" data-act="leave-room">
-              Leave Desk
+              Close Workspace
             </button>
           </div>
         </header>
@@ -514,8 +500,7 @@ export function renderSpaces(host, rawPath = null) {
       if (titleEl && engine.spaceName) titleEl.textContent = engine.spaceName;
       const tagEl = host.querySelector('.sp-online-tag');
       if (tagEl) {
-        const count = engine.onlineMembers.size;
-        tagEl.innerHTML = `<span class="sp-dot-live"></span> ${count} active peer${count === 1 ? '' : 's'}`;
+        tagEl.innerHTML = `${count} active member${count === 1 ? '' : 's'}`;
       }
     }
   };
