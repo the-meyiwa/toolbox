@@ -1,3 +1,4 @@
+import { tbConfirm, tbPrompt, tbAlert } from '../lib/dialog.js';
 /* ============================================================
    Spaces View — The Shared Desk.
 
@@ -61,8 +62,8 @@ export function renderSpaces(host, rawPath = null) {
         <div class="sp-landing">
           <div class="sp-connecting-card">
             <div class="sp-pulse-ring"></div>
-            <h2 class="sp-landing-title" style="margin-top:16px;">Opening Workspace…</h2>
-            <p class="sp-landing-desc">Preparing your workspace data…</p>
+            <h2 class="sp-landing-title" style="margin-top:16px;">Opening Work Space…</h2>
+            <p class="sp-landing-desc">Preparing your work space data…</p>
             <div class="sp-connecting-hint">Code: <strong>${escapeHtml(engine.roomCode || targetCode || '')}</strong></div>
           </div>
         </div>
@@ -83,12 +84,12 @@ export function renderSpaces(host, rawPath = null) {
       <div class="sp-directory">
         <!-- Hero Header -->
         <header class="sp-dir-hero">
-          <h1 class="sp-dir-title">Workspaces</h1>
-          <p class="sp-dir-sub">Organize your active tools, files, and ongoing projects in dedicated workspaces.</p>
+          <h1 class="sp-dir-title">Work Spaces</h1>
+          <p class="sp-dir-sub">Organize your active tools, files, and ongoing projects in dedicated work spaces.</p>
           <div class="sp-dir-actions">
             <button class="btn btn-primary" data-act="go-create">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              Create Workspace
+              Create Work Space
             </button>
             <button class="btn btn-secondary" data-act="go-join">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
@@ -100,23 +101,23 @@ export function renderSpaces(host, rawPath = null) {
         ${joined.length ? `
           <div class="sp-section-head" style="margin-top:36px;">
             <div>
-              <h2 class="sp-section-title">Your Workspaces</h2>
-              <span class="sp-section-sub">Workspaces saved on this device</span>
+              <h2 class="sp-section-title">Your Work Spaces</h2>
+              <span class="sp-section-sub">Work Spaces saved on this device</span>
             </div>
-            <span class="sp-badge">${joined.length} Workspace${joined.length === 1 ? '' : 's'}</span>
+            <span class="sp-badge">${joined.length} Work Space${joined.length === 1 ? '' : 's'}</span>
           </div>
           <div class="sp-spaces-grid">
             ${joined.map(s => `
               <div class="sp-card" data-code="${s.id}">
                 <div class="sp-card-top">
-                  <span class="sp-code-badge" title="Workspace Code">${s.id}</span>
+                  <span class="sp-code-badge" title="Work Space Code">${s.id}</span>
                   <span class="sp-role-pill is-${s.role}">${s.role}</span>
                 </div>
                 <h3 class="sp-card-name">${escapeHtml(s.name)}</h3>
-                <p class="sp-card-desc">${escapeHtml(s.description || 'Project workspace')}</p>
+                <p class="sp-card-desc">${escapeHtml(s.description || 'Project work space')}</p>
                 <div class="sp-card-footer">
                   <button class="btn btn-primary btn-sm" data-open-space="${s.id}">
-                    Open Workspace
+                    Open Work Space
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
                   </button>
                   <button class="sp-card-remove-btn" data-remove-space="${s.id}" title="Remove from list">
@@ -131,10 +132,10 @@ export function renderSpaces(host, rawPath = null) {
             <div class="sp-empty-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
             </div>
-            <h3 class="sp-empty-title">No workspaces created yet</h3>
-            <p class="sp-empty-desc">Create a workspace to organize your tools and projects, or enter a workspace code to open an existing one.</p>
+            <h3 class="sp-empty-title">No work spaces created yet</h3>
+            <p class="sp-empty-desc">Create a work space to organize your tools and projects, or enter a work space code to open an existing one.</p>
             <div style="display:flex; gap:10px; margin-top:8px;">
-              <button class="btn btn-primary btn-sm" data-act="go-create">Create Workspace</button>
+              <button class="btn btn-primary btn-sm" data-act="go-create">Create Work Space</button>
               <button class="btn btn-secondary btn-sm" data-act="go-join">Open with Code</button>
             </div>
           </div>
@@ -154,13 +155,13 @@ export function renderSpaces(host, rawPath = null) {
         <div class="sp-form-card">
           <div class="sp-form-card-head">
             <button class="sp-back-btn" data-act="go-directory">← Back</button>
-            <span class="sp-badge">New Workspace</span>
+            <span class="sp-badge">New Work Space</span>
           </div>
-          <h2 class="sp-landing-title">Create Workspace</h2>
-          <p class="sp-landing-desc">Set up a workspace for your project, workflow, or notes.</p>
+          <h2 class="sp-landing-title">Create Work Space</h2>
+          <p class="sp-landing-desc">Set up a work space for your project, workflow, or notes.</p>
           <form class="sp-create-form" id="form-create">
             <div class="sp-form-group">
-              <label class="sp-form-label">Workspace Name</label>
+              <label class="sp-form-label">Work Space Name</label>
               <input type="text" class="tool-input" id="sp-create-name" placeholder="e.g. Engineering, Research, Daily Notes" required autocomplete="off">
             </div>
             <div class="sp-form-group">
@@ -174,7 +175,7 @@ export function renderSpaces(host, rawPath = null) {
             </div>
             ` : ''}
             <div class="sp-form-actions">
-              <button type="submit" class="btn btn-primary">Create Workspace →</button>
+              <button type="submit" class="btn btn-primary">Create Work Space →</button>
               <button type="button" class="btn btn-secondary" data-act="go-directory">Cancel</button>
             </div>
           </form>
@@ -196,11 +197,11 @@ export function renderSpaces(host, rawPath = null) {
             <button class="sp-back-btn" data-act="go-directory">← Back</button>
             <span class="sp-badge">Open</span>
           </div>
-          <h2 class="sp-landing-title">Open a Workspace</h2>
-          <p class="sp-landing-desc">Enter the 6-character workspace code to load your workspace.</p>
+          <h2 class="sp-landing-title">Open a Work Space</h2>
+          <p class="sp-landing-desc">Enter the 6-character work space code to load your work space.</p>
           <form class="sp-join-form" id="form-join">
             <div class="sp-form-group">
-              <label class="sp-form-label">Workspace Code</label>
+              <label class="sp-form-label">Work Space Code</label>
               <input type="text" class="tool-input sp-input-code" id="sp-join-code" value="${escapeHtml(targetCode || '')}" required maxlength="6" placeholder="X7K2MP" autocomplete="off" spellcheck="false">
             </div>
             ${!currentUser ? `
@@ -210,7 +211,7 @@ export function renderSpaces(host, rawPath = null) {
             </div>
             ` : ''}
             <div class="sp-form-actions">
-              <button type="submit" class="btn btn-primary">Open Workspace →</button>
+              <button type="submit" class="btn btn-primary">Open Work Space →</button>
               <button type="button" class="btn btn-secondary" data-act="go-directory">Cancel</button>
             </div>
           </form>
@@ -230,13 +231,13 @@ export function renderSpaces(host, rawPath = null) {
         <header class="sp-room-header">
           <div class="sp-room-title-area">
             <div class="sp-title-row">
-              <button class="sp-back-btn" data-act="go-directory" title="Back to Workspaces">
+              <button class="sp-back-btn" data-act="go-directory" title="Back to Work Spaces">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-                Workspaces
+                Work Spaces
               </button>
               <div class="sp-title-group">
                 <h2 class="sp-room-title">${escapeHtml(engine.spaceName)}</h2>
-                <button class="sp-code-pill" data-act="copy-code" title="Click to copy workspace code">
+                <button class="sp-code-pill" data-act="copy-code" title="Click to copy work space code">
                   <span>${engine.roomCode}</span>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                 </button>
@@ -256,7 +257,7 @@ export function renderSpaces(host, rawPath = null) {
               Share Code
             </button>
             <button class="btn btn-secondary btn-sm sp-leave-btn" data-act="leave-room">
-              Close Workspace
+              Close Work Space
             </button>
           </div>
         </header>
@@ -410,7 +411,7 @@ export function renderSpaces(host, rawPath = null) {
     const removeSpaceBtn = e.target.closest('[data-remove-space]');
     if (removeSpaceBtn) {
       const code = removeSpaceBtn.dataset.removeSpace;
-      if (confirm(`Remove ${code} from your saved spaces list?`)) {
+      if (await tbConfirm(`Remove ${code} from your saved work spaces list?`, { title: 'Remove Work Space', destructive: true })) {
         removeJoinedSpace(code);
         renderDirectory();
       }

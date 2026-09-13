@@ -1,3 +1,6 @@
+import { openContextMenu, closeContextMenu } from '../lib/context-menu.js';
+import { tbConfirm, tbPrompt, tbAlert } from '../lib/dialog.js';
+
 /* ============================================================
    TOOLBOX — Notes
    Full offline notes application with folder organization, rich formatting,
@@ -5,12 +8,19 @@
    search, pinned notes, and multi-format export.
    ============================================================ */
 
+
+function extractHashtags(text) {
+  const matches = (text || '').match(/#[a-zA-Z0-9_\-]+/g) || [];
+  return [...new Set(matches.map(t => t.toLowerCase()))];
+}
+
 export default {
   render(container) {
     const STORAGE_KEY = 'toolbox_notes_v1';
     let notes = loadNotes();
     let activeNoteId = notes.length ? notes[0].id : null;
     let activeFolder = 'all';
+    let activeHashtag = null;
     let activePaper = 'blank';
 
     container.innerHTML = `
@@ -38,6 +48,10 @@ export default {
             </div>
           </div>
 
+          <div style="margin-top:16px;">
+            <div style="font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px;">Hashtags</div>
+            <div id="notes-tags-sidebar" style="display:flex; flex-wrap:wrap; gap:4px; max-height:120px; overflow-y:auto;"></div>
+          </div>
           <div style="margin-top:12px;">
             <button type="button" class="btn btn-secondary btn-sm" id="notes-new-folder" style="width:100%;">+ New Folder</button>
           </div>
@@ -85,6 +99,7 @@ export default {
           <div id="notes-editor-container" class="notes-paper-blank" style="flex:1; overflow-y:auto; min-height:0; padding:24px 32px; display:flex; flex-direction:column; gap:12px;">
             <input type="text" id="note-title-input" placeholder="Title" style="font-size:1.5rem; font-weight:700; border:none; outline:none; background:transparent; width:100%; color:var(--text);">
             <div id="note-meta-line" style="font-size:0.75rem; color:var(--text-muted); font-family:var(--mono);"></div>
+            <div id="note-hashtags-bar" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-height:24px;"></div>
             <div id="note-body-editor" contenteditable="true" style="flex:1; outline:none; font-size:0.95rem; line-height:1.7; min-height:200px; color:var(--text); white-space:pre-wrap;"></div>
           </div>
 
@@ -127,6 +142,7 @@ export default {
           body: 'This is a clean, 100% offline note space with checklist support, pinned notes, paper textures, and folder organization.\n\n[x] Completed checklist task\n[ ] Tap to complete task\n[ ] Switch paper background to Ruled or Grid\n\nAll notes are automatically saved to local storage.',
           folder: 'quick',
           pinned: true,
+          hashtags: ['#offline', '#welcome'],
           updatedAt: Date.now()
         }
       ];
@@ -144,11 +160,13 @@ export default {
     }
 
     function renderNoteList() {
+      renderTagsSidebar();
       const q = searchInput.value.toLowerCase().trim();
       let filtered = notes.filter(n => {
         const matchesFolder = activeFolder === 'all' || n.folder === activeFolder;
-        const matchesQuery = !q || n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q);
-        return matchesFolder && matchesQuery;
+        const matchesTag = !activeHashtag || (n.hashtags && n.hashtags.includes(activeHashtag));
+        const matchesQuery = !q || n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q) || (n.hashtags && n.hashtags.some(t => t.toLowerCase().includes(q)));
+        return matchesFolder && matchesTag && matchesQuery;
       });
 
       // Sort: pinned first, then newest updated
@@ -168,8 +186,15 @@ export default {
           <div style="font-size:0.75rem; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:4px;">
             ${(note.body || 'No additional text').replace(/<[^>]*>?/gm, '').slice(0, 60)}
           </div>
-          <div style="font-size:0.68rem; color:var(--text-muted); font-family:var(--mono);">
-            ${new Date(note.updatedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
+            <div style="font-size:0.68rem; color:var(--text-muted); font-family:var(--mono);">
+              ${new Date(note.updatedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+            </div>
+            ${(note.hashtags && note.hashtags.length) ? `
+              <div style="display:flex; gap:3px; overflow:hidden;">
+                ${note.hashtags.slice(0, 2).map(t => `<span class="note-pill-tag">${escapeHtml(t)}</span>`).join('')}
+              </div>
+            ` : ''}
           </div>
         </div>
       `).join('');
@@ -180,6 +205,80 @@ export default {
           renderActiveNote();
           renderNoteList();
         });
+      });
+    }
+
+    
+    function renderTagsSidebar() {
+      const sidebarTagsEl = container.querySelector('#notes-tags-sidebar');
+      if (!sidebarTagsEl) return;
+      const allTags = new Set();
+      notes.forEach(n => {
+        (n.hashtags || []).forEach(t => allTags.add(t));
+      });
+
+      if (!allTags.size) {
+        sidebarTagsEl.innerHTML = '<span style="font-size:0.72rem; color:var(--text-muted);">No tags yet</span>';
+        return;
+      }
+
+      sidebarTagsEl.innerHTML = Array.from(allTags).map(t => `
+        <button type="button" class="note-sidebar-tag ${activeHashtag === t ? 'active' : ''}" data-tag="${escapeHtml(t)}">
+          ${escapeHtml(t)}
+        </button>
+      `).join('');
+
+      sidebarTagsEl.querySelectorAll('.note-sidebar-tag').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tag = btn.dataset.tag;
+          activeHashtag = activeHashtag === tag ? null : tag;
+          renderNoteList();
+        });
+      });
+    }
+
+    function renderEditorHashtags() {
+      const bar = container.querySelector('#note-hashtags-bar');
+      if (!bar) return;
+      const note = getActiveNote();
+      if (!note) {
+        bar.innerHTML = '';
+        return;
+      }
+      note.hashtags = note.hashtags || [];
+      bar.innerHTML = `
+        ${note.hashtags.map(t => `
+          <span class="note-editor-tag">
+            <span>${escapeHtml(t)}</span>
+            <button type="button" class="note-editor-tag-del" data-remove-tag="${escapeHtml(t)}" title="Remove tag">&times;</button>
+          </span>
+        `).join('')}
+        <button type="button" class="note-editor-add-tag-btn" id="note-add-tag-btn" title="Add Hashtag">+ Tag</button>
+      `;
+
+      bar.querySelectorAll('[data-remove-tag]').forEach(delBtn => {
+        delBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const targetTag = delBtn.dataset.removeTag;
+          note.hashtags = note.hashtags.filter(t => t !== targetTag);
+          saveNotes();
+          renderEditorHashtags();
+          renderNoteList();
+        });
+      });
+
+      bar.querySelector('#note-add-tag-btn')?.addEventListener('click', async () => {
+        const rawTag = await tbPrompt('Enter hashtag (e.g. #project, #finance):', '#', { title: 'Add Hashtag' });
+        if (!rawTag) return;
+        let formatted = rawTag.trim().toLowerCase();
+        if (!formatted.startsWith('#')) formatted = '#' + formatted;
+        formatted = formatted.replace(/[^a-z0-9_\-#]/g, '');
+        if (formatted.length > 1 && !note.hashtags.includes(formatted)) {
+          note.hashtags.push(formatted);
+          saveNotes();
+          renderEditorHashtags();
+          renderNoteList();
+        }
       });
     }
 
@@ -197,6 +296,7 @@ export default {
       metaLine.textContent = `Last modified: ${new Date(note.updatedAt).toLocaleString()}`;
       pinBtn.textContent = note.pinned ? 'Unpin' : 'Pin';
       updateCounts();
+      renderEditorHashtags();
     }
 
     function formatBodyForDisplay(body) {
@@ -218,6 +318,8 @@ export default {
       const note = getActiveNote();
       if (note) {
         note.title = titleInput.value;
+        const autoTags = extractHashtags(note.title + ' ' + (note.body || ''));
+        autoTags.forEach(t => { if (!note.hashtags.includes(t)) note.hashtags.push(t); });
         note.updatedAt = Date.now();
         saveNotes();
         renderNoteList();
@@ -228,6 +330,8 @@ export default {
       const note = getActiveNote();
       if (note) {
         note.body = bodyEditor.innerText;
+        const autoTags = extractHashtags(note.title + ' ' + (note.body || ''));
+        autoTags.forEach(t => { if (!note.hashtags.includes(t)) note.hashtags.push(t); });
         note.updatedAt = Date.now();
         saveNotes();
         renderNoteList();
@@ -273,8 +377,8 @@ export default {
       }
     });
 
-    deleteBtn.addEventListener('click', () => {
-      if (!confirm('Are you sure you want to delete this note?')) return;
+    deleteBtn.addEventListener('click', async () => {
+      if (!await tbConfirm('Are you sure you want to delete this note?', { title: 'Delete Note', destructive: true })) return;
       notes = notes.filter(n => n.id !== activeNoteId);
       activeNoteId = notes.length ? notes[0].id : null;
       saveNotes();
@@ -319,6 +423,148 @@ export default {
       URL.revokeObjectURL(a.href);
     });
 
+    
+    // Context Menu Integration for Notes
+    cardsListEl.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      const cardEl = e.target.closest('.note-card-item');
+      if (cardEl) {
+        const noteId = cardEl.dataset.id;
+        const targetNote = notes.find(n => n.id === noteId);
+        if (!targetNote) return;
+
+        openContextMenu({
+          x: e.clientX,
+          y: e.clientY,
+          title: targetNote.title || 'Note',
+          items: [
+            {
+              label: 'Open Note',
+              icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/></svg>',
+              action: () => {
+                activeNoteId = targetNote.id;
+                renderActiveNote();
+                renderNoteList();
+              }
+            },
+            {
+              label: targetNote.pinned ? 'Unpin Note' : 'Pin to Top',
+              icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-2l-3-3V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v7l-3 3v2z"></path></svg>',
+              shortcut: targetNote.pinned ? 'Pinned' : '',
+              action: () => {
+                targetNote.pinned = !targetNote.pinned;
+                saveNotes();
+                renderActiveNote();
+                renderNoteList();
+              }
+            },
+            {
+              label: 'Duplicate Note',
+              icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>',
+              action: () => {
+                const dup = {
+                  ...JSON.parse(JSON.stringify(targetNote)),
+                  id: 'note-' + Date.now(),
+                  title: targetNote.title + ' (Copy)',
+                  updatedAt: Date.now()
+                };
+                notes.unshift(dup);
+                activeNoteId = dup.id;
+                saveNotes();
+                renderActiveNote();
+                renderNoteList();
+              }
+            },
+            {
+              label: 'Add Hashtag…',
+              icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="9" x2="20" y2="9"></line><line x1="4" y1="15" x2="20" y2="15"></line><line x1="10" y1="3" x2="8" y2="21"></line><line x1="16" y1="3" x2="14" y2="21"></line></svg>',
+              action: async () => {
+                const raw = await tbPrompt('Enter hashtag for this note:', '#', { title: 'Add Hashtag' });
+                if (!raw) return;
+                let formatted = raw.trim().toLowerCase();
+                if (!formatted.startsWith('#')) formatted = '#' + formatted;
+                formatted = formatted.replace(/[^a-z0-9_\-#]/g, '');
+                targetNote.hashtags = targetNote.hashtags || [];
+                if (formatted.length > 1 && !targetNote.hashtags.includes(formatted)) {
+                  targetNote.hashtags.push(formatted);
+                  saveNotes();
+                  renderActiveNote();
+                  renderNoteList();
+                }
+              }
+            },
+            {
+              label: 'Export as Markdown',
+              icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+              action: () => {
+                const content = `# ${targetNote.title}\n\n${targetNote.body}`;
+                const blob = new Blob([content], { type: 'text/markdown' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `${targetNote.title || 'note'}.md`;
+                a.click();
+                URL.revokeObjectURL(a.href);
+              }
+            },
+            { separator: true },
+            {
+              label: 'Delete Note',
+              destructive: true,
+              icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+              action: async () => {
+                if (!await tbConfirm('Permanently delete "' + (targetNote.title || 'Note') + '"?', { title: 'Delete Note', destructive: true })) return;
+                notes = notes.filter(n => n.id !== targetNote.id);
+                if (activeNoteId === targetNote.id) {
+                  activeNoteId = notes.length ? notes[0].id : null;
+                }
+                saveNotes();
+                renderActiveNote();
+                renderNoteList();
+              }
+            }
+          ]
+        });
+      } else {
+        // Right clicked blank area
+        openContextMenu({
+          x: e.clientX,
+          y: e.clientY,
+          title: 'Notes',
+          items: [
+            {
+              label: 'New Note',
+              icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
+              action: () => addBtn.click()
+            }
+          ]
+        });
+      }
+    });
+
+    // New folder prompt
+    container.querySelector('#notes-new-folder')?.addEventListener('click', async () => {
+      const name = await tbPrompt('Enter folder name:', '', { title: 'New Folder' });
+      if (name && name.trim()) {
+        const folderKey = name.trim().toLowerCase().replace(/[^a-z0-9]/g, '-');
+        const folderList = container.querySelector('.notes-folder-list');
+        if (folderList) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'notes-folder-btn';
+          btn.dataset.folder = folderKey;
+          btn.textContent = name.trim();
+          btn.addEventListener('click', () => {
+            container.querySelectorAll('.notes-folder-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeFolder = folderKey;
+            renderNoteList();
+          });
+          folderList.appendChild(btn);
+          btn.click();
+        }
+      }
+    });
+
     renderNoteList();
     renderActiveNote();
   }
@@ -329,6 +575,74 @@ function injectNotesCSS() {
   const style = document.createElement('style');
   style.id = 'notes-injected-styles';
   style.textContent = `
+    .note-pill-tag {
+      font-size: 0.65rem;
+      padding: 1px 6px;
+      border-radius: 9999px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-family: var(--mono);
+    }
+    .note-sidebar-tag {
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.12s ease;
+      font-family: var(--mono);
+    }
+    .note-sidebar-tag:hover {
+      background: var(--bg-hover);
+      color: var(--text);
+    }
+    .note-sidebar-tag.active {
+      background: var(--black);
+      color: var(--white);
+      border-color: var(--black);
+    }
+    .note-editor-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--mono);
+    }
+    .note-editor-tag-del {
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.85rem;
+      line-height: 1;
+      padding: 0;
+    }
+    .note-editor-tag-del:hover {
+      color: #ef4444;
+    }
+    .note-editor-add-tag-btn {
+      border: 1px dashed var(--border);
+      background: none;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      border-radius: 9999px;
+      padding: 2px 8px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .note-editor-add-tag-btn:hover {
+      border-color: var(--text);
+      color: var(--text);
+    }
+
     .notes-app-wrapper {
       background: var(--bg-card) !important;
       border: 1px solid var(--border) !important;
@@ -454,4 +768,13 @@ function injectNotesCSS() {
     }
   `;
   document.head.appendChild(style);
+}
+
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }

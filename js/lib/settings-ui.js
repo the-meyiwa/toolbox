@@ -1,3 +1,4 @@
+import { tbAlert, tbConfirm, tbPrompt } from './dialog.js';
 /* ============================================================
    TOOLBOX — Unified Settings Menu
    Authoritative source of truth for:
@@ -94,7 +95,17 @@ function createModal() {
       </div>
 
       <!-- View 1: Main Settings Scrollable Body -->
-      <div class="settings-modal-body" id="settings-modal-scroll" style="flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 32px;">
+      <div class="settings-modal-body" id="settings-modal-scroll" style="flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 28px;">
+        
+        <!-- SEARCH PREFERENCES BAR -->
+        <div class="settings-search-container" style="margin-bottom: -4px;">
+          <div style="position: relative; width: 100%;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;">
+              <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>
+            </svg>
+            <input type="text" id="settings-search-input" class="tool-input" placeholder="Search preferences..." autocomplete="off" spellcheck="false" style="width: 100%; padding: 10px 14px 10px 38px; border-radius: 12px; font-size: 0.88rem; background: var(--bg-subtle); border: 1px solid var(--border); outline: none; box-sizing: border-box;">
+          </div>
+        </div>
         
         <!-- SECTION 1: PROFILE & IDENTITY -->
         <section class="settings-section" id="sec-profile">
@@ -149,6 +160,24 @@ function createModal() {
   document.body.appendChild(modalEl);
 
   // Header button triggers
+  
+  // Search bar live filtering
+  const searchInput = modalEl.querySelector('#settings-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.toLowerCase().trim();
+      const sections = modalEl.querySelectorAll('.settings-section');
+      sections.forEach(sec => {
+        if (!q) {
+          sec.style.display = '';
+          return;
+        }
+        const text = sec.innerText.toLowerCase();
+        sec.style.display = text.includes(q) ? '' : 'none';
+      });
+    });
+  }
+
   modalEl.querySelector('#close-settings').addEventListener('click', closeSettings);
   modalEl.querySelector('#settings-back-btn')?.addEventListener('click', showMainView);
   modalEl.addEventListener('click', (e) => {
@@ -645,7 +674,7 @@ function renderAiSettings() {
       QuotaManager.resetQuotas();
       renderAiSettings();
     } catch (err) {
-      alert(err.message);
+      tbAlert(err.message, 'Settings Error');
     }
   });
 }
@@ -738,6 +767,17 @@ export function openSettings(targetSection = null) {
     showMainView();
   }
 
+  // Clear search input on fresh open
+  const searchInput = modalEl.querySelector('#settings-search-input');
+  if (searchInput) {
+    searchInput.value = '';
+    modalEl.querySelectorAll('.settings-section').forEach(s => s.style.display = '');
+  }
+
+  // Always reset scroll to top
+  const mainScroll = modalEl.querySelector('#settings-modal-scroll');
+  if (mainScroll) mainScroll.scrollTop = 0;
+
   modalEl.style.display = 'flex';
   requestAnimationFrame(() => {
     modalEl.classList.add('is-open');
@@ -747,6 +787,8 @@ export function openSettings(targetSection = null) {
       if (sectionEl) {
         sectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
+    } else if (mainScroll) {
+      mainScroll.scrollTop = 0;
     }
   });
   isOpen = true;

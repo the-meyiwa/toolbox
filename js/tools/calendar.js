@@ -1,3 +1,4 @@
+import { tbConfirm, tbPrompt, tbAlert } from '../lib/dialog.js';
 /* ============================================================
    TOOLBOX — Calendar Tool
    Full offline interactive calendar with month, week, day, and agenda views,
@@ -654,9 +655,9 @@ export default {
       renderCurrentView();
     });
 
-    modalDeleteBtn.addEventListener('click', () => {
+    modalDeleteBtn.addEventListener('click', async () => {
       const id = eventIdInput.value;
-      if (id && confirm('Are you sure you want to delete this event?')) {
+      if (id && await tbConfirm('Are you sure you want to delete this event?', { title: 'Delete Event', destructive: true })) {
         deleteEvent(id);
         closeModal();
         renderCurrentView();
@@ -745,7 +746,7 @@ export default {
       const reader = new FileReader();
       reader.onload = () => {
         const imported = importFromICS(reader.result);
-        alert(`Successfully imported ${imported.length} event(s)!`);
+        tbAlert(`Successfully imported ${imported.length} event(s)!`);
         renderCurrentView();
       };
       reader.readAsText(file);

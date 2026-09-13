@@ -1,3 +1,4 @@
+import { tbAlert } from '../lib/dialog.js';
 /* ============================================================
    AI Text Watermark Remover — Multi-Scale PatchMatch Inpainter.
 
@@ -159,7 +160,7 @@ export default {
         initCanvases(decoded);
       } catch (err) {
         console.error('[Watermark Remover Decode Error]', err);
-        alert('Could not decode this image format: ' + err.message);
+        tbAlert('Could not decode this image format: ' + err.message);
       }
     }
 
@@ -698,7 +699,7 @@ export default {
         });
       } catch (err) {
         console.error('[Watermark Reconstruction Error]', err);
-        alert(err.message || 'Image reconstruction failed. The original image has not been changed.');
+        tbAlert(err.message || 'Image reconstruction failed. The original image has not been changed.');
         applyBtn.disabled = false;
         applyBtn.textContent = 'Remove Watermark';
         return;

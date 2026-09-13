@@ -1,3 +1,4 @@
+import { tbAlert } from '../lib/dialog.js';
 /* ============================================================
    Case Comparator — Comparative Precedent & Ruling Analysis.
 
@@ -119,7 +120,7 @@ export default {
         }
       } catch (err) {
         console.error('[Case Comparator PDF Error]', err);
-        alert('Could not read PDF: ' + err.message);
+        tbAlert('Could not read PDF: ' + err.message);
       } finally {
         cmpBtn.disabled = false;
         cmpBtn.textContent = origText;
@@ -181,7 +182,7 @@ export default {
       const bRaw = textB.value.trim();
 
       if (!aRaw || !bRaw) {
-        alert('Please provide text or documents for both Case A and Case B.');
+        tbAlert('Please provide text or documents for both Case A and Case B.');
         return;
       }
 

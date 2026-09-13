@@ -31,6 +31,13 @@ export const THEMES = [
     category: 'standard',
     preview: { bg: '#242424', card: '#2c2c2c', text: '#f7f7f7', accent: '#e95420' },
     description: 'Authentic Yaru dark desktop with warm aubergine and vibrant orange.'
+  },
+  {
+    id: 'yosemite',
+    name: 'Yosemite',
+    category: 'standard',
+    preview: { bg: '#e8ecf2', card: '#ffffff', text: '#1d1d1f', accent: '#007aff' },
+    description: 'Translucent glass surfaces, subtle blur, and Apple system blue.'
   }
 ];
 

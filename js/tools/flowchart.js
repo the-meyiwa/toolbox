@@ -1,3 +1,4 @@
+import { tbConfirm, tbPrompt, tbAlert } from '../lib/dialog.js';
 /* Flowchart — draw the logic, get the code.
 
    Blocks nest rather than float, which is what makes the generated code
@@ -358,8 +359,8 @@ export default {
       commit();
     });
 
-    $('fl-import-code')?.addEventListener('click', () => {
-      const code = prompt('Paste your Python, JavaScript, or Pseudocode:');
+    $('fl-import-code')?.addEventListener('click', async () => {
+      const code = await tbPrompt('Paste your Python, JavaScript, or Pseudocode:', '', { title: 'Import Code' });
       if (!code || !code.trim()) return;
       const parsed = parseCodeToNodes(code);
       if (parsed.length > 0) {
@@ -370,7 +371,7 @@ export default {
         container.querySelector('.flw-editor')?.remove();
         commit();
       } else {
-        alert('Could not parse statements from provided code. Please check formatting.');
+        tbAlert('Could not parse statements from provided code. Please check formatting.', 'Parse Error');
       }
     });
 

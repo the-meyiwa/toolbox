@@ -1,3 +1,5 @@
+import { tbConfirm, tbPrompt, tbAlert } from '../lib/dialog.js';
+import { openContextMenu as showFinderMenu, closeContextMenu } from '../lib/context-menu.js';
 /* ============================================================
    TOOLBOX — Files & Saved Work (Browser File Explorer)
    Lightweight, hierarchical browser-based file explorer with
@@ -388,14 +390,13 @@ function full(user, allItems, filteredItems, selected) {
         </div>
       </div>
 
-      <!-- TAGS FILTER BAR -->
-      <div class="sv-tags-bar" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:8px 14px; background:var(--bg-card); border:1px solid var(--border); border-radius:10px;">
-        <span style="font-size:0.74rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em; margin-right:4px;">Tags:</span>
-        <button type="button" class="sv-tag-pill ${!currentTagFilter ? 'active' : ''}" data-filter-tag="all">All</button>
+      <!-- TAGS FILTER BAR (COLOR-ONLY INDICATORS) -->
+      <div class="sv-tags-bar">
+        <span class="sv-tags-label">Tags:</span>
+        <button type="button" class="sv-tag-pill sv-tag-all ${!currentTagFilter ? 'active' : ''}" data-filter-tag="all" title="Show all files" aria-label="Show all files">All</button>
         ${Object.entries(TAG_COLORS).map(([tagKey, color]) => `
-          <button type="button" class="sv-tag-pill ${currentTagFilter === tagKey ? 'active' : ''}" data-filter-tag="${tagKey}">
-            <span style="width:8px; height:8px; border-radius:50%; background:${color}; display:inline-block;"></span>
-            <span style="text-transform:capitalize;">${tagKey}</span>
+          <button type="button" class="sv-tag-chip ${currentTagFilter === tagKey ? 'active' : ''}" data-filter-tag="${tagKey}" title="Filter by ${tagKey}" aria-label="${tagKey} tag">
+            <span class="sv-tag-chip-dot" style="background:${color};"></span>
           </button>
         `).join('')}
       </div>
@@ -502,9 +503,9 @@ function renderExplorerBody(items, selected) {
 
   // Default: Split Master/Detail View
   return `
-    <div class="sv-split-view" data-canvas="true" style="display:grid; grid-template-columns:360px 1fr; gap:16px; min-height:560px; align-items:start;">
+    <div class="sv-split-view" data-canvas="true" style="display:grid; grid-template-columns:360px 1fr; gap:16px; height:calc(100vh - 210px); min-height:600px; align-items:stretch;">
       <!-- Master: Files List -->
-      <div class="sv-split-master" data-canvas="true" style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; overflow:hidden; max-height:680px; overflow-y:auto; display:flex; flex-direction:column;">
+      <div class="sv-split-master" data-canvas="true" style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; overflow:hidden; height:100%; overflow-y:auto; display:flex; flex-direction:column;">
         <div style="padding:10px 14px; background:var(--bg-subtle); border-bottom:1px solid var(--border); font-size:0.75rem; font-weight:700; color:var(--text-secondary);">
           ITEMS IN ${escapeHtml(currentPath.toUpperCase())} (${items.length})
         </div>
@@ -514,7 +515,7 @@ function renderExplorerBody(items, selected) {
       </div>
 
       <!-- Detail: File Inspector / Content Preview Pane -->
-      <div class="sv-detail-pane" style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; overflow:hidden; min-height:560px; display:flex; flex-direction:column;">
+      <div class="sv-detail-pane" style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; overflow:hidden; height:100%; display:flex; flex-direction:column;">
         ${selectedPaths.size > 1 ? `
           <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; padding:40px 20px; text-align:center; gap:14px;">
             <div style="color:var(--text); width:48px; height:48px; border-radius:12px; background:var(--bg-subtle); display:flex; align-items:center; justify-content:center;">
@@ -734,7 +735,16 @@ function renderDetailPane(selected) {
 
         <!-- Content View Switcher & Action Buttons -->
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          ${!isImage ? `
+          ${isHtml ? `
+            <div class="sv-content-view-switcher" style="display:flex; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:2px;">
+              <button type="button" class="sv-cview-btn ${currentContentView !== 'raw' ? 'active' : ''}" data-cview="browser" title="Browser View" aria-label="Browser View" style="padding:4px 8px; border:none; background:none; cursor:pointer; font-size:0.75rem; border-radius:5px; color:var(--text); display:inline-flex; align-items:center; justify-content:center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"></path></svg>
+              </button>
+              <button type="button" class="sv-cview-btn ${currentContentView === 'raw' ? 'active' : ''}" data-cview="raw" title="HTML Source Code" aria-label="HTML Source Code" style="padding:4px 8px; border:none; background:none; cursor:pointer; font-size:0.75rem; border-radius:5px; color:var(--text); display:inline-flex; align-items:center; justify-content:center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+              </button>
+            </div>
+          ` : (!isImage ? `
             <div class="sv-content-view-switcher" style="display:flex; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:2px;">
               <button type="button" class="sv-cview-btn ${currentContentView === 'formatted' ? 'active' : ''}" data-cview="formatted" title="Formatted Render" style="padding:3px 7px; border:none; background:none; cursor:pointer; font-size:0.75rem; border-radius:5px; color:var(--text);">
                 Formatted
@@ -748,7 +758,7 @@ function renderDetailPane(selected) {
                 Raw
               </button>
             </div>
-          ` : ''}
+          ` : '')}
 
           <!-- Quick Look Preview Button -->
           <button type="button" class="btn btn-secondary btn-sm" data-act="quicklook" title="Quick Look preview (Space)" style="font-size:0.75rem; padding:4px 9px; display:inline-flex; align-items:center; gap:4px;">
@@ -792,7 +802,7 @@ function renderDetailPane(selected) {
       </div>
 
       <!-- Preview Body -->
-      <div class="sv-preview" style="flex:1; overflow:auto; padding:18px;">
+      <div class="sv-preview" style="flex:1; height:100%; overflow:auto; padding:18px;">
         ${renderContentBody(selected)}
       </div>
     </div>
@@ -814,19 +824,32 @@ function renderContentBody(file) {
     return renderCsvTable(text);
   }
 
+  if (/\.(html|htm)$/i.test(file.name)) {
+    if (currentContentView === 'raw') {
+      return `
+        <pre style="margin:0; font-family:var(--mono); font-size:0.82rem; line-height:1.5; color:var(--text); white-space:pre-wrap; word-break:break-all; min-height:100%; box-sizing:border-box;">${escapeHtml(text)}</pre>
+      `;
+    }
+    return `
+      <div style="width:100%; height:100%; min-height:500px; display:flex; flex-direction:column; background:#ffffff; border-radius:8px; overflow:hidden; border:1px solid var(--border);">
+        <iframe srcdoc="${escapeHtml(text)}" sandbox="allow-scripts allow-same-origin" style="width:100%; height:100%; flex:1; min-height:500px; border:none; background:#ffffff;"></iframe>
+      </div>
+    `;
+  }
+
   if (currentContentView === 'raw') {
     return `
-      <pre style="margin:0; font-family:var(--mono); font-size:0.82rem; line-height:1.5; color:var(--text); white-space:pre-wrap; word-break:break-all;">${escapeHtml(text)}</pre>
+      <pre style="margin:0; font-family:var(--mono); font-size:0.82rem; line-height:1.5; color:var(--text); white-space:pre-wrap; word-break:break-all; min-height:100%; box-sizing:border-box;">${escapeHtml(text)}</pre>
     `;
   }
 
   // Formatted view
   if (file.name.endsWith('.md') || file.kind === 'markdown') {
-    return `<div class="sv-md" style="font-size:0.88rem; line-height:1.6; color:var(--text);">${renderMarkdown(text)}</div>`;
+    return `<div class="sv-md" style="font-size:0.88rem; line-height:1.6; color:var(--text); min-height:100%;">${renderMarkdown(text)}</div>`;
   }
 
   return `
-    <pre style="margin:0; font-family:var(--mono); font-size:0.82rem; line-height:1.5; color:var(--text); white-space:pre-wrap; word-break:break-all;">${escapeHtml(text)}</pre>
+    <pre style="margin:0; font-family:var(--mono); font-size:0.82rem; line-height:1.5; color:var(--text); white-space:pre-wrap; word-break:break-all; min-height:100%; box-sizing:border-box;">${escapeHtml(text)}</pre>
   `;
 }
 
@@ -1012,7 +1035,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
     const msg = count === 1
       ? `Are you sure you want to permanently delete "${getBaseName(paths[0])}"?`
       : `Are you sure you want to permanently delete ${count} selected items?`;
-    if (confirm(msg)) {
+    if (await tbConfirm(msg, { destructive: true })) {
       let deletedCount = 0;
       for (const p of paths) {
         try {
@@ -1468,7 +1491,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
       } else if (act === 'properties') {
         openDirectoryProperties(currentPath);
       } else if (act === 'new-folder') {
-        const name = prompt('Folder Name:');
+        const name = await tbPrompt('Enter Folder Name:', '', { title: 'New Folder' });
         if (name && name.trim()) {
           const clean = name.trim().replace(/[/\\?%*:|"<>]/g, '-');
           const target = normalizePath(`${currentPath}/${clean}`);
@@ -1481,7 +1504,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
           }
         }
       } else if (act === 'new-file') {
-        const name = prompt('File Name (with extension, e.g. document.txt):');
+        const name = await tbPrompt('Enter File Name (with extension, e.g. document.txt):', '', { title: 'New File' });
         if (name && name.trim()) {
           const clean = name.trim().replace(/[/\\?%*:|"<>]/g, '-');
           const target = normalizePath(`${currentPath}/${clean}`);
@@ -1733,7 +1756,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
         else if (isDir) openDirectoryProperties(targetPath);
         else openQuickLook(targetPath);
       } else if (act === 'rename') {
-        const nextName = prompt('New name:', baseName);
+        const nextName = await tbPrompt('Enter new name:', baseName, { title: 'Rename Item' });
         if (nextName && nextName.trim() && nextName.trim() !== baseName) {
           try {
             await fs.rename(targetPath, nextName.trim());
@@ -1778,7 +1801,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
           await executeDelete([...selectedPaths]);
         } else {
           const itemType = isDir ? 'folder' : 'file';
-          if (confirm(`Are you sure you want to permanently delete ${itemType} "${baseName}"${isDir ? ' and all its contents' : ''}?`)) {
+          if (await tbConfirm(`Are you sure you want to permanently delete ${itemType} "${baseName}"${isDir ? ' and all its contents' : ''}?`, { title: 'Delete Item', destructive: true })) {
             try {
               await fs.delete(targetPath);
               flash(`Deleted ${itemType} "${baseName}".`);
@@ -2256,7 +2279,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
     }
 
     if (act === 'new-folder') {
-      const name = prompt('Folder Name:');
+      const name = await tbPrompt('Folder Name:', '', { title: 'New Folder' });
       if (name && name.trim()) {
         const clean = name.trim().replace(/[/\\?%*:|"<>]/g, '-');
         const target = normalizePath(`${currentPath}/${clean}`);
@@ -2272,7 +2295,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
     }
 
     if (act === 'new-file') {
-      const name = prompt('File Name (with extension, e.g. document.txt):');
+      const name = await tbPrompt('File Name (with extension, e.g. document.txt):', '', { title: 'New File' });
       if (name && name.trim()) {
         const clean = name.trim().replace(/[/\\?%*:|"<>]/g, '-');
         const target = normalizePath(`${currentPath}/${clean}`);
@@ -2356,7 +2379,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
       const filePath = actBtn.dataset.filePath || current?.path;
       const targetName = filePath ? getBaseName(filePath) : (current?.name || 'file');
 
-      if (confirm(`Are you sure you want to permanently delete "${targetName}"?`)) {
+      if (await tbConfirm(`Are you sure you want to permanently delete "${targetName}"?`, { title: 'Delete Item', destructive: true })) {
         try {
           if (filePath) {
             await fs.delete(filePath);

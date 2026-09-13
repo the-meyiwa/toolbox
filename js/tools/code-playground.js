@@ -1,3 +1,4 @@
+import { tbConfirm, tbPrompt, tbAlert } from '../lib/dialog.js';
 /**
  * Code Playground IDE
  *
@@ -458,9 +459,9 @@ export default {
     });
 
     // Hook action buttons
-    container.querySelector('#cpg-action-new')?.addEventListener('click', () => {
+    container.querySelector('#cpg-action-new')?.addEventListener('click', async () => {
       const defaultName = `Workspace ${workspaces.length + 1}`;
-      const name = prompt('Enter workspace name:', defaultName) || defaultName;
+      const name = (await tbPrompt('Enter work space name:', defaultName, { title: 'New Work Space' })) || defaultName;
       const cleanName = name.trim() || defaultName;
       const newWs = {
         id: `ws-${Date.now()}`,
@@ -510,10 +511,10 @@ export default {
 
     // Hook delete workspace buttons
     container.querySelectorAll('.cpg-del-ws-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const wsId = btn.dataset.delId;
-        if (confirm('Delete this workspace?')) {
+        if (await tbConfirm('Delete this work space?', { title: 'Delete Work Space', destructive: true })) {
           let list = getSavedWorkspaces();
           list = list.filter(w => w.id !== wsId);
           saveWorkspaces(list);
@@ -1111,7 +1112,7 @@ export default {
           `;
         }
         
-        cm.addEventListener('click', (me) => {
+        cm.addEventListener('click', async (me) => {
           const act = me.target.closest('[data-act]')?.dataset.act;
           const add = me.target.closest('[data-add]')?.dataset.add;
           cm.remove();
@@ -1126,7 +1127,7 @@ export default {
           if (!act || !targetFile) return;
           
           if (act === 'rename') {
-            const newName = prompt('Rename file:', targetFile.name);
+            const newName = await tbPrompt('Rename file:', targetFile.name, { title: 'Rename File' });
             if (newName && newName.trim()) {
               targetFile.name = newName.trim();
               if (targetFile.name.endsWith('.js')) targetFile.lang = 'javascript';
@@ -1140,7 +1141,7 @@ export default {
               persist();
             }
           } else if (act === 'delete') {
-            if (confirm('Delete ' + targetFile.name + '?')) {
+            if (await tbConfirm('Delete ' + targetFile.name + '?', { title: 'Delete File', destructive: true })) {
               state.files = state.files.filter(f => f.id !== fileId);
               if (state.activeFileId === fileId) state.activeFileId = state.files[0]?.id;
               renderTabs();
@@ -1264,9 +1265,9 @@ export default {
       });
     });
 
-    function handleAddItem(kind) {
+    async function handleAddItem(kind) {
       if (kind === 'folder') {
-        const folderName = prompt('Enter folder name (e.g. src or components):', 'src');
+        const folderName = await tbPrompt('Enter folder name (e.g. src or components):', 'src', { title: 'New Folder' });
         if (!folderName || !folderName.trim()) return;
         const clean = folderName.trim().replace(/^\/+|\/+$/g, '');
         const f = {
@@ -1285,7 +1286,7 @@ export default {
       }
 
       if (kind === 'component') {
-        const compName = prompt('Enter component / HTML page name:', `component.html`);
+        const compName = await tbPrompt('Enter component / HTML page name:', 'component.html', { title: 'New Component' });
         if (!compName || !compName.trim()) return;
         const name = compName.trim().endsWith('.html') ? compName.trim() : `${compName.trim()}.html`;
         const f = {
@@ -1304,7 +1305,7 @@ export default {
       }
 
       if (kind === 'test') {
-        const testName = prompt('Enter test filename:', `test_${state.files.length + 1}.js`);
+        const testName = await tbPrompt('Enter test filename:', `test_${state.files.length + 1}.js`, { title: 'New Test' });
         if (!testName || !testName.trim()) return;
         const f = {
           id: `f-${Date.now()}`,
@@ -1322,7 +1323,7 @@ export default {
       }
 
       // Default: New File
-      const name = prompt('Enter new filename:', `script_${state.files.length + 1}.js`);
+      const name = await tbPrompt('Enter new filename:', `script_${state.files.length + 1}.js`, { title: 'New File' });
       if (!name || !name.trim()) return;
       let ext = name.split('.').pop().toLowerCase();
       let lang = 'javascript';

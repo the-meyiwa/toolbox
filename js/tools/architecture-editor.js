@@ -1,3 +1,4 @@
+import { tbAlert } from '../lib/dialog.js';
 /* ============================================================
    Architecture Editor — Interactive Touch & Mouse Floor Plan Editor.
 
@@ -201,7 +202,7 @@ export default {
         }
         fitToScreen();
       } catch (err) {
-        alert('Could not load architectural floor plan: ' + err.message);
+        tbAlert('Could not load architectural floor plan: ' + err.message);
       }
     }
 
@@ -629,7 +630,7 @@ export default {
         downloadBlob(pdfBlob, `floor_plan_${Date.now()}.pdf`);
         analytics?.completed({ format: 'pdf', elements: elements.length });
       } catch (err) {
-        alert('Could not export PDF: ' + err.message);
+        tbAlert('Could not export PDF: ' + err.message);
       } finally {
         exportPdfBtn.disabled = false;
         exportPdfBtn.textContent = 'Download PDF';

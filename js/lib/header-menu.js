@@ -1,3 +1,4 @@
+import { tbAlert } from './dialog.js';
 /* ============================================================
    TOOLBOX — Header Dropdown Menu & Quick Action Hub
    Provides access to Themes, Browser Storage, Preferences, and Credits.
@@ -241,10 +242,10 @@ function renderPreferencesContent() {
       reader.onload = (evt) => {
         const result = importSettings(evt.target.result);
         if (result.success) {
-          alert('Settings imported successfully!');
+          tbAlert('Settings imported successfully!');
           renderPreferencesContent();
         } else {
-          alert('Failed to import settings: ' + result.error);
+          tbAlert('Failed to import settings: ' + result.error);
         }
       };
       reader.readAsText(file);

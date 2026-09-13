@@ -38,16 +38,20 @@ export default {
           />
         </div>
 
-        <!-- Filter Pills -->
-        <div id="dis-filter-pills" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none;">
-          <button type="button" class="btn btn-sm dis-pill active" data-system="all" style="border-radius:9999px; padding:5px 14px; font-size:0.8rem; font-weight:700; white-space:nowrap; background:var(--black); color:var(--white); cursor:pointer;">All Conditions</button>
-          <button type="button" class="btn btn-secondary btn-sm dis-pill" data-system="cardiovascular" style="border-radius:9999px; padding:5px 14px; font-size:0.8rem; font-weight:700; white-space:nowrap; cursor:pointer;">Cardiovascular</button>
-          <button type="button" class="btn btn-secondary btn-sm dis-pill" data-system="respiratory" style="border-radius:9999px; padding:5px 14px; font-size:0.8rem; font-weight:700; white-space:nowrap; cursor:pointer;">Respiratory</button>
-          <button type="button" class="btn btn-secondary btn-sm dis-pill" data-system="neurological" style="border-radius:9999px; padding:5px 14px; font-size:0.8rem; font-weight:700; white-space:nowrap; cursor:pointer;">Neurological</button>
-          <button type="button" class="btn btn-secondary btn-sm dis-pill" data-system="gastrointestinal" style="border-radius:9999px; padding:5px 14px; font-size:0.8rem; font-weight:700; white-space:nowrap; cursor:pointer;">Gastrointestinal</button>
-          <button type="button" class="btn btn-secondary btn-sm dis-pill" data-system="endocrine" style="border-radius:9999px; padding:5px 14px; font-size:0.8rem; font-weight:700; white-space:nowrap; cursor:pointer;">Endocrine</button>
-          <button type="button" class="btn btn-secondary btn-sm dis-pill" data-system="musculoskeletal" style="border-radius:9999px; padding:5px 14px; font-size:0.8rem; font-weight:700; white-space:nowrap; cursor:pointer;">Musculoskeletal</button>
-          <button type="button" class="btn btn-secondary btn-sm dis-pill" data-system="infectious" style="border-radius:9999px; padding:5px 14px; font-size:0.8rem; font-weight:700; white-space:nowrap; cursor:pointer;">Infectious</button>
+        <!-- Filter Pills with Scroll Edge Fades -->
+        <div class="dis-filter-wrapper" style="position:relative; width:100%; overflow:hidden;">
+          <div class="dis-fade dis-fade-left" id="dis-fade-left" style="opacity:0;"></div>
+          <div id="dis-filter-pills" class="dis-filter-pills" style="display:flex; gap:8px; overflow-x:auto; padding:4px 0; scrollbar-width:none; -webkit-overflow-scrolling:touch;">
+            <button type="button" class="btn btn-sm dis-pill active" data-system="all" style="border-radius:9999px; padding:5px 14px; font-size:0.8rem; font-weight:700; white-space:nowrap; background:var(--black); color:var(--white); cursor:pointer;">All Conditions</button>
+            <button type="button" class="btn btn-secondary btn-sm dis-pill" data-system="cardiovascular" style="border-radius:9999px; padding:5px 14px; font-size:0.8rem; font-weight:700; white-space:nowrap; cursor:pointer;">Cardiovascular</button>
+            <button type="button" class="btn btn-secondary btn-sm dis-pill" data-system="respiratory" style="border-radius:9999px; padding:5px 14px; font-size:0.8rem; font-weight:700; white-space:nowrap; cursor:pointer;">Respiratory</button>
+            <button type="button" class="btn btn-secondary btn-sm dis-pill" data-system="neurological" style="border-radius:9999px; padding:5px 14px; font-size:0.8rem; font-weight:700; white-space:nowrap; cursor:pointer;">Neurological</button>
+            <button type="button" class="btn btn-secondary btn-sm dis-pill" data-system="gastrointestinal" style="border-radius:9999px; padding:5px 14px; font-size:0.8rem; font-weight:700; white-space:nowrap; cursor:pointer;">Gastrointestinal</button>
+            <button type="button" class="btn btn-secondary btn-sm dis-pill" data-system="endocrine" style="border-radius:9999px; padding:5px 14px; font-size:0.8rem; font-weight:700; white-space:nowrap; cursor:pointer;">Endocrine</button>
+            <button type="button" class="btn btn-secondary btn-sm dis-pill" data-system="musculoskeletal" style="border-radius:9999px; padding:5px 14px; font-size:0.8rem; font-weight:700; white-space:nowrap; cursor:pointer;">Musculoskeletal</button>
+            <button type="button" class="btn btn-secondary btn-sm dis-pill" data-system="infectious" style="border-radius:9999px; padding:5px 14px; font-size:0.8rem; font-weight:700; white-space:nowrap; cursor:pointer;">Infectious</button>
+          </div>
+          <div class="dis-fade dis-fade-right" id="dis-fade-right" style="opacity:1;"></div>
         </div>
       </div>
 
@@ -200,6 +204,29 @@ export default {
       renderList();
     });
   });
+
+
+  // Reactive Edge Fades for Filter Pills
+  const pillsEl = container.querySelector('#dis-filter-pills');
+  const fadeLeft = container.querySelector('#dis-fade-left');
+  const fadeRight = container.querySelector('#dis-fade-right');
+
+  function updateEdgeFades() {
+    if (!pillsEl || !fadeLeft || !fadeRight) return;
+    const { scrollLeft, scrollWidth, clientWidth } = pillsEl;
+    const maxScroll = scrollWidth - clientWidth;
+    if (maxScroll <= 2) {
+      fadeLeft.style.opacity = '0';
+      fadeRight.style.opacity = '0';
+      return;
+    }
+    fadeLeft.style.opacity = scrollLeft > 6 ? '1' : '0';
+    fadeRight.style.opacity = scrollLeft < maxScroll - 6 ? '1' : '0';
+  }
+
+  pillsEl?.addEventListener('scroll', updateEdgeFades, { passive: true });
+  window.addEventListener('resize', updateEdgeFades, { passive: true });
+  setTimeout(updateEdgeFades, 40);
 
     // Initial render
     renderList();

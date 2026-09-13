@@ -1,3 +1,4 @@
+import { tbAlert } from './dialog.js';
 /* ============================================================
    File & image engine.
 
@@ -416,7 +417,7 @@ export function attachFileInput(zone, input, onFiles, options = {}) {
       }
     } catch (err) {
       console.error('[Toolbox Upload Error]', err);
-      alert(`Could not process file: ${err.message || err}`);
+      tbAlert(`Could not process file: ${err.message || err}`);
     } finally {
       zone.classList.remove('is-loading');
     }

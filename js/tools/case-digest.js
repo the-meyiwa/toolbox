@@ -1,3 +1,4 @@
+import { tbAlert } from '../lib/dialog.js';
 /* ============================================================
    Case Digest — Legal Case Brief & Judgment Summarizer.
 
@@ -105,7 +106,7 @@ export default {
         parseAndRender();
       } catch (err) {
         console.error('[Case Digest PDF Error]', err);
-        alert('Could not parse PDF text: ' + err.message);
+        tbAlert('Could not parse PDF text: ' + err.message);
       } finally {
         genBtn.disabled = false;
         genBtn.textContent = origText;
@@ -123,7 +124,7 @@ export default {
           textInput.value = text;
           parseAndRender();
         } catch (err) {
-          alert('Could not read text file: ' + err.message);
+          tbAlert('Could not read text file: ' + err.message);
         }
       }
     }));
@@ -306,7 +307,7 @@ export default {
     function parseAndRender() {
       const text = textInput.value.trim();
       if (!text) {
-        alert('Please paste judgment text or upload a case document.');
+        tbAlert('Please paste judgment text or upload a case document.');
         return;
       }
       analytics?.started();

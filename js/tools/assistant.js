@@ -1,3 +1,4 @@
+import { tbConfirm, tbPrompt, tbAlert } from '../lib/dialog.js';
 /* ============================================================
    TOOLBOX — Assistant View & Interactive AI Workflow Host
    Interactive Chat Interface with In-Chat Drag & Dropzone Cards,
@@ -349,7 +350,7 @@ export default {
 
     // Clear conversation
     btnClear?.addEventListener('click', async () => {
-      if (confirm('Clear current conversation history?')) {
+      if (await tbConfirm('Clear current conversation history?', { title: 'Clear History', destructive: true })) {
         history = [];
         await integrationManager.clearConversation();
         renderMessageList();
@@ -509,7 +510,7 @@ export default {
                 closeModal();
                 userInput?.focus();
               } catch (err) {
-                alert('Could not read file from Toolbox filesystem: ' + err.message);
+                tbAlert('Could not read file from Toolbox filesystem: ' + err.message);
                 row.style.opacity = '1';
               }
             });
@@ -1306,7 +1307,7 @@ export default {
 
       const quotaCheck = QuotaManager.canSendMessage();
       if (!quotaCheck.allowed) {
-        alert(quotaCheck.reason);
+        tbAlert(quotaCheck.reason);
         return;
       }
 

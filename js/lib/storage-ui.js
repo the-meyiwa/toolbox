@@ -1,3 +1,4 @@
+import { tbConfirm, tbPrompt, tbAlert } from './dialog.js';
 /* ============================================================
    TOOLBOX — Browser Storage Inspector & File Manager
    Allows users to inspect, export, and manage on-device browser
@@ -219,7 +220,7 @@ async function renderStorageContent() {
   body.querySelectorAll('.btn-file-delete').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-id');
-      if (confirm('Delete this file from your browser?')) {
+      if (await tbConfirm('Delete this file from your browser?', { title: 'Delete File', destructive: true })) {
         await artifacts.remove(id);
         renderStorageContent();
       }
@@ -231,7 +232,7 @@ async function renderStorageContent() {
     exportAllBtn.addEventListener('click', async () => {
       const all = artifacts.list();
       if (!all.length) {
-        alert('No files to export.');
+        tbAlert('No files to export.', 'Export');
         return;
       }
       const data = JSON.stringify(all, null, 2);
@@ -248,12 +249,12 @@ async function renderStorageContent() {
   const clearAllBtn = body.querySelector('#storage-clear-all');
   if (clearAllBtn) {
     clearAllBtn.addEventListener('click', async () => {
-      if (confirm('Are you sure you want to clear all saved files and preferences from this browser? This action cannot be undone.')) {
+      if (await tbConfirm('Are you sure you want to clear all saved files and preferences from this browser? This action cannot be undone.', { title: 'Clear All Data', destructive: true })) {
         for (const file of artifacts.list()) {
           await artifacts.remove(file.id);
         }
         localStorage.clear();
-        alert('Storage cleared successfully.');
+        tbAlert('Storage cleared successfully.', 'Storage Cleared');
         location.reload();
       }
     });

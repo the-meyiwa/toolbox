@@ -1,3 +1,4 @@
+import { tbConfirm, tbPrompt, tbAlert } from './dialog.js';
 /* ============================================================
    Space Activities — Desk, Artifacts, Discussion, Tasks, Sessions.
 
@@ -333,7 +334,7 @@ export function mountArtifactsView(container, engine) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 2_000_000) {
-      alert('File too large. Please select a file under 2 MB for peer sharing.');
+      tbAlert('File too large. Please select a file under 2 MB for sharing.', 'File Size Limit');
       return;
     }
     const reader = new FileReader();
@@ -349,7 +350,7 @@ export function mountArtifactsView(container, engine) {
     reader.readAsDataURL(file);
   });
 
-  const onClick = (e) => {
+  const onClick = async (e) => {
     const filterBtn = e.target.closest('.sp-filter-btn');
     if (filterBtn) {
       activeFilter = filterBtn.dataset.filter;
@@ -391,7 +392,7 @@ export function mountArtifactsView(container, engine) {
     const delArtBtn = e.target.closest('[data-act="del-art"]');
     if (delArtBtn) {
       const artId = delArtBtn.dataset.artId;
-      if (confirm('Remove this artifact from the Space?')) {
+      if (await tbConfirm('Remove this artifact from the Work Space?', { title: 'Remove Artifact', destructive: true })) {
         engine.deleteArtifact(artId);
       }
       return;
@@ -415,7 +416,7 @@ export function mountArtifactsView(container, engine) {
     const delFileBtn = e.target.closest('[data-act="del-file"]');
     if (delFileBtn) {
       const fileId = delFileBtn.dataset.fileId;
-      if (confirm('Remove this file from the Space?')) {
+      if (await tbConfirm('Remove this file from the Work Space?', { title: 'Remove File', destructive: true })) {
         engine.deleteFile(fileId);
       }
       return;

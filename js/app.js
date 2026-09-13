@@ -24,6 +24,8 @@ import { openAccountModal } from './views/account-modal.js';
 import { initFlutterwaveContribution } from './lib/flutterwave-contribution.js';
 import { initWorkspace } from './lib/workspace.js';
 import { initScrollNarrative } from './about-scroll.js';
+import './lib/dialog.js';
+import { initHomeScrollNarrative } from './home-scroll.js';
 
 /* --------------- state --------------- */
 
@@ -251,6 +253,24 @@ function renderRelated(tool) {
     <div class="related-list">${rel.map(t => toolCard(t, { compact: true })).join('')}</div>`;
 }
 
+
+function updateFullscreenBtnState(isFullscreen) {
+  if (!popoutBtn) return;
+  const expandIcon = popoutBtn.querySelector('.fs-icon-expand');
+  const collapseIcon = popoutBtn.querySelector('.fs-icon-collapse');
+  const label = popoutBtn.querySelector('.fs-label');
+  if (expandIcon) expandIcon.style.display = isFullscreen ? 'none' : 'block';
+  if (collapseIcon) collapseIcon.style.display = isFullscreen ? 'block' : 'none';
+  if (label) label.textContent = isFullscreen ? 'Exit Fullscreen' : 'Fullscreen';
+  popoutBtn.title = isFullscreen ? 'Exit Fullscreen' : 'Fullscreen';
+  popoutBtn.setAttribute('aria-label', isFullscreen ? 'Exit Fullscreen' : 'Fullscreen');
+}
+
+function toggleToolFullscreen(force) {
+  const isFullscreen = document.body.classList.toggle('tool-fullscreen', force);
+  updateFullscreenBtnState(isFullscreen);
+}
+
 /* --------------- routing --------------- */
 
 function showPage(page) {
@@ -259,14 +279,23 @@ function showPage(page) {
   for (const v of Object.values(VIEWS)) {
     if (!v) continue;
     v.classList.add('hidden');
-    v
   }
   const view = VIEWS[page];
   if (view) {
     view.classList.remove('hidden');
     void view.offsetWidth;
-    view
   }
+
+  // Route & Scroll Restoration: always start at the top
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+  const mainEl = document.getElementById('main');
+  if (mainEl) mainEl.scrollTop = 0;
+  if (view) view.scrollTop = 0;
+
+  // Toggle snap scrolling on html for home
+  document.documentElement.classList.toggle('page-snap-active', page === 'home');
 
   currentPage = page;
   document.body.classList.remove('in-tool');
@@ -389,7 +418,11 @@ async function openTool(id) {
   viewportContent.replaceWith(freshContent);
   viewportContent = freshContent;
   if (relatedBar) relatedBar.hidden = true;
-  if (popoutBtn) popoutBtn.style.display = tool.standalone ? 'inline-flex' : 'none';
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth > 768;
+  if (popoutBtn) {
+    popoutBtn.style.display = isDesktop ? 'inline-flex' : 'none';
+    updateFullscreenBtnState(false);
+  }
   viewport.classList.remove('hidden');
   void viewport.offsetWidth;
   viewport
@@ -667,12 +700,24 @@ grid.addEventListener('click', (e) => {
 backBtn.addEventListener('click', () => { window.location.hash = '#tools'; });
 if (popoutBtn) {
   popoutBtn.addEventListener('click', () => {
-    if (!currentToolId) return;
-    const url = new URL(window.location.href);
-    url.searchParams.set('standalone', 'true');
-    window.open(url.toString(), '_blank');
+    toggleToolFullscreen();
   });
 }
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.body.classList.contains('tool-fullscreen')) {
+    toggleToolFullscreen(false);
+  }
+});
+
+window.addEventListener('resize', () => {
+  if (window.innerWidth <= 768 && document.body.classList.contains('tool-fullscreen')) {
+    toggleToolFullscreen(false);
+  }
+  if (popoutBtn && currentPage === 'tool') {
+    popoutBtn.style.display = window.innerWidth > 768 ? 'inline-flex' : 'none';
+  }
+});
 logo.addEventListener('click', (e) => { e.preventDefault(); window.location.hash = '#home'; });
 window.addEventListener('hashchange', handleHash);
 window.addEventListener('pagehide', () => currentSession?.dispose());
@@ -964,6 +1009,7 @@ installSettingsUI();
 installHeaderMenu();
   initWorkspace(openTool);
   initScrollNarrative();
+  initHomeScrollNarrative();
 
 const isStandalone = new URLSearchParams(window.location.search).get('standalone') === 'true';
 if (isStandalone) {

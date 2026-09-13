@@ -1,3 +1,4 @@
+import { tbAlert } from '../lib/dialog.js';
 /* ============================================================
    Container & Cabin Quote Builder
 
@@ -1122,7 +1123,7 @@ export default {
         if (Array.isArray(data.materials)) state.customMaterials = data.materials;
         persist(); renderMaterials(); renderRates(); renderSpec(); renderLines(); renderTotals();
       } catch {
-        alert('That file could not be read as a rate book.');
+        tbAlert('That file could not be read as a rate book.');
       }
       fileInput.value = '';
     });

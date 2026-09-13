@@ -1,3 +1,4 @@
+import { tbAlert } from '../lib/dialog.js';
 /* ============================================================
    Legal PDF — Court Bundles, Bates Numbering, Redaction & E-Filing.
 
@@ -110,7 +111,7 @@ export default {
 
     async function handlePdf(file) {
       if (!file || !(file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'))) {
-        alert('Please select a valid PDF file.');
+        tbAlert('Please select a valid PDF file.');
         return;
       }
       currentFile = file;
@@ -125,7 +126,7 @@ export default {
         metaEl.textContent = `${file.name} · ${pageCount} pages · ${humanBytes(file.size)}`;
       } catch (err) {
         console.error('[Legal PDF Error]', err);
-        alert('Could not read PDF structure: ' + err.message);
+        tbAlert('Could not read PDF structure: ' + err.message);
         metaEl.textContent = 'Failed to load PDF';
       }
     }
@@ -184,7 +185,7 @@ export default {
         downloadBlob(new Blob([outBytes], { type: 'application/pdf' }), `${baseName}_bates_stamped.pdf`);
         analytics?.completed({ batesPages: count });
       } catch (err) {
-        alert('Could not apply Bates numbers: ' + err.message);
+        tbAlert('Could not apply Bates numbers: ' + err.message);
       } finally {
         applyBatesBtn.disabled = false;
         applyBatesBtn.textContent = 'Apply Bates Numbers & Download';
@@ -196,7 +197,7 @@ export default {
       if (!pdfBytes) return;
       const terms = redactTerms.value.split(',').map(t => t.trim()).filter(Boolean);
       if (!terms.length) {
-        alert('Please enter at least one term or name to redact.');
+        tbAlert('Please enter at least one term or name to redact.');
         return;
       }
 
@@ -235,7 +236,7 @@ export default {
         downloadBlob(new Blob([outBytes], { type: 'application/pdf' }), `${baseName}_redacted.pdf`);
         analytics?.completed({ redactedPages: count });
       } catch (err) {
-        alert('Could not apply redactions: ' + err.message);
+        tbAlert('Could not apply redactions: ' + err.message);
       } finally {
         applyRedactBtn.disabled = false;
         applyRedactBtn.textContent = 'Apply Redactions & Download';
@@ -255,7 +256,7 @@ export default {
         downloadBlob(new Blob([outBytes], { type: 'application/pdf' }), `${baseName}_efiling_ready.pdf`);
         analytics?.completed({ optimizedSize: outBytes.length });
       } catch (err) {
-        alert('Could not optimize PDF: ' + err.message);
+        tbAlert('Could not optimize PDF: ' + err.message);
       } finally {
         applyCompressBtn.disabled = false;
         applyCompressBtn.textContent = 'Optimize for E-Filing';

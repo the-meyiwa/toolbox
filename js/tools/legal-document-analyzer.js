@@ -1,3 +1,4 @@
+import { tbAlert } from '../lib/dialog.js';
 /* ============================================================
    Legal Document Analyzer — Contract & Legal Instrument Inspector.
 
@@ -124,7 +125,7 @@ export default {
         }
       } catch (err) {
         console.error('[Legal Document Analyzer Error]', err);
-        alert('Could not read file: ' + err.message);
+        tbAlert('Could not read file: ' + err.message);
       } finally {
         analyzeBtn.disabled = false;
         analyzeBtn.textContent = origText;
@@ -214,7 +215,7 @@ export default {
     function runAnalysis() {
       const text = textInput.value.trim();
       if (!text) {
-        alert('Please paste document text or upload a legal file.');
+        tbAlert('Please paste document text or upload a legal file.');
         return;
       }
 

@@ -1,3 +1,4 @@
+import { tbAlert } from '../lib/dialog.js';
 /* ============================================================
    Payment Hub (Receive Money) — Multi-Rail Payment Receiver.
 
@@ -100,7 +101,7 @@ export default {
     async function handleCreateSession() {
       const amount = parseFloat(amountIn.value);
       if (!amount || amount <= 0) {
-        alert('Please specify a valid payment amount.');
+        tbAlert('Please specify a valid payment amount.');
         return;
       }
 
@@ -121,7 +122,7 @@ export default {
         renderLedger();
         analytics?.started();
       } catch (err) {
-        alert('Could not initiate payment: ' + err.message);
+        tbAlert('Could not initiate payment: ' + err.message);
       } finally {
         createBtn.disabled = false;
         createBtn.textContent = 'Generate Checkout & Account';
@@ -250,7 +251,7 @@ export default {
             renderLedger();
             analytics?.completed({ amount: tx.amount });
           } catch (err) {
-            alert('Card processing error: ' + err.message);
+            tbAlert('Card processing error: ' + err.message);
             crdPayBtn.disabled = false;
             crdPayBtn.textContent = `Pay ${money(tx.amount, tx.currency)}`;
           }

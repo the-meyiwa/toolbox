@@ -1,3 +1,4 @@
+import { tbAlert } from '../lib/dialog.js';
 import { currencySelect, money, num, parseNum, escapeHtml } from '../lib/biz.js';
 
 /* Builds an invoice you can print or save as PDF straight from the
@@ -239,7 +240,7 @@ export default {
             });
             window.location.hash = `#payment-hub?ref=${tx.reference}`;
           } catch (err) {
-            alert('Could not create payment link: ' + err.message);
+            tbAlert('Could not create payment link: ' + err.message);
           }
         });
       }

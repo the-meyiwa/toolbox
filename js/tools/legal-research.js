@@ -1,3 +1,4 @@
+import { tbAlert } from '../lib/dialog.js';
 /* ============================================================
    Legal Research — Structured Issue Tree & Precedent Matrix.
 
@@ -181,7 +182,7 @@ export default {
     function buildFramework() {
       const q = qInput.value.trim();
       if (!q) {
-        alert('Please enter a research question or factual problem.');
+        tbAlert('Please enter a research question or factual problem.');
         return;
       }
 
