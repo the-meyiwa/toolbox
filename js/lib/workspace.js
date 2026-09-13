@@ -127,7 +127,7 @@ function renderRightPicker() {
       content.replaceWith(freshContent);
       
       try {
-        const mod = await import(\`../tools/\${id}.js\`);
+        const mod = await import(`../tools/${id}.js`);
         rightInstance = mod.default;
         await rightInstance.render(freshContent, { analytics: null, tool, artifact: null });
       } catch (e) {

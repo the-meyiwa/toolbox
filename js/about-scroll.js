@@ -32,7 +32,7 @@ export function initScrollNarrative() {
       if (scale > 1) scale = 1;
 
       scene.style.opacity = opacity;
-      scene.style.transform = \`scale(\${scale}) translateY(\${(distance / maxDistance) * 20}px)\`;
+      scene.style.transform = `scale(${scale}) translateY(${(distance / maxDistance) * 20}px)`;
       scene.style.transition = 'opacity 0.1s ease-out, transform 0.1s ease-out';
     });
   };
