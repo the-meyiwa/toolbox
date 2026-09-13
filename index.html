@@ -34,21 +34,17 @@
         <a href="#home" class="nav-link active" data-page="home">Home</a>
         <a href="#tools" class="nav-link" data-page="tools">Tools</a>
         <a href="#saved" class="nav-link" data-page="saved" id="nav-saved">Files</a>
-        
-        
-        
       </nav>
       <div class="header-actions" id="header-actions">
         <div class="search-wrapper" id="search-wrapper">
           <svg class="search-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="7"/>
-            <path d="M21 21l-4.35-4.35"/>
+            <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>
           </svg>
-          <input type="text" id="search" placeholder="Search tools…" autocomplete="off" spellcheck="false">
+          <input type="text" id="search" placeholder="Search tools&hellip;" autocomplete="off" spellcheck="false">
           <kbd id="search-kbd">/</kbd>
         </div>
         <div class="header-menu-container" id="header-menu-container">
-          <button type="button" class="header-icon-btn" id="header-menu-btn" aria-haspopup="true" aria-expanded="false" aria-label="Toolbox Menu & Settings" title="Menu & Options">
+          <button type="button" class="header-icon-btn" id="header-menu-btn" aria-haspopup="true" aria-expanded="false" aria-label="Toolbox Menu" title="Menu &amp; Options">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="1"></circle>
               <circle cx="12" cy="5" r="1"></circle>
@@ -72,7 +68,7 @@
       <!-- HOME -->
       <div id="home-view" class="page-view">
         <div class="home-hero">
-          <p class="home-eyebrow"><span id="home-eyebrow-count">100+</span> tools · runs in your browser · optional cloud sync</p>
+          <p class="home-eyebrow"><span id="home-eyebrow-count">100+</span> tools &middot; runs in your browser &middot; optional cloud sync</p>
           <h1 class="home-title">What do you<br>need to do?</h1>
           <p class="home-desc">Describe the job, not the tool. Open it, do the thing, close the tab.<br class="hide-mobile"> Create an optional account only if you want to sync your saved files.</p>
 
@@ -81,7 +77,7 @@
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="position:absolute; left:18px; color:var(--g500); pointer-events:none;">
                 <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>
               </svg>
-              <input type="text" id="home-hero-input" class="home-search-input" placeholder="Search 100+ tools (e.g. compress photo, convert to PDF)…" autocomplete="off" spellcheck="false" style="width:100%; padding:14px 50px 14px 48px; border-radius:9999px; border:1px solid var(--g300); background:var(--white); color:var(--black); font-size:0.95rem; font-family:var(--sans); box-shadow:0 4px 24px rgba(0,0,0,0.06); outline:none; transition:border-color 0.2s, box-shadow 0.2s;">
+              <input type="text" id="home-hero-input" class="home-search-input" placeholder="Search 100+ tools (e.g. compress photo, convert to PDF)&hellip;" autocomplete="off" spellcheck="false" style="width:100%; padding:14px 50px 14px 48px; border-radius:9999px; border:1px solid var(--g300); background:var(--white); color:var(--black); font-size:0.95rem; font-family:var(--sans); box-shadow:0 4px 24px rgba(0,0,0,0.06); outline:none; transition:border-color 0.2s, box-shadow 0.2s;">
               <button type="button" id="home-hero-submit-btn" style="position:absolute; right:7px; width:36px; height:36px; border-radius:50%; background:var(--black); color:var(--white); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.15s;" title="Search or Prompt AI">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
               </button>
@@ -92,15 +88,26 @@
           <div class="home-quick" id="home-quick"></div>
         </div>
 
-        <!-- Saved work, shown only when the user has actually saved something. -->
+        <!-- Spaces directory -->
         <div id="home-spaces" class="home-spaces" hidden></div>
 
-          <section class="home-saved" id="home-saved" hidden></section>
+        <!-- Saved work -->
+        <section class="home-saved" id="home-saved" hidden></section>
 
         <!-- ASSISTANT SIGN-IN / STATUS BANNER -->
-        <div id="home-assistant-banner-wrap" style="max-width:620px; margin:28px auto 0; width:100%;">
+        <div class="home-banner-wrap" id="home-assistant-banner-wrap">
           <div id="home-assistant-banner"></div>
         </div>
+
+        <!-- DESKTOP FOOTER (desktop only, hidden on mobile) -->
+        <footer class="home-footer">
+          <span class="home-footer-copy">&copy; 2025 Toolbox &mdash; built by madselkie</span>
+          <nav class="home-footer-nav" aria-label="Footer navigation">
+            <a href="#about" class="home-footer-link">About</a>
+            <a href="#donate" class="home-footer-link">Donate</a>
+            <a href="#tools" class="home-footer-link">All Tools</a>
+          </nav>
+        </footer>
       </div>
 
       <!-- TOOLS GRID -->
@@ -139,108 +146,98 @@
       <!-- SAVED WORK -->
       <div id="saved-view" class="page-view hidden"></div>
 
-                  
-
-              <!-- SUPPORT & ABOUT -->
-        <div id="support-view" class="page-view hidden about-story-view">
-          <div class="about-story-container">
-            <!-- SCENE 1 -->
-            <div class="about-scene scene-1" id="about-scene-1">
-              <div class="about-content">
-                <h1 class="about-title">About Toolbox</h1>
-                <p class="about-lead">Toolbox is for anyone who wants a fast, reliable collection of tools in one place.</p>
-              </div>
+      <!-- SUPPORT & ABOUT -->
+      <div id="support-view" class="page-view hidden about-story-view">
+        <div class="about-story-container">
+          <!-- SCENE 1 -->
+          <div class="about-scene scene-1" id="about-scene-1">
+            <div class="about-content">
+              <h1 class="about-title">About Toolbox</h1>
+              <p class="about-lead">Toolbox is for anyone who wants a fast, reliable collection of tools in one place.</p>
             </div>
-            
-            <!-- SCENE 2 -->
-            <div class="about-scene scene-2" id="about-scene-2">
-              <div class="about-content">
-                <h2>Why Toolbox Exists</h2>
-                <p>I only built it because I was looking for a PDF editor on Google and decided to build my own because it was tedious looking it up.</p>
-                <p>Since then, it has evolved into a comprehensive suite designed with an obsessive focus on performance, privacy, and UX.</p>
-              </div>
+          </div>
+
+          <!-- SCENE 2 -->
+          <div class="about-scene scene-2" id="about-scene-2">
+            <div class="about-content">
+              <h2>Why Toolbox Exists</h2>
+              <p>I only built it because I was looking for a PDF editor on Google and decided to build my own because it was tedious looking it up.</p>
+              <p>Since then, it has evolved into a comprehensive suite designed with an obsessive focus on performance, privacy, and UX.</p>
             </div>
+          </div>
 
-            <!-- SCENE 3 (Contribute) -->
-            <div class="about-scene scene-3" id="about-scene-3">
-<div class="about-content">
-          <!-- CONTRIBUTE TO DEVELOPMENT (FLUTTERWAVE INTEGRATION) -->
-          <section class="support-section contribute-section" id="contribute-section">
-            <h2 class="support-heading" style="display:flex; align-items:center; gap:8px;">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-              </svg>
-              <span>Contribute to Development</span>
-            </h2>
-            <p style="margin-bottom:18px; line-height:1.6; color:var(--text-secondary);">
-              Toolbox is free, open, and built with obsessive care. Your contributions directly fund server costs, API access, continuous updates, and cross-platform native development for desktop and mobile.
-            </p>
-            
-            <div class="contribute-card" style="background:var(--bg-subtle); border:1px solid var(--border); border-radius:16px; padding:22px 24px; box-shadow:0 4px 16px rgba(0,0,0,0.03);">
-              <!-- Amount and currency inputs -->
-              <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
-                <label for="contrib-amount-input" style="font-weight:600; font-size:0.88rem; color:var(--text);">Enter Contribution Amount</label>
-                <div style="display:flex; gap:10px; align-items:center;">
-                  <div style="position:relative; flex:1; display:flex; align-items:center;">
-                    <span id="contrib-curr-symbol" style="position:absolute; left:12px; font-weight:700; color:var(--text-secondary); pointer-events:none; font-family:var(--mono);">₦</span>
-                    <input type="number" id="contrib-amount-input" class="tool-input" placeholder="Amount (e.g. 5000)" min="1" step="any" style="padding-left:32px; width:100%; font-size:0.95rem; font-family:var(--mono);">
-                  </div>
-                  <select id="contrib-currency" class="tool-select" style="font-size:0.85rem; padding:8px 12px; border-radius:8px; min-width:110px;">
-                    <option value="NGN" selected>NGN (₦)</option>
-                    <option value="USD">USD ($)</option>
-                    <option value="CAD">CAD ($)</option>
-                    <option value="GBP">GBP (£)</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Contributor Details -->
-              <div class="contrib-details-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
-                <div>
-                  <label style="display:block; font-size:0.78rem; font-weight:600; margin-bottom:4px; color:var(--text-secondary);">Your Name (Optional)</label>
-                  <input type="text" id="contrib-name" class="tool-input" placeholder="Anonymous Supporter" style="width:100%; font-size:0.86rem;">
-                </div>
-                <div>
-                  <label style="display:block; font-size:0.78rem; font-weight:600; margin-bottom:4px; color:var(--text-secondary);">Email Address</label>
-                  <input type="email" id="contrib-email" class="tool-input" placeholder="supporter@example.com" style="width:100%; font-size:0.86rem;">
-                </div>
-              </div>
-
-              <!-- Action Bar -->
-              <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-top:8px;">
-                <button type="button" id="contrib-flutterwave-btn" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:8px; padding:10px 22px; font-weight:600; cursor:pointer;">
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          <!-- SCENE 3 (Contribute) -->
+          <div class="about-scene scene-3" id="about-scene-3">
+            <div class="about-content">
+              <section class="support-section contribute-section" id="contribute-section">
+                <h2 class="support-heading" style="display:flex; align-items:center; gap:8px;">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                   </svg>
-                  <span>Contribute via Flutterwave</span>
-                </button>
-                <div style="font-size:0.75rem; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                  <span>Secured by Flutterwave</span>
+                  <span>Contribute to Development</span>
+                </h2>
+                <p style="margin-bottom:18px; line-height:1.6; color:var(--text-secondary);">
+                  Toolbox is free, open, and built with obsessive care. Your contributions directly fund server costs, API access, continuous updates, and cross-platform native development.
+                </p>
+                <div class="contribute-card" style="background:var(--bg-subtle); border:1px solid var(--border); border-radius:16px; padding:22px 24px; box-shadow:0 4px 16px rgba(0,0,0,0.03);">
+                  <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
+                    <label for="contrib-amount-input" style="font-weight:600; font-size:0.88rem; color:var(--text);">Enter Contribution Amount</label>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                      <div style="position:relative; flex:1; display:flex; align-items:center;">
+                        <span id="contrib-curr-symbol" style="position:absolute; left:12px; font-weight:700; color:var(--text-secondary); pointer-events:none; font-family:var(--mono);">&#8358;</span>
+                        <input type="number" id="contrib-amount-input" class="tool-input" placeholder="Amount (e.g. 5000)" min="1" step="any" style="padding-left:32px; width:100%; font-size:0.95rem; font-family:var(--mono);">
+                      </div>
+                      <select id="contrib-currency" class="tool-select" style="font-size:0.85rem; padding:8px 12px; border-radius:8px; min-width:110px;">
+                        <option value="NGN" selected>NGN (&#8358;)</option>
+                        <option value="USD">USD ($)</option>
+                        <option value="CAD">CAD ($)</option>
+                        <option value="GBP">GBP (&pound;)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="contrib-details-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                    <div>
+                      <label style="display:block; font-size:0.78rem; font-weight:600; margin-bottom:4px; color:var(--text-secondary);">Your Name (Optional)</label>
+                      <input type="text" id="contrib-name" class="tool-input" placeholder="Anonymous Supporter" style="width:100%; font-size:0.86rem;">
+                    </div>
+                    <div>
+                      <label style="display:block; font-size:0.78rem; font-weight:600; margin-bottom:4px; color:var(--text-secondary);">Email Address</label>
+                      <input type="email" id="contrib-email" class="tool-input" placeholder="supporter@example.com" style="width:100%; font-size:0.86rem;">
+                    </div>
+                  </div>
+                  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-top:8px;">
+                    <button type="button" id="contrib-flutterwave-btn" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:8px; padding:10px 22px; font-weight:600; cursor:pointer;">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                      </svg>
+                      <span>Contribute via Flutterwave</span>
+                    </button>
+                    <div style="font-size:0.75rem; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                      <span>Secured by Flutterwave</span>
+                    </div>
+                  </div>
+                  <div id="contrib-status-msg" style="display:none; margin-top:12px; padding:10px 14px; border-radius:8px; font-size:0.82rem;"></div>
                 </div>
-              </div>
-
-              <div id="contrib-status-msg" style="display:none; margin-top:12px; padding:10px 14px; border-radius:8px; font-size:0.82rem;"></div>
+              </section>
             </div>
-          </section>
-        </div>
-</div>
+          </div>
 
-            <!-- SCENE 4 -->
-            <div class="about-scene scene-4" id="about-scene-4">
-              <div class="about-content creator-card">
-                <div class="creator-image"></div>
-                <div class="creator-info">
-                  <h3>Created by madselkie</h3>
-                  <p>Developer & Designer.</p>
-                </div>
+          <!-- SCENE 4 -->
+          <div class="about-scene scene-4" id="about-scene-4">
+            <div class="about-content creator-card">
+              <div class="creator-image"></div>
+              <div class="creator-info">
+                <h3>Created by madselkie</h3>
+                <p>Developer &amp; Designer.</p>
               </div>
             </div>
           </div>
         </div>
-      </main>
+      </div>
+    </main>
 
-    <!-- MOBILE BOTTOM NAVIGATION (FLOATING PILL ISLAND) -->
+    <!-- MOBILE BOTTOM NAVIGATION -->
     <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile Bottom Navigation">
       <div class="mob-nav-pill-indicator" id="mob-nav-indicator"></div>
       <a href="#home" class="nav-link mob-nav-item active" data-page="home">
@@ -266,9 +263,6 @@
         </svg>
         <span class="mob-nav-label">Files</span>
       </a>
-      
-        
-      
     </nav>
   </div>
 

@@ -10220,3 +10220,61 @@ body.standalone-mode .notes-app-wrapper {
 
 
 
+
+
+/* ============================================================
+   HOME PAGE FOOTER & BANNER WRAP (Desktop only)
+   ============================================================ */
+.home-banner-wrap {
+  max-width: 620px;
+  margin: 28px auto 0;
+  width: 100%;
+  padding: 0 24px;
+  box-sizing: border-box;
+}
+
+.home-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 940px;
+  margin: 48px auto 0;
+  padding: 20px 24px 32px;
+  border-top: 1px solid var(--g150);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.home-footer-copy {
+  font-size: 0.78rem;
+  color: var(--g400);
+  font-weight: 400;
+}
+
+.home-footer-nav {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.home-footer-link {
+  font-size: 0.78rem;
+  color: var(--g400);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.home-footer-link:hover {
+  color: var(--black);
+}
+
+/* Hide footer entirely on mobile */
+@media (max-width: 768px) {
+  .home-footer {
+    display: none;
+  }
+  .home-banner-wrap {
+    padding: 0 16px;
+    margin-bottom: 16px;
+  }
+}
