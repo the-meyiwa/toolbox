@@ -36,7 +36,7 @@ export default {
     let selectedDateStr = formatDateKey(new Date());
 
     container.innerHTML = `
-      <div class="calendar-app-wrapper" style="display:flex; flex-direction:column; gap:20px; max-width:1200px; margin:0 auto; font-family:var(--sans);">
+      <div class="calendar-app-wrapper" style="display:flex; flex-direction:column; gap:20px; max-width:1100px; margin:0 auto; font-family:var(--sans);">
         
         <!-- TOP CONTROLS & HEADER -->
         <div class="calendar-header-card" style="background:var(--bg-card); border:1px solid var(--border); border-radius:18px; padding:18px 24px; box-shadow:0 6px 24px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:16px;">

@@ -9758,6 +9758,7 @@ body.standalone-mode .notes-app-wrapper {
   color: var(--text-secondary);
 }
 
+.ast-attach-popup-item .ast-attach-title,
 .ast-attach-popup-item div:last-of-type > div:first-child {
   font-weight: 700;
   font-size: 0.83rem;
@@ -9765,6 +9766,7 @@ body.standalone-mode .notes-app-wrapper {
   line-height: 1.2;
 }
 
+.ast-attach-popup-item .ast-attach-desc,
 .ast-attach-popup-item div:last-of-type > div:last-child {
   font-size: 0.72rem;
   color: var(--text-muted);
@@ -10295,20 +10297,10 @@ body.tool-fullscreen #header-fs-exit-btn {
   box-shadow: 0 8px 24px rgba(0, 122, 255, 0.12) !important;
 }
 
-[data-theme="yosemite"] .btn-primary {
-  background: #007aff !important;
-  color: #ffffff !important;
-  border: none !important;
-  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.28) !important;
-}
-
-[data-theme="yosemite"] .btn-primary:hover {
-  background: #0066d6 !important;
-}
-
 [data-theme="yosemite"] .settings-modal-window,
 [data-theme="yosemite"] .finder-context-menu,
-[data-theme="yosemite"] .custom-dialog-window {
+[data-theme="yosemite"] .custom-dialog-window,
+[data-theme="yosemite"] .ast-attach-popup {
   background: rgba(248, 250, 253, 0.88) !important;
   backdrop-filter: blur(30px) saturate(190%) !important;
   -webkit-backdrop-filter: blur(30px) saturate(190%) !important;
@@ -10381,7 +10373,8 @@ body.tool-fullscreen #header-fs-exit-btn {
 
 [data-theme="yosemite-night"] .settings-modal-window,
 [data-theme="yosemite-night"] .finder-context-menu,
-[data-theme="yosemite-night"] .custom-dialog-window {
+[data-theme="yosemite-night"] .custom-dialog-window,
+[data-theme="yosemite-night"] .ast-attach-popup {
   background: rgba(26, 30, 38, 0.9) !important;
   backdrop-filter: blur(30px) saturate(190%) !important;
   -webkit-backdrop-filter: blur(30px) saturate(190%) !important;

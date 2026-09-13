@@ -164,7 +164,7 @@ export default {
     }
 
     container.innerHTML = `
-      <div class="toolbox-assistant-root" style="width:100%; max-width:100%; margin:0 auto; display:flex; flex-direction:column; height:calc(100vh - 160px); min-height:580px; max-height:920px; background:var(--white); border:1px solid var(--g200); border-radius:18px; overflow:hidden; box-shadow:0 16px 48px rgba(0,0,0,0.08); position:relative; font-family:var(--sans);">
+      <div class="toolbox-assistant-root" style="width:100%; max-width:100%; margin:0 auto; display:flex; flex-direction:column; height:calc(100vh - 160px); min-height:580px; background:var(--white); border:1px solid var(--g200); border-radius:18px; overflow:hidden; box-shadow:0 16px 48px rgba(0,0,0,0.08); position:relative; font-family:var(--sans);">
         
         <!-- HEADER BAR -->
         <div style="padding:12px 20px; border-bottom:1px solid var(--g200); background:var(--g50); flex-shrink:0;">
@@ -254,8 +254,8 @@ export default {
                     <line x1="12" y1="17" x2="12" y2="21"></line>
                   </svg>
                   <div>
-                    <div style="font-weight:700; font-size:0.83rem; color:var(--black);">Upload from computer</div>
-                    <div style="font-size:0.71rem; color:var(--g500); font-weight:400;">Browse device files</div>
+                    <div class="ast-attach-title">Upload from computer</div>
+                    <div class="ast-attach-desc">Browse device files</div>
                   </div>
                 </button>
                 <button type="button" class="ast-attach-popup-item" id="ast-attach-opt-toolbox">
@@ -263,8 +263,8 @@ export default {
                     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                   </svg>
                   <div>
-                    <div style="font-weight:700; font-size:0.83rem; color:var(--black);">Import from Toolbox files</div>
-                    <div style="font-size:0.71rem; color:var(--g500); font-weight:400;">Saved Work & filesystem</div>
+                    <div class="ast-attach-title">Import from Toolbox files</div>
+                    <div class="ast-attach-desc">Saved Work & filesystem</div>
                   </div>
                 </button>
               </div>

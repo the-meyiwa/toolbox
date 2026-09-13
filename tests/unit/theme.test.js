@@ -100,4 +100,17 @@ test('Desktop Tool Viewport: width aligns all tools (1100px) with exceptions for
     css.includes('.sv-fade-wrapper'),
     'css/style.css must define .sv-fade-wrapper styles'
   );
+
+  // 4. Yosemite themes flat 3D gradient buttons and attach popup glass styling
+  assert.ok(
+    css.includes('[data-theme="yosemite"] .ast-attach-popup') &&
+    css.includes('[data-theme="yosemite-night"] .ast-attach-popup'),
+    'css/style.css must include .ast-attach-popup in Yosemite and Yosemite Night translucent glass modal styling'
+  );
+
+  assert.ok(
+    css.includes('[data-theme="yosemite"] .btn-primary') &&
+    css.includes('linear-gradient(180deg, #3aa0ff 0%, #007aff 48%, #006ee6 100%)'),
+    'Yosemite primary button must use flat 3D Apple blue gradient'
+  );
 });

@@ -24,7 +24,7 @@ export default {
     let activePaper = 'blank';
 
     container.innerHTML = `
-      <div class="notes-app-wrapper" style="display:grid; grid-template-columns:minmax(180px, 220px) minmax(220px, 280px) 1fr; height:720px; max-height:85vh; min-height:500px; background:var(--bg-card); border:1px solid var(--border); border-radius:18px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.04);">
+      <div class="notes-app-wrapper" style="display:grid; grid-template-columns:minmax(180px, 220px) minmax(220px, 280px) 1fr; height:calc(100vh - 180px); min-height:560px; background:var(--bg-card); border:1px solid var(--border); border-radius:18px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.04);">
         
         <!-- 1. FOLDERS SIDEBAR -->
         <div class="notes-sidebar-col" style="background:var(--bg-subtle); border-right:1px solid var(--border); display:flex; flex-direction:column; justify-content:space-between; padding:14px; min-height:0; overflow-y:auto;">
