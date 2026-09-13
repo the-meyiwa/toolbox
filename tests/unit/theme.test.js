@@ -73,16 +73,21 @@ test('Desktop Tool Viewport: width aligns all tools (1100px) with exceptions for
     '#tool-viewport must have desktop max-width of 1100px'
   );
 
-  // 2. Full-width exceptions for container-planner and assistant
+  // 2. Viewport exceptions: full-width for container-planner and proportional scaling for assistant
   assert.ok(
     css.includes('body[data-tool-id="container-planner"] #tool-viewport') &&
     css.includes('body[data-tool-id="assistant"] #tool-viewport'),
-    'css/style.css must define full-width exceptions for container-planner and assistant'
+    'css/style.css must define viewport overrides for container-planner and assistant'
   );
 
   assert.ok(
     css.includes('max-width: 100% !important'),
     'Full-width tool exceptions must specify max-width: 100% !important'
+  );
+
+  assert.ok(
+    css.includes('68vw') && css.includes('75vw'),
+    'Assistant viewport on desktop must scale proportionally between half and 3/4 page width (68vw to 75vw)'
   );
 
   // 3. Files page single-page lock (no vertical scroll on page)
@@ -153,5 +158,16 @@ test('Pill Buttons, Segmented Switchers & Typography Smoothing', async () => {
     css.includes('-webkit-font-smoothing: antialiased !important') &&
     css.includes('text-rendering: optimizeLegibility !important'),
     'Universal typography smoothing must be active across elements'
+  );
+});
+
+test('Home Page Suggested Tools: excludes Assistant from #home-quick row', async () => {
+  const fs = await import('fs');
+  const path = await import('path');
+  const appJs = fs.readFileSync(path.resolve('js/app.js'), 'utf8');
+
+  assert.ok(
+    appJs.includes("t.id !== 'assistant'") && appJs.includes('popular(8)'),
+    'renderQuickRow in js/app.js must query popular tools and explicitly filter out assistant'
   );
 });

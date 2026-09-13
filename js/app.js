@@ -946,8 +946,9 @@ function renderQuickRow() {
   if (!quickRow) return;
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
   const visible = getVisibleTools({ isMobile });
-  quickRow.innerHTML = popular(6)
-    .filter(t => visible.some(v => v.id === t.id))
+  quickRow.innerHTML = popular(8)
+    .filter(t => t.id !== 'assistant' && visible.some(v => v.id === t.id))
+    .slice(0, 6)
     .map(t => `
       <a class="home-quick-item" href="#${t.id}">
         <span class="home-quick-icon">${t.icon}</span>
