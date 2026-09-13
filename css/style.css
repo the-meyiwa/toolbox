@@ -2069,13 +2069,13 @@ mark.regex-match {
     border-radius: 24px 24px 0 0 !important;
     border-bottom: none !important;
     margin: 0 !important;
-    /* Removed generic animation/transform */ !important;
+    /* Removed generic animation/transform */
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
     padding-bottom: env(safe-area-inset-bottom, 12px) !important;
   }
 
   .settings-modal-backdrop.is-open .settings-modal-window {
-    /* Removed generic animation/transform */ !important;
+    /* Removed generic animation/transform */
   }
 
   .sheet-drag-handle {
