@@ -58,7 +58,7 @@ export function renderSpaces(host, rawPath = null) {
       renderJoinForm();
     } else if (viewState === 'connecting') {
       host.innerHTML = `
-        <div class="sp-landing fade-in">
+        <div class="sp-landing">
           <div class="sp-connecting-card">
             <div class="sp-pulse-ring"></div>
             <h2 class="sp-landing-title" style="margin-top:16px;">Connecting to Space…</h2>
@@ -79,7 +79,7 @@ export function renderSpaces(host, rawPath = null) {
     const profile = getUserProfile();
 
     host.innerHTML = `
-      <div class="sp-directory fade-in">
+      <div class="sp-directory">
         <!-- Hero Header -->
         <header class="sp-dir-hero">
           <div class="sp-dir-eyebrow">Toolbox Collaboration</div>
@@ -161,7 +161,7 @@ export function renderSpaces(host, rawPath = null) {
     const currentUser = getCurrentUser();
 
     host.innerHTML = `
-      <div class="sp-landing fade-in">
+      <div class="sp-landing">
         <div class="sp-form-card">
           <div class="sp-form-card-head">
             <button class="sp-back-btn" data-act="go-directory">← Back</button>
@@ -201,7 +201,7 @@ export function renderSpaces(host, rawPath = null) {
     const currentUser = getCurrentUser();
 
     host.innerHTML = `
-      <div class="sp-landing fade-in">
+      <div class="sp-landing">
         <div class="sp-form-card">
           <div class="sp-form-card-head">
             <button class="sp-back-btn" data-act="go-directory">← Back</button>
@@ -236,7 +236,7 @@ export function renderSpaces(host, rawPath = null) {
     const onlineCount = engine.onlineMembers.size;
 
     host.innerHTML = `
-      <div class="sp-room fade-in">
+      <div class="sp-room">
         <!-- Room Topbar -->
         <header class="sp-room-header">
           <div class="sp-room-title-area">

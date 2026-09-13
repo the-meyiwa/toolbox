@@ -34,9 +34,9 @@
         <a href="#home" class="nav-link active" data-page="home">Home</a>
         <a href="#tools" class="nav-link" data-page="tools">Tools</a>
         <a href="#saved" class="nav-link" data-page="saved" id="nav-saved">Files</a>
-        <a href="#about" class="nav-link" data-page="about">About</a>
-        <a href="#donate" class="nav-link" data-page="donate">Donate</a>
-        <a href="#spaces" class="nav-link" data-page="spaces">Spaces</a>
+        
+        
+        
       </nav>
       <div class="header-actions" id="header-actions">
         <div class="search-wrapper" id="search-wrapper">
@@ -93,7 +93,9 @@
         </div>
 
         <!-- Saved work, shown only when the user has actually saved something. -->
-        <section class="home-saved" id="home-saved" hidden></section>
+        <div id="home-spaces" class="home-spaces" hidden></div>
+
+          <section class="home-saved" id="home-saved" hidden></section>
 
         <!-- ASSISTANT SIGN-IN / STATUS BANNER -->
         <div id="home-assistant-banner-wrap" style="max-width:620px; margin:28px auto 0; width:100%;">
@@ -137,8 +139,31 @@
       <!-- SAVED WORK -->
       <div id="saved-view" class="page-view hidden"></div>
 
-            <div id="donate-view" class="page-view hidden">
-        <div class="support-content" style="max-width: 600px; margin: 40px auto; padding: 20px;">
+                  
+
+              <!-- SUPPORT & ABOUT -->
+        <div id="support-view" class="page-view hidden about-story-view">
+          <div class="about-story-container">
+            <!-- SCENE 1 -->
+            <div class="about-scene scene-1" id="about-scene-1">
+              <div class="about-content">
+                <h1 class="about-title">About Toolbox</h1>
+                <p class="about-lead">Toolbox is for anyone who wants a fast, reliable collection of tools in one place.</p>
+              </div>
+            </div>
+            
+            <!-- SCENE 2 -->
+            <div class="about-scene scene-2" id="about-scene-2">
+              <div class="about-content">
+                <h2>Why Toolbox Exists</h2>
+                <p>I only built it because I was looking for a PDF editor on Google and decided to build my own because it was tedious looking it up.</p>
+                <p>Since then, it has evolved into a comprehensive suite designed with an obsessive focus on performance, privacy, and UX.</p>
+              </div>
+            </div>
+
+            <!-- SCENE 3 (Contribute) -->
+            <div class="about-scene scene-3" id="about-scene-3">
+<div class="about-content">
           <!-- CONTRIBUTE TO DEVELOPMENT (FLUTTERWAVE INTEGRATION) -->
           <section class="support-section contribute-section" id="contribute-section">
             <h2 class="support-heading" style="display:flex; align-items:center; gap:8px;">
@@ -199,25 +224,21 @@
             </div>
           </section>
         </div>
-      </div>
-      <!-- SPACES -->
-      <div id="spaces-view" class="page-view hidden"></div>
+</div>
 
-      <!-- SUPPORT -->
-      <div id="support-view" class="page-view hidden">
-        <div class="support-content" style="max-width: 600px; margin: 40px auto; padding: 20px; text-align: center;">
-          <h2 style="font-size: 2rem; font-weight: 800; margin-bottom: 24px;">About Toolbox</h2>
-          <div style="text-align: left; font-size: 1.1rem; line-height: 1.6; color: var(--text-secondary);">
-            <p style="margin-bottom: 20px;">
-              Toolbox is for anyone who wants a fast, reliable collection of tools in one place.
-            </p>
-            <p>
-              I only built it because I was looking for a PDF editor on Google and decided to build my own because it was tedious looking it up.
-            </p>
+            <!-- SCENE 4 -->
+            <div class="about-scene scene-4" id="about-scene-4">
+              <div class="about-content creator-card">
+                <div class="creator-image"></div>
+                <div class="creator-info">
+                  <h3>Created by madselkie</h3>
+                  <p>Developer & Designer.</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </main>
+      </main>
 
     <!-- MOBILE BOTTOM NAVIGATION (FLOATING PILL ISLAND) -->
     <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile Bottom Navigation">
@@ -245,29 +266,9 @@
         </svg>
         <span class="mob-nav-label">Files</span>
       </a>
-      <a href="#donate" class="nav-link mob-nav-item" data-page="donate">
-          <svg class="mob-nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-          </svg>
-          <span class="mob-nav-label">Donate</span>
-        </a>
-        <a href="#spaces" class="nav-link mob-nav-item" data-page="spaces">
-        <svg class="mob-nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-          <circle cx="9" cy="7" r="4"></circle>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-        </svg>
-        <span class="mob-nav-label">Spaces</span>
-      </a>
-      <a href="#about" class="nav-link mob-nav-item" data-page="about">
-        <svg class="mob-nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="16" x2="12" y2="12"></line>
-          <line x1="12" y1="8" x2="12.01" y2="8"></line>
-        </svg>
-        <span class="mob-nav-label">About</span>
-      </a>
+      
+        
+      
     </nav>
   </div>
 

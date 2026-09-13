@@ -38,7 +38,7 @@ export function mountDeskOverview(container, engine) {
     const taskPercent = totalTasks ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
     container.innerHTML = `
-      <div class="sp-desk fade-in">
+      <div class="sp-desk">
         <!-- Desk Metrics Strip -->
         <div class="sp-desk-summary">
           <div class="sp-desk-hero">
@@ -226,7 +226,7 @@ export function mountArtifactsView(container, engine) {
     const artifacts = rawArtifacts.filter(a => activeFilter === 'all' || a.kind === activeFilter);
 
     container.innerHTML = `
-      <div class="sp-artifacts-pane fade-in">
+      <div class="sp-artifacts-pane">
         <!-- Action Header -->
         <div class="sp-pane-header">
           <div class="sp-filter-bar">
@@ -443,7 +443,7 @@ export function mountArtifactsView(container, engine) {
 
 export function mountDiscussionView(container, engine) {
   container.innerHTML = `
-    <div class="sp-chat fade-in">
+    <div class="sp-chat">
       <div class="sp-chat-messages"></div>
       <div class="sp-typing"></div>
       <form class="sp-chat-input-row" id="sp-chat-form">
@@ -555,7 +555,7 @@ export function mountTasksView(container, engine) {
     const tasks = allTasks.filter(t => activeTab === 'all' || t.status === activeTab);
 
     container.innerHTML = `
-      <div class="sp-tasks-pane fade-in">
+      <div class="sp-tasks-pane">
         <div class="sp-pane-header">
           <div class="sp-filter-bar">
             <button class="sp-filter-btn ${activeTab === 'all' ? 'is-active' : ''}" data-task-tab="all">All (${allTasks.length})</button>
@@ -571,7 +571,7 @@ export function mountTasksView(container, engine) {
         </div>
 
         ${showForm ? `
-          <form class="sp-task-form fade-in" id="sp-new-task-form">
+          <form class="sp-task-form" id="sp-new-task-form">
             <div class="sp-form-group">
               <label class="sp-form-label">Task Title</label>
               <input type="text" class="tool-input" id="task-title" placeholder="What needs to be done?" required autocomplete="off">
@@ -721,7 +721,7 @@ export function mountLiveSessionsView(container, engine) {
 
   const render = () => {
     container.innerHTML = `
-      <div class="sp-sessions-pane fade-in">
+      <div class="sp-sessions-pane">
         <div class="sp-sub-tabs">
           <button class="sp-sub-tab ${subTab === 'notepad' ? 'is-active' : ''}" data-sub="notepad">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:4px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -762,7 +762,7 @@ export function mountLiveSessionsView(container, engine) {
 
 function mountNotepad(container, engine) {
   container.innerHTML = `
-    <div class="sp-notepad fade-in">
+    <div class="sp-notepad">
       <div class="sp-notepad-info">
         <div class="sp-notepad-badge">
           <span class="sp-dot-live"></span>
@@ -821,7 +821,7 @@ function mountPolls(container, engine) {
     const myId = engine.user.id;
 
     container.innerHTML = `
-      <div class="sp-poll-container fade-in">
+      <div class="sp-poll-container">
         <div class="sp-pane-header">
           <div>
             <h3 class="sp-section-title">Live Polls</h3>
@@ -833,7 +833,7 @@ function mountPolls(container, engine) {
         </div>
 
         ${showCreate ? `
-          <form class="sp-poll-form fade-in" id="sp-new-poll-form">
+          <form class="sp-poll-form" id="sp-new-poll-form">
             <div class="sp-form-group">
               <label class="sp-form-label">Poll Question</label>
               <input type="text" class="tool-input" id="poll-q" placeholder="What should the group vote on?" required autocomplete="off">
@@ -966,7 +966,7 @@ export function mountChallengesView(container, engine) {
     const myId = engine.user.id;
 
     container.innerHTML = `
-      <div class="sp-challenges-pane fade-in">
+      <div class="sp-challenges-pane">
         <div class="sp-pane-header">
           <div>
             <h3 class="sp-section-title">Group Challenges</h3>
@@ -978,7 +978,7 @@ export function mountChallengesView(container, engine) {
         </div>
 
         ${showCreate ? `
-          <form class="sp-challenge-form fade-in" id="sp-new-challenge-form">
+          <form class="sp-challenge-form" id="sp-new-challenge-form">
             <div class="sp-form-group">
               <label class="sp-form-label">Challenge Title</label>
               <input type="text" class="tool-input" id="ch-title" placeholder="e.g. Build a 3D Model, Design a flow chart" required autocomplete="off">
@@ -1114,7 +1114,7 @@ export function mountMembersView(container, engine) {
     const allMembersMap = engine.members ? Array.from(engine.members.values()) : [];
 
     container.innerHTML = `
-      <div class="sp-members-pane fade-in">
+      <div class="sp-members-pane">
         <!-- Invite Card -->
         <div class="sp-invite-banner">
           <div>

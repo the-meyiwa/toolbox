@@ -241,16 +241,7 @@ body {
 /* ============================================================
    ANIMATIONS
    ============================================================ */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.fade-in {
-  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-/* ============================================================
+/* Removed generic animations as per Global Design and Motion System requirements *//* ============================================================
    PAGE VIEWS
    ============================================================ */
 .page-view.hidden { display: none; }
@@ -368,7 +359,7 @@ body {
 }
 
 .home-feature:hover {
-  transform: translateY(-4px);
+  /* Removed generic animation/transform */
   background: var(--white);
   box-shadow: 0 12px 24px rgba(0,0,0,0.06);
 }
@@ -411,7 +402,7 @@ body {
 }
 
 .home-creator-card:hover {
-  transform: translateY(-4px);
+  /* Removed generic animation/transform */
   box-shadow: 0 12px 32px rgba(0,0,0,0.08);
 }
 
@@ -511,7 +502,7 @@ body {
 
 .tool-card:hover { 
   background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-subtle) 100%); 
-  transform: translateY(-2px);
+  /* Removed generic animation/transform */
   box-shadow: 0 6px 16px rgba(0,0,0,0.06);
   z-index: 2;
   border-color: var(--accent);
@@ -765,7 +756,7 @@ body {
   box-shadow: 0 2px 6px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.22); 
 }
 .btn-primary:active { 
-  transform: translateY(1px); 
+  /* Removed generic animation/transform */ 
   box-shadow: inset 0 1px 3px rgba(0,0,0,0.25); 
 }
 
@@ -781,7 +772,7 @@ body {
   box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
 }
 .btn-secondary:active { 
-  transform: translateY(1px); 
+  /* Removed generic animation/transform */ 
   box-shadow: inset 0 1px 2px rgba(0,0,0,0.1); 
 }
 
@@ -1207,7 +1198,7 @@ mark.regex-match {
 .contrib-tier-btn:hover {
   background: var(--bg-hover);
   border-color: var(--border-subtle);
-  transform: translateY(-1px);
+  /* Removed generic animation/transform */
 }
 
 .contrib-tier-btn.active {
@@ -1495,7 +1486,7 @@ mark.regex-match {
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
 }
 .creator-card-full:hover {
-  transform: translateY(-4px);
+  /* Removed generic animation/transform */
   box-shadow: 0 12px 32px rgba(0,0,0,0.08);
 }
 
@@ -1518,7 +1509,7 @@ mark.regex-match {
 
 .buymeacoffee-btn:hover {
   background: var(--g800);
-  transform: translateY(-2px);
+  /* Removed generic animation/transform */
   box-shadow: 0 10px 24px rgba(0,0,0,0.15);
 }
 
@@ -1764,7 +1755,7 @@ mark.regex-match {
   }
 
   .mob-nav-item.active .mob-nav-icon {
-    transform: translateY(-1px);
+    /* Removed generic animation/transform */
     stroke-width: 2.3;
     color: var(--accent, var(--text, #111827)) !important;
   }
@@ -2078,13 +2069,13 @@ mark.regex-match {
     border-radius: 24px 24px 0 0 !important;
     border-bottom: none !important;
     margin: 0 !important;
-    transform: translateY(100%) !important;
+    /* Removed generic animation/transform */ !important;
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
     padding-bottom: env(safe-area-inset-bottom, 12px) !important;
   }
 
   .settings-modal-backdrop.is-open .settings-modal-window {
-    transform: translateY(0) !important;
+    /* Removed generic animation/transform */ !important;
   }
 
   .sheet-drag-handle {
@@ -2771,7 +2762,7 @@ mark.regex-match {
   position: absolute;
   right: 12px;
   top: 50%;
-  transform: translateY(-50%);
+  /* Removed generic animation/transform */
   font-family: var(--mono);
   font-size: 0.74rem;
   color: var(--g400);
@@ -3443,7 +3434,7 @@ mark.regex-match {
 .home-quick-item:hover {
   border-color: var(--black);
   color: var(--black);
-  transform: translateY(-1px);
+  /* Removed generic animation/transform */
 }
 .home-quick-icon { display: flex; width: 14px; height: 14px; }
 .home-quick-icon svg { width: 100%; height: 100%; }
@@ -4006,11 +3997,11 @@ input, select, textarea {
 
 @keyframes sheetSlideUp {
   from {
-    transform: translateY(100%);
+    /* Removed generic animation/transform */
     opacity: 0.6;
   }
   to {
-    transform: translateY(0);
+    /* Removed generic animation/transform */
     opacity: 1;
   }
 }
@@ -5547,11 +5538,10 @@ input, select, textarea {
   border: 1px solid var(--g150);
   border-radius: 14px;
   background: var(--g50);
-  animation: surprise-open 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  /* Removed generic animation/transform */
 }
 
-@keyframes surprise-open {
-  from { opacity: 0; transform: translateY(-8px); }
+/* Removed generic animation/transform */
   to   { opacity: 1; transform: none; }
 }
 
@@ -5828,8 +5818,8 @@ input, select, textarea {
 .sp-typing-dots span:nth-child(2) { animation-delay: 0.2s; }
 .sp-typing-dots span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes bounce {
-  0%, 80%, 100% { transform: translateY(0); }
-  40% { transform: translateY(-4px); }
+  0%, 80%, 100% { /* Removed generic animation/transform */ }
+  40% { /* Removed generic animation/transform */ }
 }
 
 .sp-chat-input-row { display: flex; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--g150); background: var(--g50); align-items: center; }
@@ -6256,7 +6246,7 @@ input, select, textarea {
 
 [data-theme] .sv-grid-card:hover {
   border-color: var(--border) !important;
-  transform: translateY(-2px);
+  /* Removed generic animation/transform */
 }
 
 [data-theme] .tool-stat {
@@ -6798,7 +6788,7 @@ input, select, textarea {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Removed generic animation/transform */
 }
 
 /* Layout with Screen & Tape */
@@ -7467,12 +7457,12 @@ input, select, textarea {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transform: translateY(16px) scale(0.98);
+  /* Removed generic animation/transform */ scale(0.98);
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .settings-modal-backdrop.is-open .settings-modal-window {
-  transform: translateY(0) scale(1);
+  /* Removed generic animation/transform */ scale(1);
 }
 
 .settings-modal-header {
@@ -7581,7 +7571,7 @@ input, select, textarea {
 
 .theme-card:hover {
   border-color: var(--g300);
-  transform: translateY(-2px);
+  /* Removed generic animation/transform */
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
@@ -7709,7 +7699,7 @@ input, select, textarea {
 .header-icon-btn:hover {
   background: var(--g100);
   border-color: var(--g300);
-  transform: translateY(-1px);
+  /* Removed generic animation/transform */
 }
 
 /* Header Dropdown Menu */
@@ -7734,7 +7724,7 @@ input, select, textarea {
   gap: 2px;
   opacity: 0;
   pointer-events: none;
-  transform: translateY(-8px) scale(0.96);
+  /* Removed generic animation/transform */ scale(0.96);
   transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 1500;
 }
@@ -7742,7 +7732,7 @@ input, select, textarea {
 .header-dropdown-menu.is-open {
   opacity: 1;
   pointer-events: auto;
-  transform: translateY(0) scale(1);
+  /* Removed generic animation/transform */ scale(1);
 }
 
 .dropdown-item {
@@ -8164,7 +8154,7 @@ input, select, textarea {
 }
 
 .credit-card:hover {
-  transform: translateY(-2px);
+  /* Removed generic animation/transform */
   border-color: var(--g300);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
   background: var(--white);
@@ -8721,7 +8711,7 @@ input, select, textarea {
 .ast-inchat-dropzone-card.dragover {
   border-color: var(--black);
   background: var(--g50);
-  transform: translateY(-1px);
+  /* Removed generic animation/transform */
 }
 
 .ast-inchat-drop-inner {
@@ -8774,12 +8764,11 @@ input, select, textarea {
   display: flex;
   gap: 12px;
   max-width: 90%;
-  animation: astFadeIn 0.2s ease;
+  /* Removed generic animation/transform */
 }
 
-@keyframes astFadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Removed generic animation/transform */
+  to { opacity: 1; /* Removed generic animation/transform */ }
 }
 
 .ast-msg-user {
@@ -9395,15 +9384,10 @@ body.standalone-mode .notes-app-wrapper {
   display: block;
 }
 
-@keyframes astGlowEntrance {
-  0% {
-    opacity: 0;
-    transform: translateY(3px);
-    text-shadow: 0 0 14px var(--accent, #6366f1), 0 0 24px var(--accent, #6366f1);
-  }
+/* Removed generic animation/transform */
   100% {
     opacity: 1;
-    transform: translateY(0);
+    /* Removed generic animation/transform */
     text-shadow: 0 0 4px var(--accent, rgba(99, 102, 241, 0.5));
   }
 }
@@ -9442,36 +9426,26 @@ body.standalone-mode .notes-app-wrapper {
 
 /* 3. Plain Fade Animation (Smooth graceful lift with theme-aware shadow) */
 .ast-anim-plain-fade {
-  animation: astPlainFade 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  /* Removed generic animation/transform */
   display: block;
 }
 
-@keyframes astPlainFade {
-  0% {
-    opacity: 0;
-    transform: translateY(8px);
-    filter: drop-shadow(0 2px 6px var(--g200, rgba(0,0,0,0.08)));
-  }
+/* Removed generic animation/transform */
   100% {
     opacity: 1;
-    transform: translateY(0);
+    /* Removed generic animation/transform */
     filter: drop-shadow(0 0 0 transparent);
   }
 }
 
 /* 4. Pop In Animation (Spring bouncy scale with theme-aware aura) */
 .ast-anim-pop-in {
-  animation: astPopIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  /* Removed generic animation/transform */
   transform-origin: top left;
   display: block;
 }
 
-@keyframes astPopIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.93) translateY(5px);
-    text-shadow: 0 0 8px var(--g300, rgba(0,0,0,0.15));
-  }
+/* Removed generic animation/transform */
   70% {
     transform: scale(1.02) translateY(-1px);
   }
@@ -9502,17 +9476,13 @@ body.standalone-mode .notes-app-wrapper {
   display: none;
   flex-direction: column;
   gap: 3px;
-  animation: astPopupIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Removed generic animation/transform */
 }
 
-@keyframes astPopupIn {
-  from {
-    opacity: 0;
-    transform: translateY(6px) scale(0.97);
-  }
+/* Removed generic animation/transform */
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    /* Removed generic animation/transform */ scale(1);
   }
 }
 
@@ -9574,7 +9544,7 @@ body.standalone-mode .notes-app-wrapper {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: astPopupIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Removed generic animation/transform */
 }
 
 .ast-import-modal-header {
@@ -10011,7 +9981,7 @@ body.standalone-mode .notes-app-wrapper {
 }
 
 .avatar-story-card:hover {
-  transform: translateY(-2px);
+  /* Removed generic animation/transform */
   border-color: var(--g400, #999);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
 }
@@ -10153,5 +10123,124 @@ body.standalone-mode .notes-app-wrapper {
     max-width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+  }
+}
+/ *   D y n a m i c   C o n t e n t   T i l e   S y s t e m   * / 
+ . d y n a m i c - t i l e - g r i d   { 
+     d i s p l a y :   g r i d ; 
+     g r i d - t e m p l a t e - c o l u m n s :   r e p e a t ( a u t o - f i l l ,   m i n m a x ( 3 0 0 p x ,   1 f r ) ) ; 
+     g r i d - a u t o - f l o w :   d e n s e ; 
+     g a p :   1 6 p x ; 
+ } 
+ . t i l e - 1 x 1   {   g r i d - c o l u m n :   s p a n   1 ;   g r i d - r o w :   s p a n   1 ;   } 
+ . t i l e - 2 x 1   {   g r i d - c o l u m n :   s p a n   2 ;   g r i d - r o w :   s p a n   1 ;   } 
+ . t i l e - 1 x 2   {   g r i d - c o l u m n :   s p a n   1 ;   g r i d - r o w :   s p a n   2 ;   } 
+ . t i l e - 2 x 2   {   g r i d - c o l u m n :   s p a n   2 ;   g r i d - r o w :   s p a n   2 ;   } 
+ @ m e d i a   ( m a x - w i d t h :   6 5 0 p x )   { 
+     . d y n a m i c - t i l e - g r i d   {   g r i d - t e m p l a t e - c o l u m n s :   1 f r ;   } 
+     . t i l e - 1 x 1 ,   . t i l e - 2 x 1 ,   . t i l e - 1 x 2 ,   . t i l e - 2 x 2   {   g r i d - c o l u m n :   s p a n   1 ;   g r i d - r o w :   s p a n   1 ;   } 
+ }  
+ 
+
+/* Split Workspace */
+#workspace-container {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.workspace-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+#pane-left {
+  width: 100%;
+}
+
+#pane-right {
+  width: 0;
+}
+
+#workspace-container.workspace-split #pane-left {
+  width: 50%;
+}
+#workspace-container.workspace-split #pane-right {
+  width: 50%;
+  display: flex !important;
+}
+
+#workspace-divider {
+  width: 8px;
+  cursor: col-resize;
+  background: var(--border);
+  z-index: 10;
+  transition: background 0.2s;
+}
+#workspace-divider:hover {
+  background: var(--g400);
+}
+
+.pane-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+  min-height: 48px;
+}
+
+.pane-header-left, .pane-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pane-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.pane-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pane-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.pane-content {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+}
+
+@media (max-width: 768px) {
+  #workspace-container.workspace-split {
+    flex-direction: column;
+  }
+  #workspace-container.workspace-split #pane-left,
+  #workspace-container.workspace-split #pane-right {
+    width: 100% !important;
+    height: 50%;
+  }
+  #workspace-divider {
+    width: 100%;
+    height: 8px;
+    cursor: row-resize;
   }
 }

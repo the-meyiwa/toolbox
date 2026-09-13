@@ -136,7 +136,7 @@ export default {
           </div>
 
           <!-- Knowledge Cards Grid -->
-          <div id="math-lib-results-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:14px;"></div>
+          <div id="math-lib-results-grid" class="dynamic-tile-grid"></div>
         </div>
 
         <!-- 2. TAB: SOLVER & COMPUTATION LAB -->
@@ -426,11 +426,23 @@ export default {
           badgeClass = 'math-badge-algorithm';
         }
 
+        const formulaLen = entry.formula ? entry.formula.length : 0;
+        const textLen = (entry.statement || entry.definition || '').length;
+        
+        let tileClass = 'tile-1x1';
+        if (formulaLen > 90 || textLen > 250) {
+          tileClass = 'tile-2x2';
+        } else if (formulaLen > 40) {
+          tileClass = 'tile-2x1';
+        } else if (textLen > 120) {
+          tileClass = 'tile-1x2';
+        }
+
         const renderedFormula = entry.formula ? renderMath(entry.formula, { displayMode: true }) : '';
         const renderedStatement = renderMathInText(entry.statement || entry.definition || '');
 
         return `
-          <article class="math-knowledge-card">
+          <article class="math-knowledge-card ${tileClass}">
             <header class="math-card-header">
               <h3 class="math-card-title">${escapeHtml(entry.title)}</h3>
               <span class="math-proof-badge ${badgeClass}">

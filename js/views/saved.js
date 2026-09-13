@@ -456,12 +456,12 @@ function renderExplorerBody(items, selected) {
     }
 
     return `
-      <div style="text-align:center; padding:50px 20px; background:var(--bg-card); border:1px solid var(--border); border-radius:14px;">
-        <div style="color:var(--text-muted); margin-bottom:10px;">
+      <div data-canvas="true" style="text-align:center; padding:50px 20px; background:var(--bg-card); border:1px solid var(--border); border-radius:14px; min-height: 300px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: context-menu;">
+        <div style="color:var(--text-muted); margin-bottom:10px; pointer-events:none;">
           ${ICONS.folder}
         </div>
-        <h3 style="margin:0 0 6px; font-size:1rem; color:var(--text);">This folder is empty</h3>
-        <p style="margin:0 0 16px; font-size:0.84rem; color:var(--text-secondary);">Right-click or hold on files/folders to access options.</p>
+        <h3 style="margin:0 0 6px; font-size:1rem; color:var(--text); pointer-events:none;">This folder is empty</h3>
+        <p style="margin:0 0 16px; font-size:0.84rem; color:var(--text-secondary); pointer-events:none;">Right-click or hold to access options, or paste files here.</p>
         <div style="display:flex; justify-content:center; gap:8px;">
           <button type="button" class="btn btn-secondary btn-sm" data-act="new-file" style="display:inline-flex; align-items:center; gap:5px;">
             ${ICONS.plus}
@@ -1989,17 +1989,20 @@ function wire(host, selected, refresh, itemsInDir = []) {
     }
   };
 
-  const onTouchEnd = () => {
+  const onTouchEnd = (e) => {
     if (touchTimer) clearTimeout(touchTimer);
     if (activeTouchItem) {
       activeTouchItem.classList.remove('sv-touch-active');
       activeTouchItem = null;
     }
+    if (isLongPressTriggered && e && e.cancelable) {
+      e.preventDefault();
+    }
   };
 
   host.addEventListener('touchstart', onTouchStart, { passive: true });
   host.addEventListener('touchmove', onTouchMove, { passive: true });
-  host.addEventListener('touchend', onTouchEnd, { passive: true });
+  host.addEventListener('touchend', onTouchEnd, { passive: false });
 
   // Dismiss finder context menu and open-in dropdown menu on outside click or scroll
   const dismissMenu = (me) => {

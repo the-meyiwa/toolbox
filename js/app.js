@@ -22,6 +22,8 @@ import { installHeaderMenu } from './lib/header-menu.js';
 import { getCurrentUser, parseAuthRedirect } from './lib/supabase.js';
 import { openAccountModal } from './views/account-modal.js';
 import { initFlutterwaveContribution } from './lib/flutterwave-contribution.js';
+import { initWorkspace } from './lib/workspace.js';
+import { initScrollNarrative } from './about-scroll.js';
 
 /* --------------- state --------------- */
 
@@ -125,7 +127,7 @@ function renderGrid(originalList, { query = '', noResult = false } = {}) {
         <a class="btn btn-secondary btn-sm" href="mailto:meyigbenee@icloud.com?subject=${encodeURIComponent('Toolbox: no tool for "' + query + '"')}">Ask for this tool</a>
       </div>
       ${list.length ? `
-        <section class="grid-category fade-in">
+        <section class="grid-category">
           <h2 class="category-label">Closest matches</h2>
           <div class="category-tools">${list.slice(0, 6).map(t => toolCard(t)).join('')}</div>
         </section>` : ''}`;
@@ -135,7 +137,7 @@ function renderGrid(originalList, { query = '', noResult = false } = {}) {
   // A search result is a ranked list; browsing is grouped by category.
   if (query) {
     grid.innerHTML = `
-      <section class="grid-category fade-in">
+      <section class="grid-category">
         <h2 class="category-label">${list.length} result${list.length === 1 ? '' : 's'}</h2>
         <div class="category-tools">${list.map(t => toolCard(t)).join('')}</div>
       </section>`;
@@ -143,13 +145,13 @@ function renderGrid(originalList, { query = '', noResult = false } = {}) {
   }
 
   const sections = [
-    `<section class="grid-category fade-in" id="cat-popular">
+    `<section class="grid-category" id="cat-popular">
        <h2 class="category-label">Popular</h2>
        <p class="category-blurb">What people open most.</p>
        <div class="category-tools">${popular(8).filter(t => list.some(lt => lt.id === t.id)).map(t => toolCard(t)).join('')}</div>
      </section>`,
     ...categorised(list).map(c => `
-      <section class="grid-category fade-in" id="cat-${c.id}">
+      <section class="grid-category" id="cat-${c.id}">
         <h2 class="category-label">${escapeHtml(c.label)}</h2>
         <p class="category-blurb">${escapeHtml(c.blurb)}</p>
         <div class="category-tools">${c.tools.map(t => toolCard(t)).join('')}</div>
@@ -257,13 +259,13 @@ function showPage(page) {
   for (const v of Object.values(VIEWS)) {
     if (!v) continue;
     v.classList.add('hidden');
-    v.classList.remove('fade-in');
+    v
   }
   const view = VIEWS[page];
   if (view) {
     view.classList.remove('hidden');
     void view.offsetWidth;
-    view.classList.add('fade-in');
+    view
   }
 
   currentPage = page;
@@ -274,6 +276,21 @@ function showPage(page) {
   searchWrapper.style.display = page === 'tools' ? '' : 'none';
   if (page === 'donate') {
     initFlutterwaveContribution();
+  }
+  
+  if (page === 'home') {
+    const homeSpaces = document.getElementById('home-spaces');
+    if (homeSpaces) {
+      homeSpaces.hidden = false;
+      if (!unmountSpaces) {
+        unmountSpaces = renderSpaces(homeSpaces, null);
+      }
+    }
+  } else {
+     if (unmountSpaces) {
+        unmountSpaces();
+        unmountSpaces = null;
+     }
   }
   requestAnimationFrame(updateMobileNavIndicator);
 }
@@ -293,10 +310,10 @@ function initAboutShowcase() {
     details.querySelectorAll('[data-step-panel]').forEach(panel => {
       if (panel.dataset.stepPanel === step) {
         panel.style.display = 'block';
-        panel.classList.add('fade-in');
+        panel
       } else {
         panel.style.display = 'none';
-        panel.classList.remove('fade-in');
+        panel
       }
     });
   });
@@ -344,7 +361,7 @@ async function openTool(id) {
   for (const v of Object.values(VIEWS)) {
     if (!v) continue;
     v.classList.add('hidden');
-    v.classList.remove('fade-in');
+    v
   }
   searchWrapper.style.display = 'none';
 
@@ -367,7 +384,7 @@ async function openTool(id) {
   if (popoutBtn) popoutBtn.style.display = tool.standalone ? 'inline-flex' : 'none';
   viewport.classList.remove('hidden');
   void viewport.offsetWidth;
-  viewport.classList.add('fade-in');
+  viewport
 
   for (const link of navLinks) link.classList.toggle('active', link.dataset.page === 'tools');
   requestAnimationFrame(updateMobileNavIndicator);
@@ -507,8 +524,7 @@ function handleHash() {
 
   // #spaces, or #spaces/<code> to join via a shared link.
   if (raw === 'spaces' || raw.startsWith('spaces/')) {
-    showPage('spaces');
-    unmountSpaces = renderSpaces(spacesView, raw.slice(7) || null);
+    showPage('home');
     return;
   }
 
@@ -938,6 +954,8 @@ reflectSavedWork();
 initTheme();
 installSettingsUI();
 installHeaderMenu();
+  initWorkspace(openTool);
+  initScrollNarrative();
 
 const isStandalone = new URLSearchParams(window.location.search).get('standalone') === 'true';
 if (isStandalone) {

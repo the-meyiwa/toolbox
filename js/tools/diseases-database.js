@@ -40,7 +40,7 @@ export default {
 
         <!-- Filter Pills -->
         <div id="dis-filter-pills" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none;">
-          <button type="button" class="btn btn-sm dis-pill active" data-system="all" style="border-radius:9999px; padding:5px 14px; font-size:0.8rem; font-weight:700; white-space:nowrap; background:var(--black, #0f172a); color:#fff; cursor:pointer;">All Conditions</button>
+          <button type="button" class="btn btn-sm dis-pill active" data-system="all" style="border-radius:9999px; padding:5px 14px; font-size:0.8rem; font-weight:700; white-space:nowrap; background:var(--black); color:var(--white); cursor:pointer;">All Conditions</button>
           <button type="button" class="btn btn-secondary btn-sm dis-pill" data-system="cardiovascular" style="border-radius:9999px; padding:5px 14px; font-size:0.8rem; font-weight:700; white-space:nowrap; cursor:pointer;">Cardiovascular</button>
           <button type="button" class="btn btn-secondary btn-sm dis-pill" data-system="respiratory" style="border-radius:9999px; padding:5px 14px; font-size:0.8rem; font-weight:700; white-space:nowrap; cursor:pointer;">Respiratory</button>
           <button type="button" class="btn btn-secondary btn-sm dis-pill" data-system="neurological" style="border-radius:9999px; padding:5px 14px; font-size:0.8rem; font-weight:700; white-space:nowrap; cursor:pointer;">Neurological</button>
@@ -194,8 +194,8 @@ export default {
       });
       pill.classList.add('active');
       pill.classList.remove('btn-secondary');
-      pill.style.background = 'var(--black, #0f172a)';
-      pill.style.color = '#fff';
+      pill.style.background = 'var(--black)';
+      pill.style.color = 'var(--white)';
       activeSystem = pill.dataset.system;
       renderList();
     });
