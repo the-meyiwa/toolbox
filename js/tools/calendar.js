@@ -55,7 +55,7 @@ export default {
             </div>
 
             <!-- View Switcher -->
-            <div class="cal-view-switcher" style="display:flex; background:var(--bg-subtle); padding:3px; border-radius:12px; border:1px solid var(--border);">
+            <div class="cal-view-switcher" style="display:flex; background:var(--bg-subtle); padding:3px; border-radius:9999px; border:1px solid var(--border);">
               <button type="button" class="cal-view-btn active" data-view="month">Month</button>
               <button type="button" class="cal-view-btn" data-view="week">Week</button>
               <button type="button" class="cal-view-btn" data-view="day">Day</button>
@@ -783,22 +783,25 @@ function injectCalendarStyles() {
   style.id = 'calendar-tool-injected-styles';
   style.textContent = `
     .cal-view-btn {
-      padding: 5px 12px;
+      padding: 5px 14px;
       font-size: 0.8rem;
       font-weight: 500;
-      background: transparent;
-      border: none;
+      background: transparent !important;
+      border: 1px solid transparent;
       color: var(--text-secondary);
-      border-radius: 8px;
+      border-radius: 9999px;
       cursor: pointer;
-      transition: all 0.15s ease;
+      position: relative;
+      z-index: 1;
+      transition: color 0.18s ease;
+      white-space: nowrap;
     }
     .cal-view-btn:hover { color: var(--text); }
     .cal-view-btn.active {
-      background: var(--bg-card);
-      color: var(--text);
+      color: var(--text) !important;
       font-weight: 700;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      background: transparent !important;
+      box-shadow: none !important;
     }
 
     .cal-cat-pill {

@@ -24,14 +24,16 @@ export function attachSegmentedSlider(container, buttonSelector = 'button', acti
     slider.setAttribute('aria-hidden', 'true');
     slider.style.cssText = `
       position: absolute;
-      top: 2px;
+      top: 0;
       left: 0;
       border-radius: inherit;
       background: var(--bg-card, #ffffff);
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
       pointer-events: none;
       z-index: 0;
-      transition: transform 0.22s cubic-bezier(0.2, 0.85, 0.2, 1), width 0.22s cubic-bezier(0.2, 0.85, 0.2, 1), opacity 0.15s ease;
+      box-sizing: border-box;
+      transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), width 0.24s cubic-bezier(0.16, 1, 0.3, 1), height 0.24s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;
       opacity: 0;
     `;
     if (typeof container.insertBefore === 'function') {
@@ -47,7 +49,8 @@ export function attachSegmentedSlider(container, buttonSelector = 'button', acti
   buttons.forEach(btn => {
     btn.style.position = 'relative';
     btn.style.zIndex = '1';
-    btn.style.transition = 'color 0.15s ease';
+    btn.style.background = 'transparent';
+    btn.style.transition = 'color 0.18s ease';
   });
 
   const update = () => {
@@ -63,10 +66,10 @@ export function attachSegmentedSlider(container, buttonSelector = 'button', acti
     const y = activeBtn.offsetTop || 0;
 
     slider.style.opacity = '1';
-    slider.style.transform = `translate3d(${x}px, 0, 0)`;
+    slider.style.transform = `translate3d(${x}px, ${y}px, 0)`;
     if (w > 0) slider.style.width = `${w}px`;
     if (h > 0) slider.style.height = `${h}px`;
-    slider.style.top = `${y}px`;
+    slider.style.top = '0px';
 
     const btnRadius = activeBtn.style?.borderRadius || window.getComputedStyle?.(activeBtn)?.borderRadius;
     if (btnRadius) slider.style.borderRadius = btnRadius;
@@ -74,7 +77,8 @@ export function attachSegmentedSlider(container, buttonSelector = 'button', acti
 
   buttons.forEach(btn => {
     btn.addEventListener('click', () => {
-      setTimeout(update, 10);
+      buttons.forEach(b => b.classList.toggle(activeClass, b === btn));
+      update();
     });
   });
 

@@ -368,7 +368,7 @@ export class FileDeletionConfirmationRenderer extends ResultRenderer {
     const confirmBtn = document.createElement('button');
     confirmBtn.type = 'button';
     confirmBtn.className = 'btn btn-sm btn-danger';
-    confirmBtn.style.cssText = 'padding:6px 16px; border-radius:8px; background:#dc2626; color:#ffffff; font-size:0.82rem; font-weight:700; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:background 0.15s;';
+    confirmBtn.style.cssText = 'padding:6px 16px; border-radius:9999px; background:#dc2626; color:#ffffff; font-size:0.82rem; font-weight:700; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:background 0.15s;';
     confirmBtn.innerHTML = `
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="3 6 5 6 21 6"/>
@@ -380,7 +380,7 @@ export class FileDeletionConfirmationRenderer extends ResultRenderer {
     const cancelBtn = document.createElement('button');
     cancelBtn.type = 'button';
     cancelBtn.className = 'btn btn-sm btn-secondary';
-    cancelBtn.style.cssText = 'padding:6px 14px; border-radius:8px; background:var(--bg-elevated, var(--g100, #f1f5f9)); color:var(--text-secondary, #475569); font-size:0.82rem; font-weight:600; border:1px solid var(--border-color, #e2e8f0); cursor:pointer;';
+    cancelBtn.style.cssText = 'padding:6px 14px; border-radius:9999px; background:var(--bg-elevated, var(--g100, #f1f5f9)); color:var(--text-secondary, #475569); font-size:0.82rem; font-weight:600; border:1px solid var(--border-color, #e2e8f0); cursor:pointer;';
     cancelBtn.textContent = 'Cancel';
 
     const statusMsg = document.createElement('span');
@@ -4753,7 +4753,7 @@ export class ImageGalleryResultRenderer extends ResultRenderer {
     const saveFilesBtn = document.createElement('button');
     saveFilesBtn.type = 'button';
     saveFilesBtn.textContent = 'Save All to Files';
-    saveFilesBtn.style.cssText = 'font-size:0.75rem; padding:4px 10px; border-radius:6px; background:var(--primary); color:#fff; border:none; font-weight:600; cursor:pointer;';
+    saveFilesBtn.style.cssText = 'font-size:0.75rem; padding:4px 10px; border-radius:9999px; background:var(--primary); color:#fff; border:none; font-weight:600; cursor:pointer;';
     saveFilesBtn.onclick = async () => {
       saveFilesBtn.disabled = true;
       saveFilesBtn.textContent = 'Saving...';

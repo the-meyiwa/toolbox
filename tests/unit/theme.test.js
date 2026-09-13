@@ -114,3 +114,44 @@ test('Desktop Tool Viewport: width aligns all tools (1100px) with exceptions for
     'Yosemite primary button must use flat 3D Apple blue gradient'
   );
 });
+
+test('Pill Buttons, Segmented Switchers & Typography Smoothing', async () => {
+  const fs = await import('fs');
+  const path = await import('path');
+  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf8');
+
+  // 1. Most buttons must be pill shaped (border-radius: 9999px)
+  assert.ok(
+    /\.btn\s*\{[^}]*border-radius:\s*9999px/i.test(css),
+    '.btn must have pill-shaped border-radius: 9999px'
+  );
+  assert.ok(
+    /\.btn-sm\s*\{[^}]*border-radius:\s*9999px/i.test(css),
+    '.btn-sm must have pill-shaped border-radius: 9999px'
+  );
+
+  // 2. Segmented switchers and slider pills must have borders and animations
+  assert.ok(
+    css.includes('.segmented-slider-pill'),
+    'css/style.css must define .segmented-slider-pill'
+  );
+  assert.ok(
+    css.includes('.cal-view-switcher') && css.includes('.sv-storage-switch'),
+    'css/style.css must define .cal-view-switcher and .sv-storage-switch'
+  );
+  assert.ok(
+    /\.segmented-slider-pill\s*\{[^}]*border:\s*1px solid/i.test(css),
+    '.segmented-slider-pill must have border'
+  );
+  assert.ok(
+    /\.segmented-slider-pill\s*\{[^}]*transition:[^}]*transform/i.test(css),
+    '.segmented-slider-pill must animate switching with transform transition'
+  );
+
+  // 3. Typography smoothing across elements
+  assert.ok(
+    css.includes('-webkit-font-smoothing: antialiased !important') &&
+    css.includes('text-rendering: optimizeLegibility !important'),
+    'Universal typography smoothing must be active across elements'
+  );
+});

@@ -56,20 +56,33 @@ button:disabled, .btn:disabled, input:disabled, select:disabled, textarea:disabl
   --header-h: 57px;
 }
 
-/* --- Reset --- */
+/* --- Reset & Smooth Typography --- */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 input, button, textarea, select { font-family: inherit; }
 
+html,
+body,
+input,
+button,
+textarea,
+select,
+table,
+h1, h2, h3, h4, h5, h6,
+p, span, a, label {
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  text-rendering: optimizeLegibility !important;
+}
+
 html {
   font-size: 16px;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
   width: 100%;
   overflow-x: hidden;
 }
 
 body {
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   font-family: var(--sans);
   background: var(--white);
   color: var(--black);
@@ -735,7 +748,7 @@ body {
   min-height: 40px;
   padding: 0 18px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 9999px;
   font-family: var(--sans);
   font-size: 0.85rem;
   font-weight: 500;
@@ -776,7 +789,7 @@ body {
   box-shadow: inset 0 1px 2px rgba(0,0,0,0.1); 
 }
 
-.btn-sm { height: 32px; min-height: 32px; padding: 0 12px; font-size: 0.78rem; border-radius: 6px; }
+.btn-sm { height: 32px; min-height: 32px; padding: 0 12px; font-size: 0.78rem; border-radius: 9999px; }
 
 .btn.active { 
   background: var(--accent); 
@@ -10127,7 +10140,7 @@ body.tool-fullscreen #header-fs-exit-btn {
   padding: 6px 16px;
   font-weight: 600;
   font-size: 0.85rem;
-  border-radius: 8px;
+  border-radius: 9999px;
 }
 
 .btn-danger {
@@ -10465,7 +10478,7 @@ body.tool-fullscreen #header-fs-exit-btn {
   background: linear-gradient(180deg, #3aa0ff 0%, #007aff 48%, #006ee6 100%) !important;
   color: #ffffff !important;
   border: 1px solid #005ec4 !important;
-  border-radius: 6px !important;
+  border-radius: 9999px !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38), 0 1px 2px rgba(0, 45, 120, 0.22) !important;
   text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25) !important;
   font-weight: 500 !important;
@@ -10487,7 +10500,7 @@ body.tool-fullscreen #header-fs-exit-btn {
   background: linear-gradient(180deg, #ffffff 0%, #f7f8fa 50%, #eaedf1 100%) !important;
   color: #1d1d1f !important;
   border: 1px solid rgba(0, 0, 0, 0.2) !important;
-  border-radius: 6px !important;
+  border-radius: 9999px !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 2px rgba(0, 0, 0, 0.08) !important;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) !important;
   font-weight: 500 !important;
@@ -10514,7 +10527,7 @@ body.tool-fullscreen #header-fs-exit-btn {
   background: linear-gradient(180deg, #2b93ff 0%, #0a84ff 48%, #0074f0 100%) !important;
   color: #ffffff !important;
   border: 1px solid #005fcc !important;
-  border-radius: 6px !important;
+  border-radius: 9999px !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), 0 1px 3px rgba(0, 0, 0, 0.45) !important;
   text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.35) !important;
   font-weight: 500 !important;
@@ -10536,7 +10549,7 @@ body.tool-fullscreen #header-fs-exit-btn {
   background: linear-gradient(180deg, #363d4a 0%, #2b313b 50%, #21262f 100%) !important;
   color: #f5f5f7 !important;
   border: 1px solid rgba(255, 255, 255, 0.16) !important;
-  border-radius: 6px !important;
+  border-radius: 9999px !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 1px 2px rgba(0, 0, 0, 0.35) !important;
   text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.4) !important;
   font-weight: 500 !important;
@@ -10836,4 +10849,90 @@ body[data-tool-id="container-planner"] .cq-rates {
   max-width: 1040px !important;
   margin-left: auto !important;
   margin-right: auto !important;
+}
+
+/* ============================================================
+   SEGMENTED SWITCHERS & ANIMATED SLIDER PILLS
+   (Offline-Online, Calendar Views, Mode Switchers, etc.)
+   ============================================================ */
+.segmented-switcher,
+.cal-view-switcher,
+.sv-storage-switch,
+.sv-view-switcher,
+.sv-content-view-switcher,
+.calc-mode-bar,
+#calc-mode-bar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  padding: 3px;
+  gap: 2px;
+  box-sizing: border-box;
+}
+
+.segmented-slider-pill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 9999px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  pointer-events: none;
+  z-index: 0;
+  box-sizing: border-box;
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+              width 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+              height 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.15s ease;
+}
+
+.segmented-switcher button,
+.cal-view-btn,
+.sv-storage-btn,
+.sv-layout-btn,
+.sv-cview-btn,
+.calc-mode-btn {
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  color: var(--text-secondary);
+  font-family: var(--sans);
+  cursor: pointer;
+  box-shadow: none !important;
+  transition: color 0.18s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.segmented-switcher button:hover,
+.cal-view-btn:hover,
+.sv-storage-btn:hover,
+.sv-layout-btn:hover,
+.sv-cview-btn:hover,
+.calc-mode-btn:hover {
+  color: var(--text);
+}
+
+.segmented-switcher button.active,
+.cal-view-btn.active,
+.sv-storage-btn.active,
+.sv-layout-btn.active,
+.sv-cview-btn.active,
+.calc-mode-btn.active {
+  color: var(--text) !important;
+  font-weight: 700;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+[data-theme="yosemite"] .segmented-slider-pill,
+[data-theme="yosemite-night"] .segmented-slider-pill {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }

@@ -676,7 +676,7 @@ function injectNotesCSS() {
       padding: 8px 10px;
       border: 1px solid transparent;
       background: transparent;
-      border-radius: 8px;
+      border-radius: 9999px;
       font-size: 0.82rem;
       font-weight: 500;
       color: var(--text-secondary);
@@ -709,7 +709,7 @@ function injectNotesCSS() {
       background: var(--bg-card) !important;
       color: var(--text) !important;
       border: 1px solid var(--border) !important;
-      border-radius: 6px;
+      border-radius: 9999px;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
