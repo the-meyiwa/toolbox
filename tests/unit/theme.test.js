@@ -62,15 +62,15 @@ test('Theme: initTheme hydrates theme on boot', () => {
   assert.equal(document.documentElement.getAttribute('data-theme'), 'linux-mint');
 });
 
-test('Desktop Tool Viewport: width matches Files (940px) with exceptions for container-planner and assistant', async () => {
+test('Desktop Tool Viewport: width aligns all tools (1100px) with exceptions for container-planner and assistant', async () => {
   const fs = await import('fs');
   const path = await import('path');
   const css = fs.readFileSync(path.resolve('css/style.css'), 'utf8');
 
-  // 1. Tool viewport standard max-width is 940px
+  // 1. Tool viewport standard max-width is 1100px (wide enough for rich multi-column tools)
   assert.ok(
-    /#tool-viewport\s*\{[^}]*max-width:\s*940px/i.test(css),
-    '#tool-viewport must have desktop max-width of 940px to match Files'
+    /#tool-viewport\s*\{[^}]*max-width:\s*1100px/i.test(css),
+    '#tool-viewport must have desktop max-width of 1100px'
   );
 
   // 2. Full-width exceptions for container-planner and assistant

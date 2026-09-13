@@ -206,7 +206,7 @@ export default {
         </div>
 
         <!-- CHAT MESSAGE STREAM -->
-        <div id="ast-messages" style="flex:1; overflow-y:auto; padding:24px 20px; display:flex; flex-direction:column; gap:20px; background:var(--white); max-width:860px; width:100%; margin:0 auto; box-sizing:border-box;">
+        <div id="ast-messages" style="flex:1; overflow-y:auto; padding:24px 20px; display:flex; flex-direction:column; gap:20px; background:var(--white); width:100%; box-sizing:border-box;">
           <!-- Messages will be rendered here -->
         </div>
 

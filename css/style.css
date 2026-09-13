@@ -571,7 +571,7 @@ body {
    ============================================================ */
 #tool-viewport {
   width: 100%;
-  max-width: 940px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 0 24px 48px;
 }
@@ -9712,6 +9712,68 @@ body.standalone-mode .notes-app-wrapper {
 
 
 /* ============================================================
+   ASSISTANT — Attach Popup Menu (+ button dropdown)
+   Themed to match Toolbox finder-context-menu / dialog style
+   ============================================================ */
+.ast-attach-popup {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 1000;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 6px;
+  min-width: 220px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  font-family: var(--sans);
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ast-attach-popup-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease;
+  box-sizing: border-box;
+  color: var(--text);
+}
+
+.ast-attach-popup-item:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
+}
+
+.ast-attach-popup-item svg {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.ast-attach-popup-item div:last-of-type > div:first-child {
+  font-weight: 700;
+  font-size: 0.83rem;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.ast-attach-popup-item div:last-of-type > div:last-child {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-top: 1px;
+}
+
+
+/* ============================================================
    TOOLBOX — REFINED SYSTEMS & FULLSCREEN ARCHITECTURE
    ============================================================ */
 
@@ -10747,12 +10809,8 @@ body[data-tool-id="assistant"] .toolbox-assistant-root {
   max-width: 100% !important;
   width: 100% !important;
 }
-body[data-tool-id="assistant"] #ast-messages {
-  max-width: 860px !important;
-  width: 100% !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-}
+/* Assistant proportional scaling — messages fill the full scroll area,
+   inner elements (head-inner, composer-inner, chips-inner) are centered via max-width */
 body[data-tool-id="assistant"] .ast-head-inner,
 body[data-tool-id="assistant"] .ast-composer-inner,
 body[data-tool-id="assistant"] .ast-chips-inner,
