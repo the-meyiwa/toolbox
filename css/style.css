@@ -9841,14 +9841,18 @@ body.tool-fullscreen #main {
 
 body.tool-fullscreen #tool-viewport {
   width: 100% !important;
-  height: 100% !important;
+  height: calc(100vh - var(--header-h, 57px)) !important;
   max-width: 100% !important;
   margin: 0 !important;
-  padding: 12px 20px !important;
+  padding: 0 !important;
   display: flex !important;
   flex-direction: column !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
+}
+
+body.tool-fullscreen .viewport-header {
+  display: none !important;
 }
 
 body.tool-fullscreen #viewport-content {
@@ -9859,6 +9863,7 @@ body.tool-fullscreen #viewport-content {
   overflow: auto !important;
   display: flex !important;
   flex-direction: column !important;
+  padding: 0 !important;
 }
 
 body.tool-fullscreen #viewport-content > * {
@@ -9871,8 +9876,14 @@ body.tool-fullscreen #viewport-content > * {
 }
 
 body.tool-fullscreen #tool-related,
-body.tool-fullscreen .tool-related {
+body.tool-fullscreen .tool-related,
+body.tool-fullscreen #tips-fab,
+body.tool-fullscreen #mobile-nav {
   display: none !important;
+}
+
+body.tool-fullscreen #header-fs-exit-btn {
+  display: inline-flex !important;
 }
 
 /* 3. UNIFIED FINDER CONTEXT MENU */

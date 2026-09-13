@@ -54,6 +54,7 @@ let viewportContent = $('viewport-content');
 const relatedBar = $('tool-related');
 const backBtn = $('back-btn');
 const popoutBtn = $('popout-btn');
+const headerFsExitBtn = $('header-fs-exit-btn');
 const searchInput = $('search');
 const searchWrapper = $('search-wrapper');
 const logo = $('logo');
@@ -349,6 +350,7 @@ function initAboutShowcase() {
 }
 
 function teardownTool() {
+  toggleToolFullscreen(false);
   document.body.classList.remove('in-tool');
   unmountArtifacts?.();
   unmountArtifacts = null;
@@ -693,6 +695,11 @@ backBtn.addEventListener('click', () => { window.location.hash = '#tools'; });
 if (popoutBtn) {
   popoutBtn.addEventListener('click', () => {
     toggleToolFullscreen();
+  });
+}
+if (headerFsExitBtn) {
+  headerFsExitBtn.addEventListener('click', () => {
+    toggleToolFullscreen(false);
   });
 }
 
