@@ -60,8 +60,9 @@ const navLinks = document.querySelectorAll('.nav-link');
 const savedView = $('saved-view');
 const navSaved = $('nav-saved');
 const spacesView = $('spaces-view');
+const donateView = $('donate-view');
 
-const VIEWS = { home: homeView, tools: toolsView, about: supportView, support: supportView, saved: savedView, files: savedView, spaces: spacesView, tool: viewport };
+const VIEWS = { home: homeView, tools: toolsView, about: supportView, support: supportView, saved: savedView, files: savedView, spaces: spacesView, donate: donateView, tool: viewport };
 
 const toolModules = import.meta.glob('./tools/*.js');
 
@@ -271,9 +272,8 @@ function showPage(page) {
     link.classList.toggle('active', link.dataset.page === page || (page === 'about' && link.dataset.page === 'support') || (page === 'support' && link.dataset.page === 'about'));
   }
   searchWrapper.style.display = page === 'tools' ? '' : 'none';
-  if (page === 'about' || page === 'support') {
+  if (page === 'donate') {
     initFlutterwaveContribution();
-    initAboutShowcase();
   }
   requestAnimationFrame(updateMobileNavIndicator);
 }
