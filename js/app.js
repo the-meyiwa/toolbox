@@ -483,6 +483,7 @@ function handleHash() {
   if (raw === '' || raw === 'home') return showPage('home');
   if (raw === 'tools') { showPage('tools'); return; }
   if (raw === 'about' || raw === 'support') return showPage('about');
+  if (raw === 'donate') return showPage('donate');
   if (raw === 'set-new-password') {
     openAccountModal('set-new-password');
     return showPage('home');
