@@ -244,9 +244,9 @@ export default {
               <h1>${escapeHtml(s.title)}</h1>
               ${s.description ? `<p class="wk-desc">${escapeHtml(s.description)}</p>` : ''}
               <div class="wk-actions">
-                <a class="btn btn-sm" href="${escapeHtml(s.pageUrl)}" target="_blank" rel="noopener">Open on Wikipedia</a>
-                <button class="btn btn-sm" id="wk-cite">Cite</button>
-                <button class="btn btn-sm" id="wk-copy">Copy summary</button>
+                <a class="btn btn-secondary btn-sm" href="${escapeHtml(s.pageUrl)}" target="_blank" rel="noopener" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">Open on Wikipedia</a>
+                <button class="btn btn-secondary btn-sm" id="wk-cite">Cite</button>
+                <button class="btn btn-secondary btn-sm" id="wk-copy">Copy summary</button>
               </div>
             </div>
           </header>

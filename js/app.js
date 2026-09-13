@@ -13,7 +13,6 @@ import * as artifacts from './lib/artifacts.js';
 import { mountArtifactStrip, incomingBanner } from './lib/artifact-ui.js';
 import { installPalette, openPalette, detectAiIntent } from './lib/palette.js';
 import { renderSaved } from './views/saved.js';
-import { renderSpaces } from './views/spaces.js';
 import { kindLabel } from './registry/kinds.js';
 import { copyText, showToast } from './utils.js';
 import { initTheme } from './lib/theme.js';
@@ -243,6 +242,10 @@ function installCategoryChips() {
 
 function renderRelated(tool) {
   if (!relatedBar) return;
+  if (document.body.classList.contains('tool-fullscreen')) {
+    relatedBar.hidden = true;
+    return;
+  }
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
   const visible = getVisibleTools({ isMobile });
   const rel = relatedTools(tool, visible, 4);
@@ -269,6 +272,9 @@ function updateFullscreenBtnState(isFullscreen) {
 function toggleToolFullscreen(force) {
   const isFullscreen = document.body.classList.toggle('tool-fullscreen', force);
   updateFullscreenBtnState(isFullscreen);
+  if (isFullscreen && relatedBar) {
+    relatedBar.hidden = true;
+  }
 }
 
 /* --------------- routing --------------- */
@@ -315,20 +321,6 @@ function showPage(page) {
     }
   }
   
-  if (page === 'home') {
-    const homeSpaces = document.getElementById('home-spaces');
-    if (homeSpaces) {
-      homeSpaces.hidden = false;
-      if (!unmountSpaces) {
-        unmountSpaces = renderSpaces(homeSpaces, null);
-      }
-    }
-  } else {
-     if (unmountSpaces) {
-        unmountSpaces();
-        unmountSpaces = null;
-     }
-  }
   requestAnimationFrame(updateMobileNavIndicator);
 }
 

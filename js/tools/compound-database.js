@@ -168,16 +168,16 @@ export default {
         try {
           const calc = calculateMolarMass(rawQuery);
           gridEl.innerHTML = `
-            <div style="background:var(--white); border:2px solid var(--black); border-radius:12px; padding:20px; grid-column:1/-1; box-shadow:0 4px 12px rgba(0,0,0,0.04);">
+            <div class="tool-card" style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:20px; grid-column:1/-1;">
               <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
-                <span style="font-family:var(--mono); font-size:1.6rem; font-weight:900; color:var(--black);">${escapeHtml(rawQuery)}</span>
-                <span style="font-family:var(--mono); font-size:1.2rem; font-weight:800; color:var(--p700,#1d4ed8);">${calc.molarMass.toFixed(3)} g/mol</span>
+                <span style="font-family:var(--mono); font-size:1.4rem; font-weight:700; color:var(--text);">${escapeHtml(rawQuery)}</span>
+                <span style="font-family:var(--mono); font-size:1.1rem; font-weight:700; color:var(--accent, #007aff);">${calc.molarMass.toFixed(3)} g/mol</span>
               </div>
-              <p style="font-size:0.86rem; color:var(--g600); margin:0 0 14px;">Custom molecular formula parsed and calculated on-the-fly from standard atomic weights.</p>
+              <p style="font-size:0.84rem; color:var(--text-muted); margin:0 0 14px;">Custom molecular formula parsed and calculated from standard atomic weights.</p>
 
               <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
                 ${calc.composition.map(it => `
-                  <span style="font-size:0.8rem; background:var(--g100); border:1px solid var(--g200); padding:4px 10px; border-radius:6px;">
+                  <span style="font-size:0.78rem; background:var(--bg-subtle); border:1px solid var(--border); padding:4px 10px; border-radius:6px; color:var(--text);">
                     <strong>${it.name} (${it.symbol}):</strong> ${it.percent.toFixed(1)}% (${it.count} atom${it.count > 1 ? 's' : ''})
                   </span>
                 `).join('')}
@@ -192,9 +192,9 @@ export default {
           return;
         } catch {
           gridEl.innerHTML = `
-            <div style="grid-column:1/-1; text-align:center; padding:48px 16px; background:var(--white); border:1px dashed var(--g200); border-radius:12px;">
-              <p style="font-size:0.95rem; font-weight:600; color:var(--g700); margin-bottom:4px;">No compounds found matching "${escapeHtml(rawQuery)}"</p>
-              <p style="font-size:0.82rem; color:var(--g500); margin:0;">Try searching by generic name, brand name, formula, IUPAC name, or CAS registry number.</p>
+            <div style="grid-column:1/-1; text-align:center; padding:48px 16px; background:var(--bg-card); border:1px dashed var(--border); border-radius:14px;">
+              <p style="font-size:0.95rem; font-weight:600; color:var(--text); margin-bottom:4px;">No compounds found matching "${escapeHtml(rawQuery)}"</p>
+              <p style="font-size:0.82rem; color:var(--text-muted); margin:0;">Try searching by generic name, brand name, formula, IUPAC name, or CAS registry number.</p>
             </div>
           `;
           return;
@@ -202,56 +202,48 @@ export default {
       }
 
       const getCatBadge = (cat) => {
-        const colors = {
-          Pharmaceutical: { bg: '#eff6ff', text: '#1d4ed8', border: '#bfdbfe' },
-          Biochemical:    { bg: '#f0fdf4', text: '#15803d', border: '#bbf7d0' },
-          Inorganic:      { bg: '#fef3c7', text: '#b45309', border: '#fde68a' },
-          Organic:        { bg: '#f5f3ff', text: '#6d28d9', border: '#ddd6fe' },
-          Material:       { bg: '#ecfeff', text: '#0e7490', border: '#a5f3fc' },
-        };
-        const conf = colors[cat] || { bg: '#f1f5f9', text: '#334155', border: '#e2e8f0' };
-        return `<span style="font-size:0.72rem; font-weight:700; background:${conf.bg}; color:${conf.text}; border:1px solid ${conf.border}; padding:2px 8px; border-radius:999px; white-space:nowrap;">${cat}</span>`;
+        return `<span style="font-size:0.72rem; font-weight:600; background:var(--bg-subtle); color:var(--text-muted); border:1px solid var(--border); padding:2px 8px; border-radius:999px; white-space:nowrap;">${escapeHtml(cat)}</span>`;
       };
 
       const slice = filtered.slice(0, visibleCount);
 
       gridEl.innerHTML = slice.map(c => `
-        <div style="background:var(--white); border:1px solid var(--g200); border-radius:12px; padding:16px; box-shadow:0 2px 6px rgba(0,0,0,0.02); display:flex; flex-direction:column; justify-content:space-between; transition:transform 0.2s ease, box-shadow 0.2s ease;">
+        <div class="tool-card" style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:18px; display:flex; flex-direction:column; justify-content:space-between; gap:14px;">
           <div>
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px; gap:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; gap:10px;">
               <div>
-                <span style="font-family:var(--mono); font-size:1.3rem; font-weight:900; color:var(--black); letter-spacing:-0.02em;">${c.formula}</span>
-                <div style="font-size:0.82rem; color:var(--g600); font-weight:600; font-family:var(--mono);">${c.molarMass} g/mol</div>
+                <div style="font-family:var(--mono); font-size:1.22rem; font-weight:700; color:var(--text); letter-spacing:-0.02em;">${c.formula}</div>
+                <div style="font-size:0.78rem; color:var(--text-muted); font-family:var(--mono); margin-top:2px;">${c.molarMass} g/mol</div>
               </div>
               ${getCatBadge(c.category)}
             </div>
 
-            <h4 style="margin:4px 0 3px; font-size:1rem; font-weight:800; color:var(--black); line-height:1.35;">${c.name}</h4>
-            <div style="font-size:0.74rem; color:var(--g500); font-style:italic; margin-bottom:8px; line-height:1.35; word-break:break-word;">IUPAC: ${escapeHtml(c.iupac)}</div>
+            <h4 style="margin:0 0 4px; font-size:0.98rem; font-weight:700; color:var(--text); line-height:1.35;">${escapeHtml(c.name)}</h4>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:10px; line-height:1.35; word-break:break-word;">${escapeHtml(c.iupac)}</div>
 
             ${c.medicalUse ? `
-              <div style="font-size:0.76rem; background:rgba(37, 99, 235, 0.06); border-left:3px solid #2563eb; padding:4px 8px; border-radius:0 4px 4px 0; margin-bottom:8px; color:#1e40af; line-height:1.3;">
-                <strong>Clinical Class:</strong> ${escapeHtml(c.medicalUse)}
+              <div style="font-size:0.76rem; background:var(--bg-subtle); border-left:3px solid var(--accent, #007aff); padding:5px 10px; border-radius:0 6px 6px 0; margin-bottom:10px; color:var(--text); line-height:1.35;">
+                <span style="font-weight:600; color:var(--text-muted);">Class:</span> ${escapeHtml(c.medicalUse)}
               </div>
             ` : ''}
 
-            <p style="font-size:0.8rem; line-height:1.45; color:var(--g800); margin:0 0 10px;">${escapeHtml(c.summary)}</p>
+            <p style="font-size:0.82rem; line-height:1.45; color:var(--text); margin:0 0 12px;">${escapeHtml(c.summary)}</p>
 
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:0.73rem; margin-bottom:12px; background:var(--g50); padding:8px; border-radius:6px; border:1px solid var(--g150);">
-              <div><strong>CAS:</strong> <span style="font-family:var(--mono);">${c.cas}</span></div>
-              <div><strong>Density:</strong> ${c.density}</div>
-              <div><strong>Melting:</strong> ${c.melt}</div>
-              <div><strong>Boiling:</strong> ${c.boil}</div>
+            <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:6px; font-size:0.74rem; background:var(--bg-subtle); padding:10px 12px; border-radius:8px; border:1px solid var(--border);">
+              <div><span style="color:var(--text-muted);">CAS:</span> <span style="font-family:var(--mono); color:var(--text);">${c.cas}</span></div>
+              <div><span style="color:var(--text-muted);">Density:</span> <span style="color:var(--text);">${c.density}</span></div>
+              <div><span style="color:var(--text-muted);">Melting:</span> <span style="color:var(--text);">${c.melt}</span></div>
+              <div><span style="color:var(--text-muted);">Boiling:</span> <span style="color:var(--text);">${c.boil}</span></div>
             </div>
           </div>
 
-          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--g150); padding-top:10px; flex-wrap:wrap; gap:6px;">
-            <span style="font-size:0.72rem; color:${c.hazard.includes('Non-hazardous') ? '#16a34a' : '#dc2626'}; font-weight:700; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(c.hazard)}">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:12px; flex-wrap:wrap; gap:8px;">
+            <span style="font-size:0.72rem; color:var(--text-muted); max-width:170px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(c.hazard)}">
               ${escapeHtml(c.hazard)}
             </span>
             <div style="display:flex; gap:6px;">
-              <button class="btn btn-secondary btn-sm cd-copy-formula" data-formula="${c.formula}" style="font-size:0.72rem; padding:3px 8px;">Copy</button>
-              <a href="#chemical-equation-balancer" class="btn btn-secondary btn-sm" style="font-size:0.72rem; padding:3px 8px;">Balance</a>
+              <button class="btn btn-secondary btn-sm cd-copy-formula" data-formula="${c.formula}" style="font-size:0.72rem; padding:4px 10px;">Copy</button>
+              <a href="#chemical-equation-balancer" class="btn btn-secondary btn-sm" style="font-size:0.72rem; padding:4px 10px; text-decoration:none;">Balance</a>
             </div>
           </div>
         </div>

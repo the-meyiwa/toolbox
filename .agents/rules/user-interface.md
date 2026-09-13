@@ -572,3 +572,17 @@ Ensure:
 - shadows remain subtle
 - controls remain coherent
 Always make sure it all looks good on mobile displays.
+
+==================================================
+24. THEME COMPATIBILITY FOR DYNAMIC CONTROLS & ANIMATIONS
+==================================================
+
+Interactive controls, live previews, and dynamic text animations (such as Assistant response animations in Settings) must be fully functional, styled, and legible across ALL themes.
+
+Never allow dynamic animations or preview components to become invisible, clipped, washed out, or missing keyframe/class definitions.
+
+Specifically:
+- Light and translucent glass themes (e.g. Yosemite) require deliberate text contrast, solid/accent fallback shadows, and explicit background clipping support.
+- Dark translucent glass themes (e.g. Yosemite Night) require appropriate luminous glow parameters and border separation.
+- Ensure all animation utility classes (`.ast-anim-*`, preview containers) and their `@keyframes` are preserved in the core stylesheet.
+- When adding or modifying preview containers or animation styles, verify legibility across light, dark, and translucent themes before concluding changes.

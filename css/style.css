@@ -9242,15 +9242,29 @@ body.standalone-mode .notes-app-wrapper {
   color: var(--text-secondary);
 }
 
-/* Knowledge Reference Cards */
+/* Knowledge Reference Grid & Cards */
+.dynamic-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
+  margin-top: 14px;
+}
+
+@media (max-width: 640px) {
+  .dynamic-tile-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
 .math-knowledge-card {
-  padding: 18px 20px;
+  padding: 20px 22px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--bg-card);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
   transition: border-color 0.15s, box-shadow 0.15s;
   height: auto;
@@ -9856,6 +9870,11 @@ body.tool-fullscreen #viewport-content > * {
   box-sizing: border-box !important;
 }
 
+body.tool-fullscreen #tool-related,
+body.tool-fullscreen .tool-related {
+  display: none !important;
+}
+
 /* 3. UNIFIED FINDER CONTEXT MENU */
 .finder-context-menu {
   position: fixed;
@@ -10231,3 +10250,409 @@ body.tool-fullscreen #viewport-content > * {
 [data-theme="yosemite"] .dis-fade-right {
   background: linear-gradient(270deg, #edf1f7, transparent) !important;
 }
+
+/* 8. YOSEMITE NIGHT THEME */
+[data-theme="yosemite-night"] {
+  --white: #20242c;
+  --black: #f5f5f7;
+  --g50:  #16191f;
+  --g100: #222630;
+  --g150: #2c313d;
+  --g200: #3a4150;
+  --g300: #4f586b;
+  --g400: #717d94;
+  --g500: #939fb5;
+  --g600: #b5bfd0;
+  --g700: #d4dbe6;
+  --g800: #e8ecf2;
+  --g900: #f5f7fa;
+  --bg-card: rgba(28, 33, 42, 0.76);
+  --bg-subtle: rgba(20, 24, 31, 0.78);
+  --bg-hover: rgba(10, 132, 255, 0.12);
+  --border: rgba(255, 255, 255, 0.11);
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --accent: #0a84ff;
+  --accent-hover: #0071e3;
+  --accent-glow: rgba(10, 132, 255, 0.35);
+  --text: #f5f5f7;
+  --text-secondary: #a1a1a6;
+  --text-muted: #86868b;
+  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="yosemite-night"] body {
+  background: #14171d linear-gradient(180deg, #181c24 0%, #101217 100%) !important;
+  color: #f5f5f7 !important;
+}
+
+[data-theme="yosemite-night"] #app-header {
+  background: rgba(22, 26, 34, 0.82) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="yosemite-night"] .tool-card {
+  background: rgba(30, 35, 45, 0.72) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme="yosemite-night"] .tool-card:hover {
+  background: rgba(36, 42, 54, 0.9) !important;
+  border-color: rgba(10, 132, 255, 0.45) !important;
+  box-shadow: 0 8px 24px rgba(10, 132, 255, 0.22) !important;
+}
+
+[data-theme="yosemite-night"] .settings-modal-window,
+[data-theme="yosemite-night"] .finder-context-menu,
+[data-theme="yosemite-night"] .custom-dialog-window {
+  background: rgba(26, 30, 38, 0.9) !important;
+  backdrop-filter: blur(30px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(190%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="yosemite-night"] .dis-fade-left {
+  background: linear-gradient(90deg, #181c24, transparent) !important;
+}
+
+[data-theme="yosemite-night"] .dis-fade-right {
+  background: linear-gradient(270deg, #181c24, transparent) !important;
+}
+
+/* ============================================================
+   THEME TYPOGRAPHY
+   ============================================================ */
+:root,
+[data-theme="default"],
+[data-theme="white-on-black"] {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+[data-theme="linux-mint"],
+[data-theme="linux-mint"] body,
+[data-theme="linux-mint"] input,
+[data-theme="linux-mint"] select,
+[data-theme="linux-mint"] textarea,
+[data-theme="linux-mint"] button,
+[data-theme="linux-mint"] h1,
+[data-theme="linux-mint"] h2,
+[data-theme="linux-mint"] h3,
+[data-theme="linux-mint"] h4,
+[data-theme="linux-mint"] h5,
+[data-theme="linux-mint"] h6 {
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, Monaco, monospace !important;
+}
+
+[data-theme="ubuntu"],
+[data-theme="ubuntu"] body,
+[data-theme="ubuntu"] input,
+[data-theme="ubuntu"] select,
+[data-theme="ubuntu"] textarea,
+[data-theme="ubuntu"] button,
+[data-theme="ubuntu"] h1,
+[data-theme="ubuntu"] h2,
+[data-theme="ubuntu"] h3,
+[data-theme="ubuntu"] h4,
+[data-theme="ubuntu"] h5,
+[data-theme="ubuntu"] h6 {
+  font-family: 'Ubuntu', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+[data-theme="yosemite"],
+[data-theme="yosemite"] body,
+[data-theme="yosemite"] input,
+[data-theme="yosemite"] select,
+[data-theme="yosemite"] textarea,
+[data-theme="yosemite"] button,
+[data-theme="yosemite"] h1,
+[data-theme="yosemite"] h2,
+[data-theme="yosemite"] h3,
+[data-theme="yosemite"] h4,
+[data-theme="yosemite"] h5,
+[data-theme="yosemite"] h6,
+[data-theme="yosemite-night"],
+[data-theme="yosemite-night"] body,
+[data-theme="yosemite-night"] input,
+[data-theme="yosemite-night"] select,
+[data-theme="yosemite-night"] textarea,
+[data-theme="yosemite-night"] button,
+[data-theme="yosemite-night"] h1,
+[data-theme="yosemite-night"] h2,
+[data-theme="yosemite-night"] h3,
+[data-theme="yosemite-night"] h4,
+[data-theme="yosemite-night"] h5,
+[data-theme="yosemite-night"] h6 {
+  font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+}
+
+/* ============================================================
+   FLAT 3D STYLE GRADIENT BUTTONS (Yosemite & Yosemite Night)
+   Consistent Apple OS X Yosemite dimensional styling
+   ============================================================ */
+/* Yosemite (Light) Flat 3D Buttons */
+[data-theme="yosemite"] .btn-primary {
+  background: linear-gradient(180deg, #3aa0ff 0%, #007aff 48%, #006ee6 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid #005ec4 !important;
+  border-radius: 6px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38), 0 1px 2px rgba(0, 45, 120, 0.22) !important;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25) !important;
+  font-weight: 500 !important;
+  transition: all 0.12s ease;
+}
+[data-theme="yosemite"] .btn-primary:hover {
+  background: linear-gradient(180deg, #4da9ff 0%, #0a84ff 48%, #0074f0 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 2px 5px rgba(0, 45, 120, 0.28) !important;
+}
+[data-theme="yosemite"] .btn-primary:active {
+  background: linear-gradient(180deg, #0066d6 0%, #005bbb 100%) !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme="yosemite"] .btn-secondary,
+[data-theme="yosemite"] .btn:not(.btn-primary),
+[data-theme="yosemite"] button.btn,
+[data-theme="yosemite"] a.btn:not(.btn-primary) {
+  background: linear-gradient(180deg, #ffffff 0%, #f7f8fa 50%, #eaedf1 100%) !important;
+  color: #1d1d1f !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  border-radius: 6px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 2px rgba(0, 0, 0, 0.08) !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+  font-weight: 500 !important;
+  transition: all 0.12s ease;
+}
+[data-theme="yosemite"] .btn-secondary:hover,
+[data-theme="yosemite"] .btn:not(.btn-primary):hover,
+[data-theme="yosemite"] button.btn:hover,
+[data-theme="yosemite"] a.btn:not(.btn-primary):hover {
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 50%, #f1f3f6 100%) !important;
+  border-color: rgba(0, 0, 0, 0.28) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+[data-theme="yosemite"] .btn-secondary:active,
+[data-theme="yosemite"] .btn:not(.btn-primary):active,
+[data-theme="yosemite"] button.btn:active,
+[data-theme="yosemite"] a.btn:not(.btn-primary):active {
+  background: linear-gradient(180deg, #e3e7ec 0%, #ebeff4 100%) !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Yosemite Night (Dark) Flat 3D Buttons */
+[data-theme="yosemite-night"] .btn-primary {
+  background: linear-gradient(180deg, #2b93ff 0%, #0a84ff 48%, #0074f0 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid #005fcc !important;
+  border-radius: 6px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), 0 1px 3px rgba(0, 0, 0, 0.45) !important;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.35) !important;
+  font-weight: 500 !important;
+  transition: all 0.12s ease;
+}
+[data-theme="yosemite-night"] .btn-primary:hover {
+  background: linear-gradient(180deg, #449eff 0%, #1b8eff 48%, #007ff8 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42), 0 2px 6px rgba(10, 132, 255, 0.3) !important;
+}
+[data-theme="yosemite-night"] .btn-primary:active {
+  background: linear-gradient(180deg, #0066d6 0%, #0058be 100%) !important;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-theme="yosemite-night"] .btn-secondary,
+[data-theme="yosemite-night"] .btn:not(.btn-primary),
+[data-theme="yosemite-night"] button.btn,
+[data-theme="yosemite-night"] a.btn:not(.btn-primary) {
+  background: linear-gradient(180deg, #363d4a 0%, #2b313b 50%, #21262f 100%) !important;
+  color: #f5f5f7 !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-radius: 6px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 1px 2px rgba(0, 0, 0, 0.35) !important;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.4) !important;
+  font-weight: 500 !important;
+  transition: all 0.12s ease;
+}
+[data-theme="yosemite-night"] .btn-secondary:hover,
+[data-theme="yosemite-night"] .btn:not(.btn-primary):hover,
+[data-theme="yosemite-night"] button.btn:hover,
+[data-theme="yosemite-night"] a.btn:not(.btn-primary):hover {
+  background: linear-gradient(180deg, #404857 0%, #343b47 50%, #292f39 100%) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 2px 5px rgba(0, 0, 0, 0.45) !important;
+}
+[data-theme="yosemite-night"] .btn-secondary:active,
+[data-theme="yosemite-night"] .btn:not(.btn-primary):active,
+[data-theme="yosemite-night"] button.btn:active,
+[data-theme="yosemite-night"] a.btn:not(.btn-primary):active {
+  background: linear-gradient(180deg, #1d2129 0%, #252b35 100%) !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* ============================================================
+   ASSISTANT TEXT ANIMATIONS & SETTINGS PREVIEW
+   Verified across all themes (Light, Dark, Glass)
+   ============================================================ */
+/* 1. Color Rave Animation */
+.ast-anim-color-rave {
+  background: linear-gradient(
+    135deg,
+    #ff0055 0%,
+    #e65100 14%,
+    #d97706 28%,
+    #10b981 42%,
+    #007aff 57%,
+    #7928ca 71%,
+    #ff00aa 85%,
+    #ff0055 100%
+  );
+  background-size: 250% 250%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: astColorRave 4s linear infinite;
+  display: inline-block;
+}
+
+.ast-anim-color-rave p,
+.ast-anim-color-rave span,
+.ast-anim-color-rave strong,
+.ast-anim-color-rave em,
+.ast-anim-color-rave li,
+.ast-anim-color-rave h1,
+.ast-anim-color-rave h2,
+.ast-anim-color-rave h3,
+.ast-anim-color-rave h4,
+.ast-anim-color-rave h5,
+.ast-anim-color-rave h6 {
+  background: inherit;
+  background-size: inherit;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: inherit;
+}
+
+.ast-anim-color-rave pre,
+.ast-anim-color-rave code,
+.ast-anim-color-rave button {
+  -webkit-text-fill-color: initial !important;
+  color: initial !important;
+}
+
+@keyframes astColorRave {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* 2. Glow Animation */
+.ast-anim-glow,
+.ast-anim-pixel {
+  color: var(--text, #111) !important;
+  animation: astGlowEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards, astGlowPulse 2.8s ease-in-out infinite alternate;
+  display: inline-block;
+}
+
+@keyframes astGlowEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(3px);
+    text-shadow: 0 0 14px var(--accent, #6366f1), 0 0 24px var(--accent, #6366f1);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    text-shadow: 0 0 5px var(--accent, rgba(99, 102, 241, 0.5));
+  }
+}
+
+@keyframes astGlowPulse {
+  0% {
+    text-shadow: 0 0 3px var(--accent, rgba(99, 102, 241, 0.35));
+  }
+  50% {
+    text-shadow: 0 0 9px var(--accent, rgba(99, 102, 241, 0.75)), 0 0 18px var(--accent, rgba(99, 102, 241, 0.4));
+  }
+  100% {
+    text-shadow: 0 0 3px var(--accent, rgba(99, 102, 241, 0.35));
+  }
+}
+
+/* 3. Plain Fade Animation */
+.ast-anim-plain-fade {
+  color: var(--text, #111) !important;
+  animation: astPlainFade 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  display: inline-block;
+}
+
+@keyframes astPlainFade {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.12));
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+}
+
+/* 4. Pop In Animation */
+.ast-anim-pop-in {
+  color: var(--text, #111) !important;
+  animation: astPopIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: center;
+  display: inline-block;
+}
+
+@keyframes astPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(5px);
+  }
+  70% {
+    transform: scale(1.03) translateY(-1px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Animation preview box & text */
+.ast-anim-preview-box {
+  padding: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.ast-anim-preview-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.4;
+  transition: all 0.2s ease;
+}
+
+[data-theme="yosemite"] .ast-anim-glow {
+  color: #1d1d1f !important;
+  text-shadow: 0 0 10px rgba(0, 122, 255, 0.55), 0 0 1px rgba(0, 122, 255, 0.8) !important;
+}
+
+[data-theme="yosemite-night"] .ast-anim-glow {
+  color: #f5f5f7 !important;
+  text-shadow: 0 0 12px rgba(10, 132, 255, 0.7), 0 0 2px rgba(10, 132, 255, 0.9) !important;
+}
+

@@ -92,49 +92,42 @@ export default {
     for (const d of items) {
       const card = document.createElement('div');
       card.className = 'tool-card';
-      card.style.cssText = 'border:1px solid var(--g200, #e2e8f0); border-radius:16px; background:var(--white, #fff); box-shadow:0 2px 8px rgba(0,0,0,.03); overflow:hidden; display:flex; flex-direction:column;';
+      card.style.cssText = 'border:1px solid var(--border); border-radius:14px; background:var(--bg-card); overflow:hidden; display:flex; flex-direction:column;';
 
       // Header
       const cardHeader = document.createElement('div');
-      cardHeader.style.cssText = 'padding:14px 18px; background:var(--g50, #f8fafc); border-bottom:1px solid var(--g200, #e2e8f0); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;';
+      cardHeader.style.cssText = 'padding:12px 18px; background:var(--bg-subtle); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;';
 
       const headLeft = document.createElement('div');
-      headLeft.style.cssText = 'display:flex; align-items:center; gap:8px; flex-wrap:wrap;';
+      headLeft.style.cssText = 'display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;';
 
       const nameText = document.createElement('strong');
       nameText.textContent = d.name;
-      nameText.style.cssText = 'font-size:1.05rem; color:var(--text, #0f172a); font-weight:800;';
+      nameText.style.cssText = 'font-size:1.02rem; color:var(--text); font-weight:700;';
 
       const icdBadge = document.createElement('span');
       icdBadge.textContent = `ICD-11: ${d.icd11}`;
-      icdBadge.style.cssText = 'font-size:0.72rem; padding:3px 10px; border-radius:9999px; background:var(--primary-light, #eff6ff); color:var(--primary, #2563eb); font-weight:700;';
-
-      const commodityBadge = document.createElement('span');
-      commodityBadge.textContent = `Commodity ${d.commodity}/100`;
-      commodityBadge.style.cssText = 'font-size:0.72rem; padding:3px 10px; border-radius:9999px; background:#f0fdf4; color:#15803d; font-weight:700;';
+      icdBadge.style.cssText = 'font-size:0.72rem; padding:2px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-muted); font-family:var(--mono); font-weight:600;';
 
       headLeft.appendChild(nameText);
       headLeft.appendChild(icdBadge);
-      headLeft.appendChild(commodityBadge);
 
       const saveBtn = document.createElement('button');
       saveBtn.type = 'button';
       saveBtn.className = 'btn btn-secondary btn-sm';
-      saveBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">Save to Work</span>`;
-      saveBtn.style.cssText = 'font-size:0.78rem; padding:5px 14px; border-radius:9999px; cursor:pointer; font-weight:700;';
+      saveBtn.textContent = 'Save';
+      saveBtn.style.cssText = 'font-size:0.76rem; padding:4px 12px; cursor:pointer; font-weight:600;';
       saveBtn.addEventListener('click', async () => {
         try {
           await saveArtifactFile({
             name: `${d.name.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_clinical_summary.txt`,
-            content: `DISEASE: ${d.name}\nICD-11: ${d.icd11}\nPREVALENCE: ${d.prevalence}\n\nPATHOPHYSIOLOGY:\n${d.pathophysiology}\n\nSYMPTOMS:\n${(d.symptoms||[]).join('\n- ')}\n\nDIAGNOSTIC CRITERIA:\n${d.diagnosticCriteria}\n\nMANAGEMENT:\n${(d.management||[]).join('\n- ')}`,
+            content: `DISEASE: ${d.name}\nICD-11: ${d.icd11}\nPREVALENCE: ${d.prevalence || ''}\n\nPATHOPHYSIOLOGY:\n${d.pathophysiology || ''}\n\nSYMPTOMS:\n${(d.symptoms||[]).join('\n- ')}\n\nDIAGNOSTIC CRITERIA:\n${d.diagnosticCriteria || ''}\n\nMANAGEMENT:\n${(d.management||[]).join('\n- ')}`,
             kind: 'text',
             destination: 'cloud',
             from: 'diseases-database'
           });
           saveBtn.textContent = '✓ Saved';
           saveBtn.disabled = true;
-          saveBtn.style.background = '#f0fdf4';
-          saveBtn.style.color = '#15803d';
         } catch {}
       });
 
@@ -144,37 +137,49 @@ export default {
 
       // Body
       const cardBody = document.createElement('div');
-      cardBody.style.cssText = 'padding:16px 18px; display:flex; flex-direction:column; gap:12px; font-size:0.88rem; line-height:1.55; color:var(--text, #0f172a);';
+      cardBody.style.cssText = 'padding:16px 18px; display:flex; flex-direction:column; gap:14px; font-size:0.88rem; line-height:1.5; color:var(--text);';
 
-      if (d.prevalence) {
-        const prevDiv = document.createElement('div');
-        prevDiv.innerHTML = `<span style="font-size:0.75rem; font-weight:700; color:var(--g500, #64748b); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:2px;">Epidemiology & Prevalence</span>${escapeHtml(d.prevalence)}`;
-        cardBody.appendChild(prevDiv);
-      }
-
-      if (d.pathophysiology) {
+      if (d.pathophysiology || d.prevalence) {
         const pathDiv = document.createElement('div');
-        pathDiv.innerHTML = `<span style="font-size:0.75rem; font-weight:700; color:var(--g500, #64748b); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:2px;">Etiology & Pathophysiology</span>${escapeHtml(d.pathophysiology)}`;
+        pathDiv.innerHTML = `
+          <span style="font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:4px;">Clinical Overview</span>
+          <p style="margin:0; color:var(--text); font-size:0.86rem; line-height:1.5;">${escapeHtml(d.pathophysiology || d.prevalence)}</p>
+        `;
         cardBody.appendChild(pathDiv);
       }
 
-      if (d.symptoms && d.symptoms.length) {
-        const sympDiv = document.createElement('div');
-        sympDiv.innerHTML = `<span style="font-size:0.75rem; font-weight:700; color:var(--g500, #64748b); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:2px;">Clinical Signs & Symptoms</span><ul style="margin:4px 0 0 16px; padding:0;">${d.symptoms.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ul>`;
-        cardBody.appendChild(sympDiv);
-      }
+      if ((d.symptoms && d.symptoms.length) || d.diagnosticCriteria || (d.management && d.management.length)) {
+        const gridDiv = document.createElement('div');
+        gridDiv.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px;';
 
-      if (d.diagnosticCriteria) {
-        const diagDiv = document.createElement('div');
-        diagDiv.innerHTML = `<span style="font-size:0.75rem; font-weight:700; color:var(--g500, #64748b); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:2px;">Diagnostic Evaluation</span>${escapeHtml(d.diagnosticCriteria)}`;
-        cardBody.appendChild(diagDiv);
-      }
+        if (d.symptoms && d.symptoms.length) {
+          const sympDiv = document.createElement('div');
+          sympDiv.style.cssText = 'background:var(--bg-subtle); border:1px solid var(--border); border-radius:10px; padding:12px 14px;';
+          sympDiv.innerHTML = `
+            <span style="font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">Key Symptoms</span>
+            <ul style="margin:0 0 0 16px; padding:0; color:var(--text); font-size:0.84rem; line-height:1.45;">
+              ${d.symptoms.slice(0, 6).map(s => `<li>${escapeHtml(s)}</li>`).join('')}
+            </ul>
+          `;
+          gridDiv.appendChild(sympDiv);
+        }
 
-      if (d.management && d.management.length) {
-        const mgmtDiv = document.createElement('div');
-        mgmtDiv.style.cssText = 'padding:10px 14px; background:var(--g50, #f8fafc); border-radius:10px; border-left:3.5px solid var(--primary, #2563eb);';
-        mgmtDiv.innerHTML = `<span style="font-size:0.75rem; font-weight:700; color:var(--primary, #2563eb); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:4px;">First-Line Medical Management</span><ul style="margin:0 0 0 16px; padding:0;">${d.management.map(m => `<li>${escapeHtml(m)}</li>`).join('')}</ul>`;
-        cardBody.appendChild(mgmtDiv);
+        if (d.diagnosticCriteria || (d.management && d.management.length)) {
+          const diagDiv = document.createElement('div');
+          diagDiv.style.cssText = 'background:var(--bg-subtle); border:1px solid var(--border); border-radius:10px; padding:12px 14px;';
+          diagDiv.innerHTML = `
+            <span style="font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">Diagnosis & Management</span>
+            ${d.diagnosticCriteria ? `<p style="margin:0 0 6px; font-size:0.84rem; color:var(--text); line-height:1.4;">${escapeHtml(d.diagnosticCriteria)}</p>` : ''}
+            ${d.management && d.management.length ? `
+              <ul style="margin:0 0 0 16px; padding:0; color:var(--text); font-size:0.84rem; line-height:1.45;">
+                ${d.management.slice(0, 3).map(m => `<li>${escapeHtml(m)}</li>`).join('')}
+              </ul>
+            ` : ''}
+          `;
+          gridDiv.appendChild(diagDiv);
+        }
+
+        cardBody.appendChild(gridDiv);
       }
 
       card.appendChild(cardBody);

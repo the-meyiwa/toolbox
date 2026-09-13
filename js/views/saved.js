@@ -711,6 +711,7 @@ export function getToolsForFile(file) {
 
 function renderDetailPane(selected) {
   const isCsv = selected.name.endsWith('.csv') || selected.kind === 'csv';
+  const isHtml = /\.(html|htm)$/i.test(selected.name);
   const isImage = /\.(png|jpe?g|webp|gif|svg)$/i.test(selected.name);
   const isZip = selected.name.endsWith('.zip') || selected.kind === 'archive';
   const tools = getToolsForFile(selected);

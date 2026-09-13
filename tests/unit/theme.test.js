@@ -7,14 +7,16 @@ import assert from 'node:assert/strict';
 import { setupDOMEnvironment } from '../helpers/dom-env.js';
 import { THEMES, getStoredTheme, applyTheme, initTheme } from '../../js/lib/theme.js';
 
-test('Theme: contains exactly 4 canonical palettes', () => {
-  assert.equal(THEMES.length, 4);
+test('Theme: contains canonical palettes', () => {
+  assert.ok(THEMES.length >= 6, 'Expected at least 6 standard themes');
 
   const requiredIds = [
     'default',
     'white-on-black',
     'linux-mint',
     'ubuntu',
+    'yosemite',
+    'yosemite-night',
   ];
 
   for (const id of requiredIds) {

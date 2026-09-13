@@ -38,6 +38,13 @@ export const THEMES = [
     category: 'standard',
     preview: { bg: '#e8ecf2', card: '#ffffff', text: '#1d1d1f', accent: '#007aff' },
     description: 'Translucent glass surfaces, subtle blur, and Apple system blue.'
+  },
+  {
+    id: 'yosemite-night',
+    name: 'Yosemite Night',
+    category: 'standard',
+    preview: { bg: '#1c1f26', card: '#252932', text: '#f5f5f7', accent: '#0a84ff' },
+    description: 'Dark translucent glass, deep contrast, and luminous Apple system blue.'
   }
 ];
 

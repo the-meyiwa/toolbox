@@ -85,10 +85,10 @@ export default {
     this._cleanup = [];
 
     container.innerHTML = `
-      <div class="math-utility-wrapper" style="display:flex; flex-direction:column; gap:16px; font-family:var(--sans, sans-serif); color:var(--black);">
+      <div class="math-utility-wrapper" style="display:flex; flex-direction:column; gap:20px; font-family:var(--sans, sans-serif); color:var(--black);">
 
         <!-- Top Tab Bar -->
-        <div class="tool-controls" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; border-bottom:1px solid var(--border); padding-bottom:12px;">
+        <div class="tool-controls" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; border-bottom:1px solid var(--border); padding-bottom:14px;">
           <div class="math-tab-nav" role="tablist" aria-label="Math Utility Views">
             <button type="button" class="math-tab-btn active" data-tab="knowledge">
               ${SVG_ICONS.book} Knowledge Library
@@ -100,13 +100,13 @@ export default {
               ${SVG_ICONS.sigma} Collatz & Sequences
             </button>
             <button type="button" class="math-tab-btn" data-tab="tables">
-              ${SVG_ICONS.table} 4-Figure Tables & Constants
+              ${SVG_ICONS.table} Tables & Constants
             </button>
           </div>
         </div>
 
         <!-- 1. TAB: KNOWLEDGE LIBRARY -->
-        <div class="math-pane active" id="pane-knowledge" style="display:flex; flex-direction:column; gap:14px;">
+        <div class="math-pane active" id="pane-knowledge" style="display:flex; flex-direction:column; gap:20px;">
           <!-- Filter Controls Strip -->
           <div class="math-controls-bar">
             <div style="position:relative; flex:1; min-width:220px; display:flex; align-items:center;">
@@ -140,8 +140,8 @@ export default {
         </div>
 
         <!-- 2. TAB: SOLVER & COMPUTATION LAB -->
-        <div class="math-pane" id="pane-solver" style="display:none; flex-direction:column; gap:14px;">
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px;">
+        <div class="math-pane" id="pane-solver" style="display:none; flex-direction:column; gap:20px;">
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:20px;">
             <!-- Left: Operation Selector & Input Form -->
             <div style="padding:16px; border:1px solid var(--border); border-radius:12px; background:var(--bg-card); box-shadow:0 2px 8px rgba(0,0,0,0.02); display:flex; flex-direction:column; gap:12px;">
               <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -199,7 +199,7 @@ export default {
         </div>
 
         <!-- 3. TAB: COLLATZ & SEQUENCES -->
-        <div class="math-pane" id="pane-collatz" style="display:none; flex-direction:column; gap:14px;">
+        <div class="math-pane" id="pane-collatz" style="display:none; flex-direction:column; gap:20px;">
           <!-- Mathematical Sequence Engine (50+ Sequences) -->
           <div style="padding:16px; border:1px solid var(--border); border-radius:12px; background:var(--bg-card); box-shadow:0 2px 8px rgba(0,0,0,0.02); display:flex; flex-direction:column; gap:12px;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
@@ -302,8 +302,8 @@ export default {
         </div>
 
         <!-- 4. TAB: FOUR-FIGURE TABLES & CONSTANTS -->
-        <div class="math-pane" id="pane-tables" style="display:none; flex-direction:column; gap:14px;">
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px;">
+        <div class="math-pane" id="pane-tables" style="display:none; flex-direction:column; gap:20px;">
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:20px;">
             <!-- Four-Figure Table Lookup Card -->
             <div style="padding:16px; border:1px solid var(--border); border-radius:12px; background:var(--bg-card); box-shadow:0 2px 8px rgba(0,0,0,0.02); display:flex; flex-direction:column; gap:12px;">
               <div>

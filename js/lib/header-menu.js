@@ -253,7 +253,7 @@ function renderPreferencesContent() {
   });
 }
 
-export function openPreferencesModal(section = 'preferences') {
+export function openPreferencesModal(section = null) {
   openSettings(section);
 }
 
@@ -302,7 +302,7 @@ export function installHeaderMenu() {
   if (itemSettings) {
     itemSettings.addEventListener('click', () => {
       closeHeaderMenu();
-      openSettings('preferences');
+      openSettings();
     });
   }
 

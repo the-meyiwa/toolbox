@@ -167,16 +167,23 @@ export default {
       })(),
       commercial: { ...COMMERCIAL_DEFAULTS, discount: 0 },
 
-      company: saved(LS_COMPANY, {
-        name: 'Neoterm Projects',
-        address: '35 Ladipo Labinjo Crescent, Surulere, Lagos',
-        phone: '', email: '', regNo: '',
-        client: '', clientAddress: '',
-        quoteNo: `NP-${new Date().getFullYear()}-001`,
-        date: today(),
-        scope: 'Supply and conversion of a shipping container into a fitted office unit.',
-        terms: 'Prices valid for 30 days. 70% deposit on order, balance on delivery.\nLead time 3–4 weeks from receipt of deposit.\nPrices subject to change if material costs move before order confirmation.',
-      }),
+      company: (() => {
+        const fallback = {
+          name: '',
+          address: '',
+          phone: '', email: '', regNo: '',
+          client: '', clientAddress: '',
+          quoteNo: `Q-${new Date().getFullYear()}-001`,
+          date: today(),
+          scope: '',
+          terms: 'Prices valid for 30 days. 70% deposit on order, balance on delivery.\nLead time 3–4 weeks from receipt of deposit.\nPrices subject to change if material costs move before order confirmation.',
+        };
+        const res = saved(LS_COMPANY, fallback);
+        if (res.name === 'Neoterm Projects') res.name = '';
+        if (res.address === '35 Ladipo Labinjo Crescent, Surulere, Lagos') res.address = '';
+        if (res.quoteNo && res.quoteNo.startsWith('NP-')) res.quoteNo = `Q-${new Date().getFullYear()}-001`;
+        return res;
+      })(),
       rates: saved(LS_RATES, {}),
       tab: 'layout',
     };
