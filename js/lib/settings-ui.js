@@ -25,22 +25,29 @@ function escapeHtml(s) {
 
 function renderThemeCard(theme, currentId) {
   const isActive = theme.id === currentId;
+  const groupLabel = {
+    system: 'System',
+    minimal: 'Minimal',
+    developer: 'Developer',
+    expressive: 'Expressive'
+  }[theme.group] || 'System';
 
   return `
-    <button type="button" class="theme-card ${isActive ? 'is-active' : ''}" data-theme-id="${theme.id}" role="radio" aria-checked="${isActive}">
-      <div class="theme-card-preview" style="background: ${theme.preview.bg}; border-color: ${theme.preview.accent}44;">
-        <div class="theme-card-preview-bar" style="background: ${theme.preview.card};">
+    <button type="button" class="theme-card ${isActive ? 'is-active' : ''}" data-theme-id="${theme.id}" data-theme-group="${theme.group}" role="radio" aria-checked="${isActive}">
+      <div class="theme-card-preview" style="background: ${theme.preview.bg}; border: 1px solid ${theme.preview.border || 'rgba(0,0,0,0.1)'};">
+        <div class="theme-card-preview-bar" style="background: ${theme.preview.card}; border-bottom: 1px solid ${theme.preview.border || 'rgba(0,0,0,0.06)'};">
           <span class="theme-preview-dot" style="background: ${theme.preview.accent};"></span>
-          <span class="theme-preview-line" style="background: ${theme.preview.text}; opacity: 0.7;"></span>
+          <span class="theme-preview-line" style="background: ${theme.preview.text}; opacity: 0.6;"></span>
         </div>
         <div class="theme-card-preview-body">
-          <div class="theme-preview-chip" style="background: ${theme.preview.accent}; color: ${theme.preview.bg};"></div>
-          <div class="theme-preview-text" style="color: ${theme.preview.text};">Aa</div>
+          <div class="theme-preview-chip" style="background: ${theme.preview.accent}; box-shadow: 0 1px 3px rgba(0,0,0,0.15);"></div>
+          <div class="theme-preview-text" style="color: ${theme.preview.text}; font-weight: 700;">Aa</div>
         </div>
       </div>
       <div class="theme-card-meta">
         <div class="theme-card-header">
           <span class="theme-card-name">${escapeHtml(theme.name)}</span>
+          <span class="theme-badge-exp" style="font-size:0.62rem; padding:1px 6px; border-radius:9999px; background:var(--bg-subtle); color:var(--text-secondary); border:1px solid var(--border); font-weight:600; text-transform:uppercase;">${escapeHtml(groupLabel)}</span>
         </div>
         <p class="theme-card-desc">${escapeHtml(theme.description)}</p>
       </div>
@@ -114,10 +121,26 @@ function createModal() {
 
         <!-- SECTION 2: APPEARANCE & THEMES -->
         <section class="settings-section" id="sec-appearance" style="border-top: 1px solid var(--border); padding-top: 28px;">
-          <div class="settings-section-header" style="margin-bottom: 16px;">
-            <h3 class="settings-section-title" style="font-size: 0.96rem; font-weight: 700; color: var(--text); margin: 0 0 4px;">Appearance &amp; Themes</h3>
-            <span class="settings-section-hint" style="font-size: 0.76rem; color: var(--text-muted);">Applied instantly across all tools, code playground, and file explorer</span>
+          <div class="settings-section-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <h3 class="settings-section-title" style="font-size: 0.96rem; font-weight: 700; color: var(--text); margin: 0 0 4px;">Appearance &amp; Themes</h3>
+              <span class="settings-section-hint" style="font-size: 0.76rem; color: var(--text-muted);">26 distinct themes crafted with flat, dimensional, and subtle 3D styling</span>
+            </div>
+            <div style="position: relative; width: 220px; max-width: 100%;">
+              <input type="text" id="theme-filter-search" class="tool-input" placeholder="Filter themes..." autocomplete="off" spellcheck="false" style="width: 100%; height: 32px; padding: 0 10px 0 28px; font-size: 0.78rem; border-radius: 9999px;">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+            </div>
           </div>
+
+          <!-- Theme Category Tabs -->
+          <div class="theme-category-tabs" id="theme-category-tabs" style="display: flex; gap: 6px; overflow-x: auto; margin-bottom: 16px; padding-bottom: 4px; scrollbar-width: none;">
+            <button type="button" class="theme-tab-btn active" data-category="all">All (${THEMES.length})</button>
+            <button type="button" class="theme-tab-btn" data-category="system">System (15)</button>
+            <button type="button" class="theme-tab-btn" data-category="minimal">Minimal / Classic (4)</button>
+            <button type="button" class="theme-tab-btn" data-category="developer">Developer (5)</button>
+            <button type="button" class="theme-tab-btn" data-category="expressive">Expressive (2)</button>
+          </div>
+
           <div class="theme-grid" id="theme-grid-standard"></div>
         </section>
 
@@ -737,20 +760,67 @@ function renderStorageSettings() {
   });
 }
 
-function updateThemeList() {
+let activeThemeCategory = 'all';
+let activeThemeSearch = '';
+
+function updateThemeList(category = activeThemeCategory, search = activeThemeSearch) {
+  activeThemeCategory = category;
+  activeThemeSearch = search;
+
   const currentId = getStoredTheme();
   const standardGrid = modalEl.querySelector('#theme-grid-standard');
   if (!standardGrid) return;
 
-  standardGrid.innerHTML = THEMES.map(t => renderThemeCard(t, currentId)).join('');
+  const filtered = THEMES.filter(t => {
+    const matchCat = (activeThemeCategory === 'all' || t.group === activeThemeCategory);
+    const q = activeThemeSearch.toLowerCase().trim();
+    const matchSearch = !q || t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || t.group.toLowerCase().includes(q);
+    return matchCat && matchSearch;
+  });
+
+  if (filtered.length === 0) {
+    standardGrid.innerHTML = `
+      <div style="grid-column: 1 / -1; padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+        No themes found matching "${escapeHtml(activeThemeSearch)}"
+      </div>
+    `;
+  } else {
+    standardGrid.innerHTML = filtered.map(t => renderThemeCard(t, currentId)).join('');
+  }
+
+  // Update active category tab button
+  modalEl.querySelectorAll('#theme-category-tabs .theme-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-category') === activeThemeCategory);
+  });
 
   modalEl.querySelectorAll('.theme-card').forEach(card => {
     card.addEventListener('click', () => {
       const themeId = card.getAttribute('data-theme-id');
       applyTheme(themeId);
-      updateThemeList();
+      updateThemeList(activeThemeCategory, activeThemeSearch);
     });
   });
+
+  // Wire search input once
+  const searchInput = modalEl.querySelector('#theme-filter-search');
+  if (searchInput && !searchInput.dataset.wired) {
+    searchInput.dataset.wired = 'true';
+    searchInput.addEventListener('input', (e) => {
+      updateThemeList(activeThemeCategory, e.target.value);
+    });
+  }
+
+  // Wire category tabs once
+  const tabWrap = modalEl.querySelector('#theme-category-tabs');
+  if (tabWrap && !tabWrap.dataset.wired) {
+    tabWrap.dataset.wired = 'true';
+    tabWrap.querySelectorAll('.theme-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cat = btn.getAttribute('data-category');
+        updateThemeList(cat, activeThemeSearch);
+      });
+    });
+  }
 }
 
 export function openSettings(targetSection = null) {

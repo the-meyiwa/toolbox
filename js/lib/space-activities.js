@@ -52,9 +52,9 @@ export function mountDeskOverview(container, engine) {
             <div class="sp-stat-item">
               <div class="sp-stat-top">
                 <span class="sp-stat-num">${onlineCount}</span>
-                <span class="sp-dot-live"></span>
+                <span class="sp-live-badge" style="font-size:0.65rem; font-weight:600; padding:1px 6px; border-radius:9999px; background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3);">Online</span>
               </div>
-              <span class="sp-stat-label">Active Peers</span>
+              <span class="sp-stat-label">Active Members</span>
             </div>
             <div class="sp-stat-item">
               <div class="sp-stat-top">
@@ -771,7 +771,7 @@ function mountNotepad(container, engine) {
         </div>
         <span class="sp-notepad-counter" id="sp-note-count">0 words · 0 chars</span>
       </div>
-      <textarea class="sp-notepad-area" placeholder="Start typing shared notes, drafts, minutes... Keystrokes synchronize in real-time across peers." spellcheck="false"></textarea>
+      <textarea class="sp-notepad-area" placeholder="Start typing shared notes, drafts, minutes... Keystrokes synchronize in real-time across members." spellcheck="false"></textarea>
     </div>
   `;
   const area = container.querySelector('.sp-notepad-area');

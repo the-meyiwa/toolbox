@@ -8,24 +8,38 @@ import { setupDOMEnvironment } from '../helpers/dom-env.js';
 import { THEMES, getStoredTheme, applyTheme, initTheme } from '../../js/lib/theme.js';
 
 test('Theme: contains canonical palettes', () => {
-  assert.ok(THEMES.length >= 6, 'Expected at least 6 standard themes');
+  assert.equal(THEMES.length, 26, 'Expected exactly 26 canonical themes');
 
   const requiredIds = [
-    'default',
-    'white-on-black',
-    'linux-mint',
-    'ubuntu',
-    'yosemite',
-    'yosemite-night',
+    'windows-11', 'macos-sonoma', 'macos-big-sur', 'gnome', 'kde-plasma',
+    'elementary-os', 'fedora', 'pop-os', 'zorin-os', 'deepin', 'chromeos',
+    'linux-mint', 'ubuntu', 'yosemite', 'yosemite-night',
+    'default', 'white-on-black', 'nord', 'solarized',
+    'dracula', 'catppuccin', 'gruvbox', 'monokai', 'one-dark',
+    'material-you', 'cyberpunk'
   ];
 
   for (const id of requiredIds) {
     const theme = THEMES.find(t => t.id === id);
     assert.ok(theme, `Required theme "${id}" not found in THEMES`);
     assert.ok(theme.name, `Theme "${id}" has no display name`);
+    assert.ok(theme.group, `Theme "${id}" has no group`);
     assert.ok(theme.preview.bg, `Theme "${id}" missing preview bg`);
     assert.ok(theme.preview.text, `Theme "${id}" missing preview text`);
     assert.ok(theme.preview.accent, `Theme "${id}" missing preview accent`);
+  }
+});
+
+test('Theme: all 26 themes have CSS definitions in css/style.css', async () => {
+  const fs = await import('fs');
+  const path = await import('path');
+  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf8');
+
+  for (const theme of THEMES) {
+    assert.ok(
+      css.includes(`[data-theme="${theme.id}"]`),
+      `css/style.css must define [data-theme="${theme.id}"]`
+    );
   }
 });
 

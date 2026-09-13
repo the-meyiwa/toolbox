@@ -25,6 +25,7 @@ import { initWorkspace } from './lib/workspace.js';
 import { initScrollNarrative } from './about-scroll.js';
 import './lib/dialog.js';
 import { initHomeScrollNarrative } from './home-scroll.js';
+import { listJoinedSpaces } from './lib/space-engine.js';
 
 /* --------------- state --------------- */
 
@@ -980,6 +981,36 @@ if (taskGrid) {
 /* Saved work is surfaced only once it exists. Until then the home page and
    the navigation carry no trace of it, which is the whole point: the
    product must not look like a workspace to somebody who does not want one. */
+function reflectWorkSpaces() {
+  const container = $('home-spaces-list');
+  if (!container) return;
+
+  const spaces = listJoinedSpaces();
+  if (!spaces.length) {
+    container.innerHTML = `
+      <div style="padding:16px; border:1px dashed var(--border); border-radius:12px; text-align:center; color:var(--text-muted); font-size:0.8rem;">
+        <p style="margin:0 0 10px;">No active work spaces yet.</p>
+        <a href="#spaces" class="btn btn-primary btn-sm" style="font-size:0.75rem; text-decoration:none;">Create a Work Space</a>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = `
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      ${spaces.slice(0, 4).map(s => `
+        <a href="#spaces/${escapeHtml(s.id)}" class="home-task-tool" style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:10px; background:var(--surface-secondary); border:1px solid var(--border); text-decoration:none; color:var(--text);">
+          <div>
+            <div style="font-size:0.84rem; font-weight:600;">${escapeHtml(s.name || 'Work Space')}</div>
+            <div style="font-size:0.72rem; color:var(--text-muted);">${escapeHtml(s.description || 'Shared desk')}</div>
+          </div>
+          <span style="font-size:0.7rem; font-family:var(--mono, monospace); background:var(--surface); border:1px solid var(--border); padding:2px 6px; border-radius:4px; font-weight:600;">${escapeHtml(s.id)}</span>
+        </a>
+      `).join('')}
+    </div>
+  `;
+}
+
 function reflectSavedWork() {
   const items = artifacts.list();
   // Primary navigation for Files must always remain visible
@@ -987,27 +1018,50 @@ function reflectSavedWork() {
     el.hidden = false;
   });
 
-  const strip = $('home-saved');
-  if (!strip) return;
-  strip.hidden = items.length === 0;
-  if (!items.length) return;
+  const list = $('home-saved-list');
+  if (list) {
+    if (!items.length) {
+      list.innerHTML = `
+        <div style="padding:16px; border:1px dashed var(--border); border-radius:12px; text-align:center; color:var(--text-muted); font-size:0.8rem;">
+          <p style="margin:0 0 10px;">No saved documents or exports yet.</p>
+          <a href="#saved" class="btn btn-secondary btn-sm" style="font-size:0.75rem; text-decoration:none;">Go to Files</a>
+        </div>
+      `;
+    } else {
+      list.innerHTML = `
+        <div class="home-task-tools" style="display:flex; flex-direction:column; gap:8px;">
+          ${items.slice(0, 4).map(m => `
+            <a class="home-task-tool" href="#saved/${m.id}" style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:10px; background:var(--surface-secondary); border:1px solid var(--border); text-decoration:none; color:var(--text);">
+              <span style="font-size:0.84rem; font-weight:600;">${escapeHtml(m.name)}</span>
+              <em style="font-size:0.72rem; color:var(--text-muted); font-style:normal;">${escapeHtml(kindLabel(m.kind))}</em>
+            </a>`).join('')}
+        </div>`;
+    }
+  }
 
-  strip.innerHTML = `
-    <div class="home-saved-head">
-      <h2 class="home-task-label">Your saved work</h2>
-      <a class="home-task-more" href="#saved">Open all ${items.length} →</a>
-    </div>
-    <div class="home-task-tools">
-      ${items.slice(0, 5).map(m => `
-        <a class="home-task-tool" href="#saved/${m.id}">
-          <span>${escapeHtml(m.name)}</span>
-          <em>${escapeHtml(kindLabel(m.kind))}</em>
-        </a>`).join('')}
-    </div>`;
+  const strip = $('home-saved');
+  if (strip) {
+    strip.hidden = items.length === 0;
+    if (items.length) {
+      strip.innerHTML = `
+        <div class="home-saved-head">
+          <h2 class="home-task-label">Your saved work</h2>
+          <a class="home-task-more" href="#saved">Open all ${items.length} →</a>
+        </div>
+        <div class="home-task-tools">
+          ${items.slice(0, 5).map(m => `
+            <a class="home-task-tool" href="#saved/${m.id}">
+              <span>${escapeHtml(m.name)}</span>
+              <em>${escapeHtml(kindLabel(m.kind))}</em>
+            </a>`).join('')}
+        </div>`;
+    }
+  }
 }
 
 artifacts.onChange(reflectSavedWork);
 reflectSavedWork();
+reflectWorkSpaces();
 
 initTheme();
 installSettingsUI();

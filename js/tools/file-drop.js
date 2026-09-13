@@ -271,8 +271,8 @@ export default {
       self_.pc.onconnectionstatechange = () => {
         if (self_.pc.connectionState === 'connected') {
           peerStatusDot.style.background = '#22c55e';
-          peerStatusText.textContent = 'WebRTC DataChannel connected!';
-          rxStatus.textContent = 'Securely connected via P2P.';
+          peerStatusText.textContent = 'Direct connection established!';
+          rxStatus.textContent = 'Secure direct connection ready.';
           isConnected = true;
           
           if (mode === 'send' && selectedFile) {
