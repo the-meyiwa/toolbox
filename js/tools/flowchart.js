@@ -54,6 +54,12 @@ export default {
 
         <p class="flw-about" id="fl-about"></p>
 
+        <!-- Mobile Segmented View Switcher -->
+        <div class="flw-mobile-switcher" id="fl-mob-switcher" style="display:none; width:100%; margin-bottom:12px; background:var(--bg-subtle); padding:3px; border-radius:9999px; border:1px solid var(--border); justify-content:center; gap:4px; box-sizing:border-box;">
+          <button type="button" class="flw-mob-btn active" data-view="chart" style="flex:1; padding:6px; font-size:0.78rem; font-weight:600; border-radius:9999px; border:none; background:var(--accent); color:var(--accent-contrast); cursor:pointer;">Diagram</button>
+          <button type="button" class="flw-mob-btn" data-view="code" style="flex:1; padding:6px; font-size:0.78rem; font-weight:600; border-radius:9999px; border:none; background:transparent; color:var(--text-secondary); cursor:pointer;">Code</button>
+        </div>
+
         <div class="flw-split">
           <div class="flw-chart-wrap">
             <div class="flw-chart" id="fl-chart"></div>
@@ -72,6 +78,20 @@ export default {
           </div>
         </div>
       </div>`;
+
+    const flwRoot = container.querySelector('.flw');
+    container.querySelectorAll('.flw-mob-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const view = btn.dataset.view;
+        container.querySelectorAll('.flw-mob-btn').forEach(b => {
+          const isCurr = b === btn;
+          b.classList.toggle('active', isCurr);
+          b.style.background = isCurr ? 'var(--accent)' : 'transparent';
+          b.style.color = isCurr ? 'var(--accent-contrast)' : 'var(--text-secondary)';
+        });
+        flwRoot.dataset.mobView = view;
+      });
+    });
 
     const $ = (id) => container.querySelector('#' + id);
 

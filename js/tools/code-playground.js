@@ -560,7 +560,7 @@ export default {
     }
 
     container.innerHTML = `
-      <div class="ide-root cpg-mode-${currentMode}" id="cpg-root" style="display:flex; flex-direction:column; height:760px; background:var(--cpg-bg-app); border:1px solid var(--cpg-border); border-radius:14px; overflow:hidden; color:var(--cpg-text); font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; transition:background 0.15s ease, color 0.15s ease; position:relative;">
+      <div class="ide-root cpg-mode-${currentMode}" id="cpg-root" data-mob-view="editor" style="display:flex; flex-direction:column; height:760px; background:var(--cpg-bg-app); border:1px solid var(--cpg-border); border-radius:14px; overflow:hidden; color:var(--cpg-text); font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; transition:background 0.15s ease, color 0.15s ease; position:relative;">
         
         <!-- TOP MENU BAR & CONTROLS (FILE, EDIT, VIEW, RUN, TEST) -->
         <div id="cpg-header" style="background:var(--cpg-bg-card); border-bottom:1px solid var(--cpg-border); padding:4px 10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; z-index:30;">
@@ -723,6 +723,14 @@ export default {
               Run <kbd style="font-size:0.66rem; background:rgba(255,255,255,0.25); padding:1px 4px; border-radius:3px; margin-left:2px;">⌃↵</kbd>
             </button>
           </div>
+        </div>
+
+        <!-- MOBILE VIEW SWITCHER (PROGRESSIVE DISCLOSURE FOR MOBILE DEVICES) -->
+        <div class="cpg-mobile-nav" id="cpg-mobile-nav" style="display:none; width:100%; background:var(--cpg-bg-subtle); padding:4px 8px; border-bottom:1px solid var(--cpg-border); justify-content:center; gap:6px; box-sizing:border-box;">
+          <button type="button" class="cpg-mob-tab active" data-tab="editor" style="flex:1; padding:5px 4px; font-size:0.75rem; font-weight:600; border-radius:9999px; border:1px solid transparent; background:transparent; color:var(--cpg-text); cursor:pointer;">Editor</button>
+          <button type="button" class="cpg-mob-tab" data-tab="files" style="flex:1; padding:5px 4px; font-size:0.75rem; font-weight:600; border-radius:9999px; border:1px solid transparent; background:transparent; color:var(--cpg-text-secondary); cursor:pointer;">Files</button>
+          <button type="button" class="cpg-mob-tab" data-tab="preview" style="flex:1; padding:5px 4px; font-size:0.75rem; font-weight:600; border-radius:9999px; border:1px solid transparent; background:transparent; color:var(--cpg-text-secondary); cursor:pointer;">Preview</button>
+          <button type="button" class="cpg-mob-tab" data-tab="terminal" style="flex:1; padding:5px 4px; font-size:0.75rem; font-weight:600; border-radius:9999px; border:1px solid transparent; background:transparent; color:var(--cpg-text-secondary); cursor:pointer;">Console</button>
         </div>
 
         <!-- MAIN WORKSPACE BODY (SIDEBAR + EDITOR + DOCKED TERMINAL + ASSISTANT PANEL) -->
@@ -1011,6 +1019,24 @@ export default {
       if (darkCheck) darkCheck.textContent = currentMode === 'dark' ? '✓ Dark Mode' : 'Dark Mode';
       if (lightCheck) lightCheck.textContent = currentMode === 'light' ? '✓ Light Mode' : 'Light Mode';
     }
+
+    // Hook Mobile Segmented View Control (Progressive Disclosure)
+    container.querySelectorAll('.cpg-mob-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const tabName = tab.dataset.tab;
+        container.querySelectorAll('.cpg-mob-tab').forEach(t => {
+          const isCurr = t === tab;
+          t.classList.toggle('active', isCurr);
+          t.style.color = isCurr ? 'var(--cpg-text)' : 'var(--cpg-text-secondary)';
+          t.style.background = isCurr ? 'var(--cpg-bg-card)' : 'transparent';
+          t.style.borderColor = isCurr ? 'var(--cpg-border)' : 'transparent';
+        });
+        rootEl.dataset.mobView = tabName;
+        if (tabName === 'preview') {
+          updateWorkspacePreview();
+        }
+      });
+    });
 
     // Dropdown Menus Management (File, Edit, View, Run, Test)
     let openDropdown = null;
@@ -1635,6 +1661,15 @@ export default {
           loadFile();
           renderTabs();
           renderFileTree();
+          // Auto-switch to editor view on mobile so code is immediately visible
+          rootEl.dataset.mobView = 'editor';
+          container.querySelectorAll('.cpg-mob-tab').forEach(t => {
+            const isEd = t.dataset.tab === 'editor';
+            t.classList.toggle('active', isEd);
+            t.style.color = isEd ? 'var(--cpg-text)' : 'var(--cpg-text-secondary)';
+            t.style.background = isEd ? 'var(--cpg-bg-card)' : 'transparent';
+            t.style.borderColor = isEd ? 'var(--cpg-border)' : 'transparent';
+          });
         });
       });
 

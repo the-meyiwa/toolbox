@@ -48,7 +48,16 @@ export default {
           </div>
         </div>
 
-        <!-- Periodic Table Grid Container -->
+        <!-- Mobile View Switcher (Element Cards vs 18-Col Table) -->
+        <div class="pt-mobile-switcher" id="pt-mob-switcher" style="display:none; width:100%; margin-bottom:4px; background:var(--bg-subtle); padding:3px; border-radius:9999px; border:1px solid var(--border); justify-content:center; gap:4px; box-sizing:border-box;">
+          <button type="button" class="pt-mob-btn active" data-view="cards" style="flex:1; padding:6px; font-size:0.78rem; font-weight:600; border-radius:9999px; border:none; background:var(--accent); color:var(--accent-contrast); cursor:pointer;">Element Cards</button>
+          <button type="button" class="pt-mob-btn" data-view="table" style="flex:1; padding:6px; font-size:0.78rem; font-weight:600; border-radius:9999px; border:none; background:transparent; color:var(--text-secondary); cursor:pointer;">18-Col Table</button>
+        </div>
+
+        <!-- Mobile Responsive Element Cards Grid -->
+        <div id="pt-card-grid" style="display:none;"></div>
+
+        <!-- Periodic Table Grid Container (Desktop & Mobile Pan) -->
         <div class="pt-grid-container" style="overflow-x:auto; background:var(--white); border:1px solid var(--g200); border-radius:12px; padding:16px; box-shadow:0 4px 16px rgba(0,0,0,0.03);">
           <!-- Main 18-column Table -->
           <div id="pt-main-grid" style="display:grid; grid-template-columns:repeat(18, minmax(44px, 1fr)); gap:4px; min-width:880px;"></div>
@@ -71,13 +80,28 @@ export default {
       </div>
     `;
 
+    const ptWrap        = container.querySelector('.pt-wrap');
     const catFilter     = container.querySelector('#pt-cat-filter');
     const heatmapSelect = container.querySelector('#pt-heatmap-select');
     const searchIn      = container.querySelector('#pt-search');
     const mainGridEl    = container.querySelector('#pt-main-grid');
     const lanthGridEl   = container.querySelector('#pt-lanthanides-grid');
     const actinGridEl   = container.querySelector('#pt-actinides-grid');
+    const cardGridEl    = container.querySelector('#pt-card-grid');
     const detailEl      = container.querySelector('#pt-detail-card');
+
+    container.querySelectorAll('.pt-mob-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const view = btn.dataset.view;
+        container.querySelectorAll('.pt-mob-btn').forEach(b => {
+          const isCurr = b === btn;
+          b.classList.toggle('active', isCurr);
+          b.style.background = isCurr ? 'var(--accent)' : 'transparent';
+          b.style.color = isCurr ? 'var(--accent-contrast)' : 'var(--text-secondary)';
+        });
+        ptWrap.dataset.mobView = view;
+      });
+    });
 
     function getCategoryColor(catId) {
       const c = ELEMENT_CATEGORIES.find(it => it.id === catId);
@@ -176,6 +200,52 @@ export default {
       // 3. Build Actinides (89 to 103)
       const actinEls = ELEMENTS.filter(e => e.number >= 89 && e.number <= 103).sort((a, b) => a.number - b.number);
       actinGridEl.innerHTML = actinEls.map(el => createCellHtml(el)).join('');
+
+      // 4. Build Responsive Element Cards for Mobile
+      if (cardGridEl) {
+        const query = searchIn.value.trim().toLowerCase();
+        const filtered = ELEMENTS.filter(el => {
+          const matchesCategory = activeCategory === 'all' || el.category === activeCategory;
+          const matchesSearch = !query || el.name.toLowerCase().includes(query) || el.symbol.toLowerCase() === query || String(el.number) === query;
+          return matchesCategory && matchesSearch;
+        });
+
+        if (filtered.length === 0) {
+          cardGridEl.innerHTML = `<div style="grid-column:1/-1; padding:24px; text-align:center; color:var(--text-muted); font-size:0.85rem;">No elements match your query</div>`;
+        } else {
+          cardGridEl.innerHTML = filtered.map(el => {
+            const isSelected = selectedElement && selectedElement.number === el.number;
+            const catObj = ELEMENT_CATEGORIES.find(c => c.id === el.category);
+            const catColor = catObj ? catObj.color : '#3b82f6';
+            let badgeBg = catColor;
+            if (activeHeatmap !== 'none') {
+              badgeBg = getHeatmapColor(el, activeHeatmap);
+            }
+            return `
+              <button class="pt-mob-card${isSelected ? ' is-selected' : ''}" data-z="${el.number}" style="
+                background:var(--bg-card, var(--white));
+                border:1.5px solid ${isSelected ? 'var(--accent)' : 'var(--border, var(--g200))'};
+                border-radius:10px;
+                padding:10px;
+                display:flex;
+                flex-direction:column;
+                justify-content:space-between;
+                cursor:pointer;
+                text-align:left;
+                box-shadow:${isSelected ? '0 0 0 2px var(--accent-glow)' : '0 1px 3px rgba(0,0,0,0.03)'};
+                user-select:none;
+              ">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                  <span style="font-size:0.75rem; font-family:var(--mono); font-weight:700; color:var(--text-muted);">#${el.number}</span>
+                  <span style="font-size:0.7rem; font-weight:700; padding:2px 7px; border-radius:999px; background:${badgeBg}; color:${activeHeatmap !== 'none' ? '#0f172a' : '#ffffff'};">${el.symbol}</span>
+                </div>
+                <div style="font-size:0.95rem; font-weight:700; color:var(--text); margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${el.name}</div>
+                <div style="font-size:0.72rem; color:var(--text-secondary); font-family:var(--mono);">${typeof el.weight === 'number' ? el.weight.toFixed(2) : el.weight} u</div>
+              </button>
+            `;
+          }).join('');
+        }
+      }
 
       // Bind clicks
       container.querySelectorAll('[data-z]').forEach(btn => {

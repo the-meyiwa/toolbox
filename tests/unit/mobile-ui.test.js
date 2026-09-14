@@ -163,3 +163,82 @@ test('Mobile UI: Every registered tool has viewport rendering capability and res
     assert.ok(tool.category, `Tool ${tool.id} missing category`);
   }
 });
+
+test('Modern UI/UX Standards: Universal Search Box sizing is strictly restrained and sleek (<= 36px desktop / 38px mobile)', () => {
+  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const indexHtml = fs.readFileSync(path.resolve('index.html'), 'utf-8');
+
+  // Hero search bar in index.html is modern and sleek
+  assert.ok(
+    indexHtml.includes('height:38px;') || indexHtml.includes('height: 38px;'),
+    'Home hero search box must be sleek (38px height)'
+  );
+  assert.ok(
+    !indexHtml.includes('padding: 0 54px 0 54px;') && !indexHtml.includes('padding:0 54px 0 54px;'),
+    'Home hero search box must not have bulky 54px padding'
+  );
+
+  // Universal CSS rules covering all search bars
+  assert.ok(
+    css.includes('#search') && css.includes('.home-search-input') && css.includes('max-height: 36px !important;'),
+    'Universal search rule must enforce max-height: 36px !important on desktop'
+  );
+  assert.ok(
+    css.includes('input[placeholder*="Search" i]') || css.includes('input[type="search"]'),
+    'Universal search rule must target all search inputs by selector and placeholder'
+  );
+});
+
+test('Modern UI/UX Standards: Files View buttons have compact desktop height (26px - 28px)', () => {
+  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const savedJs = fs.readFileSync(path.resolve('js/views/saved.js'), 'utf-8');
+
+  assert.ok(
+    css.includes('.sv-head .btn') && css.includes('height: 28px !important;'),
+    '.sv-head .btn must have 28px height on desktop'
+  );
+  assert.ok(
+    css.includes('.sv-head .sv-tb-btn') && css.includes('height: 26px !important;'),
+    '.sv-head .sv-tb-btn must have 26px height on desktop'
+  );
+  assert.ok(
+    css.includes('.sv-head #sv-search-box') && css.includes('height: 28px !important;'),
+    '.sv-head #sv-search-box must have 28px height on desktop'
+  );
+  assert.ok(
+    savedJs.includes('height:28px') || savedJs.includes('height: 28px'),
+    'saved.js must render buttons with compact 28px dimensions'
+  );
+});
+
+test('Mobile-Adapted Tool Behaviors: Progressive disclosure switchers linearize desktop-heavy multi-pane layouts', () => {
+  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const cpgJs = fs.readFileSync(path.resolve('js/tools/code-playground.js'), 'utf-8');
+  const flJs = fs.readFileSync(path.resolve('js/tools/flowchart.js'), 'utf-8');
+  const umlJs = fs.readFileSync(path.resolve('js/tools/uml-diagram.js'), 'utf-8');
+  const ptJs = fs.readFileSync(path.resolve('js/tools/periodic-table.js'), 'utf-8');
+
+  // 1. Code Playground: Mobile Segmented Switcher [ Editor | Files | Preview | Console ]
+  assert.ok(cpgJs.includes('id="cpg-mobile-nav"'), 'Code playground must include #cpg-mobile-nav segmented control');
+  assert.ok(cpgJs.includes('data-tab="editor"') && cpgJs.includes('data-tab="preview"'), 'Code playground must provide tab targets');
+  assert.ok(css.includes('#cpg-root[data-mob-view="files"]'), 'CSS must manage single-pane visibility for code playground on mobile');
+
+  // 2. Flowchart: Mobile Segmented Switcher [ Diagram | Code ]
+  assert.ok(flJs.includes('id="fl-mob-switcher"'), 'Flowchart must include #fl-mob-switcher');
+  assert.ok(flJs.includes('data-view="chart"') && flJs.includes('data-view="code"'), 'Flowchart must provide Diagram/Code tabs');
+  assert.ok(css.includes('.flw[data-mob-view="code"]'), 'CSS must toggle code and chart panes for Flowchart on mobile');
+
+  // 3. UML Diagram: Mobile Segmented Switcher [ Preview | Source Code ]
+  assert.ok(umlJs.includes('id="uml-mob-switcher"'), 'UML Diagram must include #uml-mob-switcher');
+  assert.ok(umlJs.includes('data-view="preview"') && umlJs.includes('data-view="editor"'), 'UML Diagram must provide Preview/Source Code tabs');
+  assert.ok(css.includes('.uml[data-mob-view="editor"]'), 'CSS must toggle editor and preview panes for UML Diagram on mobile');
+
+  // 4. Periodic Table: Mobile Segmented Switcher [ Element Cards | 18-Col Table ] & Card Grid
+  assert.ok(ptJs.includes('id="pt-mob-switcher"'), 'Periodic table must include #pt-mob-switcher');
+  assert.ok(ptJs.includes('id="pt-card-grid"'), 'Periodic table must render #pt-card-grid for mobile');
+  assert.ok(css.includes('.pt-wrap[data-mob-view="table"]'), 'CSS must toggle card grid and 18-col table on mobile');
+
+  // 5. Cap Table: Mobile Responsive Cards
+  assert.ok(css.includes('.ct-row') && css.includes('.ct-row-3') && css.includes('flex-wrap: wrap !important;'), 'Cap table rows must wrap cleanly on mobile');
+});
+

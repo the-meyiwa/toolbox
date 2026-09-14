@@ -185,6 +185,12 @@ export default {
           </div>
         </div>
 
+        <!-- Mobile Segmented View Switcher (Preview vs Source Code) -->
+        <div class="uml-mobile-switcher" id="uml-mob-switcher" style="display:none; width:100%; margin-bottom:12px; background:var(--bg-subtle); padding:3px; border-radius:9999px; border:1px solid var(--border); justify-content:center; gap:4px; box-sizing:border-box;">
+          <button type="button" class="uml-mob-btn active" data-view="preview" style="flex:1; padding:6px; font-size:0.78rem; font-weight:600; border-radius:9999px; border:none; background:var(--accent); color:var(--accent-contrast); cursor:pointer;">Preview</button>
+          <button type="button" class="uml-mob-btn" data-view="editor" style="flex:1; padding:6px; font-size:0.78rem; font-weight:600; border-radius:9999px; border:none; background:transparent; color:var(--text-secondary); cursor:pointer;">Source Code</button>
+        </div>
+
         <div class="uml-split">
           <div class="uml-editor-wrap">
             <textarea class="cpg-editor uml-editor" id="uml-code" spellcheck="false"
@@ -202,6 +208,20 @@ export default {
           Pick a diagram type above to load a worked example you can edit.
         </p>
       </div>`;
+
+    const umlRoot = container.querySelector('.uml');
+    container.querySelectorAll('.uml-mob-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const view = btn.dataset.view;
+        container.querySelectorAll('.uml-mob-btn').forEach(b => {
+          const isCurr = b === btn;
+          b.classList.toggle('active', isCurr);
+          b.style.background = isCurr ? 'var(--accent)' : 'transparent';
+          b.style.color = isCurr ? 'var(--accent-contrast)' : 'var(--text-secondary)';
+        });
+        umlRoot.dataset.mobView = view;
+      });
+    });
 
     const codeEl = container.querySelector('#uml-code');
     const previewEl = container.querySelector('#uml-preview');

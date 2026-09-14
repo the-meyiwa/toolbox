@@ -254,43 +254,89 @@ body {
   gap: 10px;
 }
 
-/* Search — Cinnamon/GNOME flat app search bar */
+/* Search — Cinnamon/GNOME flat app search bar & Universal Search Box Standard */
 .search-wrapper {
   position: relative;
   display: flex;
   align-items: center;
-  width: 280px;
+  width: 260px;
 }
 
 .search-icon {
   position: absolute;
   left: 11px;
   color: var(--text-muted);
-  
 }
 
-#search {
-  width: 100%;
-  height: 36px;
-  padding: 0 34px 0 34px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
+#search,
+.home-search-input,
+.math-search-input,
+.msg-search-input,
+.tool-search-input,
+.wk-input,
+#sv-search-box,
+#cd-search,
+#an-filter,
+#pt-search,
+#notes-search-input,
+#sfx-search,
+#decomp-search,
+#ast-import-search,
+#map-search-input,
+#dis-search-input,
+input[type="search"],
+input[placeholder*="Search" i],
+input[placeholder*="search" i] {
+  height: 36px !important;
+  max-height: 36px !important;
   font-family: var(--sans);
-  font-size: 0.84rem;
-  background: var(--bg-subtle);
-  color: var(--text);
-  outline: none;
+  font-size: 0.84rem !important;
+  padding: 0 14px 0 34px !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 9999px !important;
+  background: var(--bg-subtle) !important;
+  color: var(--text) !important;
+  outline: none !important;
+  box-sizing: border-box !important;
   transition: border-color 180ms, background 180ms, box-shadow 180ms;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
 }
 
-#search:focus {
-  border-color: var(--accent);
-  background: var(--bg-card);
-  box-shadow: 0 0 0 2px var(--accent-glow), inset 0 1px 2px rgba(0,0,0,0.02);
+#search:focus,
+.home-search-input:focus,
+.math-search-input:focus,
+.msg-search-input:focus,
+.tool-search-input:focus,
+.wk-input:focus,
+#sv-search-box:focus,
+#cd-search:focus,
+#an-filter:focus,
+#pt-search:focus,
+#notes-search-input:focus,
+#sfx-search:focus,
+#decomp-search:focus,
+#ast-import-search:focus,
+#map-search-input:focus,
+#dis-search-input:focus,
+input[type="search"]:focus,
+input[placeholder*="Search" i]:focus,
+input[placeholder*="search" i]:focus {
+  border-color: var(--accent) !important;
+  background: var(--bg-card) !important;
+  box-shadow: 0 0 0 2px var(--accent-glow), inset 0 1px 2px rgba(0,0,0,0.02) !important;
 }
 
-#search::placeholder { color: var(--text-muted); }
+#search::placeholder,
+.home-search-input::placeholder,
+.math-search-input::placeholder,
+.msg-search-input::placeholder,
+.tool-search-input::placeholder,
+.wk-input::placeholder,
+input[type="search"]::placeholder,
+input[placeholder*="Search" i]::placeholder,
+input[placeholder*="search" i]::placeholder {
+  color: var(--text-muted);
+}
 
 #search-kbd {
   position: absolute;
@@ -10794,6 +10840,94 @@ body.tool-fullscreen #header-fs-exit-btn {
   background: #dc2626 !important;
 }
 
+/* ============================================================
+   FILES VIEW — MODERN SLEEK TOOLBAR & BUTTON SPECIFICATION
+   Compact, modern information density (Finder / Linear / Drive)
+   ============================================================ */
+.sv-head {
+  padding: 12px 18px !important;
+}
+
+.sv-head .btn,
+.sv-head .btn-sm,
+.sv-head button.btn {
+  height: 28px !important;
+  min-height: 28px !important;
+  padding: 0 10px !important;
+  font-size: 0.76rem !important;
+  font-weight: 500 !important;
+  border-radius: 9999px !important;
+  gap: 4px !important;
+}
+
+.sv-head .btn svg,
+.sv-head .btn-sm svg {
+  width: 13px !important;
+  height: 13px !important;
+}
+
+.sv-head .sv-tb-btn {
+  height: 26px !important;
+  min-height: 26px !important;
+  padding: 0 8px !important;
+  font-size: 0.72rem !important;
+  border-radius: 9999px !important;
+}
+
+.sv-head .sv-storage-btn {
+  height: 24px !important;
+  min-height: 24px !important;
+  padding: 0 10px !important;
+  font-size: 0.72rem !important;
+}
+
+.sv-head .sv-layout-btn {
+  height: 24px !important;
+  min-height: 24px !important;
+  padding: 0 6px !important;
+}
+
+.sv-head .sv-layout-btn svg {
+  width: 13px !important;
+  height: 13px !important;
+}
+
+.sv-head #sv-search-box {
+  height: 28px !important;
+  min-height: 28px !important;
+  font-size: 0.78rem !important;
+  padding: 0 8px 0 26px !important;
+}
+
+@media (max-width: 768px) {
+  .sv-head {
+    padding: 12px !important;
+  }
+  .sv-head .btn,
+  .sv-head .btn-sm,
+  .sv-head button.btn {
+    height: 34px !important;
+    min-height: 34px !important;
+    font-size: 0.8rem !important;
+    padding: 0 12px !important;
+  }
+  .sv-head .sv-tb-btn {
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 0 10px !important;
+  }
+  .sv-head .sv-storage-btn {
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 0 12px !important;
+  }
+  .sv-head .sv-layout-btn {
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 0 8px !important;
+  }
+}
+
 /* 5. FILES TAG CHIPS (COLOR-ONLY) */
 .sv-tags-bar {
   display: flex;
@@ -12711,6 +12845,48 @@ body[data-tool-id="container-planner"] .cq-rates {
     font-size: 0.74rem !important;
     padding: 4px 10px !important;
   }
+  #cpg-root {
+    height: calc(100vh - 180px) !important;
+    min-height: 480px !important;
+    max-height: 85vh !important;
+    position: relative !important;
+  }
+  #cpg-mobile-nav {
+    display: flex !important;
+  }
+  .cpg-mob-tab.active {
+    background: var(--cpg-bg-card) !important;
+    border-color: var(--cpg-border) !important;
+    color: var(--cpg-text) !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
+  }
+  #cpg-minimap {
+    display: none !important;
+  }
+  #cpg-root[data-mob-view="files"] #cpg-sidebar {
+    display: flex !important;
+    width: 100% !important;
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 25 !important;
+  }
+  #cpg-root:not([data-mob-view="files"]) #cpg-sidebar {
+    display: none !important;
+  }
+  #cpg-root[data-mob-view="preview"] #cpg-preview-pane {
+    display: flex !important;
+    width: 100% !important;
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 25 !important;
+  }
+  #cpg-root[data-mob-view="terminal"] #cpg-bottom-drawer {
+    display: flex !important;
+    height: 100% !important;
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 25 !important;
+  }
 
   /* Cron Parser & HTTP Mocks */
   .cron-grid,
@@ -12757,6 +12933,40 @@ body[data-tool-id="container-planner"] .cq-rates {
   .flw-bar, .uml-bar {
     flex-wrap: wrap !important;
     gap: 6px !important;
+  }
+  #fl-mob-switcher,
+  #uml-mob-switcher {
+    display: flex !important;
+  }
+  .flw[data-mob-view="code"] .flw-chart-wrap,
+  .flw[data-mob-view="code"] .flw-palette,
+  .flw[data-mob-view="code"] .flw-about {
+    display: none !important;
+  }
+  .flw[data-mob-view="code"] .flw-code-wrap {
+    display: flex !important;
+    width: 100% !important;
+  }
+  .flw:not([data-mob-view="code"]) .flw-code-wrap {
+    display: none !important;
+  }
+  .flw:not([data-mob-view="code"]) .flw-chart-wrap {
+    display: flex !important;
+    width: 100% !important;
+  }
+  .uml[data-mob-view="editor"] .uml-preview-wrap {
+    display: none !important;
+  }
+  .uml[data-mob-view="editor"] .uml-editor-wrap {
+    display: flex !important;
+    width: 100% !important;
+  }
+  .uml:not([data-mob-view="editor"]) .uml-editor-wrap {
+    display: none !important;
+  }
+  .uml:not([data-mob-view="editor"]) .uml-preview-wrap {
+    display: flex !important;
+    width: 100% !important;
   }
 
   /* Logic Lab */
@@ -12814,6 +13024,28 @@ body[data-tool-id="container-planner"] .cq-rates {
     width: 100% !important;
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
+  }
+  .ct-row,
+  .ct-row-3 {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding: 10px !important;
+    background: var(--bg-subtle, var(--g50)) !important;
+    border: 1px solid var(--border, var(--g200)) !important;
+    border-radius: 8px !important;
+    align-items: center !important;
+  }
+  .ct-row > .tool-input,
+  .ct-row-3 > .tool-input {
+    flex: 1 1 calc(50% - 8px) !important;
+    min-width: 120px !important;
+  }
+  .ct-row > .ct-del,
+  .ct-row-3 > .ct-del {
+    flex: 0 0 36px !important;
+    height: 36px !important;
+    margin-left: auto !important;
   }
 
   /* Business Model Canvas & Break-Even */
@@ -13115,6 +13347,26 @@ body[data-tool-id="container-planner"] .cq-rates {
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
     padding-bottom: 12px !important;
+  }
+  #pt-mob-switcher {
+    display: flex !important;
+  }
+  .pt-wrap[data-mob-view="table"] #pt-card-grid {
+    display: none !important;
+  }
+  .pt-wrap[data-mob-view="table"] .pt-grid-container {
+    display: block !important;
+  }
+  .pt-wrap:not([data-mob-view="table"]) .pt-grid-container {
+    display: none !important;
+  }
+  .pt-wrap:not([data-mob-view="table"]) #pt-card-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
+    gap: 8px !important;
+    max-height: 440px !important;
+    overflow-y: auto !important;
+    padding: 4px !important;
   }
   .pt-grid-container {
     min-width: 760px !important;
