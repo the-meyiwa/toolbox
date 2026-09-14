@@ -244,7 +244,8 @@ function installCategoryChips() {
 
 function renderRelated(tool) {
   if (!relatedBar) return;
-  if (document.body.classList.contains('tool-fullscreen')) {
+  if (document.body.classList.contains('tool-fullscreen') || tool?.id === 'assistant' || tool?.id === 'container-planner') {
+    relatedBar.innerHTML = '';
     relatedBar.hidden = true;
     return;
   }
@@ -283,6 +284,12 @@ function toggleToolFullscreen(force) {
 
 function showPage(page) {
   teardownTool();
+
+  if (page !== 'saved' && page !== 'files') {
+    unmountSaved?.();
+    unmountSaved = null;
+    if (savedView) savedView.innerHTML = '';
+  }
 
   for (const v of Object.values(VIEWS)) {
     if (!v) continue;
@@ -417,8 +424,9 @@ async function openTool(id) {
   viewportContent = freshContent;
   if (relatedBar) relatedBar.hidden = true;
   const isDesktop = typeof window !== 'undefined' && window.innerWidth > 768;
+  const isFullscreenByDefault = (id === 'assistant' || id === 'container-planner');
   if (popoutBtn) {
-    popoutBtn.style.display = isDesktop ? 'inline-flex' : 'none';
+    popoutBtn.style.display = (isDesktop && !isFullscreenByDefault) ? 'inline-flex' : 'none';
     updateFullscreenBtnState(false);
   }
   viewport.classList.remove('hidden');

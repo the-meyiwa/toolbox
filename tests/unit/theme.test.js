@@ -316,4 +316,177 @@ test('Theme: Tiles are arranged vertically as long horizontal bars', async () =>
   );
 });
 
+test('UI Refinements: Top Bar About Link is strictly mobile only', async () => {
+  const fs = await import('fs');
+  const path = await import('path');
+  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+
+  // Header about link must have display: none !important on desktop
+  assert.ok(
+    css.includes('#header-about-link.header-about-link') &&
+    css.includes('display: none !important;'),
+    'Desktop header-about-link must have display: none !important'
+  );
+
+  // Header about link must be display: inline-flex !important within mobile media query
+  const mobileMatch = css.match(/@media\s*\(max-width:\s*768px\)\s*\{[\s\S]*?#header-about-link\.header-about-link[\s\S]*?display:\s*inline-flex\s*!important/i);
+  assert.ok(
+    mobileMatch,
+    'Mobile @media (max-width: 768px) must display #header-about-link with inline-flex !important'
+  );
+});
+
+test('UI Refinements: Files view is hidden with !important and unmount clears DOM', async () => {
+  const fs = await import('fs');
+  const path = await import('path');
+  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const savedJs = fs.readFileSync(path.resolve('js/views/saved.js'), 'utf-8');
+  const appJs = fs.readFileSync(path.resolve('js/app.js'), 'utf-8');
+
+  // CSS must have #saved-view.hidden display: none !important
+  assert.ok(
+    css.includes('#saved-view.hidden') &&
+    css.includes('display: none !important;'),
+    '#saved-view.hidden must have display: none !important'
+  );
+
+  // saved.js unmount cleanup must empty host.innerHTML
+  assert.ok(
+    savedJs.includes("host.innerHTML = '';"),
+    'unmountSaved cleanup in saved.js must clear host.innerHTML'
+  );
+
+  // app.js showPage must clean up savedView when navigating away
+  assert.ok(
+    appJs.includes("if (page !== 'saved' && page !== 'files')") &&
+    appJs.includes("if (savedView) savedView.innerHTML = '';"),
+    'app.js showPage must empty savedView when navigating to any non-files page'
+  );
+});
+
+test('UI Refinements: Avatar Selector styling and card grid', async () => {
+  const fs = await import('fs');
+  const path = await import('path');
+  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+
+  // .settings-avatar-grid-gallery grid layout
+  assert.ok(
+    css.includes('.settings-avatar-grid-gallery') &&
+    css.includes('grid-template-columns: repeat(auto-fill, minmax(220px, 1fr))'),
+    '.settings-avatar-grid-gallery must be defined with responsive minmax grid'
+  );
+
+  // .avatar-story-card styles
+  assert.ok(
+    css.includes('.avatar-story-card') &&
+    css.includes('.avatar-story-card.is-active') &&
+    css.includes('.avatar-story-avatar-wrap') &&
+    css.includes('.avatar-story-badge'),
+    'CSS must style avatar-story-card, active state, avatar image wrap, and badge'
+  );
+});
+
+test('UI Refinements: Calendar month switcher slide/fade animations', async () => {
+  const fs = await import('fs');
+  const path = await import('path');
+  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const calJs = fs.readFileSync(path.resolve('js/tools/calendar.js'), 'utf-8');
+
+  // CSS keyframes
+  assert.ok(
+    css.includes('@keyframes calFadeSlideLeft') &&
+    css.includes('@keyframes calFadeSlideRight') &&
+    css.includes('.cal-anim-slide-left') &&
+    css.includes('.cal-anim-slide-right'),
+    'CSS must define calFadeSlideLeft, calFadeSlideRight, and animation utility classes'
+  );
+
+  // calendar.js triggers animation on prevBtn and nextBtn
+  assert.ok(
+    calJs.includes("renderCurrentView('prev')") &&
+    calJs.includes("renderCurrentView('next')"),
+    'calendar.js must pass prev and next animDir to renderCurrentView'
+  );
+  assert.ok(
+    calJs.includes('cal-anim-slide-left') &&
+    calJs.includes('cal-anim-slide-right'),
+    'calendar.js must apply cal-anim-slide classes on monthTitle'
+  );
+});
+
+test('UI Refinements: Assistant fullscreen without width stretch, zero outer scroll', async () => {
+  const fs = await import('fs');
+  const path = await import('path');
+  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const appJs = fs.readFileSync(path.resolve('js/app.js'), 'utf-8');
+
+  // Popout button and related tools suppressed
+  assert.ok(
+    css.includes('body[data-tool-id="assistant"] #popout-btn') &&
+    css.includes('display: none !important;'),
+    'Assistant must hide #popout-btn in CSS'
+  );
+  assert.ok(
+    css.includes('body[data-tool-id="assistant"] #tool-related'),
+    'Assistant must hide #tool-related in CSS'
+  );
+  assert.ok(
+    appJs.includes("tool?.id === 'assistant'"),
+    'app.js renderRelated must suppress related tools for assistant'
+  );
+
+  // Zero outer scroll and full height
+  assert.ok(
+    css.includes('body[data-tool-id="assistant"] #main') &&
+    css.includes('height: calc(100dvh - var(--header-h, 57px)) !important;') &&
+    css.includes('overflow: hidden !important;'),
+    'Assistant #main must have 100dvh minus header and overflow: hidden'
+  );
+
+  // Width containment (not stretched to 100vw)
+  assert.ok(
+    css.includes('body[data-tool-id="assistant"] #tool-viewport') &&
+    css.includes('clamp(620px, 68vw, 1140px)') &&
+    css.includes('max-width: 75vw'),
+    'Assistant tool-viewport must maintain readable centered proportional width'
+  );
+});
+
+test('UI Refinements: Container Quote Builder fullscreen and mobile scaling', async () => {
+  const fs = await import('fs');
+  const path = await import('path');
+  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const appJs = fs.readFileSync(path.resolve('js/app.js'), 'utf-8');
+
+  // Suppress popout button and related tools
+  assert.ok(
+    css.includes('body[data-tool-id="container-planner"] #popout-btn') &&
+    css.includes('body[data-tool-id="container-planner"] #tool-related'),
+    'Container planner must hide popout button and related tools'
+  );
+  assert.ok(
+    appJs.includes("tool?.id === 'container-planner'"),
+    'app.js renderRelated must suppress related tools for container-planner'
+  );
+
+  // Desktop full height
+  assert.ok(
+    css.includes('body[data-tool-id="container-planner"] #main') &&
+    css.includes('height: calc(100dvh - var(--header-h, 57px)) !important;'),
+    'Container planner #main must be full height on desktop'
+  );
+
+  // Mobile scaled rules
+  assert.ok(
+    css.includes('body[data-tool-id="container-planner"] .t3d-canvas') &&
+    css.includes('max-height: 300px !important;'),
+    'Container planner canvas must be scaled on mobile to max-height 300px'
+  );
+  assert.ok(
+    css.includes('body[data-tool-id="container-planner"] .cp') &&
+    css.includes('flex-direction: column !important;'),
+    'Container planner .cp must adapt to column layout on mobile'
+  );
+});
+
 

@@ -2681,5 +2681,6 @@ function wire(host, selected, refresh, itemsInDir = []) {
     if (ql) ql.remove();
     const pr = document.getElementById('sv-properties-modal');
     if (pr) pr.remove();
+    host.innerHTML = '';
   };
 }

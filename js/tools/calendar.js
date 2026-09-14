@@ -271,10 +271,20 @@ export default {
       }
     }
 
-    function renderCurrentView() {
+    function renderCurrentView(animDir = null) {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
       monthTitle.textContent = `${MONTH_NAMES[month]} ${year}`;
+
+      if (animDir === 'prev') {
+        monthTitle.classList.remove('cal-anim-slide-left', 'cal-anim-slide-right');
+        void monthTitle.offsetWidth;
+        monthTitle.classList.add('cal-anim-slide-right');
+      } else if (animDir === 'next') {
+        monthTitle.classList.remove('cal-anim-slide-left', 'cal-anim-slide-right');
+        void monthTitle.offsetWidth;
+        monthTitle.classList.add('cal-anim-slide-left');
+      }
 
       updateTodayBanner();
 
@@ -673,7 +683,7 @@ export default {
       } else if (currentView === 'day') {
         currentDate.setDate(currentDate.getDate() - 1);
       }
-      renderCurrentView();
+      renderCurrentView('prev');
     });
 
     nextBtn.addEventListener('click', () => {
@@ -684,7 +694,7 @@ export default {
       } else if (currentView === 'day') {
         currentDate.setDate(currentDate.getDate() + 1);
       }
-      renderCurrentView();
+      renderCurrentView('next');
     });
 
     todayBtn.addEventListener('click', () => {
@@ -931,6 +941,21 @@ function injectCalendarStyles() {
       color: var(--text-muted);
       font-weight: 600;
       padding-left: 2px;
+    }
+
+    @keyframes calFadeSlideLeft {
+      0% { opacity: 0; transform: translateX(18px); }
+      100% { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes calFadeSlideRight {
+      0% { opacity: 0; transform: translateX(-18px); }
+      100% { opacity: 1; transform: translateX(0); }
+    }
+    .cal-anim-slide-left {
+      animation: calFadeSlideLeft 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .cal-anim-slide-right {
+      animation: calFadeSlideRight 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
     @media (max-width: 768px) {
