@@ -1,5 +1,5 @@
-/* ============================================================
-   TOOLBOX — Design System
+﻿/* ============================================================
+   TOOLBOX â€” Design System
    Black & white. Minimal. Swiss-inspired.
    ============================================================ */
 
@@ -199,7 +199,7 @@ body {
   }
 }
 
-/* Nav links (Desktop) — Pure Plain Text Navigation */
+/* Nav links (Desktop) â€” Pure Plain Text Navigation */
 .nav-links,
 .desktop-nav {
   display: flex;
@@ -254,7 +254,7 @@ body {
   gap: 10px;
 }
 
-/* Search — Cinnamon/GNOME flat app search bar & Universal Search Box Standard */
+/* Search â€” Cinnamon/GNOME flat app search bar & Universal Search Box Standard */
 .search-wrapper {
   position: relative;
   display: flex;
@@ -772,7 +772,7 @@ input[placeholder*="search" i]::placeholder {
 }
 
 /* ============================================================
-   TOOL COMPONENTS — Shared building blocks
+   TOOL COMPONENTS â€” Shared building blocks
    ============================================================ */
 
 /* Sections & labels */
@@ -856,7 +856,7 @@ input[placeholder*="search" i]::placeholder {
   box-shadow: 0 0 0 2px var(--accent-glow), inset 0 1px 2px rgba(0,0,0,0.01);
 }
 
-/* Buttons — Linux Mint & Ubuntu flat tactile GTK buttons */
+/* Buttons â€” Linux Mint & Ubuntu flat tactile GTK buttons */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -1341,7 +1341,7 @@ mark.regex-match {
 }
 
 /* ============================================================
-   ABOUT PAGE — ENGINEERED PRODUCT SHOWCASE
+   ABOUT PAGE â€” ENGINEERED PRODUCT SHOWCASE
    ============================================================ */
 .support-content.showcase-content {
   max-width: 820px;
@@ -2297,7 +2297,7 @@ mark.regex-match {
 #tips-fab:hover { background: var(--g800) !important;  box-shadow: 0 0 12px rgba(0,0,0,0.08); }
 
 /* ============================================================
-   3D TOOLS — shared layout for Anatomy Explorer & Container Planner
+   3D TOOLS â€” shared layout for Anatomy Explorer & Container Planner
    ============================================================ */
 
 .t3d {
@@ -2543,7 +2543,7 @@ mark.regex-match {
 
 /* ============================================================
    CONTAINER & CABIN PLANNER
-   Larger type and hit areas than the rest of the app — this tool is
+   Larger type and hit areas than the rest of the app â€” this tool is
    aimed at people who do not use design software.
    ============================================================ */
 
@@ -2862,7 +2862,7 @@ mark.regex-match {
 .cpg-warn   { color: #9a6b00; }
 .cpg-error  { color: #b3261e; }
 .cpg-result { color: var(--black); font-weight: 500; }
-.cpg-result::before { content: '⟵ '; color: var(--g400); }
+.cpg-result::before { content: 'âŸµ '; color: var(--g400); }
 
 /* --- SQL result tables --- */
 .cpg-table-wrap { margin: 8px 0 14px; overflow-x: auto; }
@@ -3548,7 +3548,7 @@ mark.regex-match {
 .an-credit a { color: var(--g600); }
 
 /* ============================================================
-   DISCOVERY SURFACES — quick row, category blurbs, related tools
+   DISCOVERY SURFACES â€” quick row, category blurbs, related tools
    ============================================================ */
 
 .home-quick {
@@ -3803,7 +3803,7 @@ mark.regex-match {
 }
 .pdf-page.is-on .pdf-page-box { border-color: var(--black); background: var(--g50); }
 .pdf-page.is-on::after {
-  content: '✓';
+  content: 'âœ“';
   position: absolute;
   top: 5px; right: 5px;
   width: 17px; height: 17px;
@@ -3831,7 +3831,7 @@ mark.regex-match {
    Most sideways-scroll bugs on this app came from one thing: grid and
    flex children default to `min-width: auto`, which means an element
    refuses to shrink below its own min-content width. A text input's
-   intrinsic size then pushes its whole column past the viewport — that
+   intrinsic size then pushes its whole column past the viewport â€” that
    is why the NPV tool rendered a 463px column inside a 343px screen on
    a 375px phone. Containing that centrally fixes the class of bug
    rather than the instances.
@@ -3858,13 +3858,13 @@ input, select, textarea {
   max-width: 100%;
 }
 
-/* Long unbroken strings — URLs, hashes, base64 — are the other cause. */
+/* Long unbroken strings â€” URLs, hashes, base64 â€” are the other cause. */
 .tool-output, .biz-explain, .fz-name strong, .cq-line-name, .an-item-name {
   overflow-wrap: anywhere;
 }
 
 @media (max-width: 768px) {
-  /* Tap targets. Apple asks for 44px; the header was giving 24–40px. */
+  /* Tap targets. Apple asks for 44px; the header was giving 24â€“40px. */
   .logo { min-height: 44px; display: inline-flex; align-items: center; }
   .nav-link { min-height: 44px; }
   .btn, .btn-sm { min-height: 40px; }
@@ -3940,7 +3940,7 @@ input, select, textarea {
    invoice form's own grid slipped past the list above). On a phone
    nothing inside a tool has any business insisting on being wider than
    the thing that holds it, so the rule is stated once, generally.
-   Tables are excluded — they size to their content by design and live
+   Tables are excluded â€” they size to their content by design and live
    inside their own horizontal scrollers. */
 @media (max-width: 768px) {
   #viewport-content :is(div, section, aside, label, form, p, ul, ol) {
@@ -4160,7 +4160,7 @@ input, select, textarea {
 
 /* ============================================================
    SPEED TEST
-   The readout uses the app's pixel display face — this is the one
+   The readout uses the app's pixel display face â€” this is the one
    tool whose whole point is a number you glance at from a distance.
    ============================================================ */
 
@@ -5324,7 +5324,7 @@ input, select, textarea {
 
 /* `hidden` is only a default, and any component that sets `display`
    silently beats it. The Saved link sets `display: flex`, so without this
-   it stayed visible to people who had never saved anything — which is the
+   it stayed visible to people who had never saved anything â€” which is the
    one thing the whole progressive layer is supposed to avoid. */
 [hidden] { display: none !important; }
 
@@ -5610,7 +5610,7 @@ input, select, textarea {
    be noticed. Black base, two slow liquid blobs drifting under it
    on different loops so they interfere and read as waves, and a
    sheen that crosses every few seconds. All of it is compositor
-   work — transform and opacity only, nothing that triggers layout.
+   work â€” transform and opacity only, nothing that triggers layout.
    ============================================================ */
 
 .surprise {
@@ -5643,7 +5643,7 @@ input, select, textarea {
 .surprise-label { position: relative; z-index: 2; }
 
 /* The two drifting blobs. Blurred well past their own size so the edges
-   never resolve into circles — what you see is the interference. */
+   never resolve into circles â€” what you see is the interference. */
 .surprise::before,
 .surprise::after {
   content: '';
@@ -5783,7 +5783,7 @@ input, select, textarea {
 .pde-convert-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ============================================================
-   SPACES — The Shared Desk
+   SPACES â€” The Shared Desk
    "Local by default. Shared by intention."
    Cohesive with Toolbox Swiss minimalist design language.
    ============================================================ */
@@ -6077,7 +6077,7 @@ input, select, textarea {
 .art-space-custom { border-top: 1px solid var(--g100); padding-top: 12px; }
 
 /* ============================================================
-   RESPONSIVE — Desktop & Mobile Layout
+   RESPONSIVE â€” Desktop & Mobile Layout
    ============================================================ */
 
 @media (max-width: 900px) {
@@ -6210,7 +6210,7 @@ input, select, textarea {
 }
 
 /* ============================================================
-   TOOLBOX — 28 CANONICAL THEMES & UNIVERSAL TOKEN ENGINE
+   TOOLBOX â€” 28 CANONICAL THEMES & UNIVERSAL TOKEN ENGINE
    ============================================================ */
 
 [data-theme="yosemite"] {
@@ -7496,7 +7496,7 @@ input, select, textarea {
 }
 
 /* ============================================================
-   PER-THEME POLISH — CODE PLAYGROUND & EDITORS
+   PER-THEME POLISH â€” CODE PLAYGROUND & EDITORS
    ============================================================ */
 
 /* 1. White-on-Black */
@@ -7580,7 +7580,7 @@ input, select, textarea {
 }
 
 /* ============================================================
-   CALCULATOR TOOL — Universal Calculating Engine Styles
+   CALCULATOR TOOL â€” Universal Calculating Engine Styles
    ============================================================ */
 .calc-wrapper {
   display: flex;
@@ -9067,7 +9067,7 @@ input, select, textarea {
 }
 
 /* ============================================================
-   SUPPORT PAGE — NATIVE APP BANNER & CREDITS GRID
+   SUPPORT PAGE â€” NATIVE APP BANNER & CREDITS GRID
    ============================================================ */
 .support-native-banner {
   background: var(--g50);
@@ -9341,7 +9341,7 @@ input, select, textarea {
 }
 
 /* ============================================================
-   ASSISTANT — Premium Rolling Line Thinking Shimmer
+   ASSISTANT â€” Premium Rolling Line Thinking Shimmer
    ============================================================ */
 .ast-thinking-shimmer {
   display: flex;
@@ -9390,7 +9390,7 @@ input, select, textarea {
 }
 
 /* ============================================================
-   ASSISTANT — In-Chat Drag & Dropzone Cards & Drag Overlays
+   ASSISTANT â€” In-Chat Drag & Dropzone Cards & Drag Overlays
    ============================================================ */
 .ast-inchat-dropzone-card {
   margin-top: 12px;
@@ -9453,7 +9453,7 @@ input, select, textarea {
 }
 
 /* ============================================================
-   TOOLBOX ASSISTANT — Polished Chat Bubbles with Theme Gradient Outline
+   TOOLBOX ASSISTANT â€” Polished Chat Bubbles with Theme Gradient Outline
    ============================================================ */
 
 .ast-msg {
@@ -9653,7 +9653,7 @@ body.standalone-mode .notes-app-wrapper {
 }
 
 /* ============================================================
-   ASSISTANT RESULT CARDS — THEME-AWARE COLOR SYSTEM
+   ASSISTANT RESULT CARDS â€” THEME-AWARE COLOR SYSTEM
    ============================================================ */
 .assistant-result-file-card,
 .assistant-result-file-list,
@@ -10111,7 +10111,7 @@ body.standalone-mode .notes-app-wrapper {
 
 
 /* ============================================================
-   ABOUT PAGE — IMMERSIVE SCROLL STORYTELLING TILES
+   ABOUT PAGE â€” IMMERSIVE SCROLL STORYTELLING TILES
    ============================================================ */
 .about-story-view {
   width: 100%;
@@ -10412,7 +10412,7 @@ body.standalone-mode .notes-app-wrapper {
 
 
 /* ============================================================
-   ASSISTANT — Attach Popup Menu (+ button dropdown)
+   ASSISTANT â€” Attach Popup Menu (+ button dropdown)
    Themed to match Toolbox finder-context-menu / dialog style
    ============================================================ */
 .ast-attach-popup {
@@ -10476,7 +10476,7 @@ body.standalone-mode .notes-app-wrapper {
 
 
 /* ============================================================
-   TOOLBOX — REFINED SYSTEMS & FULLSCREEN ARCHITECTURE
+   TOOLBOX â€” REFINED SYSTEMS & FULLSCREEN ARCHITECTURE
    ============================================================ */
 
 /* 1. HOME SNAP SCROLLING & STORY SLIDES */
@@ -10841,7 +10841,7 @@ body.tool-fullscreen #header-fs-exit-btn {
 }
 
 /* ============================================================
-   FILES VIEW — MODERN SLEEK TOOLBAR & BUTTON SPECIFICATION
+   FILES VIEW â€” MODERN SLEEK TOOLBAR & BUTTON SPECIFICATION
    Compact, modern information density (Finder / Linear / Drive)
    ============================================================ */
 .sv-head {
@@ -12040,7 +12040,7 @@ body[data-tool-id="container-planner"] .cq-rates {
 
 
 /* ============================================================
-   TOOLBOX — MESSAGING TOOL (FLAT + DIMENSIONAL + SUBTLE 3D)
+   TOOLBOX â€” MESSAGING TOOL (FLAT + DIMENSIONAL + SUBTLE 3D)
    ============================================================ */
 .messaging-app {
   display: flex;
@@ -12633,7 +12633,7 @@ body[data-tool-id="container-planner"] .cq-rates {
 
 
 /* ============================================================
-   TOOLBOX — DISTINCT MOBILE TOOL UI SYSTEM (ALL 126 TOOLS)
+   TOOLBOX â€” DISTINCT MOBILE TOOL UI SYSTEM (ALL 126 TOOLS)
    Responsive mobile architecture for screens <= 768px
    ============================================================ */
 
@@ -12661,11 +12661,7 @@ body[data-tool-id="container-planner"] .cq-rates {
     margin-bottom: 18px !important;
   }
 
-  .viewport-header > div:first-child {
-    width: 100% !important;
-    flex-wrap: wrap !important;
-    gap: 10px !important;
-  }
+  .viewport-header > div:first-child { width: 100% !important; flex-wrap: nowrap !important; align-items: center !important; gap: 10px !important; }
 
   .viewport-heading {
     width: 100% !important;
@@ -13569,3 +13565,4 @@ body[data-tool-id="container-planner"] .cq-rates {
     gap: 8px !important;
   }
 }
+

@@ -445,24 +445,24 @@ function renderModalContent() {
     <div class="settings-modal-window" style="max-width:560px; border-radius:18px;">
       <div class="sheet-drag-handle" aria-hidden="true"></div>
       
-      <div class="settings-modal-header" style="padding-bottom:12px; border-bottom:1px solid var(--g200);">
-        <div class="settings-title-wrap">
-          <div class="settings-title-icon" style="background:var(--black); color:var(--white);">
+      <div class="settings-modal-header" style="padding-bottom:12px; border-bottom:1px solid var(--g200); display:flex; align-items:center; justify-content:space-between;">
+        <div class="settings-title-wrap" style="display:flex; align-items:center; gap:12px; flex:1; min-width:0;">
+          <div class="settings-title-icon" style="background:var(--black); color:var(--white); width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
           </div>
-          <div>
-            <h2 class="settings-modal-title" style="font-size:1.15rem; font-weight:800;">
+          <div style="min-width:0;">
+            <h2 class="settings-modal-title" style="margin:0; font-size:1.15rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
               ${(user && authMode !== 'set-new-password') ? 'Account & Storage' : (authMode === 'set-new-password' ? 'Set New Password' : (authMode === 'verify-pending' ? 'Verify Your Email' : (authMode === 'reset' ? 'Reset Password' : (authMode === 'signup' ? 'Create an Account' : 'Sign In'))))}
             </h2>
-            <p class="settings-modal-subtitle">
+            <p class="settings-modal-subtitle" style="margin:2px 0 0; font-size:0.76rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
               ${(user && authMode !== 'set-new-password') ? 'Manage cloud sync, dual storage preferences, passkeys, and AI quotas.' : (authMode === 'set-new-password' ? (recoveryContext?.email ? `Choose a new password for ${recoveryContext.email}.` : 'Choose a new password for your account.') : (authMode === 'verify-pending' ? `An activation link was sent to ${pendingConfirmationEmail || 'your email'}.` : (authMode === 'reset' ? 'Enter your email to receive a password recovery link.' : (authMode === 'signup' ? 'Sign up to access Assistant and sync your workspaces.' : 'Sign in to access Assistant, sync files, and manage spaces.'))))}
             </p>
           </div>
         </div>
-        <button type="button" class="settings-modal-close" id="close-account-modal" aria-label="Close">
+        <button type="button" class="settings-modal-close" id="close-account-modal" aria-label="Close" style="background:none; border:none; cursor:pointer; color:var(--text-muted); padding:6px; border-radius:6px; flex-shrink:0;">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -587,6 +587,7 @@ function renderModalContent() {
 
     modalEl.querySelector('#btn-acc-change-avatar')?.addEventListener('click', () => {
       closeAccountModal();
+      window.__returnToAccount = true;
       openSettings('avatars');
     });
   }

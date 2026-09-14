@@ -395,12 +395,12 @@ export default {
             </div>
           </div>
 
-          <!-- Recent Workspaces -->
-          <div>
-            <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--cpg-text-muted); font-weight:700; margin-bottom:10px;">Recent Workspaces</div>
+          <!-- Recent Projects -->
+          <div class="cpg-recent-workspaces">
+            <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--cpg-text-muted); font-weight:700; margin-bottom:10px;">Recent Projects</div>
             ${workspaces.length === 0 ? `
-              <div style="background:var(--cpg-bg-card); border:1px dashed var(--cpg-border); border-radius:10px; padding:22px; text-align:center; color:var(--cpg-text-muted); font-size:0.82rem;">
-                No open workspaces. Create a workspace or select a template above to begin.
+              <div style="padding:24px; text-align:center; color:var(--cpg-text-muted); font-size:0.85rem; border:1px dashed var(--cpg-border); border-radius:12px;">
+                No open projects. Create a project or select a template above to begin.
               </div>
             ` : `
               <div style="display:flex; flex-direction:column; gap:6px;">
@@ -566,9 +566,9 @@ export default {
         <div id="cpg-header" style="background:var(--cpg-bg-card); border-bottom:1px solid var(--cpg-border); padding:4px 10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; z-index:30;">
           
           <!-- Left: Workspaces button + Menus (File, Edit, View, Run, Test) -->
-          <div style="display:flex; align-items:center; gap:6px;">
-            <button type="button" class="cpg-menu-trigger" id="cpg-close-ws-btn" title="Back to Workspaces" style="font-weight:600; padding:4px 8px;">
-              ← Workspaces
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button type="button" class="cpg-menu-trigger" id="cpg-close-ws-btn" title="Back to Projects" style="font-weight:600; padding:4px 8px;">
+              ← Projects
             </button>
             <div style="height:14px; width:1px; background:var(--cpg-border); margin:0 2px;"></div>
 

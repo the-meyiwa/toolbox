@@ -1734,7 +1734,7 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
       required: ['query']
     }
   }
-];
+].filter((v, i, a) => a.findIndex(t => t.name === v.name) === i);
 
 /**
  * Assistant Tool Execution Engine (Client-Side Sandboxed Dispatcher)
@@ -1846,6 +1846,44 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
     } else {
       window.location.hash = `#${toolId}`;
       return { status: 'success', openedToolId: toolId, message: `Navigated to tool: #${toolId}. The user is now viewing it.` };
+    }
+  }
+
+  // Dynamic execution for natively declared Toolbox tools
+  const dynamicMatchedTool = TOOLS.find(t => t.id.replace(/-/g, '_') === name || t.id === name);
+  if (dynamicMatchedTool && !name.startsWith('open_tool_') && name !== 'search_images' && name !== 'generate_flowchart' && name !== 'generate_csv' && name !== 'save_file' && name !== 'run_speed_test') {
+    const toolId = dynamicMatchedTool.id;
+    try {
+      const toolModules = import.meta.glob('../tools/*.js');
+      const loader = toolModules[`../tools/${toolId}.js`];
+      if (loader) {
+        const module = await loader();
+        const instance = module.default;
+        
+        if (instance.setArtifact && instance.getArtifact) {
+          const dummyContainer = document.createElement('div');
+          instance.render(dummyContainer);
+          // Pass the entire args object in case the tool accepts more than just text
+          instance.setArtifact(args);
+          const outArt = instance.getArtifact();
+          
+          if (instance.destroy) instance.destroy();
+          
+          if (outArt) {
+            return {
+              status: 'success',
+              type: outArt.kind === 'json' ? 'json' : 'transform',
+              renderer: outArt.kind === 'json' ? 'json' : 'transform',
+              operation: dynamicMatchedTool.name,
+              resultText: outArt.text || JSON.stringify(outArt),
+              output: outArt.text || JSON.stringify(outArt),
+              message: `Processed with ${dynamicMatchedTool.name}.`
+            };
+          }
+        }
+      }
+    } catch (e) {
+      console.warn(`Headless execution attempt failed for dynamic tool ${toolId}:`, e);
     }
   }
 

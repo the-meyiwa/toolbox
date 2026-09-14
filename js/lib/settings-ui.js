@@ -83,23 +83,23 @@ function createModal() {
       
       <!-- Modal Header -->
       <div class="settings-modal-header" style="flex-shrink: 0; padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
-        <div class="settings-title-wrap" style="display: flex; align-items: center; gap: 12px;">
-          <button type="button" id="settings-back-btn" aria-label="Back to Settings" style="display: none; background: none; border: 1px solid var(--border); cursor: pointer; color: var(--text); padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; align-items: center; gap: 6px;">
+        <div class="settings-title-wrap" style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;">
+          <button type="button" id="settings-back-btn" aria-label="Back to Settings" style="display: none; background: none; border: 1px solid var(--border); cursor: pointer; color: var(--text); padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; align-items: center; gap: 6px; flex-shrink: 0;">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
             <span>Back</span>
           </button>
-          <div class="settings-title-icon" id="settings-title-icon" style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-subtle); display: flex; align-items: center; justify-content: center; color: var(--text);">
+          <div class="settings-title-icon" id="settings-title-icon" style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-subtle); display: flex; align-items: center; justify-content: center; color: var(--text); flex-shrink: 0;">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="3"></circle>
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
             </svg>
           </div>
-          <div>
-            <h2 id="settings-modal-title" class="settings-modal-title" style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text);">Toolbox Settings</h2>
-            <p id="settings-modal-subtitle" class="settings-modal-subtitle" style="margin: 2px 0 0; font-size: 0.76rem; color: var(--text-muted);">Appearance, Preferences, AI, and Profile Identity</p>
+          <div style="min-width: 0;">
+            <h2 id="settings-modal-title" class="settings-modal-title" style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Toolbox Settings</h2>
+            <p id="settings-modal-subtitle" class="settings-modal-subtitle" style="margin: 2px 0 0; font-size: 0.76rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Appearance, Preferences, AI, and Profile Identity</p>
           </div>
         </div>
-        <button type="button" class="settings-modal-close" id="close-settings" aria-label="Close Settings" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 6px; border-radius: 6px;">
+        <button type="button" class="settings-modal-close" id="close-settings" aria-label="Close Settings" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 6px; border-radius: 6px; flex-shrink: 0;">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -209,7 +209,15 @@ function createModal() {
   }
 
   modalEl.querySelector('#close-settings').addEventListener('click', closeSettings);
-  modalEl.querySelector('#settings-back-btn')?.addEventListener('click', showMainView);
+  modalEl.querySelector('#settings-back-btn')?.addEventListener('click', () => {
+    if (window.__returnToAccount) {
+      closeSettings();
+      window.__returnToAccount = false;
+      openAccountModal();
+    } else {
+      showMainView();
+    }
+  });
   modalEl.addEventListener('click', (e) => {
     if (e.target === modalEl) closeSettings();
   });

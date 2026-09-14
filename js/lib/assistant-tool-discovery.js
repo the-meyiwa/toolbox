@@ -34,7 +34,7 @@ export class ToolInvocationHelper {
    */
   toLLMDeclaration() {
     return {
-      name: this.tool.id,
+      name: this.tool.id.replace(/-/g, '_'),
       description: this.tool.description,
       parameters: {
         type: 'object',
@@ -352,7 +352,7 @@ export class ToolDiscoveryManager {
   }
 
   generateNavigationDeclarations() {
-    return this.getAvailableTools().map(tool => tool.toNavigationDeclaration());
+    return this.getAvailableTools().map(t => t.toLLMDeclaration());
   }
 
   /**
