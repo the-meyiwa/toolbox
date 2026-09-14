@@ -12496,3 +12496,824 @@ body[data-tool-id="container-planner"] .cq-rates {
     display: inline-flex;
   }
 }
+
+
+/* ============================================================
+   TOOLBOX — DISTINCT MOBILE TOOL UI SYSTEM (ALL 126 TOOLS)
+   Responsive mobile architecture for screens <= 768px
+   ============================================================ */
+
+@media (max-width: 768px) {
+  /* ------------------------------------------------------------
+     1. GLOBAL VIEWPORT & SHELL MOBILE CLEARANCE
+     ------------------------------------------------------------ */
+  #tool-viewport {
+    padding: 0 12px 96px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+
+  body.in-tool #main {
+    padding-bottom: 24px !important;
+  }
+
+  .viewport-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+    padding: 14px 0 !important;
+    margin-bottom: 18px !important;
+  }
+
+  .viewport-header > div:first-child {
+    width: 100% !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+  }
+
+  .viewport-heading {
+    width: 100% !important;
+  }
+
+  #viewport-title {
+    font-size: 1.25rem !important;
+    line-height: 1.3 !important;
+    flex-wrap: wrap !important;
+  }
+
+  #viewport-desc {
+    font-size: 0.8rem !important;
+    line-height: 1.45 !important;
+    margin-top: 4px !important;
+  }
+
+  #back-btn {
+    padding: 5px 12px !important;
+    font-size: 0.76rem !important;
+  }
+
+  /* ------------------------------------------------------------
+     2. UNIVERSAL SHARED TOOL COMPONENTS ON MOBILE
+     ------------------------------------------------------------ */
+  .tool-row,
+  .tool-columns,
+  .tool-split,
+  .input-split,
+  .editor-split,
+  .biz-grid,
+  .inv-grid-2,
+  .pay-hub-grid,
+  .tool-grid-2,
+  .tool-grid-3,
+  .tool-grid-4 {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 12px !important;
+  }
+
+  .tool-controls,
+  .btn-group {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .tool-controls .btn,
+  .btn-group .btn,
+  .tool-btn {
+    min-height: 42px !important;
+  }
+
+  .tool-textarea {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 0.88rem !important;
+    min-height: 100px !important;
+  }
+
+  .tool-input {
+    width: 100% !important;
+    height: 42px !important;
+    min-height: 42px !important;
+    box-sizing: border-box !important;
+    font-size: 0.9rem !important;
+  }
+
+  .tool-select {
+    width: 100% !important;
+    height: 42px !important;
+    min-height: 42px !important;
+    box-sizing: border-box !important;
+    font-size: 0.88rem !important;
+  }
+
+  .tool-output {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    word-break: break-word !important;
+    overflow-x: auto !important;
+    font-size: 0.82rem !important;
+    padding: 12px !important;
+  }
+
+  /* Universal touch-friendly horizontal scroll for tables */
+  .table-wrapper,
+  .calc-table-box,
+  .sheet-wrapper,
+  .table-responsive,
+  table {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* ------------------------------------------------------------
+     3. DEVELOPER TOOLS (19 TOOLS)
+     ------------------------------------------------------------ */
+  /* Text Diff & Inspector */
+  .diff-split,
+  .diff-out {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    font-size: 0.78rem !important;
+    overflow-x: auto !important;
+  }
+
+  /* Regex Tester & JSON Viewer */
+  .reg-layout,
+  .jview-split,
+  .sql-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 12px !important;
+  }
+
+  /* Algorithm Lab */
+  .alab {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  .alab-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+  .alab-stage {
+    width: 100% !important;
+    height: 260px !important;
+    min-height: 220px !important;
+  }
+  .alab-bar-right {
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  /* Browser simulator */
+  .browser-app-wrapper {
+    width: 100% !important;
+    border-radius: 12px !important;
+  }
+  .browser-chrome {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    padding: 8px !important;
+  }
+  .brw-address-box {
+    width: 100% !important;
+    order: 3 !important;
+  }
+  .brw-hide-mobile {
+    display: none !important;
+  }
+  .browser-viewport iframe {
+    height: calc(100vh - 230px) !important;
+    min-height: 380px !important;
+  }
+
+  /* Code Playground */
+  .cpg-landing {
+    grid-template-columns: 1fr !important;
+    padding: 12px !important;
+    gap: 12px !important;
+  }
+  .cpg-card {
+    width: 100% !important;
+  }
+  .cpg-tpl-pill {
+    font-size: 0.74rem !important;
+    padding: 4px 10px !important;
+  }
+
+  /* Cron Parser & HTTP Mocks */
+  .cron-grid,
+  .cron-field {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  .cron-runs {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    width: 100% !important;
+  }
+  .hm-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  /* Flowchart & UML Diagram */
+  .flw-layout, .flw,
+  .uml-layout, .uml {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+  .flw-split, .uml-split {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+  .flw-palette, .uml-palette {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 8px !important;
+    gap: 6px !important;
+  }
+  .flw-chart-wrap, .uml-chart-wrap {
+    width: 100% !important;
+    height: 320px !important;
+    min-height: 280px !important;
+  }
+  .flw-bar, .uml-bar {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  /* Logic Lab */
+  .lgl-layout, .lgl {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+  .lgl-palette {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    padding: 8px !important;
+    gap: 6px !important;
+  }
+  .lgl-stage-wrap {
+    width: 100% !important;
+    height: 300px !important;
+  }
+
+  /* ------------------------------------------------------------
+     4. BUSINESS & FINANCE TOOLS (24 TOOLS)
+     ------------------------------------------------------------ */
+  .inv-layout,
+  .inv-wrap {
+    width: 100% !important;
+    padding: 12px !important;
+  }
+  .inv-paper {
+    padding: 16px 12px !important;
+    box-shadow: none !important;
+    border: 1px solid var(--border) !important;
+  }
+  .inv-party-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .inv-item-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 6px !important;
+    padding: 10px !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    margin-bottom: 8px !important;
+  }
+  .inv-item-row input {
+    width: 100% !important;
+  }
+
+  /* Cap Table */
+  .cap-grid,
+  .cap-table-wrap {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Business Model Canvas & Break-Even */
+  .bmc-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  .be-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Pitch Deck & Container Planner */
+  .pd-slide-preview {
+    min-height: 220px !important;
+    height: auto !important;
+  }
+  .pd-thumbnails {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    flex-direction: row !important;
+    max-height: 100px !important;
+  }
+
+  /* Financial Analyzer Modal */
+  .stmt-modal-box {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    max-height: 90vh !important;
+    padding: 14px !important;
+  }
+
+  /* Timesheet */
+  .ts-controls {
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .ts-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 6px !important;
+    padding: 10px !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 10px !important;
+    background: var(--surface-secondary) !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* ------------------------------------------------------------
+     5. IMAGES, FILES & PDF TOOLS (13 TOOLS)
+     ------------------------------------------------------------ */
+  .cr-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+  .compressor-dropzone {
+    padding: 24px 14px !important;
+    min-height: 120px !important;
+    border-radius: 14px !important;
+  }
+
+  .fz-controls {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  .fz-ctl {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+
+  .fz-summary {
+    width: 100% !important;
+    text-align: center !important;
+  }
+
+  .fz-list {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .fz-row {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    padding: 12px !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+  }
+
+  /* Image Cropper */
+  .cr-stage {
+    max-width: 100% !important;
+    height: 280px !important;
+    max-height: 280px !important;
+    margin: 0 auto !important;
+  }
+
+  /* PDF Editor */
+  .pde-layout,
+  .pde {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: auto !important;
+    height: auto !important;
+    border-radius: 12px !important;
+  }
+  .pde-toolbar {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    display: flex !important;
+    flex-direction: row !important;
+    padding: 6px !important;
+    border-bottom: 1px solid var(--border) !important;
+  }
+
+  /* Watermark Remover */
+  .wm-layout {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .wm-stage {
+    max-width: 100% !important;
+    height: 260px !important;
+    max-height: 280px !important;
+  }
+
+  /* PDF Split & Merge Pages */
+  .pdf-pages,
+  .pdf-list {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  /* EXIF Metadata Table */
+  .exif-split,
+  .mx-table {
+    display: block !important;
+    overflow-x: auto !important;
+    width: 100% !important;
+  }
+
+  /* ------------------------------------------------------------
+     6. NUMBERS & MATH TOOLS (10 TOOLS)
+     ------------------------------------------------------------ */
+  /* Calculator */
+  .calc-grid,
+  .calc-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .calc-main-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  .calc-main-display {
+    font-size: clamp(1.8rem, 6vw, 2.6rem) !important;
+  }
+  .calc-btn {
+    min-height: 48px !important;
+    font-size: 1.05rem !important;
+    border-radius: 10px !important;
+  }
+  .calc-tape-card {
+    order: 2 !important;
+    width: 100% !important;
+    max-height: 220px !important;
+  }
+
+  /* Math Utility & Stats */
+  .stat-grid,
+  .bcon-grid,
+  .math-utility-wrapper {
+    width: 100% !important;
+  }
+  .math-tab-nav {
+    display: flex !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    max-width: 100% !important;
+    scrollbar-width: none !important;
+    padding-bottom: 6px !important;
+    gap: 6px !important;
+  }
+  .math-pane {
+    padding: 12px 6px !important;
+    width: 100% !important;
+  }
+
+  /* Resistor Code */
+  .rc-col {
+    width: 100% !important;
+    margin-bottom: 12px !important;
+  }
+  .rc-swatches {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6px !important;
+    width: 100% !important;
+  }
+
+  /* Business Days */
+  .bd-weekdays {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  /* ------------------------------------------------------------
+     7. TEXT & DOCUMENTATION TOOLS (12 TOOLS)
+     ------------------------------------------------------------ */
+  /* Markdown Preview */
+  .md-split {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+  .markdown-body {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 12px !important;
+  }
+
+  /* Document Analyzer & Word Counter */
+  .wc-grid,
+  .slug-split,
+  .doc-stat-grid,
+  .word-stat-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  /* Text Cleaner Fixes List */
+  .tc-fixes {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  /* ------------------------------------------------------------
+     8. NETWORKING & SYSTEM TOOLS (11 TOOLS)
+     ------------------------------------------------------------ */
+  /* Speed Test */
+  .st-layout,
+  .st {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    width: 100% !important;
+  }
+  .st-gauge-wrap,
+  .st-readout {
+    width: 220px !important;
+    max-width: 220px !important;
+    height: 220px !important;
+    margin: 0 auto !important;
+  }
+  .st-big {
+    font-size: 2.2rem !important;
+  }
+  .st-gauges {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  /* IP & DNS Grid */
+  .ip-grid,
+  .dns-grid,
+  .net-lookup-card,
+  .net-result-box {
+    width: 100% !important;
+    overflow-x: auto !important;
+    padding: 12px !important;
+  }
+
+  /* ------------------------------------------------------------
+     9. SCIENCE, LAW, MUSIC, REFERENCE & SECURITY (47 TOOLS)
+     ------------------------------------------------------------ */
+  /* Periodic Table */
+  .pt-wrap {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 12px !important;
+  }
+  .pt-grid-container {
+    min-width: 760px !important;
+  }
+  .pt-detail-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  .unit-grid,
+  .astro-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+
+  /* Anatomy Explorer & 3D Tools */
+  .t3d {
+    height: 280px !important;
+    width: 100% !important;
+    border-radius: 12px !important;
+  }
+
+  /* Architecture Editor */
+  .arch-stage {
+    height: 300px !important;
+    width: 100% !important;
+  }
+
+  /* Guitar Chord Finder & Tuner */
+  .chord-fretboard-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    width: 100% !important;
+  }
+  .tuner-layout,
+  .tun {
+    width: 100% !important;
+    padding: 16px 10px !important;
+  }
+  .tuner-needle-wrap,
+  .tun-display {
+    width: 200px !important;
+    max-width: 200px !important;
+    height: 200px !important;
+    margin: 0 auto !important;
+  }
+  .tun-note {
+    font-size: 3rem !important;
+  }
+  .bpm-grid,
+  .synth-keys {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+
+  /* Metronome */
+  .metro-tap-btn {
+    min-height: 48px !important;
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+    width: 100% !important;
+  }
+
+  /* Bible & Quran */
+  .bible-layout, .bib,
+  .quran-layout, .qrn {
+    width: 100% !important;
+  }
+  .bib-bar, .qrn-bar {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+  .bib-reader, .qrn-reader {
+    padding: 14px 10px !important;
+    font-size: 1.05rem !important;
+    line-height: 1.75 !important;
+  }
+
+  /* Dictionary, Wiki, Timezone */
+  .dct, .wk, .tz-grid {
+    width: 100% !important;
+  }
+  .dct-search, .wk-searchbar {
+    width: 100% !important;
+  }
+
+  /* Legal Tools (NDA, Privacy Policy, Contract Digest, Research, Comparator) */
+  .nda-grid,
+  .privacy-grid,
+  .contract-grid,
+  .cd-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .cd-card {
+    width: 100% !important;
+    padding: 14px !important;
+  }
+
+  /* Design Tools */
+  .cp-layout,
+  .svg-split,
+  .palette-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 12px !important;
+  }
+
+  /* Contrast Checker */
+  .cc {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+  .cc-controls {
+    width: 100% !important;
+  }
+  .cc-preview {
+    width: 100% !important;
+    margin-top: 14px !important;
+  }
+
+  /* Color Converter */
+  .color-inputs {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .color-swatch {
+    height: 60px !important;
+    width: 100% !important;
+    border-radius: 8px !important;
+  }
+
+  /* QR Code Generator */
+  .qr-output {
+    padding: 16px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .qr-output canvas {
+    max-width: 220px !important;
+    height: auto !important;
+  }
+
+  /* Everyday (Clock, Weather, Timer) */
+  .clock-grid,
+  .weather-grid,
+  .timer-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 12px !important;
+  }
+  .tm-face {
+    font-size: clamp(2.8rem, 12vw, 4.2rem) !important;
+  }
+  .tm-controls {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  /* Security Tools (Hash, Password, JWT) */
+  .hash-grid,
+  .pw-grid,
+  .jwt-split {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 12px !important;
+  }
+
+  /* Diseases Database */
+  .dis-filter-pills {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    display: flex !important;
+    gap: 6px !important;
+    padding-bottom: 4px !important;
+  }
+  .dis-pill {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Sound Effects Grid */
+  .sfx-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+}
