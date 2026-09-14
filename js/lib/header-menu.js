@@ -284,41 +284,17 @@ export function closeHeaderMenu() {
 }
 
 export function installHeaderMenu() {
-  const container = document.getElementById('header-actions');
-  if (!container) return;
-
   const btn = document.getElementById('header-menu-btn');
-  menuEl = document.getElementById('header-dropdown-menu');
-
   if (btn) {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      toggleHeaderMenu();
-    });
-  }
-
-  // Handle menu item actions
-  const itemSettings = document.getElementById('menu-item-settings');
-  if (itemSettings) {
-    itemSettings.addEventListener('click', () => {
-      closeHeaderMenu();
       openSettings();
     });
   }
 
-
-
-  // Outside click listener
-  window.addEventListener('click', (e) => {
-    if (isMenuOpen && menuEl && !menuEl.contains(e.target) && e.target !== btn && !btn?.contains(e.target)) {
-      closeHeaderMenu();
-    }
-  });
-
   // Escape key handler
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      if (isMenuOpen) closeHeaderMenu();
       if (prefModalEl?.classList.contains('is-open')) closePreferencesModal();
     }
   });
@@ -337,16 +313,15 @@ export function updateHeaderAvatar() {
   if (user && activePic && activePic !== 'default') {
     const src = getProfilePictureSrc(activePic);
     if (src) {
-      btn.innerHTML = `<img src="${src}" alt="Avatar" style="width:24px; height:24px; border-radius:50%; object-fit:cover; display:block;">`;
+      btn.innerHTML = `<img src="${src}" alt="Avatar" style="width:100%; height:100%; border-radius:50%; object-fit:cover; display:block;">`;
       return;
     }
   }
 
   btn.innerHTML = `
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="1"></circle>
-      <circle cx="12" cy="5" r="1"></circle>
-      <circle cx="12" cy="19" r="1"></circle>
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text);">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+      <circle cx="12" cy="7" r="4"></circle>
     </svg>
   `;
 }

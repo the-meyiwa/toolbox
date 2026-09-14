@@ -28,9 +28,10 @@ function renderThemeCard(theme, currentId) {
   const groupLabel = {
     system: 'System',
     minimal: 'Minimal',
-    developer: 'Developer',
+    cultural: 'Cultural / Design',
+    brand: 'Brand-Inspired',
     expressive: 'Expressive'
-  }[theme.group] || 'System';
+  }[theme.group] || 'Theme';
 
   return `
     <button type="button" class="theme-card ${isActive ? 'is-active' : ''}" data-theme-id="${theme.id}" data-theme-group="${theme.group}" role="radio" aria-checked="${isActive}">
@@ -124,7 +125,7 @@ function createModal() {
           <div class="settings-section-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px;">
             <div>
               <h3 class="settings-section-title" style="font-size: 0.96rem; font-weight: 700; color: var(--text); margin: 0 0 4px;">Appearance &amp; Themes</h3>
-              <span class="settings-section-hint" style="font-size: 0.76rem; color: var(--text-muted);">26 distinct themes crafted with flat, dimensional, and subtle 3D styling</span>
+              <span class="settings-section-hint" style="font-size: 0.76rem; color: var(--text-muted);">${THEMES.length} distinct themes crafted with flat, dimensional, and subtle 3D styling</span>
             </div>
             <div style="position: relative; width: 220px; max-width: 100%;">
               <input type="text" id="theme-filter-search" class="tool-input" placeholder="Filter themes..." autocomplete="off" spellcheck="false" style="width: 100%; height: 32px; padding: 0 10px 0 28px; font-size: 0.78rem; border-radius: 9999px;">
@@ -135,10 +136,11 @@ function createModal() {
           <!-- Theme Category Tabs -->
           <div class="theme-category-tabs" id="theme-category-tabs" style="display: flex; gap: 6px; overflow-x: auto; margin-bottom: 16px; padding-bottom: 4px; scrollbar-width: none;">
             <button type="button" class="theme-tab-btn active" data-category="all">All (${THEMES.length})</button>
-            <button type="button" class="theme-tab-btn" data-category="system">System (15)</button>
-            <button type="button" class="theme-tab-btn" data-category="minimal">Minimal / Classic (4)</button>
-            <button type="button" class="theme-tab-btn" data-category="developer">Developer (5)</button>
-            <button type="button" class="theme-tab-btn" data-category="expressive">Expressive (2)</button>
+            <button type="button" class="theme-tab-btn" data-category="system">System (${THEMES.filter(t => t.group === 'system').length})</button>
+            <button type="button" class="theme-tab-btn" data-category="minimal">Minimal (${THEMES.filter(t => t.group === 'minimal').length})</button>
+            <button type="button" class="theme-tab-btn" data-category="cultural">Cultural / Design (${THEMES.filter(t => t.group === 'cultural').length})</button>
+            <button type="button" class="theme-tab-btn" data-category="brand">Brand-Inspired (${THEMES.filter(t => t.group === 'brand').length})</button>
+            <button type="button" class="theme-tab-btn" data-category="expressive">Expressive (${THEMES.filter(t => t.group === 'expressive').length})</button>
           </div>
 
           <div class="theme-grid" id="theme-grid-standard"></div>

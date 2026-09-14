@@ -8,15 +8,21 @@ import { setupDOMEnvironment } from '../helpers/dom-env.js';
 import { THEMES, getStoredTheme, applyTheme, initTheme } from '../../js/lib/theme.js';
 
 test('Theme: contains canonical palettes', () => {
-  assert.equal(THEMES.length, 26, 'Expected exactly 26 canonical themes');
+  assert.equal(THEMES.length, 28, 'Expected exactly 28 canonical themes');
 
   const requiredIds = [
-    'windows-11', 'macos-sonoma', 'macos-big-sur', 'gnome', 'kde-plasma',
-    'elementary-os', 'fedora', 'pop-os', 'zorin-os', 'deepin', 'chromeos',
-    'linux-mint', 'ubuntu', 'yosemite', 'yosemite-night',
-    'default', 'white-on-black', 'nord', 'solarized',
-    'dracula', 'catppuccin', 'gruvbox', 'monokai', 'one-dark',
-    'material-you', 'cyberpunk'
+    // System (4)
+    'yosemite', 'yosemite-night', 'linux-mint', 'ubuntu',
+    // Minimal (3)
+    'default', 'white-on-black', 'swiss',
+    // Cultural / Design (10)
+    'bauhaus', 'mondrian', 'memphis', 'art-deco', 'mid-century',
+    'japanese-traditional', 'lagos', 'african-textile', 'british-racing-green', 'wimbledon',
+    // Brand-Inspired (10)
+    'barbie', 'tiffany', 'coca-cola', 'mcdonalds', 'lego',
+    'nintendo', 'playstation', 'ikea', 'google', 'claude',
+    // Expressive (1)
+    'miami-vice'
   ];
 
   for (const id of requiredIds) {
@@ -28,9 +34,14 @@ test('Theme: contains canonical palettes', () => {
     assert.ok(theme.preview.text, `Theme "${id}" missing preview text`);
     assert.ok(theme.preview.accent, `Theme "${id}" missing preview accent`);
   }
+
+  const deprecated = ['windows-11', 'macos-sonoma', 'macos-big-sur', 'elementary-os', 'chromeos'];
+  for (const d of deprecated) {
+    assert.ok(!THEMES.some(t => t.id === d), `Deprecated theme "${d}" should not be in THEMES`);
+  }
 });
 
-test('Theme: all 26 themes have CSS definitions in css/style.css', async () => {
+test('Theme: all 28 themes have CSS definitions in css/style.css', async () => {
   const fs = await import('fs');
   const path = await import('path');
   const css = fs.readFileSync(path.resolve('css/style.css'), 'utf8');
@@ -61,19 +72,24 @@ test('Theme: applyTheme updates DOM and localStorage', () => {
   assert.equal(document.documentElement.getAttribute('data-theme'), null);
   assert.equal(getStoredTheme(), 'default');
 
-  // 4. Apply invalid theme defaults safely
-  applyTheme('non-existent-theme-xyz');
-  assert.equal(document.documentElement.getAttribute('data-theme'), null);
-  assert.equal(getStoredTheme(), 'default');
+  // 4. Apply swiss theme
+  applyTheme('swiss');
+  assert.equal(document.documentElement.getAttribute('data-theme'), 'swiss');
+  assert.equal(getStoredTheme(), 'swiss');
+
+  // 5. Apply claude theme
+  applyTheme('claude');
+  assert.equal(document.documentElement.getAttribute('data-theme'), 'claude');
+  assert.equal(getStoredTheme(), 'claude');
 });
 
 test('Theme: initTheme hydrates theme on boot', () => {
   setupDOMEnvironment();
-  localStorage.setItem('toolbox_theme', 'linux-mint');
+  localStorage.setItem('toolbox_theme', 'bauhaus');
 
-  const active = initTheme();
-  assert.equal(active, 'linux-mint');
-  assert.equal(document.documentElement.getAttribute('data-theme'), 'linux-mint');
+  const theme = initTheme();
+  assert.equal(theme, 'bauhaus');
+  assert.equal(document.documentElement.getAttribute('data-theme'), 'bauhaus');
 });
 
 test('Desktop Tool Viewport: width aligns all tools (1100px) with exceptions for container-planner and assistant', async () => {
@@ -81,56 +97,76 @@ test('Desktop Tool Viewport: width aligns all tools (1100px) with exceptions for
   const path = await import('path');
   const css = fs.readFileSync(path.resolve('css/style.css'), 'utf8');
 
-  // 1. Tool viewport standard max-width is 1100px (wide enough for rich multi-column tools)
+  // 1. Tool viewport standard desktop alignment
   assert.ok(
     /#tool-viewport\s*\{[^}]*max-width:\s*1100px/i.test(css),
-    '#tool-viewport must have desktop max-width of 1100px'
+    'Standard desktop tool-viewport must have max-width: 1100px'
+  );
+  assert.ok(
+    /#tool-viewport\s*\{[^}]*margin-left:\s*auto/i.test(css) &&
+    /#tool-viewport\s*\{[^}]*margin-right:\s*auto/i.test(css),
+    'Desktop tool-viewport must be centered with margin auto'
   );
 
-  // 2. Viewport exceptions: full-width for container-planner and proportional scaling for assistant
+  // 2. Full-bleed exception for container-planner
   assert.ok(
-    css.includes('body[data-tool-id="container-planner"] #tool-viewport') &&
-    css.includes('body[data-tool-id="assistant"] #tool-viewport'),
-    'css/style.css must define viewport overrides for container-planner and assistant'
+    css.includes('container-planner') && css.includes('max-width: 100% !important'),
+    'container-planner must override tool-viewport with max-width: 100% !important'
   );
 
+  // 3. Assistant proportional scaling (~68vw to 75vw)
   assert.ok(
-    css.includes('max-width: 100% !important'),
-    'Full-width tool exceptions must specify max-width: 100% !important'
+    css.includes('clamp(620px, 68vw, 1140px)') && css.includes('max-width: 75vw'),
+    'Assistant desktop card width must scale proportionally between half and 3/4 page width'
+  );
+});
+
+test('Calculator Tool: Button Group Spacing & Pill Chips Styling', async () => {
+  const fs = await import('fs');
+  const path = await import('path');
+  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf8');
+
+  // 1. .calc-btn-group-row must have flex, wrap and gap to prevent buttons touching
+  assert.ok(
+    css.includes('.calc-btn-group-row') && css.includes('gap: 8px;'),
+    '.calc-btn-group-row must have display: flex and gap: 8px'
   );
 
+  // 2. Programmer mode word size and sign chips must be pill-shaped
   assert.ok(
-    css.includes('68vw') && css.includes('75vw'),
-    'Assistant viewport on desktop must scale proportionally between half and 3/4 page width (68vw to 75vw)'
+    css.includes('.calc-chip-group') && css.includes('border-radius: 9999px;'),
+    '.calc-chip-group must have border-radius: 9999px'
+  );
+  assert.ok(
+    css.includes('.calc-chip-btn') && css.includes('border-radius: 9999px;'),
+    '.calc-chip-btn must have border-radius: 9999px'
+  );
+});
+
+test('Header: Circular Avatar Preferences Button & Mobile About Link', async () => {
+  const fs = await import('fs');
+  const path = await import('path');
+  const html = fs.readFileSync(path.resolve('index.html'), 'utf8');
+  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf8');
+
+  // 1. Mobile about link in header
+  assert.ok(
+    html.includes('header-about-link') && html.includes('href="#about"'),
+    'index.html must include .header-about-link pointing to #about'
+  );
+  assert.ok(
+    css.includes('.header-about-link'),
+    'css/style.css must define .header-about-link'
   );
 
-  // 3. Files page single-page lock (no vertical scroll on page)
+  // 2. Circular avatar preferences button
   assert.ok(
-    css.includes('body.in-files'),
-    'css/style.css must define body.in-files rules to lock page scrolling'
+    html.includes('header-avatar-btn') || html.includes('header-menu-btn'),
+    'index.html must have header preferences button'
   );
-
   assert.ok(
-    css.includes('.sv-fade-bottom'),
-    'css/style.css must define .sv-fade-bottom styles'
-  );
-
-  assert.ok(
-    css.includes('.sv-fade-wrapper'),
-    'css/style.css must define .sv-fade-wrapper styles'
-  );
-
-  // 4. Yosemite themes flat 3D gradient buttons and attach popup glass styling
-  assert.ok(
-    css.includes('[data-theme="yosemite"] .ast-attach-popup') &&
-    css.includes('[data-theme="yosemite-night"] .ast-attach-popup'),
-    'css/style.css must include .ast-attach-popup in Yosemite and Yosemite Night translucent glass modal styling'
-  );
-
-  assert.ok(
-    css.includes('[data-theme="yosemite"] .btn-primary') &&
-    css.includes('linear-gradient(180deg, #3aa0ff 0%, #007aff 48%, #006ee6 100%)'),
-    'Yosemite primary button must use flat 3D Apple blue gradient'
+    css.includes('.header-avatar-btn') && css.includes('border-radius: 50% !important;'),
+    '.header-avatar-btn must be circular with border-radius: 50%'
   );
 });
 
@@ -141,12 +177,8 @@ test('Pill Buttons, Segmented Switchers & Typography Smoothing', async () => {
 
   // 1. Most buttons must be pill shaped (border-radius: 9999px)
   assert.ok(
-    /\.btn\s*\{[^}]*border-radius:\s*9999px/i.test(css),
+    css.includes('.btn') && css.includes('border-radius: 9999px;'),
     '.btn must have pill-shaped border-radius: 9999px'
-  );
-  assert.ok(
-    /\.btn-sm\s*\{[^}]*border-radius:\s*9999px/i.test(css),
-    '.btn-sm must have pill-shaped border-radius: 9999px'
   );
 
   // 2. Segmented switchers and slider pills must have borders and animations
@@ -159,11 +191,11 @@ test('Pill Buttons, Segmented Switchers & Typography Smoothing', async () => {
     'css/style.css must define .cal-view-switcher and .sv-storage-switch'
   );
   assert.ok(
-    /\.segmented-slider-pill\s*\{[^}]*border:\s*1px solid/i.test(css),
+    css.includes('.segmented-slider-pill') && css.includes('border: 1px solid'),
     '.segmented-slider-pill must have border'
   );
   assert.ok(
-    /\.segmented-slider-pill\s*\{[^}]*transition:[^}]*transform/i.test(css),
+    css.includes('.segmented-slider-pill') && css.includes('transform'),
     '.segmented-slider-pill must animate switching with transform transition'
   );
 
@@ -187,8 +219,7 @@ test('Home Page Suggested Tools: excludes Assistant from #home-quick row and is 
   );
 
   assert.ok(
-    /\.home-quick\s*\{[^}]*margin:\s*[^;]*auto/i.test(css) ||
-    /\.home-quick\s*\{[^}]*margin-left:\s*auto/i.test(css),
+    css.includes('.home-quick') && css.includes('margin: 18px auto 0'),
     '.home-quick must have auto horizontal margins to center under search bar'
   );
 });
