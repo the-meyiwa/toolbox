@@ -8,19 +8,19 @@ import { setupDOMEnvironment } from '../helpers/dom-env.js';
 import { THEMES, getStoredTheme, applyTheme, initTheme } from '../../js/lib/theme.js';
 
 test('Theme: contains canonical palettes', () => {
-  assert.equal(THEMES.length, 28, 'Expected exactly 28 canonical themes');
+  assert.equal(THEMES.length, 24, 'Expected exactly 24 canonical themes');
 
   const requiredIds = [
     // System (4)
     'yosemite', 'yosemite-night', 'linux-mint', 'ubuntu',
-    // Minimal (3)
-    'default', 'white-on-black', 'swiss',
-    // Cultural / Design (10)
-    'bauhaus', 'mondrian', 'memphis', 'art-deco', 'mid-century',
+    // Minimal (2)
+    'default', 'white-on-black',
+    // Cultural / Design (9)
+    'mondrian', 'memphis', 'art-deco', 'mid-century',
     'japanese-traditional', 'lagos', 'african-textile', 'british-racing-green', 'wimbledon',
-    // Brand-Inspired (10)
-    'barbie', 'tiffany', 'coca-cola', 'mcdonalds', 'lego',
-    'nintendo', 'playstation', 'ikea', 'google', 'claude',
+    // Brand-Inspired (8)
+    'barbie', 'tiffany', 'coca-cola', 'mcdonalds',
+    'playstation', 'ikea', 'google', 'claude',
     // Expressive (1)
     'miami-vice'
   ];
@@ -35,13 +35,13 @@ test('Theme: contains canonical palettes', () => {
     assert.ok(theme.preview.accent, `Theme "${id}" missing preview accent`);
   }
 
-  const deprecated = ['windows-11', 'macos-sonoma', 'macos-big-sur', 'elementary-os', 'chromeos'];
+  const deprecated = ['windows-11', 'macos-sonoma', 'macos-big-sur', 'elementary-os', 'chromeos', 'swiss', 'bauhaus', 'lego', 'nintendo'];
   for (const d of deprecated) {
     assert.ok(!THEMES.some(t => t.id === d), `Deprecated theme "${d}" should not be in THEMES`);
   }
 });
 
-test('Theme: all 28 themes have CSS definitions in css/style.css', async () => {
+test('Theme: all 24 themes have CSS definitions in css/style.css', async () => {
   const fs = await import('fs');
   const path = await import('path');
   const css = fs.readFileSync(path.resolve('css/style.css'), 'utf8');
@@ -72,10 +72,10 @@ test('Theme: applyTheme updates DOM and localStorage', () => {
   assert.equal(document.documentElement.getAttribute('data-theme'), null);
   assert.equal(getStoredTheme(), 'default');
 
-  // 4. Apply swiss theme
-  applyTheme('swiss');
-  assert.equal(document.documentElement.getAttribute('data-theme'), 'swiss');
-  assert.equal(getStoredTheme(), 'swiss');
+  // 4. Apply mondrian theme
+  applyTheme('mondrian');
+  assert.equal(document.documentElement.getAttribute('data-theme'), 'mondrian');
+  assert.equal(getStoredTheme(), 'mondrian');
 
   // 5. Apply claude theme
   applyTheme('claude');
@@ -85,11 +85,11 @@ test('Theme: applyTheme updates DOM and localStorage', () => {
 
 test('Theme: initTheme hydrates theme on boot', () => {
   setupDOMEnvironment();
-  localStorage.setItem('toolbox_theme', 'bauhaus');
+  localStorage.setItem('toolbox_theme', 'mondrian');
 
   const theme = initTheme();
-  assert.equal(theme, 'bauhaus');
-  assert.equal(document.documentElement.getAttribute('data-theme'), 'bauhaus');
+  assert.equal(theme, 'mondrian');
+  assert.equal(document.documentElement.getAttribute('data-theme'), 'mondrian');
 });
 
 test('Desktop Tool Viewport: width aligns all tools (1100px) with exceptions for container-planner and assistant', async () => {

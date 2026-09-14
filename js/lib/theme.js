@@ -1,6 +1,6 @@
 /* ============================================================
    TOOLBOX — Theme Management Engine
-   Supports 28 canonical themes across System, Minimal, Cultural, Brand, and Expressive
+   Supports 24 canonical themes across System, Minimal, Cultural, Brand, and Expressive
    ============================================================ */
 
 export const THEMES = [
@@ -34,7 +34,7 @@ export const THEMES = [
     description: 'Modern desktop palette with signature Ubuntu aubergine and warm orange.'
   },
 
-  // --- MINIMAL (3) ---
+  // --- MINIMAL (2) ---
   {
     id: 'default',
     name: 'Black on White',
@@ -49,22 +49,8 @@ export const THEMES = [
     preview: { bg: '#000000', surface: '#111111', card: '#111111', text: '#ffffff', accent: '#ffffff', border: '#262626' },
     description: 'Pitch-black darkroom aesthetic with sharp monochromatic precision.'
   },
-  {
-    id: 'swiss',
-    name: 'Swiss / International Style',
-    group: 'minimal',
-    preview: { bg: '#f4f4f4', surface: '#ffffff', card: '#ffffff', text: '#111111', accent: '#ff0000', border: '#d1d5db' },
-    description: 'Rigorous objective typography, architectural light gray, and strict Swiss red accent.'
-  },
 
-  // --- CULTURAL / DESIGN (10) ---
-  {
-    id: 'bauhaus',
-    name: 'Bauhaus',
-    group: 'cultural',
-    preview: { bg: '#f7f4ea', surface: '#ffffff', card: '#ffffff', text: '#121212', accent: '#d62828', border: '#dcd5c4' },
-    description: 'Warm off-white parchment, bold primary red, deep blue, and geometric harmony.'
-  },
+  // --- CULTURAL / DESIGN (9) ---
   {
     id: 'mondrian',
     name: 'Mondrian / De Stijl',
@@ -129,7 +115,7 @@ export const THEMES = [
     description: 'Deep championship court green, understated crisp white, and royal purple trim.'
   },
 
-  // --- BRAND-INSPIRED (10) ---
+  // --- BRAND-INSPIRED (8) ---
   {
     id: 'barbie',
     name: 'Barbie',
@@ -157,20 +143,6 @@ export const THEMES = [
     group: 'brand',
     preview: { bg: '#1a1614', surface: '#25201c', card: '#25201c', text: '#fdfbf7', accent: '#ffc72c', border: 'rgba(255,199,44,0.22)' },
     description: 'Warm espresso charcoal background with golden yellow arch highlights and warm red.'
-  },
-  {
-    id: 'lego',
-    name: 'LEGO',
-    group: 'brand',
-    preview: { bg: '#fdfdfd', surface: '#ffffff', card: '#ffffff', text: '#18181b', accent: '#d01012', border: '#e4e4e7' },
-    description: 'Crisp bright canvas with playful primary red, blue, and yellow geometric accents.'
-  },
-  {
-    id: 'nintendo',
-    name: 'Nintendo',
-    group: 'brand',
-    preview: { bg: '#fafafa', surface: '#ffffff', card: '#ffffff', text: '#1c1c1f', accent: '#e60012', border: '#dedfe4' },
-    description: 'Cheerful, clean, and polished light gray with signature Nintendo red accents.'
   },
   {
     id: 'playstation',
