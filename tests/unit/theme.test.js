@@ -223,3 +223,59 @@ test('Home Page Suggested Tools: excludes Assistant from #home-quick row and is 
     '.home-quick must have auto horizontal margins to center under search bar'
   );
 });
+
+test('Theme: Grayscale token bridge, accent contrast & universal tool compatibility', async () => {
+  const fs = await import('fs');
+  const path = await import('path');
+  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf8');
+
+  // 1. All 28 themes must have grayscale bridge (--g50 through --g900)
+  for (const theme of THEMES) {
+    const sel = `[data-theme="${theme.id}"]`;
+    const idx = css.indexOf(sel);
+    assert.ok(idx !== -1, `Selector ${sel} must exist in css/style.css`);
+    const end = css.indexOf('}', idx);
+    const block = css.slice(idx, end);
+
+    assert.ok(block.includes('--g50: var(--surface-secondary)'), `${theme.id} must map --g50`);
+    assert.ok(block.includes('--g100: var(--surface-tertiary)'), `${theme.id} must map --g100`);
+    assert.ok(block.includes('--g200: var(--border)'), `${theme.id} must map --g200`);
+    assert.ok(block.includes('--g500: var(--text-secondary)'), `${theme.id} must map --g500`);
+    assert.ok(block.includes('--g800: var(--text)'), `${theme.id} must map --g800`);
+    assert.ok(block.includes('--accent-contrast:'), `${theme.id} must define --accent-contrast`);
+  }
+
+  // 2. :root must define black-on-white accent and contrast
+  assert.ok(
+    css.includes('--accent: #000000;') && css.includes('--accent-contrast: #ffffff;'),
+    ':root must define black accent and white contrast for Black on White default'
+  );
+
+  // 3. Calculator equals button must use accent tokens
+  assert.ok(
+    css.includes('.calc-btn-eq') &&
+    css.includes('background: var(--accent) !important;') &&
+    css.includes('color: var(--accent-contrast, #ffffff) !important;'),
+    '.calc-btn-eq must use var(--accent) and var(--accent-contrast)'
+  );
+
+  // 4. Active chips and buttons must use accent contrast
+  assert.ok(
+    css.includes('.category-chip.active') &&
+    css.includes('color: var(--accent-contrast, #ffffff) !important;'),
+    '.category-chip.active must use var(--accent-contrast)'
+  );
+  assert.ok(
+    css.includes('.btn.active') &&
+    css.includes('color: var(--accent-contrast, #ffffff) !important;'),
+    '.btn.active must use var(--accent-contrast)'
+  );
+
+  // 5. Theme card must use theme surface and accent
+  assert.ok(
+    css.includes('.theme-card.is-active') &&
+    css.includes('border-color: var(--accent);'),
+    '.theme-card.is-active must use border-color: var(--accent)'
+  );
+});
+
