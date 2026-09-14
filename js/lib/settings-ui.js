@@ -48,12 +48,17 @@ function renderThemeCard(theme, currentId) {
       <div class="theme-card-meta">
         <div class="theme-card-header">
           <span class="theme-card-name">${escapeHtml(theme.name)}</span>
-          <span class="theme-badge-exp" style="font-size:0.62rem; padding:1px 6px; border-radius:9999px; background:var(--bg-subtle); color:var(--text-secondary); border:1px solid var(--border); font-weight:600; text-transform:uppercase;">${escapeHtml(groupLabel)}</span>
+          <span class="theme-badge-exp">${escapeHtml(groupLabel)}</span>
         </div>
         <p class="theme-card-desc">${escapeHtml(theme.description)}</p>
       </div>
+      <div class="theme-card-palette" aria-hidden="true">
+        <span class="theme-palette-dot" style="background: ${theme.preview.accent};" title="Accent"></span>
+        <span class="theme-palette-dot" style="background: ${theme.preview.bg}; border: 1px solid ${theme.preview.border || 'rgba(0,0,0,0.15)'};" title="Background"></span>
+        <span class="theme-palette-dot" style="background: ${theme.preview.text};" title="Text"></span>
+      </div>
       <div class="theme-card-check">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
       </div>
@@ -782,7 +787,7 @@ function updateThemeList(category = activeThemeCategory, search = activeThemeSea
 
   if (filtered.length === 0) {
     standardGrid.innerHTML = `
-      <div style="grid-column: 1 / -1; padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+      <div style="width: 100%; padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
         No themes found matching "${escapeHtml(activeThemeSearch)}"
       </div>
     `;

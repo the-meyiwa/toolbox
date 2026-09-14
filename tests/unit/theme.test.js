@@ -279,3 +279,41 @@ test('Theme: Grayscale token bridge, accent contrast & universal tool compatibil
   );
 });
 
+test('Theme: Tiles are arranged vertically as long horizontal bars', async () => {
+  const fs = await import('fs');
+  const path = await import('path');
+  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const settingsUi = fs.readFileSync(path.resolve('js/lib/settings-ui.js'), 'utf-8');
+
+  // 1. .theme-grid must use a vertical column flex layout
+  assert.ok(
+    css.includes('.theme-grid') &&
+    css.includes('flex-direction: column;'),
+    '.theme-grid must use flex-direction: column to stack bars vertically'
+  );
+
+  // 2. .theme-card must be a horizontal bar with flex-direction: row
+  assert.ok(
+    css.includes('.theme-card') &&
+    css.includes('flex-direction: row;') &&
+    css.includes('align-items: center;') &&
+    css.includes('width: 100%;'),
+    '.theme-card must be a horizontal bar spanning full width'
+  );
+
+  // 3. settings-ui renders theme card markup with meta, palette and radio check
+  assert.ok(
+    settingsUi.includes('class="theme-card-palette"'),
+    'renderThemeCard must render theme-card-palette'
+  );
+  assert.ok(
+    settingsUi.includes('class="theme-card-meta"'),
+    'renderThemeCard must render theme-card-meta'
+  );
+  assert.ok(
+    settingsUi.includes('class="theme-card-check"'),
+    'renderThemeCard must render theme-card-check'
+  );
+});
+
+
