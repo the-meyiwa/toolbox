@@ -13593,8 +13593,9 @@ body[data-tool-id="container-planner"] .cq-rates {
   }
   .math-tab-nav {
     display: flex !important;
-    flex-wrap: wrap !important;
-    overflow-x: hidden !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
     max-width: 100% !important;
     scrollbar-width: none !important;
     padding-bottom: 0 !important;
@@ -13932,8 +13933,9 @@ body[data-tool-id="container-planner"] .cq-rates {
 @media (max-width: 768px) {
   .math-tab-nav {
     display: flex !important;
-    flex-wrap: wrap !important;
-    overflow-x: hidden !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
     scrollbar-width: none !important;
     gap: 6px !important;
     width: 100% !important;
@@ -13941,9 +13943,8 @@ body[data-tool-id="container-planner"] .cq-rates {
     padding-bottom: 0 !important;
   }
   .math-tab-btn {
-    flex: 1 1 calc(50% - 6px) !important;
-    min-width: 0 !important;
-    white-space: normal !important;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
     text-align: center !important;
     justify-content: center !important;
     font-size: 0.78rem !important;
@@ -13993,9 +13994,10 @@ body[data-tool-id="container-planner"] .cq-rates {
   .katex-display,
   .katex {
     max-width: 100% !important;
-    overflow-x: hidden !important;
-    overflow-wrap: anywhere !important;
-    word-break: break-word !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
     box-sizing: border-box !important;
     font-size: clamp(0.72rem, 3.2vw, 0.95rem) !important;
   }
