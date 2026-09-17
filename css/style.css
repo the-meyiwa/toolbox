@@ -14010,8 +14010,8 @@ body[data-tool-id="container-planner"] .cq-rates {
     font-size: clamp(0.72rem, 3.2vw, 0.95rem) !important;
   }
   .math-rendered-formula math {
-    max-width: 100% !important;
-    overflow-x: hidden !important;
+    max-width: none !important;
+    overflow: visible !important;
     display: inline-block !important;
   }
 
