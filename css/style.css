@@ -14380,72 +14380,65 @@ body[data-tool-id="container-planner"] .cq-rates {
   }
 }
 
-/* === Custom About Page Background Images === */
-.custom-about-bg {
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-}
-[data-theme="light"] .custom-about-bg,
-[data-theme="default"] .custom-about-bg,
-html:not([data-theme]) .custom-about-bg {
-  background-image: url('/assets/img/about-light.jpg');
-}
-[data-theme="dark"] .custom-about-bg,
-[data-theme="white-on-black"] .custom-about-bg,
-[data-theme="yosemite-night"] .custom-about-bg {
-  background-image: url('/assets/img/about-dark.jpg');
-}
 
-/* About Page Theming Rules requested: Sand (light): text Egyptian Brown, tiles white-gradient. Water (dark): text gray, tiles black-gradient */
-[data-theme="light"] .custom-about-bg .about-hero-title,
-[data-theme="light"] .custom-about-bg .about-lead,
-[data-theme="light"] .custom-about-bg .about-eyebrow,
-[data-theme="light"] .custom-about-bg p,
-[data-theme="light"] .custom-about-bg h1,
-[data-theme="light"] .custom-about-bg h2,
-[data-theme="light"] .custom-about-bg h3,
-[data-theme="light"] .custom-about-bg span,
-[data-theme="light"] .custom-about-bg label,
-[data-theme="default"] .custom-about-bg .about-hero-title,
-[data-theme="default"] .custom-about-bg .about-lead,
-[data-theme="default"] .custom-about-bg .about-eyebrow,
-[data-theme="default"] .custom-about-bg p,
-[data-theme="default"] .custom-about-bg h1,
-[data-theme="default"] .custom-about-bg h2,
-[data-theme="default"] .custom-about-bg h3,
-[data-theme="default"] .custom-about-bg span,
-[data-theme="default"] .custom-about-bg label {
-  color: #804000 !important; /* Egyptian Brown */
-}
-[data-theme="light"] .custom-about-bg .about-tile-content,
-[data-theme="default"] .custom-about-bg .about-tile-content {
-  background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7)) !important;
-  backdrop-filter: blur(10px);
-}
+/* === Universal Mobile UI Fixes === */
+@media (max-width: 768px) {
+  /* Messaging UI */
+  .messaging-app {
+    height: 100% !important;
+    max-height: 100% !important;
+    border-radius: 0 !important;
+    border: none !important;
+    margin: 0 !important;
+  }
+  .msg-composer-wrap {
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 16px)) !important;
+  }
+  .msg-main {
+    height: 100% !important;
+  }
+  
+  /* Calculator UI */
+  .calc-wrapper {
+    height: 100% !important;
+    padding: 6px !important;
+    border-radius: 0 !important;
+    border: none !important;
+  }
+  .calc-views-container {
+    height: 100% !important;
+    overflow-y: auto !important;
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 16px)) !important;
+  }
+  .calc-main-layout {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .calc-grid-standard {
+    gap: 6px !important;
+  }
+  .calc-btn {
+    min-height: 48px !important;
+  }
+  .calc-tape-card {
+    display: none !important; /* Hide tape history on very small screens to fit calculator */
+  }
 
-[data-theme="dark"] .custom-about-bg .about-hero-title,
-[data-theme="dark"] .custom-about-bg .about-lead,
-[data-theme="dark"] .custom-about-bg .about-eyebrow,
-[data-theme="dark"] .custom-about-bg p,
-[data-theme="dark"] .custom-about-bg h1,
-[data-theme="dark"] .custom-about-bg h2,
-[data-theme="dark"] .custom-about-bg h3,
-[data-theme="dark"] .custom-about-bg span,
-[data-theme="dark"] .custom-about-bg label,
-[data-theme="white-on-black"] .custom-about-bg .about-hero-title,
-[data-theme="white-on-black"] .custom-about-bg .about-lead,
-[data-theme="white-on-black"] .custom-about-bg .about-eyebrow,
-[data-theme="white-on-black"] .custom-about-bg p,
-[data-theme="white-on-black"] .custom-about-bg h1,
-[data-theme="white-on-black"] .custom-about-bg h2,
-[data-theme="white-on-black"] .custom-about-bg h3,
-[data-theme="white-on-black"] .custom-about-bg span,
-[data-theme="white-on-black"] .custom-about-bg label {
-  color: #a0a0a0 !important; /* Gray */
-}
-[data-theme="dark"] .custom-about-bg .about-tile-content,
-[data-theme="white-on-black"] .custom-about-bg .about-tile-content {
-  background: linear-gradient(135deg, rgba(0,0,0,0.9), rgba(0,0,0,0.7)) !important;
-  backdrop-filter: blur(10px);
+  /* Math Utility UI */
+  .math-utility-wrapper {
+    padding: 8px !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+  }
+  .math-split-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  .math-controls-bar {
+    flex-direction: column !important;
+  }
+  .math-controls-bar > * {
+    width: 100% !important;
+  }
 }
