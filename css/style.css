@@ -13986,19 +13986,27 @@ body[data-tool-id="container-planner"] .cq-rates {
     grid-column: auto !important;
     width: 100% !important;
     max-width: 100% !important;
+    min-width: 0 !important;
     box-sizing: border-box !important;
   }
   .math-display,
   .math-rendered-formula,
   .math-formula-output,
-  .katex-display,
-  .katex {
+  .katex-display {
     max-width: 100% !important;
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
     overflow-wrap: normal !important;
     word-break: normal !important;
+    white-space: nowrap !important;
     box-sizing: border-box !important;
+    font-size: clamp(0.72rem, 3.2vw, 0.95rem) !important;
+    display: block !important;
+  }
+  
+  .katex {
+    overflow-wrap: normal !important;
+    word-break: normal !important;
     font-size: clamp(0.72rem, 3.2vw, 0.95rem) !important;
   }
   .math-rendered-formula math {
