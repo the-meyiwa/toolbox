@@ -33,8 +33,8 @@ button:disabled, .btn:disabled, input:disabled, select:disabled, textarea:disabl
   --accent-secondary: #222222;
   --accent-soft: rgba(0, 0, 0, 0.06);
   --gradient: linear-gradient(180deg, #ffffff 0%, #f7f7f7 100%);
-  --shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --shadow-elevated: 0 12px 32px rgba(0, 0, 0, 0.12);
+  --shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  --shadow-elevated: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
   --highlight: inset 0 1px 0 rgba(255, 255, 255, 0.85);
   --focus: rgba(0, 0, 0, 0.18);
   --success: #10b981;
@@ -59,17 +59,23 @@ button:disabled, .btn:disabled, input:disabled, select:disabled, textarea:disabl
   --accent-glow: rgba(0, 0, 0, 0.15);
   --accent-contrast: #ffffff;
 
-  --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --mono: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", 'Inter', 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
   --pixel: 'Pixelify Sans', var(--sans);
 
   /* Numbers you read at a glance get their own face. */
   --readout: 'VT323', 'Pixelify Sans', var(--mono);
 
-  /* Linux desktop elevation shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.14);
+  /* Apple-like elevation shadows */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 24px 48px rgba(0, 0, 0, 0.08), 0 8px 16px rgba(0, 0, 0, 0.03);
+
+  /* Common UI Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
 
   --header-h: 57px;
 }
@@ -137,10 +143,10 @@ body {
   align-items: center;
   height: var(--header-h);
   padding: 0 28px;
-  background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-subtle) 100%);
+  background: color-mix(in srgb, var(--bg-card) 75%, transparent);
   border-bottom: 1px solid var(--border);
-  backdrop-filter: blur(16px) saturate(125%);
-  -webkit-backdrop-filter: blur(16px) saturate(125%);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
   gap: 0;
 }
 
@@ -361,7 +367,161 @@ input[placeholder*="search" i]::placeholder {
 /* ============================================================
    ANIMATIONS
    ============================================================ */
-/* Removed generic animations as per Global Design and Motion System requirements *//* ============================================================
+/* ============================================================
+   ASSISTANT TEXT ANIMATIONS & SETTINGS PREVIEW
+   Verified across all themes (Light, Dark, Glass)
+   ============================================================ */
+/* 1. Color Rave Animation */
+.ast-anim-color-rave {
+  background: linear-gradient(
+    135deg,
+    #ff0055 0%,
+    #e65100 14%,
+    #d97706 28%,
+    #10b981 42%,
+    #007aff 57%,
+    #7928ca 71%,
+    #ff00aa 85%,
+    #ff0055 100%
+  );
+  background-size: 250% 250%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: astColorRave 4s linear infinite;
+  display: inline-block;
+}
+
+.ast-anim-color-rave p,
+.ast-anim-color-rave span,
+.ast-anim-color-rave strong,
+.ast-anim-color-rave em,
+.ast-anim-color-rave li,
+.ast-anim-color-rave h1,
+.ast-anim-color-rave h2,
+.ast-anim-color-rave h3,
+.ast-anim-color-rave h4,
+.ast-anim-color-rave h5,
+.ast-anim-color-rave h6 {
+  background: inherit;
+  background-size: inherit;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: inherit;
+}
+
+.ast-anim-color-rave pre,
+.ast-anim-color-rave code,
+.ast-anim-color-rave button {
+  -webkit-text-fill-color: initial !important;
+  color: initial !important;
+}
+
+@keyframes astColorRave {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* 2. Glow Animation */
+.ast-anim-glow,
+.ast-anim-pixel {
+  color: var(--text, #111) !important;
+  animation: astGlowEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards, astGlowPulse 2.8s ease-in-out infinite alternate;
+  display: inline-block;
+}
+
+@keyframes astGlowEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(3px);
+    text-shadow: 0 0 14px var(--accent, #6366f1), 0 0 24px var(--accent, #6366f1);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    text-shadow: 0 0 5px var(--accent, rgba(99, 102, 241, 0.5));
+  }
+}
+
+@keyframes astGlowPulse {
+  0% {
+    text-shadow: 0 0 3px var(--accent, rgba(99, 102, 241, 0.35));
+  }
+  50% {
+    text-shadow: 0 0 9px var(--accent, rgba(99, 102, 241, 0.75)), 0 0 18px var(--accent, rgba(99, 102, 241, 0.4));
+  }
+  100% {
+    text-shadow: 0 0 3px var(--accent, rgba(99, 102, 241, 0.35));
+  }
+}
+
+/* 3. Plain Fade Animation */
+.ast-anim-plain-fade {
+  color: var(--text, #111) !important;
+  animation: astPlainFade 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  display: inline-block;
+}
+
+@keyframes astPlainFade {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.12));
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+}
+
+/* 4. Pop In Animation */
+.ast-anim-pop-in {
+  color: var(--text, #111) !important;
+  animation: astPopIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: center;
+  display: inline-block;
+}
+
+@keyframes astPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(5px);
+  }
+  70% {
+    transform: scale(1.03) translateY(-1px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Animation preview box & text */
+.ast-anim-preview-box {
+  padding: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.ast-anim-preview-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.4;
+  transition: all 0.2s ease;
+}
+
+/* ============================================================
    PAGE VIEWS
    ============================================================ */
 .page-view.hidden,
@@ -386,12 +546,12 @@ input[placeholder*="search" i]::placeholder {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-subtle) 100%);
+  background: color-mix(in srgb, var(--bg-card) 60%, transparent);
   position: sticky;
   top: var(--header-h);
   z-index: 80;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
 }
 .category-chip-bar::-webkit-scrollbar { display: none; }
 
@@ -480,16 +640,16 @@ input[placeholder*="search" i]::placeholder {
   padding: 32px 24px;
   background: var(--white);
   text-align: center;
-  border-radius: 16px;
+  border-radius: var(--radius-xl);
   border: 1px solid var(--g150);
-  box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+  box-shadow: var(--shadow-sm);
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.25s ease, box-shadow 0.25s ease;
 }
 
 .home-feature:hover {
   /* Removed generic animation/transform */
   background: var(--white);
-  box-shadow: 0 12px 24px rgba(0,0,0,0.06);
+  box-shadow: var(--shadow-lg);
 }
 
 .home-feature-num {
@@ -618,8 +778,8 @@ input[placeholder*="search" i]::placeholder {
   padding: 16px 18px;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   text-decoration: none;
@@ -631,7 +791,7 @@ input[placeholder*="search" i]::placeholder {
 .tool-card:hover { 
   background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-subtle) 100%); 
   /* Removed generic animation/transform */
-  box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+  box-shadow: var(--shadow-md);
   z-index: 2;
   border-color: var(--accent);
 }
@@ -645,7 +805,7 @@ input[placeholder*="search" i]::placeholder {
   justify-content: center;
   border: 1px solid var(--border-subtle);
   background: linear-gradient(180deg, var(--bg-subtle) 0%, var(--bg-hover) 100%);
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   color: var(--text);
 }
 
