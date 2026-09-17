@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light">
@@ -70,9 +70,9 @@
         <!-- SLIDE 1 — SEARCH + ASSISTANT -->
         <section class="home-story-slide home-slide-search" id="home-slide-1">
           <div class="home-hero-container">
-            <p class="home-eyebrow"><span id="home-eyebrow-count">100+</span> tools &middot; runs in your browser &middot; optional cloud sync</p>
+            <p class="home-eyebrow"><span id="home-eyebrow-count">100+</span> browser tools</p>
             <h1 class="home-title">What do you<br>need to do?</h1>
-            <p class="home-desc">Describe the job, not the tool. Open it, do the thing, close the tab.<br class="hide-mobile"> Everything runs locally on your device with optional cloud sync.</p>
+            <p class="home-desc">Describe the job, not the tool.</p>
 
             <div class="home-search-wrap" id="home-search-wrap" style="position:relative; width:100%; max-width:620px; margin:24px auto 14px;">
               <div style="position:relative; display:flex; align-items:center;">
@@ -110,7 +110,7 @@
             <div class="home-desk-header" style="text-align:center; margin-bottom:28px;">
               <p class="home-eyebrow" style="margin-bottom:8px;">SPACE &amp; STORAGE</p>
               <h2 class="home-title" style="font-size:1.85rem; margin-bottom:8px;">Spaces &amp; Files</h2>
-              <p class="home-desc" style="max-width:540px; margin:0 auto; font-size:0.88rem;">Collaborative spaces, live projects, and offline documents saved privately on this device.</p>
+              <p class="home-desc" style="max-width:540px; margin:0 auto; font-size:0.88rem;">Spaces and offline documents.</p>
             </div>
 
             <!-- Dual Workspace & Files Grid -->
@@ -204,18 +204,15 @@
       <div id="saved-view" class="page-view hidden"></div>
 
       <!-- SUPPORT & ABOUT (SCROLL STORYTELLING TILES) -->
-      <div id="support-view" class="page-view hidden about-story-view">
+      <div id="support-view" class="page-view hidden about-story-view custom-about-bg">
         <div class="about-story-container" id="about-story-container">
           <!-- TILE 1 — ABOUT -->
           <section class="about-tile tile-active" id="about-tile-1" data-tile="1">
             <div class="about-tile-content">
               <div class="about-eyebrow">The Story</div>
               <h1 class="about-hero-title">Tools without friction.</h1>
-              <p class="about-lead">Toolbox is a fast, reliable collection of single-purpose utilities for everyday tasks. Everything runs directly in your browser with zero bloat, zero tracking, and zero paywalls.</p>
-              <div class="about-origin-card">
-                <p>It started with a simple annoyance: searching for a basic PDF editor on Google and navigating dozens of deceptive download buttons, subscription traps, and ad banners. I decided to build my own.</p>
-                <p>That single tool evolved into a suite of deterministic, high-performance web applications crafted with an obsessive focus on speed and privacy.</p>
-              </div>
+              <p class="about-lead">Fast, reliable utilities. Zero bloat, zero tracking.</p>
+              <div class="about-origin-card"><p>A suite of deterministic, high-performance web applications crafted with an obsessive focus on speed and privacy.</p></div>
               <div class="about-scroll-indicator">
                 <span>Scroll to explore</span>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
@@ -228,7 +225,7 @@
             <div class="about-tile-content">
               <div class="about-eyebrow">Support Open Development</div>
               <h2 class="about-tile-title">Keep Toolbox Independent</h2>
-              <p class="about-lead">Toolbox is free, open, and built with care. Your contributions directly fund server costs, API access, continuous updates, and cross-platform native development.</p>
+              <p class="about-lead">Toolbox is free. Your contributions fund development.</p>
               
               <div class="contribute-card" id="contribute-section">
                 <!-- Amount and Currency Selector -->
@@ -289,7 +286,7 @@
                 <div class="about-bio-info">
                   <h2 class="about-tile-title" style="margin-bottom:4px;">Meyiwa-Meyigbene Nifemi Edun</h2>
                   <p class="about-bio-handle">madselkie &middot; Software Engineer &amp; Designer</p>
-                  <p class="about-bio-desc">Building software designed with minimalism, determinism, and privacy. I created Toolbox to give users a fast, uncluttered collection of dependable tools that respect their time, data, and device.</p>
+                  <p class="about-bio-desc">Software Engineer & Designer</p>
                 </div>
               </div>
             </div>
@@ -298,25 +295,22 @@
           <!-- TILE 4 — CREDITS -->
           <section class="about-tile" id="about-tile-4" data-tile="4">
             <div class="about-tile-content">
-              <div class="about-eyebrow">Architecture &amp; Open Standards</div>
-              <h2 class="about-tile-title">Credits</h2>
+              
+              <div class="about-eyebrow">Other Projects</div>
+              <h2 class="about-tile-title">Check these out</h2>
               <div class="about-credits-card">
-                <p style="color:var(--text-secondary); line-height:1.6; margin-bottom:20px;">Toolbox is made possible through open standards, modern Web APIs, and focused engineering.</p>
                 <div class="about-credits-list">
-                  <div class="about-credit-row">
-                    <span class="about-credit-title">Web Standards</span>
-                    <span class="about-credit-desc">HTML5, CSS Variables, Web Crypto, WebAssembly, IndexedDB</span>
-                  </div>
-                  <div class="about-credit-row">
-                    <span class="about-credit-title">Mathematical Engine</span>
-                    <span class="about-credit-desc">KaTeX &amp; Deterministic Number Theory Solvers</span>
-                  </div>
-                  <div class="about-credit-row">
-                    <span class="about-credit-title">Payments</span>
-                    <span class="about-credit-desc">Flutterwave Standard Integration</span>
-                  </div>
+                  <a href="https://voltix-rho.vercel.app" target="_blank" class="about-credit-row" style="text-decoration:none; display:flex; flex-direction:column; padding:12px; border:1px solid var(--border); border-radius:12px; background:var(--bg-card); margin-bottom:10px;">
+                    <span class="about-credit-title" style="color:var(--text); font-weight:700;">Voltix</span>
+                    <span class="about-credit-desc" style="color:var(--text-secondary); font-size:0.85rem;">https://voltix-rho.vercel.app</span>
+                  </a>
+                  <a href="https://containerbrick.com" target="_blank" class="about-credit-row" style="text-decoration:none; display:flex; flex-direction:column; padding:12px; border:1px solid var(--border); border-radius:12px; background:var(--bg-card);">
+                    <span class="about-credit-title" style="color:var(--text); font-weight:700;">Container Brick</span>
+                    <span class="about-credit-desc" style="color:var(--text-secondary); font-size:0.85rem;">https://containerbrick.com</span>
+                  </a>
                 </div>
               </div>
+
             </div>
           </section>
         </div>

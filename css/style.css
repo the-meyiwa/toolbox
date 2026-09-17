@@ -14357,3 +14357,95 @@ body[data-tool-id="container-planner"] .cq-rates {
     width: auto;
   }
 }
+
+/* === Preferences Mobile Scrolling === */
+@media (max-width: 768px) {
+  .settings-modal-window {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+}
+
+/* === Files Mobile UI Overlaps & Blank Pane === */
+@media (max-width: 768px) {
+  .sv-split-view {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .sv-detail-pane {
+    display: none !important; /* Hide the blank pane on mobile in split view by default */
+  }
+  .sv-fade-bottom {
+    display: none !important; /* Prevents blank pane overlaps */
+  }
+}
+
+/* === Custom About Page Background Images === */
+.custom-about-bg {
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+[data-theme="light"] .custom-about-bg,
+[data-theme="default"] .custom-about-bg,
+html:not([data-theme]) .custom-about-bg {
+  background-image: url('/assets/img/about-light.jpg');
+}
+[data-theme="dark"] .custom-about-bg,
+[data-theme="white-on-black"] .custom-about-bg,
+[data-theme="yosemite-night"] .custom-about-bg {
+  background-image: url('/assets/img/about-dark.jpg');
+}
+
+/* About Page Theming Rules requested: Sand (light): text Egyptian Brown, tiles white-gradient. Water (dark): text gray, tiles black-gradient */
+[data-theme="light"] .custom-about-bg .about-hero-title,
+[data-theme="light"] .custom-about-bg .about-lead,
+[data-theme="light"] .custom-about-bg .about-eyebrow,
+[data-theme="light"] .custom-about-bg p,
+[data-theme="light"] .custom-about-bg h1,
+[data-theme="light"] .custom-about-bg h2,
+[data-theme="light"] .custom-about-bg h3,
+[data-theme="light"] .custom-about-bg span,
+[data-theme="light"] .custom-about-bg label,
+[data-theme="default"] .custom-about-bg .about-hero-title,
+[data-theme="default"] .custom-about-bg .about-lead,
+[data-theme="default"] .custom-about-bg .about-eyebrow,
+[data-theme="default"] .custom-about-bg p,
+[data-theme="default"] .custom-about-bg h1,
+[data-theme="default"] .custom-about-bg h2,
+[data-theme="default"] .custom-about-bg h3,
+[data-theme="default"] .custom-about-bg span,
+[data-theme="default"] .custom-about-bg label {
+  color: #804000 !important; /* Egyptian Brown */
+}
+[data-theme="light"] .custom-about-bg .about-tile-content,
+[data-theme="default"] .custom-about-bg .about-tile-content {
+  background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7)) !important;
+  backdrop-filter: blur(10px);
+}
+
+[data-theme="dark"] .custom-about-bg .about-hero-title,
+[data-theme="dark"] .custom-about-bg .about-lead,
+[data-theme="dark"] .custom-about-bg .about-eyebrow,
+[data-theme="dark"] .custom-about-bg p,
+[data-theme="dark"] .custom-about-bg h1,
+[data-theme="dark"] .custom-about-bg h2,
+[data-theme="dark"] .custom-about-bg h3,
+[data-theme="dark"] .custom-about-bg span,
+[data-theme="dark"] .custom-about-bg label,
+[data-theme="white-on-black"] .custom-about-bg .about-hero-title,
+[data-theme="white-on-black"] .custom-about-bg .about-lead,
+[data-theme="white-on-black"] .custom-about-bg .about-eyebrow,
+[data-theme="white-on-black"] .custom-about-bg p,
+[data-theme="white-on-black"] .custom-about-bg h1,
+[data-theme="white-on-black"] .custom-about-bg h2,
+[data-theme="white-on-black"] .custom-about-bg h3,
+[data-theme="white-on-black"] .custom-about-bg span,
+[data-theme="white-on-black"] .custom-about-bg label {
+  color: #a0a0a0 !important; /* Gray */
+}
+[data-theme="dark"] .custom-about-bg .about-tile-content,
+[data-theme="white-on-black"] .custom-about-bg .about-tile-content {
+  background: linear-gradient(135deg, rgba(0,0,0,0.9), rgba(0,0,0,0.7)) !important;
+  backdrop-filter: blur(10px);
+}
