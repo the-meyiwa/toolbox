@@ -269,9 +269,19 @@ export default {
                   <button class="btn btn-sm" data-view="left">Side</button>
                 </div>
                 <div class="t3d-toolbar-right">
+                  <button class="btn btn-sm" id="cp-undo" title="Undo (Ctrl+Z)" type="button">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                  </button>
+                  <button class="btn btn-sm" id="cp-redo" title="Redo (Ctrl+Shift+Z)" type="button">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"/></svg>
+                  </button>
                   <button class="btn btn-sm cp-drag-toggle" id="cp-drag-toggle" title="Drag to position items on canvas" aria-pressed="false" type="button">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px; margin-right:4px;"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x2="12" y1="2" y2="22"/></svg>
                     <span>Drag</span>
+                  </button>
+                  <button class="btn btn-sm" id="cp-save3d" title="Download 3D model (.glb)" type="button">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px; margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>Save 3D</span>
                   </button>
                   <label class="tool-checkbox"><input type="checkbox" id="cp-roof"> <span>Show roof</span></label>
                 </div>
@@ -648,6 +658,7 @@ export default {
     /* ---------------- adding items ---------------- */
 
     function addOpening(type) {
+      snapshot();
       const spec = OPENINGS[type];
       const wall = type.includes('door') ? 'front' : 'left';
       const span = wallSpan(wall);
@@ -664,6 +675,7 @@ export default {
     }
 
     function addFitting(type) {
+      snapshot();
       const spec = FITTINGS[type];
       const it = {
         key: state.nextKey++, kind: 'fitting', type, rot: 0,
@@ -706,6 +718,7 @@ export default {
     editorEl.addEventListener('click', (e) => {
       const it = state.items.find(i => i.key === state.selected); if (!it) return;
       if (e.target.id === 'cp-del') {
+        snapshot();
         state.items = state.items.filter(i => i.key !== it.key);
         state.selected = null;
         refreshLayout();
@@ -720,6 +733,33 @@ export default {
       state.selected = obj?.userData.item?.key ?? null;
       renderItems(); renderEditor();
     });
+
+    /* ---------------- undo / redo history ---------------- */
+    const MAX_HISTORY = 30;
+    const undoStack = [];
+    const redoStack = [];
+
+    function snapshot() {
+      undoStack.push(JSON.parse(JSON.stringify(state.items)));
+      if (undoStack.length > MAX_HISTORY) undoStack.shift();
+      redoStack.length = 0; // any new action clears redo
+    }
+
+    function undo() {
+      if (!undoStack.length) return;
+      redoStack.push(JSON.parse(JSON.stringify(state.items)));
+      state.items = undoStack.pop();
+      state.selected = null;
+      refreshLayout();
+    }
+
+    function redo() {
+      if (!redoStack.length) return;
+      undoStack.push(JSON.parse(JSON.stringify(state.items)));
+      state.items = redoStack.pop();
+      state.selected = null;
+      refreshLayout();
+    }
 
     /* ---------------- drag & drop positioning ---------------- */
     let dragEnabled = false;
@@ -740,6 +780,43 @@ export default {
       canvasDom.style.cursor = dragEnabled ? 'grab' : '';
       canvasDom.style.touchAction = dragEnabled ? 'none' : '';
     });
+
+    // Undo / Redo buttons
+    container.querySelector('#cp-undo')?.addEventListener('click', undo);
+    container.querySelector('#cp-redo')?.addEventListener('click', redo);
+
+    // Keyboard shortcuts
+    const keyHandler = (e) => {
+      if (!this._alive) return;
+      const isMod = e.metaKey || e.ctrlKey;
+      if (isMod && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+      if (isMod && e.key === 'z' && e.shiftKey)  { e.preventDefault(); redo(); }
+      if (isMod && e.key === 'Z')                { e.preventDefault(); redo(); }
+    };
+    document.addEventListener('keydown', keyHandler);
+
+    // 3D model export
+    container.querySelector('#cp-save3d')?.addEventListener('click', async () => {
+      try {
+        const { GLTFExporter } = await import('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/exporters/GLTFExporter.js');
+        const exporter = new GLTFExporter();
+        exporter.parse(shell, (result) => {
+          const blob = new Blob([result], { type: 'application/octet-stream' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          const presetName = state.preset === 'custom' ? 'custom' : state.preset;
+          a.href = url;
+          a.download = `container-${presetName}-${new Date().toISOString().slice(0,10)}.glb`;
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }, (err) => {
+          console.error('GLB export failed:', err);
+        }, { binary: true });
+      } catch (err) {
+        console.error('Could not load GLTFExporter:', err);
+      }
+    });
+
 
     function getCanvasPointer(e) {
       const rect = canvasDom.getBoundingClientRect();

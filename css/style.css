@@ -12213,6 +12213,7 @@ body[data-tool-id="container-planner"] .cq-rates {
 
 /* Container Quote Builder: Mobile Simpler & Scaled UI */
 @media (max-width: 768px) {
+  /* --- Page-level vertical scroll, no fixed height --- */
   body[data-tool-id="container-planner"] #main {
     height: auto !important;
     min-height: 100dvh !important;
@@ -12222,7 +12223,7 @@ body[data-tool-id="container-planner"] .cq-rates {
   body[data-tool-id="container-planner"] #tool-viewport {
     height: auto !important;
     overflow: visible !important;
-    padding: 0 10px 24px !important;
+    padding: 0 8px 24px !important;
   }
   body[data-tool-id="container-planner"] #viewport-content {
     height: auto !important;
@@ -12231,91 +12232,160 @@ body[data-tool-id="container-planner"] .cq-rates {
   body[data-tool-id="container-planner"] .cq {
     height: auto !important;
     overflow: visible !important;
+    flex: none !important;
   }
+
+  /* --- Tabs: horizontal scroll row, no wrapping --- */
   body[data-tool-id="container-planner"] .cq-tabs {
-    flex-wrap: wrap !important;
-    gap: 6px !important;
-    padding: 6px !important;
-    margin-bottom: 10px !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    gap: 4px !important;
+    padding: 4px !important;
+    margin-bottom: 8px !important;
   }
-  body[data-tool-id="container-planner"] .cq-tab {
-    flex: 1 1 calc(50% - 6px) !important;
-    font-size: 0.76rem !important;
-    padding: 6px 8px !important;
-    text-align: center !important;
-  }
-  body[data-tool-id="container-planner"] .cq-tab[data-tab="quote"],
-  body[data-tool-id="container-planner"] .cq-tab[data-tab="rates"] {
+  body[data-tool-id="container-planner"] .cq-tabs::-webkit-scrollbar {
     display: none !important;
   }
-  body[data-tool-id="container-planner"] .cq-panel {
-    height: auto !important;
-    overflow: visible !important;
-    flex-direction: column !important;
+  body[data-tool-id="container-planner"] .cq-tab {
+    flex: 0 0 auto !important;
+    font-size: 0.74rem !important;
+    padding: 6px 12px !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+  }
+
+  /* --- CRITICAL: hidden panels MUST stay hidden --- */
+  body[data-tool-id="container-planner"] .cq-panel[hidden] {
+    display: none !important;
   }
   body[data-tool-id="container-planner"] .cq-panel:not([hidden]) {
     display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    overflow: visible !important;
+    flex: none !important;
+    min-height: 0 !important;
+    position: static !important;
   }
-  body[data-tool-id="container-planner"] .cq-panel[data-panel="quote"],
-  body[data-tool-id="container-planner"] .cq-panel[data-panel="rates"] {
-    display: none !important;
-  }
+
+  /* --- Layout tab: canvas on top, config below --- */
   body[data-tool-id="container-planner"] .cp {
     display: flex !important;
     flex-direction: column !important;
     height: auto !important;
     overflow: visible !important;
-    gap: 14px !important;
+    gap: 12px !important;
+    grid-template-columns: none !important;
   }
   body[data-tool-id="container-planner"] .t3d-stage {
     order: 1 !important;
     width: 100% !important;
     height: auto !important;
     overflow: visible !important;
+    flex: none !important;
+    min-height: 0 !important;
   }
   body[data-tool-id="container-planner"] .t3d-canvas {
-    height: 260px !important;
-    min-height: 220px !important;
-    max-height: 300px !important;
+    height: 280px !important;
+    min-height: 240px !important;
+    max-height: 320px !important;
     width: 100% !important;
     border-radius: 12px !important;
   }
   body[data-tool-id="container-planner"] .t3d-toolbar {
+    display: flex !important;
     flex-wrap: wrap !important;
     gap: 6px !important;
+    padding: 6px 0 !important;
+  }
+  body[data-tool-id="container-planner"] .t3d-toolbar-right {
+    display: flex !important;
+    gap: 6px !important;
+    flex-wrap: wrap !important;
   }
   body[data-tool-id="container-planner"] .t3d-seg {
     overflow-x: auto !important;
     max-width: 100% !important;
+    flex-wrap: nowrap !important;
+  }
+  body[data-tool-id="container-planner"] .t3d-seg .btn {
+    font-size: 0.72rem !important;
+    padding: 4px 8px !important;
+    white-space: nowrap !important;
   }
   body[data-tool-id="container-planner"] .cp-panel {
     order: 2 !important;
     width: 100% !important;
     height: auto !important;
+    max-height: none !important;
     overflow: visible !important;
-    padding: 14px !important;
-    border-radius: 14px !important;
+    padding: 12px !important;
+    border-radius: 12px !important;
   }
-  body[data-tool-id="container-planner"] .cp-add-grid {
+  body[data-tool-id="container-planner"] .cp-summary {
+    display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 8px !important;
   }
-  body[data-tool-id="container-planner"] .cp-colors {
+  body[data-tool-id="container-planner"] .cp-editor {
+    width: 100% !important;
+  }
+  body[data-tool-id="container-planner"] .cp-editor-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  body[data-tool-id="container-planner"] .cp-add-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
     gap: 6px !important;
+  }
+  body[data-tool-id="container-planner"] .cp-add {
+    font-size: 0.74rem !important;
+    padding: 6px 8px !important;
+  }
+
+  /* --- Spec/Quote/Rates panels: full width, single col --- */
+  body[data-tool-id="container-planner"] .cq-spec {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
   }
   body[data-tool-id="container-planner"] .cq-meta {
     grid-template-columns: 1fr !important;
     gap: 10px !important;
   }
-  body[data-tool-id="container-planner"] .cq-spec {
-    grid-template-columns: 1fr !important;
-    gap: 16px !important;
-  }
   body[data-tool-id="container-planner"] .cq-comm-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-columns: 1fr !important;
     gap: 8px !important;
   }
+  body[data-tool-id="container-planner"] .cq-bottom {
+    flex-direction: column !important;
+  }
+  body[data-tool-id="container-planner"] .cq-company-grid {
+    grid-template-columns: 1fr !important;
+  }
+  body[data-tool-id="container-planner"] .cq-group {
+    overflow-x: auto !important;
+  }
+  body[data-tool-id="container-planner"] .cq-line {
+    font-size: 0.72rem !important;
+  }
+  body[data-tool-id="container-planner"] .cq-rates-head {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+  body[data-tool-id="container-planner"] .cq-mat-head {
+    flex-direction: column !important;
+    gap: 10px !important;
+    align-items: flex-start !important;
+  }
+  body[data-tool-id="container-planner"] .cq-mat-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
+
+
 
 /* ============================================================
    SEGMENTED SWITCHERS & ANIMATED SLIDER PILLS
@@ -14456,5 +14526,59 @@ body[data-tool-id="container-planner"] .cq-rates {
   }
   .math-controls-bar > * {
     width: 100% !important;
+  }
+}
+
+/* FORCE FIX CONTAINER PLANNER OVERLAP */
+@media (max-width: 768px) {
+  body[data-tool-id="container-planner"] .cq-panel:not([hidden]) {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    position: relative !important;
+  }
+  body[data-tool-id="container-planner"] .cp {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    position: relative !important;
+  }
+  body[data-tool-id="container-planner"] .t3d-stage {
+    order: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    position: relative !important;
+    flex: none !important;
+  }
+  body[data-tool-id="container-planner"] .cp-panel {
+    order: 2 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    max-height: none !important;
+    position: relative !important;
+    overflow: visible !important;
+  }
+  body[data-tool-id="container-planner"] .t3d-canvas {
+    height: 280px !important;
+    max-height: 280px !important;
+    flex: none !important;
+    position: relative !important;
+  }
+}
+
+/* SHOW SCROLLBAR FOR TABS */
+@media (max-width: 768px) {
+  body[data-tool-id="container-planner"] .cq-tabs {
+    scrollbar-width: auto !important;
+  }
+  body[data-tool-id="container-planner"] .cq-tabs::-webkit-scrollbar {
+    display: block !important;
+    height: 4px !important;
+  }
+  body[data-tool-id="container-planner"] .cq-tabs::-webkit-scrollbar-thumb {
+    background-color: var(--border) !important;
+    border-radius: 4px !important;
   }
 }
