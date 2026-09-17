@@ -824,10 +824,10 @@ export default {
               </div>
 
               <!-- Tab Panes -->
-              <div id="cpg-pane-terminal" class="cpg-drawer-pane" style="flex:1; overflow:auto; padding:8px 12px; font-family:'Fira Code', Consolas, monospace; font-size:0.8rem; background:var(--cpg-terminal-bg); color:var(--cpg-terminal-text);">
-                <div id="cpg-term-history" style="white-space:pre-wrap; line-height:1.45;"></div>
-                <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
-                  <span id="cpg-term-prompt" style="color:var(--cpg-text-muted); font-weight:600; font-family:inherit;">workspace $</span>
+              <div id="cpg-pane-terminal" class="cpg-drawer-pane" style="display:flex; flex-direction:column; width:100%; box-sizing:border-box; flex:1; overflow:auto; padding:8px 12px; font-family:'Fira Code', Consolas, monospace; font-size:0.8rem; background:var(--cpg-terminal-bg); color:var(--cpg-terminal-text);">
+                <div id="cpg-term-history" style="width:100%; flex-shrink:0; white-space:pre-wrap; word-break:break-word; line-height:1.45;"></div>
+                <div style="width:100%; display:flex; align-items:center; gap:8px; flex-shrink:0; margin-top:6px;">
+                  <span id="cpg-term-prompt" style="white-space:nowrap; flex-shrink:0; color:var(--cpg-text-muted); font-weight:600; font-family:inherit;">workspace $</span>
                   <input type="text" id="cpg-term-input" autocomplete="off" spellcheck="false" style="flex:1; background:transparent; border:none; outline:none; color:var(--cpg-text); font-family:inherit; font-size:inherit;" />
                 </div>
               </div>
@@ -2061,6 +2061,7 @@ Always execute the necessary terminal commands to fulfill user requests so the u
         container.querySelectorAll('.cpg-drawer-pane').forEach(p => p.style.display = 'none');
         if (state.activeDrawerTab === 'terminal') {
           container.querySelector('#cpg-pane-terminal').style.display = 'flex';
+          container.querySelector('#cpg-pane-terminal').style.flexDirection = 'column';
           termInput.focus();
         } else if (state.activeDrawerTab === 'output') {
           container.querySelector('#cpg-pane-output').style.display = 'block';

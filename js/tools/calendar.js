@@ -44,11 +44,11 @@ export default {
             
             <!-- Month/Year Navigation -->
             <div style="display:flex; align-items:center; gap:12px;">
-              <button type="button" class="btn btn-secondary btn-sm" id="cal-prev-btn" aria-label="Previous Month" style="padding:6px 10px;">
+              <button type="button" class="btn btn-secondary btn-circle" id="cal-prev-btn" aria-label="Previous Month">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
               </button>
               <h2 id="cal-month-title" style="margin:0; font-size:1.45rem; font-weight:700; color:var(--text); min-width:180px; letter-spacing:-0.02em;"></h2>
-              <button type="button" class="btn btn-secondary btn-sm" id="cal-next-btn" aria-label="Next Month" style="padding:6px 10px;">
+              <button type="button" class="btn btn-secondary btn-circle" id="cal-next-btn" aria-label="Next Month">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
               </button>
               <button type="button" class="btn btn-secondary btn-sm" id="cal-today-btn" style="font-weight:600;">Today</button>
@@ -74,6 +74,11 @@ export default {
                 <input type="file" id="cal-import-file" accept=".ics,text/calendar" style="display:none;">
               </label>
             </div>
+          </div>
+
+          <!-- Separate Days Switcher -->
+          <div class="cal-day-switcher-strip" style="display:flex; justify-content:center; align-items:center; width:100%; border-top:1px solid var(--border-subtle); padding-top:12px;">
+            <div class="cal-day-switcher" id="cal-header-day-switcher" style="display:flex; width:100%; max-width:640px;"></div>
           </div>
 
           <!-- Secondary Filter & Search Strip -->
@@ -287,6 +292,7 @@ export default {
       }
 
       updateTodayBanner();
+      updateDaySwitcher();
 
       if (currentView === 'month') {
         renderMonthGrid();
@@ -493,6 +499,9 @@ export default {
       `;
 
       viewContainer.innerHTML = html;
+
+
+
       container.querySelector('#cal-day-add-btn')?.addEventListener('click', () => openModalForDate(dateKey));
       bindCellEvents();
     }
@@ -702,6 +711,61 @@ export default {
       selectedDateStr = formatDateKey(currentDate);
       renderCurrentView();
     });
+
+    // Day Switcher (Separate days switcher with animated slider pill)
+    const headerDaySwitcher = container.querySelector('#cal-header-day-switcher');
+    let updateDaySlider = null;
+
+    function updateDaySwitcher() {
+      if (!headerDaySwitcher) return;
+      const weekStart = new Date(currentDate);
+      weekStart.setDate(currentDate.getDate() - currentDate.getDay()); // Sunday
+
+      const todayKey = formatDateKey(new Date());
+      const activeKey = formatDateKey(currentDate);
+
+      const weekDays = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(weekStart);
+        d.setDate(weekStart.getDate() + i);
+        return d;
+      });
+
+      headerDaySwitcher.innerHTML = weekDays.map((d, i) => {
+        const dk = formatDateKey(d);
+        const isActive = dk === activeKey;
+        const isToday = dk === todayKey;
+        return `
+          <button type="button" class="cal-day-switcher-btn${isActive ? ' active' : ''}" data-day-key="${dk}" aria-label="${WEEKDAY_NAMES[i]} ${d.getDate()}">
+            <span class="dsw-day">${WEEKDAY_NAMES[i]}</span>
+            <span class="dsw-num" style="${isToday && !isActive ? 'color:var(--accent);' : ''}">${d.getDate()}</span>
+          </button>
+        `;
+      }).join('');
+
+      updateDaySlider = attachSegmentedSlider(headerDaySwitcher, '.cal-day-switcher-btn');
+    }
+
+    if (headerDaySwitcher) {
+      headerDaySwitcher.addEventListener('click', (e) => {
+        const btn = e.target.closest('.cal-day-switcher-btn');
+        if (!btn) return;
+        const dk = btn.dataset.dayKey;
+        if (!dk) return;
+        const [y, m, d] = dk.split('-').map(Number);
+        currentDate = new Date(y, m - 1, d);
+        selectedDateStr = dk;
+
+        headerDaySwitcher.querySelectorAll('.cal-day-switcher-btn').forEach(b => b.classList.toggle('active', b === btn));
+        updateDaySlider?.();
+
+        // Switch to day view and update view buttons
+        currentView = 'day';
+        viewBtns.forEach(b => b.classList.toggle('active', b.dataset.view === 'day'));
+        updateCalSlider?.();
+
+        renderCurrentView();
+      });
+    }
 
     // View Switching
     const calSwitcher = container.querySelector('.cal-view-switcher');

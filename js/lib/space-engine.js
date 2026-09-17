@@ -194,9 +194,10 @@ export class SpaceEngine {
     });
 
     this.provider.on('status', event => {
-      if (event.status === 'connected') {
+      const isConnected = !!(event && (event.connected || event.status === 'connected'));
+      if (isConnected) {
         this._emit('connected');
-      } else if (event.status === 'disconnected') {
+      } else {
         this._emit('disconnected');
       }
     });
@@ -283,13 +284,30 @@ export class SpaceEngine {
 
   /* --------------- Lifecycle --------------- */
 
-  async create({ spaceName, description = '', displayName, isPublic = true }) {
+  async create(opts = {}, maybeDesc = '', maybeName = '', maybePublic = true) {
+    let spaceName = 'Untitled Space';
+    let description = '';
+    let displayName = this.displayName || 'Host';
+    let isPublic = true;
+
+    if (typeof opts === 'object' && opts !== null) {
+      spaceName = (opts.spaceName || 'Untitled Space').trim();
+      description = (opts.description || '').trim();
+      displayName = (opts.displayName || this.displayName || 'Host').trim();
+      isPublic = opts.isPublic ?? true;
+    } else if (typeof opts === 'string') {
+      spaceName = (opts || 'Untitled Space').trim();
+      description = (maybeDesc || '').trim();
+      displayName = (maybeName || this.displayName || 'Host').trim();
+      isPublic = maybePublic ?? true;
+    }
+
     const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     await this._initDoc(roomCode, displayName, 'owner');
 
     const meta = this.doc.getMap('metadata');
-    meta.set('spaceName', spaceName.trim() || 'Untitled Space');
-    meta.set('description', description.trim());
+    meta.set('spaceName', spaceName || 'Untitled Space');
+    meta.set('description', description);
     meta.set('isPublic', isPublic);
     meta.set('createdAt', Date.now());
     meta.set('createdBy', this.displayName);
@@ -311,18 +329,32 @@ export class SpaceEngine {
     return roomCode;
   }
 
-  async join({ roomCode, displayName }) {
-    const code = roomCode.trim().toUpperCase();
-    const existing = getJoinedSpace(code);
+  async join(opts = {}, maybeName = '') {
+    let roomCode = '';
+    let displayName = this.displayName || 'Anonymous';
+
+    if (typeof opts === 'object' && opts !== null) {
+      roomCode = (opts.roomCode || '').trim().toUpperCase();
+      displayName = (opts.displayName || this.displayName || 'Anonymous').trim();
+    } else if (typeof opts === 'string') {
+      roomCode = opts.trim().toUpperCase();
+      displayName = (maybeName || this.displayName || 'Anonymous').trim();
+    }
+
+    if (!roomCode) {
+      throw new Error('Room code is required to join a space');
+    }
+
+    const existing = getJoinedSpace(roomCode);
     const role = existing ? existing.role : 'member';
-    await this._initDoc(code, displayName, role);
+    await this._initDoc(roomCode, displayName, role);
 
     this.addActivity('member_joined', `${displayName} joined the space`);
 
     // Sync saved space name
     setTimeout(() => {
       saveJoinedSpace({
-        id: code,
+        id: roomCode,
         name: this.spaceName,
         description: this.spaceDescription,
         role: this.role,

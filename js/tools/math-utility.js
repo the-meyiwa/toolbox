@@ -141,7 +141,7 @@ export default {
 
         <!-- 2. TAB: SOLVER & COMPUTATION LAB -->
         <div class="math-pane" id="pane-solver" style="display:none; flex-direction:column; gap:20px;">
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:20px;">
+          <div class="math-split-grid">
             <!-- Left: Operation Selector & Input Form -->
             <div style="padding:16px; border:1px solid var(--border); border-radius:12px; background:var(--bg-card); box-shadow:0 2px 8px rgba(0,0,0,0.02); display:flex; flex-direction:column; gap:12px;">
               <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -212,7 +212,7 @@ export default {
               </span>
             </div>
 
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; align-items:flex-end;">
+            <div class="math-seq-controls">
               <div>
                 <label class="tool-label" style="font-size:0.75rem; font-weight:700; margin-bottom:4px; display:block;">Sequence</label>
                 <select id="seq-select" class="tool-select" style="width:100%; font-size:0.85rem; padding:6px 10px;">
@@ -303,7 +303,7 @@ export default {
 
         <!-- 4. TAB: FOUR-FIGURE TABLES & CONSTANTS -->
         <div class="math-pane" id="pane-tables" style="display:none; flex-direction:column; gap:20px;">
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:20px;">
+          <div class="math-split-grid">
             <!-- Four-Figure Table Lookup Card -->
             <div style="padding:16px; border:1px solid var(--border); border-radius:12px; background:var(--bg-card); box-shadow:0 2px 8px rgba(0,0,0,0.02); display:flex; flex-direction:column; gap:12px;">
               <div>

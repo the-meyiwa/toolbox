@@ -17,7 +17,7 @@ export default {
     let searchQuery = '';
 
     container.innerHTML = `
-    <div class="tool-content" style="max-width:960px; margin:0 auto; padding:20px;">
+    <div class="tool-content dis-database-wrapper" style="max-width:960px; margin:0 auto; padding:20px;">
       <!-- Header -->
       <div style="margin-bottom:24px;">
         <h2 style="font-size:1.6rem; font-weight:800; color:var(--text, #0f172a); margin:0 0 6px 0;">Diseases & Pathology Database</h2>
@@ -56,7 +56,7 @@ export default {
       </div>
 
       <!-- Results Count Bar -->
-      <div id="dis-status-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; font-size:0.82rem; color:var(--g600, #64748b); font-weight:600;">
+      <div id="dis-status-bar" class="dis-status-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; font-size:0.82rem; color:var(--g600, #64748b); font-weight:600;">
         <span id="dis-count-label">Showing high-commodity conditions</span>
         <span>WHO ICD-11 & Orphanet Engine</span>
       </div>
@@ -151,6 +151,7 @@ export default {
       if ((d.symptoms && d.symptoms.length) || d.diagnosticCriteria || (d.management && d.management.length)) {
         const gridDiv = document.createElement('div');
         gridDiv.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px;';
+        gridDiv.className = 'dis-details-grid';
 
         if (d.symptoms && d.symptoms.length) {
           const sympDiv = document.createElement('div');

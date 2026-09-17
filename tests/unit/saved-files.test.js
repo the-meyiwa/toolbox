@@ -142,7 +142,11 @@ test('Files View: Open in… popup menu toggles, renders rich items, and avoids 
   const toggleBtn = host.querySelector('#sv-open-dropdown-toggle');
   assert.ok(toggleBtn, 'Open in… toggle button must exist in detail pane');
   assert.equal(toggleBtn.getAttribute('aria-expanded'), 'false');
-  assert.ok(toggleBtn.textContent.includes('Open in…'));
+  assert.ok(
+    (toggleBtn.getAttribute('title') || '').includes('Open') ||
+    (toggleBtn.getAttribute('aria-label') || '').includes('Open'),
+    'Open in… button must have descriptive title or aria-label'
+  );
 
   // Verify dropdown menu starts hidden
   const menu = host.querySelector('#sv-open-dropdown-menu');

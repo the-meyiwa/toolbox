@@ -62,7 +62,8 @@ const ICONS = {
   paste: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>',
   info: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
   eye: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
-  checkAll: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>'
+  checkAll: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+  x: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
 };
 
 // UI state preserved across refreshes in current session & stored preferences
@@ -244,20 +245,19 @@ function empty() {
       <p class="sv-lede" style="color:var(--text-secondary); line-height:1.6; font-size:0.92rem; margin-bottom:24px;">
         Nothing saved yet. Tools that generate content—such as tidied documents, converted data, diagrams, or code—include a Save action. Items you save persist offline in this browser and appear here.
       </p>
-      <div class="sv-empty-actions" style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
-        <button type="button" class="btn btn-primary" data-act="new-file" style="display:inline-flex; align-items:center; gap:6px;">
+      <div class="sv-empty-actions" style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-primary btn-circle" data-act="new-file" title="New File" aria-label="New File" style="--circle-size:38px;">
           ${ICONS.plus}
-          <span>New File</span>
         </button>
-        <button type="button" class="btn btn-secondary" data-act="new-folder" style="display:inline-flex; align-items:center; gap:6px;">
+        <button type="button" class="btn btn-secondary btn-circle" data-act="new-folder" title="New Folder" aria-label="New Folder" style="--circle-size:38px;">
           ${ICONS.folderPlus}
-          <span>New Folder</span>
         </button>
-        <button type="button" class="btn btn-secondary" data-act="upload" style="display:inline-flex; align-items:center; gap:6px;">
+        <button type="button" class="btn btn-secondary btn-circle" data-act="upload" title="Upload" aria-label="Upload" style="--circle-size:38px;">
           ${ICONS.upload}
-          <span>Upload</span>
         </button>
-        <a class="btn btn-secondary" href="#tools">Browse tools</a>
+        <a class="btn btn-secondary btn-circle" href="#tools" title="Browse tools" aria-label="Browse tools" style="--circle-size:38px;">
+          ${ICONS.grid}
+        </a>
       </div>
       <div style="margin-top:24px; text-align:left;">
         ${storageNote()}
@@ -277,7 +277,7 @@ function full(user, allItems, filteredItems, selected) {
       <header class="sv-head" style="background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:0 4px 16px rgba(0,0,0,0.03);">
         
         <!-- Left: Storage Tabs & Folder Info -->
-        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+        <div class="sv-head-left" style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
           <div>
             <div style="display:flex; align-items:center; gap:8px;">
               <h1 class="sv-title" style="margin:0; font-size:1.35rem; font-weight:700; color:var(--text);">Files</h1>
@@ -300,9 +300,9 @@ function full(user, allItems, filteredItems, selected) {
         </div>
 
         <!-- Right: Search, Views and File Operations -->
-        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <div class="sv-head-right" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <!-- Search input -->
-          <div style="position:relative; width:170px;">
+          <div class="sv-search-wrap" style="position:relative; width:170px;">
             <input type="text" id="sv-search-box" class="tool-input" placeholder="Search files…" value="${escapeHtml(currentSearch)}" style="width:100%; height:28px; font-size:0.78rem; padding:0 8px 0 26px; border-radius:9999px;">
             <div style="position:absolute; left:8px; top:6px; color:var(--text-muted); pointer-events:none; display:flex; align-items:center;">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -322,39 +322,34 @@ function full(user, allItems, filteredItems, selected) {
             </button>
           </div>
 
-          <!-- File Operations (Cut, Copy, Paste, Delete) -->
-          <div class="sv-op-btn-group" style="display:inline-flex; align-items:center; background:var(--bg-subtle); padding:2px; border-radius:9999px; border:1px solid var(--border); gap:1px;">
-            <button type="button" class="btn btn-secondary btn-sm sv-tb-btn" data-act="cut" title="Cut selected (Ctrl+X)" style="padding:2px 7px; font-size:0.72rem; border:none; background:none; display:inline-flex; align-items:center; gap:3px; ${selectedPaths.size === 0 && !selected ? 'opacity:0.4; pointer-events:none;' : ''}">
+          <!-- File Operations (Cut, Copy, Paste, Delete) — STANDALONE CIRCULAR BUTTONS -->
+          <div class="sv-op-btn-group" style="display:inline-flex; align-items:center; gap:6px;">
+            <button type="button" class="btn btn-secondary sv-tb-btn btn-circle" data-act="cut" title="Cut selected (Ctrl+X)" aria-label="Cut selected" style="${selectedPaths.size === 0 && !selected ? 'opacity:0.4; pointer-events:none;' : ''}">
               ${ICONS.scissors}
-              <span class="sv-btn-txt">Cut</span>
             </button>
-            <button type="button" class="btn btn-secondary btn-sm sv-tb-btn" data-act="copy" title="Copy selected (Ctrl+C)" style="padding:2px 7px; font-size:0.72rem; border:none; background:none; display:inline-flex; align-items:center; gap:3px; ${selectedPaths.size === 0 && !selected ? 'opacity:0.4; pointer-events:none;' : ''}">
+            <button type="button" class="btn btn-secondary sv-tb-btn btn-circle" data-act="copy" title="Copy selected (Ctrl+C)" aria-label="Copy selected" style="${selectedPaths.size === 0 && !selected ? 'opacity:0.4; pointer-events:none;' : ''}">
               ${ICONS.copy}
-              <span class="sv-btn-txt">Copy</span>
             </button>
-            <button type="button" class="btn btn-secondary btn-sm sv-tb-btn" data-act="paste" title="Paste into folder (Ctrl+V)" style="padding:2px 7px; font-size:0.72rem; border:none; background:none; display:inline-flex; align-items:center; gap:3px; ${fileClipboard.paths.length === 0 ? 'opacity:0.4; pointer-events:none;' : ''}">
+            <button type="button" class="btn btn-secondary sv-tb-btn btn-circle" data-act="paste" title="Paste into folder (Ctrl+V)${fileClipboard.paths.length > 0 ? ` (${fileClipboard.paths.length})` : ''}" aria-label="Paste into folder" style="${fileClipboard.paths.length === 0 ? 'opacity:0.4; pointer-events:none;' : ''}">
               ${ICONS.paste}
-              <span class="sv-btn-txt">Paste${fileClipboard.paths.length > 0 ? ` (${fileClipboard.paths.length})` : ''}</span>
             </button>
-            <button type="button" class="btn btn-secondary btn-sm sv-tb-btn" data-act="delete-selected" title="Delete selected (Delete)" style="padding:2px 7px; font-size:0.72rem; border:none; background:none; color:#ef4444; display:inline-flex; align-items:center; gap:3px; ${selectedPaths.size === 0 && !selected ? 'opacity:0.4; pointer-events:none;' : ''}">
+            <button type="button" class="btn btn-secondary sv-tb-btn btn-circle btn-danger" data-act="delete-selected" title="Delete selected (Delete)" aria-label="Delete selected" style="${selectedPaths.size === 0 && !selected ? 'opacity:0.4; pointer-events:none;' : ''}">
               ${ICONS.delete}
-              <span class="sv-btn-txt">Delete</span>
             </button>
           </div>
 
-          <!-- Primary Actions -->
-          <button type="button" class="btn btn-secondary btn-sm" data-act="new-folder" title="Create New Folder" style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; height:28px; padding:0 9px;">
-            ${ICONS.folderPlus}
-            <span>New Folder</span>
-          </button>
-          <button type="button" class="btn btn-secondary btn-sm" data-act="new-file" title="Create New File" style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; height:28px; padding:0 9px;">
-            ${ICONS.plus}
-            <span>New File</span>
-          </button>
-          <button type="button" class="btn btn-primary btn-sm" data-act="upload" title="Upload Files" style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; height:28px; padding:0 10px;">
-            ${ICONS.upload}
-            <span>Upload</span>
-          </button>
+          <!-- Primary Actions — STANDALONE CIRCULAR BUTTONS -->
+          <div class="sv-primary-actions" style="display:inline-flex; align-items:center; gap:6px;">
+            <button type="button" class="btn btn-secondary btn-circle" data-act="new-folder" title="Create New Folder" aria-label="Create New Folder">
+              ${ICONS.folderPlus}
+            </button>
+            <button type="button" class="btn btn-secondary btn-circle" data-act="new-file" title="Create New File" aria-label="Create New File">
+              ${ICONS.plus}
+            </button>
+            <button type="button" class="btn btn-primary btn-circle" data-act="upload" title="Upload Files" aria-label="Upload Files">
+              ${ICONS.upload}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -377,20 +372,17 @@ function full(user, allItems, filteredItems, selected) {
           }).join('')}
         </div>
 
-        <!-- Folder Actions (Select All, Properties, Up) -->
+        <!-- Folder Actions (Select All, Properties, Up) — STANDALONE CIRCULAR BUTTONS -->
         <div style="display:flex; align-items:center; gap:6px;">
-          <button type="button" class="btn btn-secondary btn-sm" data-act="select-all" title="Select All (Ctrl+A)" style="padding:4px 8px; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px;">
+          <button type="button" class="btn btn-secondary btn-circle" data-act="select-all" title="Select All (Ctrl+A)" aria-label="Select All">
             ${ICONS.checkAll}
-            <span>Select All</span>
           </button>
-          <button type="button" class="btn btn-secondary btn-sm" data-act="folder-properties" title="Folder Properties" style="padding:4px 8px; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px;">
+          <button type="button" class="btn btn-secondary btn-circle" data-act="folder-properties" title="Folder Properties" aria-label="Folder Properties">
             ${ICONS.info}
-            <span>Properties</span>
           </button>
           ${currentPath !== '/' && currentPath !== '/Home' ? `
-            <button type="button" class="btn btn-secondary btn-sm" data-act="nav-up" title="Go up one folder" style="padding:4px 8px; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px;">
+            <button type="button" class="btn btn-secondary btn-circle" data-act="nav-up" title="Go up one folder" aria-label="Go up one folder">
               ${ICONS.arrowUp}
-              <span>Up</span>
             </button>
           ` : ''}
         </div>
@@ -416,24 +408,24 @@ function full(user, allItems, filteredItems, selected) {
           <div style="font-size:0.84rem; font-weight:700; color:var(--text); white-space:nowrap;">
             ${selectedPaths.size} selected
           </div>
-          <div style="display:flex; gap:6px; align-items:center; overflow-x:auto; scrollbar-width:none;">
-            <button type="button" class="btn btn-secondary btn-sm" data-act="cut" style="min-height:38px; padding:6px 10px; display:inline-flex; align-items:center; gap:4px;">
-              ${ICONS.scissors} <span>Cut</span>
+          <div style="display:flex; gap:8px; align-items:center; overflow-x:auto; scrollbar-width:none;">
+            <button type="button" class="btn btn-secondary btn-circle" data-act="cut" title="Cut" aria-label="Cut">
+              ${ICONS.scissors}
             </button>
-            <button type="button" class="btn btn-secondary btn-sm" data-act="copy" style="min-height:38px; padding:6px 10px; display:inline-flex; align-items:center; gap:4px;">
-              ${ICONS.copy} <span>Copy</span>
+            <button type="button" class="btn btn-secondary btn-circle" data-act="copy" title="Copy" aria-label="Copy">
+              ${ICONS.copy}
             </button>
-            <button type="button" class="btn btn-secondary btn-sm" data-act="multi-properties" style="min-height:38px; padding:6px 10px; display:inline-flex; align-items:center; gap:4px;">
-              ${ICONS.info} <span>Info</span>
+            <button type="button" class="btn btn-secondary btn-circle" data-act="multi-properties" title="Properties" aria-label="Properties">
+              ${ICONS.info}
             </button>
-            <button type="button" class="btn btn-secondary btn-sm" data-act="multi-download" style="min-height:38px; padding:6px 10px; display:inline-flex; align-items:center; gap:4px;">
-              ${ICONS.download} <span>ZIP</span>
+            <button type="button" class="btn btn-secondary btn-circle" data-act="multi-download" title="Download ZIP" aria-label="Download ZIP">
+              ${ICONS.download}
             </button>
-            <button type="button" class="btn btn-secondary btn-sm" data-act="delete-selected" style="min-height:38px; padding:6px 10px; color:#ef4444; display:inline-flex; align-items:center; gap:4px;">
-              ${ICONS.delete} <span>Delete</span>
+            <button type="button" class="btn btn-secondary btn-circle btn-danger" data-act="delete-selected" title="Delete" aria-label="Delete">
+              ${ICONS.delete}
             </button>
-            <button type="button" class="btn btn-secondary btn-sm" data-act="clear-selection" style="min-height:38px; padding:6px 10px;">
-              Clear
+            <button type="button" class="btn btn-secondary btn-circle" data-act="clear-selection" title="Clear selection" aria-label="Clear selection">
+              ${ICONS.x}
             </button>
           </div>
         </div>
@@ -457,8 +449,8 @@ function renderExplorerBody(items, selected) {
           </div>
           <h3 style="margin:0 0 6px; font-size:1rem; color:var(--text);">No files match "${escapeHtml(currentSearch)}"</h3>
           <p style="margin:0 0 16px; font-size:0.84rem; color:var(--text-secondary);">Check your spelling or clear the search filter.</p>
-          <button type="button" class="btn btn-secondary btn-sm" id="sv-clear-search" style="display:inline-flex; align-items:center; gap:5px;">
-            <span>Clear search</span>
+          <button type="button" class="btn btn-secondary btn-circle" id="sv-clear-search" title="Clear search" aria-label="Clear search" style="--circle-size:32px;">
+            ${ICONS.x}
           </button>
         </div>
       `;
@@ -471,14 +463,12 @@ function renderExplorerBody(items, selected) {
         </div>
         <h3 style="margin:0 0 6px; font-size:1rem; color:var(--text); pointer-events:none;">This folder is empty</h3>
         <p style="margin:0 0 16px; font-size:0.84rem; color:var(--text-secondary); pointer-events:none;">Right-click or hold to access options, or paste files here.</p>
-        <div style="display:flex; justify-content:center; gap:8px;">
-          <button type="button" class="btn btn-secondary btn-sm" data-act="new-file" style="display:inline-flex; align-items:center; gap:5px;">
+        <div style="display:flex; justify-content:center; gap:10px;">
+          <button type="button" class="btn btn-secondary btn-circle" data-act="new-file" title="New File" aria-label="New File" style="--circle-size:32px;">
             ${ICONS.plus}
-            <span>New File</span>
           </button>
-          <button type="button" class="btn btn-secondary btn-sm" data-act="new-folder" style="display:inline-flex; align-items:center; gap:5px;">
+          <button type="button" class="btn btn-secondary btn-circle" data-act="new-folder" title="New Folder" aria-label="New Folder" style="--circle-size:32px;">
             ${ICONS.folderPlus}
-            <span>New Folder</span>
           </button>
         </div>
       </div>
@@ -544,12 +534,12 @@ function renderExplorerBody(items, selected) {
               <h3 style="margin:0; font-size:1.05rem; color:var(--text); font-weight:700;">${selectedPaths.size} items selected</h3>
               <p style="margin:0; font-size:0.82rem; color:var(--text-secondary); max-width:300px;">Perform operations using the toolbar buttons or shortcuts (Ctrl+C, Ctrl+X, Delete).</p>
               <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap; justify-content:center;">
-                <button type="button" class="btn btn-secondary btn-sm" data-act="cut">${ICONS.scissors} Cut</button>
-                <button type="button" class="btn btn-secondary btn-sm" data-act="copy">${ICONS.copy} Copy</button>
-                <button type="button" class="btn btn-secondary btn-sm" data-act="multi-properties">${ICONS.info} Properties</button>
-                <button type="button" class="btn btn-secondary btn-sm" data-act="multi-download">${ICONS.download} Download ZIP</button>
-                <button type="button" class="btn btn-secondary btn-sm" data-act="delete-selected" style="color:#ef4444;">${ICONS.delete} Delete</button>
-                <button type="button" class="btn btn-secondary btn-sm" data-act="clear-selection">Clear</button>
+                <button type="button" class="btn btn-secondary btn-circle" data-act="cut" title="Cut" aria-label="Cut" style="--circle-size:32px;">${ICONS.scissors}</button>
+                <button type="button" class="btn btn-secondary btn-circle" data-act="copy" title="Copy" aria-label="Copy" style="--circle-size:32px;">${ICONS.copy}</button>
+                <button type="button" class="btn btn-secondary btn-circle" data-act="multi-properties" title="Properties" aria-label="Properties" style="--circle-size:32px;">${ICONS.info}</button>
+                <button type="button" class="btn btn-secondary btn-circle" data-act="multi-download" title="Download ZIP" aria-label="Download ZIP" style="--circle-size:32px;">${ICONS.download}</button>
+                <button type="button" class="btn btn-secondary btn-circle btn-danger" data-act="delete-selected" title="Delete" aria-label="Delete" style="--circle-size:32px;">${ICONS.delete}</button>
+                <button type="button" class="btn btn-secondary btn-circle" data-act="clear-selection" title="Clear selection" aria-label="Clear selection" style="--circle-size:32px;">${ICONS.x}</button>
               </div>
             </div>
           ` : (selected ? renderDetailPane(selected) : `
@@ -769,33 +759,30 @@ function renderDetailPane(selected) {
             </div>
           ` : (!isImage ? `
             <div class="sv-content-view-switcher" style="display:flex; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:2px;">
-              <button type="button" class="sv-cview-btn ${currentContentView === 'formatted' ? 'active' : ''}" data-cview="formatted" title="Formatted Render" style="padding:3px 7px; border:none; background:none; cursor:pointer; font-size:0.75rem; border-radius:5px; color:var(--text);">
-                Formatted
+              <button type="button" class="sv-cview-btn ${currentContentView === 'formatted' ? 'active' : ''}" data-cview="formatted" title="Formatted Render" aria-label="Formatted Render" style="padding:4px 7px; border:none; background:none; cursor:pointer; border-radius:5px; color:var(--text); display:inline-flex; align-items:center; justify-content:center;">
+                ${ICONS.eye}
               </button>
               ${isCsv ? `
-                <button type="button" class="sv-cview-btn ${currentContentView === 'table' ? 'active' : ''}" data-cview="table" title="Data Table" style="padding:3px 7px; border:none; background:none; cursor:pointer; font-size:0.75rem; border-radius:5px; color:var(--text);">
-                  ${ICONS.table} Table
+                <button type="button" class="sv-cview-btn ${currentContentView === 'table' ? 'active' : ''}" data-cview="table" title="Data Table" aria-label="Data Table" style="padding:4px 7px; border:none; background:none; cursor:pointer; border-radius:5px; color:var(--text); display:inline-flex; align-items:center; justify-content:center;">
+                  ${ICONS.table}
                 </button>
               ` : ''}
-              <button type="button" class="sv-cview-btn ${currentContentView === 'raw' ? 'active' : ''}" data-cview="raw" title="Raw Text" style="padding:3px 7px; border:none; background:none; cursor:pointer; font-size:0.75rem; border-radius:5px; color:var(--text);">
-                Raw
+              <button type="button" class="sv-cview-btn ${currentContentView === 'raw' ? 'active' : ''}" data-cview="raw" title="Raw Text" aria-label="Raw Text" style="padding:4px 7px; border:none; background:none; cursor:pointer; border-radius:5px; color:var(--text); display:inline-flex; align-items:center; justify-content:center;">
+                ${ICONS.raw}
               </button>
             </div>
           ` : '')}
 
           <!-- Quick Look Preview Button -->
-          <button type="button" class="btn btn-secondary btn-sm" data-act="quicklook" title="Quick Look preview (Space)" style="font-size:0.75rem; padding:4px 9px; display:inline-flex; align-items:center; gap:4px;">
+          <button type="button" class="btn btn-secondary btn-circle" data-act="quicklook" title="Quick Look preview (Space)" aria-label="Quick Look preview">
             ${ICONS.eye}
-            <span>Preview</span>
           </button>
 
           <!-- Open in Tool Pop-up Menu -->
           ${tools.length > 0 ? `
             <div class="sv-open-dropdown-wrap" style="position:relative;">
-              <button type="button" class="btn btn-secondary btn-sm sv-open-dropdown-toggle" id="sv-open-dropdown-toggle" aria-haspopup="true" aria-expanded="false" title="Open this file in a tool" style="font-size:0.75rem; padding:4px 10px; display:inline-flex; align-items:center; gap:5px;">
+              <button type="button" class="btn btn-secondary btn-circle sv-open-dropdown-toggle" id="sv-open-dropdown-toggle" aria-haspopup="true" aria-expanded="false" title="Open this file in a tool" aria-label="Open in tool">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                <span>Open in…</span>
-                <svg class="sv-open-dropdown-arrow" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
               </button>
               <div id="sv-open-dropdown-menu" class="sv-open-dropdown-menu" hidden style="position:absolute; right:0; top:calc(100% + 5px); z-index:1000; min-width:230px; max-width:300px; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:6px; box-shadow:0 12px 28px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.1); font-family:var(--sans);">
                 <div style="padding:4px 8px 6px; font-size:0.7rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; border-bottom:1px solid var(--border); margin-bottom:4px;">
@@ -817,8 +804,8 @@ function renderDetailPane(selected) {
           ` : ''}
 
           ${isZip ? `
-            <button type="button" class="btn btn-secondary btn-sm" data-act="extract-archive" data-file-path="${escapeHtml(selected.path)}" title="Unpack archive into current directory" style="font-size:0.75rem; padding:4px 8px; display:inline-flex; align-items:center; gap:4px;">
-              ${ICONS.zip} Extract
+            <button type="button" class="btn btn-secondary btn-circle" data-act="extract-archive" data-file-path="${escapeHtml(selected.path)}" title="Extract archive" aria-label="Extract archive">
+              ${ICONS.zip}
             </button>
           ` : ''}
         </div>
@@ -924,7 +911,7 @@ function renderMarkdown(md) {
 
 function storageNote() {
   return store.persistent
-    ? `<p class="sv-note" style="margin-top:16px; font-size:0.75rem; color:var(--text-muted); line-height:1.5;">Offline Files are persisted locally in browser IndexedDB. No account required. Files remain accessible offline.</p>`
+    ? ''
     : `<p class="sv-note is-warn" style="margin-top:16px; font-size:0.75rem; color:#f59e0b; line-height:1.5;">Private browsing mode detected. Files persist during this session. Download files to keep them permanently.</p>`;
 }
 
@@ -1118,7 +1105,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
             <span style="color:var(--text);">${ICONS.folder}</span>
             <strong style="font-size:0.95rem; color:var(--text);">${escapeHtml(dirName)} Properties</strong>
           </div>
-          <button type="button" id="sv-prop-close" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:4px; border-radius:6px; display:inline-flex;">
+          <button type="button" id="sv-prop-close" class="btn-circle btn-secondary" style="--circle-size:28px; color:var(--text-muted); cursor:pointer;" title="Close" aria-label="Close">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
@@ -1347,7 +1334,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
               </div>
             </div>
           </div>
-          <button type="button" id="sv-ql-close" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:6px; border-radius:8px; display:inline-flex;">
+          <button type="button" id="sv-ql-close" class="btn-circle btn-secondary" style="--circle-size:28px; color:var(--text-muted); cursor:pointer;" title="Close" aria-label="Close">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>

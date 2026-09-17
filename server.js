@@ -34,6 +34,16 @@ try {
 } catch (e) {}
 
 const server = http.createServer(async (request, response) => {
+  const urlPath = request.url?.split('?')[0] || '';
+  if (urlPath === '/health' || urlPath === '/healthz') {
+    response.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*'
+    });
+    response.end(JSON.stringify({ status: 'ok', service: 'toolbox-signaling', time: Date.now() }));
+    return;
+  }
+
   const handled = await handleApiRequest(request, response);
   if (handled) return;
 
@@ -178,3 +188,12 @@ server.on('upgrade', (request, socket, head) => {
 server.listen(port, () => {
   console.log(`Toolbox Spaces Signaling Server running on port ${port}`);
 });
+
+process.on('uncaughtException', (err) => {
+  console.error('[Signaling Server Uncaught Exception]:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[Signaling Server Unhandled Rejection]:', reason);
+});
+

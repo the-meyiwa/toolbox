@@ -97,8 +97,10 @@ export default {
         </aside>
 
         <div class="t3d-stage">
-          <div class="t3d-canvas" id="an-canvas">
+          <div class="t3d-canvas" id="an-canvas" style="position:relative;">
             <div class="an-progress" id="an-progress" hidden><span id="an-progress-text"></span></div>
+            <!-- In-viewport Clinical HUD Badge -->
+            <div class="an-render-badge" id="an-render-badge" style="display:none;"></div>
           </div>
 
           <div class="t3d-toolbar">
@@ -412,8 +414,10 @@ export default {
     }
 
     viewer.onSelect((obj) => {
+      const badgeEl = container.querySelector('#an-render-badge');
       const s = obj?.userData.structure;
       if (!s) {
+        if (badgeEl) badgeEl.style.display = 'none';
         infoEl.innerHTML = `<div class="t3d-info-empty">
           <strong>Click any anatomical structure in 3D to explore</strong>
           <span>Left-drag to rotate · scroll to zoom · right-drag to pan</span></div>`;
@@ -423,6 +427,39 @@ export default {
         const fmaUrl = (s.fma || detail.fma)
           ? `https://bioportal.bioontology.org/ontologies/FMA?p=classes&conceptid=http%3A%2F%2Fpurl.org%2Fsig%2Font%2Ffma%2Ffma${s.fma || detail.fma}`
           : null;
+
+        // Render inline HUD badge directly within the 3D canvas viewport
+        if (badgeEl) {
+          badgeEl.style.display = 'flex';
+          badgeEl.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; width:100%;">
+              <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                <span class="t3d-dot" style="background:${hex(sys.color)}; width:8px; height:8px; border-radius:50%; display:inline-block;"></span>
+                <span style="font-size:0.75rem; font-weight:700; color:var(--text);">${sys.label}</span>
+                <span style="font-size:0.68rem; padding:1px 6px; border-radius:999px; background:var(--bg-subtle); color:var(--text-secondary); border:1px solid var(--border); font-family:var(--mono);">${detail.region.toUpperCase()}</span>
+              </div>
+              <button type="button" class="btn btn-secondary btn-circle" id="an-badge-close" title="Close" aria-label="Close" style="--circle-size:22px; flex-shrink:0; font-size:12px; line-height:1;">&times;</button>
+            </div>
+            <h4 style="margin:6px 0 2px; font-size:0.96rem; font-weight:700; color:var(--text); line-height:1.2;">${s.name}</h4>
+            ${detail.commonName && detail.commonName !== s.name ? `<div style="font-size:0.76rem; color:var(--text-secondary); margin-bottom:4px;">Common: ${detail.commonName}</div>` : ''}
+            <p style="margin:2px 0 6px; font-size:0.78rem; line-height:1.4; color:var(--text-secondary); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${detail.functionDesc || detail.clinicalNotes || 'Anatomical structure'}</p>
+            <div style="display:flex; justify-content:flex-end; align-items:center; width:100%; border-top:1px solid var(--border); padding-top:6px; margin-top:4px;">
+              <button type="button" id="an-badge-show-more" class="btn btn-primary btn-sm" style="font-size:0.72rem; padding:3px 10px; border-radius:9999px;">
+                Show more details &darr;
+              </button>
+            </div>
+          `;
+
+          badgeEl.querySelector('#an-badge-close')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            badgeEl.style.display = 'none';
+          });
+
+          badgeEl.querySelector('#an-badge-show-more')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            infoEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          });
+        }
 
         infoEl.innerHTML = `
           <div class="t3d-info-head" style="align-items:flex-start; margin-bottom:10px;">
@@ -485,7 +522,9 @@ export default {
         const item = listEl.querySelector(`[data-id="${s.id}"]`);
         if (item) {
           item.classList.add('is-selected');
-          item.scrollIntoView({ block: 'nearest' });
+          // Scroll within list only without moving entire window
+          const offset = item.offsetTop - listEl.offsetTop;
+          listEl.scrollTop = Math.max(0, offset - 40);
         }
       }
     });

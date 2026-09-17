@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    TOOLBOX â€” Design System
    Black & white. Minimal. Swiss-inspired.
    ============================================================ */
@@ -913,6 +913,98 @@ input[placeholder*="search" i]::placeholder {
   background: var(--accent); 
   color: var(--accent-contrast, #ffffff) !important; 
   border-color: var(--accent); 
+}
+
+/* === Standalone Perfect Circular Buttons === */
+.btn-circle {
+  --circle-size: 30px;
+  width: var(--circle-size, 30px) !important;
+  height: var(--circle-size, 30px) !important;
+  min-width: var(--circle-size, 30px) !important;
+  min-height: var(--circle-size, 30px) !important;
+  max-width: var(--circle-size, 30px) !important;
+  max-height: var(--circle-size, 30px) !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 50% !important;
+  padding: 0 !important;
+  margin: 0;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  line-height: 1 !important;
+  transition: all 0.16s ease;
+}
+
+.btn-circle svg {
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  min-height: 14px !important;
+  max-width: 14px !important;
+  max-height: 14px !important;
+  flex-shrink: 0 !important;
+  pointer-events: none;
+}
+
+.btn-circle.btn-secondary {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text) !important;
+}
+.btn-circle.btn-secondary:hover {
+  background: var(--bg-hover) !important;
+  border-color: var(--border-subtle, var(--border)) !important;
+  color: var(--text) !important;
+}
+
+.btn-circle.btn-primary {
+  background: var(--accent) !important;
+  border: 1px solid var(--accent) !important;
+  color: var(--accent-contrast, #ffffff) !important;
+}
+.btn-circle.btn-primary:hover {
+  filter: brightness(1.08);
+}
+
+.btn-circle.btn-danger,
+.btn-circle[data-act="delete-selected"] {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  color: #ef4444 !important;
+}
+.btn-circle.btn-danger:hover,
+.btn-circle[data-act="delete-selected"]:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: #ef4444 !important;
+  color: #ef4444 !important;
+}
+
+@media (max-width: 768px) {
+  .btn-circle {
+    --circle-size: 36px;
+    width: var(--circle-size, 36px) !important;
+    height: var(--circle-size, 36px) !important;
+    min-width: var(--circle-size, 36px) !important;
+    min-height: var(--circle-size, 36px) !important;
+    max-width: var(--circle-size, 36px) !important;
+    max-height: var(--circle-size, 36px) !important;
+    aspect-ratio: 1 / 1 !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    flex-shrink: 0 !important;
+  }
+  .btn-circle svg {
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+    min-height: 16px !important;
+    max-width: 16px !important;
+    max-height: 16px !important;
+    flex-shrink: 0 !important;
+  }
 }
 
 .btn-group { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -2043,18 +2135,75 @@ mark.regex-match {
   /* Files (Saved) View on Mobile */
   .sv {
     padding: 0 4px 40px !important;
+    max-width: 100% !important;
   }
   .sv-head {
-    padding: 14px 16px !important;
+    padding: 12px 14px !important;
+    display: flex !important;
     flex-direction: column !important;
     align-items: stretch !important;
-    gap: 12px !important;
+    gap: 10px !important;
   }
-  .sv-head > div:last-child {
+  .sv-head-left {
     display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+  .sv-head-right {
+    display: flex !important;
+    align-items: center !important;
     flex-wrap: wrap !important;
     gap: 8px !important;
-    justify-content: space-between !important;
+    width: 100% !important;
+  }
+  .sv-search-wrap {
+    flex: 1 1 140px !important;
+    min-width: 120px !important;
+    max-width: 100% !important;
+    width: auto !important;
+  }
+  .sv-search-wrap input {
+    width: 100% !important;
+  }
+  .sv-view-switcher {
+    flex-shrink: 0 !important;
+  }
+  .sv-primary-actions {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    margin-left: auto !important;
+  }
+  .sv-breadcrumbs {
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    padding-bottom: 2px !important;
+  }
+  .sv-breadcrumbs::-webkit-scrollbar {
+    display: none !important;
+  }
+  .sv-tags-bar {
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    padding: 6px 10px !important;
+  }
+  .sv-tags-bar::-webkit-scrollbar {
+    display: none !important;
+  }
+  .sv-tag-pill, .sv-tag-chip {
+    flex-shrink: 0 !important;
+  }
+  .sv-grid-view {
+    grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)) !important;
+    gap: 8px !important;
+    padding: 10px 4px !important;
   }
   .sv-body {
     grid-template-columns: 1fr !important;
@@ -3247,24 +3396,47 @@ mark.regex-match {
 
 .cq-tabs {
   display: flex;
-  gap: 2px;
-  border-bottom: 1px solid var(--g150);
-  overflow-x: auto;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+  padding: 8px 12px;
+  margin-bottom: 14px;
+  position: relative;
+  z-index: 50;
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 12px;
+  border: 1px solid var(--border);
 }
 .cq-tab {
-  padding: 11px 18px;
-  border: none;
-  background: none;
-  border-bottom: 2px solid transparent;
+  padding: 7px 16px;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
   font: inherit;
-  font-size: 0.86rem;
-  color: var(--g500);
+  font-weight: 600;
+  font-size: 0.82rem;
   cursor: pointer;
   white-space: nowrap;
-  transition: color 140ms, border-color 140ms;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
-.cq-tab:hover { color: var(--black); }
-.cq-tab.is-active { color: var(--black); font-weight: 500; border-bottom-color: var(--black); }
+.cq-tab:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.cq-tab.is-active {
+  background: var(--black);
+  color: var(--white);
+  border-color: var(--black);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  font-weight: 600;
+}
 
 .cq-h {
   font-family: var(--mono);
@@ -8660,15 +8832,18 @@ input, select, textarea {
   height: 36px;
   min-width: 36px;
   min-height: 36px;
+  max-width: 36px;
+  max-height: 36px;
+  aspect-ratio: 1 / 1 !important;
   border-radius: 50% !important;
   background: var(--surface-secondary);
   border: 1px solid var(--border);
   color: var(--text);
   cursor: pointer;
   overflow: hidden;
-  padding: 0;
+  padding: 0 !important;
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-  flex-shrink: 0;
+  flex-shrink: 0 !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
@@ -9950,12 +10125,40 @@ body.standalone-mode .notes-app-wrapper {
   margin-top: 14px;
 }
 
-@media (max-width: 640px) {
+.math-split-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(340px, 1.2fr);
+  gap: 20px;
+  align-items: start;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.math-seq-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  align-items: flex-end;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
   .dynamic-tile-grid {
-    grid-template-columns: 1fr;
-    gap: 14px;
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+  .math-split-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  .math-seq-controls {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
   }
 }
+
+
 
 .math-knowledge-card {
   padding: 20px 22px;
@@ -10874,6 +11077,42 @@ body.tool-fullscreen #header-fs-exit-btn {
   border-radius: 9999px !important;
 }
 
+.sv-head .btn-circle,
+.sv-head .btn.btn-circle,
+.sv-head .btn-sm.btn-circle,
+.sv-head button.btn-circle,
+.sv-head .sv-tb-btn.btn-circle {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  max-width: 28px !important;
+  max-height: 28px !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 50% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  gap: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.sv-head .btn-circle svg,
+.sv-head .btn.btn-circle svg,
+.sv-head .btn-sm.btn-circle svg,
+.sv-head button.btn-circle svg {
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  min-height: 14px !important;
+  max-width: 14px !important;
+  max-height: 14px !important;
+  flex-shrink: 0 !important;
+}
+
 .sv-head .sv-storage-btn {
   height: 24px !important;
   min-height: 24px !important;
@@ -10915,6 +11154,34 @@ body.tool-fullscreen #header-fs-exit-btn {
     height: 32px !important;
     min-height: 32px !important;
     padding: 0 10px !important;
+  }
+  .sv-head .btn-circle,
+  .sv-head .btn.btn-circle,
+  .sv-head .btn-sm.btn-circle,
+  .sv-head button.btn-circle,
+  .sv-head .sv-tb-btn.btn-circle {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    max-width: 34px !important;
+    max-height: 34px !important;
+    aspect-ratio: 1 / 1 !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    flex-shrink: 0 !important;
+  }
+  .sv-head .btn-circle svg,
+  .sv-head .btn.btn-circle svg,
+  .sv-head .btn-sm.btn-circle svg,
+  .sv-head button.btn-circle svg {
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+    min-height: 16px !important;
+    max-width: 16px !important;
+    max-height: 16px !important;
+    flex-shrink: 0 !important;
   }
   .sv-head .sv-storage-btn {
     height: 28px !important;
@@ -11831,41 +12098,115 @@ body[data-tool-id="container-planner"] .cq {
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
+  flex: 1 !important;
+  min-height: 0 !important;
+  position: relative !important;
 }
-body[data-tool-id="container-planner"] .cq-panel[data-panel="design"] {
-  height: 100% !important;
+body[data-tool-id="container-planner"] .cq-tabs {
   display: flex !important;
-  flex-direction: column !important;
+  flex-shrink: 0 !important;
+  align-items: center !important;
+  gap: 8px !important;
+  border-bottom: 1px solid var(--border) !important;
+  background: var(--bg-card) !important;
+  padding: 8px 12px !important;
+  margin-bottom: 12px !important;
+  position: relative !important;
+  z-index: 50 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--border) !important;
+}
+body[data-tool-id="container-planner"] .cq-tab {
+  padding: 7px 16px !important;
+  border-radius: 9999px !important;
+  border: 1px solid var(--border) !important;
+  background: var(--bg-subtle) !important;
+  color: var(--text-secondary) !important;
+  font-weight: 600 !important;
+  font-size: 0.82rem !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+body[data-tool-id="container-planner"] .cq-tab:hover {
+  background: var(--bg-hover) !important;
+  color: var(--text) !important;
+}
+body[data-tool-id="container-planner"] .cq-tab.is-active {
+  background: var(--black) !important;
+  color: var(--white) !important;
+  border-color: var(--black) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12) !important;
+}
+body[data-tool-id="container-planner"] .cq-panel {
+  flex: 1 !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  position: relative !important;
+  z-index: 1 !important;
   overflow: hidden !important;
 }
+body[data-tool-id="container-planner"] .cq-panel:not([hidden]) {
+  display: flex !important;
+  flex-direction: column !important;
+}
+body[data-tool-id="container-planner"] .cq-panel[data-panel="layout"] {
+  height: 100% !important;
+  overflow: hidden !important;
+  flex: 1 !important;
+  min-height: 0 !important;
+}
+body[data-tool-id="container-planner"] .cq-panel[data-panel="spec"],
+body[data-tool-id="container-planner"] .cq-panel[data-panel="quote"],
+body[data-tool-id="container-planner"] .cq-panel[data-panel="rates"] {
+  overflow-y: auto !important;
+  padding: 10px 4px 60px !important;
+  flex: 1 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+}
 body[data-tool-id="container-planner"] .cp {
+  display: grid !important;
   grid-template-columns: 340px minmax(0, 1fr) !important;
   width: 100% !important;
-  height: calc(100% - 60px) !important;
+  height: 100% !important;
   gap: 20px !important;
   overflow: hidden !important;
   flex: 1 !important;
+  min-height: 0 !important;
+  align-items: stretch !important;
 }
 body[data-tool-id="container-planner"] .cp-panel {
   height: 100% !important;
+  max-height: 100% !important;
   overflow-y: auto !important;
+  position: static !important;
 }
 body[data-tool-id="container-planner"] .t3d-stage {
   height: 100% !important;
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
+  min-height: 0 !important;
 }
 body[data-tool-id="container-planner"] .t3d-canvas {
   flex: 1 !important;
-  height: auto !important;
-  min-height: 400px !important;
+  height: 100% !important;
+  min-height: 350px !important;
+  width: 100% !important;
 }
 body[data-tool-id="container-planner"] .cq-spec,
 body[data-tool-id="container-planner"] .cq-takeoff,
 body[data-tool-id="container-planner"] [data-panel="quote"] > div,
 body[data-tool-id="container-planner"] .cq-rates {
   max-width: 1040px !important;
+  width: 100% !important;
   margin-left: auto !important;
   margin-right: auto !important;
 }
@@ -11891,9 +12232,27 @@ body[data-tool-id="container-planner"] .cq-rates {
     height: auto !important;
     overflow: visible !important;
   }
-  body[data-tool-id="container-planner"] .cq-panel[data-panel="design"] {
+  body[data-tool-id="container-planner"] .cq-tabs {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    padding: 6px !important;
+    margin-bottom: 10px !important;
+  }
+  body[data-tool-id="container-planner"] .cq-tab {
+    flex: 1 1 calc(50% - 6px) !important;
+    font-size: 0.76rem !important;
+    padding: 6px 8px !important;
+    text-align: center !important;
+  }
+  body[data-tool-id="container-planner"] .cq-panel,
+  body[data-tool-id="container-planner"] .cq-panel[data-panel="layout"],
+  body[data-tool-id="container-planner"] .cq-panel[data-panel="spec"],
+  body[data-tool-id="container-planner"] .cq-panel[data-panel="quote"],
+  body[data-tool-id="container-planner"] .cq-panel[data-panel="rates"] {
     height: auto !important;
     overflow: visible !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
   body[data-tool-id="container-planner"] .cp {
     display: flex !important;
@@ -11958,6 +12317,7 @@ body[data-tool-id="container-planner"] .cq-rates {
    ============================================================ */
 .segmented-switcher,
 .cal-view-switcher,
+.cal-day-switcher,
 .sv-storage-switch,
 .sv-view-switcher,
 .sv-content-view-switcher,
@@ -11993,6 +12353,7 @@ body[data-tool-id="container-planner"] .cq-rates {
 
 .segmented-switcher button,
 .cal-view-btn,
+.cal-day-switcher-btn,
 .sv-storage-btn,
 .sv-layout-btn,
 .sv-cview-btn,
@@ -13232,11 +13593,11 @@ body[data-tool-id="container-planner"] .cq-rates {
   }
   .math-tab-nav {
     display: flex !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
+    flex-wrap: wrap !important;
+    overflow-x: hidden !important;
     max-width: 100% !important;
     scrollbar-width: none !important;
-    padding-bottom: 6px !important;
+    padding-bottom: 0 !important;
     gap: 6px !important;
   }
   .math-pane {
@@ -13566,3 +13927,515 @@ body[data-tool-id="container-planner"] .cq-rates {
   }
 }
 
+
+/* === Math Utility Mobile Responsive & Universal Mobile Fit === */
+@media (max-width: 768px) {
+  .math-tab-nav {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    overflow-x: hidden !important;
+    scrollbar-width: none !important;
+    gap: 6px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-bottom: 0 !important;
+  }
+  .math-tab-btn {
+    flex: 1 1 calc(50% - 6px) !important;
+    min-width: 0 !important;
+    white-space: normal !important;
+    text-align: center !important;
+    justify-content: center !important;
+    font-size: 0.78rem !important;
+    padding: 8px 6px !important;
+    box-sizing: border-box !important;
+  }
+  .math-controls-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .math-controls-bar select,
+  .math-controls-bar input,
+  .math-controls-bar button,
+  .math-controls-bar > div,
+  .math-control-group {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+  .math-split-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .dynamic-tile-grid {
+    grid-template-columns: 1fr !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .math-knowledge-card,
+  .tile-wide,
+  .tile-standard {
+    grid-column: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .math-display,
+  .math-rendered-formula,
+  .math-formula-output,
+  .katex-display,
+  .katex {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    box-sizing: border-box !important;
+    font-size: clamp(0.72rem, 3.2vw, 0.95rem) !important;
+  }
+  .math-rendered-formula math {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    display: inline-block !important;
+  }
+
+  /* Universal vertical-only scrolling guarantee on mobile */
+  html, body {
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+    width: 100% !important;
+  }
+  #main,
+  #tool-viewport,
+  #viewport-content,
+  .tool-content,
+  .tool-pane,
+  .math-utility-wrapper,
+  .dis-database-wrapper,
+  .notes-app-wrapper,
+  .calc-wrapper {
+    max-width: 100% !important;
+    width: 100% !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* === Assistant Mobile Full-Height Dock === */
+@media (max-width: 768px) {
+  body[data-tool-id="assistant"] #main {
+    height: 100dvh !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+  }
+  body[data-tool-id="assistant"] #tool-viewport {
+    padding: 0 !important;
+    height: 100% !important;
+    max-height: 100% !important;
+  }
+  body[data-tool-id="assistant"] .viewport-header {
+    padding: 6px 12px !important;
+    margin-bottom: 0 !important;
+  }
+  body[data-tool-id="assistant"] #viewport-content {
+    padding: 0 !important;
+    margin: 0 !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+  }
+  body[data-tool-id="assistant"] .toolbox-assistant-root {
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+  body[data-tool-id="assistant"] .ast-composer {
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 12px)) !important;
+  }
+}
+
+/* === Calculator Mode Switcher — Universal Contrast Fix & Mobile Responsive === */
+.calc-mode-bar {
+  background: var(--bg-subtle, var(--surface-secondary, rgba(0,0,0,0.12))) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 9999px !important;
+  padding: 2px !important;
+  position: relative !important;
+  display: flex !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: none !important;
+  flex-wrap: nowrap !important;
+  max-width: 100% !important;
+}
+.calc-mode-bar::-webkit-scrollbar {
+  display: none !important;
+}
+.calc-mode-btn {
+  color: var(--text-secondary) !important;
+  background: transparent !important;
+  position: relative !important;
+  z-index: 1 !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+}
+.calc-mode-btn:hover {
+  color: var(--text) !important;
+}
+.calc-mode-btn.active {
+  color: var(--text) !important;
+  font-weight: 700 !important;
+  background: transparent !important;
+}
+.calc-mode-bar .segmented-slider-pill {
+  background: var(--surface-elevated, var(--bg-card, #ffffff)) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15) !important;
+}
+
+@media (max-width: 768px) {
+  .calc-mode-bar {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    justify-content: flex-start !important;
+    padding: 3px 6px !important;
+    gap: 4px !important;
+  }
+  .calc-mode-btn {
+    padding: 6px 12px !important;
+    font-size: 0.78rem !important;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+  }
+}
+
+.cp-drag-toggle {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-weight: 500 !important;
+}
+.cp-drag-toggle.is-active {
+  background: var(--black, #111) !important;
+  color: var(--white, #fff) !important;
+  border-color: var(--black, #111) !important;
+}
+
+/* Black/dark theme overrides for calculator mode switcher */
+[data-theme="white-on-black"] .calc-mode-bar .segmented-slider-pill,
+[data-theme="yosemite-night"] .calc-mode-bar .segmented-slider-pill,
+[data-theme="art-deco"] .calc-mode-bar .segmented-slider-pill,
+[data-theme="coca-cola"] .calc-mode-bar .segmented-slider-pill,
+[data-theme="ubuntu"] .calc-mode-bar .segmented-slider-pill,
+[data-theme="linux-mint"] .calc-mode-bar .segmented-slider-pill {
+  background: var(--surface, var(--bg-card, #1e1e1e)) !important;
+  border-color: var(--border) !important;
+}
+[data-theme="white-on-black"] .calc-mode-btn.active,
+[data-theme="yosemite-night"] .calc-mode-btn.active,
+[data-theme="art-deco"] .calc-mode-btn.active,
+[data-theme="coca-cola"] .calc-mode-btn.active,
+[data-theme="ubuntu"] .calc-mode-btn.active,
+[data-theme="linux-mint"] .calc-mode-btn.active {
+  color: var(--text) !important;
+}
+[data-theme="white-on-black"] .calc-mode-btn,
+[data-theme="yosemite-night"] .calc-mode-btn,
+[data-theme="art-deco"] .calc-mode-btn,
+[data-theme="coca-cola"] .calc-mode-btn,
+[data-theme="ubuntu"] .calc-mode-btn,
+[data-theme="linux-mint"] .calc-mode-btn {
+  color: var(--text-secondary) !important;
+}
+
+/* === Diseases Database Mobile === */
+@media (max-width: 640px) {
+  .dis-database-wrapper {
+    padding: 10px 4px !important;
+  }
+  .dis-details-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .dis-fade {
+    width: 16px !important;
+  }
+}
+
+/* === Calendar Day Switcher === */
+.cal-day-switcher {
+  display: flex;
+  align-items: center;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  padding: 2px;
+  position: relative;
+  gap: 0;
+  overflow: hidden;
+}
+.cal-day-switcher-btn {
+  flex: 1;
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  position: relative;
+  z-index: 1;
+  transition: color 0.18s ease;
+  white-space: nowrap;
+}
+.cal-day-switcher-btn .dsw-day {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 600;
+}
+.cal-day-switcher-btn .dsw-num {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.cal-day-switcher-btn.active,
+.cal-day-switcher-btn:hover {
+  color: var(--text);
+}
+@media (max-width: 500px) {
+  .cal-day-switcher-btn {
+    padding: 4px 4px;
+    font-size: 0.65rem;
+  }
+}
+
+/* === Notes Tool Mobile Navigation & Drawer === */
+.notes-btn-to-folders,
+.notes-btn-sidebar-toggle,
+.notes-drawer-backdrop,
+.notes-drawer-close-btn {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .notes-app-wrapper {
+    display: flex !important;
+    flex-direction: column !important;
+    position: relative !important;
+    height: calc(100vh - 120px) !important;
+    min-height: 480px !important;
+    border-radius: 14px !important;
+    overflow: hidden !important;
+  }
+
+  /* 1. Mobile Default View: Folders View */
+  .notes-app-wrapper.mobile-view-folders .notes-sidebar-col {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    border-right: none !important;
+  }
+  .notes-app-wrapper.mobile-view-folders .notes-editor-col,
+  .notes-app-wrapper.mobile-view-folders .notes-list-col:not(.is-drawer-open) {
+    display: none !important;
+  }
+
+  /* 2. Mobile Notes View (Editor is visible) */
+  .notes-app-wrapper.mobile-view-notes .notes-sidebar-col {
+    display: none !important;
+  }
+  .notes-app-wrapper.mobile-view-notes .notes-editor-col {
+    display: flex !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* 3. Mobile Notes List: Accessible ONLY with a side bar */
+  .notes-app-wrapper .notes-list-col {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 84% !important;
+    max-width: 320px !important;
+    height: 100% !important;
+    z-index: 1000 !important;
+    background: var(--bg-card) !important;
+    border-right: 1px solid var(--border) !important;
+    box-shadow: none !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.24s ease !important;
+    display: flex !important;
+  }
+
+  .notes-app-wrapper .notes-list-col.is-drawer-open {
+    transform: translateX(0) !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45) !important;
+  }
+
+  /* Drawer Backdrop */
+  .notes-drawer-backdrop {
+    display: block !important;
+    position: absolute !important;
+    inset: 0 !important;
+    background: rgba(0, 0, 0, 0.45) !important;
+    z-index: 999 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity 0.22s ease !important;
+    backdrop-filter: blur(2px) !important;
+  }
+
+  .notes-drawer-backdrop.is-active {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+/* === Notes Tool Mobile Navigation & Drawer === */
+.notes-btn-to-folders,
+.notes-btn-sidebar-toggle,
+.notes-drawer-backdrop,
+.notes-drawer-close-btn {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .notes-app-wrapper {
+    display: flex !important;
+    flex-direction: column !important;
+    position: relative !important;
+    height: calc(100vh - 120px) !important;
+    min-height: 480px !important;
+    border-radius: 14px !important;
+    overflow: hidden !important;
+  }
+
+  /* 1. Mobile Default View: Folders View */
+  .notes-app-wrapper.mobile-view-folders .notes-sidebar-col {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    border-right: none !important;
+  }
+  .notes-app-wrapper.mobile-view-folders .notes-editor-col,
+  .notes-app-wrapper.mobile-view-folders .notes-list-col:not(.is-drawer-open) {
+    display: none !important;
+  }
+
+  /* 2. Mobile Notes View (Editor is visible) */
+  .notes-app-wrapper.mobile-view-notes .notes-sidebar-col {
+    display: none !important;
+  }
+  .notes-app-wrapper.mobile-view-notes .notes-editor-col {
+    display: flex !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* 3. Mobile Notes List: Accessible ONLY with a side bar */
+  .notes-app-wrapper .notes-list-col {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 84% !important;
+    max-width: 320px !important;
+    height: 100% !important;
+    z-index: 1000 !important;
+    background: var(--bg-card) !important;
+    border-right: 1px solid var(--border) !important;
+    box-shadow: none !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.24s ease !important;
+    display: flex !important;
+  }
+
+  .notes-app-wrapper .notes-list-col.is-drawer-open {
+    transform: translateX(0) !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45) !important;
+  }
+
+  /* Drawer Backdrop */
+  .notes-drawer-backdrop {
+    display: block !important;
+    position: absolute !important;
+    inset: 0 !important;
+    background: rgba(0, 0, 0, 0.45) !important;
+    z-index: 999 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity 0.22s ease !important;
+    backdrop-filter: blur(2px) !important;
+  }
+
+  .notes-drawer-backdrop.is-active {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  /* Mobile toolbar buttons */
+  .notes-btn-to-folders {
+    display: inline-flex !important;
+  }
+  .notes-btn-sidebar-toggle {
+    display: inline-flex !important;
+  }
+  .notes-drawer-close-btn {
+    display: inline-flex !important;
+  }
+  .notes-desktop-folder-label {
+    display: none !important;
+  }
+
+  .notes-toolbar-top {
+    padding: 8px 10px !important;
+    gap: 6px !important;
+  }
+
+  #notes-editor-container {
+    padding: 16px 16px !important;
+  }
+}
+
+/* === Anatomy Explorer In-Viewport Clinical HUD Badge === */
+.an-render-badge {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  max-width: 330px;
+  width: calc(100% - 28px);
+  background: var(--surface-elevated, var(--bg-card));
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  pointer-events: auto;
+  transition: opacity 0.18s ease;
+}
+
+@media (min-width: 641px) {
+  .an-render-badge {
+    max-width: 320px;
+    width: auto;
+  }
+}

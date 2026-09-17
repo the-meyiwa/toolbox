@@ -269,6 +269,10 @@ export default {
                   <button class="btn btn-sm" data-view="left">Side</button>
                 </div>
                 <div class="t3d-toolbar-right">
+                  <button class="btn btn-sm cp-drag-toggle" id="cp-drag-toggle" title="Drag to position items on canvas" aria-pressed="false" type="button">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px; margin-right:4px;"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x2="12" y1="2" y2="22"/></svg>
+                    <span>Drag</span>
+                  </button>
                   <label class="tool-checkbox"><input type="checkbox" id="cp-roof"> <span>Show roof</span></label>
                 </div>
               </div>
@@ -712,9 +716,162 @@ export default {
     });
 
     viewer.onSelect((obj) => {
+      if (isDragging) return;
       state.selected = obj?.userData.item?.key ?? null;
       renderItems(); renderEditor();
     });
+
+    /* ---------------- drag & drop positioning ---------------- */
+    let dragEnabled = false;
+    let isDragging = false;
+    let dragItem = null;
+    const dragPlane = new THREE.Plane();
+    const dragRaycaster = new THREE.Raycaster();
+    const dragPointer = new THREE.Vector2();
+    const dragPlaneIntersect = new THREE.Vector3();
+
+    const dragBtn = container.querySelector('#cp-drag-toggle');
+    const canvasDom = viewer.renderer.domElement;
+
+    dragBtn?.addEventListener('click', () => {
+      dragEnabled = !dragEnabled;
+      dragBtn.classList.toggle('is-active', dragEnabled);
+      dragBtn.setAttribute('aria-pressed', String(dragEnabled));
+      canvasDom.style.cursor = dragEnabled ? 'grab' : '';
+    });
+
+    function getCanvasPointer(e) {
+      const rect = canvasDom.getBoundingClientRect();
+      dragPointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      dragPointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    }
+
+    canvasDom.addEventListener('pointerdown', (e) => {
+      if (!dragEnabled || e.button !== 0) return;
+      getCanvasPointer(e);
+      viewer.camera.updateMatrixWorld();
+      dragRaycaster.setFromCamera(dragPointer, viewer.camera);
+
+      const hits = dragRaycaster.intersectObjects(viewer.pickables, true);
+      if (!hits.length) return;
+
+      let targetGroup = hits[0].object;
+      while (targetGroup && !targetGroup.userData?.item && targetGroup !== viewer.scene) {
+        targetGroup = targetGroup.parent;
+      }
+      if (!targetGroup?.userData?.item) return;
+
+      const it = targetGroup.userData.item;
+      dragItem = it;
+      isDragging = true;
+      viewer.controls.enabled = false;
+      canvasDom.style.cursor = 'grabbing';
+
+      state.selected = it.key;
+      viewer.select(targetGroup);
+      renderItems();
+      renderEditor();
+
+      if (it.kind === 'fitting') {
+        dragPlane.set(new THREE.Vector3(0, 1, 0), 0);
+      } else if (it.kind === 'opening') {
+        const { len, wid } = state;
+        if (it.wall === 'front') {
+          dragPlane.set(new THREE.Vector3(1, 0, 0), -len / 2);
+        } else if (it.wall === 'back') {
+          dragPlane.set(new THREE.Vector3(-1, 0, 0), -len / 2);
+        } else if (it.wall === 'left') {
+          dragPlane.set(new THREE.Vector3(0, 0, -1), -wid / 2);
+        } else {
+          dragPlane.set(new THREE.Vector3(0, 0, 1), -wid / 2);
+        }
+      }
+
+      e.stopPropagation();
+      try { canvasDom.setPointerCapture(e.pointerId); } catch {}
+    });
+
+    canvasDom.addEventListener('pointermove', (e) => {
+      if (!dragEnabled) return;
+      getCanvasPointer(e);
+      viewer.camera.updateMatrixWorld();
+      dragRaycaster.setFromCamera(dragPointer, viewer.camera);
+
+      if (!isDragging || !dragItem) {
+        const hits = dragRaycaster.intersectObjects(viewer.pickables, true);
+        canvasDom.style.cursor = hits.length > 0 ? 'grab' : '';
+        return;
+      }
+
+      if (!dragRaycaster.ray.intersectPlane(dragPlane, dragPlaneIntersect)) return;
+
+      const it = dragItem;
+      const u = state.unit;
+      const toDisplay = (m) => u === 'm' ? m.toFixed(2) : (m / M_PER_FT).toFixed(2);
+
+      if (it.kind === 'fitting') {
+        const spec = FITTINGS[it.type];
+        const w = it.rot % 2 ? spec.d : spec.w;
+        const d = it.rot % 2 ? spec.w : spec.d;
+        it.x = Math.max(w / 2, Math.min(state.len - w / 2, dragPlaneIntersect.x + state.len / 2));
+        it.z = Math.max(d / 2, Math.min(state.wid - d / 2, dragPlaneIntersect.z + state.wid / 2));
+
+        const grp = shell.children.find(c => c.userData.item?.key === it.key);
+        if (grp && grp.children[0]) {
+          const body = grp.children[0];
+          const h = spec.isWall ? Math.min(spec.h, state.hgt) : spec.h;
+          body.position.set(it.x - state.len / 2, h / 2, it.z - state.wid / 2);
+        }
+
+        const xIn = editorEl.querySelector('[data-prop="x"]');
+        const zIn = editorEl.querySelector('[data-prop="z"]');
+        if (xIn) xIn.value = toDisplay(it.x);
+        if (zIn) zIn.value = toDisplay(it.z);
+
+      } else if (it.kind === 'opening') {
+        const span = wallSpan(it.wall);
+        let along;
+        if (it.wall === 'front') {
+          along = dragPlaneIntersect.z + state.wid / 2;
+        } else if (it.wall === 'back') {
+          along = state.wid / 2 - dragPlaneIntersect.z;
+        } else if (it.wall === 'left') {
+          along = -(dragPlaneIntersect.x - state.len / 2);
+        } else {
+          along = dragPlaneIntersect.x + state.len / 2;
+        }
+        it.along = Math.max(it.w / 2, Math.min(span - it.w / 2, along));
+
+        const grp = shell.children.find(c => c.userData.item?.key === it.key);
+        if (grp && grp.children[0]) {
+          const panel = grp.children[0];
+          const { len, wid } = state;
+          if (it.wall === 'front' || it.wall === 'back') {
+            const sign = it.wall === 'front' ? 1 : -1;
+            panel.position.set(sign * (len / 2 + WALL_T / 2), it.sill + it.h / 2, sign * (it.along - wid / 2));
+          } else {
+            const sign = it.wall === 'left' ? -1 : 1;
+            panel.position.set(-(it.along - len / 2) * sign, it.sill + it.h / 2, sign * (wid / 2 + WALL_T / 2));
+          }
+        }
+
+        const alongIn = editorEl.querySelector('[data-prop="along"]');
+        if (alongIn) alongIn.value = toDisplay(it.along);
+      }
+    });
+
+    const endDrag = (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      dragItem = null;
+      viewer.controls.enabled = true;
+      canvasDom.style.cursor = dragEnabled ? 'grab' : '';
+      try { if (e?.pointerId) canvasDom.releasePointerCapture(e.pointerId); } catch {}
+      refreshLayout();
+    };
+
+    canvasDom.addEventListener('pointerup', endDrag);
+    canvasDom.addEventListener('pointercancel', endDrag);
 
     /* ---------------- size / unit / colour ---------------- */
 

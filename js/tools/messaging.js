@@ -350,7 +350,7 @@ export default {
       engine.on('connected', updateHeader);
       engine.on('disconnected', updateHeader);
 
-      await engine.join(currentRoomCode, displayName);
+      await engine.join({ roomCode: currentRoomCode, displayName });
       updateHeader();
       renderMessages();
     };
@@ -377,7 +377,11 @@ export default {
         engine.on('connected', updateHeader);
         engine.on('disconnected', updateHeader);
 
-        const code = await engine.create(name.trim(), 'Direct channel', displayName);
+        const code = await engine.create({
+          spaceName: name.trim(),
+          description: 'Direct channel',
+          displayName
+        });
         currentRoomCode = code;
         renderConvList();
         updateHeader();
