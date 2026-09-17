@@ -12248,15 +12248,17 @@ body[data-tool-id="container-planner"] .cq-rates {
   body[data-tool-id="container-planner"] .cq-tab[data-tab="rates"] {
     display: none !important;
   }
-  body[data-tool-id="container-planner"] .cq-panel,
-  body[data-tool-id="container-planner"] .cq-panel[data-panel="layout"],
-  body[data-tool-id="container-planner"] .cq-panel[data-panel="spec"],
-  body[data-tool-id="container-planner"] .cq-panel[data-panel="quote"],
-  body[data-tool-id="container-planner"] .cq-panel[data-panel="rates"] {
+  body[data-tool-id="container-planner"] .cq-panel {
     height: auto !important;
     overflow: visible !important;
-    display: flex !important;
     flex-direction: column !important;
+  }
+  body[data-tool-id="container-planner"] .cq-panel:not([hidden]) {
+    display: flex !important;
+  }
+  body[data-tool-id="container-planner"] .cq-panel[data-panel="quote"],
+  body[data-tool-id="container-planner"] .cq-panel[data-panel="rates"] {
+    display: none !important;
   }
   body[data-tool-id="container-planner"] .cp {
     display: flex !important;
