@@ -738,6 +738,7 @@ export default {
       dragBtn.classList.toggle('is-active', dragEnabled);
       dragBtn.setAttribute('aria-pressed', String(dragEnabled));
       canvasDom.style.cursor = dragEnabled ? 'grab' : '';
+      canvasDom.style.touchAction = dragEnabled ? 'none' : '';
     });
 
     function getCanvasPointer(e) {
@@ -866,6 +867,7 @@ export default {
       dragItem = null;
       viewer.controls.enabled = true;
       canvasDom.style.cursor = dragEnabled ? 'grab' : '';
+      canvasDom.style.touchAction = dragEnabled ? 'none' : '';
       try { if (e?.pointerId) canvasDom.releasePointerCapture(e.pointerId); } catch {}
       refreshLayout();
     };

@@ -12244,6 +12244,10 @@ body[data-tool-id="container-planner"] .cq-rates {
     padding: 6px 8px !important;
     text-align: center !important;
   }
+  body[data-tool-id="container-planner"] .cq-tab[data-tab="quote"],
+  body[data-tool-id="container-planner"] .cq-tab[data-tab="rates"] {
+    display: none !important;
+  }
   body[data-tool-id="container-planner"] .cq-panel,
   body[data-tool-id="container-planner"] .cq-panel[data-panel="layout"],
   body[data-tool-id="container-planner"] .cq-panel[data-panel="spec"],
