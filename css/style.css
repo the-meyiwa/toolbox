@@ -59,23 +59,37 @@ button:disabled, .btn:disabled, input:disabled, select:disabled, textarea:disabl
   --accent-glow: rgba(0, 0, 0, 0.15);
   --accent-contrast: #ffffff;
 
-  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", 'Inter', 'Segoe UI', sans-serif;
-  --mono: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", 'Inter', 'Segoe UI', sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, 'JetBrains Mono', monospace;
   --pixel: 'Pixelify Sans', var(--sans);
 
   /* Numbers you read at a glance get their own face. */
   --readout: 'VT323', 'Pixelify Sans', var(--mono);
 
-  /* Apple-like elevation shadows */
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.03);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 24px 48px rgba(0, 0, 0, 0.08), 0 8px 16px rgba(0, 0, 0, 0.03);
+  /* Diffuse Multi-Stop Layered Elevation Shadows */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 1px rgba(0, 0, 0, 0.02);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-md: 0 8px 16px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.02);
+  --shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.06), 0 4px 8px rgba(0, 0, 0, 0.02);
+  --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.08), 0 8px 16px rgba(0, 0, 0, 0.03);
+  --shadow: var(--shadow-sm);
+  --shadow-elevated: var(--shadow-lg);
 
-  /* Common UI Radius */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  /* Standardized Border Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 9999px;
+
+  /* Adaptive Glassmorphism */
+  --bg-glass: color-mix(in srgb, var(--bg-card) 75%, transparent);
+  --bg-glass-subtle: color-mix(in srgb, var(--bg-card) 60%, transparent);
+  --bg-glass-elevated: color-mix(in srgb, var(--surface-elevated, var(--bg-card)) 85%, transparent);
+  --backdrop-blur: blur(20px);
+  --backdrop-blur-sm: blur(12px);
+  --backdrop-blur-lg: blur(28px);
 
   --header-h: 57px;
 }
@@ -519,6 +533,16 @@ input[placeholder*="search" i]::placeholder {
   font-weight: 600;
   line-height: 1.4;
   transition: all 0.2s ease;
+}
+
+[data-theme="yosemite"] .ast-anim-glow {
+  color: #1d1d1f !important;
+  text-shadow: 0 0 10px rgba(0, 122, 255, 0.55), 0 0 1px rgba(0, 122, 255, 0.8) !important;
+}
+
+[data-theme="yosemite-night"] .ast-anim-glow {
+  color: #f5f5f7 !important;
+  text-shadow: 0 0 12px rgba(10, 132, 255, 0.7), 0 0 2px rgba(10, 132, 255, 0.9) !important;
 }
 
 /* ============================================================
@@ -7695,10 +7719,35 @@ input, select, textarea {
   color: var(--text) !important;
 }
 
+/* Dark Theme Layered Elevation Shadows Contract */
+[data-theme="white-on-black"],
+[data-theme="yosemite-night"],
+[data-theme="linux-mint"],
+[data-theme="ubuntu"],
+[data-theme="art-deco"],
+[data-theme="lagos"],
+[data-theme="african-textile"],
+[data-theme="british-racing-green"],
+[data-theme="wimbledon"],
+[data-theme="coca-cola"],
+[data-theme="mcdonalds"],
+[data-theme="playstation"],
+[data-theme="miami-vice"] {
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.07);
+  --shadow-md: 0 8px 16px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.09);
+  --shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.12);
+  --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.15);
+  --shadow: var(--shadow-sm);
+  --shadow-elevated: var(--shadow-lg);
+}
+
 /* Universal Token-Driven Component Styling (Flat + Dimensional + Subtle 3D) */
 [data-theme] #app-header {
-  background: var(--surface);
+  background: var(--bg-glass);
   border-bottom: 1px solid var(--border);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
 }
 
 [data-theme] .tool-card {
@@ -7822,7 +7871,9 @@ input, select, textarea {
 [data-theme] .finder-context-menu,
 [data-theme] .custom-dialog-window,
 [data-theme] .ast-attach-popup {
-  background: var(--surface-elevated);
+  background: var(--bg-glass-elevated);
+  backdrop-filter: var(--backdrop-blur-lg);
+  -webkit-backdrop-filter: var(--backdrop-blur-lg);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-elevated);
 }
@@ -10783,14 +10834,14 @@ body.standalone-mode .notes-app-wrapper {
   bottom: calc(100% + 8px);
   left: 0;
   z-index: 1000;
-  background: var(--bg-card);
+  background: var(--bg-glass-elevated);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius-lg, 12px);
   padding: 6px;
   min-width: 220px;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-xl);
+  backdrop-filter: var(--backdrop-blur-lg);
+  -webkit-backdrop-filter: var(--backdrop-blur-lg);
   font-family: var(--sans);
   flex-direction: column;
   gap: 2px;
@@ -11019,13 +11070,13 @@ body.tool-fullscreen #header-fs-exit-btn {
   z-index: 10000;
   min-width: 220px;
   max-width: 320px;
-  background: var(--bg-card);
+  background: var(--bg-glass-elevated);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg, 12px);
   padding: 6px;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-xl);
+  backdrop-filter: var(--backdrop-blur-lg);
+  -webkit-backdrop-filter: var(--backdrop-blur-lg);
   font-family: var(--sans);
   font-size: 0.82rem;
   box-sizing: border-box;
@@ -11498,35 +11549,35 @@ body.tool-fullscreen #header-fs-exit-btn {
 }
 
 [data-theme="yosemite"] #app-header {
-  background: rgba(245, 247, 250, 0.75) !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+  background: var(--bg-glass) !important;
+  backdrop-filter: var(--backdrop-blur) !important;
+  -webkit-backdrop-filter: var(--backdrop-blur) !important;
+  border-bottom: 1px solid var(--border) !important;
 }
 
 [data-theme="yosemite"] .tool-card {
-  background: rgba(255, 255, 255, 0.75) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(0, 0, 0, 0.08) !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04) !important;
+  background: var(--bg-glass) !important;
+  backdrop-filter: var(--backdrop-blur-sm) !important;
+  -webkit-backdrop-filter: var(--backdrop-blur-sm) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-sm) !important;
 }
 
 [data-theme="yosemite"] .tool-card:hover {
-  background: rgba(255, 255, 255, 0.95) !important;
+  background: var(--bg-glass-elevated) !important;
   border-color: rgba(0, 122, 255, 0.3) !important;
-  box-shadow: 0 8px 24px rgba(0, 122, 255, 0.12) !important;
+  box-shadow: var(--shadow-md) !important;
 }
 
 [data-theme="yosemite"] .settings-modal-window,
 [data-theme="yosemite"] .finder-context-menu,
 [data-theme="yosemite"] .custom-dialog-window,
 [data-theme="yosemite"] .ast-attach-popup {
-  background: rgba(248, 250, 253, 0.88) !important;
-  backdrop-filter: blur(30px) saturate(190%) !important;
-  -webkit-backdrop-filter: blur(30px) saturate(190%) !important;
-  border: 1px solid rgba(0, 0, 0, 0.12) !important;
-  box-shadow: 0 24px 60px rgba(0, 20, 50, 0.18) !important;
+  background: var(--bg-glass-elevated) !important;
+  backdrop-filter: var(--backdrop-blur-lg) !important;
+  -webkit-backdrop-filter: var(--backdrop-blur-lg) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-xl) !important;
 }
 
 [data-theme="yosemite"] .dis-fade-left {
@@ -11578,35 +11629,35 @@ body.tool-fullscreen #header-fs-exit-btn {
 }
 
 [data-theme="yosemite-night"] #app-header {
-  background: rgba(22, 26, 34, 0.82) !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: var(--bg-glass) !important;
+  backdrop-filter: var(--backdrop-blur) !important;
+  -webkit-backdrop-filter: var(--backdrop-blur) !important;
+  border-bottom: 1px solid var(--border) !important;
 }
 
 [data-theme="yosemite-night"] .tool-card {
-  background: rgba(30, 35, 45, 0.72) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+  background: var(--bg-glass) !important;
+  backdrop-filter: var(--backdrop-blur-sm) !important;
+  -webkit-backdrop-filter: var(--backdrop-blur-sm) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-sm) !important;
 }
 
 [data-theme="yosemite-night"] .tool-card:hover {
-  background: rgba(36, 42, 54, 0.9) !important;
+  background: var(--bg-glass-elevated) !important;
   border-color: rgba(10, 132, 255, 0.45) !important;
-  box-shadow: 0 8px 24px rgba(10, 132, 255, 0.22) !important;
+  box-shadow: var(--shadow-md) !important;
 }
 
 [data-theme="yosemite-night"] .settings-modal-window,
 [data-theme="yosemite-night"] .finder-context-menu,
 [data-theme="yosemite-night"] .custom-dialog-window,
 [data-theme="yosemite-night"] .ast-attach-popup {
-  background: rgba(26, 30, 38, 0.9) !important;
-  backdrop-filter: blur(30px) saturate(190%) !important;
-  -webkit-backdrop-filter: blur(30px) saturate(190%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6) !important;
+  background: var(--bg-glass-elevated) !important;
+  backdrop-filter: var(--backdrop-blur-lg) !important;
+  -webkit-backdrop-filter: var(--backdrop-blur-lg) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-xl) !important;
 }
 
 [data-theme="yosemite-night"] .dis-fade-left {
@@ -11623,7 +11674,7 @@ body.tool-fullscreen #header-fs-exit-btn {
 :root,
 [data-theme="default"],
 [data-theme="white-on-black"] {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--sans);
 }
 
 [data-theme="linux-mint"],
@@ -11680,7 +11731,7 @@ body.tool-fullscreen #header-fs-exit-btn {
 [data-theme="yosemite-night"] h4,
 [data-theme="yosemite-night"] h5,
 [data-theme="yosemite-night"] h6 {
-  font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+  font-family: var(--sans) !important;
 }
 
 /* ============================================================
@@ -11784,172 +11835,6 @@ body.tool-fullscreen #header-fs-exit-btn {
   background: linear-gradient(180deg, #1d2129 0%, #252b35 100%) !important;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45) !important;
 }
-
-/* ============================================================
-   ASSISTANT TEXT ANIMATIONS & SETTINGS PREVIEW
-   Verified across all themes (Light, Dark, Glass)
-   ============================================================ */
-/* 1. Color Rave Animation */
-.ast-anim-color-rave {
-  background: linear-gradient(
-    135deg,
-    #ff0055 0%,
-    #e65100 14%,
-    #d97706 28%,
-    #10b981 42%,
-    #007aff 57%,
-    #7928ca 71%,
-    #ff00aa 85%,
-    #ff0055 100%
-  );
-  background-size: 250% 250%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-  animation: astColorRave 4s linear infinite;
-  display: inline-block;
-}
-
-.ast-anim-color-rave p,
-.ast-anim-color-rave span,
-.ast-anim-color-rave strong,
-.ast-anim-color-rave em,
-.ast-anim-color-rave li,
-.ast-anim-color-rave h1,
-.ast-anim-color-rave h2,
-.ast-anim-color-rave h3,
-.ast-anim-color-rave h4,
-.ast-anim-color-rave h5,
-.ast-anim-color-rave h6 {
-  background: inherit;
-  background-size: inherit;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-  animation: inherit;
-}
-
-.ast-anim-color-rave pre,
-.ast-anim-color-rave code,
-.ast-anim-color-rave button {
-  -webkit-text-fill-color: initial !important;
-  color: initial !important;
-}
-
-@keyframes astColorRave {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-/* 2. Glow Animation */
-.ast-anim-glow,
-.ast-anim-pixel {
-  color: var(--text, #111) !important;
-  animation: astGlowEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards, astGlowPulse 2.8s ease-in-out infinite alternate;
-  display: inline-block;
-}
-
-@keyframes astGlowEntrance {
-  0% {
-    opacity: 0;
-    transform: translateY(3px);
-    text-shadow: 0 0 14px var(--accent, #6366f1), 0 0 24px var(--accent, #6366f1);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-    text-shadow: 0 0 5px var(--accent, rgba(99, 102, 241, 0.5));
-  }
-}
-
-@keyframes astGlowPulse {
-  0% {
-    text-shadow: 0 0 3px var(--accent, rgba(99, 102, 241, 0.35));
-  }
-  50% {
-    text-shadow: 0 0 9px var(--accent, rgba(99, 102, 241, 0.75)), 0 0 18px var(--accent, rgba(99, 102, 241, 0.4));
-  }
-  100% {
-    text-shadow: 0 0 3px var(--accent, rgba(99, 102, 241, 0.35));
-  }
-}
-
-/* 3. Plain Fade Animation */
-.ast-anim-plain-fade {
-  color: var(--text, #111) !important;
-  animation: astPlainFade 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  display: inline-block;
-}
-
-@keyframes astPlainFade {
-  0% {
-    opacity: 0;
-    transform: translateY(8px);
-    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.12));
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-    filter: drop-shadow(0 0 0 transparent);
-  }
-}
-
-/* 4. Pop In Animation */
-.ast-anim-pop-in {
-  color: var(--text, #111) !important;
-  animation: astPopIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  transform-origin: center;
-  display: inline-block;
-}
-
-@keyframes astPopIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.92) translateY(5px);
-  }
-  70% {
-    transform: scale(1.03) translateY(-1px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-/* Animation preview box & text */
-.ast-anim-preview-box {
-  padding: 12px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  min-height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-.ast-anim-preview-text {
-  font-size: 0.9rem;
-  font-weight: 600;
-  line-height: 1.4;
-  transition: all 0.2s ease;
-}
-
-[data-theme="yosemite"] .ast-anim-glow {
-  color: #1d1d1f !important;
-  text-shadow: 0 0 10px rgba(0, 122, 255, 0.55), 0 0 1px rgba(0, 122, 255, 0.8) !important;
-}
-
-[data-theme="yosemite-night"] .ast-anim-glow {
-  color: #f5f5f7 !important;
-  text-shadow: 0 0 12px rgba(10, 132, 255, 0.7), 0 0 2px rgba(10, 132, 255, 0.9) !important;
-}
-
-
 
 /* ============================================================
    FILES PAGE CONTAINER & FADE OVERFLOW BORDER
@@ -14582,13 +14467,13 @@ body[data-tool-id="container-planner"] .cq-rates {
   left: 14px;
   max-width: 330px;
   width: calc(100% - 28px);
-  background: var(--surface-elevated, var(--bg-card));
+  background: var(--bg-glass-elevated);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius-lg, 14px);
   padding: 12px 14px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: var(--backdrop-blur-sm, blur(12px));
+  -webkit-backdrop-filter: var(--backdrop-blur-sm, blur(12px));
   z-index: 10;
   display: flex;
   flex-direction: column;
