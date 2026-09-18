@@ -147,6 +147,8 @@ export default {
     });
 
     let history = [];
+    let inputHistoryIndex = -1;
+    let inputDraft = '';
 
     const taskState = {
       activeToolId: currentToolId || null,
@@ -633,7 +635,32 @@ export default {
     userInput?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
+        inputHistoryIndex = -1;
+        inputDraft = '';
         handleSend();
+      } else if (e.key === 'ArrowUp') {
+        const userMsgs = history.filter(m => m.role === 'user');
+        if (userMsgs.length > 0) {
+          if (inputHistoryIndex === -1) {
+            inputDraft = userInput.value;
+          }
+          if (inputHistoryIndex < userMsgs.length - 1) {
+            inputHistoryIndex++;
+            userInput.value = userMsgs[userMsgs.length - 1 - inputHistoryIndex].content;
+            handleAutoResize();
+          }
+        }
+      } else if (e.key === 'ArrowDown') {
+        const userMsgs = history.filter(m => m.role === 'user');
+        if (inputHistoryIndex > -1) {
+          inputHistoryIndex--;
+          if (inputHistoryIndex === -1) {
+            userInput.value = inputDraft;
+          } else {
+            userInput.value = userMsgs[userMsgs.length - 1 - inputHistoryIndex].content;
+          }
+          handleAutoResize();
+        }
       }
     });
 
@@ -972,6 +999,15 @@ export default {
           const rem = Math.floor(s % 60);
           return `${m}:${rem < 10 ? '0' : ''}${rem}`;
         };
+
+        AssistantAudioManager.restore({
+          audioId: audioId,
+          title: result.title,
+          artist: result.artist,
+          artworkUrl: result.artworkUrl,
+          url: result.url,
+          duration: result.duration
+        });
 
         return `
           <div class="ast-audio-player-card" data-audio-id="${audioId}" style="padding:14px 16px; background:var(--white); border:1px solid var(--g300); border-radius:14px; box-shadow:0 4px 14px rgba(0,0,0,0.05); margin-top:8px;">

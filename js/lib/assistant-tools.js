@@ -39,6 +39,10 @@ import {
 import { fs } from './filesystem.js';
 import { queryDns } from './dns-resolver.js';
 import { fetchPackageMetadata } from './npm-client.js';
+import * as artifacts from './artifacts.js';
+import { listJoinedSpaces, getJoinedSpace, SpaceEngine } from './space-engine.js';
+import { getPublicProfiles } from './profile-system.js';
+
 
 let activeAssistantAudios = [];
 
@@ -47,7 +51,80 @@ let activeAssistantAudios = [];
  */
 const registryDeclarations = toolDiscovery.generateNavigationDeclarations();
 
-export const ASSISTANT_TOOL_DECLARATIONS = [
+export const ASSISTANT_TOOL_DECLARATIONS = [,
+  {
+    name: 'list_saved_artifacts',
+    description: 'List all saved files and artifacts in Toolbox (Files/Saved view).',
+    parameters: { type: 'OBJECT', properties: {} }
+  },
+  {
+    name: 'read_artifact',
+    description: 'Read the contents of a saved file or artifact by its ID.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        id: { type: 'STRING', description: 'The ID of the artifact to read.' }
+      },
+      required: ['id']
+    }
+  },
+  {
+    name: 'create_artifact',
+    description: 'Create and save a new artifact/file.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        name: { type: 'STRING', description: 'Name of the artifact.' },
+        kind: { type: 'STRING', description: 'Kind/type (e.g., text, code, md).' },
+        text: { type: 'STRING', description: 'Content of the artifact.' }
+      },
+      required: ['name', 'text']
+    }
+  },
+  {
+    name: 'delete_artifact',
+    description: 'Delete a saved artifact by ID.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        id: { type: 'STRING', description: 'The ID of the artifact to delete.' }
+      },
+      required: ['id']
+    }
+  },
+  {
+    name: 'list_conversations',
+    description: 'List all active messaging spaces/conversations the user has joined.',
+    parameters: { type: 'OBJECT', properties: {} }
+  },
+  {
+    name: 'read_space_messages',
+    description: 'Read the latest messages from a messaging space conversation by space code.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        code: { type: 'STRING', description: 'The space code (e.g. QWEASD).' }
+      },
+      required: ['code']
+    }
+  },
+  {
+    name: 'send_space_message',
+    description: 'Send a message into a messaging space conversation.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        code: { type: 'STRING', description: 'The space code.' },
+        text: { type: 'STRING', description: 'The message text to send.' }
+      },
+      required: ['code', 'text']
+    }
+  },
+  {
+    name: 'list_profiles',
+    description: 'List public user profiles for socializing.',
+    parameters: { type: 'OBJECT', properties: {} }
+  },
   {
     name: 'run_speed_test',
     description: 'Measures live internet connection speed (download bandwidth Mbps, latency ping in ms, jitter in ms, ISP organization, and edge location).',

@@ -586,3 +586,11 @@ Specifically:
 - Dark translucent glass themes (e.g. Yosemite Night) require appropriate luminous glow parameters and border separation.
 - Ensure all animation utility classes (`.ast-anim-*`, preview containers) and their `@keyframes` are preserved in the core stylesheet.
 - When adding or modifying preview containers or animation styles, verify legibility across light, dark, and translucent themes before concluding changes.
+==================================================
+25. PREMIUM "POWERWASH" UI STANDARDS
+==================================================
+
+When modernizing or styling components, adhere to these premium aesthetic tokens to balance functional minimalism with a high-quality finish:
+- **Typography**: Utilize premium native system stacks (e.g., `-apple-system, BlinkMacSystemFont, "SF Pro Display"`).
+- **Elevation**: Use diffuse, multi-layered shadows (e.g., `0 24px 48px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.03)`) instead of harsh, single-layer drop shadows.
+- **Adaptive Glassmorphism**: When using `backdrop-filter: blur`, *never* hardcode opaque white/black backgrounds. Always use `color-mix(in srgb, var(--bg-card) 75%, transparent)` (or similar percentages) to ensure flawless adaptation across all 28 custom themes.

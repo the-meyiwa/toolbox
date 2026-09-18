@@ -563,8 +563,12 @@ export default {
     /* ---------------- start ---------------- */
 
     renderList();
-    const first = systemsEl.querySelector('[data-system="skeletal"]');
-    if (first) { first.checked = true; first.dispatchEvent(new Event('change', { bubbles: true })); }
+    // Render the full anatomy by enabling all systems
+    const systemCBs = systemsEl.querySelectorAll('input[type="checkbox"]');
+    systemCBs.forEach(cb => {
+      cb.checked = true;
+      cb.dispatchEvent(new Event('change', { bubbles: true }));
+    });
   },
 
   destroy() {

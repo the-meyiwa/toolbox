@@ -7,6 +7,7 @@
 
 import { SpaceEngine, listJoinedSpaces, saveJoinedSpace, getUserProfile, saveUserProfile, prewarmSignaling } from '../lib/space-engine.js';
 import { tbAlert, tbPrompt, tbConfirm } from '../lib/dialog.js';
+import { getMyProfile, updateMyProfile, getPublicProfiles } from '../lib/profile-system.js';
 
 const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -85,7 +86,11 @@ export default {
 
           <div class="msg-conv-list" id="msg-conv-list"></div>
 
-          <div class="msg-sidebar-footer">
+          <div class="msg-sidebar-footer" style="display:flex; flex-direction:column; gap:8px;">
+            <button type="button" class="btn btn-secondary btn-sm msg-discover-btn" id="msg-discover-btn" style="width:100%; justify-content:center;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+              <span>Discover & Profile</span>
+            </button>
             <button type="button" class="btn btn-secondary btn-sm msg-join-btn" id="msg-join-btn" style="width:100%; justify-content:center;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
               <span>Join with Code</span>
@@ -128,6 +133,9 @@ export default {
               <h4 style="margin:0 0 6px; font-weight:700; color:var(--text);">Direct &amp; Group Messaging</h4>
               <p style="margin:0; font-size:0.84rem; color:var(--text-muted); max-width:360px;">Select a conversation or start a new direct channel with a code.</p>
             </div>
+          </div>
+          
+          <div class="msg-discover-view" id="msg-discover-view" style="display:none; flex:1; overflow-y:auto; padding:20px; background:var(--bg-card);">
           </div>
 
           <!-- Typing Indicator -->
@@ -182,6 +190,10 @@ export default {
     const backBtn = container.querySelector('#msg-back-btn');
     const newBtn = container.querySelector('#msg-new-btn');
     const joinBtn = container.querySelector('#msg-join-btn');
+    const discoverBtn = container.querySelector('#msg-discover-btn');
+    const discoverView = container.querySelector('#msg-discover-view');
+    const chatHeader = container.querySelector('#msg-chat-header');
+    const composerWrap = container.querySelector('#msg-composer-wrap');
 
     // Update conversation sidebar list
     const renderConvList = () => {
@@ -329,8 +341,71 @@ export default {
       }
     };
 
+    const showStream = () => {
+      discoverView.style.display = 'none';
+      stream.style.display = 'block';
+      chatHeader.style.display = 'flex';
+      composerWrap.style.display = 'block';
+    };
+
+    const showDiscover = () => {
+      stream.style.display = 'none';
+      chatHeader.style.display = 'none';
+      composerWrap.style.display = 'none';
+      discoverView.style.display = 'block';
+      
+      const myProfile = getMyProfile();
+      const publics = getPublicProfiles();
+
+      discoverView.innerHTML = `
+        <div style="max-width:600px; margin:0 auto;">
+          <h2 style="font-weight:700; margin-bottom:20px;">My Profile</h2>
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:30px;">
+            <div style="display:flex; gap:16px; align-items:center;">
+              <div style="width:60px; height:60px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:1.5rem; font-weight:700;">${escapeHtml(myProfile.avatar)}</div>
+              <div style="flex:1;">
+                <input type="text" id="prof-name" class="tool-input" value="${escapeHtml(myProfile.name)}" style="font-size:1.1rem; font-weight:700; border:none; background:transparent; padding:0; margin-bottom:4px; width:100%;">
+                <input type="text" id="prof-username" class="tool-input" value="${escapeHtml(myProfile.username)}" style="font-size:0.85rem; color:var(--text-muted); border:none; background:transparent; padding:0; width:100%;" placeholder="@username">
+              </div>
+            </div>
+            <div style="margin-top:16px; display:flex; gap:12px;">
+              <input type="text" id="prof-affiliation" class="tool-input" value="${escapeHtml(myProfile.affiliation)}" placeholder="Affiliation" style="flex:1;">
+              <input type="text" id="prof-bio" class="tool-input" value="${escapeHtml(myProfile.bio)}" placeholder="Bio" style="flex:2;">
+              <button class="btn btn-primary" id="prof-save-btn">Save</button>
+            </div>
+          </div>
+
+          <h2 style="font-weight:700; margin-bottom:20px;">Discover Network</h2>
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            ${publics.map(p => `
+              <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:16px; display:flex; gap:16px; align-items:center;">
+                <div style="width:48px; height:48px; border-radius:50%; background:var(--bg-subtle); display:flex; align-items:center; justify-content:center; font-weight:700;">${escapeHtml(p.avatar)}</div>
+                <div style="flex:1;">
+                  <div style="font-weight:600; font-size:0.95rem;">${escapeHtml(p.name)} <span style="font-weight:400; color:var(--text-muted); font-size:0.8rem;">@${escapeHtml(p.username)}</span></div>
+                  <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">${escapeHtml(p.affiliation)}</div>
+                  <div style="font-size:0.85rem; margin-top:6px;">${escapeHtml(p.bio)}</div>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="alert('Messaging users directly not yet implemented.')">Message</button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+
+      discoverView.querySelector('#prof-save-btn').addEventListener('click', () => {
+        updateMyProfile({
+          name: discoverView.querySelector('#prof-name').value,
+          username: discoverView.querySelector('#prof-username').value,
+          affiliation: discoverView.querySelector('#prof-affiliation').value,
+          bio: discoverView.querySelector('#prof-bio').value
+        });
+        tbAlert('Profile updated.', 'Profile');
+      });
+    };
+
     // Connect to room code
     const connectToRoom = async (code) => {
+      showStream();
       if (!code) return;
       currentRoomCode = code.toUpperCase();
       renderConvList();
@@ -338,7 +413,7 @@ export default {
       engine.leave();
       engine = new SpaceEngine();
 
-      const profile = getUserProfile();
+      const profile = getMyProfile();
       const displayName = profile.name || 'Member ' + Math.floor(100 + Math.random() * 900);
 
       engine.on('chat-update', renderMessages);
@@ -502,6 +577,12 @@ export default {
     searchInput.addEventListener('input', renderConvList);
     newBtn.addEventListener('click', handleNewConversation);
     joinBtn.addEventListener('click', handleJoinWithCode);
+    discoverBtn.addEventListener('click', () => {
+      showDiscover();
+      if (window.innerWidth <= 768) {
+        sidebar.classList.add('mobile-collapsed');
+      }
+    });
 
     // Initial render
     renderConvList();
@@ -515,6 +596,13 @@ export default {
       clearTimeout(typingTimer);
       engine.leave();
     };
+  },
+
+  getContextMenu(e) {
+    return [
+      { label: 'New Conversation', action: () => document.getElementById('msg-new-btn')?.click() },
+      { label: 'Join with Code', action: () => document.getElementById('msg-join-btn')?.click() }
+    ];
   },
 
   destroy() {

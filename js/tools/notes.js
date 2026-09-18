@@ -436,9 +436,20 @@ export default {
     titleInput.addEventListener('input', () => {
       const note = getActiveNote();
       if (note) {
+        const oldText = (note.title || '') + ' ' + (note.body || '');
+        const oldAutoTags = extractHashtags(oldText);
+        
         note.title = titleInput.value;
-        const autoTags = extractHashtags(note.title + ' ' + (note.body || ''));
-        autoTags.forEach(t => { if (!note.hashtags.includes(t)) note.hashtags.push(t); });
+        const newText = (note.title || '') + ' ' + (note.body || '');
+        const newAutoTags = extractHashtags(newText);
+        
+        const removedAutoTags = oldAutoTags.filter(t => !newAutoTags.includes(t));
+        const addedAutoTags = newAutoTags.filter(t => !oldAutoTags.includes(t));
+        
+        if (!note.hashtags) note.hashtags = [];
+        note.hashtags = note.hashtags.filter(t => !removedAutoTags.includes(t));
+        addedAutoTags.forEach(t => { if (!note.hashtags.includes(t)) note.hashtags.push(t); });
+        
         note.updatedAt = Date.now();
         saveNotes();
         renderNoteList();
@@ -448,12 +459,28 @@ export default {
     bodyEditor.addEventListener('input', () => {
       const note = getActiveNote();
       if (note) {
+        const oldText = (note.title || '') + ' ' + (note.body || '');
+        const oldAutoTags = extractHashtags(oldText);
+        
         note.body = bodyEditor.innerText;
-        const autoTags = extractHashtags(note.title + ' ' + (note.body || ''));
-        autoTags.forEach(t => { if (!note.hashtags.includes(t)) note.hashtags.push(t); });
+        const newText = (note.title || '') + ' ' + (note.body || '');
+        const newAutoTags = extractHashtags(newText);
+        
+        const removedAutoTags = oldAutoTags.filter(t => !newAutoTags.includes(t));
+        const addedAutoTags = newAutoTags.filter(t => !oldAutoTags.includes(t));
+        
+        if (!note.hashtags) note.hashtags = [];
+        note.hashtags = note.hashtags.filter(t => !removedAutoTags.includes(t));
+        addedAutoTags.forEach(t => { if (!note.hashtags.includes(t)) note.hashtags.push(t); });
+        
         note.updatedAt = Date.now();
         saveNotes();
         updateCounts();
+        // Since tags might have been added or removed, re-render them and the note list
+        if (removedAutoTags.length > 0 || addedAutoTags.length > 0) {
+          renderEditorHashtags();
+          renderNoteList();
+        }
       }
     });
 

@@ -1369,6 +1369,24 @@ export class AudioPlayerResultRenderer extends ResultRenderer {
       Boolean(result?.audioId);
   }
 
+  static async reconstruct(result) {
+    const data = result?.data || result || {};
+    const audioId = data.audioId || result?.audioId;
+    if (audioId && data.url) {
+      AssistantAudioManager.restore({
+        audioId,
+        title: data.title || result?.title,
+        artist: data.artist || result?.artist,
+        artworkUrl: data.artworkUrl || result?.artworkUrl,
+        url: data.url,
+        duration: data.duration || result?.duration,
+        currentTime: 0,
+        volume: 1
+      });
+    }
+    return result;
+  }
+
   static render(result, container) {
     const data = result?.data || result || {};
     const audioId = data.audioId || result?.audioId;

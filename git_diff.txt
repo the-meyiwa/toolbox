@@ -1,0 +1,543 @@
+﻿diff --git a/.agents/rules/user-interface.md b/.agents/rules/user-interface.md
+index 6904c1c..904d290 100644
+--- a/.agents/rules/user-interface.md
++++ b/.agents/rules/user-interface.md
+@@ -585,4 +585,12 @@ Specifically:
+ - Light and translucent glass themes (e.g. Yosemite) require deliberate text contrast, solid/accent fallback shadows, and explicit background clipping support.
+ - Dark translucent glass themes (e.g. Yosemite Night) require appropriate luminous glow parameters and border separation.
+ - Ensure all animation utility classes (`.ast-anim-*`, preview containers) and their `@keyframes` are preserved in the core stylesheet.
+-- When adding or modifying preview containers or animation styles, verify legibility across light, dark, and translucent themes before concluding changes.
+\ No newline at end of file
++- When adding or modifying preview containers or animation styles, verify legibility across light, dark, and translucent themes before concluding changes.
++==================================================
++25. PREMIUM "POWERWASH" UI STANDARDS
++==================================================
++
++When modernizing or styling components, adhere to these premium aesthetic tokens to balance functional minimalism with a high-quality finish:
++- **Typography**: Utilize premium native system stacks (e.g., `-apple-system, BlinkMacSystemFont, "SF Pro Display"`).
++- **Elevation**: Use diffuse, multi-layered shadows (e.g., `0 24px 48px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.03)`) instead of harsh, single-layer drop shadows.
++- **Adaptive Glassmorphism**: When using `backdrop-filter: blur`, *never* hardcode opaque white/black backgrounds. Always use `color-mix(in srgb, var(--bg-card) 75%, transparent)` (or similar percentages) to ensure flawless adaptation across all 28 custom themes.
+diff --git a/js/app.js b/js/app.js
+index 2ab43f0..bee07d2 100644
+--- a/js/app.js
++++ b/js/app.js
+@@ -26,6 +26,7 @@ import { initScrollNarrative } from './about-scroll.js';
+ import './lib/dialog.js';
+ import { initHomeScrollNarrative } from './home-scroll.js';
+ import { listJoinedSpaces } from './lib/space-engine.js';
++import { openContextMenu } from './lib/context-menu.js';
+ 
+ /* --------------- state --------------- */
+ 
+@@ -1071,6 +1072,29 @@ artifacts.onChange(reflectSavedWork);
+ reflectSavedWork();
+ reflectWorkSpaces();
+ 
++viewport.addEventListener('contextmenu', (e) => {
++  if (['INPUT', 'TEXTAREA'].includes(e.target.tagName) || e.target.closest('[contenteditable="true"]')) return;
++  
++  let items = [];
++  if (currentToolInstance && typeof currentToolInstance.getContextMenu === 'function') {
++      const customItems = currentToolInstance.getContextMenu(e);
++      if (customItems && customItems.length > 0) {
++          items = items.concat(customItems);
++      }
++  }
++  
++  if (currentToolObj) {
++      if (items.length > 0) items.push({ separator: true });
++      items.push({ label: 'Copy Tool Link', action: () => copyText(window.location.href) });
++      const standaloneMode = new URLSearchParams(window.location.search).get('standalone') === 'true';
++      if (!standaloneMode) {
++          items.push({ label: 'Open in new tab', action: () => window.open(window.location.href, '_blank') });
++      }
++      openContextMenu({ x: e.clientX, y: e.clientY, items, title: currentToolObj.name });
++      e.preventDefault();
++  }
++});
++
+ initTheme();
+ installSettingsUI();
+ installHeaderMenu();
+diff --git a/js/lib/assistant-result-renderer.js b/js/lib/assistant-result-renderer.js
+index f23ae13..005514a 100644
+--- a/js/lib/assistant-result-renderer.js
++++ b/js/lib/assistant-result-renderer.js
+@@ -1369,6 +1369,24 @@ export class AudioPlayerResultRenderer extends ResultRenderer {
+       Boolean(result?.audioId);
+   }
+ 
++  static async reconstruct(result) {
++    const data = result?.data || result || {};
++    const audioId = data.audioId || result?.audioId;
++    if (audioId && data.url) {
++      AssistantAudioManager.restore({
++        audioId,
++        title: data.title || result?.title,
++        artist: data.artist || result?.artist,
++        artworkUrl: data.artworkUrl || result?.artworkUrl,
++        url: data.url,
++        duration: data.duration || result?.duration,
++        currentTime: 0,
++        volume: 1
++      });
++    }
++    return result;
++  }
++
+   static render(result, container) {
+     const data = result?.data || result || {};
+     const audioId = data.audioId || result?.audioId;
+diff --git a/js/lib/assistant-tools.js b/js/lib/assistant-tools.js
+index c278063..f3424fb 100644
+--- a/js/lib/assistant-tools.js
++++ b/js/lib/assistant-tools.js
+@@ -39,6 +39,8 @@ import {
+ import { fs } from './filesystem.js';
+ import { queryDns } from './dns-resolver.js';
+ import { fetchPackageMetadata } from './npm-client.js';
++import * as artifacts from './artifacts.js';
++import { listJoinedSpaces } from './space-engine.js';
+ 
+ let activeAssistantAudios = [];
+ 
+@@ -48,6 +50,27 @@ let activeAssistantAudios = [];
+ const registryDeclarations = toolDiscovery.generateNavigationDeclarations();
+ 
+ export const ASSISTANT_TOOL_DECLARATIONS = [
++  {
++    name: 'list_saved_artifacts',
++    description: 'List all saved files and artifacts in Toolbox (Files/Saved view).',
++    parameters: { type: 'OBJECT', properties: {} }
++  },
++  {
++    name: 'read_artifact',
++    description: 'Read the contents of a saved file or artifact by its ID.',
++    parameters: {
++      type: 'OBJECT',
++      properties: {
++        id: { type: 'STRING', description: 'The ID of the artifact to read.' }
++      },
++      required: ['id']
++    }
++  },
++  {
++    name: 'list_conversations',
++    description: 'List all active messaging spaces/conversations the user has joined.',
++    parameters: { type: 'OBJECT', properties: {} }
++  },
+   {
+     name: 'run_speed_test',
+     description: 'Measures live internet connection speed (download bandwidth Mbps, latency ping in ms, jitter in ms, ISP organization, and edge location).',
+@@ -6009,6 +6032,52 @@ if (container) {
+         ...importRes
+       };
+     }
++    case 'list_saved_artifacts': {
++      try {
++        const list = await artifacts.list();
++        return {
++          status: 'success',
++          type: 'artifacts-list',
++          count: list.length,
++          artifacts: list,
++          message: `Found ${list.length} saved artifact(s).`
++        };
++      } catch (err) {
++        return { status: 'error', success: false, message: `Failed to list artifacts: ${err.message}` };
++      }
++    }
++
++    case 'read_artifact': {
++      try {
++        const file = await artifacts.read(args.id);
++        if (!file) return { status: 'error', success: false, message: `Artifact ${args.id} not found.` };
++        return {
++          status: 'success',
++          type: 'artifact-content',
++          id: file.id,
++          name: file.name,
++          content: file.text,
++          message: `Read artifact ${file.name} successfully.`
++        };
++      } catch (err) {
++        return { status: 'error', success: false, message: `Failed to read artifact: ${err.message}` };
++      }
++    }
++
++    case 'list_conversations': {
++      try {
++        const spaces = listJoinedSpaces();
++        return {
++          status: 'success',
++          type: 'spaces-list',
++          count: spaces.length,
++          spaces: spaces,
++          message: `Found ${spaces.length} active conversation(s).`
++        };
++      } catch (err) {
++        return { status: 'error', success: false, message: `Failed to list conversations: ${err.message}` };
++      }
++    }
+ 
+     default:
+       return { status: 'error', message: `Unknown assistant tool or capability: ${name}` };
+diff --git a/js/lib/settings-ui.js b/js/lib/settings-ui.js
+index 461b501..6cc4028 100644
+--- a/js/lib/settings-ui.js
++++ b/js/lib/settings-ui.js
+@@ -15,6 +15,7 @@ import { getCurrentUser, updateUserProfile, claimUsername, getUsernameChangeStat
+ import { getSettings, updateSettings, exportSettings, importSettings } from './settings.js';
+ import { PROFILE_PICTURES, getProfilePictureSrc, getUserAvatarHtml } from './profile-pictures.js';
+ import { openAccountModal } from '../views/account-modal.js';
++import { getGeminiApiKey, setGeminiApiKey } from './ai-provider.js';
+ 
+ let modalEl = null;
+ let isOpen = false;
+@@ -605,6 +606,17 @@ function renderAiSettings() {
+ 
+     <div style="background:var(--bg-subtle); border:1px solid var(--border); border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:16px;">
+       
++      <!-- Gemini API Key -->
++      <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px;">
++        <div style="flex:1;">
++          <div style="font-size:0.84rem; font-weight:700; color:var(--text);">Gemini API Key</div>
++          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
++            Set your custom API key for the AI Assistant.
++          </div>
++        </div>
++        <input type="password" id="settings-gemini-api-key" class="tool-input" placeholder="AIzaSy..." value="${escapeHtml(getGeminiApiKey())}" style="min-width:200px; font-size:0.82rem; padding:6px 10px;">
++      </div>
++
+       <!-- Response text animation toggle -->
+       <label style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+         <div>
+@@ -715,6 +727,10 @@ function renderAiSettings() {
+       tbAlert(err.message, 'Settings Error');
+     }
+   });
++
++  container.querySelector('#settings-gemini-api-key')?.addEventListener('input', (e) => {
++    setGeminiApiKey(e.target.value);
++  });
+ }
+ 
+ function renderStorageSettings() {
+diff --git a/js/registry/tools.js b/js/registry/tools.js
+index 6aec0c3..d166bbf 100644
+--- a/js/registry/tools.js
++++ b/js/registry/tools.js
+@@ -1177,6 +1177,20 @@ export const TOOLS = [
+     weight: 86,
+     icon: svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15h6"/><path d="M9 11h6"/><path d="M9 19h4"/>'),
+   },
++  {
++    id: 'spotify',
++    name: 'Spotify Player',
++    description: 'Search and play music from Spotify',
++    category: 'audio',
++    keywords: ['spotify', 'music', 'player', 'songs', 'audio', 'track', 'search'],
++    synonyms: ['music player', 'song search'],
++    intents: ['play music', 'search for a song', 'listen to music', 'spotify'],
++    related: ['sound-effects', 'audio-tag-editor', 'metronome'],
++    accepts: [],
++    produces: [],
++    weight: 90,
++    icon: svg('<circle cx="12" cy="12" r="10"/><path d="M8 11.5c2.5-1 5.5-.5 8 1"/><path d="M8.5 14c2-.5 4.5-.5 6.5.5"/><path d="M9 16.5c1.5-.5 3.5-.5 5 .5"/>'),
++  },
+   {
+     id: 'text-cleaner',
+     name: 'Clean Text',
+diff --git a/js/tools/anatomy-explorer.js b/js/tools/anatomy-explorer.js
+index af1b77f..41fb84d 100644
+--- a/js/tools/anatomy-explorer.js
++++ b/js/tools/anatomy-explorer.js
+@@ -563,8 +563,12 @@ export default {
+     /* ---------------- start ---------------- */
+ 
+     renderList();
+-    const first = systemsEl.querySelector('[data-system="skeletal"]');
+-    if (first) { first.checked = true; first.dispatchEvent(new Event('change', { bubbles: true })); }
++    // Render the full anatomy by enabling all systems
++    const systemCBs = systemsEl.querySelectorAll('input[type="checkbox"]');
++    systemCBs.forEach(cb => {
++      cb.checked = true;
++      cb.dispatchEvent(new Event('change', { bubbles: true }));
++    });
+   },
+ 
+   destroy() {
+diff --git a/js/tools/assistant.js b/js/tools/assistant.js
+index 2992f07..75c3589 100644
+--- a/js/tools/assistant.js
++++ b/js/tools/assistant.js
+@@ -147,6 +147,8 @@ export default {
+     });
+ 
+     let history = [];
++    let inputHistoryIndex = -1;
++    let inputDraft = '';
+ 
+     const taskState = {
+       activeToolId: currentToolId || null,
+@@ -633,7 +635,32 @@ export default {
+     userInput?.addEventListener('keydown', (e) => {
+       if (e.key === 'Enter' && !e.shiftKey) {
+         e.preventDefault();
++        inputHistoryIndex = -1;
++        inputDraft = '';
+         handleSend();
++      } else if (e.key === 'ArrowUp') {
++        const userMsgs = history.filter(m => m.role === 'user');
++        if (userMsgs.length > 0) {
++          if (inputHistoryIndex === -1) {
++            inputDraft = userInput.value;
++          }
++          if (inputHistoryIndex < userMsgs.length - 1) {
++            inputHistoryIndex++;
++            userInput.value = userMsgs[userMsgs.length - 1 - inputHistoryIndex].content;
++            handleAutoResize();
++          }
++        }
++      } else if (e.key === 'ArrowDown') {
++        const userMsgs = history.filter(m => m.role === 'user');
++        if (inputHistoryIndex > -1) {
++          inputHistoryIndex--;
++          if (inputHistoryIndex === -1) {
++            userInput.value = inputDraft;
++          } else {
++            userInput.value = userMsgs[userMsgs.length - 1 - inputHistoryIndex].content;
++          }
++          handleAutoResize();
++        }
+       }
+     });
+ 
+@@ -973,6 +1000,15 @@ export default {
+           return `${m}:${rem < 10 ? '0' : ''}${rem}`;
+         };
+ 
++        AssistantAudioManager.restore({
++          audioId: audioId,
++          title: result.title,
++          artist: result.artist,
++          artworkUrl: result.artworkUrl,
++          url: result.url,
++          duration: result.duration
++        });
++
+         return `
+           <div class="ast-audio-player-card" data-audio-id="${audioId}" style="padding:14px 16px; background:var(--white); border:1px solid var(--g300); border-radius:14px; box-shadow:0 4px 14px rgba(0,0,0,0.05); margin-top:8px;">
+             <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px;">
+diff --git a/js/tools/messaging.js b/js/tools/messaging.js
+index b3b6554..82523f8 100644
+--- a/js/tools/messaging.js
++++ b/js/tools/messaging.js
+@@ -7,6 +7,7 @@
+ 
+ import { SpaceEngine, listJoinedSpaces, saveJoinedSpace, getUserProfile, saveUserProfile, prewarmSignaling } from '../lib/space-engine.js';
+ import { tbAlert, tbPrompt, tbConfirm } from '../lib/dialog.js';
++import { getMyProfile, updateMyProfile, getPublicProfiles } from '../lib/profile-system.js';
+ 
+ const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
+   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+@@ -85,7 +86,11 @@ export default {
+ 
+           <div class="msg-conv-list" id="msg-conv-list"></div>
+ 
+-          <div class="msg-sidebar-footer">
++          <div class="msg-sidebar-footer" style="display:flex; flex-direction:column; gap:8px;">
++            <button type="button" class="btn btn-secondary btn-sm msg-discover-btn" id="msg-discover-btn" style="width:100%; justify-content:center;">
++              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
++              <span>Discover & Profile</span>
++            </button>
+             <button type="button" class="btn btn-secondary btn-sm msg-join-btn" id="msg-join-btn" style="width:100%; justify-content:center;">
+               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+               <span>Join with Code</span>
+@@ -129,6 +134,9 @@ export default {
+               <p style="margin:0; font-size:0.84rem; color:var(--text-muted); max-width:360px;">Select a conversation or start a new direct channel with a code.</p>
+             </div>
+           </div>
++          
++          <div class="msg-discover-view" id="msg-discover-view" style="display:none; flex:1; overflow-y:auto; padding:20px; background:var(--bg-card);">
++          </div>
+ 
+           <!-- Typing Indicator -->
+           <div class="msg-typing-indicator" id="msg-typing-bar"></div>
+@@ -182,6 +190,10 @@ export default {
+     const backBtn = container.querySelector('#msg-back-btn');
+     const newBtn = container.querySelector('#msg-new-btn');
+     const joinBtn = container.querySelector('#msg-join-btn');
++    const discoverBtn = container.querySelector('#msg-discover-btn');
++    const discoverView = container.querySelector('#msg-discover-view');
++    const chatHeader = container.querySelector('#msg-chat-header');
++    const composerWrap = container.querySelector('#msg-composer-wrap');
+ 
+     // Update conversation sidebar list
+     const renderConvList = () => {
+@@ -329,8 +341,71 @@ export default {
+       }
+     };
+ 
++    const showStream = () => {
++      discoverView.style.display = 'none';
++      stream.style.display = 'block';
++      chatHeader.style.display = 'flex';
++      composerWrap.style.display = 'block';
++    };
++
++    const showDiscover = () => {
++      stream.style.display = 'none';
++      chatHeader.style.display = 'none';
++      composerWrap.style.display = 'none';
++      discoverView.style.display = 'block';
++      
++      const myProfile = getMyProfile();
++      const publics = getPublicProfiles();
++
++      discoverView.innerHTML = `
++        <div style="max-width:600px; margin:0 auto;">
++          <h2 style="font-weight:700; margin-bottom:20px;">My Profile</h2>
++          <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:30px;">
++            <div style="display:flex; gap:16px; align-items:center;">
++              <div style="width:60px; height:60px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:1.5rem; font-weight:700;">${escapeHtml(myProfile.avatar)}</div>
++              <div style="flex:1;">
++                <input type="text" id="prof-name" class="tool-input" value="${escapeHtml(myProfile.name)}" style="font-size:1.1rem; font-weight:700; border:none; background:transparent; padding:0; margin-bottom:4px; width:100%;">
++                <input type="text" id="prof-username" class="tool-input" value="${escapeHtml(myProfile.username)}" style="font-size:0.85rem; color:var(--text-muted); border:none; background:transparent; padding:0; width:100%;" placeholder="@username">
++              </div>
++            </div>
++            <div style="margin-top:16px; display:flex; gap:12px;">
++              <input type="text" id="prof-affiliation" class="tool-input" value="${escapeHtml(myProfile.affiliation)}" placeholder="Affiliation" style="flex:1;">
++              <input type="text" id="prof-bio" class="tool-input" value="${escapeHtml(myProfile.bio)}" placeholder="Bio" style="flex:2;">
++              <button class="btn btn-primary" id="prof-save-btn">Save</button>
++            </div>
++          </div>
++
++          <h2 style="font-weight:700; margin-bottom:20px;">Discover Network</h2>
++          <div style="display:flex; flex-direction:column; gap:12px;">
++            ${publics.map(p => `
++              <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:16px; display:flex; gap:16px; align-items:center;">
++                <div style="width:48px; height:48px; border-radius:50%; background:var(--bg-subtle); display:flex; align-items:center; justify-content:center; font-weight:700;">${escapeHtml(p.avatar)}</div>
++                <div style="flex:1;">
++                  <div style="font-weight:600; font-size:0.95rem;">${escapeHtml(p.name)} <span style="font-weight:400; color:var(--text-muted); font-size:0.8rem;">@${escapeHtml(p.username)}</span></div>
++                  <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">${escapeHtml(p.affiliation)}</div>
++                  <div style="font-size:0.85rem; margin-top:6px;">${escapeHtml(p.bio)}</div>
++                </div>
++                <button class="btn btn-secondary btn-sm" onclick="alert('Messaging users directly not yet implemented.')">Message</button>
++              </div>
++            `).join('')}
++          </div>
++        </div>
++      `;
++
++      discoverView.querySelector('#prof-save-btn').addEventListener('click', () => {
++        updateMyProfile({
++          name: discoverView.querySelector('#prof-name').value,
++          username: discoverView.querySelector('#prof-username').value,
++          affiliation: discoverView.querySelector('#prof-affiliation').value,
++          bio: discoverView.querySelector('#prof-bio').value
++        });
++        tbAlert('Profile updated.', 'Profile');
++      });
++    };
++
+     // Connect to room code
+     const connectToRoom = async (code) => {
++      showStream();
+       if (!code) return;
+       currentRoomCode = code.toUpperCase();
+       renderConvList();
+@@ -338,7 +413,7 @@ export default {
+       engine.leave();
+       engine = new SpaceEngine();
+ 
+-      const profile = getUserProfile();
++      const profile = getMyProfile();
+       const displayName = profile.name || 'Member ' + Math.floor(100 + Math.random() * 900);
+ 
+       engine.on('chat-update', renderMessages);
+@@ -502,6 +577,12 @@ export default {
+     searchInput.addEventListener('input', renderConvList);
+     newBtn.addEventListener('click', handleNewConversation);
+     joinBtn.addEventListener('click', handleJoinWithCode);
++    discoverBtn.addEventListener('click', () => {
++      showDiscover();
++      if (window.innerWidth <= 768) {
++        sidebar.classList.add('mobile-collapsed');
++      }
++    });
+ 
+     // Initial render
+     renderConvList();
+@@ -517,6 +598,13 @@ export default {
+     };
+   },
+ 
++  getContextMenu(e) {
++    return [
++      { label: 'New Conversation', action: () => document.getElementById('msg-new-btn')?.click() },
++      { label: 'Join with Code', action: () => document.getElementById('msg-join-btn')?.click() }
++    ];
++  },
++
+   destroy() {
+     if (typeof this._unmount === 'function') {
+       this._unmount();
+diff --git a/js/tools/notes.js b/js/tools/notes.js
+index bbea1c4..d0d3da1 100644
+--- a/js/tools/notes.js
++++ b/js/tools/notes.js
+@@ -436,9 +436,20 @@ export default {
+     titleInput.addEventListener('input', () => {
+       const note = getActiveNote();
+       if (note) {
++        const oldText = (note.title || '') + ' ' + (note.body || '');
++        const oldAutoTags = extractHashtags(oldText);
++        
+         note.title = titleInput.value;
+-        const autoTags = extractHashtags(note.title + ' ' + (note.body || ''));
+-        autoTags.forEach(t => { if (!note.hashtags.includes(t)) note.hashtags.push(t); });
++        const newText = (note.title || '') + ' ' + (note.body || '');
++        const newAutoTags = extractHashtags(newText);
++        
++        const removedAutoTags = oldAutoTags.filter(t => !newAutoTags.includes(t));
++        const addedAutoTags = newAutoTags.filter(t => !oldAutoTags.includes(t));
++        
++        if (!note.hashtags) note.hashtags = [];
++        note.hashtags = note.hashtags.filter(t => !removedAutoTags.includes(t));
++        addedAutoTags.forEach(t => { if (!note.hashtags.includes(t)) note.hashtags.push(t); });
++        
+         note.updatedAt = Date.now();
+         saveNotes();
+         renderNoteList();
+@@ -448,12 +459,28 @@ export default {
+     bodyEditor.addEventListener('input', () => {
+       const note = getActiveNote();
+       if (note) {
++        const oldText = (note.title || '') + ' ' + (note.body || '');
++        const oldAutoTags = extractHashtags(oldText);
++        
+         note.body = bodyEditor.innerText;
+-        const autoTags = extractHashtags(note.title + ' ' + (note.body || ''));
+-        autoTags.forEach(t => { if (!note.hashtags.includes(t)) note.hashtags.push(t); });
++        const newText = (note.title || '') + ' ' + (note.body || '');
++        const newAutoTags = extractHashtags(newText);
++        
++        const removedAutoTags = oldAutoTags.filter(t => !newAutoTags.includes(t));
++        const addedAutoTags = newAutoTags.filter(t => !oldAutoTags.includes(t));
++        
++        if (!note.hashtags) note.hashtags = [];
++        note.hashtags = note.hashtags.filter(t => !removedAutoTags.includes(t));
++        addedAutoTags.forEach(t => { if (!note.hashtags.includes(t)) note.hashtags.push(t); });
++        
+         note.updatedAt = Date.now();
+         saveNotes();
+         updateCounts();
++        // Since tags might have been added or removed, re-render them and the note list
++        if (removedAutoTags.length > 0 || addedAutoTags.length > 0) {
++          renderEditorHashtags();
++          renderNoteList();
++        }
+       }
+     });
+ 

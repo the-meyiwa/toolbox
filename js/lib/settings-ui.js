@@ -15,6 +15,7 @@ import { getCurrentUser, updateUserProfile, claimUsername, getUsernameChangeStat
 import { getSettings, updateSettings, exportSettings, importSettings } from './settings.js';
 import { PROFILE_PICTURES, getProfilePictureSrc, getUserAvatarHtml } from './profile-pictures.js';
 import { openAccountModal } from '../views/account-modal.js';
+import { getGeminiApiKey, setGeminiApiKey } from './ai-provider.js';
 
 let modalEl = null;
 let isOpen = false;
@@ -605,6 +606,17 @@ function renderAiSettings() {
 
     <div style="background:var(--bg-subtle); border:1px solid var(--border); border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:16px;">
       
+      <!-- Gemini API Key -->
+      <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px;">
+        <div style="flex:1;">
+          <div style="font-size:0.84rem; font-weight:700; color:var(--text);">Gemini API Key</div>
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
+            Set your custom API key for the AI Assistant.
+          </div>
+        </div>
+        <input type="password" id="settings-gemini-api-key" class="tool-input" placeholder="AIzaSy..." value="${escapeHtml(getGeminiApiKey())}" style="min-width:200px; font-size:0.82rem; padding:6px 10px;">
+      </div>
+
       <!-- Response text animation toggle -->
       <label style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
         <div>
@@ -714,6 +726,10 @@ function renderAiSettings() {
     } catch (err) {
       tbAlert(err.message, 'Settings Error');
     }
+  });
+
+  container.querySelector('#settings-gemini-api-key')?.addEventListener('input', (e) => {
+    setGeminiApiKey(e.target.value);
   });
 }
 
