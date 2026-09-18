@@ -3521,7 +3521,8 @@ mark.regex-match {
   .inv-parties { grid-template-columns: 1fr; gap: 14px; }
   .ts-table-head { display: none; }
   .ts-row { grid-template-columns: 1fr 1fr; gap: 6px; padding: 12px; border: 1px solid var(--g200); border-radius: 9px; }
-  .ct-row, .ct-row-3 { grid-template-columns: 1fr 1fr auto; }
+  .ct-row { grid-template-columns: 1fr 1fr auto; }
+  .ct-row-3 { grid-template-columns: 1fr 1fr 1fr auto; }
   .ts-controls { grid-template-columns: 1fr; }
 }
 
@@ -6580,7 +6581,7 @@ input, select, textarea {
   --text-muted: #758296;
   --border: rgba(0, 0, 0, 0.12);
   --border-subtle: rgba(0, 0, 0, 0.07);
-  --accent: #007aff;
+  --accent: #0062cc;
   --accent-secondary: #5856d6;
   --accent-soft: rgba(0, 122, 255, 0.12);
   --accent-glow: rgba(0, 122, 255, 0.28);
@@ -6628,7 +6629,7 @@ input, select, textarea {
   --text-muted: #86868b;
   --border: rgba(255, 255, 255, 0.13);
   --border-subtle: rgba(255, 255, 255, 0.08);
-  --accent: #0a84ff;
+  --accent: #0062cc;
   --accent-secondary: #5e5ce6;
   --accent-soft: rgba(10, 132, 255, 0.16);
   --accent-glow: rgba(10, 132, 255, 0.38);
@@ -6724,7 +6725,7 @@ input, select, textarea {
   --text-muted: #776f67;
   --border: rgba(255, 255, 255, 0.1);
   --border-subtle: rgba(255, 255, 255, 0.05);
-  --accent: #e95420;
+  --accent: #c84416;
   --accent-secondary: #77216f;
   --accent-soft: rgba(233, 84, 32, 0.14);
   --accent-glow: rgba(233, 84, 32, 0.35);
@@ -7015,7 +7016,7 @@ input, select, textarea {
   --accent-secondary: #556b2f;
   --accent-soft: rgba(217, 119, 36, 0.12);
   --accent-glow: rgba(217, 119, 36, 0.3);
-  --accent-contrast: #ffffff;
+  --accent-contrast: #2c2621;
   --gradient: linear-gradient(180deg, #ffffff 0%, #f4ede3 100%);
   --shadow: 0 3px 12px rgba(44, 38, 33, 0.07);
   --shadow-elevated: 0 12px 32px rgba(44, 38, 33, 0.14);
@@ -7111,7 +7112,7 @@ input, select, textarea {
   --accent-secondary: #f59e0b;
   --accent-soft: rgba(0, 168, 89, 0.16);
   --accent-glow: rgba(0, 168, 89, 0.38);
-  --accent-contrast: #ffffff;
+  --accent-contrast: #0f1a14;
   --gradient: linear-gradient(180deg, #182a20 0%, #132219 100%);
   --shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
   --shadow-elevated: 0 16px 44px rgba(0, 0, 0, 0.65);
@@ -7159,7 +7160,7 @@ input, select, textarea {
   --accent-secondary: #b33927;
   --accent-soft: rgba(217, 130, 36, 0.15);
   --accent-glow: rgba(217, 130, 36, 0.35);
-  --accent-contrast: #ffffff;
+  --accent-contrast: #1c1815;
   --gradient: linear-gradient(180deg, #2c2520 0%, #211c18 100%);
   --shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
   --shadow-elevated: 0 16px 44px rgba(0, 0, 0, 0.7);
@@ -7299,7 +7300,7 @@ input, select, textarea {
   --text-muted: #9c788a;
   --border: #ffd1e6;
   --border-subtle: #ffe3f0;
-  --accent: #e0218a;
+  --accent: #d61a80;
   --accent-secondary: #b8156e;
   --accent-soft: rgba(224, 33, 138, 0.12);
   --accent-glow: rgba(224, 33, 138, 0.35);
@@ -7351,7 +7352,7 @@ input, select, textarea {
   --accent-secondary: #088c88;
   --accent-soft: rgba(10, 186, 181, 0.12);
   --accent-glow: rgba(10, 186, 181, 0.32);
-  --accent-contrast: #ffffff;
+  --accent-contrast: #142828;
   --gradient: linear-gradient(180deg, #ffffff 0%, #eef9f9 100%);
   --shadow: 0 4px 14px rgba(10, 186, 181, 0.08);
   --shadow-elevated: 0 14px 34px rgba(10, 186, 181, 0.16);
@@ -7395,7 +7396,7 @@ input, select, textarea {
   --text-muted: #787878;
   --border: rgba(255, 255, 255, 0.11);
   --border-subtle: rgba(255, 255, 255, 0.06);
-  --accent: #f40009;
+  --accent: #e60008;
   --accent-secondary: #b30006;
   --accent-soft: rgba(244, 0, 9, 0.15);
   --accent-glow: rgba(244, 0, 9, 0.38);
@@ -7634,7 +7635,7 @@ input, select, textarea {
   --text-muted: #998d83;
   --border: #dfd5c7;
   --border-subtle: #ebdcd6;
-  --accent: #c25e2e;
+  --accent: #ba592b;
   --accent-secondary: #78350f;
   --accent-soft: rgba(194, 94, 46, 0.12);
   --accent-glow: rgba(194, 94, 46, 0.32);
@@ -14627,3 +14628,17 @@ body[data-tool-id="container-planner"] .cq-rates {
     border-radius: 4px !important;
   }
 }
+
+@media (max-width: 480px) {
+  #header-about-link.header-about-link, .header-about-link {
+    display: none !important;
+  }
+}
+
+
+@media (max-width: 768px) {
+  .mobile-nav, #mobile-nav {
+    padding-bottom: max(env(safe-area-inset-bottom), 12px) !important;
+  }
+}
+
