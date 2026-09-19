@@ -125,17 +125,17 @@ export default {
     if (!this.state.selectedVehicle) {
       const infoPanel = this.container.querySelector('#ag-desktop-info');
       if (infoPanel) {
-        infoPanel.innerHTML = \`
+        infoPanel.innerHTML = `
           <div style="color: var(--text-muted); margin-bottom: 16px; font-weight: 600;">Popular Models</div>
           <div style="display:flex; flex-direction:column; gap:8px;">
-            \${this.state.vehicles.slice(0, 10).map(v => \`
-              <div class="ag-search-item" data-id="\${v.id}" style="border: 1px solid var(--border); border-radius: 8px; padding: 12px;">
-                <div style="font-weight: 600; color: var(--text);">\${v.manufacturer} \${v.model}</div>
-                <div style="font-size: 0.8rem; color: var(--text-muted);">\${v.generation} (\${v.years})</div>
+            ${this.state.vehicles.slice(0, 10).map(v => `
+              <div class="ag-search-item" data-id="${v.id}" style="border: 1px solid var(--border); border-radius: 8px; padding: 12px;">
+                <div style="font-weight: 600; color: var(--text);">${v.manufacturer} ${v.model}</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">${v.generation} (${v.years})</div>
               </div>
-            \`).join('')}
+            `).join('')}
           </div>
-        \`;
+        `;
       }
     }
   },
@@ -283,7 +283,7 @@ export default {
     this.state.selectedSection = null;
     this.state.selectedComponent = null;
     
-    const svg = await autoClient.getVehicleDiagram(id, '2D');
+    const svg = await autoClient.getVehicleDiagram(vehicle, '2D');
     this.state.diagramSvg = svg;
     
     this.renderVehicleUI();

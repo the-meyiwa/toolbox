@@ -30,12 +30,12 @@ export class AutomotiveDataClient {
 
   async _fetchModelsForMake(make) {
     try {
-      const res = await fetch(\https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/\?format=json\);
+      const res = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/${encodeURIComponent(make)}?format=json`);
       const data = await res.json();
       let results = data.Results || [];
       
       return results.slice(0, 100).map(r => this._enrichVehicleData(r));
-    } catch(e) {
+    } catch (e) {
       console.error('Failed to fetch NHTSA data:', e);
       return [];
     }
@@ -67,18 +67,25 @@ export class AutomotiveDataClient {
   }
 
   async getVehicleDetails(id) {
-    // In a real app we'd fetch specific vehicle details. 
-    // Here we'll search across popular makes if we only have the ID,
-    // but the UI typically retains the selected vehicle object.
-    return null; // The UI should use the cached object from search results
+    return null;
   }
 
-  async getVehicleDiagram(id, type = '2D') {
-    return this._generatePlaceholderSVG();
+  async getVehicleDiagram(vehicleOrId, type = '2D') {
+    return this._generatePlaceholderSVG(vehicleOrId);
   }
 
-  _generatePlaceholderSVG() {
-    return \
+  _generatePlaceholderSVG(vehicle) {
+    const components = (vehicle && vehicle.components) ? vehicle.components : [
+      { id: 'engine', name: 'Engine block / Motor', section: 'Engine Bay', description: 'Primary power unit.', coordinates: { x: 25, y: 50 } },
+      { id: 'f-susp', name: 'Front Suspension', section: 'Suspension', description: 'Steering and shock absorption.', coordinates: { x: 20, y: 30 } },
+      { id: 'dash', name: 'Dashboard & Infotainment', section: 'Dashboard', description: 'Central control and display.', coordinates: { x: 45, y: 50 } },
+      { id: 'seats-f', name: 'Front Seats', section: 'Cabin', description: 'Driver and passenger seating.', coordinates: { x: 55, y: 50 } },
+      { id: 'seats-r', name: 'Rear Seats', section: 'Cabin', description: 'Passenger seating area.', coordinates: { x: 75, y: 50 } },
+      { id: 'r-susp', name: 'Rear Suspension', section: 'Suspension', description: 'Rear axle shock absorption.', coordinates: { x: 80, y: 30 } },
+      { id: 'trunk', name: 'Trunk / Cargo', section: 'Rear', description: 'Rear storage area.', coordinates: { x: 90, y: 50 } }
+    ];
+
+    return `
       <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:100%;" preserveAspectRatio="xMidYMid meet">
         <defs>
           <linearGradient id="chassisGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -93,8 +100,16 @@ export class AutomotiveDataClient {
         <circle cx="80" cy="70" r="10" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3" />
         <circle cx="20" cy="70" r="3" fill="currentColor" opacity="0.5" />
         <circle cx="80" cy="70" r="3" fill="currentColor" opacity="0.5" />
+
+        <!-- Interactive Components -->
+        ${components.map(comp => `
+          <g class="auto-component" data-comp-id="${comp.id}" style="cursor: pointer; outline: none;" tabindex="0">
+            <circle cx="${comp.coordinates.x}" cy="${comp.coordinates.y}" r="3" fill="var(--accent, #3b82f6)" />
+            <circle cx="${comp.coordinates.x}" cy="${comp.coordinates.y}" r="6" fill="transparent" stroke="var(--accent, #3b82f6)" stroke-width="0.5" opacity="0.5" />
+          </g>
+        `).join('')}
       </svg>
-    \;
+    `;
   }
 }
 

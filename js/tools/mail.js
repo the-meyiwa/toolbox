@@ -13,7 +13,7 @@ export default {
       isSidebarOpen: false // for mobile
     };
 
-    container.innerHTML = \`
+    container.innerHTML = `
       <style>
         .mail-app { 
           display: grid; 
@@ -700,23 +700,23 @@ export default {
     
     const dateStr = new Date(msg.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
     
-    pane.innerHTML = \`
+    pane.innerHTML = `
       <div class="mail-read-header">
         <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
           <button type="button" class="mobile-header-toggle" id="mail-read-back">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
           </button>
-          <h2 class="mail-read-subject" style="margin:0;">\${msg.subject || '(No subject)'}</h2>
+          <h2 class="mail-read-subject" style="margin:0;">${msg.subject || '(No subject)'}</h2>
         </div>
         <div class="mail-read-meta">
           <div style="display:flex; align-items:center;">
-            <div class="mail-sender-avatar">\${msg.from.name.charAt(0).toUpperCase()}</div>
+            <div class="mail-sender-avatar">${msg.from.name.charAt(0).toUpperCase()}</div>
             <div>
-              <div class="mail-read-sender">\${msg.from.name} <span class="mail-read-email">&lt;\${msg.from.email}&gt;</span></div>
-              <div class="mail-read-email" style="margin-top:2px;">to \${msg.to.map(t=>t.name).join(', ')}</div>
+              <div class="mail-read-sender">${msg.from.name} <span class="mail-read-email">&lt;${msg.from.email}&gt;</span></div>
+              <div class="mail-read-email" style="margin-top:2px;">to ${msg.to.map(t=>t.name).join(', ')}</div>
             </div>
           </div>
-          <div class="mail-read-date">\${dateStr}</div>
+          <div class="mail-read-date">${dateStr}</div>
         </div>
         <div class="mail-read-actions">
           <button type="button" class="mail-action-btn action-reply">
@@ -734,9 +734,9 @@ export default {
         </div>
       </div>
       <div class="mail-read-body">
-        \${msg.body.replace(/\\n/g, '<br>')}
+        ${msg.body.replace(/\n/g, '<br>')}
       </div>
-    \`;
+    `;
   },
 
   openCompose(initialData = { to: '', subject: '', body: '' }) {
