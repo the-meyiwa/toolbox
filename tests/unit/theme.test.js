@@ -231,7 +231,7 @@ test('Theme: Grayscale token bridge, accent contrast & universal tool compatibil
 
   // 1. All 28 themes must have grayscale bridge (--g50 through --g900)
   for (const theme of THEMES) {
-    const sel = `[data-theme="${theme.id}"]`;
+    const sel = `[data-theme="${theme.id}"] {`;
     const idx = css.indexOf(sel);
     assert.ok(idx !== -1, `Selector ${sel} must exist in css/style.css`);
     const end = css.indexOf('}', idx);

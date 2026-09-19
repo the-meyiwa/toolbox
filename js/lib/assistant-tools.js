@@ -51,7 +51,8 @@ let activeAssistantAudios = [];
  */
 const registryDeclarations = toolDiscovery.generateNavigationDeclarations();
 
-export const ASSISTANT_TOOL_DECLARATIONS = [,
+export const ASSISTANT_TOOL_DECLARATIONS = [
+  ...registryDeclarations,
   {
     name: 'list_saved_artifacts',
     description: 'List all saved files and artifacts in Toolbox (Files/Saved view).',
@@ -1811,7 +1812,7 @@ export const ASSISTANT_TOOL_DECLARATIONS = [,
       required: ['query']
     }
   }
-].filter((v, i, a) => a.findIndex(t => t.name === v.name) === i);
+].filter((v, i, a) => v && v.name && a.findIndex(t => t && t.name === v.name) === i);
 
 /**
  * Assistant Tool Execution Engine (Client-Side Sandboxed Dispatcher)

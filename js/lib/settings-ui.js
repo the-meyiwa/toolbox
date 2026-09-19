@@ -79,28 +79,28 @@ function createModal() {
   modalEl.style.display = 'none';
 
   modalEl.innerHTML = `
-    <div class="settings-modal-window" style="max-width: 820px; width: 95%; height: 86vh; max-height: 840px; display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 20px 48px rgba(0,0,0,0.2);">
+    <div class="settings-modal-window">
       <div class="sheet-drag-handle" aria-hidden="true"></div>
       
       <!-- Modal Header -->
-      <div class="settings-modal-header" style="flex-shrink: 0; padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
-        <div class="settings-title-wrap" style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;">
-          <button type="button" id="settings-back-btn" aria-label="Back to Settings" style="display: none; background: none; border: 1px solid var(--border); cursor: pointer; color: var(--text); padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; align-items: center; gap: 6px; flex-shrink: 0;">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      <div class="settings-modal-header" style="flex-shrink: 0; padding: 24px 32px 16px; border-bottom: 1px solid var(--border); background: var(--bg-card); display: flex; align-items: flex-start; justify-content: space-between; z-index: 10;">
+        <div class="settings-title-wrap" style="display: flex; align-items: flex-start; gap: 16px; flex: 1; min-width: 0;">
+          <button type="button" id="settings-back-btn" aria-label="Back to Settings" style="display: none; background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px; border-radius: 8px; font-size: 0.85rem; font-weight: 500; align-items: center; gap: 6px; flex-shrink: 0; transition: color 0.15s ease;">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
             <span>Back</span>
           </button>
-          <div class="settings-title-icon" id="settings-title-icon" style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-subtle); display: flex; align-items: center; justify-content: center; color: var(--text); flex-shrink: 0;">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <div class="settings-title-icon" id="settings-title-icon" style="display: flex; align-items: center; justify-content: center; color: var(--text); flex-shrink: 0; margin-top: 2px;">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="3"></circle>
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
             </svg>
           </div>
-          <div style="min-width: 0;">
-            <h2 id="settings-modal-title" class="settings-modal-title" style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Toolbox Settings</h2>
-            <p id="settings-modal-subtitle" class="settings-modal-subtitle" style="margin: 2px 0 0; font-size: 0.76rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Appearance, Preferences, AI, and Profile Identity</p>
+          <div style="min-width: 0; display: flex; flex-direction: column;">
+            <h2 id="settings-modal-title" class="settings-modal-title" style="margin: 0; font-size: 1.4rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; letter-spacing: -0.02em;">Toolbox Settings</h2>
+            <p id="settings-modal-subtitle" class="settings-modal-subtitle" style="margin: 6px 0 0; font-size: 0.85rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4;">Appearance, Preferences, AI, and Profile Identity</p>
           </div>
         </div>
-        <button type="button" class="settings-modal-close" id="close-settings" aria-label="Close Settings" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 6px; border-radius: 6px; flex-shrink: 0;">
+        <button type="button" class="settings-modal-close" id="close-settings" aria-label="Close Settings" style="background: var(--bg-subtle); border: 1px solid var(--border); cursor: pointer; color: var(--text); padding: 0; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; box-shadow: 0 2px 4px rgba(0,0,0,0.03); transition: all 0.15s ease; position: relative; z-index: 20;">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -109,7 +109,7 @@ function createModal() {
       </div>
 
       <!-- View 1: Main Settings Scrollable Body -->
-      <div class="settings-modal-body" id="settings-modal-scroll" style="flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 28px;">
+      <div class="settings-modal-body" id="settings-modal-scroll" style="flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 24px; display: flex; flex-direction: column; gap: 28px; position: relative;">
         
         <!-- SEARCH PREFERENCES BAR -->
         <div class="settings-search-container" style="margin-bottom: -4px;">
@@ -880,6 +880,7 @@ export function openSettings(targetSection = null) {
   if (mainScroll) mainScroll.scrollTop = 0;
 
   modalEl.style.display = 'flex';
+
   requestAnimationFrame(() => {
     modalEl.classList.add('is-open');
 
@@ -898,6 +899,7 @@ export function openSettings(targetSection = null) {
 export function closeSettings() {
   if (!modalEl || !isOpen) return;
   modalEl.classList.remove('is-open');
+
   setTimeout(() => {
     modalEl.style.display = 'none';
     isOpen = false;
