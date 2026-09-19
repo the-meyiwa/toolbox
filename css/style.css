@@ -9083,6 +9083,32 @@ input, select, textarea {
   display: block;
 }
 
+.header-notif-btn {
+  position: relative;
+}
+
+.header-notif-badge {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background: var(--error, #e53935);
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  border: 1.5px solid var(--surface-secondary, #ffffff);
+  z-index: 2;
+}
+
 /* Header Dropdown Menu */
 .header-menu-container {
   position: relative;
@@ -14668,3 +14694,37 @@ body[data-tool-id="automobile-guide"] #viewport-content {
     padding: 0 !important;
   }
 }
+
+/* Tech device comparisons */
+.device-compare { width:100%; min-height:0; overflow:auto; padding:20px; color:var(--text); }
+.dc-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+.dc-header h2 { margin:0 0 8px; font-size:1.3rem; }
+.dc-header p,.dc-hint,.dc-status { color:var(--text-muted); font-size:.82rem; line-height:1.6; }
+.dc-brand { border:1px solid var(--border); border-radius:999px; padding:7px 12px; font-size:.76rem; white-space:nowrap; }
+.dc-brand strong { color:var(--accent); }
+.dc-status { padding:10px 12px; background:var(--bg-subtle); border-radius:8px; }
+.dc-lookup,.dc-library-bar,.dc-toolbar { display:flex; flex-wrap:wrap; gap:12px; align-items:end; margin:16px 0; }
+.dc-lookup label,.dc-library-bar label { display:flex; flex:1 1 175px; flex-direction:column; gap:6px; font-size:.78rem; }
+.dc-lookup [hidden] { display:none; }
+.device-compare input:not([type="checkbox"]),.device-compare select { min-width:0; width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card); color:var(--text); font:inherit; }
+.device-compare input[type="checkbox"] { accent-color:var(--accent); }
+.dc-library { max-height:245px; overflow:auto; border-block:1px solid var(--border); }
+.dc-saved { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 0; }
+.dc-saved label { display:flex; align-items:center; gap:10px; font-size:.82rem; min-width:0; }
+.dc-saved small,.dc-table small { display:block; color:var(--text-muted); font-size:.72rem; font-weight:400; margin-top:4px; }
+.dc-empty { padding:14px 0; color:var(--text-muted); font-size:.85rem; }
+.dc-toolbar { align-items:center; font-size:.8rem; }
+.dc-toolbar label { margin-right:auto; }
+.dc-table-wrap { overflow:auto; max-width:100%; }
+.dc-table { width:100%; border-collapse:separate; border-spacing:0; font-size:.8rem; }
+.dc-table caption { text-align:left; font-weight:600; padding:10px 0; }
+.dc-table th,.dc-table td { min-width:190px; max-width:310px; padding:12px; text-align:left; vertical-align:top; border-bottom:1px solid var(--border); overflow-wrap:anywhere; }
+.dc-table th:first-child { min-width:150px; }
+.dc-table thead th { background:var(--bg-card); }
+.dc-table a,.dc-hint a { color:var(--accent); }
+.dc-table th a { display:inline-block; margin-top:8px; font-size:.74rem; }
+.dc-section th { background:var(--bg-subtle); }
+.dc-different td { background:color-mix(in srgb,var(--accent) 6%,var(--bg-card)); }
+.device-compare :focus-visible,.header-notif-panel :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.header-notif-panel .notif-item { display:block; width:100%; text-align:left; border:0; font:inherit; }
+@media(max-width:600px) { .device-compare { padding:12px; } .dc-lookup label { flex-basis:100%; } .dc-lookup button { width:100%; } .dc-table th,.dc-table td { min-width:165px; } }

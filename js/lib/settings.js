@@ -15,6 +15,9 @@ export const DEFAULT_SETTINGS = Object.freeze({
   editorWrap: false,
   editorFontSize: 13,   // in pixels
   hapticAudio: true,
+  notificationsEnabled: true,
+  notificationSound: false,
+  notificationsPush: false,
   offlineFirst: true,
   assistantResponseAnimation: true,
   assistantAnimationStyle: 'color rave', // 'color rave' | 'glow' | 'Plain Fade' | 'Pop In'

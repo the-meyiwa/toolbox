@@ -1772,6 +1772,20 @@ export const TOOLS = [
     offline: false,
     icon: svg('<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>'),
   },
+  {
+    id: 'tech-device-comparisons',
+    name: 'Tech Device comparisons',
+    description: 'Find Icecat spec sheets and compare phones, laptops, TVs, appliances and accessories side by side',
+    category: 'everyday',
+    secondary: ['developer', 'business', 'reference'],
+    keywords: ['tech device comparisons', 'device comparison', 'specs', 'spec sheet', 'compare phones', 'compare laptops', 'smartphones', 'laptops', 'voltix', 'monitors', 'chargers', 'magsafe', 'keyboards', 'mice', 'tvs', 'appliances', 'gadgets', 'hardware'],
+    synonyms: ['device specs', 'spec comparisons', 'phone compare', 'laptop compare', 'tech specs'],
+    intents: ['compare devices', 'compare phones', 'tech device comparisons', 'compare laptop specs', 'device specs', 'voltix comparison', 'gadget comparison'],
+    related: ['automobile-guide', 'messaging', 'calculator'],
+    weight: 82,
+    offline: true,
+    icon: svg('<rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>'),
+  },
 ];
 
 export default TOOLS;

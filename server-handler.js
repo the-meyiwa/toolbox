@@ -5,6 +5,7 @@
    ============================================================ */
 
 import crypto from 'crypto';
+import { handleDeviceRequest } from './server-device-specs.js';
 import { isBlockedHost, parseWebPage, haversineDistanceKm } from './js/lib/web-scraper-engine.js';
 import {
   getWorkspaceDir,
@@ -63,6 +64,8 @@ export async function handleApiRequest(request, response) {
     response.end();
     return true;
   }
+
+  if (await handleDeviceRequest(request, response, url)) return true;
 
   // --- Toolbox IDE Real Code Execution & Workspace API ---
   if (url.pathname.startsWith('/api/ide/')) {

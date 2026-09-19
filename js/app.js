@@ -379,7 +379,7 @@ function teardownTool() {
   currentToolObj = null;
 }
 
-async function openTool(id) {
+async function openTool(id, routeState = {}) {
   const tool = BY_ID.get(id);
   
   if (id === 'assistant' && !getCurrentUser()) {
@@ -460,7 +460,7 @@ async function openTool(id) {
     // Guard against a fast back-navigation resolving into a dead viewport.
     if (currentToolId !== id) return;
     currentToolInstance = module.default;
-    await currentToolInstance.render(viewportContent, { analytics: session, tool, artifact: incoming });
+    await currentToolInstance.render(viewportContent, { ...routeState, analytics: session, tool, artifact: incoming });
     if (currentToolId !== id) return;
 
     /* The artifact layer wraps the tool rather than living inside it: a tool
@@ -575,6 +575,16 @@ function handleHash() {
   // #spaces, or #spaces/<code> to join via a shared link.
   if (raw === 'spaces' || raw.startsWith('spaces/')) {
     showPage('home');
+    return;
+  }
+
+  if (raw.startsWith('messaging?')) {
+    const roomCode = new URLSearchParams(raw.slice(raw.indexOf('?') + 1)).get('code');
+    if (roomCode && /^[A-Za-z0-9_-]{1,80}$/.test(roomCode)) {
+      openTool('messaging', { roomCode });
+      return;
+    }
+    openTool('messaging');
     return;
   }
 

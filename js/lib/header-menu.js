@@ -10,10 +10,15 @@ import { openAccountModal } from '../views/account-modal.js';
 import { getSettings, updateSettings, exportSettings, importSettings } from './settings.js';
 import { getCurrentUser } from './supabase.js';
 import { getProfilePictureSrc } from './profile-pictures.js';
+import { NotificationEngine, safeNotificationLink, prepareNotificationSound } from './notifications.js';
 
 let menuEl = null;
 let isMenuOpen = false;
 let prefModalEl = null;
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 
 function createPreferencesModal() {
   if (prefModalEl) return prefModalEl;
@@ -292,15 +297,214 @@ export function installHeaderMenu() {
     });
   }
 
+  // Setup Notification Center
+  const notifBtn = document.getElementById('header-notif-btn');
+  if (notifBtn) {
+    notifBtn.setAttribute('aria-expanded', 'false');
+    notifBtn.setAttribute('aria-controls', 'header-notif-panel');
+    notifBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleNotificationPanel();
+      if (getSettings().notificationSound) prepareNotificationSound();
+    });
+  }
+
   // Escape key handler
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       if (prefModalEl?.classList.contains('is-open')) closePreferencesModal();
+      if (notifPanelEl?.classList.contains('is-open')) closeNotificationPanel();
     }
   });
 
   updateHeaderAvatar();
+  updateNotificationBadge();
   window.addEventListener('toolbox:authchange', updateHeaderAvatar);
+  const refreshNotifications = () => {
+    updateNotificationBadge();
+    if (notifPanelEl?.classList.contains('is-open')) renderNotificationPanel();
+  };
+  window.addEventListener('toolbox:notifications-updated', refreshNotifications);
+  window.addEventListener('toolbox:authchange', refreshNotifications);
+  window.addEventListener('toolbox:settingschange', refreshNotifications);
+  window.addEventListener('storage', event => {
+    if (!event.key || event.key.startsWith('toolbox_notifications_') || event.key === 'toolbox_supabase_session') refreshNotifications();
+  });
+}
+
+let notifPanelEl = null;
+
+async function updateNotificationBadge() {
+  const badge = document.getElementById('header-notif-badge');
+  if (!badge) return;
+  const count = await NotificationEngine.getUnreadCount();
+  document.getElementById('header-notif-btn')?.setAttribute('aria-label', count ? `Notifications, ${count} unread` : 'Notifications');
+
+  if (count > 0) {
+    badge.textContent = count > 9 ? '9+' : count;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+async function renderNotificationPanel() {
+  if (!notifPanelEl) {
+    notifPanelEl = document.createElement('div');
+    notifPanelEl.id = 'header-notif-panel';
+    notifPanelEl.setAttribute('role', 'region');
+    notifPanelEl.setAttribute('aria-label', 'Notifications');
+    notifPanelEl.className = 'header-dropdown-menu header-notif-panel';
+    notifPanelEl.style.cssText = `
+      position: fixed;
+      top: 56px;
+      right: 16px;
+      width: 340px;
+      max-width: calc(100vw - 32px);
+      max-height: min(480px, calc(100dvh - 72px));
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow-lg);
+      z-index: 2000;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      transform-origin: top right;
+      transition: opacity 0.15s, transform 0.15s;
+    `;
+    document.body.appendChild(notifPanelEl);
+
+    // Close on outside click
+    document.addEventListener('click', (e) => {
+      if (notifPanelEl.classList.contains('is-open') && !notifPanelEl.contains(e.target) && !document.getElementById('header-notif-btn').contains(e.target)) {
+        closeNotificationPanel();
+      }
+    });
+  }
+
+  const notifications = await NotificationEngine.getNotifications();
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  let html = `
+    <div style="padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: color-mix(in srgb, var(--bg-card) 90%, transparent); backdrop-filter: blur(12px);">
+      <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--text);">Notifications</h4>
+      <div style="display:flex; gap: 8px;">
+        ${unreadCount > 0 ? `<button type="button" id="notif-mark-read" style="background:none; border:none; color:var(--accent); font-size:0.75rem; cursor:pointer; font-weight:600;">Mark all read</button>` : ''}
+        <button type="button" id="notif-clear-all" style="background:none; border:none; color:var(--text-muted); font-size:0.75rem; cursor:pointer;">Clear</button>
+      </div>
+    </div>
+    <div style="flex: 1; overflow-y: auto; max-height: 400px;" id="notif-list-container">
+  `;
+
+  if (notifications.length === 0) {
+    html += `
+      <div style="padding: 40px 24px; text-align: center; color: var(--text-muted);">
+        <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1" style="opacity: 0.3; margin-bottom: 12px;">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        <div style="font-size: 0.85rem; font-weight: 600;">You're all caught up</div>
+      </div>
+    `;
+  } else {
+    notifications.forEach(n => {
+      const isUnread = !n.read;
+      const timeStr = new Date(n.date).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' });
+      html += `
+        <button type="button" class="notif-item" data-id="${escapeHtml(n.id)}" aria-label="${escapeHtml(`${isUnread ? 'Unread: ' : ''}${n.title}`)}" style="padding: 12px 16px; border-bottom: 1px solid var(--border); background: ${isUnread ? 'var(--bg-subtle)' : 'transparent'}; cursor: pointer; transition: background 0.15s; position: relative;">
+          ${isUnread ? '<div style="position:absolute; left:6px; top:18px; width:6px; height:6px; border-radius:50%; background:var(--accent);"></div>' : ''}
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px; padding-left: ${isUnread ? '8px' : '0'};">
+            <span style="font-weight: 600; font-size: 0.82rem; color: var(--text);">${escapeHtml(n.title)}</span>
+            <span style="font-size: 0.7rem; color: var(--text-muted);">${timeStr}</span>
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-muted); padding-left: ${isUnread ? '8px' : '0'}; line-height: 1.4;">${escapeHtml(n.message)}</div>
+        </button>
+      `;
+    });
+  }
+
+  html += `</div><div style="padding:12px 16px; border-top:1px solid var(--border); display:flex; flex-wrap:wrap; gap:10px; font-size:.76rem;">
+    <label><input type="checkbox" id="notif-enabled" ${getSettings().notificationsEnabled !== false ? 'checked' : ''}> Notifications</label>
+    <label><input type="checkbox" id="notif-sound" ${getSettings().notificationSound ? 'checked' : ''}> Sound</label>
+    <button type="button" class="btn btn-sm" id="notif-browser">${getSettings().notificationsPush ? 'Disable desktop alerts' : 'Enable desktop alerts'}</button>
+    <span id="notif-permission-status" role="status"></span>
+  </div>`;
+  notifPanelEl.innerHTML = html;
+  notifPanelEl.querySelector('#notif-enabled').addEventListener('change', e => updateSettings({ notificationsEnabled: e.target.checked }));
+  notifPanelEl.querySelector('#notif-sound').addEventListener('change', e => {
+    if (e.target.checked) prepareNotificationSound();
+    updateSettings({ notificationSound: e.target.checked });
+  });
+  notifPanelEl.querySelector('#notif-browser').addEventListener('click', async () => {
+    if (getSettings().notificationsPush) { updateSettings({ notificationsPush: false }); return; }
+    try {
+      const result = await NotificationEngine.enableBrowserNotifications();
+      notifPanelEl.querySelector('#notif-permission-status').textContent = result === 'granted' ? 'Desktop alerts enabled while Toolbox is open.' : result === 'unsupported' ? 'Desktop alerts are not supported in this browser.' : 'Desktop alerts are blocked. You can allow them in browser site settings.';
+    } catch { notifPanelEl.querySelector('#notif-permission-status').textContent = 'Could not enable desktop alerts. In-app notifications remain available.'; }
+  });
+
+  const listContainer = notifPanelEl.querySelector('#notif-list-container');
+  listContainer.addEventListener('click', async (e) => {
+    const item = e.target.closest('.notif-item');
+    if (item) {
+      const id = item.getAttribute('data-id');
+      const targetNotif = notifications.find(n => n.id === id);
+      await NotificationEngine.markAsRead(id);
+      const link = safeNotificationLink(targetNotif?.link);
+      if (link) {
+        closeNotificationPanel();
+        if (link.startsWith('#')) {
+          window.location.hash = link;
+        } else {
+          window.location.href = link;
+        }
+      } else {
+        renderNotificationPanel(); // Re-render to clear dot
+      }
+    }
+  });
+
+  const btnMark = notifPanelEl.querySelector('#notif-mark-read');
+  if (btnMark) btnMark.addEventListener('click', async () => {
+    await NotificationEngine.markAllAsRead();
+    renderNotificationPanel();
+  });
+
+  const btnClear = notifPanelEl.querySelector('#notif-clear-all');
+  if (btnClear) btnClear.addEventListener('click', async () => {
+    await NotificationEngine.clearAll();
+    renderNotificationPanel();
+  });
+}
+
+function toggleNotificationPanel() {
+  if (notifPanelEl && notifPanelEl.classList.contains('is-open')) {
+    closeNotificationPanel();
+  } else {
+    renderNotificationPanel().then(() => {
+      notifPanelEl.style.display = 'flex';
+      // Trigger reflow for animation
+      void notifPanelEl.offsetWidth;
+      notifPanelEl.style.opacity = '1';
+      notifPanelEl.style.transform = 'scale(1)';
+      notifPanelEl.classList.add('is-open');
+      document.getElementById('header-notif-btn')?.setAttribute('aria-expanded', 'true');
+    });
+  }
+}
+
+function closeNotificationPanel() {
+  document.getElementById('header-notif-btn')?.setAttribute('aria-expanded', 'false');
+  if (!notifPanelEl) return;
+  notifPanelEl.style.opacity = '0';
+  notifPanelEl.style.transform = 'scale(0.95)';
+  notifPanelEl.classList.remove('is-open');
+  setTimeout(() => {
+    if (!notifPanelEl.classList.contains('is-open')) {
+      notifPanelEl.style.display = 'none';
+    }
+  }, 150);
 }
 
 export function updateHeaderAvatar() {

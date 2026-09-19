@@ -6,6 +6,8 @@
    peer-to-peer across members without requiring a central database.
    ============================================================ */
 
+import { NotificationEngine } from './notifications.js';
+
 let yjsPromise = null;
 let ywebrtcPromise = null;
 
@@ -237,6 +239,7 @@ export class SpaceEngine {
 
     // Wire CRDT observers
     this._wireObserver(this.chat, 'chat-update');
+    this._watchChatNotifications();
     this._wireObserver(this.polls, 'poll-update');
     this._wireObserver(this.artifacts, 'artifacts-update');
     this._wireObserver(this.files, 'files-update');
@@ -261,6 +264,28 @@ export class SpaceEngine {
   _wireObserver(target, eventName) {
     if (!target) return;
     const obs = () => this._emit(eventName);
+    target.observe(obs);
+    this._observers.push({ target, obs });
+  }
+
+  _watchChatNotifications() {
+    const target = this.chat;
+    if (!target) return;
+    const joinedAt = Date.now();
+    const seen = new Set(target.toArray().map(m => m.id));
+    const obs = () => {
+      for (const m of target.toArray()) {
+        if (!m.id || seen.has(m.id)) continue;
+        seen.add(m.id);
+        // A first sync may contain old history; edits must not trigger another alert.
+        if (m.from === this.user.id || m.from === 'bot_assistant' || !(Number(m.time) >= joinedAt)) continue;
+        void NotificationEngine.addNotification(
+          `New message in ${this.spaceName || this.roomCode}`,
+          `${m.name || 'Someone'}: ${String(m.text || m.attachment?.name || 'Sent an attachment').slice(0, 160)}`,
+          'message', `#messaging?code=${encodeURIComponent(this.roomCode)}`, `${this.roomCode}:${m.id}`
+        );
+      }
+    };
     target.observe(obs);
     this._observers.push({ target, obs });
   }
