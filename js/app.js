@@ -16,14 +16,15 @@ import { renderSaved } from './views/saved.js';
 import { kindLabel } from './registry/kinds.js';
 import { copyText, showToast } from './utils.js';
 import { initTheme } from './lib/theme.js';
-import { installSettingsUI } from './lib/settings-ui.js';
+import { installSettingsUI, openSettings } from './lib/settings-ui.js';
 import { installHeaderMenu } from './lib/header-menu.js';
 import { getCurrentUser, parseAuthRedirect } from './lib/supabase.js';
 import { openAccountModal } from './views/account-modal.js';
-import { initFlutterwaveContribution } from './lib/flutterwave-contribution.js';
 import { initWorkspace } from './lib/workspace.js';
 import { initScrollNarrative } from './about-scroll.js';
+import { initSupporterProfile } from './lib/supporter.js';
 import './lib/dialog.js';
+import '../css/menu-motion.css';
 import { initHomeScrollNarrative } from './home-scroll.js';
 import { listJoinedSpaces } from './lib/space-engine.js';
 import { openContextMenu } from './lib/context-menu.js';
@@ -31,6 +32,7 @@ import { openContextMenu } from './lib/context-menu.js';
 /* --------------- state --------------- */
 
 let currentToolId = null;
+let toolNavigationVersion = 0;
 let currentToolInstance = null;
 let currentToolObj = null;
 let currentSession = null;
@@ -83,6 +85,7 @@ function toolCard(tool, { compact = false } = {}) {
         <div class="tool-card-name">${escapeHtml(tool.name)}</div>
         <div class="tool-card-desc">${escapeHtml(tool.description)}</div>
       </div>
+      <span class="tool-card-arrow" aria-hidden="true">↗</span>
       ${tool.badge ? `<span class="tool-card-badge">${escapeHtml(tool.badge)}</span>` : ''}
       ${tool.offline === false ? '<span class="tool-card-flag" title="Needs an internet connection">online</span>' : ''}
     </a>`;
@@ -376,18 +379,8 @@ function showPage(page) {
     link.classList.toggle('active', link.dataset.page === page || (page === 'about' && link.dataset.page === 'support') || (page === 'support' && link.dataset.page === 'about'));
   }
   searchWrapper.style.display = page === 'tools' ? '' : 'none';
-  if (page === 'donate' || page === 'about' || page === 'support') {
-    initFlutterwaveContribution();
-    if (page === 'donate') {
-      setTimeout(() => {
-        const tile2 = document.getElementById('about-tile-2');
-        if (tile2) {
-          tile2.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 50);
-    }
-  }
-  
+  if (page === 'donate') openSettings('contribution');
+
   requestAnimationFrame(updateMobileNavIndicator);
 }
 
@@ -416,6 +409,7 @@ function initAboutShowcase() {
 }
 
 function teardownTool() {
+  toolNavigationVersion++;
   toggleToolFullscreen(false);
   document.body.classList.remove('in-tool');
   document.body.removeAttribute('data-tool-id');
@@ -455,10 +449,11 @@ async function openTool(id, routeState = {}) {
 
   teardownTool();
 
+  const navigationVersion = toolNavigationVersion;
+
   for (const v of Object.values(VIEWS)) {
     if (!v) continue;
     v.classList.add('hidden');
-    v
   }
   searchWrapper.style.display = 'none';
 
@@ -475,6 +470,7 @@ async function openTool(id, routeState = {}) {
   // the node drops every listener bound to it, for every tool at once.
   const freshContent = document.createElement('div');
   freshContent.id = 'viewport-content';
+  freshContent.setAttribute('aria-busy', 'true');
   viewportContent.replaceWith(freshContent);
   viewportContent = freshContent;
   if (relatedBar) relatedBar.hidden = true;
@@ -485,8 +481,6 @@ async function openTool(id, routeState = {}) {
     updateFullscreenBtnState(false);
   }
   viewport.classList.remove('hidden');
-  void viewport.offsetWidth;
-  viewport
 
   for (const link of navLinks) link.classList.toggle('active', link.dataset.page === 'tools');
   requestAnimationFrame(updateMobileNavIndicator);
@@ -513,10 +507,10 @@ async function openTool(id, routeState = {}) {
     if (!loader) throw new Error(`No module for "${id}"`);
     const module = await loader();
     // Guard against a fast back-navigation resolving into a dead viewport.
-    if (currentToolId !== id) return;
+    if (toolNavigationVersion !== navigationVersion) return;
     currentToolInstance = module.default;
     await currentToolInstance.render(viewportContent, { ...routeState, analytics: session, tool, artifact: incoming });
-    if (currentToolId !== id) return;
+    if (toolNavigationVersion !== navigationVersion) return;
 
     /* The artifact layer wraps the tool rather than living inside it: a tool
        that declares neither hook gets nothing, sees nothing, and is
@@ -534,14 +528,17 @@ async function openTool(id, routeState = {}) {
     });
 
     renderRelated(tool);
+    freshContent.setAttribute('aria-busy', 'false');
   } catch (err) {
+    if (toolNavigationVersion !== navigationVersion) return;
     console.error(err);
     session.error('load_failed');
     viewportContent.innerHTML = `
       <div class="no-results">
         <p class="no-results-title">This tool failed to load</p>
-        <p class="no-results-text">${escapeHtml(err.message)}</p>
+        <p class="no-results-text">Please reopen the tool. If the problem continues, reload Toolbox and check your connection.</p>
       </div>`;
+    freshContent.setAttribute('aria-busy', 'false');
   }
 }
 
@@ -1153,6 +1150,7 @@ viewport.addEventListener('contextmenu', (e) => {
 initTheme();
 
 installSettingsUI();
+initSupporterProfile();
 installHeaderMenu();
   initWorkspace(openTool);
   initScrollNarrative();

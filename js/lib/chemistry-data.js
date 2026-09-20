@@ -2,7 +2,6 @@
    Chemistry Data Layer — Periodic Table & Comprehensive Chemical / Drug Database.
    ============================================================ */
 
-import { COMPOUNDS_DATA } from './compounds-dataset.js';
 
 
 /**
@@ -187,4 +186,3 @@ export const ELEMENTS = [
 /**
  * Comprehensive Chemical & Pharmaceutical Compound Database (1,050+ verified entries)
  */
-export const COMMON_COMPOUNDS = COMPOUNDS_DATA;

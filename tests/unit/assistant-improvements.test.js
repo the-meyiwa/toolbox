@@ -72,28 +72,8 @@ test('Assistant File Deletion: executes multiple deletions when confirmed', asyn
   assert.equal(statB, null, 'fileB.txt must be deleted');
 });
 
-test('Assistant Response Text Animations: supports 4 customizable animation styles and toggle', () => {
+test('Assistant Response Text Animations: remain disabled for a stable reading surface', () => {
   resetSettings();
-
-  // 1. color rave (default)
   updateSettings({ assistantResponseAnimation: true, assistantAnimationStyle: 'color rave' });
-  assert.equal(getAssistantAnimationClass(), 'ast-anim-color-rave');
-
-  // 2. glow & legacy Pixel
-  updateSettings({ assistantResponseAnimation: true, assistantAnimationStyle: 'glow' });
-  assert.equal(getAssistantAnimationClass(), 'ast-anim-glow');
-  updateSettings({ assistantResponseAnimation: true, assistantAnimationStyle: 'Pixel' });
-  assert.equal(getAssistantAnimationClass(), 'ast-anim-glow');
-
-  // 3. Plain Fade
-  updateSettings({ assistantResponseAnimation: true, assistantAnimationStyle: 'Plain Fade' });
-  assert.equal(getAssistantAnimationClass(), 'ast-anim-plain-fade');
-
-  // 4. Pop In
-  updateSettings({ assistantResponseAnimation: true, assistantAnimationStyle: 'Pop In' });
-  assert.equal(getAssistantAnimationClass(), 'ast-anim-pop-in');
-
-  // Disabled toggle
-  updateSettings({ assistantResponseAnimation: false });
   assert.equal(getAssistantAnimationClass(), '');
 });

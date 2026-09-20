@@ -15,11 +15,13 @@ import { getCurrentUser, updateUserProfile, claimUsername, getUsernameChangeStat
 import { getSettings, updateSettings, exportSettings, importSettings } from './settings.js';
 import { PROFILE_PICTURES, getProfilePictureSrc, getUserAvatarHtml } from './profile-pictures.js';
 import { openAccountModal } from '../views/account-modal.js';
-import { getGeminiApiKey, setGeminiApiKey } from './ai-provider.js';
 import { NotificationEngine, prepareNotificationSound } from './notifications.js';
+import { renderContributionSettings } from './flutterwave-contribution.js';
+import { paintSupporterProfile } from './supporter.js';
 
 let modalEl = null;
 let isOpen = false;
+let closeTimer = 0;
 
 function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -111,15 +113,6 @@ function createModal() {
 
       <!-- View 1: Main Settings Scrollable Body -->
       <div class="settings-modal-body" id="settings-modal-scroll" style="flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 24px; display: flex; flex-direction: column; gap: 28px; position: relative;">
-        <nav class="settings-section-nav" aria-label="Settings sections">
-          <button type="button" data-settings-jump="profile">Profile</button>
-          <button type="button" data-settings-jump="appearance">Appearance</button>
-          <button type="button" data-settings-jump="preferences">Preferences</button>
-          <button type="button" data-settings-jump="notifications">Notifications</button>
-          <button type="button" data-settings-jump="mail">Mail</button>
-          <button type="button" data-settings-jump="ai">Assistant</button>
-          <button type="button" data-settings-jump="storage">Storage</button>
-        </nav>
         
         <!-- SEARCH PREFERENCES BAR -->
         <div class="settings-search-container" style="margin-bottom: -4px;">
@@ -147,16 +140,6 @@ function createModal() {
               <input type="text" id="theme-filter-search" class="tool-input" placeholder="Filter themes..." autocomplete="off" spellcheck="false" style="width: 100%; height: 32px; padding: 0 10px 0 28px; font-size: 0.78rem; border-radius: 9999px;">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
             </div>
-          </div>
-
-          <!-- Theme Category Tabs -->
-          <div class="theme-category-tabs" id="theme-category-tabs" style="display: flex; gap: 6px; overflow-x: auto; margin-bottom: 16px; padding-bottom: 4px; scrollbar-width: none;">
-            <button type="button" class="theme-tab-btn active" data-category="all">All (${THEMES.length})</button>
-            <button type="button" class="theme-tab-btn" data-category="system">System (${THEMES.filter(t => t.group === 'system').length})</button>
-            <button type="button" class="theme-tab-btn" data-category="minimal">Minimal (${THEMES.filter(t => t.group === 'minimal').length})</button>
-            <button type="button" class="theme-tab-btn" data-category="cultural">Cultural / Design (${THEMES.filter(t => t.group === 'cultural').length})</button>
-            <button type="button" class="theme-tab-btn" data-category="brand">Brand-Inspired (${THEMES.filter(t => t.group === 'brand').length})</button>
-            <button type="button" class="theme-tab-btn" data-category="expressive">Expressive (${THEMES.filter(t => t.group === 'expressive').length})</button>
           </div>
 
           <div class="theme-grid" id="theme-grid-standard"></div>
@@ -192,6 +175,10 @@ function createModal() {
           <div id="ai-settings-container"></div>
         </section>
 
+        <section class="settings-section" id="sec-contribution">
+          <div id="contribution-settings-container"></div>
+        </section>
+
         <!-- SECTION 5: BACKUP & STORAGE -->
         <section class="settings-section" id="sec-storage" style="border-top: 1px solid var(--border); padding-top: 28px;">
           <div id="storage-settings-container"></div>
@@ -215,12 +202,6 @@ function createModal() {
   `;
 
   document.body.appendChild(modalEl);
-
-  modalEl.querySelector('.settings-section-nav')?.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-settings-jump]');
-    if (!button) return;
-    modalEl.querySelector(`#sec-${button.dataset.settingsJump}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
 
   // Header button triggers
   
@@ -401,7 +382,7 @@ function renderProfileSettings() {
       <!-- Top Row: Avatar + Username + Display Name -->
       <div style="display:flex; align-items:flex-start; gap:18px; flex-wrap:wrap;">
         <div id="settings-avatar-current-preview" style="flex-shrink:0; margin-top:2px;">
-          ${getUserAvatarHtml(activePicId, 60)}
+          ${getUserAvatarHtml({ ...user, profilePicture: activePicId }, 60)}
         </div>
         
         <div style="flex:1; min-width:240px; display:flex; flex-direction:column; gap:12px;">
@@ -626,63 +607,17 @@ function renderAiSettings() {
   if (!container) return;
 
   const user = getCurrentUser();
-  const settings = getSettings();
   const quota = user ? QuotaManager.getQuotaSummary() : null;
   const isUnlimited = user ? QuotaManager.isUserUnlimited() : false;
 
   container.innerHTML = `
     <div class="settings-section-header" style="margin-bottom: 12px;">
       <h3 class="settings-section-title" style="font-size: 0.96rem; font-weight: 700; color: var(--text); margin: 0 0 4px;">Assistant AI</h3>
-      <span class="settings-section-hint" style="font-size: 0.76rem; color: var(--text-muted);">Response text animations and Cloud Conversation persistence</span>
+      <span class="settings-section-hint" style="font-size: 0.76rem; color: var(--text-muted);">Conversation persistence and usage</span>
     </div>
 
     <div style="background:var(--bg-subtle); border:1px solid var(--border); border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:16px;">
       
-      <!-- Gemini API Key -->
-      <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px;">
-        <div style="flex:1;">
-          <div style="font-size:0.84rem; font-weight:700; color:var(--text);">Gemini API Key</div>
-          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
-            Set your custom API key for the AI Assistant.
-          </div>
-        </div>
-        <input type="password" id="settings-gemini-api-key" class="tool-input" placeholder="AIzaSy..." value="${escapeHtml(getGeminiApiKey())}" style="min-width:200px; font-size:0.82rem; padding:6px 10px;">
-      </div>
-
-      <!-- Response text animation toggle -->
-      <label style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
-        <div>
-          <div style="font-size:0.84rem; font-weight:700; color:var(--text);">Response text animation</div>
-          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
-            Animate assistant message text dynamically as responses are generated
-          </div>
-        </div>
-        <input type="checkbox" id="settings-ast-anim-toggle" class="pref-switch" ${settings.assistantResponseAnimation !== false ? 'checked' : ''}>
-      </label>
-
-      <!-- Animation style picker -->
-      <div style="display:flex; justify-content:space-between; align-items:center; padding-top:12px; border-top:1px solid var(--border); flex-wrap:wrap; gap:8px;">
-        <div>
-          <div style="font-size:0.84rem; font-weight:700; color:var(--text);">Animation style</div>
-          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
-            Visual effect applied to the assistant's response text
-          </div>
-        </div>
-        <select class="tool-select pref-select" id="settings-ast-anim-style" style="min-width:160px; font-size:0.82rem;">
-          <option value="color rave" ${(settings.assistantAnimationStyle || 'color rave') === 'color rave' ? 'selected' : ''}>color rave</option>
-          <option value="glow" ${(settings.assistantAnimationStyle === 'glow' || settings.assistantAnimationStyle === 'Pixel') ? 'selected' : ''}>glow</option>
-          <option value="Plain Fade" ${settings.assistantAnimationStyle === 'Plain Fade' ? 'selected' : ''}>Plain Fade</option>
-          <option value="Pop In" ${settings.assistantAnimationStyle === 'Pop In' ? 'selected' : ''}>Pop In</option>
-        </select>
-      </div>
-
-      <!-- Animation Live Preview -->
-      <div style="padding-top:10px; border-top:1px solid var(--border);">
-        <div class="ast-anim-preview-box" id="settings-ast-anim-preview-box" style="justify-content:center; text-align:center; padding:12px; background:var(--bg-card); border-radius:8px; border:1px solid var(--border);">
-          <span class="ast-anim-preview-text" id="settings-ast-anim-preview-text">Animation preview</span>
-        </div>
-      </div>
-
       <!-- Cloud History Status -->
       <div style="padding-top:12px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
         <div>
@@ -716,41 +651,6 @@ function renderAiSettings() {
     </div>
   `;
 
-  // Attach animation preview & listeners
-  const updateSettingsAnimPreview = () => {
-    const isEnabled = container.querySelector('#settings-ast-anim-toggle')?.checked;
-    const style = container.querySelector('#settings-ast-anim-style')?.value || 'color rave';
-    const previewEl = container.querySelector('#settings-ast-anim-preview-text');
-    if (!previewEl) return;
-    previewEl.className = 'ast-anim-preview-text';
-    if (!isEnabled) {
-      previewEl.textContent = 'Animations disabled';
-      previewEl.style.opacity = '0.4';
-      previewEl.style.fontStyle = 'italic';
-    } else {
-      previewEl.textContent = 'Animation preview';
-      previewEl.style.opacity = '1';
-      previewEl.style.fontStyle = 'normal';
-      let animClass = 'ast-anim-color-rave';
-      if (style === 'glow' || style === 'Pixel') animClass = 'ast-anim-glow';
-      else if (style === 'Plain Fade') animClass = 'ast-anim-plain-fade';
-      else if (style === 'Pop In') animClass = 'ast-anim-pop-in';
-      previewEl.classList.add(animClass);
-    }
-  };
-
-  updateSettingsAnimPreview();
-
-  container.querySelector('#settings-ast-anim-toggle')?.addEventListener('change', (e) => {
-    updateSettings({ assistantResponseAnimation: e.target.checked });
-    updateSettingsAnimPreview();
-  });
-
-  container.querySelector('#settings-ast-anim-style')?.addEventListener('change', (e) => {
-    updateSettings({ assistantAnimationStyle: e.target.value });
-    updateSettingsAnimPreview();
-  });
-
   container.querySelector('#btn-reset-quota-modal')?.addEventListener('click', () => {
     try {
       QuotaManager.resetQuotas();
@@ -760,9 +660,6 @@ function renderAiSettings() {
     }
   });
 
-  container.querySelector('#settings-gemini-api-key')?.addEventListener('input', (e) => {
-    setGeminiApiKey(e.target.value);
-  });
 }
 
 function renderStorageSettings() {
@@ -823,11 +720,9 @@ function renderStorageSettings() {
   });
 }
 
-let activeThemeCategory = 'all';
 let activeThemeSearch = '';
 
-function updateThemeList(category = activeThemeCategory, search = activeThemeSearch) {
-  activeThemeCategory = category;
+function updateThemeList(search = activeThemeSearch) {
   activeThemeSearch = search;
 
   const currentId = getStoredTheme();
@@ -835,10 +730,9 @@ function updateThemeList(category = activeThemeCategory, search = activeThemeSea
   if (!standardGrid) return;
 
   const filtered = THEMES.filter(t => {
-    const matchCat = (activeThemeCategory === 'all' || t.group === activeThemeCategory);
     const q = activeThemeSearch.toLowerCase().trim();
     const matchSearch = !q || t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || t.group.toLowerCase().includes(q);
-    return matchCat && matchSearch;
+    return matchSearch;
   });
 
   if (filtered.length === 0) {
@@ -851,16 +745,11 @@ function updateThemeList(category = activeThemeCategory, search = activeThemeSea
     standardGrid.innerHTML = filtered.map(t => renderThemeCard(t, currentId)).join('');
   }
 
-  // Update active category tab button
-  modalEl.querySelectorAll('#theme-category-tabs .theme-tab-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.getAttribute('data-category') === activeThemeCategory);
-  });
-
   modalEl.querySelectorAll('.theme-card').forEach(card => {
     card.addEventListener('click', () => {
       const themeId = card.getAttribute('data-theme-id');
       applyTheme(themeId);
-      updateThemeList(activeThemeCategory, activeThemeSearch);
+      updateThemeList(activeThemeSearch);
     });
   });
 
@@ -869,23 +758,12 @@ function updateThemeList(category = activeThemeCategory, search = activeThemeSea
   if (searchInput && !searchInput.dataset.wired) {
     searchInput.dataset.wired = 'true';
     searchInput.addEventListener('input', (e) => {
-      updateThemeList(activeThemeCategory, e.target.value);
+      updateThemeList(e.target.value);
     });
   }
 
-  // Wire category tabs once
-  const tabWrap = modalEl.querySelector('#theme-category-tabs');
-  if (tabWrap && !tabWrap.dataset.wired) {
-    tabWrap.dataset.wired = 'true';
-    tabWrap.querySelectorAll('.theme-tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const cat = btn.getAttribute('data-category');
-        updateThemeList(cat, activeThemeSearch);
-      });
-    });
-  }
+
 }
-
 
 function renderMailSettings() {
   const container = modalEl?.querySelector('#mail-settings-container');
@@ -955,6 +833,11 @@ export function openSettings(targetSection = null) {
   renderStorageSettings();
   renderMailSettings();
   renderNotificationSettings();
+  renderContributionSettings(modalEl.querySelector('#contribution-settings-container'), () => {
+    closeSettings();
+    openAccountModal();
+  });
+  paintSupporterProfile();
 
   if (targetSection === 'avatars') {
     showAvatarView();
@@ -973,6 +856,7 @@ export function openSettings(targetSection = null) {
   const mainScroll = modalEl.querySelector('#settings-modal-scroll');
   if (mainScroll) mainScroll.scrollTop = 0;
 
+  clearTimeout(closeTimer);
   modalEl.style.display = 'flex';
 
   requestAnimationFrame(() => {
@@ -993,14 +877,17 @@ export function openSettings(targetSection = null) {
 export function closeSettings() {
   if (!modalEl || !isOpen) return;
   modalEl.classList.remove('is-open');
-
-  setTimeout(() => {
+  isOpen = false;
+  closeTimer = setTimeout(() => {
+    if (isOpen) return;
     modalEl.style.display = 'none';
-    isOpen = false;
   }, 200);
 }
 
 export function installSettingsUI() {
+  window.addEventListener('toolbox:authchange', () => {
+    if (isOpen) openSettings();
+  });
   const settingsBtn = document.getElementById('settings-btn');
   if (settingsBtn) {
     settingsBtn.addEventListener('click', () => openSettings());

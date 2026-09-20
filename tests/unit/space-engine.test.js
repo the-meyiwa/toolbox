@@ -44,7 +44,9 @@ test('SpaceEngine: joined spaces bookmarks persistence', () => {
 test('SpaceEngine: incoming chat notifications ignore history, own messages and repeat edits', async () => {
   const { SpaceEngine } = await import('../../js/lib/space-engine.js');
   const { NotificationEngine } = await import('../../js/lib/notifications.js');
-  await NotificationEngine.clearAll();
+  const delivered = [];
+  const originalAdd = NotificationEngine.addNotification;
+  NotificationEngine.addNotification = async (...args) => { delivered.push(args); };
   const now = Date.now();
   let messages = [{ id: 'existing', from: 'peer', time: now - 10000 }];
   let callback;
@@ -54,9 +56,12 @@ test('SpaceEngine: incoming chat notifications ignore history, own messages and 
   messages.push({ id: 'old-sync', from: 'peer', time: now - 10000 });
   messages.push({ id: 'own', from: 'self', time: now + 1 });
   messages.push({ id: 'incoming', from: 'peer', name: 'Peer', text: 'Hello', time: now + 1 });
-  callback(); callback();
-  const alerts = await NotificationEngine.getNotifications();
-  assert.equal(alerts.length, 1);
-  assert.equal(alerts[0].link, '#messaging?code=ROOM1');
-  assert.equal(context._observers.length, 1);
+  try {
+    callback(); callback();
+    assert.equal(delivered.length, 1);
+    assert.equal(delivered[0][3], '#messaging?code=ROOM1');
+    assert.equal(context._observers.length, 1);
+  } finally {
+    NotificationEngine.addNotification = originalAdd;
+  }
 });

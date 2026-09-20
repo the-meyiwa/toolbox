@@ -4,6 +4,9 @@
    and reactive avatar rendering across settings, header, and Spaces.
    ============================================================ */
 
+import { getSupporterState } from './supporter.js';
+import { getCurrentUser } from './supabase.js';
+
 export const PROFILE_PICTURES = [
   {
     id: 'default',
@@ -200,6 +203,15 @@ export function getProfilePictureSrc(id) {
 }
 
 export function getUserAvatarHtml(userOrId, size = 32, className = '') {
+  const avatar = renderAvatar(userOrId, size, className);
+  if (!userOrId?.id || userOrId.id !== getCurrentUser()?.id) return avatar;
+  const state = getSupporterState();
+  const style = state.supporter && ['etched','halo','orbit'].includes(state.profileStyle) ? state.profileStyle : 'classic';
+  const id = String(userOrId.id).replace(/[^a-zA-Z0-9_-]/g, '');
+  return `<span class="supporter-avatar" data-supporter-account="${id}" data-supporter-style="${style}">${avatar}${state.supporter ? '<span class="supporter-avatar-badge" title="Toolbox Supporter" aria-label="Toolbox Supporter">S</span>' : ''}</span>`;
+}
+
+function renderAvatar(userOrId, size = 32, className = '') {
   let pictureId = 'default';
 
   if (typeof userOrId === 'string') {

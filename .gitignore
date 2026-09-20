@@ -6,4 +6,6 @@ dist/
 .env.local
 .env.*
 .workspaces/
+.toolbox-mail.json
+audit-*.log
 

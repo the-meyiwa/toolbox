@@ -5,6 +5,7 @@
    viewport boundary collision detection.
    ============================================================ */
 
+import { removeMenu } from './menu-motion.js';
 let activeMenu = null;
 
 /**
@@ -95,11 +96,21 @@ export function openContextMenu({ x, y, title = '', items = [] }) {
     if (e.key === 'Escape') {
       closeContextMenu();
     }
+    const entries = [...menu.querySelectorAll('[role="menuitem"]')];
+    const index = entries.indexOf(document.activeElement);
+    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) {
+      e.preventDefault();
+      const next = e.key === 'Home' ? 0 : e.key === 'End' ? entries.length - 1
+        : (index + (e.key === 'ArrowUp' ? -1 : 1) + entries.length) % entries.length;
+      entries[next]?.focus();
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      if (index >= 0) { e.preventDefault(); entries[index].click(); }
+    }
   };
 
   menu.addEventListener('click', onMenuClick);
   // Delay global listeners so the triggering click doesn't instantly dismiss
-  setTimeout(() => {
+  const listenerTimer = setTimeout(() => {
     window.addEventListener('pointerdown', onGlobalPointerDown, true);
     window.addEventListener('contextmenu', onGlobalPointerDown, true);
     window.addEventListener('scroll', closeContextMenu, { passive: true, capture: true });
@@ -109,11 +120,12 @@ export function openContextMenu({ x, y, title = '', items = [] }) {
   activeMenu = {
     element: menu,
     cleanup: () => {
+      clearTimeout(listenerTimer);
       window.removeEventListener('pointerdown', onGlobalPointerDown, true);
       window.removeEventListener('contextmenu', onGlobalPointerDown, true);
       window.removeEventListener('scroll', closeContextMenu, true);
       window.removeEventListener('keydown', onKeyDown, true);
-      menu.remove();
+      removeMenu(menu);
     }
   };
 }
@@ -126,7 +138,7 @@ export function closeContextMenu() {
   const existing = document.getElementById('toolbox-context-menu');
   if (existing) existing.remove();
   const legacy = document.getElementById('sv-finder-menu');
-  if (legacy) legacy.remove();
+  if (legacy) removeMenu(legacy);
 }
 
 function escapeHtml(str) {

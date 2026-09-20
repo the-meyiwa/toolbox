@@ -7,6 +7,9 @@
 
 export default {
   render(container) {
+    this.destroy();
+    let disposed = false;
+    let subtitleUrl = null;
     let videoBlobUrl = null;
     let audioCtx = null;
     let gainNode = null;
@@ -115,6 +118,16 @@ export default {
     const metaRes = container.querySelector('#vp-meta-res');
     const metaDur = container.querySelector('#vp-meta-dur');
     const metaLoop = container.querySelector('#vp-meta-loop');
+    this._cleanup = () => {
+      disposed = true;
+      videoEl.pause?.();
+      videoEl.removeAttribute('src');
+      videoEl.load?.();
+      if (videoBlobUrl) URL.revokeObjectURL(videoBlobUrl);
+      if (subtitleUrl) URL.revokeObjectURL(subtitleUrl);
+      gainNode?.disconnect();
+      audioCtx?.close().catch(() => {});
+    };
 
     chooseBtn.addEventListener('click', () => videoInput.click());
     subBtn.addEventListener('click', () => subInput.click());
@@ -174,6 +187,7 @@ export default {
 
     async function loadSubtitles(file) {
       const text = await file.text();
+      if (disposed) return;
       let vttText = text;
       if (file.name.endsWith('.srt')) {
         // Convert SRT to WebVTT
@@ -185,7 +199,9 @@ export default {
       track.kind = 'subtitles';
       track.label = file.name.replace(/\.[^/.]+$/, '');
       track.srclang = 'en';
-      track.src = URL.createObjectURL(blob);
+      if (subtitleUrl) URL.revokeObjectURL(subtitleUrl);
+      subtitleUrl = URL.createObjectURL(blob);
+      track.src = subtitleUrl;
       track.default = true;
 
       // Remove existing tracks
@@ -271,5 +287,9 @@ export default {
         URL.revokeObjectURL(a.href);
       }, 'image/png');
     });
+  },
+  destroy() {
+    this._cleanup?.();
+    this._cleanup = null;
   }
 };

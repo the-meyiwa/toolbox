@@ -1,4 +1,5 @@
 import { tbConfirm, tbPrompt, tbAlert } from '../lib/dialog.js';
+import { removeMenu } from '../lib/menu-motion.js';
 /**
  * Code Playground IDE
  *
@@ -1086,7 +1087,7 @@ export default {
         closeAllMenus();
       }
     const cm = document.getElementById('cpg-context-menu');
-      if (cm && !e.target.closest('#cpg-context-menu')) cm.remove();
+      if (cm && !e.target.closest('#cpg-context-menu')) removeMenu(cm);
     };
     document.addEventListener('click', onDocClick);
 
@@ -1094,7 +1095,7 @@ export default {
       if (e.key === 'Escape') {
         closeAllMenus();
         const cm = document.getElementById('cpg-context-menu');
-        if (cm) cm.remove();
+        if (cm) removeMenu(cm);
       }
     };
     document.addEventListener('keydown', onDocKeydown);
@@ -1108,7 +1109,7 @@ export default {
       if (treeItem || tabItem || sidebar) {
         e.preventDefault();
         const cmExists = document.getElementById('cpg-context-menu');
-        if (cmExists) cmExists.remove();
+        if (cmExists) removeMenu(cmExists);
         
         let targetFile = null;
         let fileId = null;
@@ -1141,7 +1142,7 @@ export default {
         cm.addEventListener('click', async (me) => {
           const act = me.target.closest('[data-act]')?.dataset.act;
           const add = me.target.closest('[data-add]')?.dataset.add;
-          cm.remove();
+          removeMenu(cm);
 
           if (add) {
             const plusDropdown = document.getElementById('cpg-plus-dropdown');

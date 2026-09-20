@@ -22,35 +22,35 @@ export const AI_MODES = {
     id: 'auto',
     name: 'Auto Mode',
     badge: 'Auto Reasoning',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.6-flash',
     description: 'High-speed generative intelligence with multi-tool calling, file reasoning, and code generation.'
   },
   reasoning: {
     id: 'reasoning',
     name: 'Deep Reasoning',
     badge: 'Deep Reasoning',
-    model: 'gemini-2.5-pro',
+    model: 'gemini-3.6-flash',
     description: 'Analytical problem solving, multi-step proofs, and comprehensive explanations.'
   },
   code: {
     id: 'code',
     name: 'Code & Math Engine',
     badge: 'Code Engine',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.6-flash',
     description: 'Generates and tests code in JavaScript, Python, C++, and SQL with live execution.'
   },
   science: {
     id: 'science',
     name: 'Science & Chemistry',
     badge: 'Science Engine',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.6-flash',
     description: 'Molar mass calculation, reaction balancing, stoichiometry, and compound queries.'
   },
   files: {
     id: 'files',
     name: 'File & Image Suite',
     badge: 'File Suite',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.6-flash',
     description: 'Multimodal image inspection, conversion, dataset analysis, and OCR.'
   }
 };
@@ -293,6 +293,12 @@ export async function streamChatCompletion({
     ? BASE_SYSTEM_INSTRUCTION + dynamicContext
     : dynamicContext;
   const activeToolDeclarations = toolDeclarations || ASSISTANT_TOOL_DECLARATIONS;
+  const interactionTools = activeToolDeclarations.map(tool => ({
+    type: 'function',
+    name: tool.name,
+    description: tool.description,
+    parameters: tool.parameters || { type: 'object', properties: {} }
+  }));
 
   if (!isRealBrowser) {
     const lastUser = [...history].reverse().find(m => m.role === 'user')?.content || 'Hello';
@@ -388,7 +394,7 @@ export async function streamChatCompletion({
         model: modeCfg.model,
         input: currentSteps,
         system_instruction: systemInstruction ? `${fullSystemInstruction}\n\n${systemInstruction}` : fullSystemInstruction,
-        tools: [{ functionDeclarations: activeToolDeclarations }],
+        tools: interactionTools,
         stream: true
       });
 
@@ -415,7 +421,7 @@ export async function streamChatCompletion({
         // We have function calls to execute
         const toolResponses = [];
         for (const call of functionCallsThisTurn) {
-           const result = await handleSingleToolCall(call.name, call.args || {}, call.id);
+           const result = await handleSingleToolCall(call.name, call.arguments || call.args || {}, call.id);
            toolResponses.push({
              type: 'function_result',
              call_id: call.id,
@@ -481,7 +487,7 @@ export async function testAiProviderConnection(provider = 'gemini', apiKey = '')
   }
 
   const start = Date.now();
-  const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-flash-latest'];
+  const modelsToTry = ['gemini-3.6-flash'];
   let lastErr = 'Connection failed';
 
   try {

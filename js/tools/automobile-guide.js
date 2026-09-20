@@ -13,6 +13,7 @@ import { autoClient } from '../lib/automotive-data.js';
 
 export default {
   render(container) {
+    this.destroy();
     this.container = container;
     this.state = {
       vehicles: [],
@@ -751,7 +752,10 @@ export default {
   },
 
   async loadInitialVehicle() {
-    this.state.vehicles = await autoClient.searchVehicles('lexus gx');
+    const version = this._version;
+    const vehicles = await autoClient.searchVehicles('lexus gx');
+    if (version !== this._version) return;
+    this.state.vehicles = vehicles;
     // Default to the first result
     const initial = this.state.vehicles[0];
     if (initial) {
@@ -764,26 +768,30 @@ export default {
     const searchDropdown = this.container.querySelector('#ag-search-dropdown');
 
     // Live search input with debouncing
-    let debounce;
+    const version = this._version;
     searchInput.addEventListener('input', (e) => {
-      clearTimeout(debounce);
-      debounce = setTimeout(async () => {
+      clearTimeout(this._searchTimer);
+      this._searchTimer = setTimeout(async () => {
         const query = e.target.value.trim();
         const results = await autoClient.searchVehicles(query);
+        if (version !== this._version || query !== searchInput.value.trim()) return;
         this.renderSearchResults(results);
       }, 200);
     });
 
     searchInput.addEventListener('focus', async () => {
-      const results = await autoClient.searchVehicles(searchInput.value.trim());
+      const query = searchInput.value.trim();
+      const results = await autoClient.searchVehicles(query);
+      if (version !== this._version || query !== searchInput.value.trim()) return;
       this.renderSearchResults(results);
     });
 
-    document.addEventListener('click', (e) => {
+    this._onOutsideClick = (e) => {
       if (!searchInput.contains(e.target) && !searchDropdown.contains(e.target)) {
         searchDropdown.style.display = 'none';
       }
-    });
+    };
+    document.addEventListener('click', this._onOutsideClick);
 
     // View mode pills
     const viewPills = this.container.querySelector('#ag-view-pills');
@@ -811,16 +819,18 @@ export default {
       this.state.startY = e.clientY - this.state.panY;
     });
 
-    window.addEventListener('mousemove', (e) => {
+    this._onPanMove = (e) => {
       if (!this.state.isPanning) return;
       this.state.panX = e.clientX - this.state.startX;
       this.state.panY = e.clientY - this.state.startY;
       this.applyTransform();
-    });
+    };
+    window.addEventListener('mousemove', this._onPanMove);
 
-    window.addEventListener('mouseup', () => {
+    this._onPanEnd = () => {
       this.state.isPanning = false;
-    });
+    };
+    window.addEventListener('mouseup', this._onPanEnd);
 
     // Mouse wheel zoom
     canvasCol.addEventListener('wheel', (e) => {
@@ -915,12 +925,14 @@ export default {
   },
 
   async selectVehicle(vehicle) {
+    const version = this._version;
     this.state.selectedVehicle = vehicle;
     this.state.selectedSection = null;
     this.state.selectedComponent = null;
 
     // Fetch full specs
     const specs = await autoClient.getVehicleDetails(vehicle.id, vehicle.manufacturer, vehicle.model);
+    if (version !== this._version || this.state.selectedVehicle !== vehicle) return;
     if (specs) {
        this.state.selectedVehicle = { ...vehicle, ...specs };
     }
@@ -997,6 +1009,8 @@ export default {
   },
 
   async updateBlueprint() {
+    const version = this._version;
+    const request = this._diagramRequest = (this._diagramRequest || 0) + 1;
     const { selectedVehicle, viewMode, selectedSection, selectedComponent } = this.state;
     if (!selectedVehicle) return;
 
@@ -1007,6 +1021,7 @@ export default {
       selectedSection,
       selectedComponent
     );
+    if (version !== this._version || request !== this._diagramRequest) return;
     container.innerHTML = svgMarkup;
 
     // Update status bar
@@ -1192,6 +1207,14 @@ export default {
     this.state.panX = 0;
     this.state.panY = 0;
     this.applyTransform();
+  },
+
+  destroy() {
+    this._version = (this._version || 0) + 1;
+    clearTimeout(this._searchTimer);
+    document.removeEventListener('click', this._onOutsideClick);
+    window.removeEventListener('mousemove', this._onPanMove);
+    window.removeEventListener('mouseup', this._onPanEnd);
   },
 
   applyTransform() {

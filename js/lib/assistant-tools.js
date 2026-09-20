@@ -9,7 +9,6 @@ import { TOOLS } from '../registry/index.js';
 import { cleanText } from '../utils.js';
 import { LANGUAGES, makeWorker } from './code-runtimes.js';
 import { calculateMolarMass, balanceChemicalEquation, calculateStoichiometry } from './chemistry-engine.js';
-import { COMPOUNDS_DATA } from './compounds-dataset.js';
 import { connectionInfo, measureLatency, measureDownload } from './netspeed.js';
 import { AssistantAudioManager } from './assistant-audio.js';
 import { toolDiscovery } from './assistant-tool-discovery.js';
@@ -3535,7 +3534,9 @@ header h1 { font-size: 2rem; margin-bottom: 6px; }
           // 1. In Node environment, use esbuild
           if (typeof process !== 'undefined' && process.versions?.node) {
             try {
-              const esbuild = await import('esbuild');
+              // Keep the Node-only compiler out of browser tool chunks.
+              const nodeCompiler = 'esbuild';
+              const esbuild = await import(/* @vite-ignore */ nodeCompiler);
               esbuild.transformSync(js, { loader: isJsx ? 'jsx' : 'js' });
               validated = true;
             } catch (esErr) {
@@ -4355,6 +4356,7 @@ if (container) {
         const balanced = balanceChemicalEquation(formulaOrQuery);
         return { status: 'success', input: formulaOrQuery, balancedEquation: balanced.equation, isBalanced: balanced.balanced };
       } else if (action === 'search_compound') {
+        const { COMPOUNDS_DATA } = await import('./compounds-dataset.js');
         const q = formulaOrQuery.toLowerCase().trim();
         const results = COMPOUNDS_DATA.filter(c => 
           c.name.toLowerCase().includes(q) || 

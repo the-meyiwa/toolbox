@@ -2,56 +2,60 @@ export function initScrollNarrative() {
   const supportView = document.getElementById('support-view');
   if (!supportView) return;
 
-  const tiles = supportView.querySelectorAll('.about-tile');
+  const tiles = supportView.querySelectorAll('.about-chapter');
   if (!tiles.length) return;
 
-  const prefersReduced = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const prefersReduced = () => motion.matches;
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  let frame = 0;
 
   const updateNarrative = () => {
+    frame = 0;
     if (supportView.classList.contains('hidden')) return;
 
-    if (prefersReduced()) {
-      tiles.forEach((tile) => {
-        tile.style.opacity = '1';
-        tile.style.transform = 'none';
-        tile.style.filter = 'none';
-      });
-      return;
-    }
+    supportView.classList.toggle('story-motion', !prefersReduced());
+    const bounds = supportView.getBoundingClientRect();
+    supportView.style.setProperty('--story-progress', clamp(-bounds.top / Math.max(1, bounds.height - window.innerHeight), 0, 1));
 
     const viewportHeight = window.innerHeight;
-    const viewportCenter = viewportHeight / 2;
-
     tiles.forEach((tile) => {
       const rect = tile.getBoundingClientRect();
-      const tileCenter = rect.top + rect.height / 2;
-      const distance = Math.abs(tileCenter - viewportCenter);
-      const threshold = viewportHeight * 0.55;
-
-      const progress = Math.min(distance / threshold, 1);
-      const opacity = Math.max(0.08, 1 - progress * 1.15);
-      const scale = 1 - progress * 0.04;
-      const translateY = (tileCenter < viewportCenter ? -1 : 1) * (progress * 20);
-      const blur = progress * 2.5;
-
-      tile.style.opacity = opacity.toFixed(3);
-      tile.style.transform = `translate3d(0, ${translateY.toFixed(1)}px, 0) scale(${scale.toFixed(3)})`;
-      tile.style.filter = blur > 0.4 ? `blur(${blur.toFixed(1)}px)` : 'none';
-      tile.classList.toggle('tile-active', progress < 0.35);
+      if (rect.bottom < -viewportHeight || rect.top > viewportHeight * 2) return;
+      const travel = Math.max(1, viewportHeight + rect.height);
+      const progress = prefersReduced() ? .5 : clamp((viewportHeight - rect.top) / travel, 0, 1);
+      const centered = (progress - .5) * 2;
+      const enter = prefersReduced() ? 1 : clamp((progress - .02) / .14, 0, 1);
+      const exit = prefersReduced() ? 0 : clamp((progress - .76) / .18, 0, 1);
+      const visibility = prefersReduced() ? 1 : Math.min(enter, 1 - exit);
+      const phase = (offset) => prefersReduced() ? 1 : clamp((progress - offset) / .18, 0, 1);
+      tile.style.setProperty('--chapter-progress', progress.toFixed(4));
+      tile.style.setProperty('--chapter-drift', `${centered * 72}px`);
+      tile.style.setProperty('--chapter-turn', `${centered * -14}deg`);
+      tile.style.setProperty('--chapter-spread', `${Math.abs(centered) * 64}px`);
+      tile.style.setProperty('--chapter-reveal', visibility.toFixed(3));
+      tile.style.setProperty('--chapter-exit', exit.toFixed(3));
+      tile.style.setProperty('--chapter-enter', enter.toFixed(3));
+      tile.style.setProperty('--story-step-1', phase(.12).toFixed(3));
+      tile.style.setProperty('--story-step-2', phase(.25).toFixed(3));
+      tile.style.setProperty('--story-step-3', phase(.38).toFixed(3));
+      tile.classList.toggle('is-story-active', progress > .16 && progress < .84);
     });
   };
 
-  window.addEventListener('scroll', updateNarrative, { passive: true });
-  window.addEventListener('resize', updateNarrative, { passive: true });
+  const schedule = () => { if (!frame) frame = requestAnimationFrame(updateNarrative); };
+  window.addEventListener('scroll', schedule, { passive: true });
+  window.addEventListener('resize', schedule, { passive: true });
+  motion.addEventListener('change', schedule);
 
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       if (mutation.attributeName === 'class' && !supportView.classList.contains('hidden')) {
-        setTimeout(updateNarrative, 40);
+        schedule();
       }
     });
   });
-  observer.observe(supportView, { attributes: true });
+  observer.observe(supportView, { attributes: true, attributeFilter: ['class'] });
 
   // Initial trigger
   updateNarrative();

@@ -1549,7 +1549,7 @@ export const TOOLS = [
   {
     id: 'payment-hub',
     name: 'Payment Hub & Receive Money',
-    description: 'Accept payments and receive money via Dedicated Virtual Bank Accounts, Cards and Crypto rails with instant settlements',
+    description: 'Payment receiving setup status and invoice creation — a verified merchant integration is required',
     category: 'business',
     secondary: ['numbers', 'everyday'],
     keywords: ['payment', 'receive money', 'virtual account', 'bank transfer', 'card', 'crypto', 'lightning', 'invoice payment', 'checkout'],

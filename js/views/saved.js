@@ -1,4 +1,5 @@
 import { tbConfirm, tbPrompt, tbAlert } from '../lib/dialog.js';
+import { removeMenu } from '../lib/menu-motion.js';
 import { openContextMenu as showFinderMenu, closeContextMenu } from '../lib/context-menu.js';
 /* ============================================================
    TOOLBOX — Files & Saved Work (Browser File Explorer)
@@ -706,6 +707,8 @@ export function getToolsForFile(file) {
     if (ext === 'html') add('html-entity-codec');
   } else if (['zip', 'tar', 'gz', 'bz2'].includes(ext) || kind === 'archive') {
     ['file-decompressor', 'file-compressor'].forEach(add);
+  } else if (['txt', 'rtf', 'log'].includes(ext) || kind === 'text') {
+    ['find-replace', 'text-cleaner', 'word-counter', 'document-analyzer'].forEach(add);
   }
 
   // 2. Include all registry tools that accept this kind
@@ -1492,7 +1495,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
       const itemTarget = me.target.closest('[data-canvas-act]');
       if (!itemTarget) return;
       const act = itemTarget.dataset.canvasAct;
-      menu.remove();
+      removeMenu(menu);
 
       if (act === 'select-all') {
         const items = fs.listSync(currentPath);
@@ -1726,7 +1729,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
           await fs.setTags(p, nextTags);
         }
         flash(`Updated tags for ${paths.length} item(s).`);
-        menu.remove();
+        removeMenu(menu);
         refresh(null);
         return;
       }
@@ -1734,7 +1737,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
       const itemTarget = me.target.closest('[data-cmenu]');
       if (!itemTarget) return;
       const act = itemTarget.dataset.cmenu;
-      menu.remove();
+      removeMenu(menu);
 
       if (act === 'open') {
         if (isDir) {
@@ -2074,7 +2077,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
   const dismissMenu = (me) => {
     const menu = document.getElementById('sv-finder-menu');
     if (menu && (menu.contains ? !menu.contains(me.target) : !me.target?.closest?.('#sv-finder-menu'))) {
-      menu.remove();
+      removeMenu(menu);
     }
     const openMenu = host.querySelector('#sv-open-dropdown-menu');
     const isInsideOpen = me.target?.closest?.('.sv-open-dropdown-wrap');
@@ -2215,7 +2218,13 @@ function wire(host, selected, refresh, itemsInDir = []) {
       // Normal click
       selectedPaths.clear();
       selectedPaths.add(itemPath);
-      if (!isDir) {
+      if (isDir && currentLayout !== 'split') {
+        currentPath = itemPath;
+        selectedPaths.clear();
+        refresh(null);
+      } else if (!isDir && currentLayout !== 'split') {
+        openQuickLook(itemsInDir.find(file => file.path === itemPath) || itemPath);
+      } else if (!isDir) {
         history.replaceState(null, '', `#files/${encodeURIComponent(itemPath)}`);
         refresh(itemPath);
       } else {
@@ -2487,6 +2496,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
     if (!file) return;
 
     try {
+      const text = await file.text();
       const res = store.importBundle(text);
       const n = res?.imported || 0;
       flash(`Imported ${n} artifact${n === 1 ? '' : 's'}.`);
@@ -2499,6 +2509,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
 
   // Double click: open folder or launch file into top tool
   const onDblClick = async (e) => {
+    if (currentLayout !== 'split') return;
     const folderEl = e.target.closest('[data-is-dir="true"]');
     if (folderEl) {
       const path = folderEl.dataset.path || folderEl.dataset.navPath;
@@ -2572,7 +2583,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
       const propModal = document.getElementById('sv-properties-modal');
       if (propModal) { propModal.remove(); return; }
       const fMenu = document.getElementById('sv-finder-menu');
-      if (fMenu) { fMenu.remove(); return; }
+      if (fMenu) { removeMenu(fMenu); return; }
     }
 
     // Ctrl+A / Cmd+A: Select All

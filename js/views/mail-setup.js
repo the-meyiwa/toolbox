@@ -24,9 +24,10 @@ export function createMailSetupUI({ onboarding = false, onComplete = null } = {}
 
   const list = container.querySelector('#mail-account-list');
   const error = container.querySelector('#oauth-error-container');
+  const authHeaders = () => ({ Authorization: `Bearer ${user.token}` });
   const renderAccounts = async () => {
     try {
-      const response = await fetch(`/api/mail/status?userId=${encodeURIComponent(user.id)}`);
+      const response = await fetch('/api/mail/status', { headers: authHeaders() });
       const data = await response.json();
       const accounts = data.accounts || [];
       const activeId = localStorage.getItem('toolbox_mail_active_account') || data.activeAccountId;
@@ -38,24 +39,38 @@ export function createMailSetupUI({ onboarding = false, onComplete = null } = {}
 
   container.querySelectorAll('[data-mail-provider]').forEach(button => button.addEventListener('click', async () => {
     const provider = button.dataset.mailProvider;
+    const popup = window.open('about:blank', `Toolbox ${providerName(provider)} Mail`, 'width=520,height=680');
+    if (!popup) {
+      error.textContent = 'Allow popups for Toolbox to connect your mailbox.';
+      return;
+    }
+    popup.document.title = `Connecting ${providerName(provider)} Mail…`;
+    popup.document.body.innerHTML = '<p style="font:15px system-ui;padding:24px">Preparing secure mailbox authorization…</p>';
     button.disabled = true;
     error.textContent = '';
     try {
-      const response = await fetch(`/api/mail/oauth/init?userId=${encodeURIComponent(user.id)}&provider=${provider}`);
+      const response = await fetch(`/api/mail/oauth/init?provider=${provider}`, { headers: authHeaders() });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || 'Could not start mailbox authorization.');
-      const popup = window.open(data.url, `Toolbox ${providerName(provider)} Mail`, 'width=520,height=680');
-      if (!popup) throw new Error('Allow popups for Toolbox to connect your mailbox.');
+      popup.location.replace(data.url);
       const listener = event => {
-        if (event.data?.type !== 'toolbox:mail-oauth-success') return;
+        if (event.origin !== window.location.origin || event.data?.type !== 'toolbox:mail-oauth-success') return;
         window.removeEventListener('message', listener);
+        clearInterval(closeWatcher);
+        button.disabled = false;
         localStorage.setItem('toolbox_mail_active_account', event.data.accountId || '');
         window.dispatchEvent(new CustomEvent('toolbox:mailconfigchange'));
         void renderAccounts();
         onComplete?.();
       };
       window.addEventListener('message', listener);
-    } catch (err) { error.textContent = err.message; button.disabled = false; }
+      const closeWatcher = window.setInterval(() => {
+        if (!popup.closed) return;
+        clearInterval(closeWatcher);
+        window.removeEventListener('message', listener);
+        button.disabled = false;
+      }, 400);
+    } catch (err) { popup.close(); error.textContent = err.message; button.disabled = false; }
   }));
   container.querySelector('#mail-setup-skip')?.addEventListener('click', () => onComplete?.());
   return container;

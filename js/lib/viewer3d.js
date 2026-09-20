@@ -38,7 +38,9 @@ export class Viewer3D {
 
     // --- Renderer ---
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const modestDevice = (navigator.deviceMemory && navigator.deviceMemory <= 4)
+      || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, modestDevice ? 1.25 : 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.localClippingEnabled = true;
@@ -88,7 +90,19 @@ export class Viewer3D {
     this.resize();
 
     this._tick = this._tick.bind(this);
-    this.renderer.setAnimationLoop(this._tick);
+    this._visible = true;
+    this._syncAnimation = () => {
+      this.renderer.setAnimationLoop(!this.disposed && this._visible && !document.hidden ? this._tick : null);
+    };
+    document.addEventListener('visibilitychange', this._syncAnimation);
+    if (typeof IntersectionObserver !== 'undefined') {
+      this._intersection = new IntersectionObserver(entries => {
+        this._visible = entries[0]?.isIntersecting !== false;
+        this._syncAnimation();
+      });
+      this._intersection.observe(mount);
+    }
+    this._syncAnimation();
   }
 
   /* ---------------- setup helpers ---------------- */
@@ -411,6 +425,8 @@ export class Viewer3D {
     if (this.disposed) return;
     this.disposed = true;
     this.renderer.setAnimationLoop(null);
+    document.removeEventListener('visibilitychange', this._syncAnimation);
+    this._intersection?.disconnect();
     this._ro.disconnect();
 
     const el = this.renderer.domElement;

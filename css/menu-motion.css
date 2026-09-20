@@ -1,0 +1,63 @@
+/* One quiet motion language across menus. Only transform and opacity move. */
+:root { --menu-ease: cubic-bezier(.2,.8,.2,1); }
+
+:is(.finder-context-menu, .cpg-context-menu, #cpg-context-menu, .sv-open-dropdown-menu,
+    .art-menu, .cpg-dropdown-menu, .ast-attach-popup, .ag-search-dropdown,
+    .header-dropdown-menu, [role="menu"]) {
+  transform-origin: top left;
+  animation: menu-unfold 180ms var(--menu-ease) both;
+  transition: opacity 120ms ease, transform 160ms var(--menu-ease), display 160ms allow-discrete;
+}
+.sv-open-dropdown-menu, .ast-attach-popup, .header-dropdown-menu { transform-origin: top right; }
+
+@keyframes menu-unfold {
+  from { opacity:0; transform:perspective(900px) rotateX(-7deg) scale(.97); }
+  to { opacity:1; transform:perspective(900px) rotateX(0deg) scale(1); }
+}
+
+/* Discrete display transitions preserve existing hidden/display semantics. */
+@supports (transition-behavior: allow-discrete) {
+  :is(.sv-open-dropdown-menu,.art-menu,.cpg-dropdown-menu,.ast-attach-popup,.ag-search-dropdown) {
+    animation:none;
+    opacity:1;
+    transform:perspective(900px) rotateX(0deg) scale(1);
+  }
+  :is(.sv-open-dropdown-menu,.art-menu,.cpg-dropdown-menu,.ast-attach-popup,.ag-search-dropdown):is([hidden],[style*="display: none"]) {
+    opacity:0;
+    transform:perspective(900px) rotateX(-7deg) scale(.97);
+    pointer-events:none;
+  }
+  @starting-style {
+    :is(.sv-open-dropdown-menu,.art-menu,.cpg-dropdown-menu,.ast-attach-popup,.ag-search-dropdown) {
+      opacity:0;
+      transform:perspective(900px) rotateX(-7deg) scale(.97);
+    }
+  }
+}
+
+.settings-modal-window, .custom-dialog-window {
+  transform:translateY(8px) scale(.985);
+  transition:transform 180ms var(--menu-ease);
+}
+.is-open > .settings-modal-window, .is-open > .custom-dialog-window { transform:translateY(0) scale(1); }
+.settings-modal-backdrop:not(.is-open), .custom-dialog-backdrop.is-closing { pointer-events:none; }
+
+/* Nested cards don't each need a separate GPU blur layer. */
+.settings-section, .tool-card, .home-feature, .sv-main-pane, .sv-detail-pane {
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+}
+@media (hover:none) {
+  body { background-attachment:scroll; }
+  .settings-modal-window { backdrop-filter:none; -webkit-backdrop-filter:none; background:var(--bg-card) !important; }
+}
+@media (prefers-reduced-motion:reduce) {
+  :is(.finder-context-menu,.cpg-context-menu,#cpg-context-menu,.sv-open-dropdown-menu,
+      .art-menu,.cpg-dropdown-menu,.ast-attach-popup,.ag-search-dropdown,
+      .header-dropdown-menu,[role="menu"],.settings-modal-window,.custom-dialog-window,
+      .settings-modal-backdrop,.custom-dialog-backdrop,.header-notif-panel) {
+    animation:none !important;
+    transition:none !important;
+    transform:none !important;
+  }
+}

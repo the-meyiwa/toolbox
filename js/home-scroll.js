@@ -34,17 +34,22 @@ export function initHomeScrollNarrative() {
     });
   };
 
-  window.addEventListener('scroll', updateSlides, { passive: true });
-  window.addEventListener('resize', updateSlides, { passive: true });
+  let frame = 0;
+  const schedule = () => {
+    if (frame || homeView.classList.contains('hidden')) return;
+    frame = requestAnimationFrame(() => { frame = 0; updateSlides(); });
+  };
+  window.addEventListener('scroll', schedule, { passive: true });
+  window.addEventListener('resize', schedule, { passive: true });
 
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       if (mutation.attributeName === 'class' && !homeView.classList.contains('hidden')) {
-        setTimeout(updateSlides, 50);
+        schedule();
       }
     });
   });
-  observer.observe(homeView, { attributes: true });
+  observer.observe(homeView, { attributes: true, attributeFilter: ['class'] });
 
   // Handle smooth scroll clicks for internal slide navigation
   homeView.addEventListener('click', (e) => {
@@ -54,7 +59,7 @@ export function initHomeScrollNarrative() {
       const targetId = link.getAttribute('href').slice(1);
       const targetEl = document.getElementById(targetId);
       if (targetEl) {
-        targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        targetEl.scrollIntoView({ behavior: prefersReduced() ? 'instant' : 'smooth', block: 'start' });
       }
     }
   });

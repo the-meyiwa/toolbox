@@ -6,11 +6,26 @@
 
 export default {
   render(container) {
+    this.destroy();
+    let disposed = false;
+    let audioVersion = 0;
+    let artworkVersion = 0;
+    let artworkUrl = null;
     let currentAudioBytes = null;
     let originalFileName = 'track.mp3';
     let artworkBytes = null;
     let artworkMime = 'image/jpeg';
     let audioUrl = null;
+    this._cleanup = () => {
+      disposed = true;
+      const player = container.querySelector('#tag-audio-player');
+      player?.pause?.();
+      player?.removeAttribute('src');
+      player?.load?.();
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+      if (artworkUrl) URL.revokeObjectURL(artworkUrl);
+      currentAudioBytes = artworkBytes = null;
+    };
 
     container.innerHTML = `
       <div class="tool-section">
@@ -149,6 +164,9 @@ export default {
     });
 
     removeArtBtn.addEventListener('click', () => {
+      artworkVersion++;
+      if (artworkUrl) URL.revokeObjectURL(artworkUrl);
+      artworkUrl = null;
       artworkBytes = null;
       artImg.style.display = 'none';
       artPlaceholder.style.display = 'block';
@@ -156,18 +174,28 @@ export default {
     });
 
     async function loadArtworkFile(file) {
+      const version = ++artworkVersion;
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      if (disposed || version !== artworkVersion) return;
       artworkMime = file.type || 'image/jpeg';
-      artworkBytes = new Uint8Array(await file.arrayBuffer());
-      const url = URL.createObjectURL(file);
-      artImg.src = url;
+      artworkBytes = bytes;
+      if (artworkUrl) URL.revokeObjectURL(artworkUrl);
+      artworkUrl = URL.createObjectURL(file);
+      artImg.src = artworkUrl;
       artImg.style.display = 'block';
       artPlaceholder.style.display = 'none';
       removeArtBtn.style.display = 'inline-flex';
     }
 
     async function loadAudioFile(file) {
+      const version = ++audioVersion;
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      if (disposed || version !== audioVersion) return;
+      artworkVersion++;
+      if (artworkUrl) URL.revokeObjectURL(artworkUrl);
+      artworkUrl = null;
       originalFileName = file.name;
-      currentAudioBytes = new Uint8Array(await file.arrayBuffer());
+      currentAudioBytes = bytes;
 
       if (audioUrl) URL.revokeObjectURL(audioUrl);
       audioUrl = URL.createObjectURL(file);
@@ -191,7 +219,8 @@ export default {
         artworkBytes = tags.artwork.data;
         artworkMime = tags.artwork.mime;
         const blob = new Blob([artworkBytes], { type: artworkMime });
-        artImg.src = URL.createObjectURL(blob);
+        artworkUrl = URL.createObjectURL(blob);
+        artImg.src = artworkUrl;
         artImg.style.display = 'block';
         artPlaceholder.style.display = 'none';
         removeArtBtn.style.display = 'inline-flex';
@@ -226,6 +255,10 @@ export default {
       a.click();
       URL.revokeObjectURL(a.href);
     });
+  },
+  destroy() {
+    this._cleanup?.();
+    this._cleanup = null;
   }
 };
 
@@ -298,7 +331,7 @@ function decodeApicFrame(data) {
   return { mime: mime || 'image/jpeg', data: data.slice(pos) };
 }
 
-function writeID3v2(audioBytes, tags) {
+export function writeID3v2(audioBytes, tags) {
   // Strip existing ID3v2 tag if present
   let rawAudio = audioBytes;
   if (audioBytes[0] === 0x49 && audioBytes[1] === 0x44 && audioBytes[2] === 0x33) {
@@ -332,7 +365,14 @@ function writeID3v2(audioBytes, tags) {
   header[8] = (totalFramesSize >> 7) & 0x7F;
   header[9] = totalFramesSize & 0x7F;
 
-  return new Uint8Array([...header, ...frames.flatMap(f => Array.from(f)), ...rawAudio]);
+  // Keep audio bytes in typed arrays: spreading a large MP3 creates millions
+  // of boxed numbers and can exhaust mobile memory.
+  const output = new Uint8Array(header.length + totalFramesSize + rawAudio.length);
+  output.set(header);
+  let offset = header.length;
+  for (const frame of frames) { output.set(frame, offset); offset += frame.length; }
+  output.set(rawAudio, offset);
+  return output;
 }
 
 function buildTextFrame(frameId, text) {

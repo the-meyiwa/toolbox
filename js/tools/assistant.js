@@ -41,24 +41,13 @@ import { openAccountModal } from '../views/account-modal.js';
 import { AssistantAudioManager } from '../lib/assistant-audio.js';
 import { ConversationIntegrationManager } from '../lib/assistant-integration.js';
 import TOOLS from '../registry/tools.js';
-import { getSetting } from '../lib/settings.js';
 import { ToolboxFilesystem, fs } from '../lib/filesystem.js';
 
 const STORAGE_HISTORY = 'toolbox_assistant_history_v2';
 const STORAGE_KEEP_CONTEXT = 'toolbox_assistant_keep_context';
 
 export function getAssistantAnimationClass() {
-  const isEnabled = getSetting('assistantResponseAnimation') !== false;
-  if (!isEnabled) return '';
-  const style = getSetting('assistantAnimationStyle') || 'color rave';
-  switch (style) {
-    case 'color rave': return 'ast-anim-color-rave';
-    case 'glow': return 'ast-anim-glow';
-    case 'Pixel': return 'ast-anim-glow';
-    case 'Plain Fade': return 'ast-anim-plain-fade';
-    case 'Pop In': return 'ast-anim-pop-in';
-    default: return 'ast-anim-color-rave';
-  }
+  return '';
 }
 
 export function formatToolProgressStatus(toolName, toolArgs = {}) {

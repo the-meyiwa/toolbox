@@ -30,7 +30,7 @@
   <div id="app">
     <header id="app-header">
       <div class="header-brand-group">
-        <a href="#home" class="logo" id="logo">Toolbox</a>
+        <a href="#home" class="logo" id="logo" aria-label="Toolbox home"><span class="logo-mark" aria-hidden="true"><i></i><i></i><i></i></span><span class="logo-word">Toolbox</span></a>
         <a href="#about" class="nav-link header-about-link" id="header-about-link" data-page="about">About</a>
       </div>
       <nav class="nav-links desktop-nav" id="desktop-nav-links">
@@ -53,7 +53,6 @@
             <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>
           </svg>
           <input type="text" id="search" placeholder="Search tools…" autocomplete="off" spellcheck="false">
-          <kbd id="search-kbd">/</kbd>
         </div>
         <button type="button" class="header-avatar-btn header-notif-btn" id="header-notif-btn" aria-label="Notifications" title="Notifications">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -146,7 +145,7 @@
               <span class="home-footer-copy">&copy; 2025 Toolbox &mdash; built by madselkie</span>
               <nav class="home-footer-nav" aria-label="Footer navigation">
                 <a href="#about" class="home-footer-link">About</a>
-                <a href="#donate" class="home-footer-link">Donate</a>
+                <a href="#donate" class="home-footer-link">Become a Supporter</a>
               </nav>
             </footer>
           </div>
@@ -196,114 +195,69 @@
       <!-- SAVED WORK -->
       <div id="saved-view" class="page-view hidden"></div>
 
-      <!-- SUPPORT & ABOUT (SCROLL STORYTELLING TILES) -->
+      <!-- About: the story behind Toolbox -->
       <div id="support-view" class="page-view hidden about-story-view">
+        <div class="about-reading-line" aria-hidden="true"><span></span></div>
         <div class="about-story-container" id="about-story-container">
-          <!-- TILE 1 — ABOUT -->
-          <section class="about-tile tile-active" id="about-tile-1" data-tile="1">
-            <div class="about-tile-content">
-              <div class="about-eyebrow">The Story</div>
-              <h1 class="about-hero-title">Tools without friction.</h1>
-              <p class="about-lead">Fast, reliable utilities. Zero bloat, zero tracking.</p>
-              <div class="about-origin-card"><p>A suite of deterministic, high-performance web applications crafted with an obsessive focus on speed and privacy.</p></div>
-              <div class="about-scroll-indicator">
-                <span>Scroll to explore</span>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-              </div>
+          <section class="about-chapter about-opening" aria-labelledby="about-title">
+            <div class="about-copy">
+              <p class="about-eyebrow">The Toolbox story / 01</p>
+              <h1 id="about-title">It started<br>with a PDF.</h1>
+              <p class="about-lead">A small task. A Google search.<br>One unexpected beginning.</p>
+              <p>I needed to convert some files to PDF. So, like anyone would, I went looking for a PDF editor on Google.</p>
+              <p>Then a different thought showed up.</p>
+              <blockquote>“Lemme just make one.”</blockquote>
+              <span class="about-scroll-indicator">Scroll to follow the story <span aria-hidden="true">↓</span></span>
+            </div>
+            <div class="about-scene about-paper-scene" aria-hidden="true">
+              <div class="story-paper paper-back"><span>Files</span><i></i><i></i><i></i></div>
+              <div class="story-paper paper-front"><span>PDF</span><i></i><i></i><i></i><b>One task.<br>A starting point.</b></div>
+              <div class="story-scene-caption">01 / The first conversion</div>
             </div>
           </section>
-
-          <!-- TILE 2 — CONTRIBUTE -->
-          <section class="about-tile" id="about-tile-2" data-tile="2">
-            <div class="about-tile-content">
-              <div class="about-eyebrow">Support Open Development</div>
-              <h2 class="about-tile-title">Keep Toolbox Independent</h2>
-              <p class="about-lead">Toolbox is free. Your contributions fund development.</p>
-              
-              <div class="contribute-card" id="contribute-section">
-                <!-- Amount and Currency Selector -->
-                <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
-                  <label for="contrib-amount-input" style="font-weight:600; font-size:0.88rem; color:var(--text);">Contribution Amount</label>
-                  <div style="display:flex; gap:10px; align-items:center;">
-                    <div style="position:relative; flex:1; display:flex; align-items:center;">
-                      <span id="contrib-curr-symbol" style="position:absolute; left:12px; font-weight:700; color:var(--text-secondary); pointer-events:none; font-family:var(--mono);">&#8358;</span>
-                      <input type="number" id="contrib-amount-input" class="tool-input" placeholder="Amount (e.g. 5000)" min="1" step="any" style="padding-left:32px; width:100%; font-size:0.95rem; font-family:var(--mono);">
-                    </div>
-                    <select id="contrib-currency" class="tool-select" style="font-size:0.85rem; padding:8px 12px; border-radius:8px; min-width:110px;">
-                      <option value="NGN" selected>NGN (&#8358;)</option>
-                      <option value="USD">USD ($)</option>
-                      <option value="CAD">CAD ($)</option>
-                      <option value="GBP">GBP (&pound;)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <!-- Contributor Details -->
-                <div class="contrib-details-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
-                  <div>
-                    <label style="display:block; font-size:0.78rem; font-weight:600; margin-bottom:4px; color:var(--text-secondary);">Your Name (Optional)</label>
-                    <input type="text" id="contrib-name" class="tool-input" placeholder="Anonymous Supporter" style="width:100%; font-size:0.86rem;">
-                  </div>
-                  <div>
-                    <label style="display:block; font-size:0.78rem; font-weight:600; margin-bottom:4px; color:var(--text-secondary);">Email Address</label>
-                    <input type="email" id="contrib-email" class="tool-input" placeholder="supporter@example.com" style="width:100%; font-size:0.86rem;">
-                  </div>
-                </div>
-
-                <!-- Action Bar -->
-                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-top:8px;">
-                  <button type="button" id="contrib-flutterwave-btn" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:8px; padding:10px 22px; font-weight:600; cursor:pointer;">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                    </svg>
-                    <span>Support Toolbox</span>
-                  </button>
-                  <div style="font-size:0.75rem; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
-                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                    <span>Secured by Flutterwave</span>
-                  </div>
-                </div>
-                <div id="contrib-status-msg" style="display:none; margin-top:12px; padding:10px 14px; border-radius:8px; font-size:0.82rem;"></div>
-              </div>
+          <section class="about-chapter" aria-labelledby="about-learning">
+            <div class="about-copy">
+              <p class="about-eyebrow">Built with intention / 02</p>
+              <h2 id="about-learning">The tool worked.<br>The details mattered.</h2>
+              <p>Toolbox began as something I wanted for myself: a direct, dependable way to get a job done without working around somebody else's idea of how it should feel.</p>
+              <p>I have no interest in writing code for its own sake. I care about building things with intention—thinking through the structure, the interaction, and the details until the result feels inevitable.</p>
+            </div>
+            <div class="about-scene about-path-scene" aria-hidden="true">
+              <div class="story-path"><span>Useful by default</span><span>Clear in every state</span><span>Considered in every detail</span></div>
+              <div class="story-year"><strong>Intent</strong><span>The standard behind<br>every interaction</span></div>
             </div>
           </section>
-
-          <!-- TILE 3 — MY BIO -->
-          <section class="about-tile" id="about-tile-3" data-tile="3">
-            <div class="about-tile-content">
-              <div class="about-eyebrow">Creator Profile</div>
-              <div class="about-bio-card">
-                <div class="about-bio-avatar">
-                  <span style="font-family:var(--pixel); font-size:2rem; font-weight:700;">M</span>
-                </div>
-                <div class="about-bio-info">
-                  <h2 class="about-tile-title" style="margin-bottom:4px;">Meyiwa-Meyigbene Nifemi Edun</h2>
-                  <p class="about-bio-handle">madselkie &middot; Software Engineer &amp; Designer</p>
-                  <p class="about-bio-desc">Software Engineer & Designer</p>
-                </div>
-              </div>
+          <section class="about-chapter" aria-labelledby="about-growing">
+            <div class="about-copy">
+              <p class="about-eyebrow">One idea led to another / 03</p>
+              <h2 id="about-growing">The base was there.<br>The ideas kept coming.</h2>
+              <p>Once the foundation was in place, the larger opportunity became clear. Useful tools across the web are often scattered between different interfaces, accounts, and standards.</p>
+              <p>A file converter became a coherent environment for the things worth doing every day—connected, consistent, and designed to work as one.</p>
+            </div>
+            <div class="about-scene about-tools-scene" aria-hidden="true">
+              <div class="story-tool"><span>01</span>Documents</div>
+              <div class="story-tool"><span>02</span>Images</div>
+              <div class="story-tool story-tool-core"><span>The idea became</span><strong>Toolbox.</strong></div>
+              <div class="story-tool"><span>03</span>Workspace</div>
+              <div class="story-tool"><span>04</span>Everyday tools</div>
             </div>
           </section>
-
-          <!-- TILE 4 — CREDITS -->
-          <section class="about-tile" id="about-tile-4" data-tile="4">
-            <div class="about-tile-content">
-              
-              <div class="about-eyebrow">Other Projects</div>
-              <h2 class="about-tile-title">Check these out</h2>
-              <div class="about-credits-card">
-                <div class="about-credits-list">
-                  <a href="https://voltix-rho.vercel.app" target="_blank" class="about-credit-row" style="text-decoration:none; display:flex; flex-direction:column; padding:12px; border:1px solid var(--border); border-radius:12px; background:var(--bg-card); margin-bottom:10px;">
-                    <span class="about-credit-title" style="color:var(--text); font-weight:700;">Voltix</span>
-                    <span class="about-credit-desc" style="color:var(--text-secondary); font-size:0.85rem;">https://voltix-rho.vercel.app</span>
-                  </a>
-                  <a href="https://containerbrick.com" target="_blank" class="about-credit-row" style="text-decoration:none; display:flex; flex-direction:column; padding:12px; border:1px solid var(--border); border-radius:12px; background:var(--bg-card);">
-                    <span class="about-credit-title" style="color:var(--text); font-weight:700;">Container Brick</span>
-                    <span class="about-credit-desc" style="color:var(--text-secondary); font-size:0.85rem;">https://containerbrick.com</span>
-                  </a>
-                </div>
+          <section class="about-chapter about-ending" aria-labelledby="about-next">
+            <div class="about-copy">
+              <p class="about-eyebrow">Still being written / 04</p>
+              <h2 id="about-next">One place.<br>More possibilities.</h2>
+              <p>Toolbox is built on a simple conviction: useful software should also be exceptional software.</p>
+              <p>The next chapter is still being built, with the same standard applied to every interaction.</p>
+              <a class="btn btn-primary" href="#tools">Explore Toolbox</a>
+            </div>
+            <div class="about-maker">
+              <span class="about-eyebrow">Made by</span>
+              <h3>Meyiwa-Meyigbene<br>Nifemi Edun</h3>
+              <p>@madselkie</p>
+              <div class="about-projects"><span>Elsewhere</span>
+                <a href="https://voltix-rho.vercel.app" target="_blank" rel="noopener noreferrer">Voltix <span aria-hidden="true">↗</span></a>
+                <a href="https://containerbrick.com" target="_blank" rel="noopener noreferrer">Container Brick <span aria-hidden="true">↗</span></a>
               </div>
-
             </div>
           </section>
         </div>

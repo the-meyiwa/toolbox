@@ -134,7 +134,8 @@ export default {
           this.oscillator.frequency.setValueAtTime(80, this.audioCtx.currentTime);
           this.oscillator.frequency.linearRampToValueAtTime(280, this.audioCtx.currentTime + 3);
           // Loop sweep
-          setInterval(() => {
+          clearInterval(this.sweepInterval);
+          this.sweepInterval = setInterval(() => {
             if (isPlaying && currentMode === 'sweep' && this.oscillator) {
               this.oscillator.frequency.setValueAtTime(80, this.audioCtx.currentTime);
               this.oscillator.frequency.linearRampToValueAtTime(280, this.audioCtx.currentTime + 3);
@@ -178,6 +179,7 @@ export default {
     };
 
     const stopSound = () => {
+      clearInterval(this.sweepInterval);
       if (this.oscillator) {
         try {
           this.oscillator.stop();
@@ -197,6 +199,7 @@ export default {
   },
 
   destroy() {
+    clearInterval(this.sweepInterval);
     if (this.oscillator) {
       try { this.oscillator.stop(); } catch {}
       this.oscillator = null;

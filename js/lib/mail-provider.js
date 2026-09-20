@@ -287,12 +287,21 @@ export class ServerMailProvider extends BaseMailProvider {
     try { return localStorage.getItem('toolbox_mail_active_account') || ''; } catch { return ''; }
   }
 
+  _session() {
+    try { return JSON.parse(localStorage.getItem('toolbox_supabase_session') || '{}'); } catch { return {}; }
+  }
+
+  _authHeaders() {
+    const session = this._session();
+    return session.token ? { Authorization: `Bearer ${session.token}` } : {};
+  }
+
   async checkConfig() {
     try {
       const user = JSON.parse(localStorage.getItem('toolbox_supabase_session') || '{}');
       const userId = user.user?.id || user.id;
       if (!userId) return false;
-      const res = await fetch(`/api/mail/status?userId=${encodeURIComponent(userId)}`);
+      const res = await fetch('/api/mail/status', { headers: this._authHeaders() });
       if (res.ok) {
         const data = await res.json();
         this.providerConfig.authStatus = data.configured ? 'connected' : 'unconfigured';
@@ -324,7 +333,7 @@ export class ServerMailProvider extends BaseMailProvider {
     }
     const user = JSON.parse(localStorage.getItem('toolbox_supabase_session') || '{}');
     const userId = user.user?.id || user.id;
-    const res = await fetch(`/api/mail/messages?userId=${encodeURIComponent(userId)}&accountId=${encodeURIComponent(this._activeAccountId())}`);
+    const res = await fetch(`/api/mail/messages?accountId=${encodeURIComponent(this._activeAccountId())}`, { headers: this._authHeaders() });
     if (res.ok) {
       const data = await res.json();
       const messages = (data.messages || []).map(m => ({
@@ -440,8 +449,8 @@ export class ServerMailProvider extends BaseMailProvider {
     if (!userId) throw new Error('Sign in before using connected Mail.');
     const response = await fetch('/api/mail/action', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, accountId: this._activeAccountId(), action, ...payload })
+      headers: { 'Content-Type': 'application/json', ...this._authHeaders() },
+      body: JSON.stringify({ accountId: this._activeAccountId(), action, ...payload })
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || 'Mail action failed.');

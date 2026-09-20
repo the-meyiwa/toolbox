@@ -1,159 +1,129 @@
-/* ============================================================
-   TOOLBOX — Flutterwave Contribution Integration
-   Enables supporters to contribute to Toolbox development
-   via Flutterwave Standard Inline checkout with customizable
-   amounts and CAD, GBP, USD, NGN multi-currency support.
-   ============================================================ */
+import { getCurrentUser } from './supabase.js';
+import { getSupporterState, refreshSupporterState, supporterRequest } from './supporter.js';
 
-const STORAGE_KEY_FLW_PUBLIC = 'toolbox_flutterwave_public_key';
-// Creator's Flutterwave public key (Production)
-const DEFAULT_FLW_KEY = 'FLWPUBK-cb3d7945751843f1c06e13b27c4089e7-X';
-
-let flwScriptPromise = null;
-
-function loadFlutterwaveScript() {
-  if (typeof window.FlutterwaveCheckout === 'function') {
-    return Promise.resolve();
-  }
-  if (flwScriptPromise) return flwScriptPromise;
-
-  flwScriptPromise = new Promise((resolve, reject) => {
-    const existing = document.querySelector('script[src*="checkout.flutterwave.com"]');
-    if (existing) {
-      existing.addEventListener('load', () => resolve());
-      existing.addEventListener('error', (err) => reject(err));
-      return;
-    }
+let scriptPromise;
+const CLAIM_KEY = 'toolbox_contribution_claim';
+function loadCheckout() {
+  if (typeof window.FlutterwaveCheckout === 'function') return Promise.resolve();
+  if (scriptPromise) return scriptPromise;
+  scriptPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = 'https://checkout.flutterwave.com/v3.js';
     script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Failed to load Flutterwave checkout script'));
+    script.onload = resolve;
+    script.onerror = () => { script.remove(); scriptPromise = null; reject(new Error('Checkout could not load. Please try again.')); };
     document.head.appendChild(script);
   });
-
-  return flwScriptPromise;
+  return scriptPromise;
 }
+const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
-const CURRENCY_CONFIG = {
-  NGN: { symbol: '₦', defaultAmount: 5000, min: 100 },
-  USD: { symbol: '$', defaultAmount: 10, min: 1 },
-  CAD: { symbol: '$', defaultAmount: 15, min: 1 },
-  GBP: { symbol: '£', defaultAmount: 10, min: 1 },
-};
-
-export function initFlutterwaveContribution() {
-  const container = document.getElementById('contribute-section');
+export function renderContributionSettings(container, onSignIn) {
   if (!container) return;
+  const user = getCurrentUser();
+  container.innerHTML = `
+    <h3 class="settings-section-title">Become a Supporter</h3>
+    <p class="supporter-intro">If Toolbox has been useful to you, you can help fund the next round of careful improvements.</p>
+    <div id="supporter-account-controls"></div>
+    <form id="contribute-section" class="contribution-form">
+      <div class="contribution-fields">
+        <label>Amount<input id="contrib-amount-input" class="tool-input" type="number" min="100" step="0.01" value="5000" required></label>
+        <label>Currency<select id="contrib-currency" class="tool-select"><option value="NGN">NGN (₦)</option><option value="USD">USD ($)</option><option value="CAD">CAD ($)</option><option value="GBP">GBP (£)</option></select></label>
+      </div>
+      ${user ? `<p class="supporter-account">Contributing as ${escape(user.email)}.</p>` : `<label class="contribution-email">Email for the payment receipt<input id="contrib-email" class="tool-input" type="email" autocomplete="email" required placeholder="you@example.com"></label><p class="supporter-note">Signing in after your contribution lets Toolbox remember it and attach any thank-you benefits to your profile.</p>`}
+      <div class="contribution-actions"><button class="btn btn-primary" id="contrib-flutterwave-btn" type="submit" disabled>Contribute securely</button></div>
+      <p class="supporter-note">One-time payment processed securely by Flutterwave.</p>
+    </form>
+    <p id="contrib-status-msg" class="supporter-status" role="status" aria-live="polite"></p>
+    <div id="contrib-after-payment"></div>`;
 
-  const currencySelect = container.querySelector('#contrib-currency');
-  const amountInput = container.querySelector('#contrib-amount-input');
-  const currSymbolSpan = container.querySelector('#contrib-curr-symbol');
-  const nameInput = container.querySelector('#contrib-name');
-  const emailInput = container.querySelector('#contrib-email');
-  const checkoutBtn = container.querySelector('#contrib-flutterwave-btn');
-  const statusMsg = container.querySelector('#contrib-status-msg');
+  const status = container.querySelector('#contrib-status-msg');
+  const button = container.querySelector('#contrib-flutterwave-btn');
+  const amount = container.querySelector('#contrib-amount-input');
+  const currency = container.querySelector('#contrib-currency');
+  const email = container.querySelector('#contrib-email');
+  const after = container.querySelector('#contrib-after-payment');
+  const isCurrent = () => container.contains(status);
+  let ready = false, busy = false;
+  const report = text => { if (isCurrent()) status.textContent = text; };
+  const unlock = () => { busy = false; if (isCurrent()) { button.disabled = !ready; amount.disabled = currency.disabled = false; if (email) email.disabled = false; } };
 
-  if (!checkoutBtn || !amountInput) return;
-
-  function syncCurrency() {
-    const curr = currencySelect?.value || 'NGN';
-    const cfg = CURRENCY_CONFIG[curr] || CURRENCY_CONFIG.NGN;
-    if (currSymbolSpan) {
-      currSymbolSpan.textContent = cfg.symbol;
-    }
-    if (!amountInput.value) {
-      amountInput.value = cfg.defaultAmount;
-    }
-  }
-
-  if (currencySelect) {
-    currencySelect.addEventListener('change', () => {
-      syncCurrency();
-    });
-  }
-
-  syncCurrency();
-
-  // Handle Checkout Click
-  checkoutBtn.addEventListener('click', async () => {
-    const rawAmt = parseFloat(amountInput.value);
-    const curr = currencySelect?.value || 'NGN';
-    const cfg = CURRENCY_CONFIG[curr] || CURRENCY_CONFIG.NGN;
-
-    if (isNaN(rawAmt) || rawAmt < (cfg.min || 1)) {
-      showStatus(`Please enter a contribution amount of at least ${cfg.symbol}${cfg.min || 1}.`, 'error');
-      amountInput.focus();
-      return;
-    }
-
-    const email = (emailInput?.value || '').trim() || 'supporter@toolbox.dev';
-    const name = (nameInput?.value || '').trim() || 'Toolbox Supporter';
-    const pubKey = localStorage.getItem(STORAGE_KEY_FLW_PUBLIC) || DEFAULT_FLW_KEY;
-
-    checkoutBtn.disabled = true;
-    const origBtnHtml = checkoutBtn.innerHTML;
-    checkoutBtn.innerHTML = `
-      <svg class="animate-spin" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;">
-        <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
-        <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path>
-      </svg>
-      <span>Connecting to Flutterwave…</span>
-    `;
-
+  async function claimRememberedContribution() {
+    if (!user) return;
+    const reference = localStorage.getItem(CLAIM_KEY);
+    if (!reference) return;
     try {
-      await loadFlutterwaveScript();
+      await supporterRequest('claim', { reference });
+      localStorage.removeItem(CLAIM_KEY);
+      await refreshSupporterState();
+      renderMemberControls(container, report);
+      report('Your contribution is now remembered on this Toolbox account. Thank you.');
+    } catch { /* A delayed payment may be claimed on the next visit. */ }
+  }
 
-      if (typeof window.FlutterwaveCheckout !== 'function') {
-        throw new Error('Flutterwave inline checkout is unavailable in this environment.');
-      }
-
-      const txRef = 'TBX-' + Date.now() + '-' + Math.floor(Math.random() * 1000000);
-
+  container.querySelector('form').addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!ready || busy || !isCurrent()) return;
+    busy = true; button.disabled = true; amount.disabled = currency.disabled = true; if (email) email.disabled = true;
+    report('Preparing secure checkout…');
+    try {
+      await loadCheckout();
+      const intent = await supporterRequest('intent', { amount:Number(amount.value), currency:currency.value, email:email?.value.trim() || user?.email }, false);
       window.FlutterwaveCheckout({
-        public_key: pubKey,
-        tx_ref: txRef,
-        amount: rawAmt,
-        currency: curr,
-        payment_options: 'card,ussd,banktransfer,qr,mobilemoney',
-        customer: {
-          email: email,
-          name: name,
+        public_key:intent.public_key, tx_ref:intent.tx_ref, amount:intent.amount, currency:intent.currency,
+        customer:intent.customer,
+        customizations:{ title:'Support Toolbox', description:'A one-time contribution to Toolbox' },
+        callback: async payment => {
+          report('Confirming your contribution…');
+          try {
+            await supporterRequest('verify', { reference:intent.tx_ref, transactionId:payment.transaction_id }, false);
+            if (user) {
+              await supporterRequest('claim', { reference:intent.tx_ref });
+              await refreshSupporterState();
+              renderMemberControls(container, report);
+              report('Thank you for supporting Toolbox. Your contribution is linked to your profile.');
+            } else {
+              localStorage.setItem(CLAIM_KEY, intent.tx_ref);
+              report('Thank you for supporting Toolbox.');
+              after.innerHTML = '<div class="contribution-thanks"><strong>Want Toolbox to remember this?</strong><span>Sign in and this contribution will be linked to your profile. This is optional.</span><button type="button" class="btn btn-secondary">Sign in to remember it</button></div>';
+              after.querySelector('button').addEventListener('click', onSignIn);
+            }
+          } catch (error) { report(error.message); }
+          finally { unlock(); }
         },
-        customizations: {
-          title: 'Toolbox Development Contribution',
-          description: `Contribution of ${cfg.symbol}${rawAmt.toLocaleString()} to Toolbox open development`,
-          logo: window.location.origin + '/assets/logo.svg',
-        },
-        callback: function(paymentData) {
-          console.log('[Flutterwave] Payment successful:', paymentData);
-          showStatus(`Thank you so much, ${name}! Your contribution of ${cfg.symbol}${rawAmt.toLocaleString()} (${paymentData.transaction_id || txRef}) was successful.`, 'success');
-        },
-        onclose: function() {
-          checkoutBtn.disabled = false;
-          checkoutBtn.innerHTML = origBtnHtml;
-        }
+        onclose: unlock,
       });
-    } catch (err) {
-      console.error('[Flutterwave] Checkout initialization failed:', err);
-      showStatus(`Unable to load checkout: ${err.message}. Please try again later.`, 'error');
-      checkoutBtn.disabled = false;
-      checkoutBtn.innerHTML = origBtnHtml;
-    }
+      report('Complete your contribution in the Flutterwave checkout.');
+    } catch (error) { report(error.message); unlock(); }
   });
 
-  function showStatus(msg, type = 'info') {
-    if (!statusMsg) return;
-    statusMsg.style.display = 'block';
-    statusMsg.textContent = msg;
-    if (type === 'error') {
-      statusMsg.style.background = 'rgba(239, 68, 68, 0.12)';
-      statusMsg.style.color = '#ef4444';
-      statusMsg.style.border = '1px solid rgba(239, 68, 68, 0.3)';
-    } else {
-      statusMsg.style.background = 'rgba(16, 185, 129, 0.12)';
-      statusMsg.style.color = '#10b981';
-      statusMsg.style.border = '1px solid rgba(16, 185, 129, 0.3)';
-    }
-  }
+  (async () => {
+    try {
+      const configuration = await supporterRequest('configuration', null, false);
+      ready = configuration.ready; button.disabled = !ready;
+      if (!ready) report('Contributions are temporarily unavailable on this deployment.');
+      if (user) {
+        await Promise.allSettled([refreshSupporterState(), claimRememberedContribution()]);
+        renderMemberControls(container, report);
+      }
+    } catch (error) { report(error.message); }
+  })();
+}
+
+function renderMemberControls(container, report) {
+  const state = getSupporterState();
+  const controls = container.querySelector('#supporter-account-controls');
+  if (!controls || !state.supporter) { if (controls) controls.innerHTML = ''; return; }
+  controls.innerHTML = `<div class="supporter-member"><span class="supporter-badge">Toolbox Supporter</span>
+    <p class="supporter-note">Thank you. Your profile styles and early-access preference live here.</p>
+    <label>Profile style<select class="tool-select" id="supporter-style">${['classic','etched','halo','orbit'].map(style => `<option value="${style}" ${state.profileStyle === style ? 'selected' : ''}>${style[0].toUpperCase()+style.slice(1)}</option>`).join('')}</select></label>
+    <label class="supporter-toggle"><input type="checkbox" id="supporter-early" ${state.earlyAccess ? 'checked' : ''}>Enable early-access previews</label>
+    <button type="button" class="btn btn-secondary" id="supporter-save">Save supporter preferences</button></div>`;
+  controls.querySelector('#supporter-save').addEventListener('click', async event => {
+    event.currentTarget.disabled = true;
+    try {
+      await supporterRequest('preferences', { profileStyle:controls.querySelector('#supporter-style').value, earlyAccess:controls.querySelector('#supporter-early').checked });
+      await refreshSupporterState(); renderMemberControls(container, report); report('Supporter preferences saved.');
+    } catch (error) { report(error.message); event.currentTarget.disabled = false; }
+  });
 }

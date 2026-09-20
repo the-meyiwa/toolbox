@@ -5,6 +5,9 @@
    ============================================================ */
 
 import crypto from 'crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { handleSupporterRequest } from './server-supporters.js';
 import { handleDeviceRequest } from './server-device-specs.js';
 import { isBlockedHost, parseWebPage, haversineDistanceKm } from './js/lib/web-scraper-engine.js';
 import {
@@ -41,7 +44,31 @@ function cleanIdempotencyStore() {
 // Anonymous File Drop P2P WebRTC Signaling Relay
 const fileDropRooms = new Map(); // roomCode -> { signals: [], lastActive: number }
 const FILEDROP_ROOM_TTL_MS = 15 * 60 * 1000;
-const mailOAuthStates = new Map(); // nonce -> { userId, provider, createdAt }
+
+function mailCallbackUrl(request, configuredUrl) {
+  if (configuredUrl) return configuredUrl;
+  const protocol = String(request.headers['x-forwarded-proto'] || 'http').split(',')[0].trim();
+  const host = String(request.headers['x-forwarded-host'] || request.headers.host || 'localhost:3000').split(',')[0].trim();
+  return `${protocol}://${host}/api/mail/oauth/callback`;
+}
+
+function encodeMailState(payload, secret) {
+  const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = crypto.createHmac('sha256', secret).update(encoded).digest('base64url');
+  return `${encoded}.${signature}`;
+}
+
+function decodeMailState(value, secret) {
+  const [encoded, signature] = String(value || '').split('.');
+  if (!encoded || !signature) return null;
+  const expected = crypto.createHmac('sha256', secret).update(encoded).digest('base64url');
+  const left = Buffer.from(signature);
+  const right = Buffer.from(expected);
+  if (left.length !== right.length || !crypto.timingSafeEqual(left, right)) return null;
+  const payload = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'));
+  if (!payload?.userId || !payload?.provider || !payload?.expiresAt || Date.now() > payload.expiresAt) return null;
+  return payload;
+}
 
 function cleanFileDropRooms() {
   const now = Date.now();
@@ -65,6 +92,8 @@ export async function handleApiRequest(request, response) {
     response.end();
     return true;
   }
+
+  if (await handleSupporterRequest(request, response, url)) return true;
 
   // --- Toolbox IDE Real Code Execution & Workspace API ---
   if (await handleDeviceRequest(request, response, url)) return true;
@@ -496,10 +525,29 @@ export async function handleApiRequest(request, response) {
   if (url.pathname.startsWith('/api/mail/')) {
     const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
     const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-    const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/mail/oauth/callback';
+    const GOOGLE_REDIRECT_URI = mailCallbackUrl(request, process.env.GOOGLE_REDIRECT_URI);
     const MICROSOFT_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID;
     const MICROSOFT_CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET;
-    const MICROSOFT_REDIRECT_URI = process.env.MICROSOFT_REDIRECT_URI || 'http://localhost:3000/api/mail/oauth/callback';
+    const MICROSOFT_REDIRECT_URI = mailCallbackUrl(request, process.env.MICROSOFT_REDIRECT_URI);
+    const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
+    const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+    const sendMailJson = (status, data) => {
+      response.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      response.end(JSON.stringify(data));
+    };
+    const authenticateMailUser = async () => {
+      const authorization = request.headers.authorization || '';
+      if (!SUPABASE_URL || !SUPABASE_KEY) throw Object.assign(new Error('Toolbox sign-in is not configured on this deployment.'), { status: 503 });
+      if (!/^Bearer [\w.-]+$/.test(authorization)) throw Object.assign(new Error('Sign in to Toolbox to use Mail.'), { status: 401 });
+      const authResponse = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: { apikey: SUPABASE_KEY, Authorization: authorization },
+        signal: AbortSignal.timeout(15000)
+      });
+      if (!authResponse.ok) throw Object.assign(new Error('Your Toolbox session has expired. Sign in again.'), { status: 401 });
+      const user = await authResponse.json();
+      if (!user?.id) throw Object.assign(new Error('A signed-in Toolbox account is required.'), { status: 401 });
+      return user;
+    };
     const accountsFor = (store, userId) => {
       const record = store[userId];
       if (!record) return [];
@@ -511,29 +559,57 @@ export async function handleApiRequest(request, response) {
       const accounts = accountsFor(store, userId);
       return accounts.find(account => account.id === accountId) || accounts[0] || null;
     };
+    const refreshMailAccount = async (store, userId, account) => {
+      if (!account?.refresh_token || !account.expires_at || account.expires_at > Date.now() + 60_000) return account;
+      const isMicrosoft = account.provider === 'microsoft';
+      const tokenResponse = await fetch(isMicrosoft ? 'https://login.microsoftonline.com/common/oauth2/v2.0/token' : 'https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: isMicrosoft ? MICROSOFT_CLIENT_ID : GOOGLE_CLIENT_ID,
+          client_secret: isMicrosoft ? MICROSOFT_CLIENT_SECRET : GOOGLE_CLIENT_SECRET,
+          refresh_token: account.refresh_token,
+          grant_type: 'refresh_token',
+          ...(isMicrosoft ? { scope: 'openid profile email offline_access User.Read Mail.ReadWrite Mail.Send' } : {})
+        }),
+        signal: AbortSignal.timeout(15000)
+      });
+      const tokenData = await tokenResponse.json();
+      if (!tokenResponse.ok || !tokenData.access_token) throw new Error(tokenData.error_description || 'Mailbox authorization expired. Reconnect this account in Preferences.');
+      Object.assign(account, {
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token || account.refresh_token,
+        expires_at: Date.now() + (Number(tokenData.expires_in || 3600) * 1000),
+        updated_at: Date.now()
+      });
+      saveMailStore(store);
+      return account;
+    };
 
     if (url.pathname === '/api/mail/status' && request.method === 'GET') {
-      const userId = url.searchParams.get('userId');
+      let user;
+      try { user = await authenticateMailUser(); } catch (error) { sendMailJson(error.status || 500, { success: false, error: error.message }); return true; }
       const store = getMailStore();
-      const accounts = accountsFor(store, userId);
-      response.writeHead(200, { 'Content-Type': 'application/json' });
-      response.end(JSON.stringify({ 
+      const accounts = accountsFor(store, user.id);
+      sendMailJson(200, {
         success: true, 
         configured: accounts.length > 0,
         email: accounts[0]?.email || null,
         activeAccountId: accounts[0]?.id || null,
         accounts: accounts.map(({ id, email, provider }) => ({ id, email, provider })),
         providersReady: { google: !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET), microsoft: !!(MICROSOFT_CLIENT_ID && MICROSOFT_CLIENT_SECRET) }
-      }));
+      });
       return true;
     }
 
     if (url.pathname === '/api/mail/oauth/init' && request.method === 'GET') {
-      const userId = url.searchParams.get('userId');
+      let user;
+      try { user = await authenticateMailUser(); } catch (error) { sendMailJson(error.status || 500, { success: false, error: error.message }); return true; }
       const provider = url.searchParams.get('provider') === 'microsoft' ? 'microsoft' : 'google';
-      const nonce = crypto.randomUUID();
-      mailOAuthStates.set(nonce, { userId, provider, createdAt: Date.now() });
-      const state = Buffer.from(JSON.stringify({ userId, provider, nonce })).toString('base64url');
+      const stateSecret = process.env.MAIL_OAUTH_STATE_SECRET || (provider === 'microsoft' ? MICROSOFT_CLIENT_SECRET : GOOGLE_CLIENT_SECRET);
+      if (!stateSecret) { sendMailJson(503, { success: false, error: `${provider === 'microsoft' ? 'Microsoft' : 'Google'} Mail is not configured on this deployment.` }); return true; }
+      const requestedOrigin = request.headers.origin || `${String(request.headers['x-forwarded-proto'] || 'http').split(',')[0]}://${String(request.headers['x-forwarded-host'] || request.headers.host || 'localhost:3000').split(',')[0]}`;
+      const state = encodeMailState({ userId: user.id, provider, nonce: crypto.randomUUID(), expiresAt: Date.now() + 10 * 60 * 1000, appOrigin: requestedOrigin }, stateSecret);
       if (provider === 'microsoft') {
         if (!MICROSOFT_CLIENT_ID || !MICROSOFT_CLIENT_SECRET) {
           response.writeHead(400, { 'Content-Type': 'application/json' });
@@ -560,17 +636,18 @@ export async function handleApiRequest(request, response) {
 
     if (url.pathname === '/api/mail/oauth/callback' && request.method === 'GET') {
       const code = url.searchParams.get('code');
+      const rawState = url.searchParams.get('state') || '';
+      const unsignedProvider = (() => { try { return JSON.parse(Buffer.from(rawState.split('.')[0] || '', 'base64url').toString('utf8')).provider; } catch { return null; } })();
+      const stateSecret = process.env.MAIL_OAUTH_STATE_SECRET || (unsignedProvider === 'microsoft' ? MICROSOFT_CLIENT_SECRET : GOOGLE_CLIENT_SECRET);
       let state;
-      try { state = JSON.parse(Buffer.from(url.searchParams.get('state') || '', 'base64url').toString('utf8')); } catch { state = null; }
+      try { state = stateSecret ? decodeMailState(rawState, stateSecret) : null; } catch { state = null; }
       const userId = state?.userId;
       const provider = state?.provider || 'google';
-      const savedState = state?.nonce ? mailOAuthStates.get(state.nonce) : null;
-      if (!code || !userId || !savedState || savedState.userId !== userId || savedState.provider !== provider || Date.now() - savedState.createdAt > 10 * 60 * 1000) {
+      if (!code || !userId || !state) {
         response.writeHead(400, { 'Content-Type': 'text/html' });
         response.end('Invalid or expired mailbox authorization state.');
         return true;
       }
-      mailOAuthStates.delete(state.nonce);
       try {
         const isMicrosoft = provider === 'microsoft';
         const tokenRes = await fetch(isMicrosoft ? 'https://login.microsoftonline.com/common/oauth2/v2.0/token' : 'https://oauth2.googleapis.com/token', {
@@ -595,22 +672,25 @@ export async function handleApiRequest(request, response) {
         const userData = await userRes.json();
 
         const email = userData.mail || userData.userPrincipalName || userData.email;
+        if (!email) throw new Error('The mail provider did not return an account email.');
         const accountId = `${provider}:${email}`;
         const store = getMailStore();
+        const previousAccount = accountsFor(store, userId).find(account => account.id === accountId);
         const accounts = accountsFor(store, userId).filter(account => account.id !== accountId);
         accounts.push({
           id: accountId,
           provider,
           access_token: tokenData.access_token,
-          refresh_token: tokenData.refresh_token,
+          refresh_token: tokenData.refresh_token || previousAccount?.refresh_token,
           email,
+          expires_at: Date.now() + (Number(tokenData.expires_in || 3600) * 1000),
           updated_at: Date.now()
         });
         store[userId] = { accounts };
         saveMailStore(store);
 
         response.writeHead(200, { 'Content-Type': 'text/html' });
-        response.end(`<script>window.opener.postMessage({type:"toolbox:mail-oauth-success",accountId:${JSON.stringify(accountId)}}, "*"); window.close();</script>Mailbox connected. You can close this window.`);
+        response.end(`<script>window.opener?.postMessage({type:"toolbox:mail-oauth-success",accountId:${JSON.stringify(accountId)}}, ${JSON.stringify(state.appOrigin)}); window.close();</script>Mailbox connected. You can close this window.`);
       } catch (err) {
         response.writeHead(500, { 'Content-Type': 'text/html' });
         response.end(`Authentication failed: ${err.message}`);
@@ -619,10 +699,11 @@ export async function handleApiRequest(request, response) {
     }
 
     if (url.pathname === '/api/mail/messages' && request.method === 'GET') {
-      const userId = url.searchParams.get('userId');
+      let user;
+      try { user = await authenticateMailUser(); } catch (error) { sendMailJson(error.status || 500, { success: false, error: error.message }); return true; }
       const accountId = url.searchParams.get('accountId') || '';
       const store = getMailStore();
-      const account = accountFor(store, userId, accountId);
+      let account = accountFor(store, user.id, accountId);
       if (!account || !account.access_token) {
         response.writeHead(401, { 'Content-Type': 'application/json' });
         response.end(JSON.stringify({ success: false, error: 'Not authenticated with Gmail' }));
@@ -630,6 +711,7 @@ export async function handleApiRequest(request, response) {
       }
 
       try {
+        account = await refreshMailAccount(store, user.id, account);
         if (account.provider === 'microsoft') {
           const graphRes = await fetch('https://graph.microsoft.com/v1.0/me/messages?$top=20&$select=id,subject,from,receivedDateTime,bodyPreview,isRead,importance', { headers: { Authorization: `Bearer ${account.access_token}` } });
           const graphData = await graphRes.json();
@@ -671,12 +753,16 @@ export async function handleApiRequest(request, response) {
     }
 
     if (url.pathname === '/api/mail/action' && request.method === 'POST') {
+      let user;
+      try { user = await authenticateMailUser(); } catch (error) { sendMailJson(error.status || 500, { success: false, error: error.message }); return true; }
       let rawBody = '';
       for await (const chunk of request) rawBody += chunk;
       try {
         const payload = rawBody ? JSON.parse(rawBody) : {};
-        const account = accountFor(getMailStore(), payload.userId, payload.accountId);
+        const store = getMailStore();
+        let account = accountFor(store, user.id, payload.accountId);
         if (!account?.access_token) throw new Error('Gmail is not connected.');
+        account = await refreshMailAccount(store, user.id, account);
         if (account.provider === 'microsoft') {
           const graphHeaders = { Authorization: `Bearer ${account.access_token}`, 'Content-Type': 'application/json' };
           let graphUrl = `https://graph.microsoft.com/v1.0/me/messages/${encodeURIComponent(payload.id || '')}`;
@@ -806,14 +892,14 @@ export async function handleApiRequest(request, response) {
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
           response.writeHead(503, { 'Content-Type': 'application/json' });
-          response.end(JSON.stringify({ success: false, error: 'No server Assistant provider is configured. Add a Gemini key in Preferences.' }));
+          response.end(JSON.stringify({ success: false, error: 'The Assistant provider is not configured on this deployment.' }));
           return true;
         }
         const contents = history.filter(message => message?.content).map(message => ({
           role: message.role === 'assistant' ? 'model' : 'user',
           parts: [{ text: String(message.content) }]
         }));
-        const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
+        const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contents, systemInstruction: { parts: [{ text: systemInstruction }] } }),

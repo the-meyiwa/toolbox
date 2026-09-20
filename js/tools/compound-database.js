@@ -6,7 +6,7 @@
    pharmacological/industrial indications, GHS hazards, and live formula parsing.
    ============================================================ */
 
-import { COMMON_COMPOUNDS } from '../lib/chemistry-data.js';
+import { COMPOUNDS_DATA as COMMON_COMPOUNDS } from '../lib/compounds-dataset.js';
 import { calculateMolarMass } from '../lib/chemistry-engine.js';
 import { escapeHtml } from '../lib/biz.js';
 import { copyText } from '../utils.js';
