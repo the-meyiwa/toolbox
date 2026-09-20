@@ -751,9 +751,9 @@ export default {
   },
 
   async loadInitialVehicle() {
-    this.state.vehicles = await autoClient.searchVehicles('');
-    // Default to the flagship Lexus GX 550 (J250)
-    const initial = this.state.vehicles.find(v => v.id === 'lexus-gx-550') || this.state.vehicles[0];
+    this.state.vehicles = await autoClient.searchVehicles('lexus gx');
+    // Default to the first result
+    const initial = this.state.vehicles[0];
     if (initial) {
       this.selectVehicle(initial);
     }
@@ -914,16 +914,22 @@ export default {
     });
   },
 
-  selectVehicle(vehicle) {
+  async selectVehicle(vehicle) {
     this.state.selectedVehicle = vehicle;
     this.state.selectedSection = null;
     this.state.selectedComponent = null;
 
+    // Fetch full specs
+    const specs = await autoClient.getVehicleDetails(vehicle.id, vehicle.manufacturer, vehicle.model);
+    if (specs) {
+       this.state.selectedVehicle = { ...vehicle, ...specs };
+    }
+
     // Render Left Panel Info
-    this.renderVehicleInfo(vehicle);
+    this.renderVehicleInfo(this.state.selectedVehicle);
 
     // Render Section Navigation
-    this.renderSectionNav(vehicle);
+    this.renderSectionNav(this.state.selectedVehicle);
 
     // Update Blueprint
     this.updateBlueprint();
@@ -944,17 +950,27 @@ export default {
     `;
 
     const specGrid = this.container.querySelector('#ag-spec-grid');
-    specGrid.innerHTML = `
-      <div class="ag-spec-row"><span class="ag-spec-label">Years</span><span class="ag-spec-val">${vehicle.years || 'N/A'}</span></div>
-      <div class="ag-spec-row"><span class="ag-spec-label">Body Style</span><span class="ag-spec-val">${vehicle.bodyStyle || 'N/A'}</span></div>
-      <div class="ag-spec-row"><span class="ag-spec-label">Drivetrain</span><span class="ag-spec-val">${vehicle.layout || 'N/A'}</span></div>
-      <div class="ag-spec-row"><span class="ag-spec-label">Engine</span><span class="ag-spec-val">${vehicle.engine?.code || 'N/A'} (${vehicle.engine?.output || ''})</span></div>
-      <div class="ag-spec-row"><span class="ag-spec-label">Transmission</span><span class="ag-spec-val">${vehicle.transmission?.code || 'N/A'}</span></div>
-      <div class="ag-spec-row"><span class="ag-spec-label">Front Susp.</span><span class="ag-spec-val">${vehicle.chassis?.frontSuspension?.split('with')[0] || 'Independent'}</span></div>
-      <div class="ag-spec-row"><span class="ag-spec-label">Rear Susp.</span><span class="ag-spec-val">${vehicle.chassis?.rearSuspension?.split('with')[0] || 'Independent'}</span></div>
-      <div class="ag-spec-row"><span class="ag-spec-label">Curb Weight</span><span class="ag-spec-val">${vehicle.curbWeight || 'N/A'}</span></div>
-      <div class="ag-spec-row"><span class="ag-spec-label">Wheelbase</span><span class="ag-spec-val">${vehicle.wheelbase || 'N/A'}</span></div>
-    `;
+    if (vehicle.meta && vehicle.meta.extract) {
+      specGrid.innerHTML = `
+        <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; padding: 4px 0 12px; font-style: italic;">
+          ${vehicle.meta.extract.substring(0, 250)}...
+        </div>
+        <div class="ag-spec-row"><span class="ag-spec-label">Years</span><span class="ag-spec-val">${vehicle.years || 'N/A'}</span></div>
+        <div class="ag-spec-row"><span class="ag-spec-label">Body Style</span><span class="ag-spec-val">${vehicle.bodyStyle || 'N/A'}</span></div>
+      `;
+    } else {
+      specGrid.innerHTML = `
+        <div class="ag-spec-row"><span class="ag-spec-label">Years</span><span class="ag-spec-val">${vehicle.years || 'N/A'}</span></div>
+        <div class="ag-spec-row"><span class="ag-spec-label">Body Style</span><span class="ag-spec-val">${vehicle.bodyStyle || 'N/A'}</span></div>
+        <div class="ag-spec-row"><span class="ag-spec-label">Drivetrain</span><span class="ag-spec-val">${vehicle.layout || 'N/A'}</span></div>
+        <div class="ag-spec-row"><span class="ag-spec-label">Engine</span><span class="ag-spec-val">${vehicle.engine?.code || 'N/A'} (${vehicle.engine?.output || ''})</span></div>
+        <div class="ag-spec-row"><span class="ag-spec-label">Transmission</span><span class="ag-spec-val">${vehicle.transmission?.code || 'N/A'}</span></div>
+        <div class="ag-spec-row"><span class="ag-spec-label">Front Susp.</span><span class="ag-spec-val">${vehicle.chassis?.frontSuspension?.split('with')[0] || 'Independent'}</span></div>
+        <div class="ag-spec-row"><span class="ag-spec-label">Rear Susp.</span><span class="ag-spec-val">${vehicle.chassis?.rearSuspension?.split('with')[0] || 'Independent'}</span></div>
+        <div class="ag-spec-row"><span class="ag-spec-label">Curb Weight</span><span class="ag-spec-val">${vehicle.curbWeight || 'N/A'}</span></div>
+        <div class="ag-spec-row"><span class="ag-spec-label">Wheelbase</span><span class="ag-spec-val">${vehicle.wheelbase || 'N/A'}</span></div>
+      `;
+    }
   },
 
   renderSectionNav(vehicle) {

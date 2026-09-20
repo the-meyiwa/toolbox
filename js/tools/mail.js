@@ -9,6 +9,9 @@
  */
 
 import { mailClient } from '../lib/mail-provider.js';
+import { createMailSetupUI } from '../views/mail-setup.js';
+import { getCurrentUser } from '../lib/supabase.js';
+import { openSettings } from '../lib/settings-ui.js';
 
 function sanitizeHtml(html) {
   if (!html) return '';
@@ -22,6 +25,17 @@ function sanitizeHtml(html) {
 export default {
   render(container) {
     this.container = container;
+    if (!getCurrentUser()) {
+      container.innerHTML = `
+        <div class="mail-auth-gate">
+          <div class="mail-auth-gate-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg></div>
+          <h2>Setup Mail Client in settings</h2>
+          <p>Sign in to Toolbox, then connect Gmail or Microsoft Mail from Preferences.</p>
+          <button type="button" class="btn btn-primary" id="mail-open-settings">Open Preferences</button>
+        </div>`;
+      container.querySelector('#mail-open-settings')?.addEventListener('click', () => openSettings('mail'));
+      return;
+    }
     this.state = {
       folder: 'inbox',
       messages: [],
@@ -40,8 +54,8 @@ export default {
           height: 100%;
           width: 100%;
           font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
-          color: var(--text, #f8fafc);
-          background: var(--bg, #0f172a);
+          color: var(--text);
+          background: var(--background);
           overflow: hidden;
           position: relative;
           -webkit-font-smoothing: antialiased;
@@ -50,8 +64,8 @@ export default {
 
         /* Sidebar Pane */
         .mail-sidebar {
-          background-color: var(--bg-card, rgba(30, 41, 59, 0.85));
-          border-right: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+          background-color: var(--surface-secondary, var(--surface));
+          border-right: 1px solid var(--border);
           display: flex;
           flex-direction: column;
           backdrop-filter: blur(25px);
@@ -69,7 +83,7 @@ export default {
           font-weight: 700;
           letter-spacing: -0.015em;
           margin: 0;
-          color: var(--text, #f8fafc);
+          color: var(--text);
         }
         .mail-nav {
           display: flex;
@@ -108,13 +122,13 @@ export default {
           border-radius: 8px;
           font-size: 0.85rem;
           font-weight: 500;
-          color: var(--text-muted, #94a3b8);
+          color: var(--text-muted);
           cursor: pointer;
           transition: all 0.15s ease;
         }
         .mail-nav-item:hover {
-          background: rgba(255, 255, 255, 0.05);
-          color: var(--text, #f8fafc);
+          background: var(--surface-secondary);
+          color: var(--text);
         }
         .mail-nav-item.active {
           background: var(--accent, #007aff);
@@ -136,9 +150,9 @@ export default {
         }
         .mail-sidebar-footer {
           padding: 12px 16px;
-          border-top: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+          border-top: 1px solid var(--border);
           font-size: 0.72rem;
-          color: var(--text-muted, #94a3b8);
+          color: var(--text-muted);
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -146,8 +160,8 @@ export default {
 
         /* Message List Pane */
         .mail-list-pane {
-          background-color: var(--bg, #0f172a);
-          border-right: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+          background-color: var(--background);
+          border-right: 1px solid var(--border);
           display: flex;
           flex-direction: column;
           overflow: hidden;
@@ -155,17 +169,17 @@ export default {
         }
         .mail-search-bar {
           padding: 12px 14px;
-          border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-          background: var(--bg, #0f172a);
+          border-bottom: 1px solid var(--border);
+          background: var(--background);
           position: relative;
         }
         .mail-search-input {
           width: 100%;
           padding: 7px 12px 7px 32px;
-          background: var(--bg-card, #1e293b);
-          border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+          background: var(--surface);
+          border: 1px solid var(--border);
           border-radius: 8px;
-          color: var(--text, #f8fafc);
+          color: var(--text);
           font-size: 0.82rem;
           outline: none;
           box-sizing: border-box;
@@ -179,7 +193,7 @@ export default {
           left: 22px;
           top: 50%;
           transform: translateY(-50%);
-          color: var(--text-muted, #94a3b8);
+          color: var(--text-muted);
           pointer-events: none;
         }
         .mail-list {
@@ -190,13 +204,13 @@ export default {
         }
         .mail-item {
           padding: 12px 16px;
-          border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.05));
+          border-bottom: 1px solid var(--border);
           cursor: pointer;
           transition: background-color 0.15s ease;
           position: relative;
         }
         .mail-item:hover {
-          background-color: rgba(255, 255, 255, 0.03);
+          background-color: var(--surface-secondary);
         }
         .mail-item.selected {
           background-color: rgba(0, 122, 255, 0.12);
@@ -212,7 +226,7 @@ export default {
         }
         .mail-item.unread .mail-item-sender {
           font-weight: 700;
-          color: #ffffff;
+          color: var(--text);
         }
         .mail-item.unread::after {
           content: '';
@@ -233,7 +247,7 @@ export default {
         .mail-item-sender {
           font-size: 0.88rem;
           font-weight: 500;
-          color: var(--text, #f8fafc);
+          color: var(--text);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -241,12 +255,12 @@ export default {
         }
         .mail-item-date {
           font-size: 0.72rem;
-          color: var(--text-muted, #94a3b8);
+          color: var(--text-muted);
         }
         .mail-item-subject {
           font-size: 0.82rem;
           font-weight: 600;
-          color: var(--text, #e2e8f0);
+          color: var(--text);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -254,7 +268,7 @@ export default {
         }
         .mail-item-snippet {
           font-size: 0.76rem;
-          color: var(--text-muted, #94a3b8);
+          color: var(--text-muted);
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
@@ -271,8 +285,9 @@ export default {
           font-size: 0.68rem;
           padding: 1px 6px;
           border-radius: 4px;
-          background: rgba(255, 255, 255, 0.08);
-          color: var(--text-muted, #94a3b8);
+          background: var(--surface-secondary);
+          border: 1px solid var(--border);
+          color: var(--text-muted);
           display: flex;
           align-items: center;
           gap: 4px;
@@ -280,11 +295,23 @@ export default {
 
         /* Reading Pane */
         .mail-reading-pane {
-          background-color: var(--bg, #0f172a);
+          background-color: var(--background);
           display: flex;
           flex-direction: column;
           overflow-y: auto;
           position: relative;
+        }
+        .mail-empty-state {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          color: var(--text-muted);
+          font-size: 0.95rem;
+          gap: 12px;
+          padding: 32px;
+          text-align: center;
         }
         .mail-read-empty {
           flex: 1;
@@ -292,21 +319,21 @@ export default {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          color: var(--text-muted, #94a3b8);
+          color: var(--text-muted);
           font-size: 0.95rem;
           gap: 12px;
         }
         .mail-read-header {
           padding: 24px 28px 18px;
-          border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-          background: var(--bg-card, #1e293b);
+          border-bottom: 1px solid var(--border);
+          background: var(--surface);
         }
         .mail-read-subject {
           font-size: 1.35rem;
           font-weight: 700;
           letter-spacing: -0.02em;
           margin: 0 0 16px 0;
-          color: var(--text, #f8fafc);
+          color: var(--text);
         }
         .mail-read-meta {
           display: flex;
@@ -331,28 +358,28 @@ export default {
         .mail-sender-name {
           font-size: 0.92rem;
           font-weight: 600;
-          color: var(--text, #f8fafc);
+          color: var(--text);
         }
         .mail-sender-email {
           font-size: 0.78rem;
-          color: var(--text-muted, #94a3b8);
+          color: var(--text-muted);
         }
         .mail-read-date {
           font-size: 0.78rem;
-          color: var(--text-muted, #94a3b8);
+          color: var(--text-muted);
         }
         .mail-read-actions {
           display: flex;
           gap: 8px;
         }
         .mail-action-btn {
-          background: var(--bg, #0f172a);
-          border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+          background: var(--background);
+          border: 1px solid var(--border);
           border-radius: 6px;
           padding: 6px 12px;
           font-size: 0.78rem;
           font-weight: 600;
-          color: var(--text, #f8fafc);
+          color: var(--text);
           display: flex;
           align-items: center;
           gap: 6px;
@@ -367,12 +394,12 @@ export default {
           padding: 28px;
           font-size: 0.92rem;
           line-height: 1.6;
-          color: var(--text, #e2e8f0);
+          color: var(--text);
           flex: 1;
         }
         .mail-read-attachments {
           padding: 16px 28px;
-          border-top: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+          border-top: 1px solid var(--border);
           background: rgba(0, 0, 0, 0.1);
         }
         .mail-att-list {
@@ -386,11 +413,11 @@ export default {
           align-items: center;
           gap: 8px;
           padding: 8px 12px;
-          background: var(--bg-card, #1e293b);
-          border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+          background: var(--surface);
+          border: 1px solid var(--border);
           border-radius: 8px;
           font-size: 0.8rem;
-          color: var(--text, #f8fafc);
+          color: var(--text);
           cursor: pointer;
           text-decoration: none;
         }
@@ -405,8 +432,8 @@ export default {
           right: 28px;
           width: 580px;
           max-height: 600px;
-          background: var(--bg-card, #1e293b);
-          border: 1px solid var(--border, rgba(255, 255, 255, 0.15));
+          background: var(--surface);
+          border: 1px solid var(--border);
           border-radius: 12px;
           box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
           display: none;
@@ -420,7 +447,7 @@ export default {
         .mail-compose-header {
           padding: 12px 16px;
           background: rgba(255, 255, 255, 0.04);
-          border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+          border-bottom: 1px solid var(--border);
           display: flex;
           justify-content: space-between;
           align-items: center;
@@ -430,7 +457,7 @@ export default {
         .mail-compose-close {
           background: transparent;
           border: none;
-          color: var(--text-muted, #94a3b8);
+          color: var(--text-muted);
           cursor: pointer;
           padding: 4px;
         }
@@ -438,12 +465,12 @@ export default {
           display: flex;
           align-items: center;
           padding: 8px 16px;
-          border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.05));
+          border-bottom: 1px solid var(--border);
           font-size: 0.84rem;
         }
         .mail-compose-label {
           width: 55px;
-          color: var(--text-muted, #94a3b8);
+          color: var(--text-muted);
           font-weight: 500;
         }
         .mail-compose-input {
@@ -451,7 +478,7 @@ export default {
           background: transparent;
           border: none;
           outline: none;
-          color: var(--text, #f8fafc);
+          color: var(--text);
           font-size: 0.84rem;
         }
         .mail-compose-body {
@@ -461,7 +488,7 @@ export default {
           background: transparent;
           border: none;
           outline: none;
-          color: var(--text, #f8fafc);
+          color: var(--text);
           font-family: inherit;
           font-size: 0.88rem;
           line-height: 1.5;
@@ -470,7 +497,7 @@ export default {
         .mail-compose-footer {
           padding: 10px 16px;
           background: rgba(255, 255, 255, 0.03);
-          border-top: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+          border-top: 1px solid var(--border);
           display: flex;
           justify-content: space-between;
           align-items: center;
@@ -776,20 +803,47 @@ export default {
   },
 
   async loadMailbox() {
-    this.state.messages = await mailClient.getMessages(this.state.folder);
-    this.renderMessageList();
-    this.updateFolderBadges();
+    try {
+      this.state.messages = await mailClient.getMessages(this.state.folder);
+      this.renderMessageList();
+      this.updateFolderBadges();
+    } catch (err) {
+      this.renderUnconfiguredState(err.message);
+    }
+  },
+
+  renderUnconfiguredState(msg) {
+    const list = this.container.querySelector('#mail-list');
+    list.innerHTML = '';
+    
+    // Inject the reusable setup component instead of a passive error message
+    const setupUI = createMailSetupUI();
+    list.appendChild(setupUI);
+
+    this.container.querySelector('#mail-reading-pane').innerHTML = `
+      <div class="mail-empty-state">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.3">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+          <polyline points="22,6 12,13 2,6"></polyline>
+        </svg>
+        <span>Mail Configuration Required</span>
+      </div>
+    `;
   },
 
   async updateFolderBadges() {
-    const folders = await mailClient.getFolders();
-    folders.forEach(f => {
-      const badge = this.container.querySelector(`#badge-${f.id}`);
-      if (badge) {
-        badge.textContent = f.unreadCount;
-        badge.style.display = f.unreadCount > 0 ? 'inline-block' : 'none';
-      }
-    });
+    try {
+      const folders = await mailClient.getFolders();
+      folders.forEach(f => {
+        const badge = this.container.querySelector(`#badge-${f.id}`);
+        if (badge) {
+          badge.textContent = f.unreadCount;
+          badge.style.display = f.unreadCount > 0 ? 'inline-block' : 'none';
+        }
+      });
+    } catch (e) {
+      // Badges hidden if config fails
+    }
   },
 
   renderMessageList() {
@@ -834,17 +888,21 @@ export default {
   },
 
   async selectMessage(id) {
-    const msg = await mailClient.getMessage(id);
-    if (!msg) return;
+    try {
+      const msg = await mailClient.getMessage(id);
+      if (!msg) return;
 
-    this.state.selectedMessage = msg;
-    await mailClient.markRead(id, true);
-    this.renderMessageList();
-    this.renderReadingPane(msg);
+      this.state.selectedMessage = msg;
+      await mailClient.markRead(id, true);
+      this.renderMessageList();
+      this.renderReadingPane(msg);
 
-    // On mobile, slide reading pane in
-    const readingPane = this.container.querySelector('#mail-reading-pane');
-    readingPane.classList.add('open');
+      // On mobile, slide reading pane in
+      const readingPane = this.container.querySelector('#mail-reading-pane');
+      if (readingPane) readingPane.classList.add('open');
+    } catch (err) {
+      alert(`Error reading message: ${err.message}`);
+    }
   },
 
   renderReadingPane(msg) {

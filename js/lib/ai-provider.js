@@ -22,35 +22,35 @@ export const AI_MODES = {
     id: 'auto',
     name: 'Auto Mode',
     badge: 'Auto Reasoning',
-    model: 'gemini-3.5-flash-lite',
+    model: 'gemini-2.5-flash',
     description: 'High-speed generative intelligence with multi-tool calling, file reasoning, and code generation.'
   },
   reasoning: {
     id: 'reasoning',
     name: 'Deep Reasoning',
     badge: 'Deep Reasoning',
-    model: 'gemini-3.5-flash',
+    model: 'gemini-2.5-pro',
     description: 'Analytical problem solving, multi-step proofs, and comprehensive explanations.'
   },
   code: {
     id: 'code',
     name: 'Code & Math Engine',
     badge: 'Code Engine',
-    model: 'gemini-3.5-flash-lite',
+    model: 'gemini-2.5-flash',
     description: 'Generates and tests code in JavaScript, Python, C++, and SQL with live execution.'
   },
   science: {
     id: 'science',
     name: 'Science & Chemistry',
     badge: 'Science Engine',
-    model: 'gemini-3.5-flash-lite',
+    model: 'gemini-2.5-flash',
     description: 'Molar mass calculation, reaction balancing, stoichiometry, and compound queries.'
   },
   files: {
     id: 'files',
     name: 'File & Image Suite',
     badge: 'File Suite',
-    model: 'gemini-3.5-flash-lite',
+    model: 'gemini-2.5-flash',
     description: 'Multimodal image inspection, conversion, dataset analysis, and OCR.'
   }
 };
@@ -319,7 +319,17 @@ export async function streamChatCompletion({
   try {
     const apiKey = getGeminiApiKey();
     if (!apiKey) {
-      throw new Error('API key is missing. Please set your Gemini API key in settings.');
+      const proxyResponse = await fetch('/api/assistant/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ history, systemInstruction: systemInstruction ? `${fullSystemInstruction}\n\n${systemInstruction}` : fullSystemInstruction }),
+        signal
+      });
+      const payload = await proxyResponse.json().catch(() => ({}));
+      if (!proxyResponse.ok || !payload.text) throw new Error(payload.error || 'Connect an Assistant provider in Preferences.');
+      fullResponseText = payload.text;
+      onToken(fullResponseText);
+      return { text: fullResponseText, taskState, toolResults: [] };
     }
 
     const client = new GoogleGenAI({ apiKey });
@@ -471,7 +481,7 @@ export async function testAiProviderConnection(provider = 'gemini', apiKey = '')
   }
 
   const start = Date.now();
-  const modelsToTry = ['gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.7-flash'];
+  const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-flash-latest'];
   let lastErr = 'Connection failed';
 
   try {

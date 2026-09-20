@@ -95,6 +95,7 @@ export function listJoinedSpaces() {
 }
 
 export function getJoinedSpace(code) {
+  if (!code || typeof code !== 'string') return null;
   const upper = code.toUpperCase();
   return listJoinedSpaces().find(s => s.id === upper) || null;
 }

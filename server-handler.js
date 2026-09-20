@@ -41,6 +41,7 @@ function cleanIdempotencyStore() {
 // Anonymous File Drop P2P WebRTC Signaling Relay
 const fileDropRooms = new Map(); // roomCode -> { signals: [], lastActive: number }
 const FILEDROP_ROOM_TTL_MS = 15 * 60 * 1000;
+const mailOAuthStates = new Map(); // nonce -> { userId, provider, createdAt }
 
 function cleanFileDropRooms() {
   const now = Date.now();
@@ -65,9 +66,9 @@ export async function handleApiRequest(request, response) {
     return true;
   }
 
+  // --- Toolbox IDE Real Code Execution & Workspace API ---
   if (await handleDeviceRequest(request, response, url)) return true;
 
-  // --- Toolbox IDE Real Code Execution & Workspace API ---
   if (url.pathname.startsWith('/api/ide/')) {
     // 1. Dev Server Reverse Proxy Preview (/api/ide/preview/:port/*)
     const previewMatch = url.pathname.match(/^\/api\/ide\/preview\/(\d+)/);
@@ -390,6 +391,351 @@ export async function handleApiRequest(request, response) {
     }
   }
 
+  // --- Toolbox Automotive Data Proxy API ---
+  if (url.pathname.startsWith('/api/automotive/')) {
+    if (url.pathname === '/api/automotive/resolve' && request.method === 'GET') {
+      const q = (url.searchParams.get('q') || '').trim();
+      if (!q) {
+        response.writeHead(400, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, error: 'Query parameter "q" is required.' }));
+        return true;
+      }
+      try {
+        const parts = q.split(/\s+/);
+        const make = parts[0];
+        const modelQuery = parts.slice(1).join(' ').toLowerCase();
+
+        // 1. Fetch NHTSA Data
+        let nhtsaResults = [];
+        try {
+          const vpicUrl = `https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/${encodeURIComponent(make)}?format=json`;
+          const vpicRes = await fetch(vpicUrl, { headers: { 'User-Agent': 'ToolboxAutomotiveProxy/1.0' } });
+          if (vpicRes.ok) {
+            const data = await vpicRes.json();
+            const apiResults = data.Results || [];
+            nhtsaResults = modelQuery 
+              ? apiResults.filter(r => r.Model_Name.toLowerCase().includes(modelQuery))
+              : apiResults;
+          }
+        } catch (e) {
+          console.warn('[Automotive Proxy] NHTSA error:', e.message);
+        }
+
+        // 2. Fetch Wikipedia Meta (Search)
+        let wikiExtract = null;
+        let wikiImage = null;
+        let wikiTitle = null;
+        try {
+          const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q + ' car')}&utf8=&format=json&srlimit=1`;
+          const searchRes = await fetch(searchUrl, { headers: { 'User-Agent': 'ToolboxAutomotiveProxy/1.0' } });
+          const searchData = await searchRes.json();
+          const firstResult = searchData.query?.search?.[0];
+          
+          if (firstResult) {
+            wikiTitle = firstResult.title;
+            const detailUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts|pageimages&exintro=1&explaintext=1&pithumbsize=800&titles=${encodeURIComponent(firstResult.title)}&format=json`;
+            const detailRes = await fetch(detailUrl, { headers: { 'User-Agent': 'ToolboxAutomotiveProxy/1.0' } });
+            const detailData = await detailRes.json();
+            const pages = detailData.query?.pages || {};
+            const pageId = Object.keys(pages)[0];
+            if (pageId && pageId !== '-1') {
+              wikiExtract = pages[pageId].extract;
+              wikiImage = pages[pageId].thumbnail?.source;
+            }
+          }
+        } catch (e) {
+          console.warn('[Automotive Proxy] Wikipedia error:', e.message);
+        }
+          
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ 
+          success: true, 
+          results: nhtsaResults,
+          meta: {
+            title: wikiTitle,
+            extract: wikiExtract,
+            image: wikiImage
+          }
+        }));
+        return true;
+      } catch (err) {
+        response.writeHead(500, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, error: err.message }));
+        return true;
+      }
+    }
+
+    if (url.pathname === '/api/automotive/specs' && request.method === 'GET') {
+      const q = (url.searchParams.get('q') || '').trim();
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify({ 
+        success: true, 
+        specs: { note: 'Server-side specs proxy operational.', query: q }
+      }));
+      return true;
+    }
+
+    if (url.pathname === '/api/automotive/assets' && request.method === 'GET') {
+      const id = (url.searchParams.get('id') || '').trim();
+      // Securely serve from /assets/automotive
+      response.writeHead(404, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify({ success: false, error: 'Asset pending licensing or unavailable.' }));
+      return true;
+    }
+  }
+
+  // --- Toolbox Mail Client API ---
+  const MAIL_STORE_FILE = path.join(process.cwd(), '.toolbox-mail.json');
+  function getMailStore() {
+    try { return JSON.parse(fs.readFileSync(MAIL_STORE_FILE, 'utf8')); } catch { return {}; }
+  }
+  function saveMailStore(data) {
+    fs.writeFileSync(MAIL_STORE_FILE, JSON.stringify(data, null, 2));
+  }
+
+  if (url.pathname.startsWith('/api/mail/')) {
+    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+    const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+    const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/mail/oauth/callback';
+    const MICROSOFT_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID;
+    const MICROSOFT_CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET;
+    const MICROSOFT_REDIRECT_URI = process.env.MICROSOFT_REDIRECT_URI || 'http://localhost:3000/api/mail/oauth/callback';
+    const accountsFor = (store, userId) => {
+      const record = store[userId];
+      if (!record) return [];
+      if (Array.isArray(record.accounts)) return record.accounts;
+      if (record.access_token) return [{ ...record, id: `google:${record.email || 'primary'}`, provider: 'google' }];
+      return [];
+    };
+    const accountFor = (store, userId, accountId = '') => {
+      const accounts = accountsFor(store, userId);
+      return accounts.find(account => account.id === accountId) || accounts[0] || null;
+    };
+
+    if (url.pathname === '/api/mail/status' && request.method === 'GET') {
+      const userId = url.searchParams.get('userId');
+      const store = getMailStore();
+      const accounts = accountsFor(store, userId);
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify({ 
+        success: true, 
+        configured: accounts.length > 0,
+        email: accounts[0]?.email || null,
+        activeAccountId: accounts[0]?.id || null,
+        accounts: accounts.map(({ id, email, provider }) => ({ id, email, provider })),
+        providersReady: { google: !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET), microsoft: !!(MICROSOFT_CLIENT_ID && MICROSOFT_CLIENT_SECRET) }
+      }));
+      return true;
+    }
+
+    if (url.pathname === '/api/mail/oauth/init' && request.method === 'GET') {
+      const userId = url.searchParams.get('userId');
+      const provider = url.searchParams.get('provider') === 'microsoft' ? 'microsoft' : 'google';
+      const nonce = crypto.randomUUID();
+      mailOAuthStates.set(nonce, { userId, provider, createdAt: Date.now() });
+      const state = Buffer.from(JSON.stringify({ userId, provider, nonce })).toString('base64url');
+      if (provider === 'microsoft') {
+        if (!MICROSOFT_CLIENT_ID || !MICROSOFT_CLIENT_SECRET) {
+          response.writeHead(400, { 'Content-Type': 'application/json' });
+          response.end(JSON.stringify({ success: false, error: 'Microsoft Mail is not configured on this deployment.' }));
+          return true;
+        }
+        const scope = encodeURIComponent('openid profile email offline_access User.Read Mail.ReadWrite Mail.Send');
+        const authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${MICROSOFT_CLIENT_ID}&redirect_uri=${encodeURIComponent(MICROSOFT_REDIRECT_URI)}&response_type=code&response_mode=query&scope=${scope}&state=${encodeURIComponent(state)}&prompt=select_account`;
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: true, url: authUrl, provider }));
+        return true;
+      }
+      if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+        response.writeHead(400, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, error: 'Server is missing GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables.' }));
+        return true;
+      }
+      const scope = encodeURIComponent('https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email');
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}&response_type=code&scope=${scope}&access_type=offline&include_granted_scopes=true&prompt=consent&state=${encodeURIComponent(state)}`;
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify({ success: true, url: authUrl }));
+      return true;
+    }
+
+    if (url.pathname === '/api/mail/oauth/callback' && request.method === 'GET') {
+      const code = url.searchParams.get('code');
+      let state;
+      try { state = JSON.parse(Buffer.from(url.searchParams.get('state') || '', 'base64url').toString('utf8')); } catch { state = null; }
+      const userId = state?.userId;
+      const provider = state?.provider || 'google';
+      const savedState = state?.nonce ? mailOAuthStates.get(state.nonce) : null;
+      if (!code || !userId || !savedState || savedState.userId !== userId || savedState.provider !== provider || Date.now() - savedState.createdAt > 10 * 60 * 1000) {
+        response.writeHead(400, { 'Content-Type': 'text/html' });
+        response.end('Invalid or expired mailbox authorization state.');
+        return true;
+      }
+      mailOAuthStates.delete(state.nonce);
+      try {
+        const isMicrosoft = provider === 'microsoft';
+        const tokenRes = await fetch(isMicrosoft ? 'https://login.microsoftonline.com/common/oauth2/v2.0/token' : 'https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            code,
+            client_id: isMicrosoft ? MICROSOFT_CLIENT_ID : GOOGLE_CLIENT_ID,
+            client_secret: isMicrosoft ? MICROSOFT_CLIENT_SECRET : GOOGLE_CLIENT_SECRET,
+            redirect_uri: isMicrosoft ? MICROSOFT_REDIRECT_URI : GOOGLE_REDIRECT_URI,
+            ...(isMicrosoft ? { scope: 'openid profile email offline_access User.Read Mail.ReadWrite Mail.Send' } : {}),
+            grant_type: 'authorization_code'
+          })
+        });
+        const tokenData = await tokenRes.json();
+        if (tokenData.error) throw new Error(tokenData.error_description || tokenData.error);
+        
+        // Get user email
+        const userRes = await fetch(isMicrosoft ? 'https://graph.microsoft.com/v1.0/me' : 'https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: { Authorization: `Bearer ${tokenData.access_token}` }
+        });
+        const userData = await userRes.json();
+
+        const email = userData.mail || userData.userPrincipalName || userData.email;
+        const accountId = `${provider}:${email}`;
+        const store = getMailStore();
+        const accounts = accountsFor(store, userId).filter(account => account.id !== accountId);
+        accounts.push({
+          id: accountId,
+          provider,
+          access_token: tokenData.access_token,
+          refresh_token: tokenData.refresh_token,
+          email,
+          updated_at: Date.now()
+        });
+        store[userId] = { accounts };
+        saveMailStore(store);
+
+        response.writeHead(200, { 'Content-Type': 'text/html' });
+        response.end(`<script>window.opener.postMessage({type:"toolbox:mail-oauth-success",accountId:${JSON.stringify(accountId)}}, "*"); window.close();</script>Mailbox connected. You can close this window.`);
+      } catch (err) {
+        response.writeHead(500, { 'Content-Type': 'text/html' });
+        response.end(`Authentication failed: ${err.message}`);
+      }
+      return true;
+    }
+
+    if (url.pathname === '/api/mail/messages' && request.method === 'GET') {
+      const userId = url.searchParams.get('userId');
+      const accountId = url.searchParams.get('accountId') || '';
+      const store = getMailStore();
+      const account = accountFor(store, userId, accountId);
+      if (!account || !account.access_token) {
+        response.writeHead(401, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, error: 'Not authenticated with Gmail' }));
+        return true;
+      }
+
+      try {
+        if (account.provider === 'microsoft') {
+          const graphRes = await fetch('https://graph.microsoft.com/v1.0/me/messages?$top=20&$select=id,subject,from,receivedDateTime,bodyPreview,isRead,importance', { headers: { Authorization: `Bearer ${account.access_token}` } });
+          const graphData = await graphRes.json();
+          if (!graphRes.ok) throw new Error(graphData.error?.message || 'Microsoft Graph could not list messages.');
+          response.writeHead(200, { 'Content-Type': 'application/json' });
+          response.end(JSON.stringify({ success: true, messages: (graphData.value || []).map(message => ({ id: message.id, snippet: message.bodyPreview, subject: message.subject || 'No Subject', from: message.from?.emailAddress ? `${message.from.emailAddress.name || ''} <${message.from.emailAddress.address}>` : 'Unknown', date: message.receivedDateTime, unread: !message.isRead })) }));
+          return true;
+        }
+        const listRes = await fetch('https://www.googleapis.com/gmail/v1/users/me/messages?maxResults=20', {
+          headers: { Authorization: `Bearer ${account.access_token}` }
+        });
+        if (!listRes.ok) throw new Error('Gmail API failed to list messages');
+        const listData = await listRes.json();
+        const messages = listData.messages || [];
+
+        // Fetch details for first 5 messages to avoid rate limits on naive proxy
+        const detailed = await Promise.all(messages.slice(0, 10).map(async (m) => {
+          const mRes = await fetch(`https://www.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date`, {
+            headers: { Authorization: `Bearer ${account.access_token}` }
+          });
+          const mData = await mRes.json();
+          const headers = mData.payload?.headers || [];
+          return {
+            id: m.id,
+            snippet: mData.snippet,
+            subject: headers.find(h => h.name.toLowerCase() === 'subject')?.value || 'No Subject',
+            from: headers.find(h => h.name.toLowerCase() === 'from')?.value || 'Unknown',
+            date: headers.find(h => h.name.toLowerCase() === 'date')?.value || ''
+          };
+        }));
+
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: true, messages: detailed }));
+      } catch (err) {
+        response.writeHead(500, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, error: err.message }));
+      }
+      return true;
+    }
+
+    if (url.pathname === '/api/mail/action' && request.method === 'POST') {
+      let rawBody = '';
+      for await (const chunk of request) rawBody += chunk;
+      try {
+        const payload = rawBody ? JSON.parse(rawBody) : {};
+        const account = accountFor(getMailStore(), payload.userId, payload.accountId);
+        if (!account?.access_token) throw new Error('Gmail is not connected.');
+        if (account.provider === 'microsoft') {
+          const graphHeaders = { Authorization: `Bearer ${account.access_token}`, 'Content-Type': 'application/json' };
+          let graphUrl = `https://graph.microsoft.com/v1.0/me/messages/${encodeURIComponent(payload.id || '')}`;
+          let method = 'PATCH';
+          let graphBody = {};
+          if (payload.action === 'send') {
+            graphUrl = 'https://graph.microsoft.com/v1.0/me/sendMail';
+            method = 'POST';
+            const message = payload.message || {};
+            const recipients = Array.isArray(message.to) ? message.to : [message.to];
+            graphBody = { message: { subject: message.subject || '', body: { contentType: 'HTML', content: message.body || '' }, toRecipients: recipients.filter(Boolean).map(value => ({ emailAddress: { address: value.email || value } })) } };
+          } else if (payload.action === 'trash') { method = 'DELETE'; graphBody = null; }
+          else if (payload.action === 'read') graphBody = { isRead: !!payload.isRead };
+          else if (payload.action === 'star') graphBody = { flag: { flagStatus: payload.starred ? 'flagged' : 'notFlagged' } };
+          else if (payload.action === 'move') { graphUrl += '/move'; method = 'POST'; graphBody = { destinationId: payload.folder === 'trash' ? 'deleteditems' : payload.folder }; }
+          const graphResponse = await fetch(graphUrl, { method, headers: graphHeaders, ...(graphBody ? { body: JSON.stringify(graphBody) } : {}) });
+          if (!graphResponse.ok) { const graphError = await graphResponse.json().catch(() => ({})); throw new Error(graphError.error?.message || 'Microsoft Mail rejected the action.'); }
+          response.writeHead(200, { 'Content-Type': 'application/json' });
+          response.end(JSON.stringify({ success: true }));
+          return true;
+        }
+        const headers = { Authorization: `Bearer ${account.access_token}`, 'Content-Type': 'application/json' };
+        let endpoint = '';
+        let body = {};
+        if (payload.action === 'send') {
+          const message = payload.message || {};
+          const recipients = Array.isArray(message.to) ? message.to.map(value => value.email || value).join(', ') : String(message.to || '');
+          const mime = [`To: ${recipients}`, `Subject: ${message.subject || ''}`, 'MIME-Version: 1.0', 'Content-Type: text/html; charset=UTF-8', '', message.body || ''].join('\r\n');
+          body = { raw: Buffer.from(mime).toString('base64url') };
+          endpoint = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send';
+        } else if (payload.action === 'trash') {
+          endpoint = `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(payload.id)}/trash`;
+        } else {
+          endpoint = `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(payload.id)}/modify`;
+          const addLabelIds = [];
+          const removeLabelIds = [];
+          if (payload.action === 'read') (payload.isRead ? removeLabelIds : addLabelIds).push('UNREAD');
+          if (payload.action === 'star') (payload.starred ? addLabelIds : removeLabelIds).push('STARRED');
+          if (payload.action === 'move') {
+            removeLabelIds.push('INBOX');
+            if (payload.folder === 'inbox') addLabelIds.push('INBOX');
+            if (payload.folder === 'spam') addLabelIds.push('SPAM');
+            if (payload.folder === 'trash') addLabelIds.push('TRASH');
+          }
+          body = { addLabelIds, removeLabelIds };
+        }
+        const gmailResponse = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(body) });
+        const result = await gmailResponse.json().catch(() => ({}));
+        if (!gmailResponse.ok) throw new Error(result.error?.message || 'Gmail rejected the action.');
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: true, result }));
+      } catch (error) {
+        response.writeHead(500, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, error: error.message }));
+      }
+      return true;
+    }
+  }
+
   // --- Assistant Binary Proxy ---
   if (url.pathname === '/api/assistant/browser/fetch-binary' && request.method === 'GET') {
     const targetUrl = (url.searchParams.get('url') || '').trim();
@@ -449,6 +795,39 @@ export async function handleApiRequest(request, response) {
         supportedProviders: ['gemini', 'groq', 'openai', 'openrouter', 'deepseek', 'ollama', 'local'],
         timestamp: Date.now()
       }));
+      return true;
+    }
+
+    if (url.pathname === '/api/assistant/chat' && request.method === 'POST') {
+      let rawBody = '';
+      for await (const chunk of request) rawBody += chunk;
+      try {
+        const { history = [], systemInstruction = '' } = rawBody ? JSON.parse(rawBody) : {};
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+          response.writeHead(503, { 'Content-Type': 'application/json' });
+          response.end(JSON.stringify({ success: false, error: 'No server Assistant provider is configured. Add a Gemini key in Preferences.' }));
+          return true;
+        }
+        const contents = history.filter(message => message?.content).map(message => ({
+          role: message.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: String(message.content) }]
+        }));
+        const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents, systemInstruction: { parts: [{ text: systemInstruction }] } }),
+          signal: AbortSignal.timeout(45000)
+        });
+        const result = await geminiResponse.json();
+        const text = result.candidates?.[0]?.content?.parts?.map(part => part.text || '').join('') || '';
+        if (!geminiResponse.ok || !text) throw new Error(result.error?.message || 'The Assistant provider returned an empty response.');
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: true, text }));
+      } catch (error) {
+        response.writeHead(500, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, error: error.message }));
+      }
       return true;
     }
 

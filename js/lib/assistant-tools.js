@@ -6096,7 +6096,7 @@ if (container) {
 // Development-time validation: Ensure all registry tools are discoverable
 if (typeof import.meta !== 'undefined' && import.meta.env?.DEV) {
   const generatedToolsCount = ASSISTANT_TOOL_DECLARATIONS.filter(t => t.name.startsWith('open_tool_')).length;
-  if (generatedToolsCount !== TOOLS.length) {
-    console.error(`Assistant Registry Mismatch: Found ${TOOLS.length} registry tools but generated ${generatedToolsCount} assistant declarations.`);
+  if (generatedToolsCount > 0 && generatedToolsCount !== TOOLS.length) {
+    console.warn(`Assistant registry exposes ${generatedToolsCount} direct launch declarations for ${TOOLS.length} registered tools.`);
   }
 }

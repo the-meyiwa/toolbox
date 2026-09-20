@@ -424,24 +424,11 @@ async function renderNotificationPanel() {
     });
   }
 
-  html += `</div><div style="padding:12px 16px; border-top:1px solid var(--border); display:flex; flex-wrap:wrap; gap:10px; font-size:.76rem;">
-    <label><input type="checkbox" id="notif-enabled" ${getSettings().notificationsEnabled !== false ? 'checked' : ''}> Notifications</label>
-    <label><input type="checkbox" id="notif-sound" ${getSettings().notificationSound ? 'checked' : ''}> Sound</label>
-    <button type="button" class="btn btn-sm" id="notif-browser">${getSettings().notificationsPush ? 'Disable desktop alerts' : 'Enable desktop alerts'}</button>
-    <span id="notif-permission-status" role="status"></span>
-  </div>`;
+  html += `</div><div class="notif-preferences-link"><button type="button" id="notif-open-preferences">Notification preferences</button></div>`;
   notifPanelEl.innerHTML = html;
-  notifPanelEl.querySelector('#notif-enabled').addEventListener('change', e => updateSettings({ notificationsEnabled: e.target.checked }));
-  notifPanelEl.querySelector('#notif-sound').addEventListener('change', e => {
-    if (e.target.checked) prepareNotificationSound();
-    updateSettings({ notificationSound: e.target.checked });
-  });
-  notifPanelEl.querySelector('#notif-browser').addEventListener('click', async () => {
-    if (getSettings().notificationsPush) { updateSettings({ notificationsPush: false }); return; }
-    try {
-      const result = await NotificationEngine.enableBrowserNotifications();
-      notifPanelEl.querySelector('#notif-permission-status').textContent = result === 'granted' ? 'Desktop alerts enabled while Toolbox is open.' : result === 'unsupported' ? 'Desktop alerts are not supported in this browser.' : 'Desktop alerts are blocked. You can allow them in browser site settings.';
-    } catch { notifPanelEl.querySelector('#notif-permission-status').textContent = 'Could not enable desktop alerts. In-app notifications remain available.'; }
+  notifPanelEl.querySelector('#notif-open-preferences')?.addEventListener('click', () => {
+    closeNotificationPanel();
+    openSettings('notifications');
   });
 
   const listContainer = notifPanelEl.querySelector('#notif-list-container');

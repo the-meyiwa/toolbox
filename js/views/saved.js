@@ -1827,6 +1827,35 @@ function wire(host, selected, refresh, itemsInDir = []) {
 
   // ---------------- Drag & Drop in Files ----------------
   let dragCounter = 0;
+  let dragHoldTimer = null;
+  let dragDesk = null;
+
+  const closeDragDesk = () => {
+    clearTimeout(dragHoldTimer);
+    dragHoldTimer = null;
+    dragDesk?.remove();
+    dragDesk = null;
+  };
+
+  const openDragDesk = (sourcePath) => {
+    if (dragDesk || !sourcePath) return;
+    const folders = fs.listSync('/', { recursive: true, storage: currentStorage })
+      .filter(item => item.isDirectory && item.path !== sourcePath && !item.path.startsWith(`${sourcePath}/`))
+      .sort((a, b) => a.path.localeCompare(b.path));
+    dragDesk = document.createElement('aside');
+    dragDesk.className = 'sv-drag-desk';
+    dragDesk.setAttribute('aria-label', 'Temporary file desk');
+    dragDesk.innerHTML = `
+      <div class="sv-drag-desk-head">
+        <div><strong>Temporary desk</strong><span>Drop ${escapeHtml(getBaseName(sourcePath))} into a folder</span></div>
+      </div>
+      <div class="sv-drag-desk-folders">
+        <button type="button" data-nav-path="/" class="sv-drag-desk-folder">${ICONS.folder}<span>Files</span></button>
+        ${folders.map(folder => `<button type="button" data-nav-path="${escapeHtml(folder.path)}" class="sv-drag-desk-folder">${ICONS.folder}<span>${escapeHtml(folder.path.replace(/^\//, ''))}</span></button>`).join('')}
+      </div>`;
+    host.appendChild(dragDesk);
+    requestAnimationFrame(() => dragDesk?.classList.add('is-open'));
+  };
 
   const onDragEnter = (e) => {
     e.preventDefault();
@@ -1863,10 +1892,11 @@ function wire(host, selected, refresh, itemsInDir = []) {
     dragCounter = 0;
     host.classList.remove('sv-drag-active');
     host.querySelectorAll('.sv-folder-drop-hover').forEach(el => el.classList.remove('sv-folder-drop-hover'));
+    const deskTarget = e.target.closest('.sv-drag-desk-folder');
 
     // 1. Check if internal item was dropped onto a folder
     const internalSource = e.dataTransfer ? (e.dataTransfer.getData('application/toolbox-path') || e.dataTransfer.getData('text/plain')) : null;
-    const folderTarget = e.target.closest('[data-is-dir="true"]') || e.target.closest('[data-nav-path]');
+    const folderTarget = deskTarget || e.target.closest('[data-is-dir="true"]') || e.target.closest('[data-nav-path]');
 
     if (internalSource && folderTarget) {
       const targetDir = folderTarget.dataset.path || folderTarget.dataset.navPath;
@@ -1875,6 +1905,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
           const dest = normalizePath(`${targetDir}/${getBaseName(internalSource)}`);
           await fs.rename(internalSource, dest);
           flash(`Moved "${getBaseName(internalSource)}" to "${getBaseName(targetDir) || 'Root'}".`);
+          closeDragDesk();
           refresh(null);
           return;
         } catch (err) {
@@ -1917,6 +1948,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
       e.dataTransfer.setData('text/plain', itemPath);
       e.dataTransfer.effectAllowed = 'move';
       itemEl.classList.add('is-dragging');
+      dragHoldTimer = setTimeout(() => openDragDesk(itemPath), 650);
     }
   };
 
@@ -1924,6 +1956,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
     const itemEl = e.target.closest('[data-path]');
     if (itemEl) itemEl.classList.remove('is-dragging');
     host.querySelectorAll('.sv-folder-drop-hover').forEach(el => el.classList.remove('sv-folder-drop-hover'));
+    closeDragDesk();
   };
 
   host.addEventListener('dragenter', onDragEnter);

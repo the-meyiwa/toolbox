@@ -16,6 +16,7 @@ import { getSettings, updateSettings, exportSettings, importSettings } from './s
 import { PROFILE_PICTURES, getProfilePictureSrc, getUserAvatarHtml } from './profile-pictures.js';
 import { openAccountModal } from '../views/account-modal.js';
 import { getGeminiApiKey, setGeminiApiKey } from './ai-provider.js';
+import { NotificationEngine, prepareNotificationSound } from './notifications.js';
 
 let modalEl = null;
 let isOpen = false;
@@ -110,6 +111,15 @@ function createModal() {
 
       <!-- View 1: Main Settings Scrollable Body -->
       <div class="settings-modal-body" id="settings-modal-scroll" style="flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 24px; display: flex; flex-direction: column; gap: 28px; position: relative;">
+        <nav class="settings-section-nav" aria-label="Settings sections">
+          <button type="button" data-settings-jump="profile">Profile</button>
+          <button type="button" data-settings-jump="appearance">Appearance</button>
+          <button type="button" data-settings-jump="preferences">Preferences</button>
+          <button type="button" data-settings-jump="notifications">Notifications</button>
+          <button type="button" data-settings-jump="mail">Mail</button>
+          <button type="button" data-settings-jump="ai">Assistant</button>
+          <button type="button" data-settings-jump="storage">Storage</button>
+        </nav>
         
         <!-- SEARCH PREFERENCES BAR -->
         <div class="settings-search-container" style="margin-bottom: -4px;">
@@ -161,6 +171,22 @@ function createModal() {
           <div id="preferences-settings-container"></div>
         </section>
 
+        <section class="settings-section" id="sec-notifications">
+          <div class="settings-section-header">
+            <h3 class="settings-section-title">Notifications</h3>
+            <span class="settings-section-hint">Choose how Toolbox can alert you</span>
+          </div>
+          <div id="notifications-settings-container"></div>
+        </section>
+
+        <section class="settings-section" id="sec-mail">
+          <div class="settings-section-header">
+            <h3 class="settings-section-title">Mail account</h3>
+            <span class="settings-section-hint">Connect and manage your inbox provider</span>
+          </div>
+          <div id="mail-settings-container"></div>
+        </section>
+
         <!-- SECTION 4: ASSISTANT AI -->
         <section class="settings-section" id="sec-ai" style="border-top: 1px solid var(--border); padding-top: 28px;">
           <div id="ai-settings-container"></div>
@@ -189,6 +215,12 @@ function createModal() {
   `;
 
   document.body.appendChild(modalEl);
+
+  modalEl.querySelector('.settings-section-nav')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-settings-jump]');
+    if (!button) return;
+    modalEl.querySelector(`#sec-${button.dataset.settingsJump}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
 
   // Header button triggers
   
@@ -854,6 +886,66 @@ function updateThemeList(category = activeThemeCategory, search = activeThemeSea
   }
 }
 
+
+function renderMailSettings() {
+  const container = modalEl?.querySelector('#mail-settings-container');
+  if (!container) return;
+  import('../views/mail-setup.js').then(({ createMailSetupUI }) => {
+    container.innerHTML = '';
+    container.appendChild(createMailSetupUI());
+  }).catch(() => {});
+}
+
+function renderNotificationSettings() {
+  const container = modalEl?.querySelector('#notifications-settings-container');
+  if (!container) return;
+  const current = getSettings();
+  container.innerHTML = `
+    <div style="background:var(--bg-subtle); border:1px solid var(--border); border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:16px;">
+      <label style="display:flex; align-items:center; justify-content:space-between; cursor:pointer;">
+        <div>
+          <div style="font-size:0.88rem; font-weight:600; color:var(--text);">In-App Notifications</div>
+          <div style="font-size:0.75rem; color:var(--text-muted);">Show badges and notification alerts for new messages</div>
+        </div>
+        <input type="checkbox" id="pref-notif-enabled" ${current.notificationsEnabled !== false ? 'checked' : ''}>
+      </label>
+      <label style="display:flex; align-items:center; justify-content:space-between; cursor:pointer;">
+        <div>
+          <div style="font-size:0.88rem; font-weight:600; color:var(--text);">Notification Sounds</div>
+          <div style="font-size:0.75rem; color:var(--text-muted);">Play audio chime when alerts arrive</div>
+        </div>
+        <input type="checkbox" id="pref-notif-sound" ${current.notificationSound ? 'checked' : ''}>
+      </label>
+      <label style="display:flex; align-items:center; justify-content:space-between; cursor:pointer;">
+        <div>
+          <div style="font-size:0.88rem; font-weight:600; color:var(--text);">Desktop Alerts</div>
+          <div style="font-size:0.75rem; color:var(--text-muted);">Allow system notifications while Toolbox is open</div>
+          <div id="pref-notif-status" role="status" style="font-size:0.72rem; color:var(--text-muted); margin-top:3px;"></div>
+        </div>
+        <input type="checkbox" id="pref-notif-push" ${current.notificationsPush ? 'checked' : ''}>
+      </label>
+    </div>
+  `;
+  container.querySelector('#pref-notif-enabled')?.addEventListener('change', (e) => {
+    updateSettings({ notificationsEnabled: e.target.checked });
+  });
+  container.querySelector('#pref-notif-sound')?.addEventListener('change', (e) => {
+    if (e.target.checked) prepareNotificationSound();
+    updateSettings({ notificationSound: e.target.checked });
+  });
+  container.querySelector('#pref-notif-push')?.addEventListener('change', async (e) => {
+    const status = container.querySelector('#pref-notif-status');
+    if (!e.target.checked) {
+      updateSettings({ notificationsPush: false });
+      if (status) status.textContent = 'Desktop alerts disabled.';
+      return;
+    }
+    const result = await NotificationEngine.enableBrowserNotifications();
+    e.target.checked = result === 'granted';
+    if (status) status.textContent = result === 'granted' ? 'Desktop alerts enabled.' : result === 'unsupported' ? 'Not supported by this browser.' : 'Blocked in browser site settings.';
+  });
+}
+
 export function openSettings(targetSection = null) {
   createModal();
   renderProfileSettings();
@@ -861,6 +953,8 @@ export function openSettings(targetSection = null) {
   renderPreferencesSettings();
   renderAiSettings();
   renderStorageSettings();
+  renderMailSettings();
+  renderNotificationSettings();
 
   if (targetSection === 'avatars') {
     showAvatarView();

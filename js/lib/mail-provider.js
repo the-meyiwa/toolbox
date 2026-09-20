@@ -45,6 +45,7 @@ export class LocalMailProvider extends BaseMailProvider {
       authStatus: 'connected',
       externalSyncAvailable: false
     };
+    this.messageCache = new Map();
     this._load();
   }
 
@@ -52,9 +53,10 @@ export class LocalMailProvider extends BaseMailProvider {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        this.messages = JSON.parse(stored);
+        this.messages = JSON.parse(stored).filter(message => !['msg_welcome', 'msg_q3_report'].includes(message?.id));
+        this._save();
       } else {
-        this.messages = this._getSeedMessages();
+        this.messages = [];
         this._save();
       }
 
@@ -64,7 +66,7 @@ export class LocalMailProvider extends BaseMailProvider {
       }
     } catch (e) {
       console.warn('Failed to load local mail store:', e);
-      this.messages = this._getSeedMessages();
+      this.messages = [];
     }
   }
 
@@ -74,70 +76,6 @@ export class LocalMailProvider extends BaseMailProvider {
     } catch (e) {
       console.error('Mail storage quota exceeded:', e);
     }
-  }
-
-  _getSeedMessages() {
-    const now = Date.now();
-    return [
-      {
-        id: 'msg_welcome',
-        threadId: 'th_welcome',
-        folder: 'inbox',
-        from: { name: 'Toolbox Systems', email: 'system@toolbox.local' },
-        to: [{ name: 'User', email: 'user@toolbox.local' }],
-        cc: [],
-        bcc: [],
-        subject: 'Welcome to your Production Mail Client',
-        snippet: 'Your Mail client is equipped with threading, attachments, and offline persistence...',
-        body: `<p>Hello,</p>
-<p>Welcome to the <strong>Toolbox Mail Client</strong>. This client features:</p>
-<ul>
-  <li>Full conversation message threading</li>
-  <li>File attachment encoding &amp; downloads</li>
-  <li>Draft autosave &amp; recovery</li>
-  <li>Instant multi-mailbox search</li>
-  <li>Zero plain-text credentials in storage</li>
-</ul>
-<p>You can configure external API gateways or OAuth accounts from the Mail Provider Settings.</p>
-<p>Best regards,<br><em>Toolbox Architecture Team</em></p>`,
-        date: new Date(now - 3600000).toISOString(),
-        unread: true,
-        starred: true,
-        attachments: [
-          {
-            id: 'att_readme',
-            name: 'client_specs.txt',
-            size: '1.4 KB',
-            type: 'text/plain',
-            data: 'data:text/plain;base64,VG9vbGJveCBNYWlsIENsaWVudCBTcGVjcwotLS0tLS0tLS0tLS0tLS0tLS0tLQpGZWF0dXJlczogVGhyZWFkaW5nLCBBdHRhY2htZW50cywgU3luYywgT0F1dGggQnJpZGdlLg=='
-          }
-        ]
-      },
-      {
-        id: 'msg_q3_report',
-        threadId: 'th_q3',
-        folder: 'inbox',
-        from: { name: 'Elena Rostova', email: 'elena.rostova@acme.corp' },
-        to: [{ name: 'User', email: 'user@toolbox.local' }],
-        cc: [{ name: 'Executive Team', email: 'exec@acme.corp' }],
-        bcc: [],
-        subject: 'Engineering & Q3 Milestones Deliverable',
-        snippet: 'Please review the attached release deliverables for the upcoming automotive & tools sprint...',
-        body: `<p>Hi Team,</p>
-<p>Please review the milestones achieved this quarter:</p>
-<ol>
-  <li>Automobile Guide vector blueprint integration completed.</li>
-  <li>Settings &amp; Preferences UI alignment verified.</li>
-  <li>Mail client architecture updated to decoupled provider model.</li>
-</ol>
-<p>Let me know if you need additional clarification on any component.</p>
-<p>Elena Rostova<br>VP of Product</p>`,
-        date: new Date(now - 86400000).toISOString(),
-        unread: false,
-        starred: false,
-        attachments: []
-      }
-    ];
   }
 
   async getFolders() {
@@ -332,4 +270,215 @@ export class LocalMailProvider extends BaseMailProvider {
   }
 }
 
-export const mailClient = new LocalMailProvider();
+export class ServerMailProvider extends BaseMailProvider {
+  constructor() {
+    super();
+    this.providerConfig = {
+      type: 'server_imap',
+      providerName: 'Toolbox Server Engine',
+      accountEmail: '',
+      authStatus: 'unconfigured',
+      externalSyncAvailable: true
+    };
+    this.messageCache = new Map();
+  }
+
+  _activeAccountId() {
+    try { return localStorage.getItem('toolbox_mail_active_account') || ''; } catch { return ''; }
+  }
+
+  async checkConfig() {
+    try {
+      const user = JSON.parse(localStorage.getItem('toolbox_supabase_session') || '{}');
+      const userId = user.user?.id || user.id;
+      if (!userId) return false;
+      const res = await fetch(`/api/mail/status?userId=${encodeURIComponent(userId)}`);
+      if (res.ok) {
+        const data = await res.json();
+        this.providerConfig.authStatus = data.configured ? 'connected' : 'unconfigured';
+        const account = (data.accounts || []).find(item => item.id === this._activeAccountId()) || data.accounts?.[0];
+        this.providerConfig.accountEmail = account?.email || data.email || '';
+        this.providerConfig.providerName = account?.provider === 'microsoft' ? 'Microsoft Mail' : 'Gmail';
+        return data.configured;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  async getFolders() {
+    const isConfigured = await this.checkConfig();
+    if (!isConfigured) {
+      throw new Error('Backend Mail Configuration Required');
+    }
+    return [
+      { id: 'inbox', name: 'Inbox', count: 0, unreadCount: 0 }
+    ];
+  }
+
+  async getMessages(folder = 'inbox') {
+    const isConfigured = await this.checkConfig();
+    if (!isConfigured) {
+      throw new Error('Backend Mail Configuration Required');
+    }
+    const user = JSON.parse(localStorage.getItem('toolbox_supabase_session') || '{}');
+    const userId = user.user?.id || user.id;
+    const res = await fetch(`/api/mail/messages?userId=${encodeURIComponent(userId)}&accountId=${encodeURIComponent(this._activeAccountId())}`);
+    if (res.ok) {
+      const data = await res.json();
+      const messages = (data.messages || []).map(m => ({
+        id: m.id,
+        threadId: m.id,
+        folder: 'inbox',
+        from: { name: m.from.split('<')[0].trim(), email: m.from.match(/<([^>]+)>/)?.[1] || m.from },
+        to: [{ name: 'Me', email: this.providerConfig.accountEmail }],
+        subject: m.subject,
+        snippet: m.snippet,
+        body: `<p>${m.snippet}</p>`,
+        date: new Date(m.date || Date.now()).toISOString(),
+        unread: m.unread === true,
+        starred: false,
+        attachments: []
+      }));
+      messages.forEach(message => this.messageCache.set(message.id, message));
+      return messages;
+    }
+    return [];
+  }
+
+  async getMessage(id) {
+    if (this.messageCache.has(id)) return this.messageCache.get(id);
+    await this.getMessages('inbox');
+    return this.messageCache.get(id) || null;
+  }
+
+  async getThreadMessages(threadId) {
+    const message = await this.getMessage(threadId);
+    return message ? [message] : [];
+  }
+
+  async sendMessage(draft) {
+    return this._action('send', { message: draft });
+  }
+
+  async saveDraft(draft) {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        ...draft,
+        lastSaved: new Date().toISOString()
+      }));
+    } catch (e) {}
+  }
+
+  getSavedDraft() {
+    try {
+      const stored = localStorage.getItem(DRAFT_KEY);
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  clearSavedDraft() {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch (e) {}
+  }
+
+  async deleteMessage(id) {
+    await this._action('trash', { id });
+    this.messageCache.delete(id);
+  }
+
+  async moveMessage(id, targetFolder) {
+    return this._action('move', { id, folder: targetFolder });
+  }
+
+  async markRead(id, isRead = true) {
+    return this._action('read', { id, isRead });
+  }
+
+  async toggleStar(id) {
+    const message = await this.getMessage(id);
+    const starred = !message?.starred;
+    await this._action('star', { id, starred });
+    if (message) message.starred = starred;
+    return starred;
+  }
+
+  async searchMessages(query) {
+    const messages = await this.getMessages('inbox');
+    const term = String(query || '').toLowerCase();
+    return messages.filter(message => [message.subject, message.snippet, message.from?.name, message.from?.email].some(value => String(value || '').toLowerCase().includes(term)));
+  }
+
+  async sync() {
+    const isConfigured = await this.checkConfig();
+    if (!isConfigured) {
+      throw new Error('Backend Mail Configuration Required');
+    }
+    return {
+      status: 'synced',
+      timestamp: new Date().toISOString(),
+      messagesCount: 0
+    };
+  }
+
+  getProviderConfig() {
+    return this.providerConfig;
+  }
+
+  setProviderConfig(config) {
+    // Only pass non-sensitive settings to UI
+    this.providerConfig = { ...this.providerConfig, ...config };
+  }
+
+  async _action(action, payload = {}) {
+    const session = JSON.parse(localStorage.getItem('toolbox_supabase_session') || '{}');
+    const userId = session.user?.id || session.id;
+    if (!userId) throw new Error('Sign in before using connected Mail.');
+    const response = await fetch('/api/mail/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, accountId: this._activeAccountId(), action, ...payload })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || 'Mail action failed.');
+    return result;
+  }
+}
+
+class AdaptiveMailProvider extends BaseMailProvider {
+  constructor() { super(); this.local = new LocalMailProvider(); this.server = new ServerMailProvider(); this.active = this.local; }
+  async _provider() {
+    if (await this.server.checkConfig()) {
+      this.active = this.server;
+      return this.active;
+    }
+    let signedIn = false;
+    try { signedIn = !!JSON.parse(localStorage.getItem('toolbox_supabase_session') || '{}').token; } catch {}
+    if (signedIn) throw new Error('Connect a Mail account in Preferences.');
+    this.active = this.local;
+    return this.active;
+  }
+  async getFolders() { return (await this._provider()).getFolders(); }
+  async getMessages(folder) { return (await this._provider()).getMessages(folder); }
+  async getMessage(id) { return (await this._provider()).getMessage(id); }
+  async getThreadMessages(id) { return (await this._provider()).getThreadMessages?.(id) || []; }
+  async sendMessage(message) { return (await this._provider()).sendMessage(message); }
+  async saveDraft(draft) { return (await this._provider()).saveDraft(draft); }
+  getSavedDraft() { return this.active.getSavedDraft?.() || this.local.getSavedDraft(); }
+  clearSavedDraft() { return this.active.clearSavedDraft?.() || this.local.clearSavedDraft(); }
+  async deleteMessage(id) { return (await this._provider()).deleteMessage(id); }
+  async moveMessage(id, folder) { return (await this._provider()).moveMessage(id, folder); }
+  async markRead(id, value) { return (await this._provider()).markRead(id, value); }
+  async toggleStar(id) { return (await this._provider()).toggleStar(id); }
+  async searchMessages(query) { return (await this._provider()).searchMessages(query); }
+  async sync() { return (await this._provider()).sync(); }
+  getProviderConfig() { return this.active.getProviderConfig(); }
+  setProviderConfig(config) { return this.active.setProviderConfig(config); }
+  async checkConfig() { return this.server.checkConfig(); }
+}
+
+export const mailClient = new AdaptiveMailProvider();

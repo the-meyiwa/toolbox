@@ -40,7 +40,6 @@ let unmountArtifacts = null;
 /** Teardown for the saved-work view. */
 let unmountSaved = null;
 /** Teardown for the spaces view. */
-let unmountSpaces = null;
 
 /* --------------- DOM --------------- */
 
@@ -65,10 +64,9 @@ const navLinks = document.querySelectorAll('.nav-link');
 
 const savedView = $('saved-view');
 const navSaved = $('nav-saved');
-const spacesView = $('spaces-view');
 const donateView = $('donate-view');
 
-const VIEWS = { home: homeView, tools: toolsView, about: supportView, support: supportView, saved: savedView, files: savedView, spaces: spacesView, donate: supportView, tool: viewport };
+const VIEWS = { home: homeView, tools: toolsView, about: supportView, support: supportView, saved: savedView, files: savedView, donate: supportView, tool: viewport };
 
 const toolModules = import.meta.glob('./tools/*.js');
 
@@ -90,6 +88,19 @@ function toolCard(tool, { compact = false } = {}) {
     </a>`;
 }
 
+export const LONG_CONTENT_TOOL_IDS = new Set([
+  'wiki', 'dictionary', 'bible', 'quran',
+  'case-digest', 'case-comparator', 'legal-document-analyzer', 'legal-research', 'legal-pdf',
+  'document-analyzer', 'periodic-table', 'compound-database', 'diseases-database',
+  'cap-table', 'amortization-schedule', 'depreciation-calculator', 'invoice-generator',
+  'payroll-cost', 'timesheet', 'pto-accrual', 'unit-economics', 'runway-calculator',
+  'subscription-analyzer', 'financial-analyzer', 'concrete-estimator', 'beam-calculator',
+  'stoichiometry-calculator', 'chemical-equation-balancer', 'math-utility'
+]);
+
+export function isFitScreenTool(id) {
+  return !LONG_CONTENT_TOOL_IDS.has(id);
+}
 
 /* --------------- rendering --------------- */
 
@@ -243,9 +254,52 @@ function installCategoryChips() {
   });
 }
 
+
+const FILE_UPLOAD_TOOL_IDS = new Set([
+  'audio-tag-editor',
+  'document-analyzer',
+  'file-compressor',
+  'file-decompressor',
+  'file-drop',
+  'file-hash',
+  'image-compressor',
+  'image-converter',
+  'image-cropper',
+  'image-metadata',
+  'image-resizer',
+  'image-to-pdf',
+  'legal-document-analyzer',
+  'legal-pdf',
+  'pdf-editor',
+  'pdf-merge',
+  'pdf-split',
+  'video-player',
+  'watermark-remover'
+]);
+
+function isSimpleFileUploadTool(tool, container) {
+  if (!tool) return false;
+  if (FILE_UPLOAD_TOOL_IDS.has(tool.id)) return true;
+  if (!container) return false;
+  const excluded = ['assistant', 'container-planner', 'mail', 'messaging', 'calendar', 'data-bot', 'financial-analyzer', 'notes', 'code-playground', 'flowchart'];
+  if (excluded.includes(tool.id)) return false;
+
+  const hasDropzone = !!container.querySelector('.fz, .compressor-dropzone, [id*="dropzone"], [class*="dropzone"], [class*="drop-zone"], [id*="drop-zone"]');
+  const hasFileInput = !!container.querySelector('input[type="file"]');
+  const hasTextarea = !!container.querySelector('textarea');
+  const hasEditor = !!container.querySelector('.editor, [contenteditable="true"], canvas, table');
+  return (hasDropzone || hasFileInput) && !hasTextarea && !hasEditor;
+}
+
 function renderRelated(tool) {
   if (!relatedBar) return;
   if (document.body.classList.contains('tool-fullscreen') || tool?.id === 'assistant' || tool?.id === 'container-planner') {
+    relatedBar.innerHTML = '';
+    relatedBar.hidden = true;
+    return;
+  }
+  // User Rule: Remove "Related Tools" from all tools except the ones that simply just ask you to upload a file
+  if (!isSimpleFileUploadTool(tool, viewportContent)) {
     relatedBar.innerHTML = '';
     relatedBar.hidden = true;
     return;
@@ -316,6 +370,7 @@ function showPage(page) {
   currentPage = page;
   document.body.classList.remove('in-tool');
   document.body.removeAttribute('data-tool-id');
+  document.body.classList.remove('tool-fit-screen');
   document.body.classList.toggle('in-files', page === 'saved' || page === 'files');
   for (const link of navLinks) {
     link.classList.toggle('active', link.dataset.page === page || (page === 'about' && link.dataset.page === 'support') || (page === 'support' && link.dataset.page === 'about'));
@@ -364,13 +419,12 @@ function teardownTool() {
   toggleToolFullscreen(false);
   document.body.classList.remove('in-tool');
   document.body.removeAttribute('data-tool-id');
+  document.body.classList.remove('tool-fit-screen');
   unmountArtifacts?.();
   unmountArtifacts = null;
   unmountSaved?.();
   unmountSaved = null;
-  unmountSpaces?.();
-  unmountSpaces = null;
-  currentSession?.dispose();
+    currentSession?.dispose();
   currentSession = null;
   try { currentToolInstance?.destroy?.(); }
   catch (err) { console.error('tool failed to clean up', err); }
@@ -441,6 +495,7 @@ async function openTool(id, routeState = {}) {
   document.body.classList.add('in-tool');
   document.body.classList.remove('in-files');
   document.body.setAttribute('data-tool-id', id);
+  document.body.classList.toggle('tool-fit-screen', isFitScreenTool(id));
   currentToolObj = tool;
   currentToolId = id;
 
@@ -532,6 +587,10 @@ function handleHash() {
         : 'Welcome to Toolbox!';
       showToast(successMsg, 'success');
       showPage('home');
+      if (redirect.type === 'signup' || localStorage.getItem('toolbox_mail_onboarding_pending')) {
+        localStorage.removeItem('toolbox_mail_onboarding_pending');
+        openAccountModal('mail-onboarding');
+      }
       return;
     }
 
@@ -572,9 +631,10 @@ function handleHash() {
     return;
   }
 
-  // #spaces, or #spaces/<code> to join via a shared link.
+  // #spaces, or #spaces/<code> to join via a shared link - redirect to messaging
   if (raw === 'spaces' || raw.startsWith('spaces/')) {
-    showPage('home');
+    const code = raw.startsWith('spaces/') ? raw.slice(7) : '';
+    window.location.hash = code ? `#messaging?code=${encodeURIComponent(code)}` : '#messaging';
     return;
   }
 
@@ -656,8 +716,7 @@ const PAGE_TIPS = {
     '<strong>Export all</strong> writes one file you can import again later, or on another machine.',
   ],
   support: ['Found a bug? Use <strong>Complain about a tool</strong>.', 'Want something built? Use <strong>Ask for a tool</strong>.'],
-  spaces: ['No account needed — just a display name.', 'Share the room code or link to invite others.', 'Everything stays between participants — nothing is stored.'],
-};
+  };
 
 function showTips() {
   const tipsModal = $('tips-modal');
@@ -1000,35 +1059,6 @@ if (taskGrid) {
 /* Saved work is surfaced only once it exists. Until then the home page and
    the navigation carry no trace of it, which is the whole point: the
    product must not look like a workspace to somebody who does not want one. */
-function reflectWorkSpaces() {
-  const container = $('home-spaces-list');
-  if (!container) return;
-
-  const spaces = listJoinedSpaces();
-  if (!spaces.length) {
-    container.innerHTML = `
-      <div style="padding:16px; border:1px dashed var(--border); border-radius:12px; text-align:center; color:var(--text-muted); font-size:0.8rem;">
-        <p style="margin:0 0 10px;">No active work spaces yet.</p>
-        <a href="#spaces" class="btn btn-primary btn-sm" style="font-size:0.75rem; text-decoration:none;">Create a Work Space</a>
-      </div>
-    `;
-    return;
-  }
-
-  container.innerHTML = `
-    <div style="display:flex; flex-direction:column; gap:8px;">
-      ${spaces.slice(0, 4).map(s => `
-        <a href="#spaces/${escapeHtml(s.id)}" class="home-task-tool" style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:10px; background:var(--surface-secondary); border:1px solid var(--border); text-decoration:none; color:var(--text);">
-          <div>
-            <div style="font-size:0.84rem; font-weight:600;">${escapeHtml(s.name || 'Work Space')}</div>
-            <div style="font-size:0.72rem; color:var(--text-muted);">${escapeHtml(s.description || 'Shared desk')}</div>
-          </div>
-          <span style="font-size:0.7rem; font-family:var(--mono, monospace); background:var(--surface); border:1px solid var(--border); padding:2px 6px; border-radius:4px; font-weight:600;">${escapeHtml(s.id)}</span>
-        </a>
-      `).join('')}
-    </div>
-  `;
-}
 
 function reflectSavedWork() {
   const items = artifacts.list();
@@ -1080,7 +1110,6 @@ function reflectSavedWork() {
 
 artifacts.onChange(reflectSavedWork);
 reflectSavedWork();
-reflectWorkSpaces();
 
 
 viewport.addEventListener('contextmenu', (e) => {

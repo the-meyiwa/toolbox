@@ -62,7 +62,7 @@ function getWebmailInfo(email) {
 }
 
 let modalEl = null;
-let authMode = 'signin'; // 'signin' | 'signup' | 'reset' | 'set-new-password' | 'verify-pending'
+let authMode = 'signin'; // 'signin' | 'signup' | 'reset' | 'set-new-password' | 'verify-pending' | 'mail-onboarding'
 let recoveryContext = null;
 let pendingConfirmationEmail = null;
 
@@ -125,6 +125,9 @@ export function closeAccountModal() {
 }
 
 function renderAuthCard(user, authMode, recoveryContext, pendingConfirmationEmail) {
+  if (authMode === 'mail-onboarding') {
+    return '<div id="signup-mail-onboarding" style="min-height:300px; display:grid; place-items:center;"><span style="color:var(--text-muted);">Preparing optional Mail setup…</span></div>';
+  }
   if (authMode === 'set-new-password') {
     return `
       <div>
@@ -455,10 +458,10 @@ function renderModalContent() {
           </div>
           <div style="min-width:0;">
             <h2 class="settings-modal-title" style="margin:0; font-size:1.15rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-              ${(user && authMode !== 'set-new-password') ? 'Account & Storage' : (authMode === 'set-new-password' ? 'Set New Password' : (authMode === 'verify-pending' ? 'Verify Your Email' : (authMode === 'reset' ? 'Reset Password' : (authMode === 'signup' ? 'Create an Account' : 'Sign In'))))}
+              ${authMode === 'mail-onboarding' ? 'Optional Mail Setup' : ((user && authMode !== 'set-new-password') ? 'Account & Storage' : (authMode === 'set-new-password' ? 'Set New Password' : (authMode === 'verify-pending' ? 'Verify Your Email' : (authMode === 'reset' ? 'Reset Password' : (authMode === 'signup' ? 'Create an Account' : 'Sign In')))))}
             </h2>
             <p class="settings-modal-subtitle" style="margin:2px 0 0; font-size:0.76rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-              ${(user && authMode !== 'set-new-password') ? 'Manage cloud sync, dual storage preferences, passkeys, and AI quotas.' : (authMode === 'set-new-password' ? (recoveryContext?.email ? `Choose a new password for ${recoveryContext.email}.` : 'Choose a new password for your account.') : (authMode === 'verify-pending' ? `An activation link was sent to ${pendingConfirmationEmail || 'your email'}.` : (authMode === 'reset' ? 'Enter your email to receive a password recovery link.' : (authMode === 'signup' ? 'Sign up to access Assistant and sync your workspaces.' : 'Sign in to access Assistant, sync files, and manage spaces.'))))}
+              ${authMode === 'mail-onboarding' ? 'A cleaner way to send and receive emails.' : ((user && authMode !== 'set-new-password') ? 'Manage cloud sync, dual storage preferences, passkeys, and AI quotas.' : (authMode === 'set-new-password' ? (recoveryContext?.email ? `Choose a new password for ${recoveryContext.email}.` : 'Choose a new password for your account.') : (authMode === 'verify-pending' ? `An activation link was sent to ${pendingConfirmationEmail || 'your email'}.` : (authMode === 'reset' ? 'Enter your email to receive a password recovery link.' : (authMode === 'signup' ? 'Sign up to access Assistant and sync your workspaces.' : 'Sign in to access Assistant, sync files, and manage spaces.')))))}
             </p>
           </div>
         </div>
@@ -549,6 +552,14 @@ function renderModalContent() {
   modalEl.addEventListener('click', (e) => {
     if (e.target === modalEl) closeAccountModal();
   });
+
+  if (authMode === 'mail-onboarding') {
+    const mount = modalEl.querySelector('#signup-mail-onboarding');
+    import('./mail-setup.js').then(({ createMailSetupUI }) => {
+      if (!mount?.isConnected) return;
+      mount.replaceChildren(createMailSetupUI({ onboarding: true, onComplete: () => { localStorage.removeItem('toolbox_mail_onboarding_pending'); closeAccountModal(); window.location.hash = '#assistant'; } }));
+    });
+  }
 
   const btnSignout = modalEl.querySelector('#btn-auth-signout');
   if (btnSignout) {
@@ -983,12 +994,13 @@ function renderModalContent() {
           const res = await signUpWithEmail(email, pwd);
           if (res.success) {
             if (res.requiresConfirmation) {
+              localStorage.setItem('toolbox_mail_onboarding_pending', email);
               pendingConfirmationEmail = email;
               authMode = 'verify-pending';
               renderModalContent();
             } else {
-              closeAccountModal();
-              window.location.hash = '#assistant';
+              authMode = 'mail-onboarding';
+              renderModalContent();
             }
           } else {
             authMsg.style.display = 'block';
