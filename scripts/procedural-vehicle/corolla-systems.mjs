@@ -12,8 +12,11 @@ const HOOD_REQ = [{ id: 'hood', state: true, reason: 'Open the bonnet first.' }]
 
 /* ------------------------------------------------------------- STRUCTURE -- */
 
+/** Compress front-end packaging rearward for bodies with shorter front overhangs. */
+const frontShift = (P, u) => u + (P.frontShift || 0) * Math.max(0, 1 - u / 0.95);
+
 export function buildStructure({ P, B, A, X }) {
-  const at = (u, y, z) => [X(u), y, z];
+  const at = (u, y, z) => [X(frontShift(P, u)), y, z];
   const fw = P.glass.cowlU - 0.14; // firewall station
   B.firewallU = fw;
   const innerW = P.HW - 0.1;
@@ -442,7 +445,7 @@ export function buildPowertrain({ P, B, A, X, art }) {
 /* ------------------------------------------------------------ ENGINE BAY -- */
 
 export function buildEngineBay({ P, B, A, X, art }) {
-  const at = (u, y, z) => [X(u), squash(y), z];
+  const at = (u, y, z) => [X(frontShift(P, u)), squash(y), z];
   const { uE, zE } = B.engine;
   // Cooling module: condenser, radiator with side tanks, fan shroud.
   A.add('ac_condenser', box(0.016, 0.38, 0.66, { at: at(0.315, 0.51, 0) }));

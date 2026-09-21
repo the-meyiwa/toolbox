@@ -72,9 +72,11 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { ArticulationController } from '../../js/lib/automobile/articulation-controller.js';
 import { validateArticulations } from '../../js/lib/automobile/vehicle-package.js';
 
+// 2014–2016: real E180 body geometry scaled to its 4,620 mm published length; the
+// source is ~2 % wider than the published 1,775 mm, so width tolerance is wider.
 const COROLLAS = [
-  { id: 'toyota-corolla-2014-2016', length: 182.6, width: 69.9, height: 57.3, wheelbase: 106.3, trackF: 60.3 },
-  { id: 'toyota-corolla-2013', length: 179.3, width: 69.3, height: 57.7, wheelbase: 102.4, trackF: 60.2 }
+  { id: 'toyota-corolla-2014-2016', accuracy: 'generation', length: 4620 / 25.4, width: 69.9, height: 57.7, wheelbase: 106.3, trackF: 60.3, tol: { length: 0.01, width: 0.06, height: 0.02, axle: 0.015 } },
+  { id: 'toyota-corolla-2013', accuracy: 'representative', length: 179.3, width: 69.3, height: 57.7, wheelbase: 102.4, trackF: 60.2, tol: { length: 0.03, width: 0.03, height: 0.015, axle: 0.002 } }
 ];
 const IN = 0.0254;
 const readJson = path => readFile(new URL(path, import.meta.url), 'utf8').then(JSON.parse);
@@ -85,10 +87,11 @@ async function loadGlb(id) {
 }
 
 test('procedural Corolla packages pass the runtime contract with complete reference data', async () => {
-  for (const { id } of COROLLAS) {
+  for (const { id, accuracy } of COROLLAS) {
     const manifest = await readJson(`../../public/automobile/packages/${id}/manifest.json`);
     assert.equal(validateVehiclePackage(manifest), manifest);
-    assert.equal(manifest.vehicle.accuracy, 'representative', 'procedural geometry must not claim exactness');
+    assert.equal(manifest.vehicle.accuracy, accuracy, 'packages must not claim more accuracy than their geometry has');
+    assert.ok(manifest.license.attribution && manifest.license.sourceUrl);
     assert.ok(manifest.components.length > 200, `${id} should model body, cabin and mechanical parts`);
     assert.ok(manifest.articulations.length >= 50);
     const layers = new Set(manifest.layerGroups.map(layer => layer.id));
@@ -116,12 +119,13 @@ test('Corolla geometry follows the published exterior dimensions', async () => {
       if (node.isMesh && ['body', 'glass'].includes(layerOf.get(manifest.meshMappings[node.name]))) body.expandByObject(node);
     });
     const size = body.getSize(new Vector3());
-    assert.ok(Math.abs(size.x - dims.length * IN) < 0.03, `${dims.id} length ${size.x}`);
-    assert.ok(Math.abs(size.z - dims.width * IN) < 0.03, `${dims.id} width ${size.z}`);
-    assert.ok(Math.abs(body.max.y - dims.height * IN) < 0.015, `${dims.id} height ${body.max.y}`);
+    const { tol } = dims;
+    assert.ok(Math.abs(size.x - dims.length * IN) < tol.length, `${dims.id} length ${size.x}`);
+    assert.ok(Math.abs(size.z - dims.width * IN) < tol.width, `${dims.id} width ${size.z}`);
+    assert.ok(Math.abs(body.max.y - dims.height * IN) < tol.height, `${dims.id} height ${body.max.y}`);
     const pivot = name => gltf.scene.getObjectByName(name).getWorldPosition(new Vector3());
-    assert.ok(Math.abs(pivot('tbx_pivot_wheel_front_left').x - pivot('tbx_pivot_wheel_rear_left').x - dims.wheelbase * IN) < 0.002, 'wheelbase');
-    assert.ok(Math.abs(pivot('tbx_pivot_wheel_front_right').z - pivot('tbx_pivot_wheel_front_left').z - dims.trackF * IN) < 0.002, 'front track');
+    assert.ok(Math.abs(pivot('tbx_pivot_wheel_front_left').x - pivot('tbx_pivot_wheel_rear_left').x - dims.wheelbase * IN) < tol.axle, 'wheelbase');
+    assert.ok(Math.abs(pivot('tbx_pivot_wheel_front_right').z - pivot('tbx_pivot_wheel_front_left').z - dims.trackF * IN) < tol.axle, 'front track');
   }
 });
 
@@ -188,7 +192,7 @@ test('articulation validation rejects malformed or dangling definitions', () => 
   assert.doesNotThrow(() => validateArticulations(undefined, ids));
 });
 
-test('procedural generator is deterministic and committed packages are current', () => {
+test('procedural generator is deterministic and committed packages are current (2013)', () => {
   const output = execFileSync(process.execPath, [new URL('../../scripts/build-procedural-vehicle.mjs', import.meta.url).pathname, '--check'], { encoding: 'utf8' });
   assert.match(output, /up to date/);
 });

@@ -55,13 +55,12 @@ try{
   await page.waitForFunction(()=>guide?.viewer?.asset);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   assert.ok(await page.evaluate(()=>guide.viewer.canvas.width*guide.viewer.canvas.height<=650000));
   await page.screenshot({path:`${out}/mobile.png`});
-  // Mobile toggles: tap a part, use the Toggle button in its info panel.
+  // Mobile toggles: tap a part, flip a toggle in its info panel.
   const hood=await page.evaluate(()=>{const v=guide.viewer,m=v.asset.registry.get('hood').meshes[0];m.geometry.computeBoundingBox();const c=m.geometry.boundingBox.getCenter(new m.position.constructor());m.localToWorld(c);c.project(v.camera);const r=v.canvas.getBoundingClientRect();return{x:r.left+(c.x+1)/2*r.width,y:r.top+(1-c.y)/2*r.height};});
   await page.touchscreen.tap(hood.x,hood.y);
-  await page.waitForSelector('#ag-selection-chip [data-open-toggle]:not([hidden])');
-  await page.tap('#ag-selection-chip [data-open-toggle]');
-  await page.waitForSelector('#ag-sheet-body [data-articulation="hood"]');
-  await page.tap('#ag-sheet-body [data-articulation="hood"]');
+  // Tapping a part opens the small info panel; its toggles live right there.
+  await page.waitForSelector('#ag-part-card:not([hidden]) [data-articulation="hood"]');
+  await page.tap('#ag-part-card [data-articulation="hood"]');
   await page.waitForFunction(()=>guide.viewer.articulation.isActive('hood')&&!guide.viewer.articulation.isMoving());
   await page.screenshot({path:`${out}/mobile-toggle.png`});
   assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,packages,screenshots:out},null,2));

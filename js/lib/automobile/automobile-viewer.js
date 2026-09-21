@@ -110,10 +110,25 @@ export class AutomobileViewer {
     }
   }
 
+  /** Keep the vehicle centred in the area left visible above an overlay (e.g. the phone info panel). */
+  setBottomInset(px = 0) {
+    this.bottomInset = Math.max(0, Math.round(px));
+    this.applyViewOffset();
+    this.requestRender();
+  }
+
+  applyViewOffset() {
+    const width = Math.max(1, this.host.clientWidth), height = Math.max(1, this.host.clientHeight);
+    const inset = Math.min(this.bottomInset || 0, height * 0.6);
+    if (inset > 0) this.camera.setViewOffset(width, height, 0, inset / 2, width, height);
+    else this.camera.clearViewOffset();
+  }
+
   resize() {
     const width = Math.max(1, this.host.clientWidth), height = Math.max(1, this.host.clientHeight);
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
+    this.applyViewOffset();
     const distance = this.fittedDistance();
     // Preserve the user's relative zoom and pan when orientation changes.
     if (this.fitDistance) {

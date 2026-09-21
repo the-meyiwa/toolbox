@@ -642,11 +642,7 @@ export default {
               <div class="ag-viewer-host" id="ag-viewer-host">
                 <div style="color:var(--text-muted); font-size:0.9rem;">Loading technical 3D viewer…</div>
               </div>
-              <div class="ag-selection-chip" id="ag-selection-chip" hidden>
-                <span class="ag-chip-name" id="ag-chip-name"></span>
-                <button type="button" class="ag-chip-btn ag-chip-toggle" data-open-toggle hidden>Toggle</button>
-                <button type="button" class="ag-chip-btn" data-open-inspector>Info</button>
-              </div>
+              <section class="ag-part-card" id="ag-part-card" hidden aria-live="polite" aria-label="Selected part"></section>
             </div>
 
             <div class="ag-view-status" id="ag-view-status">
@@ -770,7 +766,6 @@ export default {
       const action=target.closest('[data-articulation]');
       if(action){ this.runArticulation(action.dataset.articulation); return; }
       if(target.closest('[data-toggle-actions]')){ this.state.actionsOpen=!this.state.actionsOpen; this.refreshInspector(); return; }
-      if(target.closest('[data-open-toggle]')){ this.state.actionsOpen=true; this.refreshInspector(); this.showMobileTab('inspector'); return; }
       if(target.closest('[data-open-inspector]')){ this.showMobileTab('inspector'); return; }
       const layer=target.closest('[data-layer-toggle]');
       if(layer){ this.toggleLayer(layer.dataset.layerToggle); return; }
@@ -1021,10 +1016,10 @@ export default {
       if(asset.metadata.unavailableLayers?.length)attribution.append(document.createTextNode(` · Unavailable: ${asset.metadata.unavailableLayers.join(', ')}`));
       const articulated=this.viewer.articulation?.size;
       this.setStatus(articulated
-        ? (this.isCompact() ? 'Drag to orbit · Pinch to zoom · Tap a part, then Toggle to open, remove or adjust it' : 'Drag to orbit · Scroll to zoom · Right-click a part to open, remove or adjust it')
+        ? (this.isCompact() ? 'Drag to orbit · Pinch to zoom · Tap a part to see its info and toggles' : 'Drag to orbit · Scroll to zoom · Right-click a part to open, remove or adjust it')
         : 'Drag to orbit · Scroll / pinch to zoom · Two fingers to pan');
       this.container.querySelector('#ag-empty-hint').textContent=articulated
-        ? `Select a part in the viewer or the list. ${this.isCompact()?'Use the Toggle button':'Right-click a part'} for its ${articulated} available moving and removable parts.`
+        ? `Select a part in the viewer or the list. ${this.isCompact()?'Tap a part to get its toggles':'Right-click a part'} for its ${articulated} available moving and removable parts.`
         : 'Select geometry or choose a component from the list. Only supplied metadata is shown.';
       const { settings,mobile }=this.viewer.pipeline;
       const limit=mobile?settings.mobileHiddenComponents:settings.maxHiddenComponents;
@@ -1046,27 +1041,44 @@ export default {
       button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));
     });
     if(comp)this.renderInspector(comp);else this.clearInspector();
-    this.renderSelectionChip(comp);
+    this.renderPartCard(comp);
     this.dispatchAssistantContext(comp);
     if(this.state.activeMobileTab!=='diag')this.handleMobileTab(this.state.activeMobileTab);
   },
 
-  renderSelectionChip(comp) {
-    const chip=this.container.querySelector('#ag-selection-chip');
-    if(!chip)return;
-    chip.hidden=!comp;
-    if(!comp)return;
-    chip.querySelector('#ag-chip-name').textContent=comp.name;
-    const count=this.viewer?.articulation?.forComponent(comp.id).length||0;
-    const toggle=chip.querySelector('[data-open-toggle]');
-    toggle.hidden=!count;
-    toggle.textContent=count>1?`Toggle (${count})`:'Toggle';
+  /** Phones and touch screens: a small info panel over the viewer carrying the part's toggles. */
+  renderPartCard(comp) {
+    const card=this.container.querySelector('#ag-part-card');
+    if(!card)return;
+    card.hidden=!comp||!this.isCompact();
+    if(card.hidden){card.innerHTML='';this.viewer?.setBottomInset(0);return;}
+    const controller=this.viewer?.articulation;
+    const defs=controller?.forComponent(comp.id)||[];
+    const rows=defs.map(def=>{
+      const available=controller.availability(def.id), active=controller.isActive(def.id);
+      const label=def.actions?.on||def.label;
+      return `<button type="button" class="ag-toggle-row${available.enabled?'':' is-locked'}" role="switch" aria-checked="${active}" data-articulation="${escape(def.id)}"${available.enabled?'':' aria-disabled="true"'}>
+        <span class="ag-toggle-text"><span>${escape(label)}</span>${available.enabled?'':`<small>${escape(available.reason)}</small>`}</span>
+        <span class="ag-switch" aria-hidden="true"><span></span></span>
+      </button>`;
+    }).join('');
+    card.innerHTML=`<header class="ag-part-card-head">
+        <div><span class="ag-part-card-cat">${escape(comp.category||'Part')}</span><strong>${escape(comp.name)}</strong></div>
+        <div class="ag-part-card-tools">
+          <button type="button" class="ag-part-card-more" data-open-inspector>Details</button>
+          <button type="button" class="ag-part-card-close" data-clear-selection aria-label="Close">×</button>
+        </div>
+      </header>
+      ${rows?`<div class="ag-part-card-toggles" role="group" aria-label="Toggles">${rows}</div>`:`<p class="ag-part-card-text">${escape(comp.location||'')} No moving or removable parts here.</p>`}`;
+    // Lift the vehicle into the space above the panel.
+    const host=this.container.querySelector('#ag-viewer-host');
+    this.viewer?.setBottomInset(host ? Math.max(0, host.getBoundingClientRect().bottom - card.getBoundingClientRect().top) : 0);
   },
 
   refreshInspector() {
     const comp=this.viewer?.asset?.registry.metadata(this.state.selectedComponent);
     if(comp)this.renderInspector(comp);
-    this.renderSelectionChip(comp||null);
+    this.renderPartCard(comp||null);
     this.syncMobileSheet();
   },
 
@@ -1170,7 +1182,7 @@ export default {
     const available=controller.availability(id);
     if(!available.enabled){ this.setStatus(available.reason); return; }
     this.viewer.articulate(id);
-    // On phones, drop the sheet so the movement is visible; the chip keeps the part at hand.
+    // On phones, drop the sheet so the movement is visible; the info panel stays with the part.
     if(this.isCompact()&&this.state.activeMobileTab!=='diag')this.showMobileTab('diag');
   },
 

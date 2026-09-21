@@ -8,6 +8,8 @@ export class Assembly {
     this.counts = new Map();
     this.pivots = new Map();
     this.triangles = new Map();
+    /** Component ids to omit (used when a source model already supplies them). */
+    this.skip = new Set();
   }
 
   /** Create a transform node whose origin is a hinge / slide origin in vehicle space. */
@@ -22,7 +24,7 @@ export class Assembly {
 
   /** Add geometry authored in vehicle space as a mesh of `componentId` under `parent`. */
   add(componentId, geometry, parent = this.root) {
-    if (!geometry) return null;
+    if (!geometry || this.skip.has(componentId)) return null;
     if (!/^[a-z0-9][a-z0-9_]*$/.test(componentId)) throw new Error(`Invalid component id ${componentId}`);
     const n = (this.counts.get(componentId) || 0) + 1;
     this.counts.set(componentId, n);

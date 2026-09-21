@@ -31,13 +31,23 @@ The pipeline accepts CC0 1.0 and CC BY 4.0 inputs, strips presentation-only mate
 
 ## Included packages
 
-- 2014–2016 Toyota Corolla (E170, North America) — Toolbox-original procedural package with body, cabin and mechanical layers and 55 articulations. Default vehicle.
-- 2013 Toyota Corolla (E140, North America) — the same generator driven by the E140 profile.
+- 2014–2016 Toyota Corolla — real body, glass, lamps, wheels, brakes and full cabin from "2014 Toyota Corolla E180 EU (with interior)" by Armored Wave (CC BY 4.0, https://skfb.ly/oLAVz), split into components and articulated, with Toolbox's procedural engine bay, chassis and fuel system fitted inside. Default vehicle. The body is the European E180; North American cars differ in bumpers, grilles and lamps.
+- 2013 Toyota Corolla (E140, North America) — Toolbox-original procedural package.
 - 2005 Ford Mustang GT by Ricy, CC BY 4.0.
 - 2018 Tesla Model 3 by Ameer Studio, CC BY 4.0.
 - BMW M4 Competition M Package by SRT Performance, CC BY 4.0. Its exact model year is unavailable in the source, so Toolbox labels it representative rather than exact.
 
 Attribution and source links are embedded in every manifest and displayed in the viewer.
+
+## Source-geometry package (2014–2016 Corolla)
+
+`scripts/build-source-vehicle.mjs` builds the package from the downloaded source GLB (git-ignored; place it at `vehicle-packages/sources/2014_toyota_corolla_e180_eu_with_interior.glb`):
+
+```text
+npm run vehicle:source
+```
+
+`scripts/vehicle-sources/corolla-e180.mjs` splits every source mesh into vertex-connected islands and classifies them by node, material and bounds (doors, glass, mirrors, bonnet, seats, visors, glovebox …); the single welded body shell is cut per triangle into bumpers, wings, quarters, rockers and boot lid. Geometry is scaled to the published 4,620 mm length (wheelbase lands at 2,708 mm). Hinge pivots are derived from each part's bounds, and the procedural systems below are fitted to the measured axles, track and cowl.
 
 ## Procedural packages (Toyota Corolla)
 
@@ -64,7 +74,7 @@ A manifest may declare `articulations` (see the schema). Each has an `id`, `labe
 Interaction model:
 
 - Desktop: right-click a part in the viewport (or in the component list) for its actions, isolate/hide options and vehicle-wide quick actions. Right-drag still pans. With the canvas focused, Shift+F10 or the context-menu key opens the menu for the selection.
-- Mobile / touch: tap a part; the selection chip and the Component panel show a **Toggle** button that expands the available actions. Running an action lowers the sheet so the movement is visible.
+- Mobile / touch: tap a part to open a small info panel over the viewer; its toggles (switches) sit right there, and the vehicle is lifted into the space above the panel. **Details** opens the full component sheet.
 - Model layers (body, glass, lighting, trim, structure, interior, airbags, engine, engine-bay systems, chassis, wheels, fuel & exhaust) can be hidden to see inside; quick actions open all doors, lower windows, remove all wheels or reset everything.
 
 ## Verification

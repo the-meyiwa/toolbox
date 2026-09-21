@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
- * Generates Toolbox-original procedural vehicle packages (GLB + manifest +
+ * Generates Toolbox-original procedural vehicle packages (currently the 2013
+ * E140 Corolla; the 2014–2016 car is built from source geometry by
+ * build-source-vehicle.mjs) (GLB + manifest +
  * specification sheet) and registers them in public/automobile/catalog.json.
  *
  *   node scripts/build-procedural-vehicle.mjs            # build all
@@ -13,7 +15,8 @@ import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildCorolla } from './procedural-vehicle/corolla-model.mjs';
-import { E170, E140 } from './procedural-vehicle/corolla-profiles.mjs';
+import { E140 } from './procedural-vehicle/corolla-profiles.mjs';
+import { mergeCatalog } from './vehicle-sources/catalog.mjs';
 import { describeComponent, specSheet, GENERATIONS, LAYERS } from './procedural-vehicle/corolla-data.mjs';
 import { writeGLB } from './procedural-vehicle/geometry.mjs';
 
@@ -22,12 +25,6 @@ const GENERATOR = 'toolbox-procedural-vehicle@1.0.0';
 const REPO = 'https://github.com/the-meyiwa/toolbox';
 
 const PACKAGES = [
-  {
-    gen: 'e170', profile: E170,
-    vehicle: { id: 'toyota-corolla-2014-2016', make: 'Toyota', model: 'Corolla', displayName: '2014–2016 Toyota Corolla', year: null, years: [2014, 2015, 2016], generation: 'Eleventh generation (E170, North America)', variant: 'Sedan · L / LE / LE Eco / S grades', bodyStyle: 'Sedan', accuracy: 'representative' },
-    aliases: ['Corolla', 'Toyota Corolla', 'E170', 'ZRE172', '2014', '2015', '2016', 'Corolla 2014', 'Corolla 2015', 'Corolla 2016', 'Corolla LE', 'Corolla S'],
-    specifications: { bodyStyle: 'Sedan', layout: 'Front-engine, front-wheel drive', engine: { code: '2ZR-FE 1.8 L I4 (2ZR-FAE on LE Eco)' }, transmission: { code: '6MT · 4AT (L) · CVTi-S' }, curbWeight: 'About 2,800 lb (LE / S)', wheelbase: '106.3 in (2,700 mm)' }
-  },
   {
     gen: 'e140', profile: E140,
     vehicle: { id: 'toyota-corolla-2013', make: 'Toyota', model: 'Corolla', displayName: '2013 Toyota Corolla', year: 2013, years: [2013], generation: 'Tenth generation (E140, North America)', variant: 'Sedan · L / LE / S grades', bodyStyle: 'Sedan', accuracy: 'representative' },
@@ -92,10 +89,7 @@ const built = [];
 for (const def of PACKAGES) built.push(await buildPackage(def));
 
 const catalogPath = path.join(ROOT, 'public/automobile/catalog.json');
-const catalog = JSON.parse(await readFile(catalogPath, 'utf8'));
-const generatedIds = new Set(built.map(b => b.catalogEntry.id));
-catalog.vehicles = [...built.map(b => b.catalogEntry), ...catalog.vehicles.filter(v => !generatedIds.has(v.id))];
-catalog.defaultVehicleId = 'toyota-corolla-2014-2016';
+const catalog = mergeCatalog(JSON.parse(await readFile(catalogPath, 'utf8')), built.map(b => b.catalogEntry));
 
 const files = [];
 for (const b of built) {

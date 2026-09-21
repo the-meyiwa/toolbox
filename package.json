@@ -10,7 +10,8 @@
     "start": "node server.js",
     "test": "node tests/test-runner.js",
     "vehicle:package": "node scripts/vehicle-package.mjs",
-    "vehicle:procedural": "node scripts/build-procedural-vehicle.mjs"
+    "vehicle:procedural": "node scripts/build-procedural-vehicle.mjs",
+    "vehicle:source": "node scripts/build-source-vehicle.mjs"
   },
   "devDependencies": {
     "@gltf-transform/core": "^4.4.2",
