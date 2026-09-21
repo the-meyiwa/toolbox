@@ -29,6 +29,7 @@ test('Messaging Tool: module exports render and destroy lifecycle', async () => 
 
 test('Messaging Tool: renders sidebar, message stream, and composer', async () => {
   setupDOMEnvironment();
+  localStorage.setItem('toolbox_supabase_session', JSON.stringify({ id:'me', email:'me@example.com', token:'test-token', username:'me', displayName:'Me' }));
   const mod = await import('../../js/tools/messaging.js');
   const tool = mod.default;
 
@@ -38,12 +39,12 @@ test('Messaging Tool: renders sidebar, message stream, and composer', async () =
   tool.render(container);
 
   assert.ok(container.querySelector('#msg-sidebar'), 'Must render #msg-sidebar');
-  assert.ok(container.querySelector('#msg-search-input'), 'Must render search input');
-  assert.ok(container.querySelector('#msg-conv-list'), 'Must render conversations list');
-  assert.ok(container.querySelector('#msg-stream'), 'Must render message stream');
-  assert.ok(container.querySelector('#msg-composer-input'), 'Must render message textarea');
-  assert.ok(container.querySelector('#msg-send-btn'), 'Must render send button');
-  assert.ok(container.querySelector('#msg-attach-btn'), 'Must render attachment button');
+  assert.ok(container.querySelector('#messages-search'), 'Must render search input');
+  assert.ok(container.querySelector('#messages-conversations'), 'Must render conversations list');
+  assert.ok(container.querySelector('#messages-stream'), 'Must render message stream');
+  assert.ok(container.querySelector('#messages-input'), 'Must render message textarea');
+  assert.ok(container.querySelector('.messages-send'), 'Must render send button');
+  assert.ok(container.querySelector('#messages-attach'), 'Must render attachment button');
 
   // Verify zero technical jargon in initial UI
   const text = container.textContent.toLowerCase();

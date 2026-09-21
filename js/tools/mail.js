@@ -12,6 +12,7 @@ import { mailClient } from '../lib/mail-provider.js';
 import { createMailSetupUI } from '../views/mail-setup.js';
 import { getCurrentUser } from '../lib/supabase.js';
 import { openSettings } from '../lib/settings-ui.js';
+import { findToolboxUserByEmail, avatarMarkup } from '../lib/user-directory.js';
 
 function sanitizeHtml(html) {
   if (!html) return '';
@@ -658,6 +659,7 @@ export default {
           <div class="mail-compose-field">
             <span class="mail-compose-label">To:</span>
             <input type="email" id="mail-to" class="mail-compose-input" placeholder="recipient@example.com" />
+            <span id="mail-recipient-profile" class="mail-recipient-profile" aria-live="polite"></span>
           </div>
           <div class="mail-compose-field" id="mail-cc-row" style="display:none;">
             <span class="mail-compose-label">CC:</span>
@@ -772,6 +774,16 @@ export default {
       }
     });
 
+    const toInput = this.container.querySelector('#mail-to');
+    const recipientProfile = this.container.querySelector('#mail-recipient-profile');
+    const showRecipient = async () => {
+      const profile = await findToolboxUserByEmail(toInput.value).catch(() => null);
+      recipientProfile.innerHTML = profile ? `${avatarMarkup(profile, 26)}<span>${profile.name}<small>Toolbox user</small></span>` : '';
+      recipientProfile.classList.toggle('visible', Boolean(profile));
+    };
+    toInput?.addEventListener('change', showRecipient);
+    toInput?.addEventListener('blur', showRecipient);
+
     // Search bar
     const searchInput = this.container.querySelector('#mail-search');
     searchInput.addEventListener('input', (e) => {
@@ -861,6 +873,7 @@ export default {
       return `
         <div class="mail-item ${isUnread ? 'unread' : ''} ${isSelected ? 'selected' : ''}" data-msg-id="${m.id}">
           <div class="mail-item-top">
+            <span class="mail-list-avatar" data-mail-avatar="${m.from.email}">${(m.from.name || m.from.email || 'U').charAt(0).toUpperCase()}</span>
             <span class="mail-item-sender">${m.from.name || m.from.email}</span>
             <span class="mail-item-date">${dateStr}</span>
           </div>
@@ -878,6 +891,11 @@ export default {
         </div>
       `;
     }).join('');
+
+    list.querySelectorAll('[data-mail-avatar]').forEach(async avatar => {
+      const profile = await findToolboxUserByEmail(avatar.dataset.mailAvatar).catch(() => null);
+      if (profile) avatar.outerHTML = avatarMarkup(profile, 30);
+    });
 
     list.querySelectorAll('.mail-item').forEach(el => {
       el.addEventListener('click', () => {
@@ -905,7 +923,7 @@ export default {
     }
   },
 
-  renderReadingPane(msg) {
+  async renderReadingPane(msg) {
     const emptyState = this.container.querySelector('#mail-read-empty');
     const content = this.container.querySelector('#mail-read-content');
     emptyState.style.display = 'none';
@@ -913,13 +931,14 @@ export default {
 
     const dateStr = new Date(msg.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
     const avatarLetter = (msg.from.name || msg.from.email || 'U').charAt(0).toUpperCase();
+    const senderProfile = await findToolboxUserByEmail(msg.from.email).catch(() => null);
 
     content.innerHTML = `
       <div class="mail-read-header">
         <h2 class="mail-read-subject">${msg.subject || '(No subject)'}</h2>
         <div class="mail-read-meta">
           <div style="display:flex; align-items:center;">
-            <div class="mail-sender-avatar">${avatarLetter}</div>
+            ${senderProfile ? avatarMarkup(senderProfile, 42) : `<div class="mail-sender-avatar">${avatarLetter}</div>`}
             <div>
               <div class="mail-sender-name">${msg.from.name} <span class="mail-sender-email">&lt;${msg.from.email}&gt;</span></div>
               <div class="mail-sender-email">To: ${msg.to.map(t => t.name || t.email).join(', ')}</div>

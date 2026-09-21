@@ -22,6 +22,17 @@ import { paintSupporterProfile } from './supporter.js';
 let modalEl = null;
 let isOpen = false;
 let closeTimer = 0;
+let currentSettingsPage = 'home';
+
+const SETTINGS_PAGES = [
+  { id: 'profile', title: 'Profile', hint: 'Account, identity and avatar', icon: '◉', sections: ['sec-profile'] },
+  { id: 'general', title: 'General', hint: 'Preferences, settings backup and storage', icon: '⚙', sections: ['sec-preferences', 'sec-storage'] },
+  { id: 'appearance', title: 'Appearance', hint: 'Theme and interface style', icon: '◐', sections: ['sec-appearance'] },
+  { id: 'notifications', title: 'Notifications', hint: 'Alerts, sounds and badges', icon: '◌', sections: ['sec-notifications'] },
+  { id: 'mail', title: 'Mail', hint: 'Connected Gmail and Microsoft accounts', icon: '✉', sections: ['sec-mail'] },
+  { id: 'assistant', title: 'Assistant', hint: 'AI usage and conversation sync', icon: '✦', sections: ['sec-ai'] },
+  { id: 'support', title: 'Support Toolbox', hint: 'Help fund careful, independent development', icon: '♡', sections: ['sec-contribution'] }
+];
 
 function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -68,6 +79,83 @@ function renderThemeCard(theme, currentId) {
       </div>
     </button>
   `;
+}
+
+function setSettingsHeading(title, subtitle, showBack) {
+  const back = modalEl.querySelector('#settings-back-btn');
+  const icon = modalEl.querySelector('#settings-title-icon');
+  if (back) back.style.display = showBack ? 'inline-flex' : 'none';
+  if (icon) icon.style.display = showBack ? 'none' : 'flex';
+  modalEl.querySelector('#settings-modal-title').textContent = title;
+  modalEl.querySelector('#settings-modal-subtitle').textContent = subtitle;
+}
+
+function showSettingsHome() {
+  currentSettingsPage = 'home';
+  const home = modalEl.querySelector('#settings-home-view');
+  const detail = modalEl.querySelector('#settings-detail-view');
+  if (!home || !detail) return;
+  home.hidden = false;
+  detail.hidden = true;
+  modalEl.querySelector('#settings-avatars-view').style.display = 'none';
+  modalEl.querySelector('#settings-modal-scroll').style.display = 'flex';
+  modalEl.querySelector('.settings-search-container').style.display = '';
+  setSettingsHeading('Settings', 'Toolbox, arranged around the way you use it', false);
+  modalEl.querySelector('#settings-modal-scroll').scrollTop = 0;
+}
+
+function showSettingsPage(id) {
+  const page = SETTINGS_PAGES.find(item => item.id === id);
+  if (!page) return showSettingsHome();
+  currentSettingsPage = id;
+  modalEl.querySelector('#settings-home-view').hidden = true;
+  modalEl.querySelector('#settings-detail-view').hidden = false;
+  modalEl.querySelectorAll('[data-settings-panel]').forEach(panel => { panel.hidden = panel.dataset.settingsPanel !== id; });
+  modalEl.querySelector('#settings-avatars-view').style.display = 'none';
+  modalEl.querySelector('#settings-modal-scroll').style.display = 'flex';
+  modalEl.querySelector('.settings-search-container').style.display = 'none';
+  setSettingsHeading(page.title, page.hint, true);
+  modalEl.querySelector('#settings-modal-scroll').scrollTop = 0;
+}
+
+function organizeSettingsNavigation() {
+  const body = modalEl.querySelector('#settings-modal-scroll');
+  if (!body || body.dataset.organized) return;
+  body.dataset.organized = 'true';
+  const search = body.querySelector('.settings-search-container');
+  const sections = [...body.querySelectorAll(':scope > .settings-section')];
+  const home = document.createElement('div');
+  home.id = 'settings-home-view';
+  home.className = 'settings-home-view';
+  home.innerHTML = `<div class="settings-list" role="list">${SETTINGS_PAGES.map(page => `
+    <button type="button" class="settings-list-row" data-settings-page="${page.id}">
+      <span class="settings-list-icon" aria-hidden="true">${page.icon}</span>
+      <span class="settings-list-copy"><strong>${page.title}</strong><small>${page.hint}</small></span>
+      <span class="settings-list-chevron" aria-hidden="true">›</span>
+    </button>`).join('')}</div>`;
+  const detail = document.createElement('div');
+  detail.id = 'settings-detail-view';
+  detail.className = 'settings-detail-view';
+  detail.hidden = true;
+  SETTINGS_PAGES.forEach(page => {
+    const panel = document.createElement('div');
+    panel.className = 'settings-page-panel';
+    panel.dataset.settingsPanel = page.id;
+    panel.hidden = true;
+    page.sections.forEach(id => {
+      const section = sections.find(item => item.id === id);
+      if (section) panel.appendChild(section);
+    });
+    detail.appendChild(panel);
+  });
+  body.appendChild(home);
+  body.appendChild(detail);
+  home.querySelectorAll('[data-settings-page]').forEach(button => button.addEventListener('click', () => showSettingsPage(button.dataset.settingsPage)));
+  const input = body.querySelector('#settings-search-input');
+  input?.addEventListener('input', () => {
+    const query = input.value.trim().toLowerCase();
+    home.querySelectorAll('.settings-list-row').forEach(row => { row.hidden = Boolean(query) && !row.textContent.toLowerCase().includes(query); });
+  });
 }
 
 function createModal() {
@@ -134,7 +222,7 @@ function createModal() {
           <div class="settings-section-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px;">
             <div>
               <h3 class="settings-section-title" style="font-size: 0.96rem; font-weight: 700; color: var(--text); margin: 0 0 4px;">Appearance &amp; Themes</h3>
-              <span class="settings-section-hint" style="font-size: 0.76rem; color: var(--text-muted);">${THEMES.length} distinct themes crafted with flat, dimensional, and subtle 3D styling</span>
+              <span class="settings-section-hint" style="font-size: 0.76rem; color: var(--text-muted);">${THEMES.length} carefully matched Toolbox themes</span>
             </div>
             <div style="position: relative; width: 220px; max-width: 100%;">
               <input type="text" id="theme-filter-search" class="tool-input" placeholder="Filter themes..." autocomplete="off" spellcheck="false" style="width: 100%; height: 32px; padding: 0 10px 0 28px; font-size: 0.78rem; border-radius: 9999px;">
@@ -202,6 +290,7 @@ function createModal() {
   `;
 
   document.body.appendChild(modalEl);
+  organizeSettingsNavigation();
 
   // Header button triggers
   
@@ -228,8 +317,10 @@ function createModal() {
       closeSettings();
       window.__returnToAccount = false;
       openAccountModal();
+    } else if (currentSettingsPage === 'avatars') {
+      showSettingsPage('profile');
     } else {
-      showMainView();
+      showSettingsHome();
     }
   });
   modalEl.addEventListener('click', (e) => {
@@ -256,6 +347,7 @@ export function showMainView() {
   if (subtitle) subtitle.textContent = 'Appearance, Preferences, AI, and Profile Identity';
 
   renderProfileSettings();
+  showSettingsHome();
 }
 
 export function showAvatarView() {
@@ -273,6 +365,7 @@ export function showAvatarView() {
   if (titleIcon) titleIcon.style.display = 'none';
   if (title) title.textContent = 'Choose Your Avatar';
   if (subtitle) subtitle.textContent = 'Character bios and personal companions';
+  currentSettingsPage = 'avatars';
 
   renderAvatarGallery();
 }
@@ -612,7 +705,7 @@ function renderAiSettings() {
 
   container.innerHTML = `
     <div class="settings-section-header" style="margin-bottom: 12px;">
-      <h3 class="settings-section-title" style="font-size: 0.96rem; font-weight: 700; color: var(--text); margin: 0 0 4px;">Assistant AI</h3>
+      <h3 class="settings-section-title" style="font-size: 0.96rem; font-weight: 700; color: var(--text); margin: 0 0 4px;">Assistant</h3>
       <span class="settings-section-hint" style="font-size: 0.76rem; color: var(--text-muted);">Conversation persistence and usage</span>
     </div>
 
@@ -668,7 +761,7 @@ function renderStorageSettings() {
 
   container.innerHTML = `
     <div class="settings-section-header" style="margin-bottom: 12px;">
-      <h3 class="settings-section-title" style="font-size: 0.96rem; font-weight: 700; color: var(--text); margin: 0 0 4px;">Settings Backup &amp; Storage</h3>
+      <h3 class="settings-section-title" style="font-size: 0.96rem; font-weight: 700; color: var(--text); margin: 0 0 4px;">Backup &amp; Storage</h3>
       <span class="settings-section-hint" style="font-size: 0.76rem; color: var(--text-muted);">Export configuration to JSON or import on another machine</span>
     </div>
 
@@ -841,8 +934,11 @@ export function openSettings(targetSection = null) {
 
   if (targetSection === 'avatars') {
     showAvatarView();
+  } else if (targetSection) {
+    const page = targetSection === 'preferences' || targetSection === 'storage' ? 'general' : targetSection === 'ai' ? 'assistant' : targetSection === 'contribution' ? 'support' : targetSection;
+    showSettingsPage(page);
   } else {
-    showMainView();
+    showSettingsHome();
   }
 
   // Clear search input on fresh open
@@ -862,12 +958,7 @@ export function openSettings(targetSection = null) {
   requestAnimationFrame(() => {
     modalEl.classList.add('is-open');
 
-    if (targetSection && targetSection !== 'avatars') {
-      const sectionEl = modalEl.querySelector(`#sec-${targetSection}`);
-      if (sectionEl) {
-        sectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    } else if (mainScroll) {
+    if (!targetSection && mainScroll) {
       mainScroll.scrollTop = 0;
     }
   });

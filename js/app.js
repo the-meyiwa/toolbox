@@ -85,7 +85,6 @@ function toolCard(tool, { compact = false } = {}) {
         <div class="tool-card-name">${escapeHtml(tool.name)}</div>
         <div class="tool-card-desc">${escapeHtml(tool.description)}</div>
       </div>
-      <span class="tool-card-arrow" aria-hidden="true">↗</span>
       ${tool.badge ? `<span class="tool-card-badge">${escapeHtml(tool.badge)}</span>` : ''}
       ${tool.offline === false ? '<span class="tool-card-flag" title="Needs an internet connection">online</span>' : ''}
     </a>`;

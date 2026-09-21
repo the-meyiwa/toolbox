@@ -278,6 +278,19 @@ export function updateUserProfile({ username, displayName, avatarUrl, profilePic
     window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: updated } }));
   } catch {}
 
+  // Keep the public Toolbox identity coherent across Messages and Mail.
+  // This is intentionally fire-and-forget so profile editing still works offline.
+  try {
+    const config = getSupabaseConfig();
+    if (current.id && current.token && !current.token.startsWith('tok_')) {
+      fetch(`${config.url}/rest/v1/profiles?id=eq.${encodeURIComponent(current.id)}`, {
+        method: 'PATCH',
+        headers: { apikey: config.anonKey, Authorization: `Bearer ${current.token}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify({ username: finalUsername || null, display_name: updated.displayName || null, avatar_url: updated.avatarUrl || null, profile_picture: updated.profilePicture || 'default', messaging_enabled: true, updated_at: new Date().toISOString() })
+      }).catch(() => {});
+    }
+  } catch {}
+
   return updated;
 }
 
@@ -340,6 +353,7 @@ export async function signInWithEmail(email, password) {
       localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
       localStorage.setItem('supabase_auth_session', JSON.stringify(userSession));
       window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
+      queueMicrotask(() => updateUserProfile({ username: userSession.username, displayName: userSession.displayName }));
       return { success: true, user: userSession };
     }
 
@@ -484,6 +498,7 @@ export async function signUpWithEmail(email, password) {
         localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
         localStorage.setItem('supabase_auth_session', JSON.stringify(userSession));
         window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
+        queueMicrotask(() => updateUserProfile({ username: userSession.username, displayName: userSession.displayName }));
         return { success: true, user: userSession };
       }
 

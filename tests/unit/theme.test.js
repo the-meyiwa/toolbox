@@ -8,21 +8,10 @@ import { setupDOMEnvironment } from '../helpers/dom-env.js';
 import { THEMES, getStoredTheme, applyTheme, initTheme } from '../../js/lib/theme.js';
 
 test('Theme: contains canonical palettes', () => {
-  assert.equal(THEMES.length, 24, 'Expected exactly 24 canonical themes');
+  assert.equal(THEMES.length, 5, 'Expected exactly five curated themes');
 
   const requiredIds = [
-    // System (4)
-    'yosemite', 'yosemite-night', 'linux-mint', 'ubuntu',
-    // Minimal (2)
-    'default', 'white-on-black',
-    // Cultural / Design (9)
-    'mondrian', 'memphis', 'art-deco', 'mid-century',
-    'japanese-traditional', 'lagos', 'african-textile', 'british-racing-green', 'wimbledon',
-    // Brand-Inspired (8)
-    'barbie', 'tiffany', 'coca-cola', 'mcdonalds',
-    'playstation', 'ikea', 'google', 'claude',
-    // Expressive (1)
-    'miami-vice'
+    'default', 'white-on-black', 'claude', 'ubuntu', 'cyberpunk'
   ];
 
   for (const id of requiredIds) {
@@ -41,7 +30,7 @@ test('Theme: contains canonical palettes', () => {
   }
 });
 
-test('Theme: all 24 themes have CSS definitions in css/style.css', async () => {
+test('Theme: all curated themes have CSS definitions in css/style.css', async () => {
   const fs = await import('fs');
   const path = await import('path');
   const css = fs.readFileSync(path.resolve('css/style.css'), 'utf8');
@@ -62,20 +51,20 @@ test('Theme: applyTheme updates DOM and localStorage', () => {
   assert.equal(document.documentElement.getAttribute('data-theme'), 'ubuntu');
   assert.equal(getStoredTheme(), 'ubuntu');
 
-  // 2. Apply linux-mint theme
+  // 2. Removed themes migrate to their closest supported theme
   applyTheme('linux-mint');
-  assert.equal(document.documentElement.getAttribute('data-theme'), 'linux-mint');
-  assert.equal(getStoredTheme(), 'linux-mint');
+  assert.equal(document.documentElement.getAttribute('data-theme'), 'ubuntu');
+  assert.equal(getStoredTheme(), 'ubuntu');
 
   // 3. Apply default theme removes data-theme attribute
   applyTheme('default');
   assert.equal(document.documentElement.getAttribute('data-theme'), null);
   assert.equal(getStoredTheme(), 'default');
 
-  // 4. Apply mondrian theme
-  applyTheme('mondrian');
-  assert.equal(document.documentElement.getAttribute('data-theme'), 'mondrian');
-  assert.equal(getStoredTheme(), 'mondrian');
+  // 4. Apply cyberpunk theme
+  applyTheme('cyberpunk');
+  assert.equal(document.documentElement.getAttribute('data-theme'), 'cyberpunk');
+  assert.equal(getStoredTheme(), 'cyberpunk');
 
   // 5. Apply claude theme
   applyTheme('claude');
@@ -85,11 +74,11 @@ test('Theme: applyTheme updates DOM and localStorage', () => {
 
 test('Theme: initTheme hydrates theme on boot', () => {
   setupDOMEnvironment();
-  localStorage.setItem('toolbox_theme', 'mondrian');
+  localStorage.setItem('toolbox_theme', 'cyberpunk');
 
   const theme = initTheme();
-  assert.equal(theme, 'mondrian');
-  assert.equal(document.documentElement.getAttribute('data-theme'), 'mondrian');
+  assert.equal(theme, 'cyberpunk');
+  assert.equal(document.documentElement.getAttribute('data-theme'), 'cyberpunk');
 });
 
 test('Desktop Tool Viewport: width aligns all tools (1100px) with exceptions for container-planner and assistant', async () => {
@@ -488,5 +477,4 @@ test('UI Refinements: Container Quote Builder fullscreen and mobile scaling', as
     'Container planner .cp must adapt to column layout on mobile'
   );
 });
-
 

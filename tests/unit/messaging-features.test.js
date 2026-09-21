@@ -4,46 +4,26 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { setupDOMEnvironment } from '../helpers/dom-env.js';
 
-test('Messaging Features: searchPublicProfiles searches by name and username', async () => {
-  const { searchPublicProfiles, getPublicProfiles } = await import('../../js/lib/profile-system.js');
-  
-  const all = getPublicProfiles();
-  assert.ok(all.length >= 10, 'Must have realistic user directory with >= 10 profiles');
-
-  // Search by display name
-  const aliceMatches = searchPublicProfiles('Alice');
-  assert.ok(aliceMatches.length >= 1, 'Must find Alice by display name');
-  assert.equal(aliceMatches[0].name, 'Alice Smith');
-
-  // Search by @username
-  const bobMatches = searchPublicProfiles('@bob.ops');
-  assert.ok(bobMatches.length >= 1, 'Must find Bob by @username');
-  assert.equal(bobMatches[0].username, 'bob.ops');
-
-  // Search by partial username
-  const charlieMatches = searchPublicProfiles('charlie');
-  assert.ok(charlieMatches.length >= 1, 'Must find Charlie by partial username');
-  assert.equal(charlieMatches[0].username, 'charlie.data');
+test('Messaging Features: uses authenticated directory rather than dummy profiles', async () => {
+  const source = fs.readFileSync(path.resolve('js/lib/user-directory.js'), 'utf8');
+  assert.ok(source.includes('/rest/v1/profiles'));
+  assert.ok(!source.includes('Alice Smith'));
+  assert.ok(!source.includes('DEFAULT_MOCK_PROFILES'));
 });
 
 test('Messaging Features: Super-expanded Messaging Tool elements', async () => {
   setupDOMEnvironment();
+  localStorage.setItem('toolbox_supabase_session', JSON.stringify({ id:'me', email:'me@example.com', token:'test-token', username:'me', displayName:'Me' }));
   const messagingModule = (await import('../../js/tools/messaging.js')).default;
   const container = document.createElement('div');
   document.body.appendChild(container);
   
   messagingModule.render(container);
 
-  // Search and tabs
-  assert.ok(container.querySelector('#msg-search-input'), 'Must have search input');
-  assert.ok(container.querySelector('#tab-btn-chats'), 'Must have Chats tab');
-  assert.ok(container.querySelector('#tab-btn-people'), 'Must have People tab');
-
-  // Action buttons
-  assert.ok(container.querySelector('#msg-attach-btn'), 'Must have File attachment button');
-  assert.ok(container.querySelector('#msg-poll-btn'), 'Must have Poll creation button');
-  assert.ok(container.querySelector('#msg-chess-btn'), 'Must have Chess game button');
-  assert.ok(container.querySelector('#msg-ast-btn'), 'Must have Assistant trigger button');
+  assert.ok(container.querySelector('#messages-search'), 'Must have account directory search');
+  assert.ok(container.querySelector('#messages-attach'), 'Must have file sharing');
+  assert.ok(container.querySelector('#messages-game'), 'Must have a game action');
+  assert.ok(container.querySelector('#messages-compose'), 'Must have the conversation composer');
 
   messagingModule.destroy();
 });
