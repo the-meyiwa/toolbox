@@ -34,6 +34,15 @@ test('Messaging Features: Super-expanded Messaging Tool elements', async () => {
   messagingModule.destroy();
 });
 
+test('Messaging Features: background refreshes preserve reading position and participant search is inline', () => {
+  const source = fs.readFileSync(path.resolve('js/tools/messaging.js'), 'utf8');
+  assert.match(source, /Search Toolbox by name or username/);
+  assert.match(source, /messagesFingerprint/);
+  assert.match(source, /wasNearBottom/);
+  assert.match(source, /previousTop \+ \(stream\.scrollHeight - previousHeight\)/);
+  assert.doesNotMatch(source, /title:'Add a participant'/);
+});
+
 test('Mail Tool: Theme tokens in CSS have zero dark slate or inverted text bugs', () => {
   const mailJs = fs.readFileSync(path.resolve('js/tools/mail.js'), 'utf8');
 
