@@ -43,6 +43,17 @@ test('Messaging Features: background refreshes preserve reading position and par
   assert.doesNotMatch(source, /title:'Add a participant'/);
 });
 
+test('Messaging Features: notifications open conversations and support direct replies', () => {
+  const app = fs.readFileSync(path.resolve('js/app.js'), 'utf8');
+  const messaging = fs.readFileSync(path.resolve('js/tools/messaging.js'), 'utf8');
+  const header = fs.readFileSync(path.resolve('js/lib/header-menu.js'), 'utf8');
+  assert.match(app, /initMessageNotifications/);
+  assert.match(app, /messagingParams\.get\('conversation'\)/);
+  assert.match(messaging, /NotificationEngine\.clearConversation/);
+  assert.match(header, /notif-inline-reply/);
+  assert.match(header, /await sendMessage\(notification\.data\.conversationId, value\)/);
+});
+
 test('Mail Tool: Theme tokens in CSS have zero dark slate or inverted text bugs', () => {
   const mailJs = fs.readFileSync(path.resolve('js/tools/mail.js'), 'utf8');
 

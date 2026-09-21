@@ -238,7 +238,7 @@ export function claimUsername(newUsername) {
 /**
  * Updates user profile metadata (username, displayName, profilePicture, avatarUrl, username_changed_at)
  */
-export function updateUserProfile({ username, displayName, avatarUrl, profilePicture, username_changed_at } = {}) {
+export function updateUserProfile({ username, displayName, avatarUrl, profilePicture, username_changed_at } = {}, { remote = true } = {}) {
   const current = getCurrentUser();
   if (!current) return null;
 
@@ -282,7 +282,7 @@ export function updateUserProfile({ username, displayName, avatarUrl, profilePic
   // This is intentionally fire-and-forget so profile editing still works offline.
   try {
     const config = getSupabaseConfig();
-    if (current.id && current.token && !current.token.startsWith('tok_')) {
+    if (remote && current.id && current.token && !current.token.startsWith('tok_')) {
       fetch(`${config.url}/rest/v1/profiles?id=eq.${encodeURIComponent(current.id)}`, {
         method: 'PATCH',
         headers: { apikey: config.anonKey, Authorization: `Bearer ${current.token}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
@@ -291,6 +291,24 @@ export function updateUserProfile({ username, displayName, avatarUrl, profilePic
     }
   } catch {}
 
+  return updated;
+}
+
+export async function persistUserProfile(patch = {}) {
+  const current = getCurrentUser();
+  if (!current) throw new Error('Sign in to save your profile.');
+  const updated = updateUserProfile(patch, { remote: false });
+  if (!current.id || !current.token || current.token.startsWith('tok_')) return updated;
+  const config = getSupabaseConfig();
+  const response = await fetch(`${config.url}/rest/v1/profiles?on_conflict=id`, {
+    method: 'POST',
+    headers: { apikey: config.anonKey, Authorization: `Bearer ${current.token}`, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({ id: current.id, email: current.email || null, username: updated.username || null, display_name: updated.displayName || null, avatar_url: updated.avatarUrl || null, profile_picture: updated.profilePicture || 'default', messaging_enabled: true, updated_at: new Date().toISOString() })
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.message || 'Your profile could not be saved.');
+  }
   return updated;
 }
 

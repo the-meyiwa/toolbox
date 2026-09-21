@@ -11,6 +11,7 @@ import { getSettings, updateSettings, exportSettings, importSettings } from './s
 import { getCurrentUser } from './supabase.js';
 import { getProfilePictureSrc } from './profile-pictures.js';
 import { NotificationEngine, safeNotificationLink, prepareNotificationSound } from './notifications.js';
+import { sendMessage } from './messaging-service.js';
 
 let menuEl = null;
 let isMenuOpen = false;
@@ -347,14 +348,15 @@ async function renderNotificationPanel() {
       const isUnread = !n.read;
       const timeStr = new Date(n.date).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' });
       html += `
-        <button type="button" class="notif-item" data-id="${escapeHtml(n.id)}" aria-label="${escapeHtml(`${isUnread ? 'Unread: ' : ''}${n.title}`)}" style="padding: 12px 16px; border-bottom: 1px solid var(--border); background: ${isUnread ? 'var(--bg-subtle)' : 'transparent'}; cursor: pointer; transition: background 0.15s; position: relative;">
+        <div class="notif-item" data-id="${escapeHtml(n.id)}" role="button" tabindex="0" aria-label="${escapeHtml(`${isUnread ? 'Unread: ' : ''}${n.title}`)}" style="padding: 12px 16px; border-bottom: 1px solid var(--border); background: ${isUnread ? 'var(--bg-subtle)' : 'transparent'}; cursor: pointer; transition: background 0.15s; position: relative;">
           ${isUnread ? '<div style="position:absolute; left:6px; top:18px; width:6px; height:6px; border-radius:50%; background:var(--accent);"></div>' : ''}
           <div style="display:flex; justify-content:space-between; margin-bottom:4px; padding-left: ${isUnread ? '8px' : '0'};">
             <span style="font-weight: 600; font-size: 0.82rem; color: var(--text);">${escapeHtml(n.title)}</span>
             <span style="font-size: 0.7rem; color: var(--text-muted);">${timeStr}</span>
           </div>
           <div style="font-size: 0.8rem; color: var(--text-muted); padding-left: ${isUnread ? '8px' : '0'}; line-height: 1.4;">${escapeHtml(n.message)}</div>
-        </button>
+          ${n.type === 'message' && n.data?.conversationId ? `<button type="button" class="notif-reply-action" data-reply-id="${escapeHtml(n.id)}">Reply</button>` : ''}
+        </div>
       `;
     });
   }
@@ -368,6 +370,30 @@ async function renderNotificationPanel() {
 
   const listContainer = notifPanelEl.querySelector('#notif-list-container');
   listContainer.addEventListener('click', async (e) => {
+    if (e.target.closest('.notif-inline-reply')) return;
+    const replyAction = e.target.closest('.notif-reply-action');
+    if (replyAction) {
+      e.stopPropagation();
+      const item = replyAction.closest('.notif-item');
+      item.querySelector('.notif-inline-reply')?.remove();
+      item.insertAdjacentHTML('beforeend', `<form class="notif-inline-reply"><input type="text" maxlength="2000" placeholder="Write a reply" aria-label="Reply to message"><button type="submit">Send</button></form>`);
+      const form = item.querySelector('.notif-inline-reply');
+      form.querySelector('input').focus();
+      form.addEventListener('submit', async event => {
+        event.preventDefault();event.stopPropagation();
+        const notification = notifications.find(n => n.id === item.dataset.id);
+        const input = form.querySelector('input');const value = input.value.trim();
+        if (!value || !notification?.data?.conversationId) return;
+        const submit = form.querySelector('button');submit.disabled = true;
+        try {
+          await sendMessage(notification.data.conversationId, value);
+          await NotificationEngine.clearConversation(notification.data.conversationId);
+          closeNotificationPanel();
+          window.location.hash = `#messaging?conversation=${encodeURIComponent(notification.data.conversationId)}`;
+        } catch (error) { submit.disabled = false; await tbAlert(error.message, 'Reply not sent'); }
+      });
+      return;
+    }
     const item = e.target.closest('.notif-item');
     if (item) {
       const id = item.getAttribute('data-id');

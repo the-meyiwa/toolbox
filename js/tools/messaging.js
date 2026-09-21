@@ -4,6 +4,7 @@ import { searchToolboxUsers, avatarMarkup } from '../lib/user-directory.js';
 import { listConversations, listMessages, listConversationParticipants, startDirectConversation, sendMessage, updateMessagePayload, uploadMessageFile, listOnlineToolboxFiles, approveParticipantRequest, MESSAGE_MAX_LENGTH } from '../lib/messaging-service.js';
 import { list as listOfflineFiles, get as getOfflineFile } from '../lib/artifacts.js';
 import { tbPrompt } from '../lib/dialog.js';
+import { NotificationEngine } from '../lib/notifications.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const time = value => new Date(value).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
@@ -11,7 +12,7 @@ const fileSize = bytes => bytes < 1024 ? `${bytes} B` : bytes < 1048576 ? `${(by
 
 export default {
   _cleanup: null,
-  render(container) {
+  render(container, { conversationId = null } = {}) {
     this.destroy();
     const user = getCurrentUser();
     if (!user) {
@@ -92,12 +93,12 @@ export default {
       container.querySelectorAll('[data-participant-request] button').forEach(button => button.onclick=async()=>{ button.disabled=true; try{await approveParticipantRequest(button.closest('[data-participant-request]').dataset.participantRequest);await refreshMessages();await refreshConversations();}catch(error){button.disabled=false;alert(error.message);}});
     };
     const refreshMessages = async ({ initial = false } = {}) => { if(!active||stopped)return; const conversationId=active.conversation_id; try { const next=await listMessages(conversationId); if(!active||active.conversation_id!==conversationId)return; const fingerprint=JSON.stringify(next.map(item=>[item.id,item.kind,item.body,item.payload,item.created_at])); if(fingerprint===messagesFingerprint)return; messages=next;messagesFingerprint=fingerprint;renderMessages({initial,stickToBottom:true}); } catch(error){ if(initial)stream.innerHTML=`<div class="messages-error">${esc(error.message)}</div>`; } };
-    const openConversation = async item => { const changed=active?.conversation_id!==item.conversation_id; active=item;if(changed){messages=[];messagesFingerprint='';stream.classList.remove('messages-stream-settled');} const p=person(item); $('#messages-chat-person').innerHTML=`${avatarMarkup(p,36)}<span><strong>${esc(p.name||p.username)}</strong><small>@${esc(p.username||'toolbox-user')}</small></span>`; form.hidden=false; sidebar.classList.add('has-chat'); renderConversations(); await refreshMessages({initial:changed}); input.focus(); };
+    const openConversation = async item => { const changed=active?.conversation_id!==item.conversation_id; active=item;if(changed){messages=[];messagesFingerprint='';stream.classList.remove('messages-stream-settled');} const p=person(item); $('#messages-chat-person').innerHTML=`${avatarMarkup(p,36)}<span><strong>${esc(p.name||p.username)}</strong><small>@${esc(p.username||'toolbox-user')}</small></span>`; form.hidden=false; sidebar.classList.add('has-chat'); renderConversations(); await NotificationEngine.clearConversation(item.conversation_id);await refreshMessages({initial:changed}); input.focus(); };
     const refreshConversations = async () => { try { const next=await listConversations();const fingerprint=JSON.stringify(next);if(fingerprint!==conversationsFingerprint){conversations=next;conversationsFingerprint=fingerprint;renderConversations();} if(active){active=conversations.find(i=>i.conversation_id===active.conversation_id)||active;} } catch(error){ if(!conversations.length)$('#messages-conversations').innerHTML=`<div class="messages-error">${esc(error.message)}</div>`; } };
     let searchTimer=0;
     $('#messages-search').oninput = event => { clearTimeout(searchTimer); const q=event.target.value.trim(); if(!q){results.hidden=true;return;} searchTimer=setTimeout(async()=>{ results.hidden=false; results.innerHTML='<div class="messages-list-empty">Searching…</div>'; try { const users=await searchToolboxUsers(q); results.innerHTML=users.length?users.map(p=>`<button class="messages-person" data-user="${p.id}">${avatarMarkup(p,38)}<span><strong>${esc(p.name)}</strong><small>@${esc(p.username||'toolbox-user')}</small></span></button>`).join(''):'<div class="messages-list-empty">No Toolbox users found.</div>'; results.querySelectorAll('[data-user]').forEach(button=>button.onclick=async()=>{ const p=users.find(x=>x.id===button.dataset.user); const id=await startDirectConversation(p.id); await refreshConversations(); const item=conversations.find(x=>x.conversation_id===id)||{conversation_id:id,...Object.fromEntries(Object.entries(p).map(([k,v])=>[`other_${k}`,v]))}; results.hidden=true; $('#messages-search').value=''; openConversation(item); }); } catch(error){results.innerHTML=`<div class="messages-error">${esc(error.message)}</div>`;} },260); };
     $('#messages-new').onclick=()=>$('#messages-search').focus(); $('#messages-back').onclick=()=>sidebar.classList.remove('has-chat');
-    form.onsubmit=async event=>{event.preventDefault(); if(!active||!input.value.trim())return; const value=input.value; input.value=''; try{messages.push(await sendMessage(active.conversation_id,value));renderMessages();await refreshConversations();}catch(error){input.value=value;alert(error.message);}};
+    form.onsubmit=async event=>{event.preventDefault(); if(!active||!input.value.trim())return; const value=input.value; input.value=''; try{messages.push(await sendMessage(active.conversation_id,value));await NotificationEngine.clearConversation(active.conversation_id);renderMessages();await refreshConversations();}catch(error){input.value=value;alert(error.message);}};
     input.onkeydown=event=>{if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();form.requestSubmit();}};
     const plusButton=$('#messages-attach'), actionMenu=$('#messages-action-menu'), sourceMenu=$('#messages-file-source'), picker=$('#messages-picker');
     const closeActions=()=>{actionMenu.hidden=true;sourceMenu.hidden=true;plusButton.classList.remove('open');plusButton.setAttribute('aria-expanded','false');};
@@ -134,7 +135,7 @@ export default {
     const outsideHandler=event=>{if(!event.target.closest('.messages-action-wrap'))closeActions();};document.addEventListener('pointerdown',outsideHandler);
     actionMenu.onkeydown=event=>{const items=[...actionMenu.querySelectorAll('[role="menuitem"]')];const index=items.indexOf(document.activeElement);if(event.key==='Escape'){closeActions();plusButton.focus();}if(event.key==='ArrowDown'){event.preventDefault();items[(index+1)%items.length].focus();}if(event.key==='ArrowUp'){event.preventDefault();items[(index-1+items.length)%items.length].focus();}};
     $('#messages-game').onclick=async()=>{if(!active)return;try{messages.push(await sendMessage(active.conversation_id,'Tic-tac-toe','game',{board:Array(9).fill(''),turn:'X',winner:''}));renderMessages();}catch(error){alert(error.message);}};
-    refreshConversations(); poll=setInterval(()=>{refreshConversations();refreshMessages();},5000);
+    refreshConversations().then(()=>{if(conversationId){const target=conversations.find(item=>item.conversation_id===conversationId);if(target)openConversation(target);}}); poll=setInterval(()=>{refreshConversations();refreshMessages();},5000);
     this._cleanup=()=>{stopped=true;clearInterval(poll);clearTimeout(searchTimer);document.removeEventListener('pointerdown',outsideHandler);};
   },
   destroy(){this._cleanup?.();this._cleanup=null;}

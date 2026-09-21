@@ -11,7 +11,7 @@ import { tbAlert, tbConfirm, tbPrompt } from './dialog.js';
 
 import { THEMES, getStoredTheme, applyTheme } from './theme.js';
 import { QuotaManager } from './quota-manager.js';
-import { getCurrentUser, updateUserProfile, claimUsername, getUsernameChangeStatus, signOut, isUsernameAvailable, MADSELKIE_EMAILS } from './supabase.js';
+import { getCurrentUser, updateUserProfile, persistUserProfile, claimUsername, getUsernameChangeStatus, signOut, isUsernameAvailable, MADSELKIE_EMAILS } from './supabase.js';
 import { getSettings, updateSettings, exportSettings, importSettings } from './settings.js';
 import { PROFILE_PICTURES, getProfilePictureSrc, getUserAvatarHtml } from './profile-pictures.js';
 import { openAccountModal } from '../views/account-modal.js';
@@ -410,12 +410,18 @@ function renderAvatarGallery() {
     `;
   }).join('');
 
-  const pickAvatar = (id) => {
-    const found = PROFILE_PICTURES.find(p => p.id === id);
+  const pickAvatar = async (id) => {
     const src = getProfilePictureSrc(id);
-    updateUserProfile({ profilePicture: id, avatarUrl: src });
-    updateSettings({ profilePicture: id });
-    renderAvatarGallery();
+    const button = [...gallery.querySelectorAll('.avatar-story-card')].find(card => card.dataset.avatarId === id)?.querySelector('.btn-pick-avatar');
+    if (button) { button.disabled = true; button.textContent = 'Saving…'; }
+    try {
+      await persistUserProfile({ profilePicture: id, avatarUrl: src });
+      updateSettings({ profilePicture: id });
+      renderAvatarGallery();
+    } catch (error) {
+      if (button) { button.disabled = false; button.textContent = 'Choose'; }
+      await tbAlert(error.message, 'Avatar not saved');
+    }
   };
 
   gallery.querySelectorAll('.avatar-story-card').forEach(card => {

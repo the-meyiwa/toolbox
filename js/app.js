@@ -28,6 +28,7 @@ import '../css/menu-motion.css';
 import { initHomeScrollNarrative } from './home-scroll.js';
 import { listJoinedSpaces } from './lib/space-engine.js';
 import { openContextMenu } from './lib/context-menu.js';
+import { initMessageNotifications } from './lib/message-notifications.js';
 
 /* --------------- state --------------- */
 
@@ -635,12 +636,14 @@ function handleHash() {
   }
 
   if (raw.startsWith('messaging?')) {
-    const roomCode = new URLSearchParams(raw.slice(raw.indexOf('?') + 1)).get('code');
+    const messagingParams = new URLSearchParams(raw.slice(raw.indexOf('?') + 1));
+    const roomCode = messagingParams.get('code');
+    const conversationId = messagingParams.get('conversation');
     if (roomCode && /^[A-Za-z0-9_-]{1,80}$/.test(roomCode)) {
       openTool('messaging', { roomCode });
       return;
     }
-    openTool('messaging');
+    openTool('messaging', { conversationId: /^[0-9a-f-]{36}$/i.test(conversationId || '') ? conversationId : null });
     return;
   }
 
@@ -1151,6 +1154,7 @@ initTheme();
 installSettingsUI();
 initSupporterProfile();
 installHeaderMenu();
+initMessageNotifications();
   initWorkspace(openTool);
   initScrollNarrative();
   initHomeScrollNarrative();

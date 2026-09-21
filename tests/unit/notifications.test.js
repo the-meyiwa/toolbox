@@ -68,6 +68,17 @@ test('Notifications: NotificationEngine full lifecycle in node environment', asy
   assert.equal(await NotificationEngine.getUnreadCount(), 0);
 });
 
+test('Notifications: conversation messages can be cleared after viewing or replying', async () => {
+  const { NotificationEngine } = await import('../../js/lib/notifications.js');
+  await NotificationEngine.clearAll();
+  await NotificationEngine.addNotification('Ada', 'Hello', 'message', '#messaging?conversation=one', 'message-one', { conversationId: 'one' });
+  await NotificationEngine.addNotification('Grace', 'Hi', 'message', '#messaging?conversation=two', 'message-two', { conversationId: 'two' });
+  await NotificationEngine.clearConversation('one');
+  const remaining = await NotificationEngine.getNotifications();
+  assert.equal(remaining.length, 1);
+  assert.equal(remaining[0].data.conversationId, 'two');
+});
+
 test('Notifications: concurrent delivery, per-account isolation, preference and malformed storage handling', async () => {
   const { NotificationEngine, safeNotificationLink } = await import('../../js/lib/notifications.js');
   const { updateSettings } = await import('../../js/lib/settings.js');

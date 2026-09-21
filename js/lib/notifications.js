@@ -45,13 +45,14 @@ function chime() {
 export class NotificationEngine {
   static async getNotifications() { return read(keyForUser()); }
   static async saveNotifications(items) { write(keyForUser(), items); }
-  static async addNotification(title, message, type = 'info', link = null, sourceId = null) {
+  static async addNotification(title, message, type = 'info', link = null, sourceId = null, data = null) {
     if (getSettings().notificationsEnabled === false) return null;
     // No awaits between reading and writing: simultaneous incoming messages cannot overwrite each other.
     const key = keyForUser(); const items = read(key);
     if (sourceId && items.some(n => n.sourceId === sourceId)) return null;
     const notification = { id: `ntf_${globalThis.crypto?.randomUUID?.() || `${Date.now()}_${Math.random().toString(36).slice(2)}`}`,
       title: String(title), message: String(message), type, link: safeNotificationLink(link), sourceId,
+      data: data && typeof data === 'object' ? data : null,
       date: new Date().toISOString(), read: false };
     write(key, [notification, ...items]);
     const settings = getSettings();
@@ -74,6 +75,8 @@ export class NotificationEngine {
     const key = keyForUser(); write(key, read(key).map(n => n.id === id ? { ...n, read: true } : n));
   }
   static async markAllAsRead() { const key = keyForUser(); write(key, read(key).map(n => ({ ...n, read: true }))); }
+  static async clearWhere(predicate) { const key = keyForUser(); write(key, read(key).filter(n => !predicate(n))); }
+  static async clearConversation(conversationId) { return this.clearWhere(n => n.data?.conversationId === conversationId); }
   static async clearAll() { write(keyForUser(), []); }
   static async getUnreadCount() { return read(keyForUser()).filter(n => !n.read).length; }
 }
