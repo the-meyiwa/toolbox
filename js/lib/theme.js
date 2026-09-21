@@ -1,6 +1,6 @@
 /* ============================================================
    TOOLBOX — Theme Management Engine
-   Supports 24 canonical themes across System, Minimal, Cultural, Brand, and Expressive
+   Seven curated themes with complete semantic-token coverage.
    ============================================================ */
 
 export const THEMES = [
@@ -8,7 +8,9 @@ export const THEMES = [
   { id: 'white-on-black', name: 'White on Black', group: 'minimal', preview: { bg: '#000000', surface: '#111111', card: '#111111', text: '#ffffff', accent: '#ffffff', border: '#262626' }, description: 'Focused monochrome for low-light work.' },
   { id: 'claude', name: 'Claude', group: 'signature', preview: { bg: '#f7f3ee', surface: '#fcfaf7', card: '#fcfaf7', text: '#2f2a25', accent: '#c15f3c', border: '#ded5ca' }, description: 'Warm, editorial, and quietly tactile.' },
   { id: 'ubuntu', name: 'Ubuntu', group: 'signature', preview: { bg: '#242424', surface: '#2c2c2c', card: '#2c2c2c', text: '#f7f7f7', accent: '#e95420', border: 'rgba(255,255,255,0.09)' }, description: 'Deep aubergine surfaces with warm orange accents.' },
-  { id: 'cyberpunk', name: 'Cyberpunk', group: 'signature', preview: { bg: '#07080d', surface: '#10131c', card: '#111622', text: '#f4f7ff', accent: '#68f7d4', border: 'rgba(104,247,212,0.28)' }, description: 'Dark technical glass with electric mint and violet signals.' }
+  { id: 'cyberpunk', name: 'Cyberpunk', group: 'signature', preview: { bg: '#07080d', surface: '#10131c', card: '#111622', text: '#f4f7ff', accent: '#68f7d4', border: 'rgba(104,247,212,0.28)' }, description: 'Dark technical glass with electric mint and violet signals.' },
+  { id: 'neon-tokyo', name: 'Neon Tokyo', group: 'signature', preview: { bg: '#090611', surface: '#171022', card: '#1d132b', text: '#fff4fc', accent: '#ff4fc8', border: 'rgba(77,238,255,0.3)' }, description: 'Midnight violet glass with electric pink and cyan light.' },
+  { id: 'cyberpunk-amber', name: 'Cyberpunk Amber', group: 'signature', preview: { bg: '#0b0905', surface: '#18130b', card: '#21180c', text: '#fff8e8', accent: '#ffb000', border: 'rgba(255,176,0,0.3)' }, description: 'Industrial black glass with amber terminals and cool blue signals.' }
 ];
 
 const THEME_ALIASES = {

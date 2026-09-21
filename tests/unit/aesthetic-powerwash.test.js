@@ -433,8 +433,8 @@ test('Animations: Dynamic animation utility classes are preserved and styled', (
    TIER 6: WCAG AA CONTRAST COMPLIANCE ACROSS 24 THEMES (R3, F7)
    ============================================================ */
 
-test('Contrast: Exactly five curated themes are registered in THEMES registry', () => {
-  assert.equal(THEMES.length, 5, `Expected exactly five curated themes, found ${THEMES.length}`);
+test('Contrast: Exactly seven curated themes are registered in THEMES registry', () => {
+  assert.equal(THEMES.length, 7, `Expected exactly seven curated themes, found ${THEMES.length}`);
 });
 
 test('Contrast: All curated themes meet WCAG AA contrast ratio (>= 4.5:1) between accent and contrast text', () => {

@@ -28,6 +28,14 @@ export async function listConversations() {
   return request('rpc/list_my_conversations', { method: 'POST', body: '{}' });
 }
 
+export async function listConversationParticipants(conversationId) {
+  return request('rpc/list_conversation_participants', { method: 'POST', body: JSON.stringify({ target_conversation_id: conversationId }) });
+}
+
+export async function approveParticipantRequest(requestMessageId) {
+  return request('rpc/approve_conversation_participant', { method: 'POST', body: JSON.stringify({ request_message_id: requestMessageId }) });
+}
+
 export async function listMessages(conversationId) {
   return request(`toolbox_messages?conversation_id=eq.${encodeURIComponent(conversationId)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=*&order=created_at.asc&limit=200`);
 }
@@ -54,4 +62,8 @@ export async function uploadMessageFile(file) {
   const response = await fetch(`${url}/storage/v1/object/toolbox-files/${path}`, { method: 'POST', headers: { apikey: headers.apikey, Authorization: headers.Authorization, 'Content-Type': file.type || 'application/octet-stream', 'x-upsert': 'false' }, body: file });
   if (!response.ok) throw new Error('The file could not be uploaded.');
   return { name: file.name, size: file.size, type: file.type, url: `${url}/storage/v1/object/public/toolbox-files/${path}` };
+}
+
+export async function listOnlineToolboxFiles() {
+  return request('saved_artifacts?select=id,name,kind,storage_url,payload,updated_at&order=updated_at.desc&limit=50');
 }

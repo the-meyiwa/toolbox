@@ -25,13 +25,13 @@ let closeTimer = 0;
 let currentSettingsPage = 'home';
 
 const SETTINGS_PAGES = [
-  { id: 'profile', title: 'Profile', hint: 'Account, identity and avatar', icon: '◉', sections: ['sec-profile'] },
-  { id: 'general', title: 'General', hint: 'Preferences, settings backup and storage', icon: '⚙', sections: ['sec-preferences', 'sec-storage'] },
-  { id: 'appearance', title: 'Appearance', hint: 'Theme and interface style', icon: '◐', sections: ['sec-appearance'] },
-  { id: 'notifications', title: 'Notifications', hint: 'Alerts, sounds and badges', icon: '◌', sections: ['sec-notifications'] },
-  { id: 'mail', title: 'Mail', hint: 'Connected Gmail and Microsoft accounts', icon: '✉', sections: ['sec-mail'] },
-  { id: 'assistant', title: 'Assistant', hint: 'AI usage and conversation sync', icon: '✦', sections: ['sec-ai'] },
-  { id: 'support', title: 'Support Toolbox', hint: 'Help fund careful, independent development', icon: '♡', sections: ['sec-contribution'] }
+  { id: 'profile', title: 'Profile', hint: 'Account, identity and avatar', icon: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', sections: ['sec-profile'] },
+  { id: 'general', title: 'General', hint: 'Preferences, settings backup and storage', icon: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1-2.9 2.9-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5v.1h-4v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1-2.9-2.9.1-.1a1.7 1.7 0 0 0 .3-1.8A1.7 1.7 0 0 0 3 14H3v-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1 2.9-2.9.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.5V3h4v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1 2.9 2.9-.1.1a1.7 1.7 0 0 0-.3 1.8 1.7 1.7 0 0 0 1.5 1h.1v4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', sections: ['sec-preferences', 'sec-storage'] },
+  { id: 'appearance', title: 'Appearance', hint: 'Theme and interface style', icon: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z"/>', sections: ['sec-appearance'] },
+  { id: 'notifications', title: 'Notifications', hint: 'Alerts, sounds and badges', icon: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>', sections: ['sec-notifications'] },
+  { id: 'mail', title: 'Mail', hint: 'Connected Gmail and Microsoft accounts', icon: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>', sections: ['sec-mail'] },
+  { id: 'assistant', title: 'Assistant', hint: 'AI usage and conversation sync', icon: '<path d="m12 3 1.4 4.6L18 9l-4.6 1.4L12 15l-1.4-4.6L6 9l4.6-1.4z"/><path d="m19 15 .7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7z"/>', sections: ['sec-ai'] },
+  { id: 'support', title: 'Support Toolbox', hint: 'Help fund careful, independent development', icon: '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8z"/>', sections: ['sec-contribution'] }
 ];
 
 function escapeHtml(s) {
@@ -129,7 +129,7 @@ function organizeSettingsNavigation() {
   home.className = 'settings-home-view';
   home.innerHTML = `<div class="settings-list" role="list">${SETTINGS_PAGES.map(page => `
     <button type="button" class="settings-list-row" data-settings-page="${page.id}">
-      <span class="settings-list-icon" aria-hidden="true">${page.icon}</span>
+      <span class="settings-list-icon" aria-hidden="true"><svg viewBox="0 0 24 24">${page.icon}</svg></span>
       <span class="settings-list-copy"><strong>${page.title}</strong><small>${page.hint}</small></span>
       <span class="settings-list-chevron" aria-hidden="true">›</span>
     </button>`).join('')}</div>`;

@@ -8,10 +8,10 @@ import { setupDOMEnvironment } from '../helpers/dom-env.js';
 import { THEMES, getStoredTheme, applyTheme, initTheme } from '../../js/lib/theme.js';
 
 test('Theme: contains canonical palettes', () => {
-  assert.equal(THEMES.length, 5, 'Expected exactly five curated themes');
+  assert.equal(THEMES.length, 7, 'Expected exactly seven curated themes');
 
   const requiredIds = [
-    'default', 'white-on-black', 'claude', 'ubuntu', 'cyberpunk'
+    'default', 'white-on-black', 'claude', 'ubuntu', 'cyberpunk', 'neon-tokyo', 'cyberpunk-amber'
   ];
 
   for (const id of requiredIds) {
@@ -477,4 +477,3 @@ test('UI Refinements: Container Quote Builder fullscreen and mobile scaling', as
     'Container planner .cp must adapt to column layout on mobile'
   );
 });
-

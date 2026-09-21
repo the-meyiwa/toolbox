@@ -24,6 +24,12 @@ test('Messaging Features: Super-expanded Messaging Tool elements', async () => {
   assert.ok(container.querySelector('#messages-attach'), 'Must have file sharing');
   assert.ok(container.querySelector('#messages-game'), 'Must have a game action');
   assert.ok(container.querySelector('#messages-compose'), 'Must have the conversation composer');
+  assert.deepEqual(
+    [...container.querySelectorAll('[data-message-action]')].map(button => button.dataset.messageAction),
+    ['poll', 'media', 'files', 'participant'],
+    'The animated add menu must expose all four collaboration actions'
+  );
+  assert.deepEqual([...container.querySelectorAll('[data-file-source]')].map(button => button.dataset.fileSource), ['online', 'offline']);
 
   messagingModule.destroy();
 });

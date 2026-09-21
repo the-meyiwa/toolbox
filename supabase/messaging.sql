@@ -27,10 +27,12 @@ create table if not exists public.toolbox_conversation_members (
 create table if not exists public.toolbox_messages (
   id uuid primary key default gen_random_uuid(), conversation_id uuid references public.toolbox_conversations on delete cascade not null,
   sender_id uuid references auth.users on delete cascade not null, body text not null default '',
-  kind text not null default 'text' check (kind in ('text','file','game')), payload jsonb not null default '{}'::jsonb,
+  kind text not null default 'text', payload jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(), expires_at timestamptz not null default (now() + interval '24 hours'),
   check (char_length(body) <= 2000)
 );
+alter table public.toolbox_messages drop constraint if exists toolbox_messages_kind_check;
+alter table public.toolbox_messages add constraint toolbox_messages_kind_check check (kind in ('text','file','game','poll','participant_request'));
 create index if not exists toolbox_messages_conversation_created on public.toolbox_messages(conversation_id,created_at);
 alter table public.toolbox_conversations enable row level security;
 alter table public.toolbox_conversation_members enable row level security;
@@ -43,8 +45,9 @@ drop policy if exists "Members read live messages" on public.toolbox_messages;
 create policy "Members read live messages" on public.toolbox_messages for select to authenticated using (expires_at > now() and exists(select 1 from public.toolbox_conversation_members m where m.conversation_id=conversation_id and m.user_id=auth.uid()));
 drop policy if exists "Members send messages" on public.toolbox_messages;
 create policy "Members send messages" on public.toolbox_messages for insert to authenticated with check (sender_id=auth.uid() and exists(select 1 from public.toolbox_conversation_members m where m.conversation_id=conversation_id and m.user_id=auth.uid()));
+drop policy if exists "Members update interactive messages" on public.toolbox_messages;
 drop policy if exists "Members update game messages" on public.toolbox_messages;
-create policy "Members update game messages" on public.toolbox_messages for update to authenticated using (kind='game' and expires_at > now() and exists(select 1 from public.toolbox_conversation_members m where m.conversation_id=conversation_id and m.user_id=auth.uid()));
+create policy "Members update interactive messages" on public.toolbox_messages for update to authenticated using (kind in ('game','poll') and expires_at > now() and exists(select 1 from public.toolbox_conversation_members m where m.conversation_id=conversation_id and m.user_id=auth.uid()));
 
 create or replace function public.get_or_create_direct_conversation(other_user_id uuid) returns uuid language plpgsql security definer set search_path=public as $$
 declare cid uuid;
@@ -61,10 +64,35 @@ end $$;
 grant execute on function public.get_or_create_direct_conversation(uuid) to authenticated;
 
 create or replace function public.list_my_conversations() returns table(conversation_id uuid, other_id uuid, other_email text, other_username text, other_name text, other_avatar_url text, other_profile_picture text, last_message_at timestamptz) language sql security definer set search_path=public as $$
-  select c.id,p.id,p.email,p.username,p.display_name,p.avatar_url,p.profile_picture,max(msg.created_at)
+  select c.id,min(p.id::text)::uuid,min(p.email),min(p.username),string_agg(coalesce(p.display_name,p.username),' · ' order by coalesce(p.display_name,p.username)),min(p.avatar_url),min(p.profile_picture),max(msg.created_at)
   from toolbox_conversations c join toolbox_conversation_members mine on mine.conversation_id=c.id and mine.user_id=auth.uid()
   join toolbox_conversation_members them on them.conversation_id=c.id and them.user_id<>auth.uid()
   join profiles p on p.id=them.user_id left join toolbox_messages msg on msg.conversation_id=c.id and msg.expires_at>now()
-  group by c.id,p.id,p.email,p.username,p.display_name,p.avatar_url,p.profile_picture order by max(msg.created_at) desc nulls last,c.created_at desc;
+  group by c.id,c.created_at order by max(msg.created_at) desc nulls last,c.created_at desc;
 $$;
 grant execute on function public.list_my_conversations() to authenticated;
+
+create or replace function public.list_conversation_participants(target_conversation_id uuid) returns table(id uuid,email text,username text,name text,avatar_url text,profile_picture text) language sql security definer set search_path=public as $$
+  select p.id,p.email,p.username,p.display_name,p.avatar_url,p.profile_picture from toolbox_conversation_members m join profiles p on p.id=m.user_id
+  where m.conversation_id=target_conversation_id and exists(select 1 from toolbox_conversation_members mine where mine.conversation_id=target_conversation_id and mine.user_id=auth.uid());
+$$;
+grant execute on function public.list_conversation_participants(uuid) to authenticated;
+
+drop function if exists public.add_approved_conversation_participant(uuid);
+create or replace function public.approve_conversation_participant(request_message_id uuid) returns boolean language plpgsql security definer set search_path=public as $$
+declare msg toolbox_messages; member_count int; approval_count int; target_id uuid;
+begin
+  select * into msg from toolbox_messages where id=request_message_id and kind='participant_request' and expires_at>now();
+  if msg.id is null or not exists(select 1 from toolbox_conversation_members where conversation_id=msg.conversation_id and user_id=auth.uid()) then raise exception 'Request is unavailable'; end if;
+  target_id := (msg.payload->>'target_id')::uuid;
+  if not (coalesce(msg.payload->'approvals','[]'::jsonb) @> to_jsonb(array[auth.uid()::text])) then
+    update toolbox_messages set payload=jsonb_set(msg.payload,'{approvals}',coalesce(msg.payload->'approvals','[]'::jsonb) || to_jsonb(auth.uid()::text),true) where id=msg.id returning * into msg;
+  end if;
+  select count(*) into member_count from toolbox_conversation_members where conversation_id=msg.conversation_id;
+  select count(distinct value::uuid) into approval_count from jsonb_array_elements_text(coalesce(msg.payload->'approvals','[]'::jsonb));
+  if approval_count < member_count then return false; end if;
+  insert into toolbox_conversation_members(conversation_id,user_id) values(msg.conversation_id,target_id) on conflict do nothing;
+  update toolbox_conversations set kind='group' where id=msg.conversation_id;
+  return true;
+end $$;
+grant execute on function public.approve_conversation_participant(uuid) to authenticated;
