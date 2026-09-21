@@ -1,15 +1,8 @@
-/**
- * Automobile Guide — Technical Vehicle Reference & Exploration System
- * Features:
- * - 3-Column balanced desktop workspace with dominant vector visualization
- * - Multi-generational vehicle database with technical specifications
- * - Interactive 2D vector blueprints: Chassis Top-Down, Profile Cutaway, Interior Cockpit
- * - Component diagnostics inspector with failure modes & related component graph
- * - Touch-optimized mobile layout with floating bottom sheet
- * - Assistant context bridge
- */
+/** Automobile Guide: reference data, semantic inspector and technical 3D viewport. */
 
 import { autoClient } from '../lib/automotive-data.js';
+import { AutomobileViewer } from '../lib/automobile/automobile-viewer.js';
+const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 export default {
   render(container) {
@@ -20,13 +13,7 @@ export default {
       selectedVehicle: null,
       selectedSection: null,
       selectedComponent: null,
-      viewMode: 'chassis', // 'chassis' | 'profile' | 'interior'
-      zoom: 1,
-      panX: 0,
-      panY: 0,
-      isPanning: false,
-      startX: 0,
-      startY: 0,
+      viewMode: 'technical',
       activeMobileTab: 'diag' // 'diag' | 'specs' | 'inspector'
     };
 
@@ -322,7 +309,7 @@ export default {
           position: relative;
           transform-origin: center center;
         }
-        .ag-svg-container {
+        .ag-viewer-host {
           width: 100%;
           height: 100%;
           display: flex;
@@ -330,12 +317,6 @@ export default {
           justify-content: center;
           transition: transform 0.08s ease-out;
         }
-        .ag-technical-svg {
-          width: 100%;
-          height: 100%;
-          max-height: 100%;
-        }
-
         /* Floating Diagram Toolbar */
         .ag-floating-tools {
           position: absolute;
@@ -507,67 +488,6 @@ export default {
           opacity: 0.9;
         }
 
-        /* SVG Interactive Component Styles */
-        .diag-comp {
-          cursor: pointer;
-          transition: all 0.2s ease;
-          outline: none;
-        }
-        .diag-comp:hover path,
-        .diag-comp:hover rect,
-        .diag-comp:hover circle {
-          filter: drop-shadow(0 0 6px var(--accent, #3b82f6));
-          stroke-width: 3 !important;
-        }
-        .diag-comp.is-section-focused path,
-        .diag-comp.is-section-focused rect {
-          filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.6));
-        }
-        .diag-comp.is-active path,
-        .diag-comp.is-active rect,
-        .diag-comp.is-active circle {
-          stroke: #ef4444 !important;
-          stroke-width: 3.5 !important;
-          filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.8)) !important;
-        }
-
-        /* Pin Markers */
-        .ag-pin {
-          cursor: pointer;
-          transition: transform 0.15s ease;
-        }
-        .ag-pin-core {
-          fill: var(--accent, #3b82f6);
-          transition: fill 0.15s ease;
-        }
-        .ag-pin-ring {
-          fill: none;
-          stroke: var(--accent, #3b82f6);
-          stroke-width: 1.5;
-          opacity: 0.6;
-          animation: ag-pulse 2s infinite;
-        }
-        .ag-pin.is-selected .ag-pin-core {
-          fill: #ef4444;
-        }
-        .ag-pin.is-selected .ag-pin-ring {
-          stroke: #ef4444;
-          opacity: 0.9;
-        }
-        .ag-pin-label {
-          fill: #ffffff;
-          font-size: 10px;
-          font-weight: 700;
-          letter-spacing: 0.03em;
-          text-shadow: 0 1px 3px rgba(0,0,0,0.8);
-          pointer-events: none;
-        }
-        @keyframes ag-pulse {
-          0% { r: 8px; opacity: 0.8; }
-          50% { r: 16px; opacity: 0.2; }
-          100% { r: 8px; opacity: 0.8; }
-        }
-
         /* Mobile Bottom Sheet & Responsive Rules */
         .ag-mobile-tabs {
           display: none;
@@ -653,9 +573,9 @@ export default {
 
           <div class="ag-header-right">
             <div class="ag-view-pills" id="ag-view-pills">
-              <button type="button" class="ag-view-btn active" data-view="chassis">Chassis X-Ray</button>
-              <button type="button" class="ag-view-btn" data-view="profile">Cutaway Profile</button>
-              <button type="button" class="ag-view-btn" data-view="interior">Cockpit Plan</button>
+              <button type="button" class="ag-view-btn active" data-view="technical" aria-pressed="true">Technical</button>
+              <button type="button" class="ag-view-btn" data-view="xray" aria-pressed="false">X-Ray</button>
+              <button type="button" class="ag-view-btn" data-view="isolate" aria-pressed="false">Isolate</button>
             </div>
           </div>
         </header>
@@ -682,7 +602,7 @@ export default {
 
             <div class="ag-panel-section" style="border-bottom:none;">
               <div class="ag-panel-title">
-                <span>Vehicle Subsystems</span>
+                <span>Model Components</span>
               </div>
               <div class="ag-nav-list" id="ag-nav-list">
                 <!-- Section items dynamically populated -->
@@ -690,29 +610,30 @@ export default {
             </div>
           </aside>
 
-          <!-- Center Column: Dominant Vector Blueprint Visualization -->
+          <!-- Center Column: Interactive Technical Visualization -->
           <main class="ag-col-center" id="ag-canvas-col">
             <div class="ag-floating-tools">
-              <button type="button" class="ag-tool-btn" id="ag-zoom-in" title="Zoom In">
+              <button type="button" class="ag-tool-btn" id="ag-zoom-in" title="Zoom In" aria-label="Zoom in">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
               </button>
-              <button type="button" class="ag-tool-btn" id="ag-zoom-out" title="Zoom Out">
+              <button type="button" class="ag-tool-btn" id="ag-zoom-out" title="Zoom Out" aria-label="Zoom out">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
               </button>
-              <button type="button" class="ag-tool-btn" id="ag-zoom-reset" title="Reset View">
+              <button type="button" class="ag-tool-btn" id="ag-zoom-reset" title="Reset View" aria-label="Reset camera">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
               </button>
             </div>
 
+            <div class="ag-asset-disclosure"><strong id="ag-asset-label">Loading model</strong><p id="ag-asset-description"></p></div>
             <div class="ag-canvas-viewport">
-              <div class="ag-svg-container" id="ag-svg-container">
-                <div style="color:var(--text-muted); font-size:0.9rem;">Initializing technical blueprint engine…</div>
+              <div class="ag-viewer-host" id="ag-viewer-host">
+                <div style="color:var(--text-muted); font-size:0.9rem;">Loading technical 3D viewer…</div>
               </div>
             </div>
 
             <div class="ag-view-status" id="ag-view-status">
               <span class="ag-status-indicator"></span>
-              <span id="ag-status-text">Ready • High-Precision 2D Blueprint</span>
+              <span id="ag-status-text" role="status">Technical 3D • Geometry accuracy is shown with each asset</span>
             </div>
           </main>
 
@@ -726,7 +647,7 @@ export default {
               </svg>
               <div>
                 <strong>No Component Selected</strong>
-                <p style="margin:4px 0 0; font-size:0.78rem; opacity:0.8;">Click any mechanical component in the blueprint to inspect engineering specs, diagnostics, and failure modes.</p>
+                <p style="margin:4px 0 0; font-size:0.78rem; opacity:0.8;">Select geometry or choose a component from the list. Only supplied metadata is shown.</p>
               </div>
             </div>
             <div id="ag-inspector-content" style="display:none; padding:16px;"></div>
@@ -740,7 +661,7 @@ export default {
 
         <!-- Mobile Navigation Switcher -->
         <nav class="ag-mobile-tabs">
-          <button type="button" class="ag-mob-btn active" data-mob-tab="diag">Blueprint</button>
+          <button type="button" class="ag-mob-btn active" data-mob-tab="diag">3D Viewer</button>
           <button type="button" class="ag-mob-btn" data-mob-tab="specs">Vehicle Specs</button>
           <button type="button" class="ag-mob-btn" data-mob-tab="inspector">Component</button>
         </nav>
@@ -748,18 +669,23 @@ export default {
     `;
 
     this.bindEvents();
-    this.loadInitialVehicle();
+    this.initializeViewer();
   },
 
-  async loadInitialVehicle() {
-    const version = this._version;
-    const vehicles = await autoClient.searchVehicles('lexus gx');
-    if (version !== this._version) return;
-    this.state.vehicles = vehicles;
-    // Default to the first result
-    const initial = this.state.vehicles[0];
-    if (initial) {
-      this.selectVehicle(initial);
+  async initializeViewer() {
+    const host=this.container.querySelector('#ag-viewer-host');
+    try {
+      this.viewer=new AutomobileViewer(host,{
+        onSelect:comp=>this.onComponentSelection(comp),
+        onStatus:text=>{this.container.querySelector('#ag-status-text').textContent=text;}
+      });
+      this.container.querySelector('#ag-spec-grid').textContent='Search for a vehicle to load its available reference data.';
+      await this.loadVisualization(null);
+    } catch(error) {
+      if(!this.container.isConnected)return;
+      host.innerHTML='<div class="ag-viewer-error" role="status"><strong>3D viewer unavailable</strong><p></p></div>';
+      host.querySelector('p').textContent=error.message;
+      this.container.querySelector('#ag-status-text').textContent='Vehicle search and reference information remain available.';
     }
   },
 
@@ -801,83 +727,23 @@ export default {
         viewPills.querySelectorAll('.ag-view-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         this.state.viewMode = btn.getAttribute('data-view');
-        this.updateBlueprint();
+        viewPills.querySelectorAll('.ag-view-btn').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));
+        this.viewer?.setMode(this.state.viewMode);
       }
     });
 
     // Zoom and pan canvas controls
-    const canvasCol = this.container.querySelector('#ag-canvas-col');
     this.container.querySelector('#ag-zoom-in').addEventListener('click', () => this.zoom(0.2));
     this.container.querySelector('#ag-zoom-out').addEventListener('click', () => this.zoom(-0.2));
     this.container.querySelector('#ag-zoom-reset').addEventListener('click', () => this.resetTransform());
 
-    // Mouse drag pan
-    canvasCol.addEventListener('mousedown', (e) => {
-      if (e.target.closest('.ag-tool-btn') || e.target.closest('.ag-floating-tools')) return;
-      this.state.isPanning = true;
-      this.state.startX = e.clientX - this.state.panX;
-      this.state.startY = e.clientY - this.state.panY;
-    });
-
-    this._onPanMove = (e) => {
-      if (!this.state.isPanning) return;
-      this.state.panX = e.clientX - this.state.startX;
-      this.state.panY = e.clientY - this.state.startY;
-      this.applyTransform();
+    this._onContainerClick=event=>{
+      const component=event.target.closest('[data-component-id]');
+      if(component)this.viewer?.select(component.dataset.componentId);
+      if(event.target.closest('[data-clear-selection]'))this.viewer?.select(null);
+      if(event.target.closest('[data-ask-component]'))this.askAssistant();
     };
-    window.addEventListener('mousemove', this._onPanMove);
-
-    this._onPanEnd = () => {
-      this.state.isPanning = false;
-    };
-    window.addEventListener('mouseup', this._onPanEnd);
-
-    // Mouse wheel zoom
-    canvasCol.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.12 : 0.12;
-      this.zoom(delta);
-    }, { passive: false });
-
-    // Touch support (pan & pinch)
-    canvasCol.addEventListener('touchstart', (e) => {
-      if (e.touches.length === 1) {
-        this.state.isPanning = true;
-        this.state.startX = e.touches[0].clientX - this.state.panX;
-        this.state.startY = e.touches[0].clientY - this.state.panY;
-      }
-    }, { passive: true });
-
-    canvasCol.addEventListener('touchmove', (e) => {
-      if (!this.state.isPanning || e.touches.length !== 1) return;
-      this.state.panX = e.touches[0].clientX - this.state.startX;
-      this.state.panY = e.touches[0].clientY - this.state.startY;
-      this.applyTransform();
-    }, { passive: true });
-
-    canvasCol.addEventListener('touchend', () => {
-      this.state.isPanning = false;
-    });
-
-    // Delegated Component Click inside SVG
-    const svgContainer = this.container.querySelector('#ag-svg-container');
-    svgContainer.addEventListener('click', (e) => {
-      const compEl = e.target.closest('.diag-comp') || e.target.closest('.ag-pin');
-      if (compEl) {
-        const compId = compEl.getAttribute('data-comp-id');
-        this.selectComponent(compId);
-      }
-    });
-
-    // Section Nav Click
-    const navList = this.container.querySelector('#ag-nav-list');
-    navList.addEventListener('click', (e) => {
-      const item = e.target.closest('.ag-nav-item');
-      if (item) {
-        const sec = item.getAttribute('data-section');
-        this.selectSection(sec);
-      }
-    });
+    this.container.addEventListener('click',this._onContainerClick);
 
     // Mobile tabs
     const mobTabs = this.container.querySelector('.ag-mobile-tabs');
@@ -900,12 +766,12 @@ export default {
     }
 
     dropdown.innerHTML = results.map(v => `
-      <div class="ag-search-item" data-vehicle-id="${v.id}">
+      <div class="ag-search-item" data-vehicle-id="${escape(v.id)}">
         <div>
-          <div class="ag-search-item-title">${v.manufacturer} ${v.model} <span style="font-weight:400; opacity:0.8;">${v.generation}</span></div>
-          <div class="ag-search-item-meta">${v.variant || v.bodyStyle} • ${v.years}</div>
+          <div class="ag-search-item-title">${escape(v.manufacturer)} ${escape(v.model)} <span style="font-weight:400; opacity:0.8;">${escape(v.generation)}</span></div>
+          <div class="ag-search-item-meta">${escape(v.variant || v.bodyStyle)} • ${escape(v.years)}</div>
         </div>
-        <span class="ag-search-badge">${v.status === 'metadata_only' ? 'NHTSA' : 'BLUEPRINT'}</span>
+        <span class="ag-search-badge">${escape(v.status === 'metadata_only' ? 'NHTSA' : 'REFERENCE')}</span>
       </div>
     `).join('');
 
@@ -918,7 +784,7 @@ export default {
         if (v) {
           this.selectVehicle(v);
           dropdown.style.display = 'none';
-          this.container.querySelector('#ag-search-input').value = `${v.manufacturer} ${v.model}`;
+          this.container.querySelector('#ag-search-input').value = `${escape(v.manufacturer)} ${escape(v.model)}`;
         }
       });
     });
@@ -943,8 +809,8 @@ export default {
     // Render Section Navigation
     this.renderSectionNav(this.state.selectedVehicle);
 
-    // Update Blueprint
-    this.updateBlueprint();
+    // Load semantic model
+    this.loadVisualization(this.state.selectedVehicle);
 
     // Clear Inspector
     this.clearInspector();
@@ -956,189 +822,107 @@ export default {
   renderVehicleInfo(vehicle) {
     const hero = this.container.querySelector('#ag-car-hero');
     hero.innerHTML = `
-      <h3 class="ag-car-name">${vehicle.manufacturer} ${vehicle.model}</h3>
-      <span class="ag-car-variant">${vehicle.generation} • ${vehicle.variant || ''}</span>
-      <span class="ag-car-platform">${vehicle.platform || ''}</span>
+      <h3 class="ag-car-name">${escape(vehicle.manufacturer)} ${escape(vehicle.model)}</h3>
+      <span class="ag-car-variant">${escape(vehicle.generation)} • ${escape(vehicle.variant || '')}</span>
+      <span class="ag-car-platform">${escape(vehicle.platform || '')}</span>
     `;
 
     const specGrid = this.container.querySelector('#ag-spec-grid');
     if (vehicle.meta && vehicle.meta.extract) {
       specGrid.innerHTML = `
         <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; padding: 4px 0 12px; font-style: italic;">
-          ${vehicle.meta.extract.substring(0, 250)}...
+          ${escape(vehicle.meta.extract.substring(0, 250))}...
         </div>
-        <div class="ag-spec-row"><span class="ag-spec-label">Years</span><span class="ag-spec-val">${vehicle.years || 'N/A'}</span></div>
-        <div class="ag-spec-row"><span class="ag-spec-label">Body Style</span><span class="ag-spec-val">${vehicle.bodyStyle || 'N/A'}</span></div>
+        <div class="ag-spec-row"><span class="ag-spec-label">Years</span><span class="ag-spec-val">${escape(vehicle.years || 'N/A')}</span></div>
+        <div class="ag-spec-row"><span class="ag-spec-label">Body Style</span><span class="ag-spec-val">${escape(vehicle.bodyStyle || 'N/A')}</span></div>
       `;
     } else {
       specGrid.innerHTML = `
-        <div class="ag-spec-row"><span class="ag-spec-label">Years</span><span class="ag-spec-val">${vehicle.years || 'N/A'}</span></div>
-        <div class="ag-spec-row"><span class="ag-spec-label">Body Style</span><span class="ag-spec-val">${vehicle.bodyStyle || 'N/A'}</span></div>
-        <div class="ag-spec-row"><span class="ag-spec-label">Drivetrain</span><span class="ag-spec-val">${vehicle.layout || 'N/A'}</span></div>
-        <div class="ag-spec-row"><span class="ag-spec-label">Engine</span><span class="ag-spec-val">${vehicle.engine?.code || 'N/A'} (${vehicle.engine?.output || ''})</span></div>
-        <div class="ag-spec-row"><span class="ag-spec-label">Transmission</span><span class="ag-spec-val">${vehicle.transmission?.code || 'N/A'}</span></div>
-        <div class="ag-spec-row"><span class="ag-spec-label">Front Susp.</span><span class="ag-spec-val">${vehicle.chassis?.frontSuspension?.split('with')[0] || 'Independent'}</span></div>
-        <div class="ag-spec-row"><span class="ag-spec-label">Rear Susp.</span><span class="ag-spec-val">${vehicle.chassis?.rearSuspension?.split('with')[0] || 'Independent'}</span></div>
-        <div class="ag-spec-row"><span class="ag-spec-label">Curb Weight</span><span class="ag-spec-val">${vehicle.curbWeight || 'N/A'}</span></div>
-        <div class="ag-spec-row"><span class="ag-spec-label">Wheelbase</span><span class="ag-spec-val">${vehicle.wheelbase || 'N/A'}</span></div>
+        <div class="ag-spec-row"><span class="ag-spec-label">Years</span><span class="ag-spec-val">${escape(vehicle.years || 'N/A')}</span></div>
+        <div class="ag-spec-row"><span class="ag-spec-label">Body Style</span><span class="ag-spec-val">${escape(vehicle.bodyStyle || 'N/A')}</span></div>
+        <div class="ag-spec-row"><span class="ag-spec-label">Drivetrain</span><span class="ag-spec-val">${escape(vehicle.layout || 'N/A')}</span></div>
+        <div class="ag-spec-row"><span class="ag-spec-label">Engine</span><span class="ag-spec-val">${escape(vehicle.engine?.code || 'N/A')} (${escape(vehicle.engine?.output || '')})</span></div>
+        <div class="ag-spec-row"><span class="ag-spec-label">Transmission</span><span class="ag-spec-val">${escape(vehicle.transmission?.code || 'N/A')}</span></div>
+        <div class="ag-spec-row"><span class="ag-spec-label">Front Susp.</span><span class="ag-spec-val">${escape(vehicle.chassis?.frontSuspension?.split('with')[0] || 'Unavailable')}</span></div>
+        <div class="ag-spec-row"><span class="ag-spec-label">Rear Susp.</span><span class="ag-spec-val">${escape(vehicle.chassis?.rearSuspension?.split('with')[0] || 'Unavailable')}</span></div>
+        <div class="ag-spec-row"><span class="ag-spec-label">Curb Weight</span><span class="ag-spec-val">${escape(vehicle.curbWeight || 'N/A')}</span></div>
+        <div class="ag-spec-row"><span class="ag-spec-label">Wheelbase</span><span class="ag-spec-val">${escape(vehicle.wheelbase || 'N/A')}</span></div>
       `;
     }
   },
 
-  renderSectionNav(vehicle) {
-    const navList = this.container.querySelector('#ag-nav-list');
-    const sections = [
-      { id: 'chassis', label: 'Chassis & Structural Frame' },
-      { id: 'engine', label: 'Engine & Forced Induction' },
-      { id: 'front-suspension', label: 'Front Suspension & Arms' },
-      { id: 'steering', label: 'Steering Gear & Tie Rods' },
-      { id: 'drivetrain', label: 'Transmission & Drivetrain' },
-      { id: 'brakes', label: 'Braking System (Rotors & Calipers)' },
-      { id: 'rear-suspension', label: 'Rear Axle & Suspension' },
-      { id: 'exhaust-fuel', label: 'Exhaust System & Fuel Tank' },
-      { id: 'cabin', label: 'Cabin & Ergonomic Seating' },
-      { id: 'cockpit', label: 'Cockpit, Instruments & Displays' }
-    ];
-
-    navList.innerHTML = sections.map(s => `
-      <div class="ag-nav-item" data-section="${s.id}">
-        <span class="ag-nav-dot"></span>
-        <span>${s.label}</span>
-      </div>
-    `).join('');
+  renderSectionNav() {
+    const list=this.container.querySelector('#ag-nav-list');
+    const parts=this.viewer?.asset?.registry.list() || [];
+    list.innerHTML=parts.length ? '<button type="button" class="ag-nav-item" data-clear-selection>Show complete model</button>'+parts.map(part=>
+      '<button type="button" class="ag-nav-item" data-component-id="'+escape(part.id)+'" aria-pressed="false"><span class="ag-nav-dot"></span><span>'+escape(part.name)+'<small>'+escape(part.category || 'Unmapped geometry')+'</small></span></button>'
+    ).join('') : '<p class="ag-asset-note">No mapped components loaded.</p>';
   },
 
-  async updateBlueprint() {
-    const version = this._version;
-    const request = this._diagramRequest = (this._diagramRequest || 0) + 1;
-    const { selectedVehicle, viewMode, selectedSection, selectedComponent } = this.state;
-    if (!selectedVehicle) return;
-
-    const container = this.container.querySelector('#ag-svg-container');
-    const svgMarkup = await autoClient.getVehicleDiagram(
-      selectedVehicle,
-      viewMode,
-      selectedSection,
-      selectedComponent
-    );
-    if (version !== this._version || request !== this._diagramRequest) return;
-    container.innerHTML = svgMarkup;
-
-    // Update status bar
-    const statusText = this.container.querySelector('#ag-status-text');
-    if (statusText) {
-      statusText.textContent = `${selectedVehicle.manufacturer} ${selectedVehicle.model} (${selectedVehicle.generation}) • ${viewMode.toUpperCase()} VIEW`;
+  async loadVisualization(vehicle) {
+    if(!this.viewer)return;
+    const version=this._version,request=this._assetRequest=(this._assetRequest||0)+1;
+    this.viewer.clear();this.assetMetadata=null;this.state.selectedComponent=null;this.clearInspector();this.renderSectionNav();
+    this.container.querySelector('#ag-asset-label').textContent='Loading model';
+    this.container.querySelector('#ag-asset-description').textContent='';
+    this.dispatchAssistantContext(null);
+    if(this.state.activeMobileTab!=='diag')this.handleMobileTab(this.state.activeMobileTab);
+    try {
+      const descriptor=await autoClient.getVehicleAsset(vehicle);
+      if(version!==this._version||request!==this._assetRequest)return;
+      const asset=await this.viewer.loadVehicle(descriptor);
+      if(!asset||version!==this._version||request!==this._assetRequest)return;
+      this.assetMetadata=asset.metadata;
+      const accuracy=asset.metadata.accuracy;
+      const label=accuracy==='development'?'DEVELOPMENT MODEL · Not vehicle geometry':accuracy==='representative'?'REPRESENTATIVE · Not the exact vehicle':accuracy==='generation'?'GENERATION MODEL':accuracy==='exact'?'VEHICLE-SPECIFIC MODEL':'UNVERIFIED GEOMETRY';
+      this.container.querySelector('#ag-asset-label').textContent=label;
+      this.container.querySelector('#ag-asset-description').textContent=asset.metadata.description || asset.metadata.label || 'No asset description supplied.';
+      this.container.querySelector('#ag-status-text').textContent='Drag to orbit · Scroll / pinch to zoom · Two fingers to pan';
+      const { settings,mobile }=this.viewer.pipeline;
+      const limit=mobile?settings.mobileHiddenComponents:settings.maxHiddenComponents;
+      if(asset.registry.list().length>limit)this.container.querySelector('#ag-asset-description').textContent+=' X-Ray previews up to '+limit+' components, prioritizing the selection.';
+      this.viewer.setMode(this.state.viewMode);this.renderSectionNav();
+      if(this.state.activeMobileTab!=='diag')this.handleMobileTab(this.state.activeMobileTab);
+    } catch(error) {
+      if(version!==this._version||request!==this._assetRequest)return;
+      this.container.querySelector('#ag-asset-label').textContent='MODEL UNAVAILABLE';
+      this.container.querySelector('#ag-asset-description').textContent=error.message;
     }
   },
 
-  selectSection(sectionId) {
-    this.state.selectedSection = sectionId;
-
-    // Highlight nav item
-    this.container.querySelectorAll('.ag-nav-item').forEach(item => {
-      item.classList.toggle('active', item.getAttribute('data-section') === sectionId);
+  onComponentSelection(comp) {
+    this.state.selectedComponent=comp?.id || null;
+    this.container.querySelectorAll('[data-component-id]').forEach(button=>{
+      const selected=button.dataset.componentId===comp?.id;
+      button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));
     });
-
-    // Focus on first component in this section if available
-    const comp = (this.state.selectedVehicle.components || []).find(c => c.section === sectionId);
-    if (comp) {
-      this.selectComponent(comp.id);
-    } else {
-      this.updateBlueprint();
-    }
-  },
-
-  selectComponent(compId) {
-    this.state.selectedComponent = compId;
-    const { selectedVehicle } = this.state;
-    if (!selectedVehicle) return;
-
-    const comp = (selectedVehicle.components || []).find(c => c.id === compId);
-    if (!comp) return;
-
-    // Highlight section in nav
-    if (comp.section) {
-      this.state.selectedSection = comp.section;
-      this.container.querySelectorAll('.ag-nav-item').forEach(item => {
-        item.classList.toggle('active', item.getAttribute('data-section') === comp.section);
-      });
-    }
-
-    // Re-render blueprint highlights
-    this.updateBlueprint();
-
-    // Render Inspector Panel
-    this.renderInspector(comp);
-
-    // Bridge context to Toolbox Assistant
+    if(comp)this.renderInspector(comp);else this.clearInspector();
     this.dispatchAssistantContext(comp);
+    if(this.state.activeMobileTab!=='diag')this.handleMobileTab(this.state.activeMobileTab);
   },
 
   renderInspector(comp) {
-    const emptyState = this.container.querySelector('#ag-inspector-empty');
-    const content = this.container.querySelector('#ag-inspector-content');
-    emptyState.style.display = 'none';
-    content.style.display = 'block';
+    this.container.querySelector('#ag-inspector-empty').style.display='none';
+    const content=this.container.querySelector('#ag-inspector-content');content.style.display='block';
+    const fields=[['Description',comp.description || comp.purpose],['Parent assembly',comp.parentAssembly],['Location',comp.location],['Specifications',comp.specs],['Failure modes',comp.failures],['Source',comp.source]];
+    content.innerHTML='<span class="ag-comp-badge">'+escape(comp.category || comp.subsystem || 'Unmapped geometry')+'</span><h4 class="ag-comp-name">'+escape(comp.name)+'</h4>'+fields.filter(([,value])=>value).map(([title,value])=>'<div class="ag-card-block"><h5>'+title+'</h5><p>'+escape(value)+'</p></div>').join('')+
+      (!comp.description&&!comp.purpose?'<p class="ag-asset-note">No component description was supplied with this asset.</p>':'')+
+      '<button type="button" class="ag-btn-assistant" data-ask-component>Copy context for Assistant</button>';
+    content.setAttribute('aria-live','polite');
+  },
 
-    const relatedChips = (comp.related || []).map(relId => {
-      const relComp = (this.state.selectedVehicle.components || []).find(c => c.id === relId);
-      const label = relComp ? relComp.name.split(' ')[0] : relId;
-      return `<button type="button" class="ag-chip" data-jump-comp="${relId}">${label}</button>`;
-    }).join('');
-
-    content.innerHTML = `
-      <span class="ag-comp-badge">${comp.subsystem || 'Component'}</span>
-      <h4 class="ag-comp-name">${comp.name}</h4>
-      <div class="ag-comp-location">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-        ${comp.location || 'Vehicle Assembly'}
-      </div>
-
-      <div class="ag-card-block">
-        <h5>Engineering Function</h5>
-        <p>${comp.purpose}</p>
-      </div>
-
-      <div class="ag-card-block">
-        <h5>Technical Specifications</h5>
-        <p>${comp.specs}</p>
-      </div>
-
-      <div class="ag-card-block ag-failure-box">
-        <h5>Common Failure Modes &amp; Symptoms</h5>
-        <p>${comp.failures || 'No common premature failure modes catalogued.'}</p>
-      </div>
-
-      ${relatedChips ? `
-        <div style="margin-top:12px;">
-          <h5 style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); margin:0 0 6px 0;">Related Subassemblies</h5>
-          <div class="ag-related-chips">${relatedChips}</div>
-        </div>
-      ` : ''}
-
-      <button type="button" class="ag-btn-assistant" id="ag-btn-ask-assistant">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-        Ask Assistant About This Part
-      </button>
-    `;
-
-    // Click handler for related chips
-    content.querySelectorAll('.ag-chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        const targetId = chip.getAttribute('data-jump-comp');
-        this.selectComponent(targetId);
-      });
-    });
-
-    // Ask Assistant click handler
-    const askBtn = content.querySelector('#ag-btn-ask-assistant');
-    if (askBtn) {
-      askBtn.addEventListener('click', () => {
-        const query = `Tell me more about the ${comp.name} on the ${this.state.selectedVehicle.manufacturer} ${this.state.selectedVehicle.model} (${this.state.selectedVehicle.generation}). What are the key maintenance tips?`;
-        window.dispatchEvent(new CustomEvent('toolbox:assistant:query', {
-          detail: { query, context: this.getAssistantContext(comp) }
-        }));
-      });
+  async askAssistant() {
+    const comp=this.viewer?.asset?.registry.metadata(this.state.selectedComponent);
+    if(!comp)return;
+    const context=this.getAssistantContext(comp), version=this._version;
+    window.dispatchEvent(new CustomEvent('toolbox:automobile:context',{detail:context}));
+    try {
+      await navigator.clipboard.writeText('Explain this component using only the supplied context. Do not assume the geometry is exact.\n'+JSON.stringify(context,null,2));
+      if(version!==this._version)return;
+      this.container.querySelector('#ag-status-text').textContent='Context copied. Paste it into Assistant to discuss this selection.';
+    } catch {
+      if(version!==this._version)return;
+      this.container.querySelector('#ag-status-text').textContent='Clipboard unavailable. Allow clipboard access and try again.';
     }
   },
 
@@ -1154,12 +938,16 @@ export default {
     return {
       tool: 'automobile-guide',
       vehicle: {
-        manufacturer: selectedVehicle.manufacturer,
-        model: selectedVehicle.model,
-        generation: selectedVehicle.generation,
-        platform: selectedVehicle.platform,
-        engine: selectedVehicle.engine?.code
+        make: selectedVehicle?.manufacturer,
+        manufacturer: selectedVehicle?.manufacturer,
+        model: selectedVehicle?.model,
+        generation: selectedVehicle?.generation,
+        platform: selectedVehicle?.platform,
+        year: selectedVehicle?.year || null,
+        engine: selectedVehicle?.engine?.code
       },
+      visualization: this.assetMetadata || null,
+      selectedComponent: comp || null,
       viewMode,
       section: selectedSection,
       component: comp ? {
@@ -1195,32 +983,16 @@ export default {
       const rightCol = this.container.querySelector('#ag-col-right');
       sheetBody.innerHTML = rightCol.innerHTML;
     }
+    sheetBody.querySelectorAll('[id]').forEach(element=>element.removeAttribute('id'));
   },
 
-  zoom(delta) {
-    this.state.zoom = Math.max(0.4, Math.min(3.5, this.state.zoom + delta));
-    this.applyTransform();
-  },
-
-  resetTransform() {
-    this.state.zoom = 1;
-    this.state.panX = 0;
-    this.state.panY = 0;
-    this.applyTransform();
-  },
-
+  zoom(delta) { this.viewer?.zoom(delta); },
+  resetTransform() { this.viewer?.reset(); },
   destroy() {
-    this._version = (this._version || 0) + 1;
+    this._version=(this._version||0)+1;
     clearTimeout(this._searchTimer);
-    document.removeEventListener('click', this._onOutsideClick);
-    window.removeEventListener('mousemove', this._onPanMove);
-    window.removeEventListener('mouseup', this._onPanEnd);
-  },
-
-  applyTransform() {
-    const svgContainer = this.container.querySelector('#ag-svg-container');
-    if (svgContainer) {
-      svgContainer.style.transform = `translate(${this.state.panX}px, ${this.state.panY}px) scale(${this.state.zoom})`;
-    }
+    document.removeEventListener('click',this._onOutsideClick);
+    this.container?.removeEventListener('click',this._onContainerClick);
+    this.viewer?.dispose();this.viewer=null;
   }
 };

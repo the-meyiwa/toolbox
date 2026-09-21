@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "vehicles": {},
+  "representative": {},
+  "development": {
+    "modelUrl": "/automobile/development.glb",
+    "metadata": {
+      "accuracy": "development",
+      "label": "Renderer test assembly",
+      "source": "Toolbox primitive geometry fixture",
+      "license": "CC0-1.0",
+      "description": "Simple boxes and cylinders for testing the viewer. No real vehicle geometry or mechanical layout is represented."
+    }
+  }
+}

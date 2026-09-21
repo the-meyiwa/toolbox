@@ -94,20 +94,15 @@ export class ComponentProvider {
 }
 
 export class VisualProvider {
-  /**
-   * Securely requests actual SVG/GLB assets from the backend proxy.
-   * If assets are not licensed or missing, returns an explicit error state.
-   */
-  static async getAssetUrl(vehicleId, viewMode = 'chassis') {
-    try {
-      const res = await fetch(`/api/automotive/assets?id=${encodeURIComponent(vehicleId)}&view=${encodeURIComponent(viewMode)}`);
-      if (!res.ok) {
-        return { available: false, error: 'Asset pending licensing or unavailable.' };
-      }
-      // Return blob URL or path if successful
-      return { available: true, url: `/api/automotive/assets?id=${encodeURIComponent(vehicleId)}` };
-    } catch (e) {
-      return { available: false, error: 'Asset server unreachable.' };
-    }
+  static async getVehicleAsset(vehicle) {
+    const response = await fetch('/automobile/assets.json');
+    if (!response.ok) throw new Error('The vehicle asset catalog could not be loaded.');
+    const catalog = await response.json();
+    const exact = catalog.vehicles?.[vehicle?.id];
+    const generic = catalog.representative?.[vehicle?.bodyStyle?.toLowerCase()];
+    const descriptor = exact || generic || catalog.development;
+    if (!descriptor?.modelUrl) throw new Error('No 3D asset is available for this vehicle.');
+    const metadata = { ...descriptor.metadata, accuracy: descriptor.metadata?.accuracy || (generic ? 'representative' : 'unverified') };
+    return { ...descriptor, metadata, components: metadata.accuracy === 'development' ? [] : [...(descriptor.components || []), ...(vehicle?.components || [])] };
   }
 }
