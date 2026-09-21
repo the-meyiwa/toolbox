@@ -56,7 +56,9 @@ export class TechnicalRenderer {
     }
     const renderGeometry = buffer => { renderer.setRenderTarget(buffer); renderer.clear(); renderer.render(scene,camera); };
     try {
-      for (const mesh of meshes) mesh.visible = mode !== 'isolate' || !selected || registry.byMesh.get(mesh).numericId === selected;
+      // Respect parts hidden by the viewer (layers, "hide part"); isolate narrows further.
+      const shown = new Map(original.map(({ mesh, visible }) => [mesh, visible && (mode !== 'isolate' || !selected || registry.byMesh.get(mesh).numericId === selected)]));
+      for (const mesh of meshes) mesh.visible = shown.get(mesh);
       for (const mesh of meshes) mesh.material = this.normalMaterial;
       renderGeometry(this.normal);
       for (const entry of entries) {
@@ -73,10 +75,13 @@ export class TechnicalRenderer {
       renderer.setRenderTarget(this.hidden); renderer.clear();
       this.hiddenComponentLimit = this.mobile ? this.settings.mobileHiddenComponents : this.settings.maxHiddenComponents;
       if (mode === 'xray') {
-        const candidates = [...entries].sort((a,b) => Number(b.numericId===selected)-Number(a.numericId===selected)).slice(0,this.hiddenComponentLimit);
+        const selectedEntry = entries.find(entry => entry.numericId === selected);
+        const rank = entry => (entry.numericId === selected ? 0 : entry.numericId === hovered ? 1 : selectedEntry && entry.layer && entry.layer === selectedEntry.layer ? 2 : 3);
+        const candidates = entries.filter(entry => entry.meshes.some(mesh => shown.get(mesh)))
+          .sort((a, b) => rank(a) - rank(b) || a.numericId - b.numericId).slice(0, this.hiddenComponentLimit);
         for (const mesh of meshes) { mesh.material = this.normalMaterial; mesh.visible = false; }
         for (const entry of candidates) {
-          entry.meshes.forEach(mesh => { mesh.visible=true; });
+          entry.meshes.forEach(mesh => { mesh.visible = shown.get(mesh); });
           renderGeometry(this.isolated);
           entry.meshes.forEach(mesh => { mesh.visible=false; });
           Object.assign(this.hiddenPass.uniforms.normals,{ value:this.isolated.texture });

@@ -44,6 +44,8 @@ function nodeSignature(node) {
   return [node.getName(), mesh?.getName(), ...materials].filter(Boolean).join(' | ');
 }
 
+const PROCEDURAL_TOOL = 'scripts/build-procedural-vehicle.mjs';
+
 function assertDefinition(definition) {
   for (const field of ['id', 'make', 'model', 'displayName', 'accuracy']) {
     if (!definition.vehicle?.[field]) throw new Error(`Definition requires vehicle.${field}.`);
@@ -51,7 +53,9 @@ function assertDefinition(definition) {
   for (const field of ['spdx', 'creator', 'sourceUrl', 'licenseUrl', 'attribution']) {
     if (!definition.license?.[field]) throw new Error(`Definition requires license.${field}.`);
   }
-  if (!['CC0-1.0', 'CC-BY-4.0'].includes(definition.license.spdx)) {
+  // Toolbox-original procedural packages carry no third-party geometry.
+  const procedural = definition.license.spdx === 'LicenseRef-Toolbox-Original' && definition.ingestion?.tool === PROCEDURAL_TOOL;
+  if (!procedural && !['CC0-1.0', 'CC-BY-4.0'].includes(definition.license.spdx)) {
     throw new Error('Ingestion accepts only CC0-1.0 or CC-BY-4.0 assets.');
   }
 }

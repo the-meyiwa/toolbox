@@ -15,21 +15,32 @@ export class VehicleResolver {
     const catalog = await loadCatalog();
     const terms = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
     return catalog.vehicles.filter(vehicle => {
-      const haystack = [vehicle.id, vehicle.make, vehicle.model, vehicle.year, ...(vehicle.aliases || [])].join(' ').toLowerCase();
+      const haystack = [vehicle.id, vehicle.make, vehicle.model, vehicle.year, vehicle.years, vehicle.generation, ...(vehicle.aliases || [])].join(' ').toLowerCase();
       return terms.every(term => haystack.includes(term));
     }).map(vehicle => ({
       id: vehicle.id, manufacturer: vehicle.make, model: vehicle.model,
       generation: vehicle.generation || 'Unavailable', variant: vehicle.variant || 'Unavailable',
-      years: vehicle.year ? String(vehicle.year) : 'Unavailable', bodyStyle: vehicle.bodyStyle || 'Unavailable',
-      status: 'toolbox-package', manifestUrl: vehicle.manifest
+      years: vehicle.years || (vehicle.year ? String(vehicle.year) : 'Unavailable'), bodyStyle: vehicle.bodyStyle || 'Unavailable',
+      status: 'toolbox-package', manifestUrl: vehicle.manifest, interactive: Boolean(vehicle.specSheet)
     }));
   }
 }
 
+const specSheets = new Map();
 export class TechnicalProvider {
   static async getSpecs(vehicleId) {
     const catalog = await loadCatalog();
-    return catalog.vehicles.find(item => item.id === vehicleId)?.specifications || {};
+    const entry = catalog.vehicles.find(item => item.id === vehicleId);
+    if (!entry) return {};
+    const specs = { ...(entry.specifications || {}) };
+    if (entry.specSheet) {
+      if (!specSheets.has(entry.specSheet)) {
+        specSheets.set(entry.specSheet, fetch(entry.specSheet).then(response => (response.ok ? response.json() : null)).catch(() => null));
+      }
+      const sheet = await specSheets.get(entry.specSheet);
+      if (sheet?.groups) specs.specSheet = sheet;
+    }
+    return specs;
   }
 }
 

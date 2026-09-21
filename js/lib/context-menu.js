@@ -16,13 +16,14 @@ let activeMenu = null;
  * @param {string} [options.title] - Optional header title
  * @param {Array<Object>} options.items - Menu action items
  */
-export function openContextMenu({ x, y, title = '', items = [] }) {
+export function openContextMenu({ x, y, title = '', items = [], className = '', focusFirst = false, label = '' }) {
   closeContextMenu();
 
   const menu = document.createElement('div');
   menu.id = 'toolbox-context-menu';
-  menu.className = 'finder-context-menu';
+  menu.className = `finder-context-menu ${className}`.trim();
   menu.setAttribute('role', 'menu');
+  if (label || title) menu.setAttribute('aria-label', label || title);
 
   let html = '';
   if (title) {
@@ -38,9 +39,13 @@ export function openContextMenu({ x, y, title = '', items = [] }) {
       html += item.customHtml;
       return;
     }
+    if (item.heading) {
+      html += `<div class="finder-menu-heading" role="presentation">${escapeHtml(item.heading)}</div>`;
+      return;
+    }
 
     html += `
-      <div class="finder-menu-item ${item.destructive ? 'destructive' : ''}" data-item-index="${index}" role="menuitem" tabindex="0">
+      <div class="finder-menu-item ${item.destructive ? 'destructive' : ''}" data-item-index="${index}" role="menuitem" tabindex="0"${item.disabled ? ' aria-disabled="true"' : ''}${item.hint ? ` title="${escapeHtml(item.hint)}"` : ''}>
         <div class="finder-menu-item-left">
           ${item.icon ? `<span class="finder-menu-icon">${item.icon}</span>` : ''}
           <span class="finder-menu-label">${escapeHtml(item.label || '')}</span>
@@ -72,6 +77,7 @@ export function openContextMenu({ x, y, title = '', items = [] }) {
   menu.style.left = `${left}px`;
   menu.style.top = `${top}px`;
   menu.style.visibility = 'visible';
+  if (focusFirst) menu.querySelector('[role="menuitem"]:not([aria-disabled="true"])')?.focus();
 
   // Event handlers
   const onMenuClick = (e) => {
@@ -79,7 +85,7 @@ export function openContextMenu({ x, y, title = '', items = [] }) {
     if (itemEl) {
       const idx = parseInt(itemEl.dataset.itemIndex, 10);
       const item = items[idx];
-      if (item && typeof item.action === 'function') {
+      if (item && !item.disabled && typeof item.action === 'function') {
         closeContextMenu();
         item.action();
       }

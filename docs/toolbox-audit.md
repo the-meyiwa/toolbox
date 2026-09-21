@@ -55,5 +55,7 @@ exercised with a live account.
 - Add Icecat credentials and confirm account entitlements with exact product IDs.
 - Payment Hub remains intentionally unavailable until a real merchant receiving
   integration exists. It no longer fabricates account numbers or payment success.
-- Automobile Guide has a working reference shell but still needs a licensed vehicle
-  specification/diagram provider for complete model-level coverage.
+- Automobile Guide now ships interactive procedural packages for the 2013 and
+  2014–2016 Toyota Corolla (body, cabin, engine bay, chassis; 55 articulations each).
+  Other models still depend on licensed source geometry being added through the
+  vehicle-package pipeline.

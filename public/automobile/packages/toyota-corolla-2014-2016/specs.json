@@ -1,0 +1,260 @@
+{
+  "schemaVersion": 1,
+  "vehicle": "2014–2016 Toyota Corolla",
+  "generation": "E170",
+  "groups": [
+    {
+      "title": "Overview",
+      "rows": [
+        [
+          "Model years",
+          "2014–2016"
+        ],
+        [
+          "Generation",
+          "E170 (North America)"
+        ],
+        [
+          "Platform",
+          "Toyota New MC platform"
+        ],
+        [
+          "Body",
+          "4-door sedan, front-engine front-wheel drive"
+        ]
+      ]
+    },
+    {
+      "title": "Engine",
+      "rows": [
+        [
+          "Code",
+          "2ZR-FE"
+        ],
+        [
+          "Type",
+          "1.8 L (1,798 cc) inline-4"
+        ],
+        [
+          "Bore × stroke",
+          "80.5 mm × 88.3 mm"
+        ],
+        [
+          "Compression",
+          "10.0 : 1"
+        ],
+        [
+          "Valvetrain",
+          "DOHC 16-valve, Dual VVT-i, timing chain"
+        ],
+        [
+          "Output",
+          "132 hp (98 kW) @ 6,000 rpm · 128 lb-ft (174 N·m) @ 4,400 rpm"
+        ],
+        [
+          "LE Eco",
+          "2ZR-FAE with Valvematic on LE Eco grades — 140 hp, 10.5 : 1 compression"
+        ],
+        [
+          "Firing order",
+          "1-3-4-2"
+        ]
+      ]
+    },
+    {
+      "title": "Drivetrain & chassis",
+      "rows": [
+        [
+          "Transmissions",
+          "6-speed manual (L, S Plus) · 4-speed automatic (L) · CVTi-S continuously variable (LE, LE Eco, S; S adds paddle shifters with 7 simulated steps)"
+        ],
+        [
+          "Suspension",
+          "MacPherson strut front · torsion-beam rear"
+        ],
+        [
+          "Steering",
+          "Rack and pinion with electric power assistance"
+        ],
+        [
+          "Brakes",
+          "Ventilated front discs (275 mm). Rear drums (229 mm) on most grades; solid rear discs (259 mm) on S Plus / S Premium"
+        ],
+        [
+          "Tyres",
+          "195/65R15, 205/55R16 or 215/45R17 depending on grade (15-inch steel to 17-inch alloy)"
+        ],
+        [
+          "Wheel fastening",
+          "5 × 100 mm, M12 × 1.5, 76 lb-ft"
+        ]
+      ]
+    },
+    {
+      "title": "Dimensions",
+      "rows": [
+        [
+          "Length",
+          "182.6 in (4,638 mm)"
+        ],
+        [
+          "Width",
+          "69.9 in (1,775 mm)"
+        ],
+        [
+          "Height",
+          "57.3 in (1,455 mm)"
+        ],
+        [
+          "Wheelbase",
+          "106.3 in (2,700 mm)"
+        ],
+        [
+          "Track F / R",
+          "60.3 in / 60.4 in"
+        ],
+        [
+          "Curb weight",
+          "About 2,800 lb (LE / S, Edmunds); varies by grade"
+        ],
+        [
+          "Turning circle",
+          "35.6 ft"
+        ],
+        [
+          "Boot volume",
+          "13.0 cu ft"
+        ],
+        [
+          "Drag coefficient",
+          "0.29 (LE / S)"
+        ]
+      ]
+    },
+    {
+      "title": "Capacities & economy",
+      "rows": [
+        [
+          "Fuel tank",
+          "13.2 US gal (50 L), regular unleaded"
+        ],
+        [
+          "Engine oil",
+          "SAE 0W-20, 4.4 US qt (4.2 L) with filter"
+        ],
+        [
+          "Oil filter",
+          "Toyota 04152-YZZA1 element"
+        ],
+        [
+          "Coolant",
+          "Toyota Super Long Life Coolant (pink)"
+        ],
+        [
+          "Spark plugs",
+          "Iridium, 1.1 mm gap"
+        ],
+        [
+          "EPA economy",
+          "LE CVT: 28 city / 37 highway / 31 combined mpg; LE Eco up to 42 mpg highway"
+        ]
+      ]
+    },
+    {
+      "title": "Cabin & safety",
+      "rows": [
+        [
+          "Airbags",
+          "Eight: driver and front-passenger front, driver knee, front-passenger seat-cushion, front seat-mounted side, and side curtains"
+        ],
+        [
+          "Headlamps",
+          "LED low beams with halogen high beams and LED daytime running lights (standard)"
+        ],
+        [
+          "Audio",
+          "L: four-speaker audio with USB. LE and above: Entune Audio with 6.1-inch touchscreen, six speakers and backup camera"
+        ],
+        [
+          "Rear seat",
+          "60/40 split folding"
+        ],
+        [
+          "Front headroom",
+          "38.3 in"
+        ],
+        [
+          "Front legroom",
+          "42.3 in"
+        ],
+        [
+          "Front shoulder room",
+          "54.8 in"
+        ],
+        [
+          "Front hip room",
+          "53.0 in"
+        ],
+        [
+          "Rear headroom",
+          "37.1 in"
+        ],
+        [
+          "Rear legroom",
+          "41.4 in"
+        ],
+        [
+          "Rear shoulder room",
+          "54.8 in"
+        ],
+        [
+          "Rear hip room",
+          "43.9 in"
+        ]
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "label": "Wikipedia — Toyota Corolla (E170)",
+      "url": "https://en.wikipedia.org/wiki/Toyota_Corolla_(E170)"
+    },
+    {
+      "label": "Edmunds — 2014 Corolla features & specs",
+      "url": "https://www.edmunds.com/toyota/corolla/2014/features-specs/"
+    },
+    {
+      "label": "Automotive Fleet — 2014 Corolla lineup and standard features",
+      "url": "https://www.automotive-fleet.com/news/toyota-details-msrp-and-standard-features-for-2014-corolla-model-lineup"
+    },
+    {
+      "label": "Cars.com — 2014 Corolla trim levels explained",
+      "url": "https://www.cars.com/articles/2014-toyota-corolla-explaining-the-trim-levels-1420663045628/"
+    },
+    {
+      "label": "Wikipedia — Toyota ZR engine",
+      "url": "https://en.wikipedia.org/wiki/Toyota_ZR_engine"
+    },
+    {
+      "label": "Toyota-Club.net — US Corolla (2013–2019) fluids & capacities",
+      "url": "https://www.toyota-club.net/files/techdata/ttx/corolla_170u.htm"
+    },
+    {
+      "label": "OilChangeDIY — 2015 Corolla oil & fluid specifications",
+      "url": "https://www.oilchangediy.com/vehicles/toyota/corolla/2015"
+    },
+    {
+      "label": "TorqueSpec Database — 2003–2019 Corolla torque specs",
+      "url": "https://torque-spec-database.com/2003-2019-toyota-corolla-torque-specs/"
+    },
+    {
+      "label": "PlugSpecs — Toyota Corolla spark plugs",
+      "url": "https://plugspecs.com/best-spark-plugs-for-toyota-corolla/"
+    },
+    {
+      "label": "Avtoreference — 2014 Corolla wheel & tyre fitment",
+      "url": "https://avtoreference.com/en/auto/toyota/corolla/2014/"
+    }
+  ],
+  "disclaimer": "Figures come from the public sources listed. Grade, market and production-date differences apply; confirm against the owner’s manual or a dealer before servicing."
+}

@@ -1,4 +1,4 @@
-import { Box3, Group, Vector3 } from 'three';
+import { Box3, Group, Vector3, DoubleSide } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { ComponentRegistry } from './component-registry.js';
@@ -31,7 +31,10 @@ export class VehicleLoader {
     root.add(model);
     let triangles = 0;
     model.traverse(node => {
-      if (node.isMesh) triangles += (node.geometry.index?.count || node.geometry.attributes.position?.count || 0) / 3;
+      if (!node.isMesh) return;
+      triangles += (node.geometry.index?.count || node.geometry.attributes.position?.count || 0) / 3;
+      // Technical rendering replaces materials; picking must not depend on source winding.
+      for (const material of [].concat(node.material || [])) material.side = DoubleSide;
     });
     if (triangles > this.maxTriangles) {
       disposeObject(root);

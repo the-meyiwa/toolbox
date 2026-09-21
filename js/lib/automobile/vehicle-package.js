@@ -38,7 +38,37 @@ export function validateVehiclePackage(manifest) {
     requireString(meshName, 'meshMappings key');
     if (!componentIds.has(componentId)) throw new Error(`Mesh ${meshName} references unknown component ${componentId}.`);
   }
+  validateArticulations(manifest.articulations, componentIds);
   return manifest;
+}
+
+const isVector = value => Array.isArray(value) && value.length === 3 && value.every(Number.isFinite);
+
+/** Optional articulations: named pivots that open, slide or detach. */
+export function validateArticulations(articulations, componentIds) {
+  if (articulations === undefined) return;
+  if (!Array.isArray(articulations)) throw new Error('Vehicle package articulations must be an array.');
+  const ids = new Set();
+  for (const item of articulations) {
+    requireString(item?.id, 'articulations[].id'); requireString(item.label, 'articulations[].label');
+    if (ids.has(item.id)) throw new Error(`Vehicle package repeats articulation ${item.id}.`);
+    ids.add(item.id);
+    if (!Array.isArray(item.transforms) || !item.transforms.length) throw new Error(`Articulation ${item.id} has no transforms.`);
+    for (const transform of item.transforms) {
+      requireString(transform.node, 'articulations[].transforms[].node');
+      const rotate = transform.rotate, translate = transform.translate;
+      if (!rotate && !translate) throw new Error(`Articulation ${item.id} transform must rotate or translate.`);
+      if (rotate && (!isVector(rotate.axis) || !Number.isFinite(rotate.degrees))) throw new Error(`Articulation ${item.id} has an invalid rotation.`);
+      if (translate && !isVector(translate)) throw new Error(`Articulation ${item.id} has an invalid translation.`);
+    }
+    for (const componentId of item.components || []) {
+      if (!componentIds.has(componentId)) throw new Error(`Articulation ${item.id} references unknown component ${componentId}.`);
+    }
+  }
+  for (const item of articulations) for (const requirement of item.requires || []) {
+    if (!ids.has(requirement.id)) throw new Error(`Articulation ${item.id} requires unknown articulation ${requirement.id}.`);
+    if (typeof requirement.state !== 'boolean') throw new Error(`Articulation ${item.id} has an invalid requirement state.`);
+  }
 }
 
 export async function loadVehiclePackage(manifestUrl, preferredLayer = 'exterior') {
@@ -54,12 +84,15 @@ export async function loadVehiclePackage(manifestUrl, preferredLayer = 'exterior
     return [meshName, {
       id: component.id, name: component.label, category: component.category || 'Uncategorized',
       description: component.description, source: component.source,
-      availability: component.availability || 'available'
+      availability: component.availability || 'available', layer: component.layer
     }];
   }));
   return {
     modelUrl: resolveAssetUrl(manifestUrl, layer.glb), componentMap,
     components: manifest.components.map(component => ({ ...component, name: component.label })),
+    articulations: manifest.articulations || [],
+    layerGroups: manifest.layerGroups || [],
+    specSheetUrl: manifest.specSheet ? resolveAssetUrl(manifestUrl, manifest.specSheet) : null,
     metadata: {
       accuracy: manifest.vehicle.accuracy, label: manifest.vehicle.displayName,
       description: manifest.notes || 'No package notes supplied.', source: manifest.license.sourceUrl,
@@ -67,7 +100,9 @@ export async function loadVehiclePackage(manifestUrl, preferredLayer = 'exterior
       packageVersion: manifest.packageVersion, layer: layer.id,
       availableLayers: manifest.layers.filter(item => item.available !== false).map(item => item.id),
       unavailableLayers: manifest.layers.filter(item => item.available === false).map(item => item.id),
-      attribution: manifest.license.attribution
+      attribution: manifest.license.attribution,
+      notes: manifest.notes,
+      articulated: Boolean(manifest.articulations?.length)
     },
     manifest
   };

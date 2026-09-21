@@ -1,0 +1,232 @@
+{
+  "schemaVersion": 1,
+  "vehicle": "2013 Toyota Corolla",
+  "generation": "E140",
+  "groups": [
+    {
+      "title": "Overview",
+      "rows": [
+        [
+          "Model years",
+          "2013"
+        ],
+        [
+          "Generation",
+          "E140 (North America)"
+        ],
+        [
+          "Platform",
+          "Toyota MC platform"
+        ],
+        [
+          "Body",
+          "4-door sedan, front-engine front-wheel drive"
+        ]
+      ]
+    },
+    {
+      "title": "Engine",
+      "rows": [
+        [
+          "Code",
+          "2ZR-FE"
+        ],
+        [
+          "Type",
+          "1.8 L (1,798 cc) inline-4"
+        ],
+        [
+          "Bore × stroke",
+          "80.5 mm × 88.3 mm"
+        ],
+        [
+          "Compression",
+          "10.0 : 1"
+        ],
+        [
+          "Valvetrain",
+          "DOHC 16-valve, Dual VVT-i, timing chain"
+        ],
+        [
+          "Output",
+          "132 hp (98 kW) @ 6,000 rpm · 128 lb-ft (174 N·m) @ 4,400 rpm"
+        ],
+        [
+          "Firing order",
+          "1-3-4-2"
+        ]
+      ]
+    },
+    {
+      "title": "Drivetrain & chassis",
+      "rows": [
+        [
+          "Transmissions",
+          "5-speed manual or 4-speed automatic with ECT-i"
+        ],
+        [
+          "Suspension",
+          "MacPherson strut front · torsion-beam rear"
+        ],
+        [
+          "Steering",
+          "Rack and pinion with electric power assistance"
+        ],
+        [
+          "Brakes",
+          "Front discs with rear drums (9.0 in / 229 mm), four-wheel ABS"
+        ],
+        [
+          "Tyres",
+          "P195/65R15 on 15-inch steel wheels (listed for the 2013 S automatic); fitment varies by grade"
+        ],
+        [
+          "Wheel fastening",
+          "5 × 100 mm, M12 × 1.5, 76 lb-ft"
+        ]
+      ]
+    },
+    {
+      "title": "Dimensions",
+      "rows": [
+        [
+          "Length",
+          "179.3 in (base) / 180.0 in (S)"
+        ],
+        [
+          "Width",
+          "69.3–69.4 in"
+        ],
+        [
+          "Height",
+          "57.7 in (1,465 mm)"
+        ],
+        [
+          "Wheelbase",
+          "102.4 in (2,600 mm)"
+        ],
+        [
+          "Track F / R",
+          "60.2 in / 60.4 in"
+        ],
+        [
+          "Curb weight",
+          "2,635–2,767 lb depending on grade"
+        ],
+        [
+          "Turning circle",
+          "35.4 ft"
+        ],
+        [
+          "Boot volume",
+          "12.3 cu ft"
+        ],
+        [
+          "Drag coefficient",
+          "Not published in the cited sources"
+        ]
+      ]
+    },
+    {
+      "title": "Capacities & economy",
+      "rows": [
+        [
+          "Fuel tank",
+          "13.2 US gal (50 L), regular unleaded"
+        ],
+        [
+          "Engine oil",
+          "SAE 0W-20, 4.4 US qt (4.2 L) with filter"
+        ],
+        [
+          "Oil filter",
+          "Toyota 04152-YZZA1 element"
+        ],
+        [
+          "Coolant",
+          "Toyota Super Long Life Coolant (pink)"
+        ],
+        [
+          "Spark plugs",
+          "Iridium, 1.1 mm gap"
+        ],
+        [
+          "EPA economy",
+          "4-speed automatic: 26 city / 34 highway / 29 combined mpg"
+        ]
+      ]
+    },
+    {
+      "title": "Cabin & safety",
+      "rows": [
+        [
+          "Airbags",
+          "Dual front, front seat-mounted side-impact, and side-curtain airbags"
+        ],
+        [
+          "Headlamps",
+          "Halogen headlamps"
+        ],
+        [
+          "Audio",
+          "Grade-dependent head unit (AM/FM/CD with USB on most grades)"
+        ],
+        [
+          "Rear seat",
+          "60/40 split folding"
+        ],
+        [
+          "Front headroom",
+          "38.8 in"
+        ],
+        [
+          "Front legroom",
+          "41.7 in"
+        ],
+        [
+          "Rear headroom",
+          "37.2 in"
+        ],
+        [
+          "Rear legroom",
+          "36.3 in"
+        ]
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "label": "Wikipedia — Toyota Corolla (E140)",
+      "url": "https://en.wikipedia.org/wiki/Toyota_Corolla_(E140)"
+    },
+    {
+      "label": "CarSpecs — 2013 Corolla S specifications",
+      "url": "https://www.carspecs.us/cars/2013/toyota/corolla/31216"
+    },
+    {
+      "label": "Wikipedia — Toyota ZR engine",
+      "url": "https://en.wikipedia.org/wiki/Toyota_ZR_engine"
+    },
+    {
+      "label": "Toyota-Club.net — US Corolla (2013–2019) fluids & capacities",
+      "url": "https://www.toyota-club.net/files/techdata/ttx/corolla_170u.htm"
+    },
+    {
+      "label": "OilChangeDIY — 2015 Corolla oil & fluid specifications",
+      "url": "https://www.oilchangediy.com/vehicles/toyota/corolla/2015"
+    },
+    {
+      "label": "TorqueSpec Database — 2003–2019 Corolla torque specs",
+      "url": "https://torque-spec-database.com/2003-2019-toyota-corolla-torque-specs/"
+    },
+    {
+      "label": "PlugSpecs — Toyota Corolla spark plugs",
+      "url": "https://plugspecs.com/best-spark-plugs-for-toyota-corolla/"
+    },
+    {
+      "label": "Avtoreference — 2014 Corolla wheel & tyre fitment",
+      "url": "https://avtoreference.com/en/auto/toyota/corolla/2014/"
+    }
+  ],
+  "disclaimer": "Figures come from the public sources listed. Grade, market and production-date differences apply; confirm against the owner’s manual or a dealer before servicing."
+}

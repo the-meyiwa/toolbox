@@ -3,18 +3,344 @@
   "$id": "https://toolbox.local/schemas/vehicle-package-v1.json",
   "title": "Toolbox Vehicle Package manifest",
   "type": "object",
-  "required": ["schemaVersion", "packageVersion", "vehicle", "license", "layers", "components", "meshMappings"],
+  "required": [
+    "schemaVersion",
+    "packageVersion",
+    "vehicle",
+    "license",
+    "layers",
+    "components",
+    "meshMappings"
+  ],
   "properties": {
-    "schemaVersion": { "const": 1 },
-    "packageVersion": { "type": "string", "minLength": 1 },
-    "vehicle": { "type": "object", "required": ["id", "make", "model", "displayName", "accuracy"], "properties": { "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" }, "make": { "type": "string", "minLength": 1 }, "model": { "type": "string", "minLength": 1 }, "displayName": { "type": "string", "minLength": 1 }, "year": { "type": ["integer", "null"] }, "accuracy": { "enum": ["exact", "generation", "representative", "development"] } }, "additionalProperties": true },
-    "license": { "type": "object", "required": ["spdx", "creator", "sourceUrl", "licenseUrl", "attribution"], "properties": { "spdx": { "type": "string", "minLength": 1 }, "creator": { "type": "string", "minLength": 1 }, "sourceUrl": { "type": "string", "format": "uri" }, "licenseUrl": { "type": "string", "format": "uri" }, "attribution": { "type": "string", "minLength": 1 } } },
-    "layers": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["id", "available"], "properties": { "id": { "type": "string", "minLength": 1 }, "available": { "type": "boolean" }, "glb": { "type": "string" }, "triangles": { "type": "integer", "minimum": 1 }, "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" } }, "allOf": [{ "if": { "properties": { "available": { "const": true } } }, "then": { "required": ["glb", "triangles", "sha256"] } }] } },
-    "components": { "type": "array", "items": { "type": "object", "required": ["id", "label", "availability"], "properties": { "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_]*$" }, "label": { "type": "string", "minLength": 1 }, "category": { "type": "string" }, "description": { "type": "string" }, "availability": { "enum": ["available", "geometry-only", "unavailable"] } } } },
-    "meshMappings": { "type": "object", "additionalProperties": { "type": "string" } },
-    "unmappedMeshes": { "type": "array", "items": { "type": "string" } },
-    "notes": { "type": "string" },
-    "ingestion": { "type": "object" }
+    "schemaVersion": {
+      "const": 1
+    },
+    "packageVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "vehicle": {
+      "type": "object",
+      "required": [
+        "id",
+        "make",
+        "model",
+        "displayName",
+        "accuracy"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "make": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "year": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "accuracy": {
+          "enum": [
+            "exact",
+            "generation",
+            "representative",
+            "development"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "license": {
+      "type": "object",
+      "required": [
+        "spdx",
+        "creator",
+        "sourceUrl",
+        "licenseUrl",
+        "attribution"
+      ],
+      "properties": {
+        "spdx": {
+          "type": "string",
+          "minLength": 1
+        },
+        "creator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourceUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "licenseUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "attribution": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "layers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "available"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "glb": {
+            "type": "string"
+          },
+          "triangles": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "available": {
+                  "const": true
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "glb",
+                "triangles",
+                "sha256"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "availability"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_]*$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "category": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "availability": {
+            "enum": [
+              "available",
+              "geometry-only",
+              "unavailable"
+            ]
+          },
+          "layer": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "meshMappings": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "unmappedMeshes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "notes": {
+      "type": "string"
+    },
+    "ingestion": {
+      "type": "object"
+    },
+    "layerGroups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "label"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "specSheet": {
+      "type": "string",
+      "description": "Relative URL of a grouped specification sheet (specs.json)."
+    },
+    "articulations": {
+      "type": "array",
+      "description": "Optional moving and removable parts. Each transform acts on a named pivot node whose origin is the real hinge or slide origin.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "transforms"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_]*$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "group": {
+            "type": "string"
+          },
+          "exclusive": {
+            "type": "string",
+            "description": "Only one articulation per exclusive group can be active."
+          },
+          "duration": {
+            "type": "number",
+            "minimum": 0
+          },
+          "actions": {
+            "type": "object",
+            "properties": {
+              "on": {
+                "type": "string"
+              },
+              "off": {
+                "type": "string"
+              }
+            }
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "requires": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "state"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "boolean"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "transforms": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "node"
+              ],
+              "properties": {
+                "node": {
+                  "type": "string",
+                  "pattern": "^tbx_pivot_[a-z0-9_]+$"
+                },
+                "rotate": {
+                  "type": "object",
+                  "required": [
+                    "axis",
+                    "degrees"
+                  ],
+                  "properties": {
+                    "axis": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      },
+                      "minItems": 3,
+                      "maxItems": 3
+                    },
+                    "degrees": {
+                      "type": "number"
+                    }
+                  }
+                },
+                "translate": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
+                },
+                "delay": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 0.9
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   },
   "additionalProperties": true
 }

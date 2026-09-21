@@ -1,7 +1,79 @@
 {
   "schemaVersion": 1,
-  "defaultVehicleId": "ford-mustang-gt-2005",
+  "defaultVehicleId": "toyota-corolla-2014-2016",
   "vehicles": [
+    {
+      "id": "toyota-corolla-2014-2016",
+      "make": "Toyota",
+      "model": "Corolla",
+      "year": null,
+      "years": "2014–2016",
+      "generation": "Eleventh generation (E170, North America)",
+      "variant": "Sedan · L / LE / LE Eco / S grades",
+      "bodyStyle": "Sedan",
+      "aliases": [
+        "Corolla",
+        "Toyota Corolla",
+        "E170",
+        "ZRE172",
+        "2014",
+        "2015",
+        "2016",
+        "Corolla 2014",
+        "Corolla 2015",
+        "Corolla 2016",
+        "Corolla LE",
+        "Corolla S"
+      ],
+      "manifest": "/automobile/packages/toyota-corolla-2014-2016/manifest.json",
+      "specSheet": "/automobile/packages/toyota-corolla-2014-2016/specs.json",
+      "specifications": {
+        "bodyStyle": "Sedan",
+        "layout": "Front-engine, front-wheel drive",
+        "engine": {
+          "code": "2ZR-FE 1.8 L I4 (2ZR-FAE on LE Eco)"
+        },
+        "transmission": {
+          "code": "6MT · 4AT (L) · CVTi-S"
+        },
+        "curbWeight": "About 2,800 lb (LE / S)",
+        "wheelbase": "106.3 in (2,700 mm)"
+      }
+    },
+    {
+      "id": "toyota-corolla-2013",
+      "make": "Toyota",
+      "model": "Corolla",
+      "year": 2013,
+      "years": "2013",
+      "generation": "Tenth generation (E140, North America)",
+      "variant": "Sedan · L / LE / S grades",
+      "bodyStyle": "Sedan",
+      "aliases": [
+        "Corolla",
+        "Toyota Corolla",
+        "E140",
+        "ZRE142",
+        "2013",
+        "Corolla 2013",
+        "Corolla LE",
+        "Corolla S"
+      ],
+      "manifest": "/automobile/packages/toyota-corolla-2013/manifest.json",
+      "specSheet": "/automobile/packages/toyota-corolla-2013/specs.json",
+      "specifications": {
+        "bodyStyle": "Sedan",
+        "layout": "Front-engine, front-wheel drive",
+        "engine": {
+          "code": "2ZR-FE 1.8 L I4"
+        },
+        "transmission": {
+          "code": "5MT · 4AT"
+        },
+        "curbWeight": "2,635–2,767 lb",
+        "wheelbase": "102.4 in (2,600 mm)"
+      }
+    },
     {
       "id": "ford-mustang-gt-2005",
       "make": "Ford",
@@ -10,9 +82,14 @@
       "generation": "Fifth generation (S197)",
       "variant": "GT",
       "bodyStyle": "Coupe",
-      "aliases": ["Mustang", "S197"],
+      "aliases": [
+        "Mustang",
+        "S197"
+      ],
       "manifest": "/automobile/packages/ford-mustang-gt-2005/manifest.json",
-      "specifications": { "bodyStyle": "Coupe" }
+      "specifications": {
+        "bodyStyle": "Coupe"
+      }
     },
     {
       "id": "tesla-model-3-2018",
@@ -22,9 +99,14 @@
       "generation": "First generation",
       "variant": "Unspecified",
       "bodyStyle": "Sedan",
-      "aliases": ["Model 3", "Tesla 3"],
+      "aliases": [
+        "Model 3",
+        "Tesla 3"
+      ],
       "manifest": "/automobile/packages/tesla-model-3-2018/manifest.json",
-      "specifications": { "bodyStyle": "Sedan" }
+      "specifications": {
+        "bodyStyle": "Sedan"
+      }
     },
     {
       "id": "bmw-m4-competition",
@@ -33,9 +115,14 @@
       "generation": "Unspecified by source",
       "variant": "M Package",
       "bodyStyle": "Coupe",
-      "aliases": ["M4", "BMW M4"],
+      "aliases": [
+        "M4",
+        "BMW M4"
+      ],
       "manifest": "/automobile/packages/bmw-m4-competition/manifest.json",
-      "specifications": { "bodyStyle": "Coupe" }
+      "specifications": {
+        "bodyStyle": "Coupe"
+      }
     }
   ]
 }
