@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "packageVersion": "1.0.0",
+  "vehicle": {
+    "id": "bmw-m4-competition",
+    "make": "BMW",
+    "model": "M4 Competition",
+    "displayName": "BMW M4 Competition",
+    "generation": "Unspecified by source",
+    "variant": "M Package",
+    "bodyStyle": "Coupe",
+    "accuracy": "representative"
+  },
+  "license": {
+    "spdx": "CC-BY-4.0",
+    "creator": "SRT Performance",
+    "sourceUrl": "https://sketchfab.com/3d-models/bmw-m4-competition-m-package-5c0a2dafb1ad408d9fc9eeef9aee531b",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "BMW M4 Competition M Package by SRT Performance, licensed CC BY 4.0",
+    "modifications": "Converted to Toolbox Vehicle Package; materials and textures removed; geometry optimized; semantic node tags added."
+  },
+  "layers": [
+    {
+      "id": "exterior",
+      "glb": "vehicle.glb",
+      "available": true,
+      "triangles": 206593,
+      "sha256": "3378499dabc0fd544982b599b720933e0eb450cae768711ab446483b8951eb9f"
+    },
+    {
+      "id": "mechanical",
+      "available": false
+    }
+  ],
+  "components": [
+    {
+      "id": "unmapped_geometry",
+      "label": "Unmapped geometry",
+      "category": "Unmapped geometry",
+      "availability": "geometry-only",
+      "source": "https://sketchfab.com/3d-models/bmw-m4-competition-m-package-5c0a2dafb1ad408d9fc9eeef9aee531b"
+    },
+    {
+      "id": "grille",
+      "label": "Front grille",
+      "category": "Body",
+      "availability": "available",
+      "source": "https://sketchfab.com/3d-models/bmw-m4-competition-m-package-5c0a2dafb1ad408d9fc9eeef9aee531b"
+    },
+    {
+      "id": "radiator_geometry",
+      "label": "Source-labelled radiator geometry",
+      "category": "Cooling",
+      "availability": "available",
+      "source": "https://sketchfab.com/3d-models/bmw-m4-competition-m-package-5c0a2dafb1ad408d9fc9eeef9aee531b"
+    },
+    {
+      "id": "interior",
+      "label": "Interior geometry",
+      "category": "Cabin",
+      "availability": "available",
+      "source": "https://sketchfab.com/3d-models/bmw-m4-competition-m-package-5c0a2dafb1ad408d9fc9eeef9aee531b"
+    },
+    {
+      "id": "headlights",
+      "label": "Headlights",
+      "category": "Lighting",
+      "availability": "available",
+      "source": "https://sketchfab.com/3d-models/bmw-m4-competition-m-package-5c0a2dafb1ad408d9fc9eeef9aee531b"
+    },
+    {
+      "id": "dashboard",
+      "label": "Dashboard",
+      "category": "Cabin",
+      "availability": "available",
+      "source": "https://sketchfab.com/3d-models/bmw-m4-competition-m-package-5c0a2dafb1ad408d9fc9eeef9aee531b"
+    },
+    {
+      "id": "rear_lights",
+      "label": "Rear lights",
+      "category": "Lighting",
+      "availability": "available",
+      "source": "https://sketchfab.com/3d-models/bmw-m4-competition-m-package-5c0a2dafb1ad408d9fc9eeef9aee531b"
+    },
+    {
+      "id": "engine_geometry",
+      "label": "Source-labelled engine geometry",
+      "category": "Powertrain",
+      "availability": "available",
+      "source": "https://sketchfab.com/3d-models/bmw-m4-competition-m-package-5c0a2dafb1ad408d9fc9eeef9aee531b"
+    },
+    {
+      "id": "body_shell",
+      "label": "Body shell",
+      "category": "Body",
+      "availability": "available",
+      "source": "https://sketchfab.com/3d-models/bmw-m4-competition-m-package-5c0a2dafb1ad408d9fc9eeef9aee531b"
+    },
+    {
+      "id": "glass",
+      "label": "Body glass",
+      "category": "Glazing",
+      "availability": "available",
+      "source": "https://sketchfab.com/3d-models/bmw-m4-competition-m-package-5c0a2dafb1ad408d9fc9eeef9aee531b"
+    },
+    {
+      "id": "brake_calipers",
+      "label": "Brake calipers",
+      "category": "Brakes",
+      "availability": "available",
+      "source": "https://sketchfab.com/3d-models/bmw-m4-competition-m-package-5c0a2dafb1ad408d9fc9eeef9aee531b"
+    },
+    {
+      "id": "wheels",
+      "label": "Wheels",
+      "category": "Running gear",
+      "availability": "available",
+      "source": "https://sketchfab.com/3d-models/bmw-m4-competition-m-package-5c0a2dafb1ad408d9fc9eeef9aee531b"
+    }
+  ],
+  "meshMappings": {
+    "tbx_unmapped_geometry_1": "unmapped_geometry",
+    "tbx_grille_1": "grille",
+    "tbx_unmapped_geometry_2": "unmapped_geometry",
+    "tbx_unmapped_geometry_3": "unmapped_geometry",
+    "tbx_unmapped_geometry_4": "unmapped_geometry",
+    "tbx_radiator_geometry_1": "radiator_geometry",
+    "tbx_interior_1": "interior",
+    "tbx_unmapped_geometry_5": "unmapped_geometry",
+    "tbx_unmapped_geometry_6": "unmapped_geometry",
+    "tbx_headlights_1": "headlights",
+    "tbx_unmapped_geometry_7": "unmapped_geometry",
+    "tbx_dashboard_1": "dashboard",
+    "tbx_unmapped_geometry_8": "unmapped_geometry",
+    "tbx_rear_lights_1": "rear_lights",
+    "tbx_interior_2": "interior",
+    "tbx_interior_3": "interior",
+    "tbx_unmapped_geometry_9": "unmapped_geometry",
+    "tbx_engine_geometry_1": "engine_geometry",
+    "tbx_unmapped_geometry_10": "unmapped_geometry",
+    "tbx_body_shell_1": "body_shell",
+    "tbx_unmapped_geometry_11": "unmapped_geometry",
+    "tbx_glass_1": "glass",
+    "tbx_unmapped_geometry_12": "unmapped_geometry",
+    "tbx_unmapped_geometry_13": "unmapped_geometry",
+    "tbx_unmapped_geometry_14": "unmapped_geometry",
+    "tbx_unmapped_geometry_15": "unmapped_geometry",
+    "tbx_unmapped_geometry_16": "unmapped_geometry",
+    "tbx_brake_calipers_1": "brake_calipers",
+    "tbx_wheels_1": "wheels",
+    "tbx_wheels_2": "wheels"
+  },
+  "unmappedMeshes": [
+    "Object_11",
+    "Object_12",
+    "Object_14",
+    "Object_16",
+    "Object_20",
+    "Object_22",
+    "Object_24",
+    "Object_26",
+    "Object_27",
+    "Object_28",
+    "Object_29",
+    "Object_30",
+    "Object_4",
+    "Object_6",
+    "Object_7",
+    "Object_8"
+  ],
+  "notes": "The source identifies this as an M4 Competition M Package but does not state a year or generation. Exterior, cabin and a source-labelled engine mesh are available; a verified mechanical layer is unavailable.",
+  "ingestion": {
+    "sourceTriangles": 206593,
+    "outputTriangles": 206593,
+    "tool": "scripts/vehicle-package.mjs",
+    "generatedAt": "2026-09-21T17:35:34.075Z"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "packageVersion": "1.0.0",
+  "vehicle": {
+    "id": "tesla-model-3-2018",
+    "make": "Tesla",
+    "model": "Model 3",
+    "displayName": "2018 Tesla Model 3",
+    "year": 2018,
+    "generation": "First generation",
+    "variant": "Unspecified",
+    "bodyStyle": "Sedan",
+    "accuracy": "generation"
+  },
+  "license": {
+    "spdx": "CC-BY-4.0",
+    "creator": "Ameer Studio",
+    "sourceUrl": "https://sketchfab.com/3d-models/tesla-2018-model-3-5ef9b845aaf44203b6d04e2c677e444f",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Tesla 2018 Model 3 by Ameer Studio, licensed CC BY 4.0"
+  },
+  "optimization": { "ratio": 0.32, "error": 0.0015, "maxTriangles": 250000 },
+  "unavailableLayers": ["mechanical"],
+  "notes": "Authored exterior and cabin geometry are available. The source contains limited named suspension geometry; no complete verified mechanical layer is available.",
+  "rules": [
+    { "type": "prefix", "match": "door_lf_", "componentId": "door_front_left", "label": "Front left door", "category": "Body" },
+    { "type": "prefix", "match": "door_rf_", "componentId": "door_front_right", "label": "Front right door", "category": "Body" },
+    { "type": "prefix", "match": "door_lr_", "componentId": "door_rear_left", "label": "Rear left door", "category": "Body" },
+    { "type": "prefix", "match": "door_rr_", "componentId": "door_rear_right", "label": "Rear right door", "category": "Body" },
+    { "type": "prefix", "match": "bonnet_", "componentId": "hood", "label": "Hood", "category": "Body" },
+    { "type": "prefix", "match": "boot_", "componentId": "trunk", "label": "Rear trunk", "category": "Body" },
+    { "type": "prefix", "match": "front_bumper_", "componentId": "bumper_front", "label": "Front bumper", "category": "Body" },
+    { "type": "prefix", "match": "rear_bumper_", "componentId": "bumper_rear", "label": "Rear bumper", "category": "Body" },
+    { "type": "prefix", "match": "wheels", "componentId": "wheels", "label": "Wheels", "category": "Running gear" },
+    { "type": "prefix", "match": "hub_", "componentId": "wheel_hubs", "label": "Wheel hubs", "category": "Running gear" },
+    { "type": "prefix", "match": "suspensi", "componentId": "suspension_geometry", "label": "Source-labelled suspension geometry", "category": "Running gear" },
+    { "type": "includes", "match": "front light", "componentId": "headlights", "label": "Headlights", "category": "Lighting" },
+    { "type": "includes", "match": "rear light", "componentId": "rear_lights", "label": "Rear lights", "category": "Lighting" },
+    { "type": "prefix", "match": "windscreen_", "componentId": "windscreen", "label": "Windscreen", "category": "Glazing" },
+    { "type": "prefix", "match": "body_", "componentId": "body_shell", "label": "Body shell", "category": "Body" },
+    { "type": "prefix", "match": "chassis_", "componentId": "chassis_geometry", "label": "Source-labelled chassis geometry", "category": "Structure" },
+    { "type": "includes", "match": "Seat Leather", "componentId": "seats", "label": "Seats", "category": "Cabin" },
+    { "type": "includes", "match": "movsteer", "componentId": "steering_geometry", "label": "Source-labelled steering geometry", "category": "Cabin" }
+  ]
+}

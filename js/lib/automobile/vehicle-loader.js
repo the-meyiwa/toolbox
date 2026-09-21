@@ -1,5 +1,6 @@
 import { Box3, Group, Vector3 } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { ComponentRegistry } from './component-registry.js';
 
 export function disposeObject(root) {
@@ -16,17 +17,15 @@ export function disposeObject(root) {
 }
 
 export class VehicleLoader {
-  constructor({ maxTriangles = 500000 } = {}) { this.loader = new GLTFLoader(); this.maxTriangles = maxTriangles; }
-  async load({ modelUrl, componentMap = {}, componentMapUrl, components = [], metadata = {} }) {
+  constructor({ maxTriangles = 500000 } = {}) {
+    this.loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+    this.maxTriangles = maxTriangles;
+  }
+  async load({ modelUrl, componentMap = {}, components = [], metadata = {} }) {
     if (!modelUrl) throw new Error('No 3D asset is configured for this vehicle.');
-    if (componentMapUrl) {
-      const response = await fetch(componentMapUrl);
-      if (!response.ok) throw new Error('The component mapping file could not be loaded.');
-      componentMap = { ...await response.json(), ...componentMap };
-    }
     let gltf;
     try { gltf = await this.loader.loadAsync(modelUrl); }
-    catch (cause) { throw new Error('The 3D model could not be loaded. Check its URL, file format and required decoders.', { cause }); }
+    catch (cause) { throw new Error(`The 3D model could not be loaded: ${cause?.message || 'unknown loader error'}`, { cause }); }
     const model = gltf.scene;
     const root = new Group();
     root.add(model);

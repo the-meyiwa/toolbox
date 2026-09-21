@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server.js",
-    "test": "node tests/test-runner.js"
+    "test": "node tests/test-runner.js",
+    "vehicle:package": "node scripts/vehicle-package.mjs"
   },
   "devDependencies": {
     "@gltf-transform/core": "^4.4.2",

@@ -8,6 +8,10 @@
 .ag-asset-disclosure { flex: 0 0 auto; padding: 18px 62px 14px 20px; color: #c0ccd8; background: #0b1017; user-select: text; }
 .ag-asset-disclosure strong { font-size: .65rem; letter-spacing: .1em; line-height: 1.6; color: #e0e9f0; }
 .ag-asset-disclosure p { margin: 5px 0 0; max-width: 560px; font-size: .74rem; line-height: 1.55; }
+.ag-asset-attribution a { color: inherit; text-underline-offset: 3px; }
+.ag-root .ag-component-search { width: 100%; min-height: 40px; margin: 0 0 10px; padding: 8px 10px; color: var(--text); background: var(--bg-subtle, var(--bg)); border: 1px solid var(--border); border-radius: 8px; font: inherit; box-sizing: border-box; }
+.ag-root .ag-component-search:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 65%, transparent); outline-offset: 1px; }
+.ag-root .ag-component-search:disabled { opacity: .55; cursor: wait; }
 .ag-root .ag-nav-item { width: 100%; min-height: 44px; text-align: left; background: transparent; font-family: inherit; }
 .ag-root .ag-nav-item small { display: block; font-size: .65rem; margin-top: 3px; opacity: .8; }
 .ag-root .ag-tool-btn { width: 40px; height: 40px; }

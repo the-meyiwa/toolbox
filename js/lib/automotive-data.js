@@ -1,7 +1,6 @@
 /**
  * Automotive Data Service Layer
- * Coordinates vehicle reference data, semantic GLB assets,
- * and external automotive API lookups using provider abstractions.
+ * Coordinates Toolbox-owned vehicle packages and local reference data.
  */
 
 import { VehicleResolver, TechnicalProvider, ComponentProvider, VisualProvider } from './automotive-provider.js';
@@ -16,14 +15,11 @@ export class AutomotiveDataClient {
   }
 
   /**
-   * Search vehicle database (via NHTSA backend proxy)
+   * Search the installed Toolbox Vehicle Package catalog.
    * @param {string} query
    * @returns {Promise<Array>}
    */
   async searchVehicles(query) {
-    if (!query) {
-      return [];
-    }
     const results = await this.resolver.resolve(query);
     // Augment with sections for UI compatibility
     return results.map(r => ({

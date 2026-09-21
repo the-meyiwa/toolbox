@@ -1,0 +1,45 @@
+{
+  "packageVersion": "1.0.0",
+  "vehicle": {
+    "id": "ford-mustang-gt-2005",
+    "make": "Ford",
+    "model": "Mustang GT",
+    "displayName": "2005 Ford Mustang GT",
+    "year": 2005,
+    "generation": "Fifth generation (S197)",
+    "variant": "GT",
+    "bodyStyle": "Coupe",
+    "accuracy": "generation"
+  },
+  "license": {
+    "spdx": "CC-BY-4.0",
+    "creator": "Ricy",
+    "sourceUrl": "https://sketchfab.com/3d-models/2005-ford-mustang-gt-26b6b60cf2804370ac3c64424242dc1f",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "2005 Ford Mustang GT by Ricy, licensed CC BY 4.0"
+  },
+  "optimization": { "ratio": 1, "error": 0.001, "maxTriangles": 250000 },
+  "unavailableLayers": ["mechanical"],
+  "notes": "Authored exterior and cabin geometry are available. A verified mechanical layer is unavailable.",
+  "rules": [
+    { "type": "prefix", "match": "leftdoor_", "componentId": "door_left", "label": "Left door", "category": "Body" },
+    { "type": "prefix", "match": "rightdoor_", "componentId": "door_right", "label": "Right door", "category": "Body" },
+    { "type": "prefix", "match": "hood_", "componentId": "hood", "label": "Hood", "category": "Body" },
+    { "type": "prefix", "match": "trunk_", "componentId": "trunk", "label": "Trunk", "category": "Body" },
+    { "type": "prefix", "match": "roof_", "componentId": "roof", "label": "Roof", "category": "Body" },
+    { "type": "prefix", "match": "fenders_", "componentId": "fenders", "label": "Fenders", "category": "Body" },
+    { "type": "includes", "match": "front bumper", "componentId": "bumper_front", "label": "Front bumper", "category": "Body" },
+    { "type": "includes", "match": "rearbumper", "componentId": "bumper_rear", "label": "Rear bumper", "category": "Body" },
+    { "type": "prefix", "match": "FrdPerofrmcRim", "componentId": "wheels", "label": "Wheels", "category": "Running gear" },
+    { "type": "prefix", "match": "tire", "componentId": "tires", "label": "Tires", "category": "Running gear" },
+    { "type": "prefix", "match": "headlight", "componentId": "headlights", "label": "Headlights", "category": "Lighting" },
+    { "type": "prefix", "match": "tailight", "componentId": "rear_lights", "label": "Rear lights", "category": "Lighting" },
+    { "type": "prefix", "match": "glass_", "componentId": "glass", "label": "Body glass", "category": "Glazing" },
+    { "type": "prefix", "match": "intdash_", "componentId": "dashboard", "label": "Dashboard", "category": "Cabin" },
+    { "type": "prefix", "match": "msngsteeringwheel_", "componentId": "steering_wheel", "label": "Steering wheel", "category": "Cabin" },
+    { "type": "prefix", "match": "fseats_", "componentId": "front_seats", "label": "Front seats", "category": "Cabin" },
+    { "type": "prefix", "match": "rseats_", "componentId": "rear_seats", "label": "Rear seats", "category": "Cabin" },
+    { "type": "prefix", "match": "exhaust_tip_", "componentId": "exhaust_tips", "label": "Exhaust tips", "category": "Exterior" },
+    { "type": "prefix", "match": "body_", "componentId": "body_shell", "label": "Body shell", "category": "Body" }
+  ]
+}

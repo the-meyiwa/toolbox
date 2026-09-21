@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "defaultVehicleId": "ford-mustang-gt-2005",
+  "vehicles": [
+    {
+      "id": "ford-mustang-gt-2005",
+      "make": "Ford",
+      "model": "Mustang GT",
+      "year": 2005,
+      "generation": "Fifth generation (S197)",
+      "variant": "GT",
+      "bodyStyle": "Coupe",
+      "aliases": ["Mustang", "S197"],
+      "manifest": "/automobile/packages/ford-mustang-gt-2005/manifest.json",
+      "specifications": { "bodyStyle": "Coupe" }
+    },
+    {
+      "id": "tesla-model-3-2018",
+      "make": "Tesla",
+      "model": "Model 3",
+      "year": 2018,
+      "generation": "First generation",
+      "variant": "Unspecified",
+      "bodyStyle": "Sedan",
+      "aliases": ["Model 3", "Tesla 3"],
+      "manifest": "/automobile/packages/tesla-model-3-2018/manifest.json",
+      "specifications": { "bodyStyle": "Sedan" }
+    },
+    {
+      "id": "bmw-m4-competition",
+      "make": "BMW",
+      "model": "M4 Competition",
+      "generation": "Unspecified by source",
+      "variant": "M Package",
+      "bodyStyle": "Coupe",
+      "aliases": ["M4", "BMW M4"],
+      "manifest": "/automobile/packages/bmw-m4-competition/manifest.json",
+      "specifications": { "bodyStyle": "Coupe" }
+    }
+  ]
+}

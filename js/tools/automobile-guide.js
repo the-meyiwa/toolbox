@@ -604,6 +604,7 @@ export default {
               <div class="ag-panel-title">
                 <span>Model Components</span>
               </div>
+              <input class="ag-component-search" id="ag-component-search" type="search" placeholder="Find a component" aria-label="Search components" disabled>
               <div class="ag-nav-list" id="ag-nav-list">
                 <!-- Section items dynamically populated -->
               </div>
@@ -624,7 +625,11 @@ export default {
               </button>
             </div>
 
-            <div class="ag-asset-disclosure"><strong id="ag-asset-label">Loading model</strong><p id="ag-asset-description"></p></div>
+            <div class="ag-asset-disclosure">
+              <strong id="ag-asset-label">Loading model</strong>
+              <p id="ag-asset-description"></p>
+              <p id="ag-asset-attribution" class="ag-asset-attribution"></p>
+            </div>
             <div class="ag-canvas-viewport">
               <div class="ag-viewer-host" id="ag-viewer-host">
                 <div style="color:var(--text-muted); font-size:0.9rem;">Loading technical 3D viewer…</div>
@@ -679,8 +684,10 @@ export default {
         onSelect:comp=>this.onComponentSelection(comp),
         onStatus:text=>{this.container.querySelector('#ag-status-text').textContent=text;}
       });
-      this.container.querySelector('#ag-spec-grid').textContent='Search for a vehicle to load its available reference data.';
-      await this.loadVisualization(null);
+      const initial=(await autoClient.searchVehicles(''))[0];
+      if(!initial)throw new Error('No Toolbox Vehicle Packages are installed.');
+      this.container.querySelector('#ag-search-input').value=`${initial.manufacturer} ${initial.model}`;
+      await this.selectVehicle(initial);
     } catch(error) {
       if(!this.container.isConnected)return;
       host.innerHTML='<div class="ag-viewer-error" role="status"><strong>3D viewer unavailable</strong><p></p></div>';
@@ -692,6 +699,8 @@ export default {
   bindEvents() {
     const searchInput = this.container.querySelector('#ag-search-input');
     const searchDropdown = this.container.querySelector('#ag-search-dropdown');
+    const componentSearch = this.container.querySelector('#ag-component-search');
+    componentSearch.addEventListener('input',()=>this.renderSectionNav());
 
     // Live search input with debouncing
     const version = this._version;
@@ -771,7 +780,7 @@ export default {
           <div class="ag-search-item-title">${escape(v.manufacturer)} ${escape(v.model)} <span style="font-weight:400; opacity:0.8;">${escape(v.generation)}</span></div>
           <div class="ag-search-item-meta">${escape(v.variant || v.bodyStyle)} • ${escape(v.years)}</div>
         </div>
-        <span class="ag-search-badge">${escape(v.status === 'metadata_only' ? 'NHTSA' : 'REFERENCE')}</span>
+        <span class="ag-search-badge">TOOLBOX PACKAGE</span>
       </div>
     `).join('');
 
@@ -795,6 +804,7 @@ export default {
     this.state.selectedVehicle = vehicle;
     this.state.selectedSection = null;
     this.state.selectedComponent = null;
+    this.container.querySelector('#ag-component-search').value = '';
 
     // Fetch full specs
     const specs = await autoClient.getVehicleDetails(vehicle.id, vehicle.manufacturer, vehicle.model);
@@ -810,7 +820,7 @@ export default {
     this.renderSectionNav(this.state.selectedVehicle);
 
     // Load semantic model
-    this.loadVisualization(this.state.selectedVehicle);
+    await this.loadVisualization(this.state.selectedVehicle);
 
     // Clear Inspector
     this.clearInspector();
@@ -824,39 +834,24 @@ export default {
     hero.innerHTML = `
       <h3 class="ag-car-name">${escape(vehicle.manufacturer)} ${escape(vehicle.model)}</h3>
       <span class="ag-car-variant">${escape(vehicle.generation)} • ${escape(vehicle.variant || '')}</span>
-      <span class="ag-car-platform">${escape(vehicle.platform || '')}</span>
+      <span class="ag-car-platform">Toolbox Vehicle Package</span>
     `;
 
     const specGrid = this.container.querySelector('#ag-spec-grid');
-    if (vehicle.meta && vehicle.meta.extract) {
-      specGrid.innerHTML = `
-        <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; padding: 4px 0 12px; font-style: italic;">
-          ${escape(vehicle.meta.extract.substring(0, 250))}...
-        </div>
-        <div class="ag-spec-row"><span class="ag-spec-label">Years</span><span class="ag-spec-val">${escape(vehicle.years || 'N/A')}</span></div>
-        <div class="ag-spec-row"><span class="ag-spec-label">Body Style</span><span class="ag-spec-val">${escape(vehicle.bodyStyle || 'N/A')}</span></div>
-      `;
-    } else {
-      specGrid.innerHTML = `
-        <div class="ag-spec-row"><span class="ag-spec-label">Years</span><span class="ag-spec-val">${escape(vehicle.years || 'N/A')}</span></div>
-        <div class="ag-spec-row"><span class="ag-spec-label">Body Style</span><span class="ag-spec-val">${escape(vehicle.bodyStyle || 'N/A')}</span></div>
-        <div class="ag-spec-row"><span class="ag-spec-label">Drivetrain</span><span class="ag-spec-val">${escape(vehicle.layout || 'N/A')}</span></div>
-        <div class="ag-spec-row"><span class="ag-spec-label">Engine</span><span class="ag-spec-val">${escape(vehicle.engine?.code || 'N/A')} (${escape(vehicle.engine?.output || '')})</span></div>
-        <div class="ag-spec-row"><span class="ag-spec-label">Transmission</span><span class="ag-spec-val">${escape(vehicle.transmission?.code || 'N/A')}</span></div>
-        <div class="ag-spec-row"><span class="ag-spec-label">Front Susp.</span><span class="ag-spec-val">${escape(vehicle.chassis?.frontSuspension?.split('with')[0] || 'Unavailable')}</span></div>
-        <div class="ag-spec-row"><span class="ag-spec-label">Rear Susp.</span><span class="ag-spec-val">${escape(vehicle.chassis?.rearSuspension?.split('with')[0] || 'Unavailable')}</span></div>
-        <div class="ag-spec-row"><span class="ag-spec-label">Curb Weight</span><span class="ag-spec-val">${escape(vehicle.curbWeight || 'N/A')}</span></div>
-        <div class="ag-spec-row"><span class="ag-spec-label">Wheelbase</span><span class="ag-spec-val">${escape(vehicle.wheelbase || 'N/A')}</span></div>
-      `;
-    }
+    const fields=[['Year',vehicle.years],['Body style',vehicle.bodyStyle],['Drivetrain',vehicle.layout],['Engine',vehicle.engine?.code],['Transmission',vehicle.transmission?.code],['Curb weight',vehicle.curbWeight],['Wheelbase',vehicle.wheelbase]];
+    specGrid.innerHTML=fields.map(([label,value])=>`<div class="ag-spec-row"><span class="ag-spec-label">${escape(label)}</span><span class="ag-spec-val">${escape(value || 'Unavailable in package')}</span></div>`).join('');
   },
 
   renderSectionNav() {
     const list=this.container.querySelector('#ag-nav-list');
-    const parts=this.viewer?.asset?.registry.list() || [];
+    const search=this.container.querySelector('#ag-component-search');
+    const query=search?.value.trim().toLowerCase() || '';
+    const allParts=this.viewer?.asset?.registry.list() || [];
+    const parts=allParts.filter(part=>`${part.name} ${part.category}`.toLowerCase().includes(query));
+    if(search){search.disabled=!allParts.length;search.placeholder=allParts.length?`Find among ${allParts.length} components`:'No components loaded';}
     list.innerHTML=parts.length ? '<button type="button" class="ag-nav-item" data-clear-selection>Show complete model</button>'+parts.map(part=>
       '<button type="button" class="ag-nav-item" data-component-id="'+escape(part.id)+'" aria-pressed="false"><span class="ag-nav-dot"></span><span>'+escape(part.name)+'<small>'+escape(part.category || 'Unmapped geometry')+'</small></span></button>'
-    ).join('') : '<p class="ag-asset-note">No mapped components loaded.</p>';
+    ).join('') : `<p class="ag-asset-note">${allParts.length?'No components match this search.':'No mapped components loaded.'}</p>`;
   },
 
   async loadVisualization(vehicle) {
@@ -865,6 +860,7 @@ export default {
     this.viewer.clear();this.assetMetadata=null;this.state.selectedComponent=null;this.clearInspector();this.renderSectionNav();
     this.container.querySelector('#ag-asset-label').textContent='Loading model';
     this.container.querySelector('#ag-asset-description').textContent='';
+    this.container.querySelector('#ag-asset-attribution').replaceChildren();
     this.dispatchAssistantContext(null);
     if(this.state.activeMobileTab!=='diag')this.handleMobileTab(this.state.activeMobileTab);
     try {
@@ -877,6 +873,10 @@ export default {
       const label=accuracy==='development'?'DEVELOPMENT MODEL · Not vehicle geometry':accuracy==='representative'?'REPRESENTATIVE · Not the exact vehicle':accuracy==='generation'?'GENERATION MODEL':accuracy==='exact'?'VEHICLE-SPECIFIC MODEL':'UNVERIFIED GEOMETRY';
       this.container.querySelector('#ag-asset-label').textContent=label;
       this.container.querySelector('#ag-asset-description').textContent=asset.metadata.description || asset.metadata.label || 'No asset description supplied.';
+      const attribution=this.container.querySelector('#ag-asset-attribution');
+      attribution.append(document.createTextNode(`${asset.metadata.attribution} · `));
+      const source=document.createElement('a');source.href=asset.metadata.source;source.target='_blank';source.rel='noopener noreferrer';source.textContent='Source and license';attribution.append(source);
+      if(asset.metadata.unavailableLayers?.length)attribution.append(document.createTextNode(` · Unavailable: ${asset.metadata.unavailableLayers.join(', ')}`));
       this.container.querySelector('#ag-status-text').textContent='Drag to orbit · Scroll / pinch to zoom · Two fingers to pan';
       const { settings,mobile }=this.viewer.pipeline;
       const limit=mobile?settings.mobileHiddenComponents:settings.maxHiddenComponents;
