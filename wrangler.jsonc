@@ -1,0 +1,19 @@
+// Cloudflare deployment for Toolbox.
+// The Vite build in ./dist is served as static assets. Requests to /api/* go
+// to the Worker in ./worker/index.js, which forwards them to the Node API on
+// Render (the job vercel.json's rewrite used to do).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "toolbox",
+  "main": "./worker/index.js",
+  "compatibility_date": "2026-09-22",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "vars": {
+    "BACKEND_URL": "https://toolbox-signaling.onrender.com"
+  },
+  "observability": { "enabled": true }
+}

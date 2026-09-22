@@ -1,0 +1,4 @@
+# Files Vite builds but Cloudflare must not upload (25 MiB per-file limit).
+# The ONNX runtime WebAssembly loads from a CDN instead (see watermark-remover.js).
+assets/ort-wasm-*.wasm
+assets/ort-wasm-*.mjs

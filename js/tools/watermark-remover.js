@@ -591,6 +591,7 @@ export default {
           const ort = await import('onnxruntime-web');
           // Single-threaded WASM works without cross-origin-isolation headers.
           ort.env.wasm.numThreads = 1;
+	     ort.env.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ort.env.versions?.web || '1.27.0'}/dist/`;
           const session = await ort.InferenceSession.create(LAMA_MODEL_URL, {
             executionProviders: ['wasm'],
             graphOptimizationLevel: 'all',
