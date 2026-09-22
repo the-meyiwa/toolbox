@@ -20,14 +20,14 @@ export default {
     <div class="tool-content dis-database-wrapper" style="max-width:960px; margin:0 auto; padding:20px;">
       <!-- Header -->
       <div style="margin-bottom:24px;">
-        <h2 style="font-size:1.6rem; font-weight:800; color:var(--text, #0f172a); margin:0 0 6px 0;">Diseases & Pathology Database</h2>
-        <p style="font-size:0.9rem; color:var(--g600, #64748b); margin:0;">
+        <h2 style="font-size:1.6rem; font-weight:800; color:var(--text, var(--text)); margin:0 0 6px 0;">Diseases & Pathology Database</h2>
+        <p style="font-size:0.9rem; color:var(--g600, var(--text-2)); margin:0;">
           Explore 80,000+ conditions across WHO ICD-11, Orphanet, and clinical medicine indexed by global epidemiological commodity.
         </p>
       </div>
 
       <!-- Search & Filters -->
-      <div style="background:var(--white, #fff); border:1px solid var(--g200, #e2e8f0); border-radius:16px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,.04); margin-bottom:20px;">
+      <div style="background:var(--white, var(--surface)); border:1px solid var(--g200, var(--line)); border-radius:16px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,.04); margin-bottom:20px;">
         <div style="position:relative; margin-bottom:14px;">
           <input
             type="search"
@@ -56,7 +56,7 @@ export default {
       </div>
 
       <!-- Results Count Bar -->
-      <div id="dis-status-bar" class="dis-status-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; font-size:0.82rem; color:var(--g600, #64748b); font-weight:600;">
+      <div id="dis-status-bar" class="dis-status-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; font-size:0.82rem; color:var(--g600, var(--text-2)); font-weight:600;">
         <span id="dis-count-label">Showing high-commodity conditions</span>
         <span>WHO ICD-11 & Orphanet Engine</span>
       </div>
@@ -79,8 +79,8 @@ export default {
 
     if (items.length === 0) {
       resultsContainer.innerHTML = `
-        <div style="padding:48px 20px; text-align:center; background:var(--white, #fff); border:1px solid var(--g200, #e2e8f0); border-radius:16px; color:var(--g500, #64748b);">
-          <div style="font-size:1.1rem; font-weight:700; color:var(--text, #0f172a); margin-bottom:6px;">No matching conditions found</div>
+        <div style="padding:48px 20px; text-align:center; background:var(--white, var(--surface)); border:1px solid var(--g200, var(--line)); border-radius:16px; color:var(--g500, var(--text-2));">
+          <div style="font-size:1.1rem; font-weight:700; color:var(--text, var(--text)); margin-bottom:6px;">No matching conditions found</div>
           <div style="font-size:0.86rem;">Try searching for symptoms like "cough", "headache", or broad categories like "cardiovascular".</div>
         </div>
       `;

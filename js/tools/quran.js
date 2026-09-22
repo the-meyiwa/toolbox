@@ -10,6 +10,8 @@
 
 import { escapeHtml } from '../lib/biz.js';
 import { copyText } from '../utils.js';
+import { getToolSettings, onToolSettings, setToolSetting } from '../lib/tool-settings.js';
+import { openSettings } from '../lib/settings-ui.js';
 
 const API = 'https://api.quran.com/api/v4';
 const PREFS = 'toolbox.quran';
@@ -41,15 +43,26 @@ export default {
     let saved = {};
     try { saved = JSON.parse(localStorage.getItem(PREFS) || '{}'); } catch { /* ignore */ }
 
+    // Reading settings live in Preferences → Tools → Quran. Carry over anything chosen here before.
+    if (saved.reciter !== undefined || saved.arabicSize !== undefined) {
+      if (saved.translation) setToolSetting('quran', 'translation', saved.translation);
+      if (saved.reciter !== undefined) setToolSetting('quran', 'reciter', saved.reciter);
+      if (saved.arabicSize !== undefined) setToolSetting('quran', 'arabicSize', saved.arabicSize);
+      if (saved.showTranslation !== undefined) setToolSetting('quran', 'showTranslation', saved.showTranslation !== false);
+      if (saved.showTransliteration !== undefined) setToolSetting('quran', 'showTransliteration', Boolean(saved.showTransliteration));
+      for (const k of ['translation', 'reciter', 'arabicSize', 'showTranslation', 'showTransliteration']) delete saved[k];
+    }
+    const prefs = getToolSettings('quran');
+
     const state = {
       chapters: [],
       chapter: saved.chapter ?? 1,
       lastVerse: saved.lastVerse ?? null,
-      translation: saved.translation ?? null,   // resolved once the catalogue loads
-      reciter: saved.reciter ?? DEFAULT_RECITER,
-      showTranslation: saved.showTranslation !== false,
-      showTransliteration: saved.showTransliteration ?? false,
-      arabicSize: saved.arabicSize ?? 2,
+      translation: prefs.translation || null,   // resolved once the catalogue loads
+      reciter: prefs.reciter ?? DEFAULT_RECITER,
+      showTranslation: prefs.showTranslation,
+      showTransliteration: prefs.showTransliteration,
+      arabicSize: prefs.arabicSize,
       verses: [],
       audio: null,
       playingVerse: null,
@@ -59,10 +72,7 @@ export default {
     const persist = () => {
       try {
         localStorage.setItem(PREFS, JSON.stringify({
-          chapter: state.chapter, lastVerse: state.lastVerse,
-          translation: state.translation, reciter: state.reciter,
-          showTranslation: state.showTranslation, showTransliteration: state.showTransliteration,
-          arabicSize: state.arabicSize, bookmarks: state.bookmarks,
+          chapter: state.chapter, lastVerse: state.lastVerse, bookmarks: state.bookmarks,
         }));
       } catch { /* private mode */ }
     };
@@ -104,28 +114,9 @@ export default {
           </select>
           <button class="btn btn-sm" id="qr-prev">←</button>
           <button class="btn btn-sm" id="qr-next">→</button>
-          <button class="btn btn-sm" id="qr-settings-btn">Settings</button>
+          <button class="btn btn-sm" id="qr-settings-btn" title="Translation, reciter and text size">Reading preferences</button>
         </div>
 
-        <details class="qrn-settings" id="qr-settings">
-          <summary>Reading settings</summary>
-          <div class="qrn-settings-grid">
-            <label class="fz-ctl"><span>Translation</span>
-              <select class="tool-select" id="qr-translation">
-                ${translations.map(t => `<option value="${t.id}"${t.id === state.translation ? ' selected' : ''}>${escapeHtml(t.name)}</option>`).join('')}
-              </select></label>
-            <label class="fz-ctl"><span>Reciter</span>
-              <select class="tool-select" id="qr-reciter">
-                ${reciters.map(r => `<option value="${r.id}"${r.id === state.reciter ? ' selected' : ''}>${escapeHtml(r.reciter_name)}${r.style ? ` (${escapeHtml(r.style)})` : ''}</option>`).join('')}
-              </select></label>
-            <label class="fz-ctl"><span>Arabic size</span>
-              <input type="range" class="tool-range" id="qr-size" min="1" max="4" step="1" value="${state.arabicSize}"></label>
-            <div class="qrn-toggles">
-              <label class="tool-checkbox"><input type="checkbox" id="qr-show-tr"${state.showTranslation ? ' checked' : ''}> <span>Translation</span></label>
-              <label class="tool-checkbox"><input type="checkbox" id="qr-show-tl"${state.showTransliteration ? ' checked' : ''}> <span>Transliteration</span></label>
-            </div>
-          </div>
-        </details>
 
         <div class="qrn-head" id="qr-head"></div>
         <div id="qr-body"></div>
@@ -371,17 +362,25 @@ export default {
     $('qr-next').addEventListener('click', () => {
       if (state.chapter < 114) { $('qr-surah').value = String(state.chapter + 1); loadChapterBound(state.chapter + 1); }
     });
-    $('qr-settings-btn').addEventListener('click', () => { $('qr-settings').open = !$('qr-settings').open; });
+    $('qr-settings-btn').addEventListener('click', () => openSettings('tool:quran'));
 
-    $('qr-translation').addEventListener('change', (e) => { state.translation = Number(e.target.value); persist(); loadChapterBound(state.chapter); });
-    $('qr-reciter').addEventListener('change', (e) => { state.reciter = Number(e.target.value); persist(); loadChapterBound(state.chapter); });
-    $('qr-size').addEventListener('input', (e) => {
-      state.arabicSize = Number(e.target.value);
-      container.querySelector('.qrn-verses')?.setAttribute('class', `qrn-verses size-${state.arabicSize}`);
-      persist();
+    this._offPrefs?.();
+    this._offPrefs = onToolSettings('quran', (next) => {
+      if (!this._alive) return;
+      const wantTranslation = next.translation ? pickTranslation(translations, next.translation) : pickTranslation(translations, null);
+      const reload = wantTranslation !== state.translation || next.reciter !== state.reciter;
+      const rerender = next.showTranslation !== state.showTranslation || next.showTransliteration !== state.showTransliteration;
+      state.translation = wantTranslation;
+      state.reciter = next.reciter;
+      state.showTranslation = next.showTranslation;
+      state.showTransliteration = next.showTransliteration;
+      if (next.arabicSize !== state.arabicSize) {
+        state.arabicSize = next.arabicSize;
+        container.querySelector('.qrn-verses')?.setAttribute('class', `qrn-verses size-${state.arabicSize}`);
+      }
+      if (reload) loadChapterBound(state.chapter);
+      else if (rerender) render();
     });
-    $('qr-show-tr').addEventListener('change', (e) => { state.showTranslation = e.target.checked; persist(); render(); });
-    $('qr-show-tl').addEventListener('change', (e) => { state.showTransliteration = e.target.checked; persist(); render(); });
 
     renderSaved();
     await loadChapterBound(state.chapter, state.lastVerse);
@@ -391,5 +390,7 @@ export default {
   destroy() {
     this._alive = false;
     this._abort?.abort();
+    this._offPrefs?.();
+    this._offPrefs = null;
   },
 };

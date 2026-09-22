@@ -619,7 +619,7 @@ export default {
 
           <div class="mail-sidebar-footer">
             <span>Local Encrypted Store</span>
-            <span style="color:#10b981;">● Connected</span>
+            <span style="color:var(--success);">● Connected</span>
           </div>
         </aside>
 
@@ -886,7 +886,7 @@ export default {
                 ${m.attachments.length}
               </span>
             ` : ''}
-            ${m.starred ? '<span style="color:#f59e0b; font-size:0.75rem;">★</span>' : ''}
+            ${m.starred ? '<span style="color:var(--warning); font-size:0.75rem;">★</span>' : ''}
           </div>
         </div>
       `;
@@ -1069,7 +1069,7 @@ export default {
     attContainer.innerHTML = (this.state.composeDraft.attachments || []).map((att, idx) => `
       <div class="mail-tag-pill" style="padding:4px 8px; background:rgba(255,255,255,0.1);">
         <span>${att.name}</span>
-        <button type="button" data-del-att="${idx}" style="background:none; border:none; color:#ef4444; cursor:pointer; font-weight:700;">×</button>
+        <button type="button" data-del-att="${idx}" style="background:none; border:none; color:var(--danger); cursor:pointer; font-weight:700;">×</button>
       </div>
     `).join('');
 

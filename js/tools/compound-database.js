@@ -41,7 +41,7 @@ export default {
         <!-- Header Banner & Counter -->
         <div style="background:var(--white); border:1px solid var(--g200); border-radius:12px; padding:16px 20px; margin-bottom:16px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
           <div style="display:flex; align-items:center; gap:12px;">
-            <div style="width:40px; height:40px; border-radius:10px; background:var(--p50,#eff6ff); border:1px solid var(--p200,#bfdbfe); color:var(--p700,#1d4ed8); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <div style="width:40px; height:40px; border-radius:10px; background:var(--p50,var(--surface-2)); border:1px solid var(--p200,#bfdbfe); color:var(--p700,var(--text)); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
             </div>
             <div>
@@ -51,7 +51,7 @@ export default {
           </div>
 
           <div id="cd-counter-badge" style="display:inline-flex; align-items:center; gap:8px; background:var(--g50); border:1px solid var(--g200); padding:6px 14px; border-radius:100px; font-size:0.82rem; font-weight:600; color:var(--g800);">
-            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#16a34a;"></span>
+            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--success);"></span>
             <span id="cd-counter-text">Showing <strong>${Math.min(visibleCount, COMMON_COMPOUNDS.length)}</strong> of <strong>${COMMON_COMPOUNDS.length.toLocaleString()}</strong> verified compounds</span>
           </div>
         </div>

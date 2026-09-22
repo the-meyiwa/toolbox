@@ -60,7 +60,7 @@ export default {
       <!-- Comparison Matrix View -->
       <div id="cmp-result-wrap" hidden style="margin-top:20px;">
         <!-- Precedential Relationship Banner -->
-        <div style="background:var(--g100); border-left:4px solid #2563eb; border-radius:6px; padding:12px 16px; margin-bottom:16px;">
+        <div style="background:var(--g100); border-left:4px solid var(--text); border-radius:6px; padding:12px 16px; margin-bottom:16px;">
           <div style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:var(--g700); margin-bottom:2px;">Judicial &amp; Precedential Relationship</div>
           <div id="cmp-relation-text" style="font-size:0.95rem; font-weight:600; color:var(--black);">Distinguishable on Facts / Consistent Principle</div>
         </div>

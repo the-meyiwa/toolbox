@@ -18,6 +18,7 @@ import { openAccountModal } from '../views/account-modal.js';
 import { NotificationEngine, prepareNotificationSound } from './notifications.js';
 import { renderContributionSettings } from './flutterwave-contribution.js';
 import { paintSupporterProfile } from './supporter.js';
+import { renderToolPreferences } from './tool-settings-ui.js';
 
 let modalEl = null;
 let isOpen = false;
@@ -27,6 +28,7 @@ let currentSettingsPage = 'home';
 const SETTINGS_PAGES = [
   { id: 'profile', title: 'Profile', hint: 'Account, identity and avatar', icon: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', sections: ['sec-profile'] },
   { id: 'general', title: 'General', hint: 'Preferences, settings backup and storage', icon: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1-2.9 2.9-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5v.1h-4v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1-2.9-2.9.1-.1a1.7 1.7 0 0 0 .3-1.8A1.7 1.7 0 0 0 3 14H3v-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1 2.9-2.9.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.5V3h4v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1 2.9 2.9-.1.1a1.7 1.7 0 0 0-.3 1.8 1.7 1.7 0 0 0 1.5 1h.1v4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', sections: ['sec-preferences', 'sec-storage'] },
+  { id: 'tools', title: 'Tools', hint: 'Settings for Chess, Device Comparisons, Notes and more', icon: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z"/>', sections: ['sec-tools'] },
   { id: 'appearance', title: 'Appearance', hint: 'Theme and interface style', icon: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z"/>', sections: ['sec-appearance'] },
   { id: 'notifications', title: 'Notifications', hint: 'Alerts, sounds and badges', icon: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>', sections: ['sec-notifications'] },
   { id: 'mail', title: 'Mail', hint: 'Connected Gmail and Microsoft accounts', icon: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>', sections: ['sec-mail'] },
@@ -38,48 +40,6 @@ function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-function renderThemeCard(theme, currentId) {
-  const isActive = theme.id === currentId;
-  const groupLabel = {
-    system: 'System',
-    minimal: 'Minimal',
-    cultural: 'Cultural / Design',
-    brand: 'Brand-Inspired',
-    expressive: 'Expressive'
-  }[theme.group] || 'Theme';
-
-  return `
-    <button type="button" class="theme-card ${isActive ? 'is-active' : ''}" data-theme-id="${theme.id}" data-theme-group="${theme.group}" role="radio" aria-checked="${isActive}">
-      <div class="theme-card-preview" style="background: ${theme.preview.bg}; border: 1px solid ${theme.preview.border || 'rgba(0,0,0,0.1)'};">
-        <div class="theme-card-preview-bar" style="background: ${theme.preview.card}; border-bottom: 1px solid ${theme.preview.border || 'rgba(0,0,0,0.06)'};">
-          <span class="theme-preview-dot" style="background: ${theme.preview.accent};"></span>
-          <span class="theme-preview-line" style="background: ${theme.preview.text}; opacity: 0.6;"></span>
-        </div>
-        <div class="theme-card-preview-body">
-          <div class="theme-preview-chip" style="background: ${theme.preview.accent}; box-shadow: 0 1px 3px rgba(0,0,0,0.15);"></div>
-          <div class="theme-preview-text" style="color: ${theme.preview.text}; font-weight: 700;">Aa</div>
-        </div>
-      </div>
-      <div class="theme-card-meta">
-        <div class="theme-card-header">
-          <span class="theme-card-name">${escapeHtml(theme.name)}</span>
-          <span class="theme-badge-exp">${escapeHtml(groupLabel)}</span>
-        </div>
-        <p class="theme-card-desc">${escapeHtml(theme.description)}</p>
-      </div>
-      <div class="theme-card-palette" aria-hidden="true">
-        <span class="theme-palette-dot" style="background: ${theme.preview.accent};" title="Accent"></span>
-        <span class="theme-palette-dot" style="background: ${theme.preview.bg}; border: 1px solid ${theme.preview.border || 'rgba(0,0,0,0.15)'};" title="Background"></span>
-        <span class="theme-palette-dot" style="background: ${theme.preview.text};" title="Text"></span>
-      </div>
-      <div class="theme-card-check">
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="20 6 9 17 4 12"></polyline>
-        </svg>
-      </div>
-    </button>
-  `;
-}
 
 function setSettingsHeading(title, subtitle, showBack) {
   const back = modalEl.querySelector('#settings-back-btn');
@@ -100,7 +60,7 @@ function showSettingsHome() {
   modalEl.querySelector('#settings-avatars-view').style.display = 'none';
   modalEl.querySelector('#settings-modal-scroll').style.display = 'flex';
   modalEl.querySelector('.settings-search-container').style.display = '';
-  setSettingsHeading('Settings', 'Toolbox, arranged around the way you use it', false);
+  setSettingsHeading('Preferences', 'Toolbox, arranged around the way you use it', false);
   modalEl.querySelector('#settings-modal-scroll').scrollTop = 0;
 }
 
@@ -217,20 +177,21 @@ function createModal() {
           <div id="profile-settings-container"></div>
         </section>
 
-        <!-- SECTION 2: APPEARANCE & THEMES -->
-        <section class="settings-section" id="sec-appearance" style="border-top: 1px solid var(--border); padding-top: 28px;">
-          <div class="settings-section-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px;">
-            <div>
-              <h3 class="settings-section-title" style="font-size: 0.96rem; font-weight: 700; color: var(--text); margin: 0 0 4px;">Appearance &amp; Themes</h3>
-              <span class="settings-section-hint" style="font-size: 0.76rem; color: var(--text-muted);">${THEMES.length} carefully matched Toolbox themes</span>
-            </div>
-            <div style="position: relative; width: 220px; max-width: 100%;">
-              <input type="text" id="theme-filter-search" class="tool-input" placeholder="Filter themes..." autocomplete="off" spellcheck="false" style="width: 100%; height: 32px; padding: 0 10px 0 28px; font-size: 0.78rem; border-radius: 9999px;">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
-            </div>
+        <!-- SECTION 2: APPEARANCE -->
+        <section class="settings-section" id="sec-appearance">
+          <div class="settings-section-header">
+            <h3 class="settings-section-title">Appearance</h3>
+            <span class="settings-section-hint">Light, dark, or follow your device.</span>
           </div>
+          <div class="theme-choice" id="theme-grid-standard" role="radiogroup" aria-label="Theme"></div>
+        </section>
 
-          <div class="theme-grid" id="theme-grid-standard"></div>
+        <section class="settings-section" id="sec-tools">
+          <div class="settings-section-header">
+            <h3 class="settings-section-title">Tool preferences</h3>
+            <span class="settings-section-hint">Each tool reads its settings from here. Changes apply straight away, even to an open tool.</span>
+          </div>
+          <div id="tool-settings-container"></div>
         </section>
 
         <!-- SECTION 3: GENERAL PREFERENCES -->
@@ -490,7 +451,7 @@ function renderProfileSettings() {
           <div>
             <label for="settings-profile-username" style="display:flex; justify-content:space-between; align-items:center; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">
               <span>Unique Username</span>
-              ${isOwner ? '<span style="color:#10b981; font-weight:600; text-transform:none;">Verified Owner Handle</span>' : ''}
+              ${isOwner ? '<span style="color:var(--success); font-weight:600; text-transform:none;">Verified Owner Handle</span>' : ''}
             </label>
             <div style="display:flex; gap:8px;">
               <div style="position:relative; flex:1;">
@@ -725,7 +686,7 @@ function renderAiSettings() {
             ${user ? 'All conversations are saved to Supabase and restored upon login.' : 'Sign in to sync your conversation history across browsers.'}
           </div>
         </div>
-        <span style="font-size:0.78rem; font-weight:600; color:${user ? '#10b981' : 'var(--text-muted)'};">
+        <span style="font-size:0.78rem; font-weight:600; color:${user ? 'var(--success)' : 'var(--text-muted)'};">
           ${user ? 'Active' : 'Offline'}
         </span>
       </div>
@@ -740,7 +701,7 @@ function renderAiSettings() {
             </div>
           </div>
           ${isUnlimited ? `
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-reset-quota-modal" style="font-size:0.74rem; color:#ef4444;">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-reset-quota-modal" style="font-size:0.74rem; color:var(--danger);">
               Reset Count
             </button>
           ` : ''}
@@ -819,49 +780,29 @@ function renderStorageSettings() {
   });
 }
 
-let activeThemeSearch = '';
+const THEME_SWATCH = {
+  system: '<span class="theme-swatch theme-swatch-system"><i></i><i></i></span>',
+  light: '<span class="theme-swatch theme-swatch-light"><i></i><i></i></span>',
+  dark: '<span class="theme-swatch theme-swatch-dark"><i></i><i></i></span>',
+};
 
-function updateThemeList(search = activeThemeSearch) {
-  activeThemeSearch = search;
-
-  const currentId = getStoredTheme();
-  const standardGrid = modalEl.querySelector('#theme-grid-standard');
-  if (!standardGrid) return;
-
-  const filtered = THEMES.filter(t => {
-    const q = activeThemeSearch.toLowerCase().trim();
-    const matchSearch = !q || t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || t.group.toLowerCase().includes(q);
-    return matchSearch;
-  });
-
-  if (filtered.length === 0) {
-    standardGrid.innerHTML = `
-      <div style="width: 100%; padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
-        No themes found matching "${escapeHtml(activeThemeSearch)}"
-      </div>
-    `;
-  } else {
-    standardGrid.innerHTML = filtered.map(t => renderThemeCard(t, currentId)).join('');
-  }
-
-  modalEl.querySelectorAll('.theme-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const themeId = card.getAttribute('data-theme-id');
-      applyTheme(themeId);
-      updateThemeList(activeThemeSearch);
+function updateThemeList() {
+  const grid = modalEl?.querySelector('#theme-grid-standard');
+  if (!grid) return;
+  const current = getStoredTheme();
+  grid.innerHTML = THEMES.map(t => `
+    <button type="button" class="theme-option${t.id === current ? ' is-active' : ''}" role="radio"
+      aria-checked="${t.id === current}" data-theme-id="${t.id}">
+      ${THEME_SWATCH[t.id] || ''}
+      <span class="theme-option-name">${escapeHtml(t.name)}</span>
+      <span class="theme-option-desc">${escapeHtml(t.description)}</span>
+    </button>`).join('');
+  grid.querySelectorAll('.theme-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      applyTheme(btn.dataset.themeId);
+      updateThemeList();
     });
   });
-
-  // Wire search input once
-  const searchInput = modalEl.querySelector('#theme-filter-search');
-  if (searchInput && !searchInput.dataset.wired) {
-    searchInput.dataset.wired = 'true';
-    searchInput.addEventListener('input', (e) => {
-      updateThemeList(e.target.value);
-    });
-  }
-
-
 }
 
 function renderMailSettings() {
@@ -938,8 +879,14 @@ export function openSettings(targetSection = null) {
   });
   paintSupporterProfile();
 
+  const toolFocus = typeof targetSection === 'string' && targetSection.startsWith('tool:') ? targetSection.slice(5) : null;
+  renderToolPreferences(modalEl.querySelector('#tool-settings-container'), toolFocus);
+
   if (targetSection === 'avatars') {
     showAvatarView();
+  } else if (toolFocus) {
+    showSettingsPage('tools');
+    setSettingsHeading('Tools', 'Settings for individual tools', true);
   } else if (targetSection) {
     const page = targetSection === 'preferences' || targetSection === 'storage' ? 'general' : targetSection === 'ai' ? 'assistant' : targetSection === 'contribution' ? 'support' : targetSection;
     showSettingsPage(page);

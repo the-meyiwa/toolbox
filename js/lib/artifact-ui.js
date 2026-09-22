@@ -39,13 +39,13 @@ export function mountArtifactStrip(host, { tool, instance, incoming }) {
   strip.className = 'art-strip';
   strip.innerHTML = `
     <div class="art-strip-main">
-      <label class="art-name-label" for="art-name">Name</label>
+      <label class="art-name-label" for="art-name">File name</label>
       <input type="text" class="tool-input art-name" id="art-name" spellcheck="false" autocomplete="off"
              placeholder="untitled.${kindExt(produces[0])}" value="${escapeHtml(boundName)}">
       <div class="art-actions">
         <button class="btn btn-primary btn-sm" data-act="save">Save</button>
         <button class="btn btn-secondary btn-sm" data-act="export">Download</button>
-        <button class="btn btn-secondary btn-sm" data-act="share-space">Share to Space</button>
+        <button class="btn btn-secondary btn-sm" data-act="share-space">Share</button>
         <div class="art-menu-wrap">
           <button class="btn btn-secondary btn-sm" data-act="open-in" aria-haspopup="true" aria-expanded="false">Open in…</button>
           <div class="art-menu" hidden></div>

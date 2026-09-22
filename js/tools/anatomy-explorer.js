@@ -482,8 +482,8 @@ export default {
           </div>
 
           <!-- Clinical Pearls & Surgical Anatomy -->
-          <div style="margin-bottom:8px; background:rgba(239, 68, 68, 0.05); border-left:3px solid #ef4444; padding:6px 10px; border-radius:0 6px 6px 0;">
-            <span style="font-size:0.74rem; font-weight:700; text-transform:uppercase; color:#b91c1c; letter-spacing:0.04em;">Clinical Pearls &amp; Pathology</span>
+          <div style="margin-bottom:8px; background:rgba(239, 68, 68, 0.05); border-left:3px solid var(--danger); padding:6px 10px; border-radius:0 6px 6px 0;">
+            <span style="font-size:0.74rem; font-weight:700; text-transform:uppercase; color:var(--danger); letter-spacing:0.04em;">Clinical Pearls &amp; Pathology</span>
             <p style="margin:2px 0 0; font-size:0.8rem; line-height:1.4; color:#7f1d1d;">${detail.clinicalNotes}</p>
           </div>
 

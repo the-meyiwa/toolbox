@@ -521,17 +521,17 @@ export default {
             <div class="calc-graph-layout">
               <div class="calc-graph-controls">
                 <div class="calc-graph-fn-row">
-                  <span class="calc-fn-color-dot" style="background:#3b82f6;"></span>
+                  <span class="calc-fn-color-dot" style="background:var(--text);"></span>
                   <label class="calc-fn-lbl">f₁(x) =</label>
                   <input type="text" id="graph-f1" class="tool-input" value="sin(x)" placeholder="e.g. sin(x) or x^2 - 4">
                 </div>
                 <div class="calc-graph-fn-row">
-                  <span class="calc-fn-color-dot" style="background:#ef4444;"></span>
+                  <span class="calc-fn-color-dot" style="background:var(--danger);"></span>
                   <label class="calc-fn-lbl">f₂(x) =</label>
                   <input type="text" id="graph-f2" class="tool-input" value="cos(x)" placeholder="e.g. cos(x)">
                 </div>
                 <div class="calc-graph-fn-row">
-                  <span class="calc-fn-color-dot" style="background:#10b981;"></span>
+                  <span class="calc-fn-color-dot" style="background:var(--success);"></span>
                   <label class="calc-fn-lbl">f₃(x) =</label>
                   <input type="text" id="graph-f3" class="tool-input" value="" placeholder="e.g. 0.5*x">
                 </div>

@@ -178,7 +178,7 @@ export default {
         <div class="rc-result">
           <div class="rc-chips">
             ${[digits[d1], digits[d2], mult, tols.find(t => t.tol === 5)].map(b => `
-              <span class="rc-chip" style="background:${b.hex};color:${b.text || '#111'}">${b.name}</span>`).join('')}
+              <span class="rc-chip" style="background:${b.hex};color:${b.text || 'var(--text)'}">${b.name}</span>`).join('')}
           </div>
           <p class="biz-explain">${fmtOhms(ohms)} reads ${escapeHtml(digits[d1].name.toLowerCase())},
             ${escapeHtml(digits[d2].name.toLowerCase())}, ${escapeHtml(mult.name.toLowerCase())} — plus gold for ±5%.</p>

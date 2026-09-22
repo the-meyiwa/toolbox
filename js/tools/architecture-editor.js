@@ -65,7 +65,7 @@ export default {
             <span id="arch-selected-name" style="font-size:0.82rem; font-weight:600; color:var(--g800); margin-right:4px;">Wall</span>
             <button class="btn btn-sm btn-secondary" id="arch-rotate-el" title="Rotate element 45°">Rotate</button>
             <button class="btn btn-sm btn-secondary" id="arch-dup-el" title="Duplicate element">Duplicate</button>
-            <button class="btn btn-sm btn-secondary" id="arch-del-el" title="Delete element" style="color:#ef4444;">Delete</button>
+            <button class="btn btn-sm btn-secondary" id="arch-del-el" title="Delete element" style="color:var(--danger);">Delete</button>
           </div>
         </div>
 

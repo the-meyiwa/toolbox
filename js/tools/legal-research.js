@@ -92,7 +92,7 @@ export default {
           <div class="cd-card" style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:14px; grid-column:1 / -1;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
               <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0; text-transform:uppercase;"> Verified Authorities &amp; Findings Matrix</h4>
-              <span style="font-size:0.75rem; color:#2563eb; font-weight:600;">Grounded &amp; Editable</span>
+              <span style="font-size:0.75rem; color:var(--text); font-weight:600;">Grounded &amp; Editable</span>
             </div>
             <div id="lr-matrix-container">
               <table style="width:100%; border-collapse:collapse; font-size:0.82rem; text-align:left;">

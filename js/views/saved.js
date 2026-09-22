@@ -88,7 +88,7 @@ function renderTagDots(tags = []) {
   if (!tags || !tags.length) return '';
   return `
     <div class="sv-tags-dots" style="display:flex; align-items:center; justify-content:center; gap:3px; margin-top:3px;">
-      ${tags.map(t => `<span style="width:6px; height:6px; border-radius:50%; background:${TAG_COLORS[t] || '#888'}; display:inline-block;" title="${escapeHtml(t)}"></span>`).join('')}
+      ${tags.map(t => `<span style="width:6px; height:6px; border-radius:50%; background:${TAG_COLORS[t] || 'var(--text-3)'}; display:inline-block;" title="${escapeHtml(t)}"></span>`).join('')}
     </div>
   `;
 }
@@ -844,8 +844,8 @@ function renderContentBody(file) {
       `;
     }
     return `
-      <div style="width:100%; height:100%; min-height:500px; display:flex; flex-direction:column; background:#ffffff; border-radius:8px; overflow:hidden; border:1px solid var(--border);">
-        <iframe srcdoc="${escapeHtml(text)}" sandbox="allow-scripts allow-same-origin" style="width:100%; height:100%; flex:1; min-height:500px; border:none; background:#ffffff;"></iframe>
+      <div style="width:100%; height:100%; min-height:500px; display:flex; flex-direction:column; background:var(--surface); border-radius:8px; overflow:hidden; border:1px solid var(--border);">
+        <iframe srcdoc="${escapeHtml(text)}" sandbox="allow-scripts allow-same-origin" style="width:100%; height:100%; flex:1; min-height:500px; border:none; background:var(--surface);"></iframe>
       </div>
     `;
   }
@@ -915,7 +915,7 @@ function renderMarkdown(md) {
 function storageNote() {
   return store.persistent
     ? ''
-    : `<p class="sv-note is-warn" style="margin-top:16px; font-size:0.75rem; color:#f59e0b; line-height:1.5;">Private browsing mode detected. Files persist during this session. Download files to keep them permanently.</p>`;
+    : `<p class="sv-note is-warn" style="margin-top:16px; font-size:0.75rem; color:var(--warning); line-height:1.5;">Private browsing mode detected. Files persist during this session. Download files to keep them permanently.</p>`;
 }
 
 /* ---------------- Event Wiring ---------------- */
@@ -1615,7 +1615,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
 
         <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
 
-        <div class="finder-menu-item" data-cmenu="delete" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #ef4444;">
+        <div class="finder-menu-item" data-cmenu="delete" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: var(--danger);">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           <span>Delete ${multiCount} Items</span>
         </div>
@@ -1698,7 +1698,7 @@ function wire(host, selected, refresh, itemsInDir = []) {
 
         <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
 
-        <div class="finder-menu-item" data-cmenu="delete" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #ef4444;">
+        <div class="finder-menu-item" data-cmenu="delete" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: var(--danger);">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           <span>Delete ${isDir ? 'Folder' : 'File'}</span>
         </div>

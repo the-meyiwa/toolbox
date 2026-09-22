@@ -382,7 +382,7 @@ export function renderSpaces(host, rawPath = null) {
       navigator.clipboard.writeText(link);
       const btn = e.target.closest('[data-act]');
       const originalHTML = btn.innerHTML;
-      btn.innerHTML = `<span style="color:#059669; font-weight:600;">Copied link!</span>`;
+      btn.innerHTML = `<span style="color:var(--success); font-weight:600;">Copied link!</span>`;
       setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
       return;
     }

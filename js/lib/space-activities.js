@@ -52,7 +52,7 @@ export function mountDeskOverview(container, engine) {
             <div class="sp-stat-item">
               <div class="sp-stat-top">
                 <span class="sp-stat-num">${onlineCount}</span>
-                <span class="sp-live-badge" style="font-size:0.65rem; font-weight:600; padding:1px 6px; border-radius:9999px; background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3);">Online</span>
+                <span class="sp-live-badge" style="font-size:0.65rem; font-weight:600; padding:1px 6px; border-radius:9999px; background:rgba(16,185,129,0.12); color:var(--success); border:1px solid rgba(16,185,129,0.3);">Online</span>
               </div>
               <span class="sp-stat-label">Active Members</span>
             </div>
@@ -166,7 +166,7 @@ export function mountDeskOverview(container, engine) {
             <div class="sp-online-roster">
               ${onlineMembers.map(m => `
                 <div class="sp-roster-pill" title="${escapeHtml(m.name)} (${m.role})">
-                  <span class="sp-avatar-circle" style="background:${m.color || '#000'}">${getInitials(m.name)}</span>
+                  <span class="sp-avatar-circle" style="background:${m.color || 'var(--text)'}">${getInitials(m.name)}</span>
                   <span class="sp-roster-name">${escapeHtml(m.name)}</span>
                   ${m.isSelf ? '<span class="sp-you-badge">you</span>' : ''}
                 </div>
@@ -1146,7 +1146,7 @@ export function mountMembersView(container, engine) {
             return `
               <div class="sp-member-row">
                 <div class="sp-member-info">
-                  <div class="sp-avatar-circle" style="background:${m.color || '#000'}">${getInitials(m.name)}</div>
+                  <div class="sp-avatar-circle" style="background:${m.color || 'var(--text)'}">${getInitials(m.name)}</div>
                   <div>
                     <div style="display:flex; align-items:center; gap:6px;">
                       <strong>${escapeHtml(m.name)}</strong>

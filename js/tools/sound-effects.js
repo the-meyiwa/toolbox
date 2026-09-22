@@ -32,7 +32,7 @@ export default {
 
             <!-- Loop Mode Toggle -->
             <button type="button" class="btn btn-secondary btn-sm" id="sfx-loop-btn">Loop: Off</button>
-            <button type="button" class="btn btn-secondary btn-sm" id="sfx-stop-all" style="color:#ef4444;">Stop All</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="sfx-stop-all" style="color:var(--danger);">Stop All</button>
           </div>
         </div>
 
@@ -160,7 +160,7 @@ export default {
       } catch (err) {
         console.error(err);
         loadingEl.style.display = 'none';
-        sfxGrid.innerHTML = `<div style="grid-column:1/-1; padding:40px; text-align:center; color:#ef4444;">Failed to fetch sounds. Please check your connection.</div>`;
+        sfxGrid.innerHTML = `<div style="grid-column:1/-1; padding:40px; text-align:center; color:var(--danger);">Failed to fetch sounds. Please check your connection.</div>`;
       }
     }
 

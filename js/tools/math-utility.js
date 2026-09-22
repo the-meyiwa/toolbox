@@ -946,7 +946,7 @@ export default {
             </div>
             <div style="padding:6px; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; text-align:center;">
               <div style="font-size:0.65rem; color:var(--text-muted);">Polar</div>
-              <div style="font-family:var(--mono, monospace); font-weight:700; color:var(--primary, #2563eb);">${escapeHtml(data.polar?.notation || '')}</div>
+              <div style="font-family:var(--mono, monospace); font-weight:700; color:var(--primary, var(--text));">${escapeHtml(data.polar?.notation || '')}</div>
             </div>
             <div style="padding:6px; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; text-align:center;">
               <div style="font-size:0.65rem; color:var(--text-muted);">Modulus |z|</div>
@@ -979,7 +979,7 @@ export default {
       } else if (data.operation === 'linear_regression') {
         mainContent = `
           <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Linear Regression (OLS)</div>
-          <div style="font-family:var(--mono, monospace); font-size:1.25rem; font-weight:700; margin-top:4px; color:var(--primary, #2563eb);">
+          <div style="font-family:var(--mono, monospace); font-size:1.25rem; font-weight:700; margin-top:4px; color:var(--primary, var(--text));">
             ${escapeHtml(data.equation)}
           </div>
           <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(100px, 1fr)); gap:6px; margin-top:8px;">

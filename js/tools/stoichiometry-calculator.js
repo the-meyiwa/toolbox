@@ -36,8 +36,8 @@ export default {
         <!-- Results Display Stage -->
         <div id="st-results-stage" style="display:none;">
           <!-- Limiting Reactant Banner -->
-          <div style="background:#f0fdf4; border:2px solid #22c55e; border-radius:10px; padding:14px; margin-bottom:16px; text-align:center;">
-            <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#15803d;">Limiting Reagent</span>
+          <div style="background:var(--success-soft); border:2px solid var(--success); border-radius:10px; padding:14px; margin-bottom:16px; text-align:center;">
+            <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--success);">Limiting Reagent</span>
             <div id="st-limiting-badge" style="font-size:1.35rem; font-weight:900; color:#14532d; margin-top:2px;"></div>
           </div>
 
@@ -55,7 +55,7 @@ export default {
         </div>
 
         <!-- Error Box -->
-        <div id="st-error-box" style="display:none; margin-top:14px; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:12px; color:#991b1b; font-size:0.85rem;"></div>
+        <div id="st-error-box" style="display:none; margin-top:14px; background:var(--danger-soft); border:1px solid var(--danger); border-radius:8px; padding:12px; color:var(--danger); font-size:0.85rem;"></div>
       </div>
     `;
 
@@ -128,7 +128,7 @@ export default {
             <tbody>
               ${stoich.productYields.map(p => `
                 <tr style="border-bottom:1px solid var(--g100);">
-                  <td style="padding:6px 8px; font-family:var(--mono); font-weight:700; color:#16a34a;">${p.formula}</td>
+                  <td style="padding:6px 8px; font-family:var(--mono); font-weight:700; color:var(--success);">${p.formula}</td>
                   <td style="padding:6px 8px; text-align:right; font-family:var(--mono); font-weight:700;">${p.moles.toFixed(4)}</td>
                   <td style="padding:6px 8px; text-align:right; font-family:var(--mono); font-weight:700;">${p.grams.toFixed(2)} g</td>
                   <td style="padding:6px 8px; text-align:right; font-family:var(--mono);">${p.litersSTP.toFixed(2)} L</td>
@@ -158,7 +158,7 @@ export default {
                   <td style="padding:6px 8px; text-align:right; font-family:var(--mono);">${e.molesRemaining.toFixed(4)}</td>
                   <td style="padding:6px 8px; text-align:right; font-family:var(--mono); font-weight:700;">${e.gramsRemaining.toFixed(2)} g</td>
                   <td style="padding:6px 8px; text-align:center;">
-                    <span style="font-size:0.72rem; font-weight:700; padding:1px 6px; border-radius:999px; background:${e.isLimiting ? '#fee2e2' : '#fef3c7'}; color:${e.isLimiting ? '#991b1b' : '#92400e'};">
+                    <span style="font-size:0.72rem; font-weight:700; padding:1px 6px; border-radius:999px; background:${e.isLimiting ? 'var(--danger-soft)' : 'var(--warning-soft)'}; color:${e.isLimiting ? 'var(--danger)' : 'var(--warning)'};">
                       ${e.isLimiting ? 'Limiting Reagent' : 'In Excess'}
                     </span>
                   </td>

@@ -17,6 +17,7 @@ import { kindLabel } from './registry/kinds.js';
 import { copyText, showToast } from './utils.js';
 import { initTheme } from './lib/theme.js';
 import { installSettingsUI, openSettings } from './lib/settings-ui.js';
+import { hasToolSettings } from './lib/tool-settings.js';
 import { installHeaderMenu } from './lib/header-menu.js';
 import { getCurrentUser, parseAuthRedirect } from './lib/supabase.js';
 import { openAccountModal } from './views/account-modal.js';
@@ -44,6 +45,8 @@ let currentPage = 'home';
 let unmountArtifacts = null;
 /** Teardown for the saved-work view. */
 let unmountSaved = null;
+/** Watches the open tool so output wells stay free of template whitespace. */
+let outputObserver = null;
 /** Teardown for the spaces view. */
 
 /* --------------- DOM --------------- */
@@ -80,16 +83,16 @@ const toolModules = import.meta.glob('./tools/*.js');
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-function toolCard(tool, { compact = false } = {}) {
+function toolCard(tool, { compact = false, index = 0 } = {}) {
   return `
-    <a class="tool-card${compact ? ' tool-card-sm' : ''}" href="#${tool.id}" id="card-${tool.id}">
+    <a class="tool-card${compact ? ' tool-card-sm' : ''}" href="#${tool.id}" id="card-${tool.id}" style="--i:${index}">
       <div class="tool-card-icon">${tool.icon}</div>
       <div class="tool-card-info">
         <div class="tool-card-name">${escapeHtml(tool.name)}</div>
         <div class="tool-card-desc">${escapeHtml(tool.description)}</div>
       </div>
-      ${tool.badge ? `<span class="tool-card-badge">${escapeHtml(tool.badge)}</span>` : ''}
-      ${tool.offline === false ? '<span class="tool-card-flag" title="Needs an internet connection">online</span>' : ''}
+      ${tool.badge ? `<span class="tool-card-badge">${escapeHtml(tool.badge)}</span>`
+        : tool.offline === false ? '<span class="tool-card-flag" title="Needs an internet connection">Online</span>' : ''}
     </a>`;
 }
 
@@ -100,7 +103,26 @@ export const LONG_CONTENT_TOOL_IDS = new Set([
   'cap-table', 'amortization-schedule', 'depreciation-calculator', 'invoice-generator',
   'payroll-cost', 'timesheet', 'pto-accrual', 'unit-economics', 'runway-calculator',
   'subscription-analyzer', 'financial-analyzer', 'concrete-estimator', 'beam-calculator',
-  'stoichiometry-calculator', 'chemical-equation-balancer', 'math-utility'
+  'stoichiometry-calculator', 'chemical-equation-balancer', 'math-utility', 'chess', 'tech-device-comparisons'
+]);
+
+/* Tools that bring their own full-screen chrome: no panel around them. */
+const BARE_TOOL_IDS = new Set([
+  'assistant', 'code-playground', 'container-planner', 'mail', 'messaging', 'calendar',
+  'notes', 'browser', 'automobile-guide', 'anatomy-explorer', 'interactive-map', 'spotify',
+]);
+/* Tools that need the whole width of the window. */
+const WIDE_TOOL_IDS = new Set([
+  ...BARE_TOOL_IDS,
+  'flowchart', 'architecture-editor', 'uml-diagram', 'logic-lab', 'algorithm-lab', 'pdf-editor',
+  'watermark-remover', 'math-utility', 'periodic-table', 'data-bot', 'financial-analyzer', 'wiki',
+  'video-player', 'file-drop', 'compound-database', 'diseases-database', 'calculator', 'case-digest',
+  'case-comparator', 'legal-research', 'text-diff', 'tech-device-comparisons', 'sound-effects', 'chess',
+]);
+/* Tools whose content should stretch to fill the panel's height. */
+const FILL_TOOL_IDS = new Set([
+  'flowchart', 'architecture-editor', 'uml-diagram', 'logic-lab', 'algorithm-lab', 'pdf-editor',
+  'watermark-remover', 'data-bot', 'video-player', 'calculator', 'timer',
 ]);
 
 export function isFitScreenTool(id) {
@@ -148,8 +170,8 @@ function renderGrid(originalList, { query = '', noResult = false } = {}) {
       </div>
       ${list.length ? `
         <section class="grid-category">
-          <h2 class="category-label">Closest matches</h2>
-          <div class="category-tools">${list.slice(0, 6).map(t => toolCard(t)).join('')}</div>
+          <div class="grid-category-head"><h2 class="category-label">Closest matches</h2></div>
+          <div class="category-tools">${list.slice(0, 6).map((t, i) => toolCard(t, { index: i })).join('')}</div>
         </section>` : ''}`;
     return;
   }
@@ -158,26 +180,31 @@ function renderGrid(originalList, { query = '', noResult = false } = {}) {
   if (query) {
     grid.innerHTML = `
       <section class="grid-category">
-        <h2 class="category-label">${list.length} result${list.length === 1 ? '' : 's'}</h2>
-        <div class="category-tools">${list.map(t => toolCard(t)).join('')}</div>
+        <div class="grid-category-head"><h2 class="category-label">Results</h2><span class="category-count">${list.length}</span></div>
+        <div class="category-tools">${list.map((t, i) => toolCard(t, { index: i })).join('')}</div>
       </section>`;
     return;
   }
 
+  const popularTools = popular(8).filter(t => list.some(lt => lt.id === t.id));
+  const groups = categorised(list);
   const sections = [
     `<section class="grid-category" id="cat-popular">
-       <h2 class="category-label">Popular</h2>
+       <div class="grid-category-head"><h2 class="category-label">Popular</h2><span class="category-count">${popularTools.length}</span></div>
        <p class="category-blurb">What people open most.</p>
-       <div class="category-tools">${popular(8).filter(t => list.some(lt => lt.id === t.id)).map(t => toolCard(t)).join('')}</div>
+       <div class="category-tools">${popularTools.map((t, i) => toolCard(t, { index: i })).join('')}</div>
      </section>`,
-    ...categorised(list).map(c => `
+    ...groups.map(c => `
       <section class="grid-category" id="cat-${c.id}">
-        <h2 class="category-label">${escapeHtml(c.label)}</h2>
+        <div class="grid-category-head"><h2 class="category-label">${escapeHtml(c.label)}</h2><span class="category-count">${c.tools.length}</span></div>
         <p class="category-blurb">${escapeHtml(c.blurb)}</p>
-        <div class="category-tools">${c.tools.map(t => toolCard(t)).join('')}</div>
+        <div class="category-tools">${c.tools.map((t, i) => toolCard(t, { index: i })).join('')}</div>
       </section>`),
   ];
   grid.innerHTML = sections.join('');
+  renderCategoryChips(groups);
+  const count = $('tools-count');
+  if (count) count.textContent = String(list.length);
 }
 
 let prevNavIndicatorLeft = null;
@@ -188,43 +215,21 @@ export function updateMobileNavIndicator() {
   const nav = document.getElementById('mobile-nav');
   const indicator = document.getElementById('mob-nav-indicator');
   if (!nav || !indicator) return;
-  const activeItem = nav.querySelector('.mob-nav-item.active');
-  if (!activeItem || activeItem.offsetParent === null) {
-    indicator.style.opacity = '0';
-    return;
-  }
-  const targetLeft = activeItem.offsetLeft;
-  const targetWidth = activeItem.offsetWidth;
-  if (!targetWidth) return;
+  const active = nav.querySelector('.mob-nav-item.active');
+  if (!active || getComputedStyle(nav).display === 'none') { indicator.style.width = '0px'; return; }
+  indicator.style.width = `${active.offsetWidth}px`;
+  indicator.style.transform = `translateX(${active.offsetLeft}px)`;
+}
 
-  indicator.style.opacity = '1';
-
-  if (prevNavIndicatorLeft !== null && prevNavIndicatorLeft !== targetLeft) {
-    if (stretchTimer) clearTimeout(stretchTimer);
-    // Dynamic Microsoft Store stretch effect
-    const movingRight = targetLeft > prevNavIndicatorLeft;
-    const stretchLeft = movingRight ? prevNavIndicatorLeft : targetLeft;
-    const stretchWidth = (Math.max(prevNavIndicatorLeft + (prevNavIndicatorWidth || targetWidth), targetLeft + targetWidth)) - stretchLeft;
-
-    // Phase 1: Rapid stretch towards target
-    indicator.style.transition = 'transform 0.14s cubic-bezier(0.3, 0, 0.2, 1), width 0.14s cubic-bezier(0.3, 0, 0.2, 1)';
-    indicator.style.transform = `translate3d(${stretchLeft}px, 0, 0)`;
-    indicator.style.width = `${stretchWidth}px`;
-
-    // Phase 2: Snap tail cleanly into active item
-    stretchTimer = setTimeout(() => {
-      indicator.style.transition = 'transform 0.20s cubic-bezier(0.2, 0.85, 0.2, 1), width 0.20s cubic-bezier(0.2, 0.85, 0.2, 1)';
-      indicator.style.transform = `translate3d(${targetLeft}px, 0, 0)`;
-      indicator.style.width = `${targetWidth}px`;
-    }, 110);
-  } else {
-    indicator.style.transition = 'opacity 0.15s ease';
-    indicator.style.transform = `translate3d(${targetLeft}px, 0, 0)`;
-    indicator.style.width = `${targetWidth}px`;
-  }
-
-  prevNavIndicatorLeft = targetLeft;
-  prevNavIndicatorWidth = targetWidth;
+function renderCategoryChips(groups) {
+  const bar = document.getElementById('category-chip-bar');
+  if (!bar) return;
+  bar.innerHTML = [
+    `<button type="button" class="chip category-chip active" data-cat="all">All</button>`,
+    `<button type="button" class="chip category-chip" data-cat="popular">Popular</button>`,
+    ...groups.map(c => `<button type="button" class="chip category-chip" data-cat="${c.id}">${escapeHtml(c.label)}</button>`),
+  ].join('');
+  installCategoryChips();
 }
 
 function installCategoryChips() {
@@ -233,11 +238,14 @@ function installCategoryChips() {
   const chips = chipBar.querySelectorAll('.category-chip');
 
   chips.forEach(chip => {
+    chip.setAttribute('aria-pressed', chip.classList.contains('active') ? 'true' : 'false');
     chip.addEventListener('click', (e) => {
       e.preventDefault();
       try { navigator.vibrate?.(6); } catch (err) {}
-      chips.forEach(c => c.classList.remove('active'));
+      chips.forEach(c => { c.classList.remove('active'); c.setAttribute('aria-pressed', 'false'); });
       chip.classList.add('active');
+      chip.setAttribute('aria-pressed', 'true');
+      chip.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
 
       const catId = chip.dataset.cat;
       if (catId === 'all') {
@@ -247,7 +255,7 @@ function installCategoryChips() {
 
       const targetEl = document.getElementById(`cat-${catId}`);
       if (targetEl) {
-        const headerOffset = 70;
+        const headerOffset = 130;
         const elementPosition = targetEl.getBoundingClientRect().top;
         const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
         window.scrollTo({
@@ -315,8 +323,8 @@ function renderRelated(tool) {
   if (!rel.length) { relatedBar.innerHTML = ''; relatedBar.hidden = true; return; }
   relatedBar.hidden = false;
   relatedBar.innerHTML = `
-    <h3 class="related-h">Related tools</h3>
-    <div class="related-list">${rel.map(t => toolCard(t, { compact: true })).join('')}</div>`;
+    <h2 class="related-h">Related tools</h2>
+    <div class="related-list">${rel.map((t, i) => toolCard(t, { compact: true, index: i })).join('')}</div>`;
 }
 
 
@@ -325,11 +333,9 @@ function updateFullscreenBtnState(isFullscreen) {
   const expandIcon = popoutBtn.querySelector('.fs-icon-expand');
   const collapseIcon = popoutBtn.querySelector('.fs-icon-collapse');
   const label = popoutBtn.querySelector('.fs-label');
-  if (expandIcon) expandIcon.style.display = isFullscreen ? 'none' : 'block';
-  if (collapseIcon) collapseIcon.style.display = isFullscreen ? 'block' : 'none';
-  if (label) label.textContent = isFullscreen ? 'Exit Fullscreen' : 'Fullscreen';
-  popoutBtn.title = isFullscreen ? 'Exit Fullscreen' : 'Fullscreen';
-  popoutBtn.setAttribute('aria-label', isFullscreen ? 'Exit Fullscreen' : 'Fullscreen');
+  if (label) label.textContent = isFullscreen ? 'Exit fullscreen' : 'Fullscreen';
+  popoutBtn.title = isFullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen';
+  popoutBtn.setAttribute('aria-label', isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen');
 }
 
 function toggleToolFullscreen(force) {
@@ -376,11 +382,11 @@ function showPage(page) {
   document.body.classList.remove('in-tool');
   document.body.removeAttribute('data-tool-id');
   document.body.classList.remove('tool-fit-screen');
+  document.body.classList.remove('tool-bare', 'tool-wide', 'tool-fill');
   document.body.classList.toggle('in-files', page === 'saved' || page === 'files');
   for (const link of navLinks) {
     link.classList.toggle('active', link.dataset.page === page || (page === 'about' && link.dataset.page === 'support') || (page === 'support' && link.dataset.page === 'about'));
   }
-  searchWrapper.style.display = page === 'tools' ? '' : 'none';
   if (page === 'donate') openSettings('contribution');
 
   requestAnimationFrame(updateMobileNavIndicator);
@@ -410,12 +416,38 @@ function initAboutShowcase() {
   });
 }
 
+/* Templates indent their markup, and `.tool-output` renders whitespace as
+   written, so a result block would open with the template's own indentation.
+   Trimming the whitespace-only edges of every output well once per render
+   fixes it everywhere without touching 29 tool templates. */
+function tidyOutputs(root) {
+  if (!root) return;
+  for (const el of root.querySelectorAll('.tool-output')) {
+    // A well that mixes elements with template whitespace: drop the blank
+    // text nodes between them, they would render as gaps and indentation.
+    if (el.firstElementChild) {
+      for (const node of [...el.childNodes]) {
+        if (node.nodeType === 3 && !node.nodeValue.trim()) node.remove();
+      }
+    }
+    let first = el.firstChild;
+    while (first && first.nodeType === 3 && !first.nodeValue.trim()) { first.remove(); first = el.firstChild; }
+    let last = el.lastChild;
+    while (last && last.nodeType === 3 && !last.nodeValue.trim()) { last.remove(); last = el.lastChild; }
+    if (first && first.nodeType === 3) first.nodeValue = first.nodeValue.replace(/^\s*\n\s*/, '');
+    if (last && last.nodeType === 3) last.nodeValue = last.nodeValue.replace(/\s*\n\s*$/, '');
+  }
+}
+
 function teardownTool() {
   toolNavigationVersion++;
+  outputObserver?.disconnect();
+  outputObserver = null;
   toggleToolFullscreen(false);
   document.body.classList.remove('in-tool');
   document.body.removeAttribute('data-tool-id');
   document.body.classList.remove('tool-fit-screen');
+  document.body.classList.remove('tool-bare', 'tool-wide', 'tool-fill');
   unmountArtifacts?.();
   unmountArtifacts = null;
   unmountSaved?.();
@@ -457,9 +489,13 @@ async function openTool(id, routeState = {}) {
     if (!v) continue;
     v.classList.add('hidden');
   }
-  searchWrapper.style.display = 'none';
-
-  viewportTitle.textContent = tool.name;
+  viewportTitle.innerHTML = `<span class="viewport-title-icon" aria-hidden="true">${tool.icon}</span><span>${escapeHtml(tool.name)}</span>`;
+  const categoryLink = $('viewport-category');
+  if (categoryLink) {
+    categoryLink.textContent = CATEGORY_LABELS[tool.category] || 'Tools';
+    categoryLink.href = '#tools';
+    categoryLink.dataset.cat = tool.category;
+  }
   // Name and description both come from the registry, so a tool can
   // never describe itself differently here than on its card.
   if (viewportDesc) viewportDesc.textContent = tool.description;
@@ -482,6 +518,8 @@ async function openTool(id, routeState = {}) {
     popoutBtn.style.display = (isDesktop && !isFullscreenByDefault) ? 'inline-flex' : 'none';
     updateFullscreenBtnState(false);
   }
+  const prefsBtn = $('tool-prefs-btn');
+  if (prefsBtn) prefsBtn.hidden = !hasToolSettings(id);
   viewport.classList.remove('hidden');
 
   for (const link of navLinks) link.classList.toggle('active', link.dataset.page === 'tools');
@@ -492,6 +530,9 @@ async function openTool(id, routeState = {}) {
   document.body.classList.remove('in-files');
   document.body.setAttribute('data-tool-id', id);
   document.body.classList.toggle('tool-fit-screen', isFitScreenTool(id));
+  document.body.classList.toggle('tool-bare', BARE_TOOL_IDS.has(id));
+  document.body.classList.toggle('tool-wide', WIDE_TOOL_IDS.has(id));
+  document.body.classList.toggle('tool-fill', FILL_TOOL_IDS.has(id));
   currentToolObj = tool;
   currentToolId = id;
 
@@ -530,6 +571,10 @@ async function openTool(id, routeState = {}) {
     });
 
     renderRelated(tool);
+    tidyOutputs(viewportContent);
+    outputObserver?.disconnect();
+    outputObserver = new MutationObserver(() => tidyOutputs(viewportContent));
+    outputObserver.observe(viewportContent, { childList: true, subtree: true });
     freshContent.setAttribute('aria-busy', 'false');
   } catch (err) {
     if (toolNavigationVersion !== navigationVersion) return;
@@ -722,11 +767,13 @@ const PAGE_TIPS = {
 function showTips() {
   const tipsModal = $('tips-modal');
   const tipsContent = $('tips-content');
-  const modalInner = tipsModal.querySelector('div');
+  const title = $('tips-title');
   tipsContent.innerHTML = '';
 
-  const tips = currentPage === 'tool' && currentToolObj
-    ? [`<strong>${escapeHtml(currentToolObj.name)}</strong> — ${escapeHtml(currentToolObj.description)}.`,
+  const inTool = currentPage === 'tool' && currentToolObj;
+  if (title) title.textContent = inTool ? `Tips · ${currentToolObj.name}` : 'Tips';
+  const tips = inTool
+    ? [`${escapeHtml(currentToolObj.description)}.`,
        ...(CATEGORY_TIPS[currentToolObj.category] ?? ['Everything runs in your browser.'])]
     : (PAGE_TIPS[currentPage] ?? PAGE_TIPS.tools);
 
@@ -735,20 +782,13 @@ function showTips() {
     li.innerHTML = tip;
     tipsContent.appendChild(li);
   }
-
-  tipsModal.style.display = 'flex';
-  requestAnimationFrame(() => {
-    tipsModal.style.opacity = '1';
-    modalInner.style.transform = 'translateY(0)';
-  });
+  tipsModal.classList.add('is-open');
+  $('close-tips')?.focus();
 }
 
 function hideTips() {
-  const tipsModal = $('tips-modal');
-  const modalInner = tipsModal.querySelector('div');
-  tipsModal.style.opacity = '0';
-  modalInner.style.transform = 'translateY(20px)';
-  setTimeout(() => { tipsModal.style.display = 'none'; }, 200);
+  $('tips-modal')?.classList.remove('is-open');
+  $('tips-fab')?.focus({ preventScroll: true });
 }
 
 /* --------------- bindings --------------- */
@@ -777,6 +817,21 @@ grid.addEventListener('click', (e) => {
   }
 });
 backBtn.addEventListener('click', () => { window.location.hash = '#tools'; });
+$('back-btn-mobile')?.addEventListener('click', () => { window.location.hash = '#tools'; });
+$('header-search-btn')?.addEventListener('click', () => openPalette());
+$('viewport-category')?.addEventListener('click', (e) => {
+  const cat = e.currentTarget.dataset.cat;
+  if (!cat) return;
+  e.preventDefault();
+  window.location.hash = '#tools';
+  requestAnimationFrame(() => setTimeout(() => {
+    document.querySelector(`.category-chip[data-cat="${cat}"]`)?.click();
+  }, 60));
+});
+const onScrollState = () => document.body.classList.toggle('is-scrolled', window.scrollY > 4);
+window.addEventListener('scroll', onScrollState, { passive: true });
+onScrollState();
+$('tool-prefs-btn')?.addEventListener('click', () => { if (currentToolId) openSettings(`tool:${currentToolId}`); });
 if (popoutBtn) {
   popoutBtn.addEventListener('click', () => {
     toggleToolFullscreen();
@@ -814,7 +869,7 @@ const homeHeroSubmitBtn = $('home-hero-submit-btn');
 function updateSearchPlaceholder() {
   if (!homeHeroInput) return;
   const user = getCurrentUser();
-  homeHeroInput.placeholder = user ? 'Search 100+ tools or prompt Assistant…' : 'Search 100+ tools…';
+  homeHeroInput.placeholder = user ? 'Search tools or ask the Assistant…' : 'Compress a photo, merge PDFs, format JSON…';
 }
 
 export function renderHomeAssistantBanner() {
@@ -822,31 +877,20 @@ export function renderHomeAssistantBanner() {
   if (!bannerEl) return;
 
   const user = getCurrentUser();
-  const titleText = user ? 'Assistant is Ready' : 'Sign in for a whole new experience';
-  const descText = user 
-    ? 'Multi-model AI layer: write code, transform files, calculate math, and execute tools.'
-    : 'Unlock the multi-model AI layer to write code, transform files, calculate math, and execute tools.';
-  const btnText = user ? 'Open Assistant &rarr;' : 'Sign In to Assistant &rarr;';
+  const titleText = user ? 'The Assistant is ready' : 'Meet the Assistant';
+  const descText = user
+    ? 'Write code, transform files, work out maths and run any tool — just ask.'
+    : 'Sign in to have it write code, transform files, work out maths and run tools for you.';
+  const btnText = user ? 'Open Assistant' : 'Sign in';
 
   bannerEl.innerHTML = `
-    <div class="home-assistant-card" style="padding:20px 24px; background:var(--g100); border:1px solid var(--g300); border-radius:18px; display:flex; align-items:center; justify-content:space-between; gap:16px; box-shadow:0 6px 20px rgba(0,0,0,0.03);">
-      <div style="display:flex; align-items:center; gap:14px;">
-        <div style="width:42px; height:42px; border-radius:50%; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-          </svg>
-        </div>
-        <div>
-          <div style="display:flex; align-items:center; gap:6px;">
-            <h3 style="margin:0; font-size:1.02rem; font-weight:800; color:var(--black); letter-spacing:-0.01em;">${titleText}</h3>
-          </div>
-          <p style="margin:2px 0 0; font-size:0.82rem; color:var(--g600); line-height:1.4;">${descText}</p>
-        </div>
+    <div class="home-assistant-card">
+      <div class="home-assistant-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 3v4M21 5h-4"/></svg></div>
+      <div class="home-assistant-text">
+        <h3 class="home-assistant-title">${titleText}</h3>
+        <p class="home-assistant-desc">${descText}</p>
       </div>
-      <button type="button" class="btn btn-primary" id="btn-open-assistant" style="padding:9px 20px; font-size:0.86rem; font-weight:700; border-radius:9999px; white-space:nowrap; flex-shrink:0; cursor:pointer;">
-        ${btnText}
-      </button>
+      <button type="button" class="btn btn-primary" id="btn-open-assistant">${btnText}</button>
     </div>
   `;
 
@@ -878,7 +922,7 @@ if (homeHeroInput && homeHeroDropdown) {
   function renderHomeHeroResults() {
     const q = homeHeroInput.value.trim();
     if (!q) {
-      homeHeroDropdown.style.display = 'none';
+      homeHeroDropdown.hidden = true;
       return;
     }
 
@@ -887,50 +931,34 @@ if (homeHeroInput && homeHeroDropdown) {
     const isAi = detectAiIntent(q);
     const searchRes = search(q, availableTools, { labels: CATEGORY_LABELS }).results.map(r => r.tool).slice(0, 6);
 
-    let html = '';
-
     const aiHtml = `
-      <div class="home-hero-ai-row" style="padding:10px 14px; background:var(--g100); border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; border:1px solid var(--g300);" data-ai-prompt="${escapeHtml(q)}">
-        <div style="display:flex; align-items:center; gap:10px;">
-          <div style="width:28px; height:28px; border-radius:50%; background:var(--black); color:var(--white); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-          </div>
-          <div>
-            <div style="font-size:0.86rem; font-weight:700; color:var(--black);">Ask Assistant: “${escapeHtml(q)}”</div>
-            <div style="font-size:0.72rem; color:var(--g600);">Let Assistant write code, analyze data, or execute tools for you</div>
-          </div>
-        </div>
-        <kbd style="font-size:0.7rem; padding:2px 6px; border-radius:4px; background:var(--white); border:1px solid var(--g300);">Enter ↵</kbd>
-      </div>
-    `;
+      <div class="hero-dd-row hero-dd-ai" role="option" tabindex="-1" data-ai-prompt="${escapeHtml(q)}">
+        <span class="hero-dd-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 3v4M21 5h-4"/></svg></span>
+        <span class="hero-dd-text">
+          <span class="hero-dd-name">Ask the Assistant: “${escapeHtml(q)}”</span>
+          <span class="hero-dd-desc">Let it write code, analyse data or run tools for you</span>
+        </span>
+        <kbd>Enter</kbd>
+      </div>`;
 
-    if (isAi) {
-      html += aiHtml;
-    }
-
+    let html = isAi ? aiHtml : '';
     if (searchRes.length) {
-      html += `<div style="font-size:0.72rem; font-weight:700; color:var(--g500); padding:4px 8px; text-transform:uppercase; letter-spacing:0.04em;">Matched Tools</div>`;
-      for (const t of searchRes) {
-        html += `
-          <a href="#${t.id}" class="home-hero-tool-row" style="display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; text-decoration:none; color:var(--black); transition:background 0.15s;">
-            <span style="font-size:1.1rem;">${t.icon}</span>
-            <div style="flex:1; min-width:0;">
-              <div style="font-size:0.86rem; font-weight:600;">${escapeHtml(t.name)}</div>
-              <div style="font-size:0.72rem; color:var(--g500); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(t.description)}</div>
-            </div>
-          </a>
-        `;
-      }
+      html += `<div class="hero-dd-label">Tools</div>`;
+      html += searchRes.map(t => `
+        <a href="#${t.id}" class="hero-dd-row" role="option">
+          <span class="hero-dd-icon">${t.icon}</span>
+          <span class="hero-dd-text">
+            <span class="hero-dd-name">${escapeHtml(t.name)}</span>
+            <span class="hero-dd-desc">${escapeHtml(t.description)}</span>
+          </span>
+        </a>`).join('');
     } else {
-      html += `<div style="padding:10px; font-size:0.82rem; color:var(--g500); text-align:center;">No direct matching tool. Press Enter to ask Assistant.</div>`;
+      html += `<div class="hero-dd-empty">No tool matches yet. Press Enter to ask the Assistant.</div>`;
     }
-
-    if (!isAi) {
-      html += `<div style="margin-top:6px;">${aiHtml}</div>`;
-    }
+    if (!isAi) html += aiHtml;
 
     homeHeroDropdown.innerHTML = html;
-    homeHeroDropdown.style.display = 'block';
+    homeHeroDropdown.hidden = false;
   }
 
   function submitHomeHero() {
@@ -947,12 +975,18 @@ if (homeHeroInput && homeHeroDropdown) {
       sessionStorage.setItem('toolbox_pending_prompt', q);
       window.location.hash = '#assistant';
     }
-    homeHeroDropdown.style.display = 'none';
+    homeHeroDropdown.hidden = true;
   }
 
   homeHeroInput.addEventListener('input', renderHomeHeroResults);
   homeHeroInput.addEventListener('focus', renderHomeHeroResults);
   homeHeroInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { homeHeroDropdown.hidden = true; return; }
+    if (e.key === 'ArrowDown') {
+      const first = homeHeroDropdown.querySelector('.hero-dd-row');
+      if (first) { e.preventDefault(); first.focus(); }
+      return;
+    }
     if (e.key === 'Enter') {
       e.preventDefault();
       submitHomeHero();
@@ -960,20 +994,28 @@ if (homeHeroInput && homeHeroDropdown) {
   });
 
   homeHeroSubmitBtn?.addEventListener('click', submitHomeHero);
+  homeHeroDropdown.addEventListener('keydown', (e) => {
+    const rows = [...homeHeroDropdown.querySelectorAll('.hero-dd-row')];
+    const i = rows.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown' && i > -1) { e.preventDefault(); rows[Math.min(i + 1, rows.length - 1)].focus(); }
+    if (e.key === 'ArrowUp' && i > -1) { e.preventDefault(); (i === 0 ? homeHeroInput : rows[i - 1]).focus(); }
+    if (e.key === 'Enter' && document.activeElement?.classList.contains('hero-dd-ai')) { e.preventDefault(); document.activeElement.click(); }
+    if (e.key === 'Escape') { homeHeroDropdown.hidden = true; homeHeroInput.focus(); }
+  });
 
   homeHeroDropdown.addEventListener('click', (e) => {
-    const aiRow = e.target.closest('.home-hero-ai-row');
+    const aiRow = e.target.closest('.hero-dd-ai');
     if (aiRow) {
       const p = aiRow.dataset.aiPrompt || homeHeroInput.value.trim();
       sessionStorage.setItem('toolbox_pending_prompt', p);
       window.location.hash = '#assistant';
-      homeHeroDropdown.style.display = 'none';
+      homeHeroDropdown.hidden = true;
     }
   });
 
   document.addEventListener('click', (e) => {
     if (!e.target.closest('#home-search-wrap')) {
-      homeHeroDropdown.style.display = 'none';
+      homeHeroDropdown.hidden = true;
     }
   });
 }
@@ -987,16 +1029,11 @@ if (tipsFab) {
 
   let scrollTimeout = null;
   window.addEventListener('scroll', () => {
-    tipsFab.style.opacity = '1';
-    tipsFab.style.pointerEvents = 'auto';
-    tipsFab.style.transform = 'translateY(0)';
+    tipsFab.classList.add('is-visible');
     clearTimeout(scrollTimeout);
-    scrollTimeout = setTimeout(() => {
-      tipsFab.style.opacity = '0';
-      tipsFab.style.pointerEvents = 'none';
-      tipsFab.style.transform = 'translateY(10px)';
-    }, 1500);
+    scrollTimeout = setTimeout(() => tipsFab.classList.remove('is-visible'), 1800);
   }, { passive: true });
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('tips-modal')?.classList.contains('is-open')) hideTips(); });
 }
 
 /* Mailto link reliability on desktop & mobile */
@@ -1070,42 +1107,17 @@ function reflectSavedWork() {
 
   const list = $('home-saved-list');
   if (list) {
-    if (!items.length) {
-      list.innerHTML = `
-        <div style="padding:16px; border:1px dashed var(--border); border-radius:12px; text-align:center; color:var(--text-muted); font-size:0.8rem;">
-          <p style="margin:0 0 10px;">No saved documents or exports yet.</p>
-          <a href="#saved" class="btn btn-secondary btn-sm" style="font-size:0.75rem; text-decoration:none;">Go to Files</a>
-        </div>
-      `;
-    } else {
-      list.innerHTML = `
-        <div class="home-task-tools" style="display:flex; flex-direction:column; gap:8px;">
-          ${items.slice(0, 4).map(m => `
-            <a class="home-task-tool" href="#saved/${m.id}" style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:10px; background:var(--surface-secondary); border:1px solid var(--border); text-decoration:none; color:var(--text);">
-              <span style="font-size:0.84rem; font-weight:600;">${escapeHtml(m.name)}</span>
-              <em style="font-size:0.72rem; color:var(--text-muted); font-style:normal;">${escapeHtml(kindLabel(m.kind))}</em>
-            </a>`).join('')}
+    list.innerHTML = items.length
+      ? items.slice(0, 5).map(m => `
+          <a class="home-file-row" href="#saved/${m.id}">
+            <span class="home-file-name">${escapeHtml(m.name)}</span>
+            <span class="home-file-kind">${escapeHtml(kindLabel(m.kind))}</span>
+          </a>`).join('')
+      : `<div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+          <strong>Nothing saved yet</strong>
+          <span>Converted files and exports you keep will show up here.</span>
         </div>`;
-    }
-  }
-
-  const strip = $('home-saved');
-  if (strip) {
-    strip.hidden = items.length === 0;
-    if (items.length) {
-      strip.innerHTML = `
-        <div class="home-saved-head">
-          <h2 class="home-task-label">Your saved work</h2>
-          <a class="home-task-more" href="#saved">Open all ${items.length} →</a>
-        </div>
-        <div class="home-task-tools">
-          ${items.slice(0, 5).map(m => `
-            <a class="home-task-tool" href="#saved/${m.id}">
-              <span>${escapeHtml(m.name)}</span>
-              <em>${escapeHtml(kindLabel(m.kind))}</em>
-            </a>`).join('')}
-        </div>`;
-    }
   }
 }
 

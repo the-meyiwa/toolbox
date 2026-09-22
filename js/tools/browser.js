@@ -78,9 +78,9 @@ export default {
           <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
             <!-- Window Traffic Light Dots -->
             <div style="display:flex; align-items:center; gap:6px; padding-left:4px;">
-              <span style="width:11px; height:11px; border-radius:50%; background:#ef4444; display:inline-block;"></span>
-              <span style="width:11px; height:11px; border-radius:50%; background:#f59e0b; display:inline-block;"></span>
-              <span style="width:11px; height:11px; border-radius:50%; background:#10b981; display:inline-block;"></span>
+              <span style="width:11px; height:11px; border-radius:50%; background:var(--danger); display:inline-block;"></span>
+              <span style="width:11px; height:11px; border-radius:50%; background:var(--warning); display:inline-block;"></span>
+              <span style="width:11px; height:11px; border-radius:50%; background:var(--success); display:inline-block;"></span>
             </div>
 
             <!-- Tab Strip -->
@@ -103,7 +103,7 @@ export default {
 
             <!-- URL Input Bar -->
             <div class="brw-address-box" style="flex:1; display:flex; align-items:center; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:2px 10px; position:relative; box-shadow:0 1px 4px rgba(0,0,0,0.02);">
-              <span style="color:#10b981; margin-right:8px; display:flex; align-items:center;" title="Secure Connection">${ICONS.lock}</span>
+              <span style="color:var(--success); margin-right:8px; display:flex; align-items:center;" title="Secure Connection">${ICONS.lock}</span>
               <input type="text" id="brw-url-input" class="tool-input" placeholder="Search with DuckDuckGo or enter web address…" style="flex:1; border:none; background:transparent; padding:6px 0; font-size:0.84rem; font-family:var(--mono); color:var(--text); outline:none;">
               <button type="button" id="brw-go-btn" class="btn btn-primary btn-sm" style="font-size:0.75rem; padding:3px 10px; margin-left:6px;">Go</button>
             </div>
@@ -157,7 +157,7 @@ export default {
         <!-- STATUS BAR -->
         <div class="brw-status-bar" style="background:var(--bg-subtle); border-top:1px solid var(--border); padding:6px 14px; display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; color:var(--text-secondary); font-family:var(--mono);">
           <div style="display:flex; align-items:center; gap:8px;">
-            <span style="width:7px; height:7px; border-radius:50%; background:#10b981;"></span>
+            <span style="width:7px; height:7px; border-radius:50%; background:var(--success);"></span>
             <span id="brw-status-text">Assistant Browser Engine Ready</span>
           </div>
           <div style="display:flex; align-items:center; gap:12px;">
@@ -411,7 +411,7 @@ export default {
               <div style="display:flex; flex-direction:column; gap:8px;">
                 ${c.related.filter(r => r.Text).map(r => `
                   <div class="brw-search-card" style="padding:10px 14px; background:var(--bg-subtle); border:1px solid var(--border); border-radius:10px; font-size:0.86rem;">
-                    <a href="${r.FirstURL || '#'}" class="brw-link" data-navigate="${r.FirstURL}" style="font-weight:600; color:#3b82f6; text-decoration:none;">${escapeHtml(r.Text)}</a>
+                    <a href="${r.FirstURL || '#'}" class="brw-link" data-navigate="${r.FirstURL}" style="font-weight:600; color:var(--text); text-decoration:none;">${escapeHtml(r.Text)}</a>
                   </div>
                 `).join('')}
               </div>
@@ -463,7 +463,7 @@ export default {
     function renderErrorState(url, errMessage) {
       pageContent.innerHTML = `
         <div style="max-width:600px; margin:40px auto; text-align:center; padding:32px 20px; background:var(--bg-subtle); border:1px solid var(--border); border-radius:14px;">
-          <h2 style="margin:0 0 8px; font-size:1.25rem; font-weight:700; color:#ef4444;">Unable to Load Webpage</h2>
+          <h2 style="margin:0 0 8px; font-size:1.25rem; font-weight:700; color:var(--danger);">Unable to Load Webpage</h2>
           <p style="font-size:0.86rem; color:var(--text-secondary); margin-bottom:18px;">${escapeHtml(errMessage)}</p>
           <div style="display:flex; justify-content:center; gap:10px;">
             <button type="button" class="btn btn-primary btn-sm" id="brw-retry-btn">Retry</button>

@@ -38,5 +38,5 @@ export function avatarMarkup(profile, size = 36) {
   const style = `width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;flex:0 0 auto`;
   if (profile?.avatarUrl) return `<img src="${profile.avatarUrl}" alt="" style="${style}">`;
   const initials = clean(profile?.name || profile?.email || '?').slice(0, 2).toUpperCase();
-  return `<span class="directory-avatar-fallback" style="${style};display:grid;place-items:center;background:var(--accent);color:var(--accent-contrast,#fff);font-weight:700">${initials}</span>`;
+  return `<span class="directory-avatar-fallback" style="${style};display:grid;place-items:center;background:var(--accent);color:var(--accent-contrast,var(--surface));font-weight:700">${initials}</span>`;
 }

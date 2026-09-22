@@ -35,7 +35,7 @@ export default {
         <!-- Video Player Workspace -->
         <div id="vp-workspace" style="display:none; margin-top:18px;">
           <!-- Video Display -->
-          <div style="background:#000; border-radius:14px; overflow:hidden; display:flex; justify-content:center; align-items:center; position:relative; box-shadow:0 12px 36px rgba(0,0,0,0.25);">
+          <div style="background:var(--text); border-radius:14px; overflow:hidden; display:flex; justify-content:center; align-items:center; position:relative; box-shadow:0 12px 36px rgba(0,0,0,0.25);">
             <video id="vp-video-el" controls style="width:100%; max-height:560px; outline:none;"></video>
           </div>
 

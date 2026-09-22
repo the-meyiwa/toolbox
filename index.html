@@ -1,11 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
-  <meta name="color-scheme" content="light">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#f7f7f6" id="meta-theme-color">
+  <meta name="color-scheme" content="light dark">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Toolbox">
@@ -14,15 +13,21 @@
   <meta name="description" content="A curated collection of simple, practical tools for everyday problems. Created by Meyiwa-Meyigbene Nifemi Edun.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Ubuntu:wght@300;400;500;700&family=Pixelify+Sans:wght@400;500;600;700&family=VT323&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Pixelify+Sans:wght@500&family=VT323&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%23000'/><text x='7' y='24' font-family='sans-serif' font-size='22' font-weight='bold' fill='%23fff'>T</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230a0a0a'/><path fill='%23fafafa' d='M9 8h14v4h-5v13h-4V12H9z'/></svg>">
   <script>
-    (function() {
-      try {
-        var t = localStorage.getItem('toolbox_theme');
-        if (t && t !== 'default') document.documentElement.setAttribute('data-theme', t);
-      } catch (e) {}
+    /* Resolve the theme before first paint so nothing flashes. */
+    (function () {
+      var pref = 'system';
+      try { pref = localStorage.getItem('toolbox_theme') || 'system'; } catch (e) {}
+      var dark = { 'white-on-black': 1, 'yosemite-night': 1, 'linux-mint': 1, 'ubuntu': 1, 'art-deco': 1, 'lagos': 1, 'african-textile': 1, 'british-racing-green': 1, 'wimbledon': 1, 'coca-cola': 1, 'mcdonalds': 1, 'playstation': 1, 'miami-vice': 1, 'cyberpunk': 1, 'cyberpunk-amber': 1, 'neon-tokyo': 1 };
+      var mode = pref === 'dark' || dark[pref] ? 'dark'
+        : pref === 'system' ? (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        : 'light';
+      document.documentElement.setAttribute('data-theme', mode);
+      var m = document.getElementById('meta-theme-color');
+      if (m) m.setAttribute('content', mode === 'dark' ? '#0a0a0a' : '#f7f7f6');
     })();
   </script>
 </head>
@@ -31,227 +36,233 @@
     <header id="app-header">
       <div class="header-brand-group">
         <a href="#home" class="logo" id="logo" aria-label="Toolbox home">Toolbox</a>
-        <a href="#about" class="nav-link header-about-link" id="header-about-link" data-page="about">About</a>
       </div>
-      <nav class="nav-links desktop-nav" id="desktop-nav-links">
+      <nav class="nav-links desktop-nav" id="desktop-nav-links" aria-label="Primary">
         <a href="#home" class="nav-link active" data-page="home">Home</a>
         <a href="#tools" class="nav-link" data-page="tools">Tools</a>
         <a href="#saved" class="nav-link" data-page="saved" id="nav-saved">Files</a>
+        <a href="#about" class="nav-link" data-page="about">About</a>
       </nav>
       <div class="header-actions" id="header-actions">
-        <button type="button" id="header-fs-exit-btn" class="btn btn-secondary btn-sm header-fs-exit-btn" title="Exit Fullscreen (Esc)" aria-label="Exit Fullscreen" style="display:none; align-items:center; gap:6px;">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="4 14 10 14 10 20"></polyline>
-            <polyline points="20 10 14 10 14 4"></polyline>
-            <line x1="14" y1="10" x2="21" y2="3"></line>
-            <line x1="3" y1="21" x2="10" y2="14"></line>
-          </svg>
-          <span class="hide-mobile">Exit Fullscreen</span>
+        <a href="#about" class="nav-link" id="header-about-link" data-page="about">About</a>
+        <button type="button" id="header-fs-exit-btn" hidden aria-hidden="true"></button>
+        <button type="button" class="header-search-btn" id="header-search-btn" aria-label="Search tools">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <span>Search tools</span>
+          <kbd>/</kbd>
         </button>
-        <div class="search-wrapper" id="search-wrapper">
-          <svg class="search-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>
-          </svg>
-          <input type="text" id="search" placeholder="Search tools…" autocomplete="off" spellcheck="false">
-        </div>
+        <button type="button" class="btn-icon theme-toggle" id="theme-toggle" aria-label="Switch to dark mode" title="Switch theme">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        </button>
         <button type="button" class="header-avatar-btn header-notif-btn" id="header-notif-btn" aria-label="Notifications" title="Notifications">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-          </svg>
-          <span class="header-notif-badge" id="header-notif-badge" style="display:none;"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="header-notif-badge" id="header-notif-badge"></span>
         </button>
-        <button type="button" class="header-avatar-btn" id="header-menu-btn" aria-label="Preferences" title="Preferences">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-            <circle cx="12" cy="7" r="4"></circle>
-          </svg>
+        <button type="button" class="header-avatar-btn" id="header-menu-btn" aria-label="Account and preferences" title="Account and preferences">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
         </button>
       </div>
     </header>
 
     <main id="main">
-      <!-- HOME (2-SLIDE STORYTELLING & SNAP SCROLLING) -->
-      <div id="home-view" class="page-view home-snap-view">
-        <!-- SLIDE 1 — SEARCH + ASSISTANT -->
-        <section class="home-story-slide home-slide-search" id="home-slide-1">
-          <div class="home-hero-container">
-            <p class="home-eyebrow"><span id="home-eyebrow-count">100+</span> browser tools</p>
-            <h1 class="home-title">What do you<br>need to do?</h1>
+      <!-- HOME -->
+      <div id="home-view" class="page-view">
+        <section class="home-hero" id="home-slide-1">
+          <div class="home-hero-inner">
+            <p class="home-eyebrow"><i aria-hidden="true"></i><b id="home-eyebrow-count">129</b> tools · all in your browser</p>
+            <h1 class="home-title">What do you need to do?</h1>
             <p class="home-desc">Describe the job, not the tool.</p>
 
-            <div class="home-search-wrap" id="home-search-wrap" style="position:relative; width:100%; max-width:620px; margin:24px auto 14px;">
-              <div style="position:relative; display:flex; align-items:center;">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="position:absolute; left:14px; color:var(--g500); pointer-events:none;">
-                  <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>
-                </svg>
-                <input type="text" id="home-hero-input" class="home-search-input" placeholder="Search 100+ tools (e.g. compress photo, convert to PDF)…" autocomplete="off" spellcheck="false" style="width:100%; height:38px; padding:0 38px 0 38px; border-radius:9999px; border:1px solid var(--g300); background:var(--white); color:var(--black); font-size:0.86rem; font-family:var(--sans); box-shadow:0 2px 12px rgba(0,0,0,0.04); outline:none; transition:border-color 0.2s, box-shadow 0.2s;">
-                <button type="button" id="home-hero-submit-btn" style="position:absolute; right:5px; width:28px; height:28px; border-radius:50%; background:var(--black); color:var(--white); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.15s;" title="Search or Prompt AI">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            <div class="home-search-wrap" id="home-search-wrap">
+              <div class="home-search-field">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+                <input type="text" id="home-hero-input" class="home-search-input" placeholder="Compress a photo, merge PDFs, format JSON…" autocomplete="off" spellcheck="false" aria-label="Describe what you need to do" aria-controls="home-hero-dropdown" aria-autocomplete="list">
+                <button type="button" id="home-hero-submit-btn" class="btn-icon btn-primary home-search-submit" aria-label="Search">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
                 </button>
               </div>
-              <div id="home-hero-dropdown" style="display:none; position:absolute; top:calc(100% + 8px); left:0; right:0; background:var(--white); border:1px solid var(--g200); border-radius:16px; box-shadow:0 16px 40px rgba(0,0,0,0.12); z-index:100; max-height:360px; overflow-y:auto; padding:8px; text-align:left;"></div>
+              <div id="home-hero-dropdown" class="home-hero-dropdown" role="listbox" hidden></div>
             </div>
 
-            <div class="home-quick" id="home-quick" style="width:100%; max-width:620px; margin:18px auto 0; display:flex; flex-wrap:wrap; justify-content:center; align-items:center;"></div>
+            <div class="home-quick" id="home-quick" aria-label="Popular tools"></div>
 
-            <!-- Integrated Assistant Banner (opening focal point) -->
-            <div class="home-banner-wrap" id="home-assistant-banner-wrap" style="width:100%; max-width:620px; margin:20px auto 0;">
+            <div class="home-assistant" id="home-assistant-banner-wrap">
               <div id="home-assistant-banner"></div>
             </div>
 
-            <!-- Subtle cue to discover Files -->
-            <div class="home-scroll-cue" style="margin-top:28px; text-align:center;">
-              <a href="#home-slide-2" class="home-scroll-hint" style="display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; color:var(--g500); text-decoration:none; text-transform:uppercase; letter-spacing:0.08em; transition:color 0.2s;">
-                <span>Files &amp; Documents</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-              </a>
-            </div>
+            <a href="#home-slide-2" class="home-scroll-hint">
+              <span>Browse by task</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </a>
           </div>
         </section>
 
-        <!-- SLIDE 2 — FILES & STORAGE -->
-        <section class="home-story-slide home-slide-files" id="home-slide-2">
-          <div class="home-desk-container">
-            <div class="home-desk-header" style="text-align:center; margin-bottom:28px;">
-              <p class="home-eyebrow" style="margin-bottom:8px;">STORAGE &amp; DOCUMENTS</p>
-              <h2 class="home-title" style="font-size:1.85rem; margin-bottom:8px;">Files &amp; Storage</h2>
-              <p class="home-desc" style="max-width:540px; margin:0 auto; font-size:0.88rem;">Saved documents and local device storage.</p>
+        <section class="home-section home-story-slide" id="home-slide-2" aria-labelledby="home-tasks-title">
+          <div class="home-section-head">
+            <div>
+              <h2 class="home-section-title" id="home-tasks-title">Start with a task</h2>
+              <p class="home-section-desc">The quickest way in when you know the job but not the tool.</p>
             </div>
-
-            <!-- Files Grid -->
-            <div class="home-slide2-grid" style="display:grid; grid-template-columns:1fr; max-width:680px; margin:0 auto 32px;">
-
-              <!-- Saved Files Section -->
-              <div class="home-card-panel" id="home-files-panel" style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px; box-shadow:var(--shadow);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                  <div style="display:flex; align-items:center; gap:8px;">
-                    <div style="width:28px; height:28px; border-radius:8px; background:var(--surface-secondary); display:flex; align-items:center; justify-content:center; color:var(--accent);">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    </div>
-                    <h3 style="font-size:0.95rem; font-weight:700; margin:0; color:var(--text);">Documents &amp; Files</h3>
-                  </div>
-                  <a href="#saved" class="btn btn-secondary btn-sm" style="font-size:0.75rem; padding:4px 12px; text-decoration:none;">Open Files →</a>
-                </div>
-                <div id="home-saved-list">
-                  <section class="home-saved" id="home-saved" hidden></section>
-                </div>
-              </div>
-
-            </div>
-
-            <!-- DESKTOP FOOTER (desktop only, hidden on mobile) -->
-            <footer class="home-footer" style="margin-top:56px;">
-              <span class="home-footer-copy">&copy; 2025 Toolbox &mdash; built by madselkie</span>
-              <nav class="home-footer-nav" aria-label="Footer navigation">
-                <a href="#about" class="home-footer-link">About</a>
-                <a href="#donate" class="home-footer-link">Become a Supporter</a>
-              </nav>
-            </footer>
+            <a href="#tools" class="btn btn-ghost btn-sm">All tools</a>
           </div>
+          <div class="home-tasks" id="home-tasks"></div>
         </section>
+
+        <section class="home-section home-story-slide" id="home-slide-3" aria-labelledby="home-files-title">
+          <div class="home-section-head">
+            <div>
+              <h2 class="home-section-title" id="home-files-title">Your files</h2>
+              <p class="home-section-desc">Saved documents and exports. They stay in this browser.</p>
+            </div>
+            <a href="#saved" class="btn btn-ghost btn-sm">Open Files</a>
+          </div>
+          <div class="home-files" id="home-saved-list"></div>
+        </section>
+
+        <footer class="home-footer">
+          <div class="home-footer-brand"><span class="logo" aria-hidden="true">Toolbox</span><span>&copy; 2025 · built by madselkie</span></div>
+          <nav class="home-footer-nav" aria-label="Footer">
+            <a href="#about" class="home-footer-link">About</a>
+            <a href="#donate" class="home-footer-link">Become a supporter</a>
+          </nav>
+        </footer>
       </div>
 
-      <!-- TOOLS GRID -->
+      <!-- TOOLS -->
       <div id="tools-view" class="page-view hidden">
-        <div id="tool-grid"></div>
+        <div class="tools-page">
+          <div class="tools-head">
+            <div>
+              <h1 class="page-title">Tools <span class="tools-count" id="tools-count"></span></h1>
+              <p class="page-desc">Everything runs in your browser. Search by what you want to do.</p>
+            </div>
+            <div class="search-wrapper" id="search-wrapper">
+              <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <input type="search" id="search" placeholder="Filter tools" autocomplete="off" spellcheck="false" aria-label="Filter tools">
+            </div>
+          </div>
+          <nav class="category-chip-bar" id="category-chip-bar" aria-label="Categories"></nav>
+          <div id="tool-grid"></div>
+        </div>
       </div>
 
       <!-- TOOL VIEWPORT -->
       <div id="tool-viewport" class="page-view hidden">
-        <div class="viewport-header" style="position:relative; display:flex; align-items:flex-start; justify-content:space-between; gap:16px;">
-          <div style="display:flex; align-items:center; gap:16px;">
-            <button id="back-btn" aria-label="Back to all tools" style="margin-top:2px;">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M19 12H5M12 19l-7-7 7-7"/>
-              </svg>
-              <span>All Tools</span>
+        <nav class="viewport-crumbs" aria-label="Breadcrumb">
+          <button id="back-btn" type="button" aria-label="Back to all tools">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            <span>Tools</span>
+          </button>
+          <span class="crumb-sep" aria-hidden="true">/</span>
+          <a href="#tools" id="viewport-category"></a>
+        </nav>
+        <div class="viewport-header">
+          <div>
+            <button type="button" class="btn-icon" id="back-btn-mobile" aria-label="Back to all tools">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
             </button>
             <div class="viewport-heading">
-              <h2 id="viewport-title" style="display:flex; align-items:center; gap:8px;"></h2>
+              <h1 id="viewport-title"></h1>
               <p id="viewport-desc" class="viewport-desc"></p>
             </div>
           </div>
-          <button id="popout-btn" class="btn btn-secondary btn-sm tool-fullscreen-btn" style="display:none; align-items:center; gap:6px; white-space:nowrap; flex-shrink:0;" title="Toggle Fullscreen" aria-label="Toggle Fullscreen">
-            <svg class="fs-icon-expand" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="15 3 21 3 21 9"></polyline>
-              <polyline points="9 21 3 21 3 15"></polyline>
-              <line x1="21" y1="3" x2="14" y2="10"></line>
-              <line x1="3" y1="21" x2="10" y2="14"></line>
-            </svg>
-            <svg class="fs-icon-collapse" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
-              <polyline points="4 14 10 14 10 20"></polyline>
-              <polyline points="20 10 14 10 14 4"></polyline>
-              <line x1="14" y1="10" x2="21" y2="3"></line>
-              <line x1="3" y1="21" x2="10" y2="14"></line>
-            </svg>
-            <span class="hide-mobile fs-label">Fullscreen</span>
-          </button>
+          <div class="viewport-actions">
+            <button id="tool-prefs-btn" type="button" class="btn-icon btn-secondary" hidden title="Tool preferences" aria-label="Tool preferences">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="14" y2="7"/><line x1="18" y1="7" x2="20" y2="7"/><circle cx="16" cy="7" r="2"/><line x1="4" y1="17" x2="6" y2="17"/><line x1="10" y1="17" x2="20" y2="17"/><circle cx="8" cy="17" r="2"/></svg>
+            </button>
+            <button id="popout-btn" type="button" class="btn-icon btn-secondary tool-fullscreen-btn" style="display:none" title="Fullscreen" aria-label="Enter fullscreen">
+              <svg class="fs-icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+              <svg class="fs-icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>
+              <span class="fs-label visually-hidden">Fullscreen</span>
+            </button>
+          </div>
         </div>
         <div id="viewport-content"></div>
         <aside class="tool-related" id="tool-related" hidden></aside>
       </div>
 
-      <!-- SAVED WORK -->
+      <!-- FILES -->
       <div id="saved-view" class="page-view hidden"></div>
 
-      <!-- About: the story behind Toolbox -->
-      <div id="support-view" class="page-view hidden about-story-view">
-        <div class="about-reading-line" aria-hidden="true"><span></span></div>
-        <div class="about-story-container" id="about-story-container">
-          <section class="about-chapter about-opening" aria-labelledby="about-title">
+      <!-- ABOUT -->
+      <div id="support-view" class="page-view hidden about-view">
+        <div class="about-progress" aria-hidden="true"><span></span></div>
+
+        <section class="about-chapter about-ch-1" data-chapter="1" aria-labelledby="about-title">
+          <div class="about-stage">
             <div class="about-copy">
-              <p class="about-eyebrow">The Toolbox story / 01</p>
-              <h1 id="about-title">It started<br>with a PDF.</h1>
-              <p class="about-lead">A small task. A Google search.<br>One unexpected beginning.</p>
-              <p>I needed to convert some files to PDF. So, like anyone would, I went looking for a PDF editor on Google.</p>
-              <p>Then a different thought showed up.</p>
-              <blockquote>“Lemme just make one.”</blockquote>
-              <span class="about-scroll-indicator">Scroll to follow the story <span aria-hidden="true">↓</span></span>
+              <p class="about-eyebrow"><span>01</span> The Toolbox story</p>
+              <h1 id="about-title" class="about-headline" data-split>It started with a PDF.</h1>
+              <p class="about-lead">A small task. A Google search. One unexpected beginning.</p>
+              <p class="about-text">I needed to convert some files to PDF. So, like anyone would, I went looking for a PDF editor on Google.</p>
+              <p class="about-text">Then a different thought showed up.</p>
+              <blockquote class="about-quote">“Lemme just make one.”</blockquote>
             </div>
-            <div class="about-scene about-paper-scene" aria-hidden="true">
-              <div class="story-paper paper-back"><span>Files</span><i></i><i></i><i></i></div>
-              <div class="story-paper paper-front"><span>PDF</span><i></i><i></i><i></i><b>One task.<br>A starting point.</b></div>
-              <div class="story-scene-caption">01 / The first conversion</div>
+            <div class="about-scene scene-paper" aria-hidden="true">
+              <div class="paper paper-3"><i></i><i></i><i></i><i></i></div>
+              <div class="paper paper-2"><i></i><i></i><i></i><i></i></div>
+              <div class="paper paper-1"><span class="paper-tag">JPG</span><i></i><i></i><i></i><i></i></div>
+              <div class="paper paper-pdf"><span class="paper-stamp">PDF</span><i></i><i></i><i></i><b>One task.<br>A starting point.</b></div>
+              <svg class="scene-arrow" viewBox="0 0 200 60"><path pathLength="1" d="M4 30 C 60 4, 140 56, 188 30"/><path pathLength="1" d="M176 20 L 190 30 L 176 40"/></svg>
             </div>
-          </section>
-          <section class="about-chapter" aria-labelledby="about-learning">
+          </div>
+          <span class="about-scroll-cue">Scroll <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></span>
+        </section>
+
+        <section class="about-chapter about-ch-2" data-chapter="2" aria-labelledby="about-learning">
+          <div class="about-stage">
             <div class="about-copy">
-              <p class="about-eyebrow">Built with intention / 02</p>
-              <h2 id="about-learning">The tool worked.<br>The details mattered.</h2>
-              <p>Toolbox began as something I wanted for myself: a direct, dependable way to get a job done without working around somebody else's idea of how it should feel.</p>
-              <p>I have no interest in writing code for its own sake. I care about building things with intention—thinking through the structure, the interaction, and the details until the result feels inevitable.</p>
+              <p class="about-eyebrow"><span>02</span> Built with intention</p>
+              <h2 id="about-learning" class="about-headline" data-split>The tool worked. The details mattered.</h2>
+              <p class="about-text">Toolbox began as something I wanted for myself: a direct, dependable way to get a job done without working around somebody else's idea of how it should feel.</p>
+              <p class="about-text">I have no interest in writing code for its own sake. I care about building things with intention — thinking through the structure, the interaction, and the details until the result feels inevitable.</p>
             </div>
-            <div class="about-scene about-path-scene" aria-hidden="true">
-              <div class="story-path"><span>Useful by default</span><span>Clear in every state</span><span>Considered in every detail</span></div>
-              <div class="story-year"><strong>Intent</strong><span>The standard behind<br>every interaction</span></div>
+            <div class="about-scene scene-intent" aria-hidden="true">
+              <svg class="intent-ring" viewBox="0 0 240 240"><circle class="ring-track" cx="120" cy="120" r="108"/><circle class="ring-draw" cx="120" cy="120" r="108" pathLength="1"/></svg>
+              <div class="intent-core"><strong>Intent</strong><span>The standard behind every interaction</span></div>
+              <ul class="intent-rows">
+                <li style="--k:0"><span>01</span>Useful by default</li>
+                <li style="--k:1"><span>02</span>Clear in every state</li>
+                <li style="--k:2"><span>03</span>Considered in every detail</li>
+              </ul>
             </div>
-          </section>
-          <section class="about-chapter" aria-labelledby="about-growing">
+          </div>
+        </section>
+
+        <section class="about-chapter about-ch-3" data-chapter="3" aria-labelledby="about-growing">
+          <div class="about-stage">
             <div class="about-copy">
-              <p class="about-eyebrow">One idea led to another / 03</p>
-              <h2 id="about-growing">The base was there.<br>The ideas kept coming.</h2>
-              <p>Once the foundation was in place, the larger opportunity became clear. Useful tools across the web are often scattered between different interfaces, accounts, and standards.</p>
-              <p>A file converter became a coherent environment for the things worth doing every day—connected, consistent, and designed to work as one.</p>
+              <p class="about-eyebrow"><span>03</span> One idea led to another</p>
+              <h2 id="about-growing" class="about-headline" data-split>The base was there. The ideas kept coming.</h2>
+              <p class="about-text">Once the foundation was in place, the larger opportunity became clear. Useful tools across the web are often scattered between different interfaces, accounts, and standards.</p>
+              <p class="about-text">A file converter became a coherent environment for the things worth doing every day — connected, consistent, and designed to work as one.</p>
             </div>
-            <div class="about-scene about-tools-scene" aria-hidden="true">
-              <div class="story-tool"><span>01</span>Documents</div>
-              <div class="story-tool"><span>02</span>Images</div>
-              <div class="story-tool story-tool-core"><span>The idea became</span><strong>Toolbox.</strong></div>
-              <div class="story-tool"><span>03</span>Workspace</div>
-              <div class="story-tool"><span>04</span>Everyday tools</div>
+            <div class="about-scene scene-burst" aria-hidden="true">
+              <div class="burst-grid" id="about-burst"></div>
+              <div class="burst-core"><span>The idea became</span><strong>Toolbox.</strong></div>
             </div>
-          </section>
-          <section class="about-chapter about-ending" aria-labelledby="about-next">
+          </div>
+        </section>
+
+        <section class="about-chapter about-ch-4" data-chapter="4" aria-labelledby="about-next">
+          <div class="about-stage about-stage-end">
             <div class="about-copy">
-              <p class="about-eyebrow">Still being written / 04</p>
-              <h2 id="about-next">One place.<br>More possibilities.</h2>
-              <p>Toolbox is built on a simple conviction: useful software should also be exceptional software.</p>
-              <p>The next chapter is still being built, with the same standard applied to every interaction.</p>
-              <a class="btn btn-primary" href="#tools">Explore Toolbox</a>
+              <p class="about-eyebrow"><span>04</span> Still being written</p>
+              <h2 id="about-next" class="about-headline" data-split>One place. More possibilities.</h2>
+              <p class="about-text">Toolbox is built on a simple conviction: useful software should also be exceptional software.</p>
+              <p class="about-text">The next chapter is still being built, with the same standard applied to every interaction.</p>
+              <div class="about-stats">
+                <div><strong data-count-to="129" id="about-tool-count">0</strong><span>tools</span></div>
+                <div><strong data-count-to="12" id="about-cat-count">0</strong><span>categories</span></div>
+                <div><strong>0</strong><span>uploads needed</span></div>
+              </div>
+              <a class="btn btn-primary btn-lg" href="#tools">Explore Toolbox
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </a>
             </div>
             <div class="about-maker">
-              <span class="about-eyebrow">Made by</span>
+              <span class="about-maker-label">Made by</span>
               <h3>Meyiwa-Meyigbene<br>Nifemi Edun</h3>
               <p>@madselkie</p>
               <div class="about-projects"><span>Elsewhere</span>
@@ -259,71 +270,44 @@
                 <a href="https://containerbrick.com" target="_blank" rel="noopener noreferrer">Container Brick <span aria-hidden="true">↗</span></a>
               </div>
             </div>
-          </section>
-        </div>
+          </div>
+          <div class="about-marquee" aria-hidden="true">
+            <div class="marquee-row" id="about-marquee-1"></div>
+            <div class="marquee-row marquee-reverse" id="about-marquee-2"></div>
+          </div>
+        </section>
       </div>
     </main>
 
-    <!-- MOBILE BOTTOM NAVIGATION -->
-    <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile Bottom Navigation">
+    <!-- MOBILE NAVIGATION -->
+    <nav class="mobile-nav" id="mobile-nav" aria-label="Primary">
       <div class="mob-nav-pill-indicator" id="mob-nav-indicator"></div>
       <a href="#home" class="nav-link mob-nav-item active" data-page="home">
-        <svg class="mob-nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-          <polyline points="9 22 9 12 15 12 15 22"></polyline>
-        </svg>
+        <svg class="mob-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
         <span class="mob-nav-label">Home</span>
       </a>
       <a href="#tools" class="nav-link mob-nav-item" data-page="tools">
-        <svg class="mob-nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="7" height="7"></rect>
-          <rect x="14" y="3" width="7" height="7"></rect>
-          <rect x="14" y="14" width="7" height="7"></rect>
-          <rect x="3" y="14" width="7" height="7"></rect>
-        </svg>
+        <svg class="mob-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/></svg>
         <span class="mob-nav-label">Tools</span>
       </a>
       <a href="#saved" class="nav-link mob-nav-item" data-page="saved" id="nav-saved-mob">
-        <svg class="mob-nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-        </svg>
+        <svg class="mob-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
         <span class="mob-nav-label">Files</span>
       </a>
     </nav>
   </div>
 
-  <!-- FLOATING TIPS BUTTON & MODAL -->
-  <button id="tips-fab" aria-label="Show Tips" title="Page Tips" style="position:fixed; bottom:24px; right:24px; width:56px; height:56px; border-radius:28px; background:var(--black); color:var(--white); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(0,0,0,0.15); z-index:900; opacity:0; pointer-events:none; transform:translateY(10px); transition:opacity 0.3s ease, transform 0.3s ease;">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="10"></circle>
-      <line x1="12" y1="16" x2="12" y2="12"></line>
-      <line x1="12" y1="8" x2="12.01" y2="8"></line>
-    </svg>
+  <!-- TIPS -->
+  <button id="tips-fab" type="button" aria-label="Show tips for this page" title="Tips">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>
   </button>
-
-  <div id="tips-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); z-index:1000; align-items:center; justify-content:center; opacity:0; transition:opacity 0.2s ease;">
-    <div class="settings-modal-window" style="background:var(--white); color:var(--black); padding:32px; border-radius:16px; box-shadow:var(--shadow-lg); border:1px solid var(--g200); max-width:400px; width:90%; position:relative;">
-      <div class="sheet-drag-handle" aria-hidden="true"></div>
-      <button id="close-tips" style="position:absolute; top:16px; right:16px; background:none; border:none; cursor:pointer; color:var(--g500); padding:4px;" aria-label="Close Tips">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
+  <div id="tips-modal" role="dialog" aria-modal="true" aria-labelledby="tips-title">
+    <div class="tips-window">
+      <button id="close-tips" type="button" class="btn-icon btn-sm tips-close" aria-label="Close tips">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
       </button>
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
-        <div style="background:var(--black); color:var(--white); width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-          </svg>
-        </div>
-        <h3 style="font-family:var(--pixel); font-size:1.5rem; margin:0; color:var(--black);">Pro Tips</h3>
-      </div>
-      <ul id="tips-content" style="margin:0; padding-left:20px; color:var(--g700); font-size:0.95rem; line-height:1.6; display:flex; flex-direction:column; gap:12px;">
-        <!-- Dynamically injected tips -->
-      </ul>
+      <div class="tips-head"><h3 id="tips-title">Tips</h3></div>
+      <ul id="tips-content"></ul>
     </div>
   </div>
 

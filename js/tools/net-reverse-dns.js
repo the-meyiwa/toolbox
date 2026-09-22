@@ -65,7 +65,7 @@ export default {
 
         if (result.status === 'error') {
           outputWrap.innerHTML = `
-            <div style="padding:16px 20px; background:var(--bg-card); border:1px solid #ef4444; border-radius:12px; color:#ef4444; font-size:0.84rem;">
+            <div style="padding:16px 20px; background:var(--bg-card); border:1px solid var(--danger); border-radius:12px; color:var(--danger); font-size:0.84rem;">
               <div style="font-weight:700; margin-bottom:4px;">Reverse Lookup Failed</div>
               <div>${escapeHtml(result.message || 'Unable to resolve reverse PTR record.')}</div>
             </div>
@@ -114,7 +114,7 @@ export default {
 
       } catch (err) {
         outputWrap.innerHTML = `
-          <div style="padding:16px 20px; background:var(--bg-card); border:1px solid #ef4444; border-radius:12px; color:#ef4444; font-size:0.84rem;">
+          <div style="padding:16px 20px; background:var(--bg-card); border:1px solid var(--danger); border-radius:12px; color:var(--danger); font-size:0.84rem;">
             <div style="font-weight:700; margin-bottom:4px;">Error</div>
             <div>${escapeHtml(err.message)}</div>
           </div>

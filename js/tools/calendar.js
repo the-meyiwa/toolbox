@@ -201,7 +201,7 @@ export default {
 
             <!-- Modal Actions -->
             <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px; border-top:1px solid var(--border); padding-top:14px;">
-              <button type="button" id="cal-btn-delete-event" class="btn btn-secondary btn-sm" style="color:#ef4444; display:none;">Delete</button>
+              <button type="button" id="cal-btn-delete-event" class="btn btn-secondary btn-sm" style="color:var(--danger); display:none;">Delete</button>
               <div style="display:flex; gap:8px; margin-left:auto;">
                 <button type="button" id="cal-btn-cancel-event" class="btn btn-secondary btn-sm">Cancel</button>
                 <button type="submit" class="btn btn-primary btn-sm">Save Event</button>
@@ -424,7 +424,7 @@ export default {
               return `
                 <div style="padding:12px 6px; text-align:center; border-right:1px solid var(--border-subtle); ${isToday ? 'background:rgba(59,130,246,0.06);' : ''}">
                   <div style="font-size:0.75rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase;">${WEEKDAY_NAMES[d.getDay()]}</div>
-                  <div style="font-size:1.1rem; font-weight:700; margin-top:2px; color:${isToday ? '#3b82f6' : 'var(--text)'}; font-family:var(--mono);">${d.getDate()}</div>
+                  <div style="font-size:1.1rem; font-weight:700; margin-top:2px; color:${isToday ? 'var(--text)' : 'var(--text)'}; font-family:var(--mono);">${d.getDate()}</div>
                 </div>
               `;
             }).join('')}

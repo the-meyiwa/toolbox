@@ -232,7 +232,7 @@ function renderAuthCard(user, authMode, recoveryContext, pendingConfirmationEmai
         </button>
         <div id="resend-msg" style="font-size:0.78rem; line-height:1.4; display:none; padding:4px 0; margin-bottom:6px;"></div>
         <div>
-          <button type="button" id="btn-pending-back" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-size:0.82rem; font-weight:600; cursor:pointer;">
+          <button type="button" id="btn-pending-back" style="background:none; border:none; padding:0; color:var(--accent, var(--text)); font-size:0.82rem; font-weight:600; cursor:pointer;">
             Back to Sign In
           </button>
         </div>
@@ -253,7 +253,7 @@ function renderAuthCard(user, authMode, recoveryContext, pendingConfirmationEmai
             <div style="font-size:0.72rem; color:var(--g600); font-family:monospace; margin-top:2px;">ID: ${escapeHtml(user.id)}</div>
           </div>
         </div>
-        <button type="button" class="btn btn-secondary btn-sm" id="btn-auth-signout" style="color:#ef4444;">Sign Out</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-auth-signout" style="color:var(--danger);">Sign Out</button>
       </div>
 
       <!-- Profile Settings (Display Name & Avatar) -->
@@ -317,7 +317,7 @@ function renderAuthCard(user, authMode, recoveryContext, pendingConfirmationEmai
           <div id="reset-msg" style="font-size:0.8rem; line-height:1.4; display:none; padding:4px 0;"></div>
           
           <div style="text-align:center; font-size:0.82rem; color:var(--g600); margin-top:4px;">
-            Remember your password? <button type="button" id="btn-back-to-signin" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-weight:600; cursor:pointer; text-decoration:underline;">Back to sign in</button>
+            Remember your password? <button type="button" id="btn-back-to-signin" style="background:none; border:none; padding:0; color:var(--accent, var(--text)); font-weight:600; cursor:pointer; text-decoration:underline;">Back to sign in</button>
           </div>
         </form>
       </div>
@@ -418,7 +418,7 @@ function renderAuthCard(user, authMode, recoveryContext, pendingConfirmationEmai
           <div id="pwd-match-hint" style="font-size:0.72rem; color:var(--g500); margin-top:-4px;">Password must be at least 6 characters.</div>
         ` : `
           <div style="text-align:right; margin-top:-4px;">
-            <button type="button" id="btn-forgot-password" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-size:0.78rem; font-weight:500; cursor:pointer; text-decoration:none;">Forgot password?</button>
+            <button type="button" id="btn-forgot-password" style="background:none; border:none; padding:0; color:var(--accent, var(--text)); font-size:0.78rem; font-weight:500; cursor:pointer; text-decoration:none;">Forgot password?</button>
           </div>
         `}
 
@@ -430,9 +430,9 @@ function renderAuthCard(user, authMode, recoveryContext, pendingConfirmationEmai
         
         <div style="text-align:center; font-size:0.82rem; color:var(--g600); margin-top:6px;">
           ${isSignUp ? `
-            Already have an account? <button type="button" id="btn-toggle-auth" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-weight:600; cursor:pointer; text-decoration:underline;">Sign in</button>
+            Already have an account? <button type="button" id="btn-toggle-auth" style="background:none; border:none; padding:0; color:var(--accent, var(--text)); font-weight:600; cursor:pointer; text-decoration:underline;">Sign in</button>
           ` : `
-            Don't have an account? <button type="button" id="btn-toggle-auth" style="background:none; border:none; padding:0; color:var(--accent, #3b82f6); font-weight:600; cursor:pointer; text-decoration:underline;">Create one</button>
+            Don't have an account? <button type="button" id="btn-toggle-auth" style="background:none; border:none; padding:0; color:var(--accent, var(--text)); font-weight:600; cursor:pointer; text-decoration:underline;">Create one</button>
           `}
         </div>
       </form>
@@ -515,7 +515,7 @@ function renderModalContent() {
         <div style="background:var(--g50); border:1px solid var(--g200); border-radius:14px; padding:14px;">
           <div style="font-size:0.82rem; font-weight:700; color:var(--black); margin-bottom:8px; display:flex; justify-content:space-between;">
             <span>Account Quotas &amp; Limits</span>
-            <span style="color:#22c55e;">Active</span>
+            <span style="color:var(--success);">Active</span>
           </div>
           
           <div style="display:flex; flex-direction:column; gap:8px; font-size:0.78rem;">
@@ -1165,14 +1165,14 @@ function renderModalContent() {
               </p>
               <form class="passkey-del-form" onsubmit="return false;" style="display:flex; gap:6px; margin:0;">
                 <input type="password" class="tool-input passkey-del-pwd" id="pwd-del-${pk.id}" data-id="${pk.id}" placeholder="Account password..." style="flex:1; padding:6px 10px; font-size:0.8rem; border-radius:6px;">
-                <button type="button" class="btn btn-primary btn-sm btn-confirm-del-pk" data-id="${pk.id}" style="background:#ef4444; border-color:#ef4444; color:#ffffff; font-size:0.75rem; padding:6px 12px; font-weight:600;">
+                <button type="button" class="btn btn-primary btn-sm btn-confirm-del-pk" data-id="${pk.id}" style="background:var(--danger); border-color:var(--danger); color:var(--surface); font-size:0.75rem; padding:6px 12px; font-weight:600;">
                   Delete
                 </button>
                 <button type="button" class="btn btn-secondary btn-sm btn-cancel-del-pk" data-id="${pk.id}" style="font-size:0.75rem; padding:6px 10px;">
                   Cancel
                 </button>
               </form>
-              <p class="passkey-del-err" id="del-err-${pk.id}" style="font-size:0.72rem; color:#ef4444; margin:4px 0 0; display:none;"></p>
+              <p class="passkey-del-err" id="del-err-${pk.id}" style="font-size:0.72rem; color:var(--danger); margin:4px 0 0; display:none;"></p>
             </div>
           </div>
         `).join('');

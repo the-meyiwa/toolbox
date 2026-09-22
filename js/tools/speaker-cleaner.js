@@ -26,7 +26,7 @@ export default {
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
               <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
             </svg>
-            <div id="sc-wave-ring" style="position:absolute; inset:-8px; border-radius:50%; border:2px solid #3b82f6; opacity:0; pointer-events:none; transition:all 0.3s;"></div>
+            <div id="sc-wave-ring" style="position:absolute; inset:-8px; border-radius:50%; border:2px solid var(--text); opacity:0; pointer-events:none; transition:all 0.3s;"></div>
           </div>
 
           <h2 style="margin:0 0 6px; font-size:1.4rem; font-weight:700;">Speaker Cleaner & Water Ejector</h2>
@@ -56,7 +56,7 @@ export default {
           <div id="sc-custom-controls" style="display:none; max-width:400px; margin:0 auto 20px; padding:14px; background:var(--g50); border:1px solid var(--g200); border-radius:12px;">
             <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.82rem; font-weight:600;">
               <span>Frequency:</span>
-              <span id="sc-freq-val" style="font-family:var(--mono); color:#3b82f6;">165 Hz</span>
+              <span id="sc-freq-val" style="font-family:var(--mono); color:var(--text);">165 Hz</span>
             </div>
             <input type="range" id="sc-freq-slider" min="50" max="1000" step="1" value="165" style="width:100%;">
           </div>

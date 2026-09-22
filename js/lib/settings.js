@@ -23,6 +23,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   assistantAnimationStyle: 'color rave', // 'color rave' | 'glow' | 'Plain Fade' | 'Pop In'
   displayName: '',
   profilePicture: 'default', // 'default' | '<image_file_name>'
+  tools: {},            // per-tool preferences, see lib/tool-settings.js
 });
 
 let currentSettings = { ...DEFAULT_SETTINGS };

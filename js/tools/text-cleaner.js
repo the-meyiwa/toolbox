@@ -212,7 +212,7 @@ export default {
         summaryEl.textContent = `${source.length.toLocaleString()} → ${text.length.toLocaleString()} chars (${charDiff >= 0 ? `${charDiff.toLocaleString()} removed` : `${Math.abs(charDiff)} normalized`})`;
         outMetaEl.textContent = `${text.length.toLocaleString()} chars`;
         pillsEl.innerHTML = statPills.map(p => `
-          <span style="font-size:0.74rem; font-weight:600; padding:2px 7px; border-radius:999px; background:${p.active ? 'var(--g100)' : '#fef3c7'}; color:${p.active ? 'var(--g800)' : '#92400e'}; border:1px solid ${p.active ? 'var(--g200)' : '#fde68a'};">
+          <span style="font-size:0.74rem; font-weight:600; padding:2px 7px; border-radius:999px; background:${p.active ? 'var(--g100)' : 'var(--warning-soft)'}; color:${p.active ? 'var(--g800)' : 'var(--warning)'}; border:1px solid ${p.active ? 'var(--g200)' : '#fde68a'};">
             ${p.count} ${p.label}
           </span>
         `).join('');

@@ -1,5 +1,12 @@
 import { openContextMenu, closeContextMenu } from '../lib/context-menu.js';
 import { tbConfirm, tbPrompt, tbAlert } from '../lib/dialog.js';
+import { getToolSettings, onToolSettings } from '../lib/tool-settings.js';
+import { openSettings } from '../lib/settings-ui.js';
+
+/* Editor typography lives in Preferences → Tools → Notes. */
+const FONT_FAMILIES = { sans: 'var(--sans)', serif: 'Georgia, serif', mono: 'var(--mono)' };
+const FONT_SIZES = { small: '0.875rem', normal: '0.95rem', large: '1.1rem', xl: '1.3rem' };
+const LINE_HEIGHTS = { compact: '1.3', standard: '1.7', relaxed: '2.1' };
 
 /* ============================================================
    TOOLBOX — Notes
@@ -29,6 +36,18 @@ export default {
       try { return JSON.parse(localStorage.getItem(FONT_PREFS_KEY) || '{}'); } catch { return {}; }
     })();
     if (fontPrefs.paper) activePaper = fontPrefs.paper;
+    // One-time move of typography chosen before it lived in Preferences.
+    if (fontPrefs.fontFamily || fontPrefs.fontSize || fontPrefs.lineHeight) {
+      const back = (map, v) => Object.keys(map).find(k => map[k] === v);
+      import('../lib/tool-settings.js').then(({ setToolSetting }) => {
+        const fam = back(FONT_FAMILIES, fontPrefs.fontFamily), size = back(FONT_SIZES, fontPrefs.fontSize), lh = back(LINE_HEIGHTS, fontPrefs.lineHeight);
+        if (fam) setToolSetting('notes', 'fontFamily', fam);
+        if (size) setToolSetting('notes', 'fontSize', size);
+        if (lh) setToolSetting('notes', 'lineHeight', lh);
+        delete fontPrefs.fontFamily; delete fontPrefs.fontSize; delete fontPrefs.lineHeight;
+        try { localStorage.setItem(FONT_PREFS_KEY, JSON.stringify(fontPrefs)); } catch {}
+      });
+    }
 
     container.innerHTML = `
       <div class="notes-app-wrapper mobile-view-folders" style="display:grid; grid-template-columns:minmax(180px, 220px) minmax(220px, 280px) 1fr; height:calc(100vh - 180px); min-height:560px; background:var(--bg-card); border:1px solid var(--border); border-radius:18px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.04); position:relative;">
@@ -536,9 +555,10 @@ export default {
 
     // === Apply Persisted Font Preferences ===
     function applyFontPrefs() {
-      const fontFamily = fontPrefs.fontFamily || 'var(--sans)';
-      const fontSize = fontPrefs.fontSize || '0.95rem';
-      const lineHeight = fontPrefs.lineHeight || '1.7';
+      const prefs = getToolSettings('notes');
+      const fontFamily = FONT_FAMILIES[prefs.fontFamily] || FONT_FAMILIES.sans;
+      const fontSize = FONT_SIZES[prefs.fontSize] || FONT_SIZES.normal;
+      const lineHeight = LINE_HEIGHTS[prefs.lineHeight] || LINE_HEIGHTS.standard;
       const paper = fontPrefs.paper || activePaper || 'blank';
       activePaper = paper;
 
@@ -552,6 +572,8 @@ export default {
       try { localStorage.setItem(FONT_PREFS_KEY, JSON.stringify(fontPrefs)); } catch {}
     }
     applyFontPrefs();
+    this._offPrefs?.();
+    this._offPrefs = onToolSettings('notes', () => applyFontPrefs());
 
     function setPageType(paper) {
       activePaper = paper;
@@ -577,68 +599,17 @@ export default {
       const x = rect ? rect.left : clientX;
       const y = rect ? rect.bottom + 4 : clientY;
 
-      const currentFamily = fontPrefs.fontFamily || 'var(--sans)';
-      const currentSize = fontPrefs.fontSize || '0.95rem';
-      const currentLine = fontPrefs.lineHeight || '1.7';
       const currentPaper = activePaper;
 
       openContextMenu({
         x,
         y,
-        title: 'Font & Style Settings',
+        title: 'Note',
         items: [
-          { label: 'Font Family', separator: true },
           {
-            label: 'System Sans',
-            icon: currentFamily === 'var(--sans)' ? checkIcon : '',
-            action: () => { fontPrefs.fontFamily = 'var(--sans)'; applyFontPrefs(); }
-          },
-          {
-            label: 'Editorial Serif',
-            icon: currentFamily === 'Georgia, serif' ? checkIcon : '',
-            action: () => { fontPrefs.fontFamily = 'Georgia, serif'; applyFontPrefs(); }
-          },
-          {
-            label: 'Monospace',
-            icon: currentFamily === 'var(--mono)' ? checkIcon : '',
-            action: () => { fontPrefs.fontFamily = 'var(--mono)'; applyFontPrefs(); }
-          },
-          { label: 'Font Size', separator: true },
-          {
-            label: 'Small (14px)',
-            icon: currentSize === '0.875rem' ? checkIcon : '',
-            action: () => { fontPrefs.fontSize = '0.875rem'; applyFontPrefs(); }
-          },
-          {
-            label: 'Normal (16px)',
-            icon: currentSize === '0.95rem' ? checkIcon : '',
-            action: () => { fontPrefs.fontSize = '0.95rem'; applyFontPrefs(); }
-          },
-          {
-            label: 'Large (18px)',
-            icon: currentSize === '1.1rem' ? checkIcon : '',
-            action: () => { fontPrefs.fontSize = '1.1rem'; applyFontPrefs(); }
-          },
-          {
-            label: 'Extra Large (22px)',
-            icon: currentSize === '1.3rem' ? checkIcon : '',
-            action: () => { fontPrefs.fontSize = '1.3rem'; applyFontPrefs(); }
-          },
-          { label: 'Line Spacing', separator: true },
-          {
-            label: 'Compact (1.3)',
-            icon: currentLine === '1.3' ? checkIcon : '',
-            action: () => { fontPrefs.lineHeight = '1.3'; applyFontPrefs(); }
-          },
-          {
-            label: 'Standard (1.7)',
-            icon: currentLine === '1.7' ? checkIcon : '',
-            action: () => { fontPrefs.lineHeight = '1.7'; applyFontPrefs(); }
-          },
-          {
-            label: 'Relaxed (2.1)',
-            icon: currentLine === '2.1' ? checkIcon : '',
-            action: () => { fontPrefs.lineHeight = '2.1'; applyFontPrefs(); }
+            label: 'Editor preferences…',
+            icon: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="7" x2="14" y2="7"/><circle cx="16" cy="7" r="2"/><line x1="10" y1="17" x2="20" y2="17"/><circle cx="8" cy="17" r="2"/></svg>',
+            action: () => openSettings('tool:notes')
           },
           { label: 'Text Formatting', separator: true },
           {
@@ -915,6 +886,11 @@ export default {
     updateMobileView();
     renderNoteList();
     renderActiveNote();
+  },
+
+  destroy() {
+    this._offPrefs?.();
+    this._offPrefs = null;
   }
 };
 

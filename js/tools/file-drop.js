@@ -128,7 +128,7 @@ export default {
               <div style="font-size:0.78rem; color:var(--g500); margin-bottom:14px;">Instant connection — no app download required</div>
 
               <!-- QR Code Canvas -->
-              <div style="background:#fff; padding:10px; border:1px solid var(--g200); border-radius:12px; margin-bottom:14px; display:flex; align-items:center; justify-content:center; min-height:190px; min-width:190px;">
+              <div style="background:var(--surface); padding:10px; border:1px solid var(--g200); border-radius:12px; margin-bottom:14px; display:flex; align-items:center; justify-content:center; min-height:190px; min-width:190px;">
                 <canvas id="p2p-qr-canvas" style="display:block;"></canvas>
               </div>
 
@@ -613,7 +613,7 @@ export default {
           try {
             await fs.writeFile('/Downloads/' + fileName, blob);
             rxSaveFsBtn.textContent = 'Saved to Offline Files!';
-            rxStatus.innerHTML = `<span style="color:#22c55e; font-weight:600;">Saved "${fileName}" to Offline Files (/Downloads/${fileName})</span>`;
+            rxStatus.innerHTML = `<span style="color:var(--success); font-weight:600;">Saved "${fileName}" to Offline Files (/Downloads/${fileName})</span>`;
           } catch (err) {
             rxSaveFsBtn.textContent = 'Save Failed';
             console.error('Failed to save to fs:', err);
@@ -623,7 +623,7 @@ export default {
         // Auto trigger download
         rxDownloadBtn.click();
         const countInfo = self_.expectedFile.totalFiles > 1 ? ` [${self_.expectedFile.index}/${self_.expectedFile.totalFiles}]` : '';
-        rxStatus.innerHTML = `<span style="color:#22c55e; font-weight:600;">Received "${fileName}"${countInfo}! Ready to download or save to Offline Files.</span>`;
+        rxStatus.innerHTML = `<span style="color:var(--success); font-weight:600;">Received "${fileName}"${countInfo}! Ready to download or save to Offline Files.</span>`;
       } catch (err) {
         console.error(err);
         rxStatus.textContent = 'Error assembling file.';

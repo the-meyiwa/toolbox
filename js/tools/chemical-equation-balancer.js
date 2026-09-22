@@ -69,7 +69,7 @@ export default {
           </div>
         </div>
 
-        <div id="eq-error-box" style="display:none; margin-top:14px; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:12px; color:#991b1b; font-size:0.85rem;"></div>
+        <div id="eq-error-box" style="display:none; margin-top:14px; background:var(--danger-soft); border:1px solid var(--danger); border-radius:8px; padding:12px; color:var(--danger); font-size:0.85rem;"></div>
       </div>
     `;
 
@@ -117,7 +117,7 @@ export default {
                 const mm = calculateMolarMass(s.formula).molarMass;
                 return `
                   <tr style="border-bottom:1px solid var(--g100);">
-                    <td style="padding:6px 8px; font-weight:600; color:${s.role === 'Reactant' ? '#2563eb' : '#16a34a'};">${s.role}</td>
+                    <td style="padding:6px 8px; font-weight:600; color:${s.role === 'Reactant' ? 'var(--text)' : 'var(--success)'};">${s.role}</td>
                     <td style="padding:6px 8px; font-family:var(--mono); font-weight:700;">${s.coeff}</td>
                     <td style="padding:6px 8px; font-family:var(--mono); font-weight:700;">${s.formula}</td>
                     <td style="padding:6px 8px; text-align:right; font-family:var(--mono);">${mm.toFixed(3)}</td>

@@ -291,24 +291,8 @@ async function renderNotificationPanel() {
     notifPanelEl.setAttribute('role', 'region');
     notifPanelEl.setAttribute('aria-label', 'Notifications');
     notifPanelEl.className = 'header-dropdown-menu header-notif-panel';
-    notifPanelEl.style.cssText = `
-      position: fixed;
-      top: 56px;
-      right: 16px;
-      width: 340px;
-      max-width: calc(100vw - 32px);
-      max-height: min(480px, calc(100dvh - 72px));
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      box-shadow: var(--shadow-lg);
-      z-index: 2000;
-      display: none;
-      flex-direction: column;
-      overflow: hidden;
-      transform-origin: top right;
-      transition: opacity 0.15s, transform 0.15s;
-    `;
+    notifPanelEl.classList.add('notif-panel');
+    notifPanelEl.style.cssText = 'top: calc(var(--header-h) - 4px); right: 16px; width: 360px; max-width: calc(100vw - 32px); max-height: min(520px, calc(100dvh - 88px));';
     document.body.appendChild(notifPanelEl);
 
     // Close on outside click
@@ -323,41 +307,35 @@ async function renderNotificationPanel() {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   let html = `
-    <div style="padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: color-mix(in srgb, var(--bg-card) 90%, transparent); backdrop-filter: blur(12px);">
-      <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--text);">Notifications</h4>
-      <div style="display:flex; gap: 8px;">
-        ${unreadCount > 0 ? `<button type="button" id="notif-mark-read" style="background:none; border:none; color:var(--accent); font-size:0.75rem; cursor:pointer; font-weight:600;">Mark all read</button>` : ''}
-        <button type="button" id="notif-clear-all" style="background:none; border:none; color:var(--text-muted); font-size:0.75rem; cursor:pointer;">Clear</button>
+    <div class="notif-head">
+      <h3>Notifications</h3>
+      <div class="notif-head-actions">
+        ${unreadCount > 0 ? `<button type="button" class="btn btn-ghost btn-sm" id="notif-mark-read">Mark all read</button>` : ''}
+        ${notifications.length ? `<button type="button" class="btn btn-ghost btn-sm" id="notif-clear-all">Clear</button>` : ''}
       </div>
     </div>
-    <div style="flex: 1; overflow-y: auto; max-height: 400px;" id="notif-list-container">
+    <div class="notif-list" id="notif-list-container">
   `;
 
   if (notifications.length === 0) {
     html += `
-      <div style="padding: 40px 24px; text-align: center; color: var(--text-muted);">
-        <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1" style="opacity: 0.3; margin-bottom: 12px;">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-        </svg>
-        <div style="font-size: 0.85rem; font-weight: 600;">You're all caught up</div>
-      </div>
-    `;
+      <div class="notif-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <strong>You're all caught up</strong>
+      </div>`;
   } else {
     notifications.forEach(n => {
       const isUnread = !n.read;
-      const timeStr = new Date(n.date).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' });
+      const timeStr = new Date(n.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       html += `
-        <div class="notif-item" data-id="${escapeHtml(n.id)}" role="button" tabindex="0" aria-label="${escapeHtml(`${isUnread ? 'Unread: ' : ''}${n.title}`)}" style="padding: 12px 16px; border-bottom: 1px solid var(--border); background: ${isUnread ? 'var(--bg-subtle)' : 'transparent'}; cursor: pointer; transition: background 0.15s; position: relative;">
-          ${isUnread ? '<div style="position:absolute; left:6px; top:18px; width:6px; height:6px; border-radius:50%; background:var(--accent);"></div>' : ''}
-          <div style="display:flex; justify-content:space-between; margin-bottom:4px; padding-left: ${isUnread ? '8px' : '0'};">
-            <span style="font-weight: 600; font-size: 0.82rem; color: var(--text);">${escapeHtml(n.title)}</span>
-            <span style="font-size: 0.7rem; color: var(--text-muted);">${timeStr}</span>
+        <div class="notif-item${isUnread ? ' is-unread' : ''}" data-id="${escapeHtml(n.id)}" role="button" tabindex="0" aria-label="${escapeHtml(`${isUnread ? 'Unread: ' : ''}${n.title}`)}">
+          <div class="notif-item-top">
+            <span class="notif-item-title">${escapeHtml(n.title)}</span>
+            <span class="notif-item-time">${timeStr}</span>
           </div>
-          <div style="font-size: 0.8rem; color: var(--text-muted); padding-left: ${isUnread ? '8px' : '0'}; line-height: 1.4;">${escapeHtml(n.message)}</div>
+          <div class="notif-item-msg">${escapeHtml(n.message)}</div>
           ${n.type === 'message' && n.data?.conversationId ? `<button type="button" class="notif-reply-action" data-reply-id="${escapeHtml(n.id)}">Reply</button>` : ''}
-        </div>
-      `;
+        </div>`;
     });
   }
 
@@ -431,11 +409,7 @@ function toggleNotificationPanel() {
     closeNotificationPanel();
   } else {
     renderNotificationPanel().then(() => {
-      notifPanelEl.style.display = 'flex';
-      // Trigger reflow for animation
       void notifPanelEl.offsetWidth;
-      notifPanelEl.style.opacity = '1';
-      notifPanelEl.style.transform = 'scale(1)';
       notifPanelEl.classList.add('is-open');
       document.getElementById('header-notif-btn')?.setAttribute('aria-expanded', 'true');
     });
@@ -444,15 +418,7 @@ function toggleNotificationPanel() {
 
 function closeNotificationPanel() {
   document.getElementById('header-notif-btn')?.setAttribute('aria-expanded', 'false');
-  if (!notifPanelEl) return;
-  notifPanelEl.style.opacity = '0';
-  notifPanelEl.style.transform = 'scale(0.95)';
-  notifPanelEl.classList.remove('is-open');
-  setTimeout(() => {
-    if (!notifPanelEl.classList.contains('is-open')) {
-      notifPanelEl.style.display = 'none';
-    }
-  }, 150);
+  notifPanelEl?.classList.remove('is-open');
 }
 
 export function updateHeaderAvatar() {
@@ -465,15 +431,12 @@ export function updateHeaderAvatar() {
   if (user && activePic && activePic !== 'default') {
     const src = getProfilePictureSrc(activePic);
     if (src) {
-      btn.innerHTML = `<img src="${src}" alt="Avatar" style="width:100%; height:100%; border-radius:50%; object-fit:cover; display:block;">`;
+      btn.innerHTML = `<img src="${src}" alt="">`;
       return;
     }
   }
 
   btn.innerHTML = `
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text);">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-      <circle cx="12" cy="7" r="4"></circle>
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
   `;
 }

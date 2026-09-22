@@ -155,7 +155,7 @@ export default {
           border:2px solid ${isSelected ? 'var(--black)' : 'transparent'};
           border-radius:6px;
           background:${bg};
-          color:${activeHeatmap !== 'none' ? '#0f172a' : '#ffffff'};
+          color:${activeHeatmap !== 'none' ? 'var(--text)' : 'var(--surface)'};
           display:flex;
           flex-direction:column;
           justify-content:space-between;
@@ -237,7 +237,7 @@ export default {
               ">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                   <span style="font-size:0.75rem; font-family:var(--mono); font-weight:700; color:var(--text-muted);">#${el.number}</span>
-                  <span style="font-size:0.7rem; font-weight:700; padding:2px 7px; border-radius:999px; background:${badgeBg}; color:${activeHeatmap !== 'none' ? '#0f172a' : '#ffffff'};">${el.symbol}</span>
+                  <span style="font-size:0.7rem; font-weight:700; padding:2px 7px; border-radius:999px; background:${badgeBg}; color:${activeHeatmap !== 'none' ? 'var(--text)' : 'var(--surface)'};">${el.symbol}</span>
                 </div>
                 <div style="font-size:0.95rem; font-weight:700; color:var(--text); margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${el.name}</div>
                 <div style="font-size:0.72rem; color:var(--text-secondary); font-family:var(--mono);">${typeof el.weight === 'number' ? el.weight.toFixed(2) : el.weight} u</div>
@@ -294,7 +294,7 @@ export default {
             <h3 style="font-size:1.3rem; font-weight:800; margin:0; color:var(--black);">${el.name}</h3>
             <div style="font-size:0.88rem; font-family:var(--mono); font-weight:600; color:var(--g700); margin:4px 0 8px;">${typeof el.weight === 'number' ? el.weight.toFixed(4) : el.weight} u</div>
 
-            <div style="display:inline-block; font-size:0.75rem; font-weight:700; background:${catColor}; color:#fff; padding:2px 8px; border-radius:999px; margin-bottom:10px;">
+            <div style="display:inline-block; font-size:0.75rem; font-weight:700; background:${catColor}; color:var(--surface); padding:2px 8px; border-radius:999px; margin-bottom:10px;">
               ${catLabel}
             </div>
 

@@ -55,7 +55,7 @@ export default {
   render(container) {
     container.innerHTML = `
       <div class="tool-section">
-        <div class="color-swatch" id="clr-swatch" style="background:#3b82f6;"></div>
+        <div class="color-swatch" id="clr-swatch" style="background:var(--text);"></div>
       </div>
 
       <div class="tool-section">

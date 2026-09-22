@@ -1,0 +1,181 @@
+/* ==========================================================================
+   Toolbox tokens — Soft Monochrome (v2)
+   Source of truth: the Toolbox design system. Light is the default;
+   [data-theme="dark"] on <html> switches everything.
+   ========================================================================== */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f7f7f6;
+  --surface: #ffffff;
+  --surface-2: #f2f2f1;
+  --surface-3: #e9e9e8;
+  --overlay: #ffffff;
+  --text: #0a0a0a;
+  --text-2: #525252;
+  --text-3: #6b6b6b;
+  --text-inverse: #fafafa;
+  --ink: #0a0a0a;
+  --ink-hover: #262626;
+  --line: #e7e7e5;
+  --line-strong: #d6d6d4;
+  --line-control: #858585;
+  --focus: #0a0a0a;
+  --scrim: rgba(10, 10, 10, 0.4);
+  --tint: rgba(10, 10, 10, 0.05);
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+  --success: #166534;
+  --success-soft: #f0fdf4;
+  --warning: #92400e;
+  --warning-soft: #fffbeb;
+  --shadow-1: 0 1px 2px rgba(10, 10, 10, 0.04);
+  --shadow-2: 0 4px 12px rgba(10, 10, 10, 0.06), 0 1px 3px rgba(10, 10, 10, 0.04);
+  --shadow-3: 0 16px 40px rgba(10, 10, 10, 0.10), 0 2px 8px rgba(10, 10, 10, 0.04);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0a0a0a;
+  --surface: #141414;
+  --surface-2: #1c1c1c;
+  --surface-3: #262626;
+  --overlay: #1a1a1a;
+  --text: #fafafa;
+  --text-2: #a3a3a3;
+  --text-3: #8a8a8a;
+  --text-inverse: #0a0a0a;
+  --ink: #fafafa;
+  --ink-hover: #e5e5e5;
+  --line: #262626;
+  --line-strong: #333333;
+  --line-control: #6b6b6b;
+  --focus: #fafafa;
+  --scrim: rgba(0, 0, 0, 0.6);
+  --tint: rgba(250, 250, 250, 0.08);
+  --danger: #f87171;
+  --danger-soft: #2a1414;
+  --success: #4ade80;
+  --success-soft: #0f2417;
+  --warning: #fbbf24;
+  --warning-soft: #2a2008;
+  --shadow-1: 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-3: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-pill: 9999px;
+  --control-sm: 32px;
+  --control-md: 40px;
+  --control-lg: 48px;
+  --header-h: 60px;
+  --content-max: 1120px;
+  --tool-max: 960px;
+  --font-sans: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, "JetBrains Mono", monospace;
+  --font-pixel: "Pixelify Sans", "SF Pro Text", -apple-system, "Segoe UI", sans-serif;
+  --font-readout: "VT323", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-in-out: cubic-bezier(.65, 0, .35, 1);
+  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+  --dur-1: 120ms;
+  --dur-2: 180ms;
+  --dur-3: 260ms;
+  --dur-4: 420ms;
+}
+
+/* --------------------------------------------------------------------------
+   Legacy aliases. Tool styles written for the old theme engine read these
+   names; they now resolve to the new tokens so every tool follows the
+   renovation (and dark mode) without being rewritten first. New code uses
+   the tokens above, never these.
+   -------------------------------------------------------------------------- */
+:root,
+[data-theme="light"],
+[data-theme="dark"] {
+  --black: var(--text);
+  --white: var(--surface);
+  --g50: var(--surface-2);
+  --g100: var(--surface-3);
+  --g150: var(--line);
+  --g200: var(--line-strong);
+  --g300: var(--line-strong);
+  --g400: var(--text-3);
+  --g500: var(--text-3);
+  --g600: var(--text-2);
+  --g700: var(--text-2);
+  --g800: var(--text);
+  --g900: var(--text);
+  --background: var(--bg);
+  --bg-card: var(--surface);
+  --bg-subtle: var(--surface-2);
+  --bg-hover: var(--surface-3);
+  --bg-elevated: var(--overlay);
+  --bg-surface: var(--surface);
+  --card-bg: var(--surface);
+  --surface-secondary: var(--surface-2);
+  --surface-tertiary: var(--surface-3);
+  --surface-elevated: var(--overlay);
+  --text-primary: var(--text);
+  --text-secondary: var(--text-2);
+  --text-muted: var(--text-3);
+  --border: var(--line);
+  --border-subtle: var(--line);
+  --border-color: var(--line);
+  --border-hover: var(--line-strong);
+  --accent: var(--ink);
+  --accent-hover: var(--ink-hover);
+  --accent-secondary: var(--text-2);
+  --accent-contrast: var(--text-inverse);
+  --accent-soft: var(--tint);
+  --accent-glow: color-mix(in srgb, var(--ink) 16%, transparent);
+  --primary: var(--ink);
+  --primary-hover: var(--ink-hover);
+  --primary-light: var(--surface-2);
+  --error: var(--danger);
+  --p50: var(--surface-2);
+  --p100: var(--surface-2);
+  --p200: var(--line-strong);
+  --p700: var(--text);
+  --glass-surface: var(--surface);
+  --glass-surface-strong: var(--overlay);
+  --glass-surface-soft: var(--surface-2);
+  --glass-line: var(--line);
+  --glass-highlight: none;
+  --glass-shadow: var(--shadow-2);
+  --bg-glass: color-mix(in srgb, var(--surface) 85%, transparent);
+  --bg-glass-subtle: color-mix(in srgb, var(--surface) 70%, transparent);
+  --bg-glass-elevated: var(--overlay);
+  --backdrop-blur: blur(16px);
+  --backdrop-blur-sm: blur(10px);
+  --backdrop-blur-lg: blur(24px);
+  --highlight: inset 0 0 0 0 transparent;
+  --gradient: var(--surface);
+  --shadow-xs: var(--shadow-1);
+  --shadow-sm: var(--shadow-1);
+  --shadow-md: var(--shadow-2);
+  --shadow-lg: var(--shadow-3);
+  --shadow-xl: var(--shadow-3);
+  --shadow: var(--shadow-1);
+  --shadow-elevated: var(--shadow-3);
+  --sans: var(--font-sans);
+  --mono: var(--font-mono);
+  --pixel: var(--font-pixel);
+  --readout: var(--font-readout);
+}

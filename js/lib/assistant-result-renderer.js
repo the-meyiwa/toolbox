@@ -331,8 +331,8 @@ export class FileDeletionConfirmationRenderer extends ResultRenderer {
         <line x1="12" y1="9" x2="12" y2="13"/>
         <line x1="12" y1="17" x2="12.01" y2="17"/>
       </svg>
-      <span style="font-weight:700; font-size:0.92rem; color:var(--text-primary, #0f172a);">Confirm File Deletion</span>
-      <span style="font-size:0.75rem; padding:2px 8px; border-radius:9999px; background:#fef2f2; color:#b91c1c; font-weight:600; border:1px solid #fecaca;">Action Required</span>
+      <span style="font-weight:700; font-size:0.92rem; color:var(--text-primary, var(--text));">Confirm File Deletion</span>
+      <span style="font-size:0.75rem; padding:2px 8px; border-radius:9999px; background:var(--danger-soft); color:var(--danger); font-weight:600; border:1px solid var(--danger);">Action Required</span>
     `;
     card.appendChild(header);
 
@@ -402,7 +402,7 @@ export class FileDeletionConfirmationRenderer extends ResultRenderer {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="20 6 9 17 4 12"/>
           </svg>
-          <span style="font-weight:700; font-size:0.92rem; color:var(--text-primary, #0f172a);">Files Deleted</span>
+          <span style="font-weight:700; font-size:0.92rem; color:var(--text-primary, var(--text));">Files Deleted</span>
         `;
         desc.textContent = res.message || `Successfully deleted ${targetPaths.length} file(s).`;
         desc.style.color = '#15803d';
@@ -429,7 +429,7 @@ export class FileDeletionConfirmationRenderer extends ResultRenderer {
       card.style.opacity = '0.7';
       desc.textContent = 'Deletion cancelled by user.';
       desc.style.color = 'var(--text-muted, #64748b)';
-      actionRow.innerHTML = '<span style="font-size:0.8rem; color:var(--text-muted, #64748b); font-style:italic;">Cancelled</span>';
+      actionRow.innerHTML = '<span style="font-size:0.8rem; color:var(--text-muted, var(--text-2)); font-style:italic;">Cancelled</span>';
     });
 
     actionRow.append(confirmBtn, cancelBtn, statusMsg);
@@ -1939,7 +1939,7 @@ export class Anatomy3DResultRenderer extends ResultRenderer {
         setTimeout(() => loaderOverlay.remove(), 300);
       } catch (err) {
         console.warn('3D Anatomy Canvas load:', err);
-        loaderOverlay.innerHTML = `<span style="color:#ef4444;">3D preview unavailable (${err.message}). View in Anatomy Explorer.</span>`;
+        loaderOverlay.innerHTML = `<span style="color:var(--danger);">3D preview unavailable (${err.message}). View in Anatomy Explorer.</span>`;
       }
     }, 10);
 
@@ -2361,7 +2361,7 @@ export class InvoiceResultRenderer extends ResultRenderer {
           ${lines.map(l => `<tr><td>${l.description}</td><td>${l.qty}</td><td>${sym}${l.price.toLocaleString()}</td><td>${sym}${(l.qty * l.price).toLocaleString()}</td></tr>`).join('')}
           </tbody></table>
           <p class="total">Total Due: ${sym}${(inv.total || 0).toLocaleString()}</p>
-          <p style="margin-top:30px;font-size:0.85rem;color:#666;">${(inv.notes || '').replace(/\n/g, '<br>')}</p>
+          <p style="margin-top:30px;font-size:0.85rem;color:var(--text-2);">${(inv.notes || '').replace(/\n/g, '<br>')}</p>
           <script>window.print();<\/script></body></html>
         `);
         w.document.close();
@@ -3102,7 +3102,7 @@ export class ContainerQuoteResultRenderer extends ResultRenderer {
     const canvasWrap = document.createElement('div');
     canvasWrap.style.cssText = 'height:140px; background:var(--g50); border-radius:12px; border:1px solid var(--g200); display:flex; align-items:center; justify-content:center; position:relative;';
     canvasWrap.innerHTML = `
-      <svg width="240" height="100" viewBox="0 0 240 100" fill="none" stroke="currentColor" stroke-width="1.8" style="color:var(--primary, #2563eb);">
+      <svg width="240" height="100" viewBox="0 0 240 100" fill="none" stroke="currentColor" stroke-width="1.8" style="color:var(--primary, var(--text));">
         <polygon points="30,30 190,30 220,15 60,15" fill="rgba(37,99,235,0.06)"/>
         <polygon points="30,30 30,80 190,80 190,30" fill="rgba(37,99,235,0.12)"/>
         <polygon points="190,30 190,80 220,65 220,15" fill="rgba(37,99,235,0.18)"/>
@@ -3119,7 +3119,7 @@ export class ContainerQuoteResultRenderer extends ResultRenderer {
     boq.innerHTML = `
       <div><span style="font-size:0.72rem; color:var(--g600); font-weight:700; text-transform:uppercase; display:block;">Materials</span><strong style="font-family:var(--mono);">₦${(quote.materials || 0).toLocaleString()}</strong></div>
       <div><span style="font-size:0.72rem; color:var(--g600); font-weight:700; text-transform:uppercase; display:block;">Labour</span><strong style="font-family:var(--mono);">₦${(quote.labour || 0).toLocaleString()}</strong></div>
-      <div><span style="font-size:0.72rem; color:var(--g600); font-weight:700; text-transform:uppercase; display:block;">Total Estimated</span><strong style="font-size:1.1rem; color:var(--primary, #2563eb); font-family:var(--mono);">₦${(quote.total || 0).toLocaleString()}</strong></div>
+      <div><span style="font-size:0.72rem; color:var(--g600); font-weight:700; text-transform:uppercase; display:block;">Total Estimated</span><strong style="font-size:1.1rem; color:var(--primary, var(--text)); font-family:var(--mono);">₦${(quote.total || 0).toLocaleString()}</strong></div>
     `;
     body.appendChild(boq);
 
@@ -3494,7 +3494,7 @@ export class MapResultRenderer extends ResultRenderer {
       `).join('');
 
       mapStage.innerHTML = `
-        <svg viewBox="0 0 600 180" style="width:100%; height:100%; display:block; background:#0f172a; border-radius:12px;">
+        <svg viewBox="0 0 600 180" style="width:100%; height:100%; display:block; background:var(--text); border-radius:12px;">
           <defs>
             <pattern id="geoGrid-${mapStageId}" width="60" height="60" patternUnits="userSpaceOnUse">
               <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#1e293b" stroke-width="1"/>
@@ -3529,7 +3529,7 @@ export class MapResultRenderer extends ResultRenderer {
         </svg>
       `;
     } else {
-      mapStage.innerHTML = `<div style="display:flex; align-items:center; justify-content:center; height:100%; color:#94a3b8; font-size:0.85rem;">Interactive Map Visualizer</div>`;
+      mapStage.innerHTML = `<div style="display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-3); font-size:0.85rem;">Interactive Map Visualizer</div>`;
     }
 
     body.appendChild(mapStage);
@@ -3560,7 +3560,7 @@ export class MapResultRenderer extends ResultRenderer {
         const topRowLeft = document.createElement('div');
         topRowLeft.innerHTML = `
           <strong style="color:var(--black); font-size:0.88rem;">${i + 1}. ${escapeHtml(pName)}</strong>
-          ${p.certified ? `<div style="font-size:0.72rem; color:#16a34a; font-weight:700; margin-top:2px;">Verified: ${escapeHtml(p.certified)}</div>` : ''}
+          ${p.certified ? `<div style="font-size:0.72rem; color:var(--success); font-weight:700; margin-top:2px;">Verified: ${escapeHtml(p.certified)}</div>` : ''}
         `;
         topRow.appendChild(topRowLeft);
 
@@ -3845,7 +3845,7 @@ export class PdfAnnotationResultRenderer extends ResultRenderer {
       const isRedact = a.type === 'redact';
       row.innerHTML = `
         <div style="display:flex; align-items:center; gap:8px;">
-          <span style="font-size:0.7rem; padding:2px 8px; border-radius:9999px; background:${isRedact ? '#fee2e2' : 'var(--g200)'}; color:${isRedact ? '#b91c1c' : 'var(--black)'}; font-weight:700;">${a.type.toUpperCase()}</span>
+          <span style="font-size:0.7rem; padding:2px 8px; border-radius:9999px; background:${isRedact ? 'var(--danger-soft)' : 'var(--g200)'}; color:${isRedact ? 'var(--danger)' : 'var(--black)'}; font-weight:700;">${a.type.toUpperCase()}</span>
           <strong style="color:var(--black);">${a.label}</strong>
         </div>
         <span style="font-size:0.74rem; color:var(--g600);">Page ${a.page || 1}</span>
@@ -3902,7 +3902,7 @@ export class CalendarCardRenderer extends ResultRenderer {
                 <span style="font-weight:600; font-size:0.86rem; color:var(--text);">${String(e.title || '')}</span>
                 <span style="font-size:0.75rem; color:var(--text-secondary);">${e.isAllDay ? '(All day)' : `${e.startTime} – ${e.endTime}`}</span>
               </div>
-              <span style="font-size:0.68rem; font-weight:700; text-transform:uppercase; padding:2px 7px; border-radius:999px; background:rgba(59,130,246,0.12); color:#3b82f6;">${e.category || 'event'}</span>
+              <span style="font-size:0.68rem; font-weight:700; text-transform:uppercase; padding:2px 7px; border-radius:999px; background:rgba(59,130,246,0.12); color:var(--text);">${e.category || 'event'}</span>
             </div>
           `).join('')}
         </div>
@@ -3913,7 +3913,7 @@ export class CalendarCardRenderer extends ResultRenderer {
       card.innerHTML = `
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
           <div style="display:flex; align-items:center; gap:8px;">
-            <div style="width:32px; height:32px; border-radius:8px; background:${isCancelled ? '#ef4444' : 'var(--black)'}; color:var(--white); display:flex; align-items:center; justify-content:center;">
+            <div style="width:32px; height:32px; border-radius:8px; background:${isCancelled ? 'var(--danger)' : 'var(--black)'}; color:var(--white); display:flex; align-items:center; justify-content:center;">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </div>
             <div>
@@ -3921,7 +3921,7 @@ export class CalendarCardRenderer extends ResultRenderer {
               <div style="font-size:0.75rem; color:var(--text-secondary);">${isCancelled ? 'Event cancelled from schedule' : 'Event confirmed & scheduled'}</div>
             </div>
           </div>
-          <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; padding:3px 9px; border-radius:999px; background:${isCancelled ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)'}; color:${isCancelled ? '#ef4444' : '#10b981'};">
+          <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; padding:3px 9px; border-radius:999px; background:${isCancelled ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)'}; color:${isCancelled ? 'var(--danger)' : 'var(--success)'};">
             ${isCancelled ? 'Cancelled' : 'Scheduled'}
           </span>
         </div>
@@ -3988,9 +3988,9 @@ export class BrowserCardRenderer extends ResultRenderer {
       <!-- Window Chrome -->
       <div style="background:var(--bg-subtle); border-bottom:1px solid var(--border); padding:8px 12px; display:flex; align-items:center; justify-content:space-between; gap:10px;">
         <div style="display:flex; align-items:center; gap:5px;">
-          <span style="width:9px; height:9px; border-radius:50%; background:#ef4444; display:inline-block;"></span>
-          <span style="width:9px; height:9px; border-radius:50%; background:#f59e0b; display:inline-block;"></span>
-          <span style="width:9px; height:9px; border-radius:50%; background:#10b981; display:inline-block;"></span>
+          <span style="width:9px; height:9px; border-radius:50%; background:var(--danger); display:inline-block;"></span>
+          <span style="width:9px; height:9px; border-radius:50%; background:var(--warning); display:inline-block;"></span>
+          <span style="width:9px; height:9px; border-radius:50%; background:var(--success); display:inline-block;"></span>
           <span style="font-size:0.75rem; font-weight:700; color:var(--text); margin-left:6px;">Browser</span>
         </div>
         <!-- Address pill -->
@@ -4388,7 +4388,7 @@ export class MathResultRenderer extends ResultRenderer {
           </div>
           <div style="padding:6px 8px; background:var(--white); border:1px solid var(--g200); border-radius:6px; text-align:center;">
             <div style="font-size:0.65rem; color:var(--g600); font-weight:700;">Polar Form</div>
-            <div style="font-family:var(--mono, monospace); font-size:1.05rem; font-weight:700; margin-top:2px; color:var(--primary, #2563eb);">${escapeHtml(data.polar?.notation || '')}</div>
+            <div style="font-family:var(--mono, monospace); font-size:1.05rem; font-weight:700; margin-top:2px; color:var(--primary, var(--text));">${escapeHtml(data.polar?.notation || '')}</div>
           </div>
           <div style="padding:6px 8px; background:var(--white); border:1px solid var(--g200); border-radius:6px; text-align:center;">
             <div style="font-size:0.65rem; color:var(--g600); font-weight:700;">Modulus |z|</div>
@@ -4449,7 +4449,7 @@ export class MathResultRenderer extends ResultRenderer {
       regCard.style.cssText = 'padding:12px 14px; border-radius:10px; background:var(--g50); border:1px solid var(--g200);';
       regCard.innerHTML = `
         <div style="font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase;">Ordinary Least Squares Linear Regression</div>
-        <div style="font-family:var(--mono, monospace); font-size:1.25rem; font-weight:700; margin-top:4px; color:var(--primary, #2563eb);">
+        <div style="font-family:var(--mono, monospace); font-size:1.25rem; font-weight:700; margin-top:4px; color:var(--primary, var(--text));">
           ${escapeHtml(data.equation)}
         </div>
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:6px; margin-top:8px;">
@@ -4544,7 +4544,7 @@ export class MathResultRenderer extends ResultRenderer {
         <div style="font-size:0.75rem; font-weight:700; color:var(--g600); text-transform:uppercase;">${escapeHtml(data.domain || 'Mathematical Constant')}</div>
         <div style="display:flex; align-items:baseline; gap:10px; margin-top:4px;">
           <span style="font-family:var(--mono, monospace); font-size:1.3rem; font-weight:700; color:var(--black);">${escapeHtml(data.symbol)}</span>
-          <span style="font-family:var(--mono, monospace); font-size:1rem; color:var(--primary, #2563eb); font-weight:600;">${escapeHtml(data.displayValue)}</span>
+          <span style="font-family:var(--mono, monospace); font-size:1rem; color:var(--primary, var(--text)); font-weight:600;">${escapeHtml(data.displayValue)}</span>
         </div>
         <div style="font-size:0.78rem; color:var(--g700); margin-top:6px;">${escapeHtml(data.description)}</div>
       `;

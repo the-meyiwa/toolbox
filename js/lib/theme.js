@@ -1,74 +1,86 @@
 /* ============================================================
-   TOOLBOX — Theme Management Engine
-   Seven curated themes with complete semantic-token coverage.
+   TOOLBOX — Theme
+   Two themes, one system: Light and Dark (Soft Monochrome), plus
+   "System", which follows the operating system and keeps following it.
+   The resolved theme is written to <html data-theme="light|dark">;
+   every colour in the product reads from tokens keyed on that.
    ============================================================ */
 
 export const THEMES = [
-  { id: 'default', name: 'Black on White', group: 'minimal', preview: { bg: '#ffffff', surface: '#ffffff', card: '#ffffff', text: '#000000', accent: '#000000', border: '#dddddd' }, description: 'Precise monochrome with a bright canvas.' },
-  { id: 'white-on-black', name: 'White on Black', group: 'minimal', preview: { bg: '#000000', surface: '#111111', card: '#111111', text: '#ffffff', accent: '#ffffff', border: '#262626' }, description: 'Focused monochrome for low-light work.' },
-  { id: 'claude', name: 'Claude', group: 'signature', preview: { bg: '#f7f3ee', surface: '#fcfaf7', card: '#fcfaf7', text: '#2f2a25', accent: '#c15f3c', border: '#ded5ca' }, description: 'Warm, editorial, and quietly tactile.' },
-  { id: 'ubuntu', name: 'Ubuntu', group: 'signature', preview: { bg: '#242424', surface: '#2c2c2c', card: '#2c2c2c', text: '#f7f7f7', accent: '#e95420', border: 'rgba(255,255,255,0.09)' }, description: 'Deep aubergine surfaces with warm orange accents.' },
-  { id: 'cyberpunk', name: 'Cyberpunk', group: 'signature', preview: { bg: '#07080d', surface: '#10131c', card: '#111622', text: '#f4f7ff', accent: '#68f7d4', border: 'rgba(104,247,212,0.28)' }, description: 'Dark technical glass with electric mint and violet signals.' },
-  { id: 'neon-tokyo', name: 'Neon Tokyo', group: 'signature', preview: { bg: '#090611', surface: '#171022', card: '#1d132b', text: '#fff4fc', accent: '#ff4fc8', border: 'rgba(77,238,255,0.3)' }, description: 'Midnight violet glass with electric pink and cyan light.' },
-  { id: 'cyberpunk-amber', name: 'Cyberpunk Amber', group: 'signature', preview: { bg: '#0b0905', surface: '#18130b', card: '#21180c', text: '#fff8e8', accent: '#ffb000', border: 'rgba(255,176,0,0.3)' }, description: 'Industrial black glass with amber terminals and cool blue signals.' }
+  { id: 'system', name: 'System', description: 'Follow your device setting.' },
+  { id: 'light', name: 'Light', description: 'Near-black ink on warm white paper.' },
+  { id: 'dark', name: 'Dark', description: 'Soft white ink on near-black.' },
 ];
 
-const THEME_ALIASES = {
-  'black-on-white': 'default',
-  'yosemite': 'default',
-  'yosemite-night': 'white-on-black',
-  'linux-mint': 'ubuntu',
-  'mondrian': 'default',
-  'memphis': 'default',
-  'art-deco': 'white-on-black',
-  'mid-century': 'claude',
-  'japanese-traditional': 'claude',
-  'lagos': 'ubuntu',
-  'african-textile': 'ubuntu',
-  'british-racing-green': 'ubuntu',
-  'wimbledon': 'claude',
-  'barbie': 'claude',
-  'tiffany': 'default',
-  'coca-cola': 'default',
-  'mcdonalds': 'default',
-  'playstation': 'white-on-black',
-  'ikea': 'default',
-  'google': 'default',
-  'miami-vice': 'cyberpunk'
-};
-const STORAGE_KEY = 'toolbox_theme';
+/* Old palette themes resolve to the side they looked like. */
+const DARK_LEGACY = new Set([
+  'white-on-black', 'yosemite-night', 'linux-mint', 'ubuntu', 'art-deco', 'lagos',
+  'african-textile', 'british-racing-green', 'wimbledon', 'coca-cola', 'mcdonalds',
+  'playstation', 'miami-vice', 'cyberpunk', 'cyberpunk-amber', 'neon-tokyo',
+]);
 
+const STORAGE_KEY = 'toolbox_theme';
+const media = typeof window !== 'undefined' && window.matchMedia
+  ? window.matchMedia('(prefers-color-scheme: dark)')
+  : null;
+
+function normalise(id) {
+  if (id === 'system' || id === 'light' || id === 'dark') return id;
+  if (!id) return 'system';
+  return DARK_LEGACY.has(id) ? 'dark' : 'light';
+}
+
+/** The stored preference: 'system' | 'light' | 'dark'. */
 export function getStoredTheme() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY) || 'default';
-    const resolved = THEME_ALIASES[raw] || raw;
-    return THEMES.find(t => t.id === resolved) ? resolved : 'default';
-  } catch {
-    return 'default';
-  }
+  try { return normalise(localStorage.getItem(STORAGE_KEY)); }
+  catch { return 'system'; }
+}
+
+/** The theme actually on screen: 'light' | 'dark'. */
+export function getResolvedTheme(pref = getStoredTheme()) {
+  if (pref === 'system') return media?.matches ? 'dark' : 'light';
+  return pref;
+}
+
+function paint(mode) {
+  const root = document.documentElement;
+  root.setAttribute('data-theme', mode);
+  const meta = document.getElementById('meta-theme-color');
+  if (meta) meta.setAttribute('content', mode === 'dark' ? '#0a0a0a' : '#f7f7f6');
+  const toggle = document.getElementById('theme-toggle');
+  if (toggle) toggle.setAttribute('aria-label', mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
 }
 
 export function applyTheme(themeId) {
-  const resolved = THEME_ALIASES[themeId] || themeId;
-  const targetTheme = THEMES.find(t => t.id === resolved) ? resolved : 'default';
-  
-  if (targetTheme === 'default') {
-    document.documentElement.removeAttribute('data-theme');
-  } else {
-    document.documentElement.setAttribute('data-theme', targetTheme);
+  const pref = normalise(themeId);
+  const mode = getResolvedTheme(pref);
+
+  // Cross-fade the switch instead of snapping every surface at once.
+  const root = document.documentElement;
+  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  if (!reduce && root.getAttribute('data-theme') && root.getAttribute('data-theme') !== mode) {
+    root.classList.add('theme-transition');
+    clearTimeout(applyTheme._t);
+    applyTheme._t = setTimeout(() => root.classList.remove('theme-transition'), 320);
   }
 
-  try {
-    localStorage.setItem(STORAGE_KEY, targetTheme);
-  } catch {}
+  paint(mode);
+  try { localStorage.setItem(STORAGE_KEY, pref); } catch {}
+  window.dispatchEvent(new CustomEvent('toolbox:themechange', { detail: { theme: mode, preference: pref } }));
+  return pref;
+}
 
-  // Dispatch custom event for reactive tools
-  window.dispatchEvent(new CustomEvent('toolbox:themechange', { detail: { theme: targetTheme } }));
-  return targetTheme;
+/** Flip between light and dark from whatever is showing now. */
+export function toggleTheme() {
+  return applyTheme(getResolvedTheme() === 'dark' ? 'light' : 'dark');
 }
 
 export function initTheme() {
-  const current = getStoredTheme();
-  applyTheme(current);
-  return current;
+  const pref = getStoredTheme();
+  paint(getResolvedTheme(pref));
+  media?.addEventListener?.('change', () => {
+    if (getStoredTheme() === 'system') applyTheme('system');
+  });
+  document.getElementById('theme-toggle')?.addEventListener('click', toggleTheme);
+  return pref;
 }

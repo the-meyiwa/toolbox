@@ -189,7 +189,7 @@ export default {
                 ${user ? 'Account' : 'Cloud Sync'}
               </button>
 
-              <button type="button" class="btn btn-secondary btn-sm" id="ast-btn-clear" style="font-size:0.74rem; color:#ef4444;" title="Clear Conversation">
+              <button type="button" class="btn btn-secondary btn-sm" id="ast-btn-clear" style="font-size:0.74rem; color:var(--danger);" title="Clear Conversation">
                 Clear
               </button>
             </div>
@@ -329,7 +329,7 @@ export default {
       const q = QuotaManager.getQuotaSummary();
       if (quotaLabel) {
         if (q.isUnlimited) {
-          quotaLabel.innerHTML = `<strong style="color:#16a34a;">Unlimited VIP</strong>`;
+          quotaLabel.innerHTML = `<strong style="color:var(--success);">Unlimited VIP</strong>`;
         } else {
           quotaLabel.textContent = `${q.messagesRemaining} / ${q.messagesLimit} msgs`;
         }
@@ -520,7 +520,7 @@ export default {
         searchInput?.addEventListener('input', (e) => renderList(e.target.value));
         setTimeout(() => searchInput?.focus(), 50);
       } catch (err) {
-        bodyEl.innerHTML = `<div style="color:#ef4444; padding:20px; font-size:0.85rem;">Error loading files: ${escapeHtml(err.message)}</div>`;
+        bodyEl.innerHTML = `<div style="color:var(--danger); padding:20px; font-size:0.85rem;">Error loading files: ${escapeHtml(err.message)}</div>`;
       }
     }
 
@@ -884,7 +884,7 @@ export default {
             <div class="ast-tool-status-area"></div>
             <div class="ast-tool-results-area"></div>
             <div class="ast-text-body ${animClass}">
-              <div style="color:#ef4444; font-weight:600; margin-bottom:8px; line-height:1.4;">${escapeHtml(error || 'Assistant failed to respond.')}</div>
+              <div style="color:var(--danger); font-weight:600; margin-bottom:8px; line-height:1.4;">${escapeHtml(error || 'Assistant failed to respond.')}</div>
               <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
                 <button type="button" class="btn btn-secondary btn-sm ast-err-btn-retry" style="font-size:0.75rem; font-weight:700; border-radius:9999px; padding:5px 14px;">
                   Retry Request
@@ -1020,7 +1020,7 @@ export default {
               </div>
 
               <!-- Stop Button -->
-              <button type="button" class="btn btn-secondary btn-sm ast-audio-btn-stop" data-audio-id="${audioId}" style="font-size:0.72rem; padding:4px 8px; color:#ef4444; flex-shrink:0;">
+              <button type="button" class="btn btn-secondary btn-sm ast-audio-btn-stop" data-audio-id="${audioId}" style="font-size:0.72rem; padding:4px 8px; color:var(--danger); flex-shrink:0;">
                 Stop
               </button>
             </div>
@@ -1167,7 +1167,7 @@ export default {
                 📄 PDF Document (${result.pageCount || 1} page${(result.pageCount || 1) > 1 ? 's' : ''})
               </div>
             ` : `
-              <img src="${result.dataUrl}" style="max-width:100%; max-height:220px; border-radius:8px; display:block; object-fit:contain; background:#111;">
+              <img src="${result.dataUrl}" style="max-width:100%; max-height:220px; border-radius:8px; display:block; object-fit:contain; background:var(--text);">
             `}
           </div>
         `;
@@ -1591,7 +1591,7 @@ export default {
             `;
           } else {
             textBody.innerHTML = `
-              <div style="color:#ef4444; font-weight:600; margin-bottom:8px; line-height:1.4;">${escapeHtml(message)}</div>
+              <div style="color:var(--danger); font-weight:600; margin-bottom:8px; line-height:1.4;">${escapeHtml(message)}</div>
               <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
                 <button type="button" class="btn btn-secondary btn-sm ast-err-btn-retry" style="font-size:0.75rem; font-weight:700;">
                   Retry Request
@@ -1792,7 +1792,7 @@ export default {
             `;
           } else {
             textBody.innerHTML = `
-              <div style="color:#ef4444; font-weight:600; margin-bottom:8px; line-height:1.4;">${escapeHtml(message)}</div>
+              <div style="color:var(--danger); font-weight:600; margin-bottom:8px; line-height:1.4;">${escapeHtml(message)}</div>
               <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
                 <button type="button" class="btn btn-secondary btn-sm ast-err-btn-retry" style="font-size:0.75rem; font-weight:700;">
                   Retry Request

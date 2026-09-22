@@ -259,7 +259,7 @@ export default {
           <p style="font-size:0.85rem; line-height:1.55; color:var(--g900); margin:0; font-weight:500;">${digest.holding}</p>
         </div>
 
-        <div class="cd-card" style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:14px; border-left:4px solid #2563eb;">
+        <div class="cd-card" style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:14px; border-left:4px solid var(--text);">
           <h4 style="font-size:0.88rem; font-weight:700; color:#1e40af; margin:0 0 8px 0; text-transform:uppercase; letter-spacing:0.04em;"> Ratio Decidendi (Binding Principle)</h4>
           <p style="font-size:0.85rem; line-height:1.55; color:var(--g900); margin:0;">${digest.ratio}</p>
         </div>

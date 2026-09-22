@@ -368,75 +368,35 @@ export function showToast(message, type = 'info', duration = 3500) {
   if (!container) {
     container = document.createElement('div');
     container.id = 'toolbox-toast-container';
-    container.style.cssText = 'position:fixed; bottom:24px; right:24px; z-index:99999; display:flex; flex-direction:column; gap:8px; pointer-events:none; max-width:calc(100vw - 48px); width:380px;';
+    container.setAttribute('role', 'status');
+    container.setAttribute('aria-live', 'polite');
     document.body.appendChild(container);
   }
 
+  const ICONS = {
+    success: '<path d="M20 6 9 17l-5-5"/>',
+    error: '<circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/>',
+    warning: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>',
+  };
   const toast = document.createElement('div');
   toast.className = `toolbox-toast toolbox-toast-${type}`;
-  toast.style.cssText = [
-    'background: #000000;',
-    'color: #ffffff;',
-    'border: 1px solid rgba(255, 255, 255, 0.18);',
-    'border-radius: 10px;',
-    'padding: 12px 16px;',
-    'font-size: 0.85rem;',
-    'font-weight: 500;',
-    'line-height: 1.4;',
-    'box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);',
-    'display: flex;',
-    'align-items: center;',
-    'gap: 10px;',
-    'pointer-events: auto;',
-    'opacity: 0;',
-    'transform: translateY(12px);',
-    'transition: opacity 0.22s ease, transform 0.22s ease;',
-    'cursor: pointer;'
-  ].join(' ');
-
-  let iconSvg = '';
-  if (type === 'success') {
-    iconSvg = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-  } else if (type === 'error') {
-    iconSvg = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
-  } else if (type === 'warning') {
-    iconSvg = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
-  } else {
-    iconSvg = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
-  }
-
-  const textSpan = document.createElement('span');
-  textSpan.textContent = message;
-  textSpan.style.cssText = 'flex:1; word-break:break-word;';
-
-  toast.innerHTML = iconSvg;
-  toast.appendChild(textSpan);
+  toast.innerHTML = `<svg class="toolbox-toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[type] || ICONS.info}</svg>`;
+  const text = document.createElement('span');
+  text.textContent = message;
+  toast.appendChild(text);
   container.appendChild(toast);
 
-  if (typeof requestAnimationFrame === 'function') {
-    requestAnimationFrame(() => {
-      toast.style.opacity = '1';
-      toast.style.transform = 'translateY(0)';
-    });
-  } else {
-    toast.style.opacity = '1';
-    toast.style.transform = 'translateY(0)';
-  }
-
+  let gone = false;
   const dismiss = () => {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateY(8px)';
-    setTimeout(() => {
-      if (toast.parentNode) toast.parentNode.removeChild(toast);
-    }, 250);
+    if (gone) return;
+    gone = true;
+    toast.classList.add('is-leaving');
+    setTimeout(() => toast.remove(), 200);
   };
 
   const timer = setTimeout(dismiss, duration);
-  toast.addEventListener('click', () => {
-    clearTimeout(timer);
-    dismiss();
-  });
-
+  toast.addEventListener('click', () => { clearTimeout(timer); dismiss(); });
   return { dismiss };
 }
 
