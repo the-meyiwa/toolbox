@@ -1,0 +1,5 @@
+ceba6ac0b27927a134c626bb25abedd6647be8ee
+jscpp 2.2.5 (JSCPP-NG, https://github.com/rauba-code/JSCPP-NG)
+
+Local patch: getline(cin, ...) no longer echoes the line it read to stdout
+(it now honours config.printStdin like operator>> does).

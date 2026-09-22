@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code Playground — browser test harness</title>
+<script>
+  // Local runtime copies when the test server provides them (see playground-server.mjs).
+  window.__PG_CDN__ = Object.fromEntries(new URLSearchParams(location.search).getAll('cdn').map((kv) => kv.split('=')));
+</script>
+<script type="importmap">{ "imports": { "marked": "/node_modules/marked/lib/marked.esm.js" } }</script>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/code-playground.css">
+<style>body { margin: 0; padding: 12px; background: #eee; } #host { max-width: 1600px; margin: 0 auto; }</style>
+</head>
+<body data-tool-id="code-playground">
+<div id="host"></div>
+<script type="module">
+  import playground from '/js/tools/code-playground.js';
+  window.playground = playground;
+  window.addEventListener('error', (e) => { (window.__errors ||= []).push(String(e.message)); });
+  window.addEventListener('unhandledrejection', (e) => { (window.__errors ||= []).push(String(e.reason?.stack || e.reason)); });
+  await playground.render(document.getElementById('host'), { analytics: { completed() {}, started() {} } });
+  window.__ready = true;
+</script>
+</body>
+</html>

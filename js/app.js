@@ -26,6 +26,7 @@ import { initSupporterProfile } from './lib/supporter.js';
 import './lib/dialog.js';
 import '../css/menu-motion.css';
 import '../css/automobile-viewer.css';
+import '../css/code-playground.css';
 import { initHomeScrollNarrative } from './home-scroll.js';
 import { listJoinedSpaces } from './lib/space-engine.js';
 import { openContextMenu } from './lib/context-menu.js';

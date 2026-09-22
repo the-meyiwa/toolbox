@@ -212,8 +212,8 @@ test('Modern UI/UX Standards: Files View buttons have compact desktop height (26
 });
 
 test('Mobile-Adapted Tool Behaviors: Progressive disclosure switchers linearize desktop-heavy multi-pane layouts', () => {
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
-  const cpgJs = fs.readFileSync(path.resolve('js/tools/code-playground.js'), 'utf-8');
+  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8') + fs.readFileSync(path.resolve('css/code-playground.css'), 'utf-8');
+  const cpgJs = fs.readFileSync(path.resolve('js/tools/code-playground.js'), 'utf-8') + fs.readFileSync(path.resolve('js/lib/playground/ide.js'), 'utf-8');
   const flJs = fs.readFileSync(path.resolve('js/tools/flowchart.js'), 'utf-8');
   const umlJs = fs.readFileSync(path.resolve('js/tools/uml-diagram.js'), 'utf-8');
   const ptJs = fs.readFileSync(path.resolve('js/tools/periodic-table.js'), 'utf-8');

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Preview · Code Playground</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #fff; }
+    iframe { border: 0; width: 100%; height: 100%; display: block; }
+    .wait { font: 14px system-ui, sans-serif; color: #64748b; display: grid; place-items: center; height: 100%; }
+  </style>
+</head>
+<body>
+  <div class="wait" id="wait">Waiting for the Code Playground tab…</div>
+  <!--
+    The student's page runs in a sandboxed frame WITHOUT allow-same-origin,
+    so it can never read Toolbox's storage or cookies. This wrapper only
+    relays messages between that frame and the IDE tab that opened it.
+  -->
+  <iframe id="frame" hidden sandbox="allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads" allow="clipboard-write; fullscreen"></iframe>
+  <script>
+    (function () {
+      var frame = document.getElementById('frame');
+      var opener = window.opener;
+      window.addEventListener('message', function (e) {
+        var m = e.data || {};
+        if (e.source === opener && e.origin === location.origin && m.type === 'pg-preview-load') {
+          document.getElementById('wait').hidden = true;
+          frame.hidden = false;
+          if (m.title) document.title = m.title + ' · Preview';
+          frame.srcdoc = m.html;
+          return;
+        }
+        if (e.source === frame.contentWindow && m && m.__pg && opener) {
+          opener.postMessage(m, location.origin);
+          return;
+        }
+        if (e.source === opener && m && m.__pg) {
+          frame.contentWindow && frame.contentWindow.postMessage(m, '*');
+        }
+      });
+      if (opener) opener.postMessage({ type: 'pg-preview-ready' }, location.origin);
+    })();
+  </script>
+</body>
+</html>

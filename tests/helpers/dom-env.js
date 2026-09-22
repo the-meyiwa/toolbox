@@ -219,6 +219,10 @@ class MockNode {
   }
 
   appendChild(child) {
+    if (child && child.nodeType === 11) {
+      for (const c of [...child.childNodes]) this.appendChild(c);
+      return child;
+    }
     if (child.parentNode) child.parentNode.removeChild(child);
     this.childNodes.push(child);
     child.parentNode = this;
@@ -283,6 +287,69 @@ class MockNode {
   remove() {
     if (this.parentNode) this.parentNode.removeChild(this);
   }
+
+  _adopt(n) {
+    if (typeof n === 'string') n = new MockTextNode(n);
+    if (n && n.nodeType === 11) return [...n.childNodes].map((c) => { n.removeChild(c); return c; });
+    return [n];
+  }
+
+  append(...nodes) {
+    for (const n of nodes.flatMap((x) => this._adopt(x))) this.appendChild(n);
+  }
+
+  insertBefore(node, ref) {
+    const list = this._adopt(node);
+    for (const n of list) {
+      if (n.parentNode) n.parentNode.removeChild(n);
+      const idx = ref ? this.childNodes.indexOf(ref) : -1;
+      if (idx === -1) this.childNodes.push(n); else this.childNodes.splice(idx, 0, n);
+      n.parentNode = this;
+      n.parentElement = this instanceof MockElement ? this : null;
+    }
+    return node;
+  }
+
+  before(...nodes) {
+    const parent = this.parentNode;
+    if (!parent) return;
+    for (const n of nodes.flatMap((x) => this._adopt(x))) parent.insertBefore(n, this);
+  }
+
+  after(...nodes) {
+    const parent = this.parentNode;
+    if (!parent) return;
+    const next = parent.childNodes[parent.childNodes.indexOf(this) + 1] || null;
+    for (const n of nodes.flatMap((x) => this._adopt(x))) parent.insertBefore(n, next);
+  }
+
+  get nextSibling() {
+    if (!this.parentNode) return null;
+    const i = this.parentNode.childNodes.indexOf(this);
+    return this.parentNode.childNodes[i + 1] || null;
+  }
+
+  get previousSibling() {
+    if (!this.parentNode) return null;
+    const i = this.parentNode.childNodes.indexOf(this);
+    return i > 0 ? this.parentNode.childNodes[i - 1] : null;
+  }
+
+  get isConnected() {
+    let n = this;
+    while (n.parentNode) n = n.parentNode;
+    return n === globalThis.document;
+  }
+}
+
+function makeStyle() {
+  const style = {};
+  Object.defineProperties(style, {
+    setProperty: { value(k, v) { this[k] = String(v); }, enumerable: false },
+    removeProperty: { value(k) { const v = this[k]; delete this[k]; return v ?? ''; }, enumerable: false },
+    getPropertyValue: { value(k) { return this[k] ?? ''; }, enumerable: false },
+  });
+  return style;
 }
 
 class MockElement extends MockNode {
@@ -294,7 +361,7 @@ class MockElement extends MockNode {
     this._attributes = new Map();
     this.classList = new MockClassList(this);
     this.dataset = {};
-    this.style = {};
+    this.style = makeStyle();
     this._listeners = new Map();
     this._value = '';
     this._checked = false;
@@ -448,6 +515,45 @@ class MockElement extends MockNode {
   }
 
   scrollIntoView() {}
+  scrollTo() {}
+  setPointerCapture() {}
+  releasePointerCapture() {}
+
+  matches(selector) { return this._matchesSelector(selector); }
+
+  get scrollHeight() { return 0; }
+  get clientHeight() { return 0; }
+  get clientWidth() { return 0; }
+  get offsetWidth() { return 0; }
+  get offsetHeight() { return 0; }
+
+  insertAdjacentHTML(position, html) {
+    const tmp = new MockElement('div');
+    tmp.innerHTML = html;
+    const nodes = [...tmp.childNodes];
+    nodes.forEach((n) => tmp.removeChild(n));
+    this.insertAdjacentNodes(position, nodes);
+  }
+
+  insertAdjacentElement(position, el) { this.insertAdjacentNodes(position, [el]); return el; }
+
+  insertAdjacentNodes(position, nodes) {
+    const pos = String(position).toLowerCase();
+    if (pos === 'beforeend') this.append(...nodes);
+    else if (pos === 'afterbegin') this.prepend(...nodes);
+    else if (pos === 'beforebegin') this.before(...nodes);
+    else if (pos === 'afterend') this.after(...nodes);
+  }
+
+  cloneNode(deep = false) {
+    const el = new MockElement(this.tagName);
+    for (const [k, v] of this._attributes) el.setAttribute(k, v);
+    el.hidden = this.hidden;
+    if (deep) {
+      for (const c of this.childNodes) el.appendChild(c instanceof MockElement ? c.cloneNode(true) : new MockTextNode(c.textContent));
+    }
+    return el;
+  }
 
   closest(selector) {
     let current = this;

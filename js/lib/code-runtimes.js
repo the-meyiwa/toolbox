@@ -241,87 +241,52 @@ self.onmessage = async function (e) {
 };`;
 
 /* ---------------- C++ (In-Browser Offline Engine) ----------------
-   The vendored JSCPP bundle detects its environment at load time: when
-   `importScripts` exists (i.e. it is loaded inside a Worker) it installs
-   its own competing `onmessage` handler and never exposes a `run` API;
-   it only assigns `window.JSCPP` when loaded on the main thread. So,
-   unlike the other languages, C++ cannot run inside an isolated Worker
-   with this build -- it is loaded and run on the main thread instead,
-   behind a Worker-shaped shim (same postMessage/onmessage/terminate
-   surface) so the rest of the IDE does not need to special-case it. */
+   C and C++ run in the JSCPP-NG interpreter inside a dedicated worker
+   (public/playground/cpp-runtime.js, shared with Code Playground), so
+   an endless loop can't freeze the page and a run can be terminated.
+   The worker speaks its own protocol; this adapter translates it into
+   the out/done messages the other language workers use. */
 
-let jscppLoadPromise = null;
-
-function loadJscppMainThread() {
-  if (jscppLoadPromise) return jscppLoadPromise;
-  jscppLoadPromise = (async () => {
-    if (typeof window === 'undefined' || typeof document === 'undefined') return null;
-    if (window.JSCPP && typeof window.JSCPP.run === 'function') return window.JSCPP;
-    const candidates = ['/vendor/jscpp.es5.min.js', '/js/vendor/jscpp.es5.min.js'];
-    for (const src of candidates) {
-      try {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = src;
-          script.onload = resolve;
-          script.onerror = () => reject(new Error('Could not load ' + src));
-          document.head.appendChild(script);
-        });
-        if (window.JSCPP && typeof window.JSCPP.run === 'function') return window.JSCPP;
-      } catch {}
-    }
-    return null;
-  })();
-  return jscppLoadPromise;
-}
-
-/* A Worker-shaped shim: exposes postMessage/onmessage/terminate so the
-   IDE's generic run() code path works unmodified, while actually
-   executing JSCPP synchronously on the main thread. */
 function createCppRunner() {
+  const origin = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : '';
+  const worker = new Worker(`${origin}/playground/cpp-runtime.js`);
+  let started = 0;
+  let pending = '';
   const target = {
     onmessage: null,
+    onerror: null,
     postMessage(data) {
-      Promise.resolve().then(async () => {
-        const post = (type, level, text) => {
-          if (typeof target.onmessage === 'function') target.onmessage({ data: { type, level, text } });
-        };
-        const started = Date.now();
-        try {
-          post('status', null, 'Compiling C++ (Offline)...');
-          const jscpp = await loadJscppMainThread();
-          if (!jscpp || typeof jscpp.run !== 'function') {
-            throw new Error('Offline compiler engine is unavailable.');
-          }
-          let outputBuffer = '';
-          const flush = (s) => {
-            outputBuffer += s;
-            let nIdx;
-            while ((nIdx = outputBuffer.indexOf('\n')) !== -1) {
-              post('out', 'log', outputBuffer.slice(0, nIdx));
-              outputBuffer = outputBuffer.slice(nIdx + 1);
-            }
-          };
-          let exitCode;
-          try {
-            exitCode = jscpp.run(data.code, data.stdin || '', { stdio: { write: flush }, maxTimeout: 20000 });
-          } catch (runErr) {
-            if (outputBuffer.length) post('out', 'log', outputBuffer);
-            post('out', 'error', runErr && runErr.message ? runErr.message : String(runErr));
-            post('done', null, String(Date.now() - started));
-            return;
-          }
-          if (outputBuffer.length) post('out', 'log', outputBuffer);
-          post('out', 'muted', 'Program exited with status ' + exitCode);
-          post('done', null, String(Date.now() - started));
-        } catch (err) {
-          post('out', 'error', err && err.message ? err.message : String(err));
-          post('done', null, String(Date.now() - started));
-        }
+      started = Date.now();
+      worker.postMessage({
+        type: 'run',
+        code: data.code || '',
+        jscppUrl: `${origin}/vendor/jscpp/JSCPP.es5.min.js`,
+        interactive: false,
+        stdinText: data.stdin || '',
+        maxTimeout: 20000,
       });
     },
-    terminate() { /* runs on the main thread; nothing to forcibly kill */ }
+    terminate() { worker.terminate(); },
   };
+  const post = (type, level, text) => target.onmessage?.({ data: { type, level, text } });
+  worker.onmessage = (e) => {
+    const m = e.data || {};
+    if (m.type === 'stdout') {
+      pending += m.data;
+      let i;
+      while ((i = pending.indexOf('\n')) !== -1) { post('out', 'log', pending.slice(0, i)); pending = pending.slice(i + 1); }
+    } else if (m.type === 'stdin-request') {
+      worker.postMessage({ type: 'stdin', data: null });
+    } else if (m.type === 'error') {
+      if (pending) { post('out', 'log', pending); pending = ''; }
+      post('out', 'error', `${m.kind === 'compile' ? 'Compile error' : 'Runtime error'}${m.line ? ` (line ${m.line})` : ''}: ${m.message}`);
+    } else if (m.type === 'exit') {
+      if (pending) { post('out', 'log', pending); pending = ''; }
+      post('out', 'muted', `Program exited with status ${m.code}`);
+      post('done', null, String(Date.now() - started));
+    }
+  };
+  worker.onerror = (err) => { target.onerror?.(err); };
   return target;
 }
 
@@ -518,8 +483,7 @@ export const LANGUAGES = { ...BASE_LANGUAGES, ...EXTRA_LANGUAGES };
 const blobUrls = new Map();
 
 export function makeWorker(languageId) {
-  // C++ cannot run inside a real Worker with the vendored JSCPP build (see
-  // note above createCppRunner), so it gets a Worker-shaped main-thread shim.
+  // C++ runs in the shared JSCPP-NG worker behind a small protocol adapter.
   if (languageId === 'cpp') return createCppRunner();
 
   const lang = LANGUAGES[languageId];
