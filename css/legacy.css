@@ -33,7 +33,6 @@
 #notes-search-input,
 #sfx-search,
 #decomp-search,
-#ast-import-search,
 #map-search-input,
 #dis-search-input {
   height: 36px !important;
@@ -61,7 +60,6 @@
 #notes-search-input:focus,
 #sfx-search:focus,
 #decomp-search:focus,
-#ast-import-search:focus,
 #map-search-input:focus,
 #dis-search-input:focus {
   border-color: var(--accent) !important;
@@ -77,147 +75,6 @@
 /* ============================================================
    ANIMATIONS
    ============================================================ */
-/* ============================================================
-   ASSISTANT TEXT ANIMATIONS & SETTINGS PREVIEW
-   Verified across all themes (Light, Dark, Glass)
-   ============================================================ */
-/* 1. Color Rave Animation */
-.ast-anim-color-rave {
-  background: linear-gradient(
-    135deg,
-    #ff0055 0%,
-    #e65100 14%,
-    #d97706 28%,
-    #10b981 42%,
-    #007aff 57%,
-    #7928ca 71%,
-    #ff00aa 85%,
-    #ff0055 100%
-  );
-  background-size: 250% 250%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-  animation: astColorRave 4s linear infinite;
-  display: inline-block;
-}
-.ast-anim-color-rave p,
-.ast-anim-color-rave span,
-.ast-anim-color-rave strong,
-.ast-anim-color-rave em,
-.ast-anim-color-rave li,
-.ast-anim-color-rave h1,
-.ast-anim-color-rave h2,
-.ast-anim-color-rave h3,
-.ast-anim-color-rave h4,
-.ast-anim-color-rave h5,
-.ast-anim-color-rave h6 {
-  background: inherit;
-  background-size: inherit;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-  animation: inherit;
-}
-.ast-anim-color-rave pre,
-.ast-anim-color-rave code,
-.ast-anim-color-rave button {
-  -webkit-text-fill-color: initial !important;
-  color: initial !important;
-}
-@keyframes astColorRave {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-/* 2. Glow Animation */
-.ast-anim-glow,
-.ast-anim-pixel {
-  color: var(--text, var(--text)) !important;
-  animation: astGlowEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards, astGlowPulse 2.8s ease-in-out infinite alternate;
-  display: inline-block;
-}
-@keyframes astGlowEntrance {
-  0% {
-    opacity: 0;
-    transform: translateY(3px);
-    text-shadow: 0 0 14px var(--accent, #6366f1), 0 0 24px var(--accent, #6366f1);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-    text-shadow: 0 0 5px var(--accent, rgba(99, 102, 241, 0.5));
-  }
-}
-@keyframes astGlowPulse {
-  0% {
-    text-shadow: 0 0 3px var(--accent, rgba(99, 102, 241, 0.35));
-  }
-  50% {
-    text-shadow: 0 0 9px var(--accent, rgba(99, 102, 241, 0.75)), 0 0 18px var(--accent, rgba(99, 102, 241, 0.4));
-  }
-  100% {
-    text-shadow: 0 0 3px var(--accent, rgba(99, 102, 241, 0.35));
-  }
-}
-/* 3. Plain Fade Animation */
-.ast-anim-plain-fade {
-  color: var(--text, var(--text)) !important;
-  animation: astPlainFade 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  display: inline-block;
-}
-@keyframes astPlainFade {
-  0% {
-    opacity: 0;
-    transform: translateY(8px);
-    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.12));
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-    filter: drop-shadow(0 0 0 transparent);
-  }
-}
-/* 4. Pop In Animation */
-.ast-anim-pop-in {
-  color: var(--text, var(--text)) !important;
-  animation: astPopIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  transform-origin: center;
-  display: inline-block;
-}
-@keyframes astPopIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.92) translateY(5px);
-  }
-  70% {
-    transform: scale(1.03) translateY(-1px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-/* Animation preview box & text */
-.ast-anim-preview-box {
-  padding: 12px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  min-height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-.ast-anim-preview-text {
-  font-size: 0.9rem;
-  font-weight: 600;
-  line-height: 1.4;
-  transition: all 0.2s ease;
-}
 /* ============================================================
    PAGE VIEWS
    ============================================================ */
@@ -1044,7 +901,13 @@ mark.regex-match {
   /* Calendar Tool on Mobile */
   .calendar-app-wrapper {
     padding: 0 4px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
   }
+  .calendar-header-card { padding: 14px !important; min-width: 0 !important; }
+  .calendar-header-card > div { min-width: 0 !important; }
+  #cal-month-title { min-width: 0 !important; flex: 1 1 auto; font-size: 1.2rem !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cal-header-bar {
     padding: 14px !important;
   }
@@ -1097,42 +960,6 @@ mark.regex-match {
   }
   #brw-page-content {
     padding: 16px !important;
-  }
-  /* Assistant Tool on Mobile */
-  .toolbox-assistant-root {
-    height: 100% !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    margin: 0 !important;
-    border: none !important;
-    border-radius: 0 !important;
-  }
-  #ast-messages {
-    padding: 16px 12px !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-  }
-  #ast-messages table {
-    display: block !important;
-    width: 100% !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-  }
-  #ast-messages pre,
-#ast-messages code {
-    max-width: 100% !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-  }
-  #ast-messages .katex-display {
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    -webkit-overflow-scrolling: touch !important;
-    max-width: 100% !important;
-  }
-  .ast-browser-card,
-.ast-calendar-card {
-    margin: 8px 0 !important;
   }
   /* Touch Targets & Inputs */
   input[type="text"],
@@ -2439,34 +2266,6 @@ input[type="date"] {
     padding: 10px 14px !important;
     font-size: 0.9rem !important;
   }
-  /* AI Assistant Mobile Sizing & Sticky Composer */
-  .toolbox-assistant-root {
-    height: 100% !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    border-radius: 0 !important;
-    border: none !important;
-    box-shadow: none !important;
-  }
-  .ast-composer {
-    position: sticky !important;
-    bottom: 0 !important;
-    z-index: 20 !important;
-    background: var(--bg-card) !important;
-    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)) 12px !important;
-  }
-  #ast-messages {
-    padding: 14px 12px !important;
-    gap: 14px !important;
-  }
-  #ast-chips {
-    padding: 6px 12px !important;
-  }
-  .ast-chip {
-    min-height: 36px !important;
-    padding: 4px 10px !important;
-    font-size: 0.72rem !important;
-  }
 }
 /* Contextual mobile action bar for multi-selection across views */
 .mobile-action-bar {
@@ -3586,6 +3385,11 @@ input[type="date"] {
   background: var(--surface-2);
   border-radius: 0 0 calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px);
 }
+/* On phones the panel padding drops to space-4, so the bleed must match it. */
+@media (max-width: 768px) {
+  body.in-tool .art-strip { margin: var(--space-6) calc(var(--space-4) * -1) calc(var(--space-6) * -1); padding: var(--space-4); }
+  body.in-tool.tool-bare .art-strip { margin-left: 0; margin-right: 0; }
+}
 .art-strip-main { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
 .art-name-label {
   font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--text-2);
@@ -4196,9 +4000,6 @@ input[type="date"] {
   .pde-thumb { flex-shrink: 0; width: 80px; }
   .pde-toolbar { overflow-x: auto; flex-wrap: nowrap; }
   /* Keep page-level cards clear of the viewport edge on narrow screens. */
-  /* Assistant composer: each control is independently rounded and tap-friendly. */
-  #ast-user-input { border:1px solid var(--border) !important; border-radius:20px !important; }
-  #ast-send-btn { border:1px solid var(--black) !important; border-radius:20px !important; padding:0 18px !important; }
   /* Spaces Mobile Layout */
   .sp-directory { padding:12px 16px 40px; box-sizing:border-box; }
   .sp-dir-hero { margin-bottom: 24px; padding-top: 16px; }
@@ -5473,239 +5274,6 @@ input[type="date"] {
   background: var(--border) !important;
 }
 /* ============================================================
-   ASSISTANT â€” Premium Rolling Line Thinking Shimmer
-   ============================================================ */
-.ast-thinking-shimmer {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 170px;
-  max-width: 260px;
-  padding: 4px 2px;
-  user-select: none;
-}
-.ast-shimmer-track {
-  width: 100%;
-  height: 3.5px;
-  background: var(--g200);
-  border-radius: 999px;
-  overflow: hidden;
-  position: relative;
-}
-.ast-shimmer-bar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 45%;
-  background: linear-gradient(90deg, transparent 0%, var(--black) 50%, transparent 100%);
-  border-radius: 999px;
-  animation: astRollingLine 1.3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-@keyframes astRollingLine {
-  0% {
-    left: -45%;
-  }
-  100% {
-    left: 100%;
-  }
-}
-.ast-shimmer-text {
-  font-size: 0.76rem;
-  color: var(--g600);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-/* ============================================================
-   ASSISTANT â€” In-Chat Drag & Dropzone Cards & Drag Overlays
-   ============================================================ */
-.ast-inchat-dropzone-card {
-  margin-top: 12px;
-  background: var(--white);
-  border: 2px dashed var(--g300);
-  border-radius: 12px;
-  padding: 14px 16px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  user-select: none;
-}
-.ast-inchat-dropzone-card:hover,
-.ast-inchat-dropzone-card.dragover {
-  border-color: var(--black);
-  background: var(--g50);
-  /* Removed generic animation/transform */
-}
-.ast-inchat-drop-inner {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.ast-inchat-drop-icon-wrap {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: var(--g100);
-  color: var(--black);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: all 0.2s ease;
-}
-.ast-inchat-dropzone-card:hover .ast-inchat-drop-icon-wrap {
-  background: var(--black);
-  color: var(--white);
-}
-.toolbox-assistant-root.is-drag-over::after {
-  content: 'Drop file here to attach to Assistant';
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(4px);
-  color: var(--surface);
-  font-size: 1.1rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
-  pointer-events: none;
-  border: 3px dashed var(--surface);
-  border-radius: 18px;
-}
-/* ============================================================
-   TOOLBOX ASSISTANT â€” Polished Chat Bubbles with Theme Gradient Outline
-   ============================================================ */
-.ast-msg {
-  display: flex;
-  gap: 12px;
-  max-width: 90%;
-  /* Removed generic animation/transform */
-}
-.ast-msg-user {
-  max-width: 80%;
-  align-self: flex-end;
-}
-.ast-msg-assistant {
-  max-width: 92%;
-  align-self: flex-start;
-}
-/* Assistant Chat Bubble: Even 20px padding on all 4 sides & Theme Gradient Outline */
-.ast-msg-assistant-bubble {
-  position: relative;
-  background: var(--g100);
-  color: var(--black);
-  padding: 20px !important;
-  border-radius: 20px;
-  font-size: 0.92rem;
-  line-height: 1.6;
-  word-break: break-word;
-  min-width: 140px;
-  box-sizing: border-box;
-  border: 1px solid color-mix(in srgb, var(--black) 16%, transparent);
-  box-shadow: 
-    0 0 0 1px color-mix(in srgb, var(--g400, var(--black)) 16%, transparent),
-    0 4px 20px 0 color-mix(in srgb, var(--black) 6%, transparent),
-    0 0 18px 2px color-mix(in srgb, var(--g500, var(--black)) 12%, transparent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-/* Faint blurry transparent gradient outline via pseudo-element */
-.ast-msg-assistant-bubble::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: 21px;
-  padding: 1px;
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--black) 32%, transparent) 0%,
-    color-mix(in srgb, var(--g400, var(--black)) 15%, transparent) 35%,
-    color-mix(in srgb, var(--black) 24%, transparent) 70%,
-    color-mix(in srgb, var(--g500, var(--black)) 12%, transparent) 100%
-  );
-  -webkit-mask: linear-gradient(var(--surface) 0 0) content-box, linear-gradient(var(--surface) 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  filter: blur(0.5px);
-}
-/* User Chat Bubble: Even padding & Theme Accent */
-.ast-msg-user-bubble {
-  position: relative;
-  background: var(--black);
-  color: var(--white);
-  padding: 14px 20px !important;
-  border-radius: 20px;
-  font-size: 0.92rem;
-  line-height: 1.5;
-  word-break: break-word;
-  box-sizing: border-box;
-  border: 1px solid color-mix(in srgb, var(--white) 16%, transparent);
-  box-shadow: 
-    0 0 0 1px color-mix(in srgb, var(--white) 12%, transparent),
-    0 4px 16px 0 color-mix(in srgb, var(--black) 15%, transparent),
-    0 0 14px 1px color-mix(in srgb, var(--white) 8%, transparent);
-}
-.ast-msg-user-bubble.is-pill {
-  border-radius: 9999px;
-  padding: 10px 20px !important;
-}
-/* Clean Markdown spacing inside response bubbles to preserve even margins */
-.ast-text-body {
-  margin: 0;
-  padding: 0;
-}
-.ast-text-body > :first-child {
-  margin-top: 0 !important;
-}
-.ast-text-body > :last-child {
-  margin-bottom: 0 !important;
-}
-.ast-text-body p {
-  margin: 0 0 12px 0;
-  line-height: 1.6;
-}
-.ast-text-body p:last-child {
-  margin-bottom: 0 !important;
-}
-.ast-text-body ul,
-.ast-text-body ol {
-  margin: 8px 0 12px 0;
-  padding-left: 20px;
-}
-.ast-text-body ul:last-child,
-.ast-text-body ol:last-child {
-  margin-bottom: 0 !important;
-}
-.ast-text-body li {
-  margin-bottom: 5px;
-}
-.ast-text-body li:last-child {
-  margin-bottom: 0;
-}
-.ast-text-body h1,
-.ast-text-body h2,
-.ast-text-body h3,
-.ast-text-body h4 {
-  margin: 14px 0 8px 0;
-  line-height: 1.35;
-  font-weight: 700;
-}
-.ast-text-body h1:first-child,
-.ast-text-body h2:first-child,
-.ast-text-body h3:first-child,
-.ast-text-body h4:first-child {
-  margin-top: 0 !important;
-}
-/* Hide empty helper zones to eliminate uneven spacing */
-.ast-tool-status-area:empty,
-.ast-tool-results-area:empty {
-  display: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-/* ============================================================
    STANDALONE MODE (Pop-out fullscreen tools)
    ============================================================ */
 /* Ensure complex tools like the IDE and Notes fill the space without rounded corners */
@@ -5714,70 +5282,6 @@ body.standalone-mode .notes-app-wrapper {
   height: 100% !important;
   border-radius: 0 !important;
   border: none !important;
-}
-/* Assistant Send Button Glow Fix */
-#ast-send-btn {
-  box-shadow: none !important;
-  transition: box-shadow 0.2s ease, background 0.2s ease !important;
-}
-#ast-send-btn:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
-}
-/* ============================================================
-   ASSISTANT RESULT CARDS â€” THEME-AWARE COLOR SYSTEM
-   ============================================================ */
-.assistant-result-file-card,
-.assistant-result-file-list,
-.assistant-result-image-card,
-.assistant-result-chart,
-.assistant-result-table,
-.assistant-result-code,
-.assistant-result-speedtest,
-.assistant-result-saved,
-.assistant-result-disease-card,
-.assistant-result-anatomy-card,
-.assistant-result-illustration-card,
-.assistant-result-invoice-card,
-.assistant-result-uml-card,
-.assistant-result-algo-card,
-.assistant-result-metronome-card,
-.assistant-result-sound-card,
-.assistant-result-elements-card,
-.assistant-result-container-card,
-.assistant-result-floorplan-card,
-.assistant-result-logic-card,
-.assistant-result-map-card,
-.assistant-result-location-card,
-.assistant-result-tuner-card,
-.assistant-result-pdf-card,
-.assistant-result-math-card,
-.assistant-result-math-knowledge-card {
-  color: var(--black) !important;
-  background: var(--white) !important;
-  border-color: var(--g200) !important;
-}
-.assistant-result-file-list strong,
-.assistant-result-file-card strong,
-.assistant-result-disease-card strong,
-.assistant-result-anatomy-card strong,
-.assistant-result-illustration-card strong,
-.assistant-result-invoice-card strong,
-.assistant-result-uml-card strong,
-.assistant-result-algo-card strong,
-.assistant-result-elements-card strong,
-.assistant-result-container-card strong,
-.assistant-result-floorplan-card strong,
-.assistant-result-logic-card strong,
-.assistant-result-map-card strong,
-.assistant-result-location-card strong,
-.assistant-result-tuner-card strong,
-.assistant-result-pdf-card strong,
-.assistant-result-math-card strong,
-.assistant-result-math-knowledge-card strong {
-  color: var(--black) !important;
-}
-.ast-msg-assistant {
-  color: var(--black) !important;
 }
 /* ============================================================
    MATH UTILITY & MATHEMATICAL NOTATION
@@ -6160,72 +5664,9 @@ body.standalone-mode .notes-app-wrapper {
    ============================================================ */
 /* Mobile adjustments */
 /* ============================================================
-   ASSISTANT â€” Attach Popup Menu (+ button dropdown)
-   Themed to match Toolbox finder-context-menu / dialog style
-   ============================================================ */
-.ast-attach-popup {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 0;
-  z-index: 1000;
-  background: var(--bg-glass-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg, 12px);
-  padding: 6px;
-  min-width: 220px;
-  box-shadow: var(--shadow-xl);
-  backdrop-filter: var(--backdrop-blur-lg);
-  -webkit-backdrop-filter: var(--backdrop-blur-lg);
-  font-family: var(--sans);
-  flex-direction: column;
-  gap: 2px;
-}
-.ast-attach-popup-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 9px 12px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.12s ease;
-  box-sizing: border-box;
-  color: var(--text);
-}
-.ast-attach-popup-item:hover {
-  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
-}
-.ast-attach-popup-item svg {
-  flex-shrink: 0;
-  color: var(--text-secondary);
-}
-.ast-attach-popup-item .ast-attach-title,
-.ast-attach-popup-item div:last-of-type > div:first-child {
-  font-weight: 700;
-  font-size: 0.83rem;
-  color: var(--text);
-  line-height: 1.2;
-}
-.ast-attach-popup-item .ast-attach-desc,
-.ast-attach-popup-item div:last-of-type > div:last-child {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  font-weight: 400;
-  margin-top: 1px;
-}
-/* ============================================================
    TOOLBOX â€” REFINED SYSTEMS & FULLSCREEN ARCHITECTURE
    ============================================================ */
 /* 1. HOME SNAP SCROLLING & STORY SLIDES */
-/* 2. SHARED FULLSCREEN TOOL VIEWPORT (DESKTOP ONLY) */
-@media (max-width: 768px) {
-  #popout-btn {
-    display: none !important;
-  }
-}
 /* 3. UNIFIED FINDER CONTEXT MENU */
 .finder-context-menu {
   position: fixed;
@@ -6728,42 +6169,12 @@ body.standalone-mode .notes-app-wrapper {
   animation: calFadeSlideRight 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 /* ============================================================
-   ASSISTANT & CONTAINER QUOTE BUILDER FULLSCREEN TREATMENTS
+   CONTAINER QUOTE BUILDER FULL-HEIGHT TREATMENTS
    ============================================================ */
-body[data-tool-id="assistant"] #popout-btn,
-body[data-tool-id="assistant"] #tool-related,
-body[data-tool-id="container-planner"] #popout-btn,
 body[data-tool-id="container-planner"] #tool-related {
   display: none !important;
 }
-/* Assistant: Fullscreen vertical height by default without stretching width */
-body[data-tool-id="assistant"] #viewport-content {
-  flex: 1 !important;
-  height: 100% !important;
-  min-height: 0 !important;
-  overflow: hidden !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
-body[data-tool-id="assistant"] .toolbox-assistant-root {
-  flex: 1 !important;
-  height: 100% !important;
-  max-height: 100% !important;
-  overflow: hidden !important;
-  border-radius: 14px !important;
-  width: 100% !important;
-  max-width: 100% !important;
-}
-body[data-tool-id="assistant"] .ast-head-inner,
-body[data-tool-id="assistant"] .ast-composer-inner,
-body[data-tool-id="assistant"] .ast-chips-inner,
-body[data-tool-id="assistant"] .ast-attached-inner {
-  max-width: 100% !important;
-  width: 100% !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-}
-/* Container Quote Builder: Fullscreen by default (Desktop) */
+/* Container Quote Builder: full height (Desktop) */
 body[data-tool-id="container-planner"] #viewport-content,
 body[data-tool-id="mail"] #viewport-content {
   flex: 1 !important;
@@ -8770,26 +8181,6 @@ body[data-tool-id="mail"] #viewport-content {
     box-sizing: border-box !important;
   }
 }
-/* === Assistant Mobile Full-Height Dock === */
-@media (max-width: 768px) {
-  body[data-tool-id="assistant"] #viewport-content {
-    padding: 0 !important;
-    margin: 0 !important;
-    flex: 1 !important;
-    min-height: 0 !important;
-  }
-  body[data-tool-id="assistant"] .toolbox-assistant-root {
-    border-radius: 0 !important;
-    border-left: none !important;
-    border-right: none !important;
-    border-bottom: none !important;
-    height: 100% !important;
-    min-height: 0 !important;
-  }
-  body[data-tool-id="assistant"] .ast-composer {
-    padding-bottom: max(12px, env(safe-area-inset-bottom, 12px)) !important;
-  }
-}
 /* === Calculator Mode Switcher — Universal Contrast Fix & Mobile Responsive === */
 .calc-mode-bar {
   background: var(--bg-subtle, var(--surface-secondary, rgba(0,0,0,0.12))) !important;
@@ -9478,7 +8869,6 @@ body[data-tool-id="notes"] .notes-editor-col {
    ============================================================ */
 .settings-modal-header,
 .finder-context-menu,
-.ast-attach-popup,
 .sv-open-dropdown-menu,
 .mail-sidebar,
 .mail-toolbar,
@@ -9619,9 +9009,7 @@ body[data-tool-id="notes"] .notes-editor-col {
 .mail-auth-gate,
 .mail-setup-card,
 .sv-main-pane,
-.sv-detail-pane,
-.ast-msg-assistant-bubble,
-.ast-composer-inner {
+.sv-detail-pane {
   position:relative;
   border-color:color-mix(in srgb,var(--glass-line) 72%,white 28%) !important;
   box-shadow:var(--glass-highlight),0 16px 46px color-mix(in srgb,var(--text) 8%,transparent) !important;
@@ -9629,8 +9017,7 @@ body[data-tool-id="notes"] .notes-editor-col {
 .settings-section::after,
 .mail-auth-gate::after,
 .mail-setup-card::after,
-.sv-detail-pane::after,
-.ast-msg-assistant-bubble::after {
+.sv-detail-pane::after {
   content:'';
   position:absolute;
   inset:0;
@@ -9643,35 +9030,12 @@ body[data-tool-id="notes"] .notes-editor-col {
 .settings-section > *,
 .mail-auth-gate > *,
 .mail-setup-card > *,
-.sv-detail-pane > *,
-.ast-msg-assistant-bubble > * { position:relative; z-index:1; }
-body[data-tool-id="assistant"] *,
-body[data-tool-id="assistant"] *::before,
-body[data-tool-id="assistant"] *::after {
-  animation:none !important;
-  scroll-behavior:auto !important;
-}
-body[data-tool-id="assistant"] .toolbox-assistant-root {
-  background:
-    linear-gradient(145deg,color-mix(in srgb,var(--glass-surface-soft) 86%,transparent),transparent 62%),
-    var(--bg) !important;
-}
-body[data-tool-id="assistant"] .ast-msg-assistant-bubble,
-body[data-tool-id="assistant"] .ast-composer-inner,
-body[data-tool-id="assistant"] .assistant-result-file-card,
-body[data-tool-id="assistant"] .assistant-result-table,
-body[data-tool-id="assistant"] .assistant-result-code {
-  background:var(--glass-surface-strong) !important;
-  backdrop-filter:blur(24px) saturate(145%);
-  -webkit-backdrop-filter:blur(24px) saturate(145%);
-  border:1px solid var(--glass-line) !important;
-}
+.sv-detail-pane > * { position:relative; z-index:1; }
 @media (max-width:700px) {
   .settings-section::after,
 .mail-auth-gate::after,
 .mail-setup-card::after,
-.sv-detail-pane::after,
-.ast-msg-assistant-bubble::after { opacity:.18; }
+.sv-detail-pane::after { opacity:.18; }
 }
 .header-notif-panel .notif-item { display:block; width:100%; text-align:left; border:0; font:inherit; }
 @media(max-width:600px) {

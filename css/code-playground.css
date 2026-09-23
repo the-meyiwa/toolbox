@@ -88,8 +88,7 @@
   isolation: isolate;
   text-align: left;
 }
-body.standalone-mode #cpg-root,
-body.tool-fullscreen #cpg-root { height: 100%; min-height: 0; border-radius: 0; border: none; }
+body.standalone-mode #cpg-root { height: 100%; min-height: 0; border-radius: 0; border: none; }
 
 #cpg-root *, #cpg-root *::before, #cpg-root *::after,
 .cpg-landing *, .cpg-ctx * { box-sizing: border-box; }

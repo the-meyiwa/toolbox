@@ -12,7 +12,8 @@
 import { marked } from 'marked';
 import { sanitizeUserFacingText, balanceMarkdownDelimiters, sanitizeRenderedHtml, extractMathSegments } from '../utils.js';
 import { AssistantMessage, ToolResult, conversationPersistence } from './assistant-message-persistence.js';
-import { renderToolResult, cleanupToolResult, selectRenderer } from './assistant-result-renderer.js';
+import { renderToolResult, cleanupToolResult, selectRenderer, hasResultRenderer } from './assistant-result-renderer.js';
+import './assistant/renderers.js';   // registers the capability-pack cards (chess, devices, plan …)
 import { toolDiscovery } from './assistant-tool-discovery.js';
 
 /**
@@ -130,6 +131,17 @@ export class ConversationIntegrationManager {
       return saved;
     }
     const failed = result?.success === false || result?.status === 'error';
+    if (!failed && hasResultRenderer(result)) {
+      return new ToolResult({
+        toolId: result?.toolId || toolName,
+        toolName: result?.toolName || toolName,
+        toolCallId: result?.toolCallId || toolCallId,
+        success: true,
+        type: 'result',
+        data: result,
+        renderer: result.renderer || result.type || null,
+      });
+    }
     const isAudio = result?.type === 'audio' || result?.audioId;
     const isSpeedTest = typeof result?.downloadSpeedMbps !== 'undefined' || result?.renderer === 'speed-test';
     const isAnatomy = result?.type === 'anatomy-3d' || result?.renderer === 'anatomy-3d' ||

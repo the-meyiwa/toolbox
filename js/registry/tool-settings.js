@@ -87,9 +87,44 @@ export const TOOL_SETTINGS = {
     ],
   },
 
+  mail: {
+    title: 'Mail',
+    hint: 'Layout, reading and sending',
+    groups: [
+      {
+        title: 'Layout',
+        fields: [
+          { key: 'readingPane', label: 'Reading pane', help: 'Where an opened message appears on larger screens.', type: 'segmented', default: 'right',
+            options: [opt('right', 'Right'), opt('bottom', 'Bottom'), opt('off', 'Off')] },
+          { key: 'density', label: 'List density', type: 'segmented', default: 'comfortable',
+            options: [opt('comfortable', 'Comfortable'), opt('compact', 'Compact')] },
+          { key: 'threading', label: 'Conversation view', help: 'Group replies with the message they answer.', type: 'toggle', default: true },
+          { key: 'snippets', label: 'Show message previews', help: 'A line of the message under each subject.', type: 'toggle', default: true },
+        ],
+      },
+      {
+        title: 'Reading',
+        fields: [
+          { key: 'remoteImages', label: 'Load remote images automatically', help: 'Remote images can tell the sender when you opened a message.', type: 'toggle', default: false },
+          { key: 'markRead', label: 'Mark as read', type: 'select', default: 'open',
+            options: [opt('open', 'When opened'), opt('delay', 'After 3 seconds'), opt('manual', 'Only when I choose')] },
+          { key: 'shortcuts', label: 'Keyboard shortcuts', help: 'c compose, / search, j/k move, e archive, # delete, r reply, s star.', type: 'toggle', default: true },
+        ],
+      },
+      {
+        title: 'Sending',
+        fields: [
+          { key: 'undoSend', label: 'Undo send window', help: 'How long a sent message waits so you can take it back.', type: 'range', min: 0, max: 30, step: 5, default: 10,
+            format: (v) => (v ? `${v} seconds` : 'Off') },
+          { key: 'replyAll', label: 'Reply to everyone by default', type: 'toggle', default: false },
+        ],
+      },
+    ],
+  },
+
   notes: {
     title: 'Notes',
-    hint: 'Typeface and spacing for the editor',
+    hint: 'Typeface, page and note list',
     groups: [
       {
         title: 'Editor',
@@ -100,6 +135,20 @@ export const TOOL_SETTINGS = {
             options: [opt('small', 'Small'), opt('normal', 'Normal'), opt('large', 'Large'), opt('xl', 'Extra large')] },
           { key: 'lineHeight', label: 'Line spacing', type: 'segmented', default: 'standard',
             options: [opt('compact', 'Compact'), opt('standard', 'Standard'), opt('relaxed', 'Relaxed')] },
+          { key: 'paper', label: 'Page', type: 'select', default: 'blank',
+            options: [opt('blank', 'Blank'), opt('lined', 'Ruled lines'), opt('grid', 'Grid'), opt('dot', 'Dot grid')] },
+          { key: 'readableWidth', label: 'Readable line length', help: 'Keep text in a comfortable column on wide screens.', type: 'toggle', default: true },
+          { key: 'spellcheck', label: 'Check spelling', type: 'toggle', default: true },
+          { key: 'showWordCount', label: 'Show word count', type: 'toggle', default: true },
+        ],
+      },
+      {
+        title: 'Note list',
+        fields: [
+          { key: 'sort', label: 'Sort notes by', type: 'select', default: 'edited',
+            options: [opt('edited', 'Date edited'), opt('created', 'Date created'), opt('title', 'Title')] },
+          { key: 'showPreview', label: 'Show preview text', type: 'toggle', default: true },
+          { key: 'groupByDate', label: 'Group by date', help: 'Today, Yesterday, Previous 7 days…', type: 'toggle', default: true },
         ],
       },
     ],

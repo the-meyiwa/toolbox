@@ -62,8 +62,6 @@ const viewportDesc = $('viewport-desc');
 let viewportContent = $('viewport-content');
 const relatedBar = $('tool-related');
 const backBtn = $('back-btn');
-const popoutBtn = $('popout-btn');
-const headerFsExitBtn = $('header-fs-exit-btn');
 const searchInput = $('search');
 const searchWrapper = $('search-wrapper');
 const logo = $('logo');
@@ -123,6 +121,7 @@ const WIDE_TOOL_IDS = new Set([
 const FILL_TOOL_IDS = new Set([
   'flowchart', 'architecture-editor', 'uml-diagram', 'logic-lab', 'algorithm-lab', 'pdf-editor',
   'watermark-remover', 'data-bot', 'video-player', 'calculator', 'timer',
+  'assistant', 'container-planner',
 ]);
 
 export function isFitScreenTool(id) {
@@ -306,7 +305,7 @@ function isSimpleFileUploadTool(tool, container) {
 
 function renderRelated(tool) {
   if (!relatedBar) return;
-  if (document.body.classList.contains('tool-fullscreen') || tool?.id === 'assistant' || tool?.id === 'container-planner') {
+  if (tool?.id === 'assistant' || tool?.id === 'container-planner') {
     relatedBar.innerHTML = '';
     relatedBar.hidden = true;
     return;
@@ -327,24 +326,6 @@ function renderRelated(tool) {
     <div class="related-list">${rel.map((t, i) => toolCard(t, { compact: true, index: i })).join('')}</div>`;
 }
 
-
-function updateFullscreenBtnState(isFullscreen) {
-  if (!popoutBtn) return;
-  const expandIcon = popoutBtn.querySelector('.fs-icon-expand');
-  const collapseIcon = popoutBtn.querySelector('.fs-icon-collapse');
-  const label = popoutBtn.querySelector('.fs-label');
-  if (label) label.textContent = isFullscreen ? 'Exit fullscreen' : 'Fullscreen';
-  popoutBtn.title = isFullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen';
-  popoutBtn.setAttribute('aria-label', isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen');
-}
-
-function toggleToolFullscreen(force) {
-  const isFullscreen = document.body.classList.toggle('tool-fullscreen', force);
-  updateFullscreenBtnState(isFullscreen);
-  if (isFullscreen && relatedBar) {
-    relatedBar.hidden = true;
-  }
-}
 
 /* --------------- routing --------------- */
 
@@ -443,7 +424,6 @@ function teardownTool() {
   toolNavigationVersion++;
   outputObserver?.disconnect();
   outputObserver = null;
-  toggleToolFullscreen(false);
   document.body.classList.remove('in-tool');
   document.body.removeAttribute('data-tool-id');
   document.body.classList.remove('tool-fit-screen');
@@ -512,12 +492,6 @@ async function openTool(id, routeState = {}) {
   viewportContent.replaceWith(freshContent);
   viewportContent = freshContent;
   if (relatedBar) relatedBar.hidden = true;
-  const isDesktop = typeof window !== 'undefined' && window.innerWidth > 768;
-  const isFullscreenByDefault = (id === 'assistant' || id === 'container-planner');
-  if (popoutBtn) {
-    popoutBtn.style.display = (isDesktop && !isFullscreenByDefault) ? 'inline-flex' : 'none';
-    updateFullscreenBtnState(false);
-  }
   const prefsBtn = $('tool-prefs-btn');
   if (prefsBtn) prefsBtn.hidden = !hasToolSettings(id);
   viewport.classList.remove('hidden');
@@ -832,31 +806,6 @@ const onScrollState = () => document.body.classList.toggle('is-scrolled', window
 window.addEventListener('scroll', onScrollState, { passive: true });
 onScrollState();
 $('tool-prefs-btn')?.addEventListener('click', () => { if (currentToolId) openSettings(`tool:${currentToolId}`); });
-if (popoutBtn) {
-  popoutBtn.addEventListener('click', () => {
-    toggleToolFullscreen();
-  });
-}
-if (headerFsExitBtn) {
-  headerFsExitBtn.addEventListener('click', () => {
-    toggleToolFullscreen(false);
-  });
-}
-
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && document.body.classList.contains('tool-fullscreen')) {
-    toggleToolFullscreen(false);
-  }
-});
-
-window.addEventListener('resize', () => {
-  if (window.innerWidth <= 768 && document.body.classList.contains('tool-fullscreen')) {
-    toggleToolFullscreen(false);
-  }
-  if (popoutBtn && currentPage === 'tool') {
-    popoutBtn.style.display = window.innerWidth > 768 ? 'inline-flex' : 'none';
-  }
-});
 logo.addEventListener('click', (e) => { e.preventDefault(); window.location.hash = '#home'; });
 window.addEventListener('hashchange', handleHash);
 window.addEventListener('pagehide', () => currentSession?.dispose());

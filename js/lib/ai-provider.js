@@ -1,200 +1,434 @@
 /* ============================================================
-   TOOLBOX — Online AI Reasoning Provider
-   100% Online Generative AI with High-Availability Multi-Model Failover:
-   - High-throughput streaming with automatic sub-second failover
-   - Multi-step sequential tool calling loops across all 100+ Toolbox tools
-   - Preserved thoughtSignature and schema-compliant tool responses
-   - Native Function Calling with client-side tool execution
-   - Multimodal support (Images, CSV, PDF, Code, Text)
-   - Zero offline heuristics or fake fallback matchers
+   TOOLBOX — Assistant engine
+
+   One tool-calling loop for every model. The browser sends the
+   conversation and the tool list to the Toolbox server
+   (/api/assistant/v2/chat), which picks a model provider
+   (Gemini, OpenAI, DeepSeek, Groq, OpenRouter — whichever are
+   configured, failing over in order) and streams its answer
+   back in the OpenAI chat-completions format.
+
+   Tool calls run here in the browser, where the tools live:
+   chess engine, device database, notes, files, calculators,
+   the code playground, web browsing through the server, and
+   every Toolbox tool through run_toolbox_tool. Results go back
+   to the model until it answers without asking for a tool.
    ============================================================ */
 
-import { GoogleGenAI } from '@google/genai';
 import { ASSISTANT_TOOL_DECLARATIONS, executeAssistantTool } from './assistant-tools.js';
+import { EXTRA_TOOL_DECLARATIONS, EXTRA_TOOL_NAMES, executeExtraTool } from './assistant/extra-tools.js';
 import { QuotaManager } from './quota-manager.js';
+import { getCurrentUser, refreshUserSession } from './supabase.js';
+import { TOOLS } from '../registry/index.js';
 
 export const STORAGE_GEMINI_KEY = 'toolbox_assistant_api_key';
 export const STORAGE_AI_MODE = 'toolbox_ai_mode';
 export const STORAGE_AI_MODEL = 'toolbox_ai_model';
+export const STORAGE_AI_PROVIDER = 'toolbox_ai_provider';
 
 export const AI_MODES = {
   auto: {
-    id: 'auto',
-    name: 'Auto Mode',
-    badge: 'Auto Reasoning',
-    model: 'gemini-3.6-flash',
-    description: 'High-speed generative intelligence with multi-tool calling, file reasoning, and code generation.'
+    id: 'auto', name: 'Auto', badge: 'Auto', model: 'auto',
+    description: 'Balanced thinking. Uses tools whenever they help.',
+  },
+  fast: {
+    id: 'fast', name: 'Fast', badge: 'Fast', model: 'auto',
+    description: 'Quick answers with light thinking.',
   },
   reasoning: {
-    id: 'reasoning',
-    name: 'Deep Reasoning',
-    badge: 'Deep Reasoning',
-    model: 'gemini-3.6-flash',
-    description: 'Analytical problem solving, multi-step proofs, and comprehensive explanations.'
+    id: 'reasoning', name: 'Deep thinking', badge: 'Deep thinking', model: 'auto',
+    description: 'Thinks longer. For proofs, hard problems and long multi-step tasks.',
   },
   code: {
-    id: 'code',
-    name: 'Code & Math Engine',
-    badge: 'Code Engine',
-    model: 'gemini-3.6-flash',
-    description: 'Generates and tests code in JavaScript, Python, C++, and SQL with live execution.'
+    id: 'code', name: 'Build', badge: 'Build', model: 'auto',
+    description: 'Writes, runs and fixes code; builds apps in the Code Playground.',
   },
   science: {
-    id: 'science',
-    name: 'Science & Chemistry',
-    badge: 'Science Engine',
-    model: 'gemini-3.6-flash',
-    description: 'Molar mass calculation, reaction balancing, stoichiometry, and compound queries.'
+    id: 'science', name: 'Math & science', badge: 'Math & science', model: 'auto',
+    description: 'Works problems through the math, chemistry and physics tools.',
   },
   files: {
-    id: 'files',
-    name: 'File & Image Suite',
-    badge: 'File Suite',
-    model: 'gemini-3.6-flash',
-    description: 'Multimodal image inspection, conversion, dataset analysis, and OCR.'
-  }
+    id: 'files', name: 'Files', badge: 'Files', model: 'auto',
+    description: 'Reads, converts and edits images, PDFs, spreadsheets and documents.',
+  },
 };
+
+const MODE_EFFORT = { auto: 'auto', fast: 'fast', reasoning: 'reasoning', code: 'reasoning', science: 'reasoning', files: 'auto' };
+const MODE_GUIDANCE = {
+  code: 'The person is building. Prefer running code over describing it: write complete programs, execute them with the code tools, read the output, fix errors and run again. For apps, open or populate the Code Playground.',
+  science: 'Work every numeric step through calculate_math / calculate_chemistry or the relevant Toolbox tool and show the working. Verify results before answering.',
+  files: 'Focus on the attached or saved files. Inspect them with the file tools before answering and save outputs back to Files.',
+  reasoning: 'Take the time to think carefully. For multi-step work, start with update_plan, then carry out every step with tools and verify the result.',
+  fast: 'Be brief. Use a tool only when it is needed for a correct answer.',
+};
+
+/* ---------------- stored preferences (kept for older callers) ---------------- */
 
 export function getGeminiApiKey() {
   try {
-    return (
-      localStorage.getItem(STORAGE_GEMINI_KEY) ||
-      localStorage.getItem('gemini_api_key') ||
-      localStorage.getItem('toolbox_gemini_api_key') ||
-      ''
-    ).trim();
-  } catch {
-    return '';
-  }
+    return (localStorage.getItem(STORAGE_GEMINI_KEY) || localStorage.getItem('gemini_api_key') || localStorage.getItem('toolbox_gemini_api_key') || '').trim();
+  } catch { return ''; }
 }
 
 export function setGeminiApiKey(key) {
   try {
     const trimmed = (key || '').trim();
-    if (trimmed) {
-      localStorage.setItem(STORAGE_GEMINI_KEY, trimmed);
-    } else {
-      localStorage.removeItem(STORAGE_GEMINI_KEY);
-    }
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('toolbox:apikeychange', { detail: { key: trimmed } }));
-    }
-  } catch {}
+    if (trimmed) localStorage.setItem(STORAGE_GEMINI_KEY, trimmed);
+    else localStorage.removeItem(STORAGE_GEMINI_KEY);
+    window.dispatchEvent(new CustomEvent('toolbox:apikeychange', { detail: { key: trimmed } }));
+  } catch { /* storage unavailable */ }
 }
 
 export function getActiveAiMode() {
-  try {
-    return localStorage.getItem(STORAGE_AI_MODE) || 'auto';
-  } catch {
-    return 'auto';
-  }
+  try { const m = localStorage.getItem(STORAGE_AI_MODE); return AI_MODES[m] ? m : 'auto'; } catch { return 'auto'; }
 }
 
 export function setActiveAiMode(mode) {
   try {
     localStorage.setItem(STORAGE_AI_MODE, mode);
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('toolbox:aimodechange', { detail: { mode } }));
-    }
-  } catch {}
+    window.dispatchEvent(new CustomEvent('toolbox:aimodechange', { detail: { mode } }));
+  } catch { /* storage unavailable */ }
 }
 
-function sanitizeToolOutput(val) {
-  if (val === null || val === undefined) return { result: 'ok' };
-  if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
-    return { result: val };
+/** Preferred provider id ('' = let the server choose). */
+export function getPreferredProvider() {
+  try { return localStorage.getItem(STORAGE_AI_PROVIDER) || ''; } catch { return ''; }
+}
+export function setPreferredProvider(id) {
+  try { if (id) localStorage.setItem(STORAGE_AI_PROVIDER, id); else localStorage.removeItem(STORAGE_AI_PROVIDER); } catch { /* storage unavailable */ }
+}
+
+/* ---------------- tool list ---------------- */
+
+/** Gemini-style schemas ('OBJECT', 'STRING') → JSON Schema every provider accepts. */
+function normalizeSchema(node) {
+  if (Array.isArray(node)) return node.map(normalizeSchema);
+  if (!node || typeof node !== 'object') return node;
+  const out = {};
+  for (const [k, v] of Object.entries(node)) {
+    if (v === undefined || v === null) continue;
+    if (k === 'type' && typeof v === 'string') out.type = v.toLowerCase();
+    else if (k === 'properties' && v && typeof v === 'object') {
+      out.properties = {};
+      for (const [pk, pv] of Object.entries(v)) out.properties[pk] = normalizeSchema(pv);
+    } else if (k === 'nullable' || k === 'format' && typeof v === 'string' && !/^(date-time|date|email|uri|enum)$/.test(v)) {
+      continue;
+    } else out[k] = normalizeSchema(v);
   }
+  if (out.type === 'array' && !out.items) out.items = { type: 'string' };
+  if (out.type === 'object' && !out.properties) out.properties = {};
+  if (Array.isArray(out.required) && out.properties) {
+    out.required = out.required.filter(r => r in out.properties);
+    if (!out.required.length) delete out.required;
+  }
+  if (Array.isArray(out.enum)) out.enum = out.enum.map(String);
+  return out;
+}
+
+const REGISTRY_TOOL_IDS = new Set(TOOLS.map(t => t.id));
+
+function buildToolList(declarations) {
+  const seen = new Set();
+  const list = [];
+  for (const d of declarations) {
+    if (!d?.name || seen.has(d.name)) continue;
+    seen.add(d.name);
+    list.push({
+      type: 'function',
+      function: {
+        name: d.name,
+        description: String(d.description || '').slice(0, 1000),
+        parameters: normalizeSchema(d.parameters || { type: 'object', properties: {} }),
+      },
+    });
+  }
+  return list;
+}
+
+let defaultTools = null;
+/** Core tools + the capability pack. Per-tool navigation declarations are replaced by find/run/open_toolbox_tool. */
+function defaultToolList() {
+  if (defaultTools) return defaultTools;
+  const core = ASSISTANT_TOOL_DECLARATIONS.filter(d => !d?.name?.startsWith('open_tool_') && !d?.name?.startsWith('navigate_to_') && !REGISTRY_TOOL_IDS.has(d?.name) && !EXTRA_TOOL_NAMES.has(d?.name));
+  // Registry declarations are the ones the discovery layer generates; drop anything it produced.
+  const registryNames = new Set(registryDeclarationNames());
+  defaultTools = buildToolList([...EXTRA_TOOL_DECLARATIONS, ...core.filter(d => !registryNames.has(d.name))]).slice(0, 128);
+  return defaultTools;
+}
+
+function registryDeclarationNames() {
+  // Registry declarations appear before the first core declaration ('list_saved_artifacts').
+  const names = [];
+  for (const d of ASSISTANT_TOOL_DECLARATIONS) {
+    if (d?.name === 'list_saved_artifacts') break;
+    if (d?.name) names.push(d.name);
+  }
+  return names;
+}
+
+/* ---------------- conversation → chat messages ---------------- */
+
+const TEXT_TYPES = /^(text\/|application\/(json|xml|javascript|x-yaml|yaml|csv|sql|x-sh))/;
+
+function decodeBase64Text(b64) {
   try {
-    return JSON.parse(JSON.stringify(val));
-  } catch {
-    return { result: String(val) };
+    const bin = atob(b64);
+    const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  } catch { return ''; }
+}
+
+function fileParts(file) {
+  if (!file?.base64) return [];
+  const type = file.type || file.mimeType || 'application/octet-stream';
+  const name = file.name || 'attachment';
+  if (type.startsWith('image/')) {
+    return [{ type: 'image_url', image_url: { url: `data:${type};base64,${file.base64}` } }];
   }
+  if (TEXT_TYPES.test(type) || /\.(txt|md|csv|json|js|ts|py|html|css|xml|yml|yaml|sql|log)$/i.test(name)) {
+    const text = decodeBase64Text(file.base64);
+    return [{ type: 'text', text: `Attached file "${name}" (${type}):\n\`\`\`\n${text.slice(0, 60000)}${text.length > 60000 ? '\n… (truncated)' : ''}\n\`\`\`` }];
+  }
+  return [{ type: 'text', text: `Attached file "${name}" (${type}, ${Math.round(file.base64.length * 0.75 / 1024)} KB). Its bytes are available to the file tools (PDF, image, dataset and conversion tools) as the current file.` }];
+}
+
+function toolContextOf(msg) {
+  if (!msg.toolResults?.length) return '';
+  const lines = [];
+  for (const r of msg.toolResults) {
+    const data = r?.data || r || {};
+    const name = r?.toolName || data.type || 'tool';
+    const summary = data.message || data.summary || data.title || '';
+    const bits = [];
+    if (data.url) bits.push(`URL: ${data.url}`);
+    if (data.excerpt || data.aboutExcerpt) bits.push(String(data.excerpt || data.aboutExcerpt).slice(0, 800));
+    if (typeof data.content === 'string') bits.push(data.content.slice(0, 1200));
+    if (data.fen) bits.push(`FEN: ${data.fen}`);
+    lines.push(`- ${name}: ${summary}${bits.length ? `\n  ${bits.join('\n  ')}` : ''}`);
+  }
+  return `\n\n[Tools used in this reply]\n${lines.join('\n')}`;
+}
+
+function buildMessages(history, currentFile, system) {
+  const out = [{ role: 'system', content: system }];
+  history.forEach((msg, i) => {
+    const isLatest = i === history.length - 1;
+    if (msg.role === 'user') {
+      const parts = [];
+      const file = msg.fileData?.base64 ? msg.fileData : (isLatest ? currentFile : null);
+      parts.push(...fileParts(file));
+      if (msg.content) parts.push({ type: 'text', text: String(msg.content) });
+      if (!parts.length) return;
+      out.push({ role: 'user', content: parts.length === 1 && parts[0].type === 'text' ? parts[0].text : parts });
+    } else if (msg.role === 'assistant' || msg.role === 'model') {
+      const text = `${msg.content || ''}${toolContextOf(msg)}`.trim();
+      if (text) out.push({ role: 'assistant', content: text });
+    }
+  });
+  // Providers require the conversation to end on a user turn.
+  if (out.length === 1 || out[out.length - 1].role !== 'user') out.push({ role: 'user', content: 'Continue.' });
+  return out;
+}
+
+/* ---------------- tool results → model ---------------- */
+
+function compactForModel(value, depth = 0) {
+  if (value == null) return value;
+  if (typeof value === 'string') {
+    if (/^data:[\w/+.-]+;base64,/.test(value) && value.length > 400) return `[binary data, ${Math.round(value.length * 0.75 / 1024)} KB]`;
+    return value.length > 6000 ? `${value.slice(0, 6000)}… (${value.length - 6000} more characters)` : value;
+  }
+  if (typeof value !== 'object') return value;
+  if (depth > 6) return '[…]';
+  if (Array.isArray(value)) {
+    const items = value.slice(0, 60).map(v => compactForModel(v, depth + 1));
+    if (value.length > 60) items.push(`… ${value.length - 60} more`);
+    return items;
+  }
+  const out = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (typeof v === 'function' || k === 'element' || k === 'node') continue;
+    if (k === 'svg' && typeof v === 'string') { out[k] = `[SVG drawing, ${v.length} characters, shown to the person]`; continue; }
+    out[k] = compactForModel(v, depth + 1);
+  }
+  return out;
+}
+
+function toolResultText(result) {
+  let text;
+  try { text = JSON.stringify(compactForModel(result)); } catch { text = String(result); }
+  return text.length > 24000 ? `${text.slice(0, 24000)}… (truncated)` : text;
+}
+
+/* ---------------- streaming ---------------- */
+
+async function authHeader(forceRefresh = false) {
+  let user = getCurrentUser();
+  if (forceRefresh && user?.refreshToken) user = await refreshUserSession();
+  return user?.token ? { Authorization: `Bearer ${user.token}` } : {};
+}
+
+class GatewayError extends Error {
+  constructor(message, status) { super(message); this.status = status; }
+}
+
+async function openGateway(body, signal) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const res = await fetch('/api/assistant/v2/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(await authHeader(attempt > 0)) },
+      body: JSON.stringify(body),
+      signal,
+    });
+    if (res.ok && res.body) return res;
+    const payload = await res.json().catch(() => ({}));
+    if (res.status === 401 && attempt === 0 && getCurrentUser()?.refreshToken) continue;
+    if (res.status === 404) throw new GatewayError('The Assistant service is not available on this server yet. Redeploy the Toolbox API.', 404);
+    throw new GatewayError(payload.error || `The Assistant service answered with ${res.status}.`, res.status);
+  }
+  throw new GatewayError('Sign in to Toolbox to use the Assistant.', 401);
 }
 
 /**
- * Builds array of Steps for Gemini Interactions API from chat history
+ * Reads one streamed model turn.
+ * Returns { text, thinking, toolCalls, finish, provider }.
  */
-function buildGeminiSteps(history, currentFile = null) {
-  const steps = [];
+async function readTurn(res, { onText, onThinking, onProvider, signal }) {
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let event = 'message';
+  let text = '', thinking = '', finish = null, provider = null;
+  const calls = [];
+  let inThought = false, pending = '';   // Gemini wraps thoughts in <thought>…</thought> inside content
 
-  for (let i = 0; i < history.length; i++) {
-    const msg = history[i];
-    const isLatest = i === history.length - 1;
-
-    if (msg.role === 'user') {
-      const content = [];
-
-      // Attach file data if present
-      if (msg.fileData?.base64) {
-        content.push({
-          type: 'image',
-          mimeType: msg.fileData.type || msg.fileData.mimeType || 'image/jpeg',
-          data: msg.fileData.base64
-        });
-      } else if (isLatest && currentFile?.base64) {
-        content.push({
-          type: 'image',
-          mimeType: currentFile.type || 'image/jpeg',
-          data: currentFile.base64
-        });
-      }
-
-      if (msg.content) {
-        content.push({ type: 'text', text: msg.content });
-      }
-
-      if (content.length) {
-        steps.push({ type: 'user_input', content });
-      }
-    } else if (msg.role === 'assistant' || msg.role === 'model') {
-      const content = [];
-      let textContent = msg.content || '';
-      
-      if (msg.toolResults?.length) {
-        const contextSnippets = [];
-        for (const r of msg.toolResults) {
-          const data = r.data || r;
-          if (data.headings?.length || data.aboutExcerpt || data.excerpt) {
-            const partsList = [];
-            if (data.title) partsList.push(`Title: ${data.title}`);
-            if (data.url) partsList.push(`URL: ${data.url}`);
-            if (data.headings?.length) partsList.push(`Headings:\n${data.headings.map(h => `• ${h}`).join('\n')}`);
-            if (data.excerpt || data.aboutExcerpt) partsList.push(`Summary: ${data.excerpt || data.aboutExcerpt}`);
-            contextSnippets.push(partsList.join('\n'));
-          } else if (data.content && typeof data.content === 'string') {
-            contextSnippets.push(`File Content (${data.name || data.path || 'file'}):\n${data.content.slice(0, 1500)}`);
-          }
+  const emitContent = (chunk) => {
+    pending += chunk;
+    for (;;) {
+      if (!inThought) {
+        const at = pending.indexOf('<thought>');
+        if (at === -1) {
+          // Hold back a partial "<thought" at the end of the chunk.
+          const keep = partialTagTail(pending, '<thought>');
+          const out = pending.slice(0, pending.length - keep);
+          pending = pending.slice(pending.length - keep);
+          if (out) { text += out; onText(out); }
+          return;
         }
-        if (contextSnippets.length && !textContent.includes('[Inspected Context from Tools]')) {
-          textContent += `\n\n[Inspected Context from Tools]:\n${contextSnippets.join('\n---\n')}`;
+        const out = pending.slice(0, at);
+        if (out) { text += out; onText(out); }
+        pending = pending.slice(at + 9);
+        inThought = true;
+      } else {
+        const at = pending.indexOf('</thought>');
+        if (at === -1) {
+          const keep = partialTagTail(pending, '</thought>');
+          const out = pending.slice(0, pending.length - keep);
+          pending = pending.slice(pending.length - keep);
+          if (out) { thinking += out; onThinking(out); }
+          return;
         }
+        const out = pending.slice(0, at);
+        if (out) { thinking += out; onThinking(out); }
+        pending = pending.slice(at + 10);
+        inThought = false;
       }
-      if (!textContent && msg.toolResults?.length) {
-        const actionSummaries = msg.toolResults.map(r => r.message || (r.title ? `${r.type || 'tool'}: ${r.title}` : '')).filter(Boolean);
-        textContent = actionSummaries.join(' ') || 'Completed requested action.';
-      }
-      if (textContent) {
-        content.push({ type: 'text', text: textContent });
-      }
-
-      if (content.length) {
-        steps.push({ type: 'model_output', content });
-      }
-    } else if (msg.role === 'function' || msg.role === 'tool') {
-      steps.push({
-        type: 'function_result',
-        call_id: msg.id || 'call_1',
-        name: msg.name,
-        result: { output: msg.content }
-      });
     }
-  }
+  };
 
-  return steps;
+  const handle = (evt, data) => {
+    if (data === '[DONE]') return;
+    let json;
+    try { json = JSON.parse(data); } catch { return; }
+    if (evt === 'provider') { provider = json; onProvider(json); return; }
+    if (evt === 'error' || (json.error && !json.choices)) {
+      throw new GatewayError(json.error?.message || json.error || 'The model stopped unexpectedly.', 502);
+    }
+    const choice = json.choices?.[0];
+    if (!choice) return;
+    const delta = choice.delta || choice.message || {};
+    const reasoning = delta.reasoning_content ?? delta.reasoning ?? delta.thinking;
+    if (typeof reasoning === 'string' && reasoning) { thinking += reasoning; onThinking(reasoning); }
+    if (typeof delta.content === 'string' && delta.content) emitContent(delta.content);
+    for (const tc of delta.tool_calls || []) {
+      const idx = typeof tc.index === 'number' ? tc.index : calls.length;
+      const slot = calls[idx] || (calls[idx] = { id: '', type: 'function', function: { name: '', arguments: '' } });
+      if (tc.id) slot.id = tc.id;
+      if (tc.function?.name) slot.function.name += tc.function.name;
+      if (tc.function?.arguments) slot.function.arguments += tc.function.arguments;
+      if (tc.extra_content) slot.extra_content = tc.extra_content;   // Gemini thought signatures
+    }
+    if (choice.finish_reason) finish = choice.finish_reason;
+  };
+
+  try {
+    for (;;) {
+      if (signal?.aborted) break;
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let nl;
+      while ((nl = buffer.indexOf('\n')) !== -1) {
+        const line = buffer.slice(0, nl).replace(/\r$/, '');
+        buffer = buffer.slice(nl + 1);
+        if (!line) { event = 'message'; continue; }
+        if (line.startsWith(':')) continue;
+        if (line.startsWith('event:')) { event = line.slice(6).trim(); continue; }
+        if (line.startsWith('data:')) handle(event, line.slice(5).trim());
+      }
+    }
+  } finally {
+    try { reader.releaseLock(); } catch { /* already released */ }
+  }
+  if (pending) {
+    if (inThought) { thinking += pending; onThinking(pending); } else { text += pending; onText(pending); }
+  }
+  const toolCalls = calls.filter(c => c && c.function.name).map((c, i) => ({ ...c, id: c.id || `call_${Date.now().toString(36)}_${i}` }));
+  return { text, thinking, toolCalls, finish, provider };
 }
 
-const BASE_SYSTEM_INSTRUCTION = `You are Toolbox Assistant, a sophisticated, highly capable AI assistant deeply integrated into Toolbox (a client-side suite of 100+ developer, networking, math, science, and financial tools), created by Meyiwa-Meyigbene Nifemi Edun.
-- Default Currency & Regional Context: The default currency is Nigerian Naira (NGN, ₦). Unless the user explicitly asks for USD ($), GBP (£), or EUR (€), always format financial calculations, invoices, pricing, and quotes in Nigerian Naira (₦).
+function partialTagTail(s, tag) {
+  for (let n = Math.min(tag.length - 1, s.length); n > 0; n--) {
+    if (s.endsWith(tag.slice(0, n))) return n;
+  }
+  return 0;
+}
+
+function parseArgs(raw) {
+  if (!raw) return {};
+  if (typeof raw === 'object') return raw;
+  try { return JSON.parse(raw); } catch {
+    // Some models close the JSON early or add trailing text.
+    const m = String(raw).match(/\{[\s\S]*\}/);
+    if (m) { try { return JSON.parse(m[0]); } catch { /* fall through */ } }
+    return { input: String(raw) };
+  }
+}
+
+/* ---------------- system prompt ---------------- */
+
+const CAPABILITIES = `You are Toolbox Assistant, the agent built into Toolbox — a workspace of 100+ tools — created by Meyiwa-Meyigbene Nifemi Edun. You do things, not just describe them. You have real tools and you should use them freely and chain them to finish the whole job.
+
+How you work
+- For anything that takes several steps (research, building something, analysing files, planning), call update_plan first with short steps, then do the steps with tools, updating the plan as each finishes. Keep going until the task is complete; do not stop to ask permission for ordinary steps.
+- Prefer computing to guessing: arithmetic and algebra go through calculate_math, chemistry through calculate_chemistry, code through the code execution tools. Check results before you report them.
+- Any Toolbox tool can be used: call find_toolbox_tools to discover the right one, run_toolbox_tool to run it on input directly, and open_toolbox_tool to open it for the person.
+- Chess: chess_analyze evaluates a position or game (best move, evaluation, opening, move quality); chess_play plays a move and lets the engine answer; chess_open_board opens a position on the Chess board. Never invent evaluations — use the engine.
+- Devices: device_specs and device_compare cover 1,300+ phones, tablets, laptops, chips, CPUs, GPUs, watches, headphones and consoles from the Toolbox database.
+- Vehicles: vehicle_lookup decodes VINs and gives specifications for cars by make, model and year.
+- Web: browse_web / browser_navigate / browser_scrape / browser_crawl read live pages; search_images finds pictures. Cite the pages you used.
+- Visuals: draw_illustration draws SVG illustrations and diagrams; csv_analyze_and_chart and the chart tools make charts; render_map shows places.
+- Notes and files: create_note, update_note, list_notes, get_note; create_file, save_file and the artifact tools keep work in Files.
+- Scripture: the Bible and Quran tools read verses and passages; quote them exactly as returned.
+- Building apps: write complete working code and put it in the Code Playground (or run it with the code tools), then report what you built.
+
+How you answer
+- Lead with the answer. Use Markdown: short headings when the reply is long, lists, tables for comparisons, fenced code with a language, and LaTeX ($…$ inline, $$…$$ display) for math.
+- When a tool shows a card (board, map, chart, device comparison, illustration, note), do not repeat its contents; add only what the card does not say.
+- Never mention internal tool names, renderers or JSON to the person.
+`;
+
+const LEGACY_RULES = `- Default Currency & Regional Context: The default currency is Nigerian Naira (NGN, ₦). Unless the user explicitly asks for USD ($), GBP (£), or EUR (€), always format financial calculations, invoices, pricing, and quotes in Nigerian Naira (₦).
 - Strict Tool Calling & Zero Pretending/Hallucination:
   1. ONLY invoke a tool when the user's intent directly and unambiguously matches the tool's intended purpose.
   2. For human clinical illnesses, patient symptoms, pathology, or ICD-11 diagnostic codes, invoke \`search_diseases\`.
@@ -259,11 +493,10 @@ const BASE_SYSTEM_INSTRUCTION = `You are Toolbox Assistant, a sophisticated, hig
 - For math formulas, use clean LaTeX formatting ($$...$$).
 - For code snippets, provide complete, working code in language-specific code blocks.
 - When a tool returns structured UI such as audio players, cards, notes, charts, calendar events, or interactive maps, do not narrate the existence of those controls. Only provide natural-language text when it adds useful information beyond what the UI itself communicates.
-- You have real-time access to the current date and time in the Current Environment section below. Always reference it if asked.`;
+- The current date and time are in the Current environment section below.`;
 
-/**
- * Main Entry Point: streamChatCompletion
- */
+/* ---------------- main entry ---------------- */
+
 export async function streamChatCompletion({
   mode = null,
   history = [],
@@ -273,246 +506,157 @@ export async function streamChatCompletion({
   turnId = null,
   idempotencyKey = null,
   onToken = () => {},
+  onThinking = () => {},
   onToolCallStart = () => {},
   onToolCallResult = () => {},
+  onStatus = () => {},
+  onProvider = () => {},
   signal = null,
   scope = 'global',
   toolDeclarations = null,
-  toolExecutor = null
+  toolExecutor = null,
+  maxSteps = null,
+  provider = null,
 }) {
-  QuotaManager.recordMessage();
+  QuotaManager.recordMessage?.();
 
-  const selectedMode = mode || getActiveAiMode();
-  const modeCfg = AI_MODES[selectedMode] || AI_MODES.auto;
-
-  const isRealBrowser = typeof window !== 'undefined' && typeof window.location !== 'undefined' && Boolean(window.location.hostname);
-  const currentTime = new Date().toLocaleString();
-  const currentUrl = isRealBrowser ? window.location.href.split('#')[0] : 'https://toolbox-gold-six.vercel.app';
-  const dynamicContext = `\nCurrent Environment:\n- Time: ${currentTime}\n- App URL: ${currentUrl}\n`;
-  const fullSystemInstruction = scope === 'global'
-    ? BASE_SYSTEM_INSTRUCTION + dynamicContext
-    : dynamicContext;
-  const activeToolDeclarations = toolDeclarations || ASSISTANT_TOOL_DECLARATIONS;
-  const interactionTools = activeToolDeclarations.map(tool => ({
-    type: 'function',
-    name: tool.name,
-    description: tool.description,
-    parameters: tool.parameters || { type: 'object', properties: {} }
-  }));
-
+  const selectedMode = AI_MODES[mode] ? mode : getActiveAiMode();
+  const isRealBrowser = typeof window !== 'undefined' && Boolean(window.location?.hostname);
   if (!isRealBrowser) {
     const lastUser = [...history].reverse().find(m => m.role === 'user')?.content || 'Hello';
     const mockText = `Response to: ${lastUser}`;
-    for (const w of mockText.split(' ')) {
-      onToken(w + ' ');
-      await new Promise(r => setTimeout(r, 2));
-    }
+    onToken(mockText);
     return { text: mockText, taskState, toolResults: [] };
   }
 
-  let fullResponseText = '';
-  const executedToolResults = [];
-  const turnExecutedTools = new Map();
-  const steps = buildGeminiSteps(history, currentFile);
+  const now = new Date();
+  const environment = `\nCurrent environment\n- Date and time: ${now.toLocaleString()} (${Intl.DateTimeFormat().resolvedOptions().timeZone})\n- App: ${window.location.origin}\n- Active tool: ${taskState?.activeToolId || 'Home'}\n`;
+  const guidance = MODE_GUIDANCE[selectedMode] ? `\nMode: ${AI_MODES[selectedMode].name}. ${MODE_GUIDANCE[selectedMode]}\n` : '';
+  const system = scope === 'global'
+    ? `${CAPABILITIES}\nHouse rules\n${LEGACY_RULES}\n${environment}${guidance}${systemInstruction ? `\n${systemInstruction}` : ''}`
+    : `${systemInstruction || ''}\n${environment}`;
 
-  if (!steps.length) {
-    steps.push({ type: 'user_input', content: [{ type: 'text', text: 'Hello' }] });
-  }
+  const tools = toolDeclarations ? buildToolList(toolDeclarations) : defaultToolList();
+  const messages = buildMessages(history, currentFile, system);
+  const limit = maxSteps || (selectedMode === 'fast' ? 6 : selectedMode === 'auto' || selectedMode === 'files' ? 16 : 24);
 
-  let success = false;
-  let lastError = null;
+  let fullText = '';
+  let fullThinking = '';
+  let providerInfo = null;
+  const executed = [];
+  const cache = new Map();
 
-  try {
-    const apiKey = getGeminiApiKey();
-    if (!apiKey) {
-      const proxyResponse = await fetch('/api/assistant/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ history, systemInstruction: systemInstruction ? `${fullSystemInstruction}\n\n${systemInstruction}` : fullSystemInstruction }),
-        signal
-      });
-      const payload = await proxyResponse.json().catch(() => ({}));
-      if (!proxyResponse.ok || !payload.text) throw new Error(payload.error || 'Connect an Assistant provider in Preferences.');
-      fullResponseText = payload.text;
-      onToken(fullResponseText);
-      return { text: fullResponseText, taskState, toolResults: [] };
+  const runTool = async (name, args, id) => {
+    const key = `${name}:${JSON.stringify(args || {})}`;
+    if (cache.has(key)) return cache.get(key);
+    if (name === 'render_map' && executed.some(r => r?.renderer === 'map-view')) {
+      const ref = { status: 'success', type: 'map-view-ref', message: 'The map is already shown above.' };
+      cache.set(key, ref);
+      return ref;
     }
+    onToolCallStart(name, args, id);
+    let result;
+    try {
+      if (toolExecutor) result = await toolExecutor(name, args);
+      if (result === undefined && EXTRA_TOOL_NAMES.has(name)) result = await executeExtraTool(name, args);
+      if (result === undefined) result = await executeAssistantTool(name, args, { currentFile, taskState });
+      if (result == null || typeof result !== 'object') result = { status: 'success', message: String(result ?? 'Done.') };
+    } catch (err) {
+      result = { status: 'error', success: false, error: err?.message || 'The tool failed.', message: `That did not work: ${err?.message || 'unknown error'}` };
+    }
+    if (!result.toolName) result.toolName = name;
+    cache.set(key, result);
+    executed.push(result);
+    onToolCallResult(name, result, id);
+    return result;
+  };
 
-    const client = new GoogleGenAI({ apiKey });
+  for (let step = 0; step < limit; step++) {
+    if (signal?.aborted) break;
+    onStatus({ type: step === 0 ? 'thinking' : 'continuing', step });
+    const res = await openGateway({
+      messages,
+      tools: tools.length ? tools : undefined,
+      mode: MODE_EFFORT[selectedMode] || 'auto',
+      provider: provider || getPreferredProvider() || undefined,
+      turnId, idempotencyKey,
+    }, signal);
 
-    const handleSingleToolCall = async (toolName, toolArgs, callId = null) => {
-      const toolKey = callId || `${toolName}:${JSON.stringify(toolArgs || {})}`;
-      if (turnExecutedTools.has(toolKey)) {
-        return turnExecutedTools.get(toolKey);
-      }
+    const turn = await readTurn(res, {
+      signal,
+      onText: (t) => { fullText += t; onToken(t); },
+      onThinking: (t) => { fullThinking += t; onThinking(t); },
+      onProvider: (p) => { providerInfo = p; onProvider(p); },
+    });
 
-      // Deduplicate redundant render_map if search_places_nearby already produced a map-view in this turn
-      if (toolName === 'render_map' && executedToolResults.some(r => r?.renderer === 'map-view')) {
-        const priorMap = executedToolResults.find(r => r?.renderer === 'map-view');
-        const toolRes = {
-          status: 'success',
-          type: 'map-view-ref',
-          title: toolArgs?.title || priorMap?.title || 'Map Locations',
-          message: `Interactive visual map already displayed above with ${priorMap?.places?.length || priorMap?.markers?.length || 0} locations.`
-        };
-        turnExecutedTools.set(toolKey, toolRes);
-        return toolRes;
-      }
+    if (!turn.toolCalls.length) break;
 
-      onToolCallStart(toolName, toolArgs);
-      let toolRes;
-      try {
-        toolRes = toolExecutor ? await toolExecutor(toolName, toolArgs) : undefined;
-        if (toolRes === undefined) {
-          toolRes = await executeAssistantTool(toolName, toolArgs, { currentFile, taskState });
-        }
-        if (!toolRes || typeof toolRes !== 'object') {
-          toolRes = { status: 'success', message: String(toolRes || 'Action completed.') };
-        }
-      } catch (err) {
-        toolRes = {
-          status: 'error',
-          success: false,
-          error: err.message || 'Operation failed',
-          message: `Failed to execute: ${err.message || 'Unknown error'}`
-        };
-      }
-      turnExecutedTools.set(toolKey, toolRes);
-      onToolCallResult(toolName, toolRes);
-      executedToolResults.push(toolRes);
-      return toolRes;
-    };
+    // Keep the model's own words (and Gemini's signatures) with its tool calls.
+    messages.push({
+      role: 'assistant',
+      content: turn.text || null,
+      tool_calls: turn.toolCalls.map(c => ({ id: c.id, type: 'function', function: { name: c.function.name, arguments: c.function.arguments || '{}' }, ...(c.extra_content ? { extra_content: c.extra_content } : {}) })),
+    });
+    if (turn.text && !/\s$/.test(fullText)) { fullText += '\n\n'; onToken('\n\n'); }
 
-    // Main multi-step interaction loop
-    let currentSteps = [...steps];
-    let loopLimit = 4;
-    
-    while (loopLimit-- > 0) {
+    for (const call of turn.toolCalls) {
       if (signal?.aborted) break;
+      const args = parseArgs(call.function.arguments);
+      const result = await runTool(call.function.name, args, call.id);
+      messages.push({ role: 'tool', tool_call_id: call.id, content: toolResultText(result) });
+    }
 
-      const stream = await client.interactions.create({
-        model: modeCfg.model,
-        input: currentSteps,
-        system_instruction: systemInstruction ? `${fullSystemInstruction}\n\n${systemInstruction}` : fullSystemInstruction,
-        tools: interactionTools,
-        stream: true
+    if (step === limit - 1 && !signal?.aborted) {
+      // Out of steps: ask for a final answer without tools.
+      messages.push({ role: 'user', content: 'You have used the available tool steps. Summarise what you did and give your final answer now, without calling more tools.' });
+      const last = await openGateway({ messages, mode: MODE_EFFORT[selectedMode] || 'auto', provider: providerInfo?.provider }, signal);
+      await readTurn(last, {
+        signal,
+        onText: (t) => { fullText += t; onToken(t); },
+        onThinking: (t) => { fullThinking += t; onThinking(t); },
+        onProvider: () => {},
       });
-
-      const functionCallsThisTurn = [];
-
-      for await (const event of stream) {
-        if (signal?.aborted) break;
-        
-        if (event.event_type === 'step.delta') {
-          if (event.delta?.type === 'text' && event.delta.text) {
-            fullResponseText += event.delta.text;
-            onToken(event.delta.text);
-          }
-        }
-
-        if (event.event_type === 'step.stop' && event.step) {
-          if (event.step.type === 'function_call') {
-            functionCallsThisTurn.push(event.step);
-          }
-        }
-      }
-
-      if (functionCallsThisTurn.length > 0) {
-        // We have function calls to execute
-        const toolResponses = [];
-        for (const call of functionCallsThisTurn) {
-           const result = await handleSingleToolCall(call.name, call.arguments || call.args || {}, call.id);
-           toolResponses.push({
-             type: 'function_result',
-             call_id: call.id,
-             name: call.name,
-             result: sanitizeToolOutput(result)
-           });
-        }
-        
-        // Append the tool calls and results to the conversation
-        currentSteps.push(...functionCallsThisTurn);
-        currentSteps.push(...toolResponses);
-        // Continue the loop to let the model generate the final response
-      } else {
-        // No more tool calls, we are done
-        break;
-      }
     }
-    
-    success = true;
-  } catch (err) {
-    lastError = err;
   }
 
-  // If tools executed, construct truthful verified status
-  if (executedToolResults.length > 0) {
-    if (!fullResponseText) {
-      const failed = executedToolResults.filter(r => r.status === 'error' || r.success === false);
-      const succeeded = executedToolResults.filter(r => r.status === 'success' || r.success === true || (r.status !== 'error' && r.success !== false));
-
-      if (failed.length > 0 && succeeded.length > 0) {
-        fullResponseText = `Completed ${succeeded.length} action(s), but encountered an issue with ${failed.length} action(s):\n` +
-          succeeded.map(r => `• ${r.message || 'Succeeded'}`).join('\n') + '\n' +
-          failed.map(r => `• Failed: ${r.message || r.error || 'Operation failed'}`).join('\n');
-      } else if (failed.length > 0) {
-        fullResponseText = `The requested action(s) could not be completed:\n` +
-          failed.map(r => `• ${r.message || r.error || 'Failed'}`).join('\n');
-      } else {
-        fullResponseText = succeeded.map(r => r.message).filter(Boolean).join('\n') || 'Action completed successfully.';
-      }
-      onToken(fullResponseText);
-    }
-    success = true;
+  if (!fullText.trim() && executed.length) {
+    const failed = executed.filter(r => r.status === 'error' || r.success === false);
+    const ok = executed.filter(r => !failed.includes(r));
+    const lines = [...ok.map(r => r.message).filter(Boolean), ...failed.map(r => `Could not finish: ${r.error || r.message}`)];
+    fullText = lines.join('\n') || 'Done.';
+    onToken(fullText);
   }
 
-  if (!success) {
-    throw lastError || new Error('Unable to connect to the online AI service. Please check your network connection.');
-  }
-
+  onStatus({ type: 'done' });
   return {
-    text: fullResponseText,
+    text: fullText,
+    thinking: fullThinking,
     taskState,
-    toolResults: executedToolResults
+    toolResults: executed,
+    provider: providerInfo?.label || providerInfo?.provider || null,
+    model: providerInfo?.model || null,
   };
 }
 
-/**
- * Standalone connection tester for Gemini API key
- */
-export async function testAiProviderConnection(provider = 'gemini', apiKey = '') {
-  const key = (apiKey !== undefined && apiKey !== null ? apiKey : getGeminiApiKey()).trim();
-  if (!key) {
-    return { success: false, message: 'No API key provided.' };
-  }
-
+/** Checks the server gateway and lists the model providers it can use. */
+export async function testAiProviderConnection() {
   const start = Date.now();
-  const modelsToTry = ['gemini-3.6-flash'];
-  let lastErr = 'Connection failed';
-
   try {
-    const client = new GoogleGenAI({ apiKey: key });
-    // Make a minimal interactions request to test connection
-    const interaction = await client.interactions.create({
-      model: modelsToTry[0],
-      input: [{ type: 'user_input', content: [{ type: 'text', text: 'hi' }] }],
-    });
-    if (interaction) {
-      return { success: true, latencyMs: Date.now() - start, message: `Successfully connected to the AI service!` };
-    }
+    const res = await fetch('/api/assistant/v2/providers', { headers: await authHeader() });
+    if (!res.ok) return { success: false, message: res.status === 404 ? 'The Assistant service is not deployed on the server yet.' : `The server answered with ${res.status}.` };
+    const { providers = [] } = await res.json();
+    if (!providers.length) return { success: false, providers, message: 'No model provider keys are set on the server.' };
+    return { success: true, providers, latencyMs: Date.now() - start, message: `Connected. Models available: ${providers.map(p => p.label).join(', ')}.` };
   } catch (err) {
-    lastErr = err.message;
-    if (lastErr.toLowerCase().includes('leaked') || lastErr.toLowerCase().includes('permission_denied')) {
-      return { success: false, message: 'API connection issue. Please check your network or global configuration.' };
-    }
+    return { success: false, message: err?.message || 'Could not reach the Toolbox server.' };
   }
+}
 
-  return { success: false, message: lastErr };
+export async function listAiProviders() {
+  const r = await testAiProviderConnection();
+  return r.providers || [];
 }
 
 export async function generateIntelligentResponse(prompt, options = {}) {
-  return streamChatCompletion({
-    history: [{ role: 'user', content: prompt }],
-    ...options
-  });
+  return streamChatCompletion({ history: [{ role: 'user', content: prompt }], ...options });
 }

@@ -286,7 +286,9 @@ export function updateUserProfile({ username, displayName, avatarUrl, profilePic
       fetch(`${config.url}/rest/v1/profiles?id=eq.${encodeURIComponent(current.id)}`, {
         method: 'PATCH',
         headers: { apikey: config.anonKey, Authorization: `Bearer ${current.token}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-        body: JSON.stringify({ username: finalUsername || null, display_name: updated.displayName || null, avatar_url: updated.avatarUrl || null, profile_picture: updated.profilePicture || 'default', messaging_enabled: true, updated_at: new Date().toISOString() })
+        // Only the fields that actually changed. Sending the username on every
+        // save made unrelated edits (an avatar) collide with profiles_username_unique.
+        body: JSON.stringify(profileColumns({ username, displayName, avatarUrl, profilePicture }))
       }).catch(() => {});
     }
   } catch {}
@@ -294,20 +296,63 @@ export function updateUserProfile({ username, displayName, avatarUrl, profilePic
   return updated;
 }
 
+/** Map profile fields that were supplied to their database columns (undefined = unchanged). */
+function profileColumns({ username, displayName, avatarUrl, profilePicture } = {}) {
+  const out = { updated_at: new Date().toISOString() };
+  if (username !== undefined) out.username = username ? String(username).trim().toLowerCase().replace(/^@/, '') : null;
+  if (displayName !== undefined) out.display_name = displayName || null;
+  if (avatarUrl !== undefined) out.avatar_url = avatarUrl || null;
+  if (profilePicture !== undefined) out.profile_picture = profilePicture || 'default';
+  return out;
+}
+
+const isUsernameClash = (body) => body?.code === '23505' && /username/i.test(`${body?.message || ''} ${body?.details || ''}`);
+
+/**
+ * Save profile changes to Supabase.
+ * Updates only the columns in `patch`, so changing an avatar never touches the
+ * username. If the row does not exist yet it is created; a username that another
+ * account already holds is left out rather than failing the whole save.
+ */
 export async function persistUserProfile(patch = {}) {
   const current = getCurrentUser();
   if (!current) throw new Error('Sign in to save your profile.');
   const updated = updateUserProfile(patch, { remote: false });
   if (!current.id || !current.token || current.token.startsWith('tok_')) return updated;
   const config = getSupabaseConfig();
-  const response = await fetch(`${config.url}/rest/v1/profiles?on_conflict=id`, {
-    method: 'POST',
-    headers: { apikey: config.anonKey, Authorization: `Bearer ${current.token}`, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify({ id: current.id, email: current.email || null, username: updated.username || null, display_name: updated.displayName || null, avatar_url: updated.avatarUrl || null, profile_picture: updated.profilePicture || 'default', messaging_enabled: true, updated_at: new Date().toISOString() })
+  const headers = { apikey: config.anonKey, Authorization: `Bearer ${current.token}`, 'Content-Type': 'application/json' };
+  const cols = profileColumns(patch);
+
+  // 1. update the existing row
+  const res = await fetch(`${config.url}/rest/v1/profiles?id=eq.${encodeURIComponent(current.id)}`, {
+    method: 'PATCH', headers: { ...headers, Prefer: 'return=representation' }, body: JSON.stringify(cols),
   });
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    throw new Error(body.message || 'Your profile could not be saved.');
+  const body = await res.json().catch(() => null);
+  if (res.ok && Array.isArray(body) && body.length) return updated;
+  if (!res.ok) {
+    if (isUsernameClash(body)) throw new Error(`The username "@${cols.username}" is already taken. Choose another one.`);
+    throw new Error(body?.message || 'Your profile could not be saved.');
+  }
+
+  // 2. no row yet: create it
+  const insert = async (row) => fetch(`${config.url}/rest/v1/profiles`, {
+    method: 'POST', headers: { ...headers, Prefer: 'return=minimal' }, body: JSON.stringify(row),
+  });
+  const row = {
+    id: current.id, email: current.email || null, messaging_enabled: true,
+    username: updated.username || null, display_name: updated.displayName || null,
+    avatar_url: updated.avatarUrl || null, profile_picture: updated.profilePicture || 'default', ...cols,
+  };
+  let created = await insert(row);
+  if (!created.ok) {
+    const err = await created.json().catch(() => ({}));
+    if (!isUsernameClash(err)) throw new Error(err.message || 'Your profile could not be saved.');
+    if (patch.username !== undefined) throw new Error(`The username "@${row.username}" is already taken. Choose another one.`);
+    created = await insert({ ...row, username: null });   // keep the avatar; the username can be claimed later
+    if (!created.ok) {
+      const again = await created.json().catch(() => ({}));
+      throw new Error(again.message || 'Your profile could not be saved.');
+    }
   }
   return updated;
 }

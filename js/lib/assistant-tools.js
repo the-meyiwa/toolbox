@@ -4400,12 +4400,14 @@ if (container) {
         body: cleanText(content),
         folder: folder || 'quick',
         pinned: true, // Always pin new notes
+        createdAt: Date.now(),
         updatedAt: Date.now()
       };
 
       notes.unshift(newNote);
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+        window.dispatchEvent(new CustomEvent('toolbox:notes-changed', { detail: { id: newNote.id } }));
       } catch {}
 
       return {
@@ -4426,6 +4428,7 @@ if (container) {
         if (raw) notes = JSON.parse(raw);
       } catch {}
 
+      notes = notes.filter(n => !n.trashed);
       const q = (args.query || '').toLowerCase().trim();
       let matched = notes;
       if (q) {
@@ -4448,6 +4451,7 @@ if (container) {
         if (raw) notes = JSON.parse(raw);
       } catch {}
 
+      notes = notes.filter(n => !n.trashed);
       const searchKey = String(args.noteId || args.title || args.query || '').toLowerCase().trim();
       const match = notes.find(n => n.id.toLowerCase() === searchKey || (n.title || '').toLowerCase().includes(searchKey));
       if (!match) {

@@ -4916,9 +4916,54 @@ export const RESULT_RENDERERS = [
 ];
 
 /**
+ * Extension hook: renderers registered at runtime (see js/lib/assistant/renderers.js).
+ * registerResultRenderer('chess-board', (data, container, result) => element, { match: data => bool })
+ * A registered type wins over the built-in renderers when the result's
+ * `renderer` / `type` names it, or when its `match` predicate accepts the data.
+ */
+const CUSTOM_RENDERERS = new Map();
+
+export function registerResultRenderer(type, render, { match = null, cleanup = null } = {}) {
+  if (!type || typeof render !== 'function') return;
+  const entry = { type, render, match, cleanup };
+  entry.Renderer = class extends ResultRenderer {
+    static id = type;
+    static name = type;
+    static canRender(result) { return customRendererFor(result) === entry; }
+    static render(result, container) { return render(result?.data ?? result, container, result); }
+    static async cleanup(result) { if (cleanup) await cleanup(result?.data ?? result); }
+  };
+  CUSTOM_RENDERERS.set(type, entry);
+}
+
+function customRendererFor(result) {
+  if (!result || !CUSTOM_RENDERERS.size) return null;
+  const data = (result.data && typeof result.data === 'object') ? result.data : result;
+  for (const key of [data.renderer, result.renderer, data.type]) {
+    if (key && CUSTOM_RENDERERS.has(key)) return CUSTOM_RENDERERS.get(key);
+  }
+  for (const entry of CUSTOM_RENDERERS.values()) {
+    try { if (entry.match?.(data)) return entry; } catch { /* ignore */ }
+  }
+  return null;
+}
+
+/** True when a result has a registered (runtime) renderer. */
+export function hasResultRenderer(result) {
+  return Boolean(customRendererFor(result));
+}
+
+/** True when a result would only get the plain-text fallback (no card). */
+export function isPlainTextResult(result) {
+  return selectRenderer(result) === TextResultRenderer;
+}
+
+/**
  * Find appropriate renderer for a result
  */
 export function selectRenderer(result) {
+  const custom = customRendererFor(result);
+  if (custom) return custom.Renderer;
   for (const Renderer of RESULT_RENDERERS) {
     if (Renderer.canRender(result)) {
       return Renderer;

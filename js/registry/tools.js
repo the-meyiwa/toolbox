@@ -1646,7 +1646,7 @@ export const TOOLS = [
   {
     id: 'notes',
     name: 'Notes',
-    description: 'Offline note space with folders, checklists, paper textures, and rich formatting',
+    description: 'Notes with folders, tags, checklists and rich formatting, saved on this device',
     category: 'text',
     secondary: ['everyday', 'business'],
     keywords: ['notes', 'notebook', 'memo', 'checklist', 'to-do', 'todo', 'rich text', 'offline notes', 'folders', 'ruled paper', 'scratchpad'],

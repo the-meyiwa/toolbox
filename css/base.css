@@ -273,7 +273,8 @@ svg { flex-shrink: 0; }
 .tool-controls:last-child { margin-bottom: 0; }
 .tool-row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
 .tool-row > .tool-input { flex: 1 1 160px; }
-.tool-split { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-bottom: var(--space-6); }
+.tool-split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); margin-bottom: var(--space-6); }
+.tool-split > * { min-width: 0; }
 .tool-divider { height: 1px; background: var(--line); margin: var(--space-6) calc(var(--space-6) * -1); border: 0; }
 
 .tool-output:has(> .copy-btn) { padding-right: 96px; }
@@ -444,7 +445,7 @@ kbd {
   text-align: center; color: var(--text-2);
 }
 .no-results-title { font-size: 17px; line-height: 24px; font-weight: 600; color: var(--text); }
-.no-results-text { font-size: 14px; line-height: 22px; max-width: 44ch; }
+.no-results-text { font-size: 14px; line-height: 22px; max-width: 44ch; overflow-wrap: anywhere; }
 .no-results .btn { margin-top: var(--space-3); }
 
 /* ---------- Tool card extras ---------- */
@@ -557,7 +558,7 @@ kbd {
 
 @media (max-width: 768px) {
   .hide-mobile { display: none !important; }
-  .tool-split { grid-template-columns: 1fr; }
+  .tool-split { grid-template-columns: minmax(0, 1fr); }
   .btn, .tool-input, .tool-select { min-height: 44px; }
   .btn-sm { min-height: 36px; }
   .fz { min-height: 180px; padding: var(--space-6) var(--space-4); }

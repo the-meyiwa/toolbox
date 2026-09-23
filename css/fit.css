@@ -1,0 +1,64 @@
+/* ==========================================================================
+   Responsive fit — tool-scoped fixes so every tool fits the display at
+   phone, tablet and desktop widths without the page scrolling sideways.
+   Each rule is scoped to one tool (body[data-tool-id] or the tool's own
+   classes) so it cannot disturb any other tool.
+   ========================================================================== */
+
+/* Color Palette: five swatches cannot share 340px side by side with their
+   hex labels, so on phones they stack as rows. */
+body[data-tool-id="color-palette-generator"] #pal-container > div { min-width: 0; }
+@media (max-width: 600px) {
+  body[data-tool-id="color-palette-generator"] #pal-container { flex-direction: column; height: auto !important; }
+  body[data-tool-id="color-palette-generator"] #pal-container > div { min-height: 64px; align-items: center !important; }
+}
+
+/* Browser: on phones the toolbar wraps so the address bar gets its own
+   full-width row under the nav and action buttons. */
+@media (max-width: 768px) {
+  body[data-tool-id="browser"] .browser-app-wrapper { min-width: 0; max-width: 100%; }
+  /* a wrapping column flexbox sizes its lines to max-content: keep it single-line */
+  body[data-tool-id="browser"] .browser-chrome { flex-wrap: nowrap !important; }
+  body[data-tool-id="browser"] .browser-chrome > div { min-width: 0; }
+  body[data-tool-id="browser"] .browser-chrome > div:nth-child(2) { flex-wrap: wrap; justify-content: space-between; }
+  body[data-tool-id="browser"] .brw-address-box { flex: 1 1 100% !important; min-width: 0; }
+  body[data-tool-id="browser"] #brw-url-input { min-width: 0; }
+  body[data-tool-id="browser"] .brw-status-bar { flex-wrap: wrap; gap: 4px 12px; }
+}
+
+/* Logic Lab / Algorithm Lab are 'fill' tools: the panel is a fixed-height
+   column, so their stacked sections must not be squeezed below their
+   content (the circuit canvas collapsed to ~100px). The panel scrolls
+   instead; the algorithm stage takes any spare height. */
+body[data-tool-id="logic-lab"] .lgl > *,
+body[data-tool-id="algorithm-lab"] .alab > * { flex-shrink: 0; }
+body[data-tool-id="algorithm-lab"] .alab-stage { flex-grow: 1; }
+
+/* Browser on desktop: the window fills the fitted panel height, and the page
+   area (not the chrome or status bar) absorbs the difference. */
+@media (min-width: 769px) {
+  body[data-tool-id="browser"] .browser-app-wrapper { flex: 1 1 auto; min-height: 0; width: 100%; }
+  body[data-tool-id="browser"] .browser-chrome,
+  body[data-tool-id="browser"] .brw-status-bar { flex-shrink: 0; }
+  body[data-tool-id="browser"] #brw-viewport { flex: 1 1 auto; min-height: 0 !important; max-height: none !important; }
+}
+body.tool-fit-screen.tool-fill[data-tool-id="logic-lab"] #viewport-content > .lgl:only-child,
+body.tool-fit-screen.tool-fill[data-tool-id="algorithm-lab"] #viewport-content > .alab:only-child { flex: 1 0 auto; }
+
+/* Code Playground on desktop: the IDE and its landing page take exactly the
+   fitted panel height; the landing scrolls inside its own dark surface. */
+@media (min-width: 769px) {
+  body.tool-fit-screen[data-tool-id="code-playground"] #cpg-root { flex: 1 1 auto; height: auto; min-height: 480px; }
+  body.tool-fit-screen[data-tool-id="code-playground"] .cpg-landing { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+}
+
+/* Timer: minutes and seconds sit side by side, and the face never gets
+   squeezed below its content (the panel scrolls on very short windows). */
+body[data-tool-id="timer"] #tm-set { flex-wrap: nowrap; width: min(420px, 100%); }
+body.tool-fit-screen.tool-fill[data-tool-id="timer"] #viewport-content > .tm:only-child { flex: 0 0 auto; }
+
+/* Tuner on phones: an older rule boxed the readout into 200x200, which cut
+   off the status line; let it span the width and size to its content. */
+@media (max-width: 768px) {
+  body[data-tool-id="tuner"] .tun-display { width: 100% !important; max-width: none !important; height: auto !important; padding: 20px 16px !important; }
+}

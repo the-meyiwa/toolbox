@@ -70,7 +70,6 @@ body.is-scrolled #app-header, body.in-tool #app-header { border-bottom-color: va
 [data-theme="dark"] .theme-toggle .icon-moon { display: block; }
 .theme-toggle svg { transition: transform var(--dur-4) var(--ease-spring); }
 .theme-toggle:active svg { transform: rotate(-30deg) scale(.9); }
-#header-fs-exit-btn { display: none !important; }
 
 /* ---------- Pages ---------- */
 .page-view { width: 100%; }
@@ -117,7 +116,10 @@ body.is-scrolled #app-header, body.in-tool #app-header { border-bottom-color: va
 .home-desc { margin-top: var(--space-3); font-size: 17px; line-height: 26px; color: var(--text-2); animation: tb-rise var(--dur-4) var(--ease-out) 120ms both; }
 @keyframes tb-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
-.home-search-wrap { position: relative; width: 100%; margin-top: var(--space-8); animation: tb-rise var(--dur-4) var(--ease-out) 180ms both; }
+/* z-index: the entrance animations below (quick chips, Assistant card) each create a
+   stacking context that comes later in the page, so without this they painted over the
+   open suggestions dropdown. */
+.home-search-wrap { position: relative; z-index: 30; width: 100%; margin-top: var(--space-8); animation: tb-rise var(--dur-4) var(--ease-out) 180ms both; }
 .home-search-field { position: relative; display: flex; align-items: center; }
 .home-search-field > svg { position: absolute; left: 20px; width: 20px; height: 20px; color: var(--text-3); pointer-events: none; }
 .home-search-input {
@@ -308,9 +310,6 @@ body.tool-wide #tool-viewport { max-width: 1480px; }
 .viewport-title-icon svg { width: 20px; height: 20px; }
 .viewport-desc { margin-top: var(--space-1); font-size: 15px; line-height: 22px; color: var(--text-2); }
 .viewport-actions { display: flex; align-items: center; gap: var(--space-2); flex-shrink: 0; }
-.tool-fullscreen-btn .fs-icon-collapse { display: none; }
-body.tool-fullscreen .tool-fullscreen-btn .fs-icon-expand { display: none; }
-body.tool-fullscreen .tool-fullscreen-btn .fs-icon-collapse { display: block; }
 
 #viewport-content {
   position: relative;
@@ -332,7 +331,7 @@ body.tool-bare #viewport-content { background: transparent; border: 0; border-ra
 
 /* Desktop: app-like tools fit the screen and scroll inside */
 @media (min-width: 769px) {
-  body.in-tool.tool-fit-screen #main { height: calc(100dvh - var(--header-h)); overflow: hidden; }
+  body.in-tool.tool-fit-screen #main { flex: none; height: calc(100dvh - var(--header-h)); overflow: hidden; }
   body.in-tool.tool-fit-screen #tool-viewport { height: 100%; display: flex; flex-direction: column; padding-bottom: var(--space-6); }
   body.in-tool.tool-fit-screen .viewport-crumbs,
   body.in-tool.tool-fit-screen .viewport-header { flex-shrink: 0; }
@@ -341,18 +340,6 @@ body.tool-bare #viewport-content { background: transparent; border: 0; border-ra
   body.in-tool.tool-fit-screen.tool-fill #viewport-content { flex: 1 1 auto; display: flex; flex-direction: column; }
   body.in-tool.tool-fit-screen.tool-fill #viewport-content > :only-child { flex: 1; min-height: 0; }
 }
-
-/* Fullscreen: the header steps aside, the tool takes the window */
-body.tool-fullscreen #app-header,
-body.tool-fullscreen #tool-related,
-body.tool-fullscreen #tips-fab,
-body.tool-fullscreen #mobile-nav { display: none !important; }
-body.tool-fullscreen #main { height: 100dvh !important; }
-body.tool-fullscreen #tool-viewport { max-width: none; padding: var(--space-4) var(--space-5); }
-body.tool-fullscreen .viewport-crumbs { display: none; }
-body.tool-fullscreen .viewport-header { margin-bottom: var(--space-3); }
-body.tool-fullscreen #viewport-title { font-size: 20px; line-height: 28px; }
-body.tool-fullscreen .viewport-desc { display: none; }
 
 /* Related tools */
 .tool-related { margin-top: var(--space-8); }
