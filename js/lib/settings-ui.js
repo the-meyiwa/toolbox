@@ -222,6 +222,7 @@ function createModal() {
         <!-- SECTION 4: ASSISTANT AI -->
         <section class="settings-section" id="sec-ai" style="border-top: 1px solid var(--border); padding-top: 28px;">
           <div id="ai-settings-container"></div>
+          <div id="ai-memory-container" style="margin-top:28px;"></div>
         </section>
 
         <section class="settings-section" id="sec-contribution">
@@ -665,6 +666,7 @@ function renderPreferencesSettings() {
 function renderAiSettings() {
   const container = modalEl.querySelector('#ai-settings-container');
   if (!container) return;
+  import('./assistant/memory-ui.js').then(m => m.renderAssistantMemory(modalEl.querySelector('#ai-memory-container'))).catch(() => {});
 
   const user = getCurrentUser();
   const quota = user ? QuotaManager.getQuotaSummary() : null;

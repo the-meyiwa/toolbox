@@ -241,10 +241,73 @@ function decodeBase64Text(b64) {
   } catch { return ''; }
 }
 
+/* PDFs are read here, before the request: the text of every page (with page markers) goes to the
+   model, and a scanned PDF with little text is sent as page images so a vision model can read it. */
+const PDF_TEXT_LIMIT = 150_000;
+const SCAN_PAGES = 4;
+const pdfCache = new WeakMap();   // file object → { text, pages, images }; kept off the stored message
+
+function base64ToBytes(b64) {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+async function preparePdf(file) {
+  if (!file?.base64 || pdfCache.has(file)) return;
+  const type = file.type || file.mimeType || '';
+  if (!/pdf/i.test(type) && !/\.pdf$/i.test(file.name || '')) return;
+  const info = { text: '', pages: 0, images: [] };
+  pdfCache.set(file, info);
+  try {
+    const pdfjs = await import('pdfjs-dist');
+    if (!pdfjs.GlobalWorkerOptions.workerSrc) pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href;
+    const doc = await pdfjs.getDocument({ data: base64ToBytes(file.base64) }).promise;
+    info.pages = doc.numPages;
+    let text = '';
+    for (let n = 1; n <= doc.numPages && text.length < PDF_TEXT_LIMIT; n++) {
+      const page = await doc.getPage(n);
+      const content = await page.getTextContent();
+      const pageText = content.items.map(it => it.str + (it.hasEOL ? '\n' : ' ')).join('').replace(/[ \t]+\n/g, '\n').trim();
+      text += `\n\n[Page ${n}]\n${pageText}`;
+    }
+    info.text = text.trim().slice(0, PDF_TEXT_LIMIT);
+    // Little text per page → probably scanned: render the first pages for a vision model.
+    if (info.text.replace(/\[Page \d+\]/g, '').trim().length < 80 * Math.min(doc.numPages, SCAN_PAGES)) {
+      for (let n = 1; n <= Math.min(doc.numPages, SCAN_PAGES); n++) {
+        const page = await doc.getPage(n);
+        const vp = page.getViewport({ scale: 1.6 });
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.min(vp.width, 1800); canvas.height = Math.round(vp.height * (canvas.width / vp.width));
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport: page.getViewport({ scale: 1.6 * canvas.width / vp.width }) }).promise;
+        info.images.push(canvas.toDataURL('image/jpeg', 0.82));
+      }
+    }
+    doc.destroy?.();
+  } catch (err) {
+    info.error = err?.message || 'could not read the PDF';
+  }
+}
+
 function fileParts(file) {
   if (!file?.base64) return [];
   const type = file.type || file.mimeType || 'application/octet-stream';
   const name = file.name || 'attachment';
+  const pdf = pdfCache.get(file);
+  if (pdf && !pdf.error) {
+    const { text, pages, images } = pdf;
+    const parts = [];
+    if (images.length) {
+      parts.push({ type: 'text', text: `Attached PDF "${name}" (${pages} page${pages === 1 ? '' : 's'}) looks scanned; the first ${images.length} page${images.length === 1 ? ' is' : 's are'} attached as images. Read them carefully.` });
+      images.forEach(url => parts.push({ type: 'image_url', image_url: { url } }));
+    }
+    if (text.replace(/\[Page \d+\]/g, '').trim()) {
+      parts.push({ type: 'text', text: `Attached PDF "${name}" (${pages} pages). Text by page${text.length >= PDF_TEXT_LIMIT ? ' (long document: later pages cut off)' : ''}:\n${text}\n\nWhen you answer from it, cite the page numbers.` });
+    }
+    if (parts.length) return parts;
+  }
   if (type.startsWith('image/')) {
     return [{ type: 'image_url', image_url: { url: `data:${type};base64,${file.base64}` } }];
   }
@@ -646,6 +709,9 @@ export async function streamChatCompletion({
     for (const g of activeGroups) for (const t of TOOL_GROUPS[g]?.tools || []) names.add(t);
     return [...names].map(n => byName.get(n)).filter(Boolean);
   };
+  // Read attached PDFs (last two user messages) before building the request.
+  const recentFiles = [currentFile, ...history.filter(m => m.role === 'user').slice(-2).map(m => m.fileData)].filter(Boolean);
+  await Promise.all(recentFiles.map(f => preparePdf(f).catch(() => {})));
   const messages = buildMessages(history, currentFile, system);
   let sticky = provider || getPreferredProvider() || undefined;
   const limit = maxSteps || (selectedMode === 'fast' ? 6 : selectedMode === 'auto' || selectedMode === 'files' ? 16 : 24);
