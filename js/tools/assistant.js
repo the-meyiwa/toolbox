@@ -1285,6 +1285,12 @@ function mountAssistant(container, state) {
       msg.model = msg.model || result?.model || null;
       msg.providerLabel = msg.providerLabel || result?.provider || null;
       msg.status = abort.signal.aborted ? 'stopped' : 'success';
+      // Figures the model mistyped from a tool result are put right (see checkFigures).
+      if (result?.fixes?.length) {
+        const apply = (t) => result.fixes.reduce((acc, f) => acc.split(f.from).join(f.to), String(t || ''));
+        for (const seg of msg.segments || []) if (seg.k === 'text') seg.text = apply(seg.text);
+        msg.content = apply(msg.content);
+      }
     } catch (err) {
       const aborted = err?.name === 'AbortError' || abort.signal.aborted;
       msg.status = aborted ? 'stopped' : 'failed';

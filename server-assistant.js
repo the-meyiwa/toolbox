@@ -37,7 +37,7 @@ const PROVIDERS = [
     label: 'Gemini',
     key: () => process.env.GEMINI_API_KEY,
     url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-    models: () => [process.env.ASSISTANT_GEMINI_MODEL, 'gemini-flash-latest', 'gemini-2.5-flash'].filter(Boolean),
+    models: () => [process.env.ASSISTANT_GEMINI_MODEL, 'gemini-flash-latest', 'gemini-3.6-flash', 'gemini-flash-lite-latest'].filter(Boolean),
     vision: true,
   },
   {
@@ -61,7 +61,7 @@ const PROVIDERS = [
     label: 'Groq',
     key: () => process.env.GROQ_API_KEY,
     url: 'https://api.groq.com/openai/v1/chat/completions',
-    models: () => [process.env.ASSISTANT_GROQ_MODEL, 'openai/gpt-oss-120b', 'llama-3.3-70b-versatile'].filter(Boolean),
+    models: () => [process.env.ASSISTANT_GROQ_MODEL, 'openai/gpt-oss-120b', 'openai/gpt-oss-20b'].filter(Boolean),
     vision: false,
   },
   {
@@ -77,9 +77,10 @@ const PROVIDERS = [
 
 // Which provider to try first for each kind of job.
 const ORDER = {
-  fast: ['groq', 'gemini', 'openai', 'deepseek', 'openrouter'],
-  auto: ['gemini', 'groq', 'openai', 'deepseek', 'openrouter'],
-  reasoning: ['gemini', 'openai', 'deepseek', 'openrouter', 'groq'],
+  // Groq leads everyday chat: it is the fastest and its free tier is the most generous.
+  fast: ['groq', 'gemini', 'openrouter', 'openai', 'deepseek'],
+  auto: ['groq', 'gemini', 'openrouter', 'openai', 'deepseek'],
+  reasoning: ['gemini', 'groq', 'openai', 'deepseek', 'openrouter'],
 };
 // How long the first model gets to start answering before a second one is started alongside it.
 const HEDGE_MS = { fast: 3500, auto: 5000, reasoning: 9000 };
@@ -115,7 +116,12 @@ function remember(p, m, err, { tools, bytes }) {
   const minutes = (n) => Date.now() + n * 60_000;
   let key = hkey(p, m, false);
   let until = minutes(2);
-  if (status === 401 || status === 403 || status === 402 || /quota|billing|credit|insufficient|balance|payment|exceeded your current/i.test(msg)) {
+  const retryIn = /retry in ([\d.]+)s/i.exec(msg);
+  if (/no credits|insufficient balance|add credits|billing details|payment required/i.test(msg) && !retryIn) {
+    until = minutes(360);            // an account with no credit stays that way until someone pays
+  } else if (retryIn) {
+    until = Date.now() + Math.min(Number(retryIn[1]) * 1000 + 1000, 6 * 60 * 60_000);   // free-tier quota: the provider says when
+  } else if (status === 401 || status === 403 || status === 402 || /quota|billing|credit|insufficient|balance|payment|exceeded your current/i.test(msg)) {
     until = minutes(30);
   } else if (status === 404 || /model.*(not found|does not exist|not supported|deprecat|decommission)/i.test(msg)) {
     until = minutes(360);

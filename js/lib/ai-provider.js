@@ -340,6 +340,65 @@ function toolResultText(result) {
   return text.length > 24000 ? `${text.slice(0, 24000)}… (truncated)` : text;
 }
 
+/* ---------------- figure check ---------------- */
+
+// Models sometimes retype a tool's figure wrongly (₦2,878,750 → ₦2,875,750). After a reply,
+// any large number in the text that is almost — but not exactly — a number a tool returned
+// is corrected to the tool's value.
+function toolNumbers(results) {
+  const out = new Set();
+  const walk = (v, depth = 0) => {
+    if (depth > 6 || v == null) return;
+    if (typeof v === 'number' && Number.isFinite(v)) { out.add(v); out.add(Math.round(v * 100) / 100); return; }
+    if (typeof v === 'string') {
+      for (const m of v.matchAll(/-?\d[\d,]*(?:\.\d+)?/g)) { const n = Number(m[0].replace(/,/g, '')); if (Number.isFinite(n)) out.add(n); }
+      return;
+    }
+    if (Array.isArray(v)) { v.slice(0, 200).forEach(x => walk(x, depth + 1)); return; }
+    if (typeof v === 'object') for (const x of Object.values(v)) walk(x, depth + 1);
+  };
+  results.forEach(r => walk(r));
+  return [...out];
+}
+
+function formatLike(original, value) {
+  const decimals = (original.split('.')[1] || '').length;
+  const fixed = value.toFixed(decimals);
+  if (!original.includes(',')) return fixed;
+  const [int, dec] = fixed.split('.');
+  return int.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (dec ? `.${dec}` : '');
+}
+
+export function checkFigures(text, results) {
+  const known = toolNumbers(results).filter(n => Math.abs(n) >= 1000);
+  if (!known.length || !text) return [];
+  const fixes = [];
+  const seen = new Set();
+  for (const m of String(text).matchAll(/\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d{4,}(?:\.\d+)?/g)) {
+    const raw = m[0];
+    if (seen.has(raw)) continue;
+    seen.add(raw);
+    const value = Number(raw.replace(/,/g, ''));
+    if (!Number.isFinite(value) || value < 1000) continue;
+    if (/^(19|20)\d\d$/.test(raw)) continue;                          // years
+    if (known.some(k => Math.abs(k - value) < 0.005)) continue;       // exact (to the cent)
+    // Near miss: same number of integer digits and within 0.5%.
+    const digits = String(Math.trunc(Math.abs(value))).length;
+    const close = known.filter(k => String(Math.trunc(Math.abs(k))).length === digits && Math.abs(k - value) / Math.abs(k) < 0.005);
+    if (close.length !== 1) continue;                                 // ambiguous or unrelated: leave it
+    // Only typo-like slips: at most two digits differ, and the tool's figure is not already quoted
+    // elsewhere in the reply (then the other number is probably deliberate).
+    const a = String(Math.trunc(Math.abs(value))), b = String(Math.trunc(Math.abs(close[0])));
+    let diff = 0;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) diff++;
+    if (diff > 2) continue;
+    const plain = String(text).replace(/,/g, '');
+    if (plain.includes(b)) continue;
+    fixes.push({ from: raw, to: formatLike(raw, close[0]) });
+  }
+  return fixes;
+}
+
 /* ---------------- streaming ---------------- */
 
 async function authHeader(forceRefresh = false) {
@@ -704,8 +763,12 @@ export async function streamChatCompletion({
     onToken(fullText);
   }
 
+  const fixes = executed.length ? checkFigures(fullText, executed) : [];
+  for (const f of fixes) fullText = fullText.split(f.from).join(f.to);
+
   onStatus({ type: 'done' });
   return {
+    fixes,
     text: fullText,
     thinking: fullThinking,
     taskState,
