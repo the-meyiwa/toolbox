@@ -858,6 +858,10 @@ export async function pollP2PSignals(roomCode, sinceDate) {
 /**
  * Persist Assistant conversation history to Supabase cloud table
  */
+// Set when the assistant_conversations table does not exist, so the app stops asking for it.
+let assistantCloudMissing = false;
+const isRealUserId = (id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id || ''));
+
 export async function saveAssistantConversationToCloud(conversation) {
   const user = getCurrentUser();
   if (!user || !user.email) return false;
@@ -870,23 +874,26 @@ export async function saveAssistantConversationToCloud(conversation) {
   const config = getSupabaseConfig();
   if (!config.url || !config.anonKey) return true;
 
+  if (assistantCloudMissing || !isRealUserId(user.id) || !user.token) return false;
   try {
-    await fetch(`${config.url}/rest/v1/assistant_conversations`, {
+    const res = await fetch(`${config.url}/rest/v1/assistant_conversations?on_conflict=user_id`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': config.anonKey,
-        'Authorization': `Bearer ${user.token || config.anonKey}`,
-        'Prefer': 'resolution=merge-duplicates'
+        'Authorization': `Bearer ${user.token}`,
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
       },
       body: JSON.stringify({
+        user_id: user.id,
         user_email: user.email,
         username: user.username || 'user',
         conversation_data: conversation,
         updated_at: new Date().toISOString()
       })
     });
-    return true;
+    if (res.status === 404) { assistantCloudMissing = true; return false; }   // table not created yet (supabase/assistant_conversations.sql)
+    return res.ok;
   } catch (err) {
     console.warn('[Supabase] Failed to sync assistant conversation to cloud:', err);
     return false;
@@ -910,13 +917,15 @@ export async function fetchAssistantConversationsFromCloud() {
   const config = getSupabaseConfig();
   if (!config.url || !config.anonKey) return localData;
 
+  if (assistantCloudMissing || !isRealUserId(user.id) || !user.token) return localData;
   try {
-    const res = await fetch(`${config.url}/rest/v1/assistant_conversations?user_email=eq.${encodeURIComponent(user.email)}&select=*&limit=1`, {
+    const res = await fetch(`${config.url}/rest/v1/assistant_conversations?user_id=eq.${encodeURIComponent(user.id)}&select=conversation_data&limit=1`, {
       headers: {
         'apikey': config.anonKey,
-        'Authorization': `Bearer ${user.token || config.anonKey}`
+        'Authorization': `Bearer ${user.token}`
       }
     });
+    if (res.status === 404) assistantCloudMissing = true;
     if (res.ok) {
       const rows = await res.json();
       if (rows && rows[0]?.conversation_data) {
