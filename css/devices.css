@@ -242,3 +242,70 @@
   background: transparent !important; border-radius: 0 !important; outline: none;
 }
 .dv-pop-search:focus-within, .dv-rank-search:focus-within { box-shadow: 0 0 0 2px var(--focus); }
+
+/* ---------- blank start: two empty slots + optional starting points ---------- */
+.dv-picker-btn.is-empty { color: var(--text); }
+.dv-picker-btn.is-empty::before { content: "Search"; }
+.dv-slot-empty { grid-template-areas: "pick" "main"; grid-template-columns: minmax(0, 1fr); animation: none; border-style: dashed; border-color: var(--line-strong); background: transparent; }
+.dv-slot-cta {
+  display: flex; align-items: center; gap: var(--space-4); width: 100%; min-height: 96px; padding: var(--space-3); border-radius: var(--radius-md);
+  text-align: left; color: var(--text-2); transition: background-color .15s ease, color .15s ease;
+}
+.dv-slot-cta:hover { background: var(--surface-2); color: var(--text); }
+.dv-slot-glyph { width: 72px; height: 72px; flex: none; display: grid; place-items: center; border-radius: 20px; background: var(--surface-2); color: var(--text-3); }
+.dv-slot-cta:hover .dv-slot-glyph { background: var(--surface-3); color: var(--text-2); }
+.dv-slot-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.dv-slot-text strong { font-size: 17px; font-weight: 600; color: var(--text); letter-spacing: -.01em; }
+.dv-slot-text small { font-size: 13px; color: var(--text-3); }
+.dv-slot-plus { width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line-strong); color: var(--text); }
+.dv-start h3 { margin-bottom: 6px; }
+.dv-start > p { margin: 0 0 var(--space-4); line-height: 1.55; max-width: 720px; }
+.dv-start > p strong { color: var(--text); font-weight: 600; }
+.dv-start-chips-head { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin-bottom: var(--space-2); }
+.dv-start-chips-head .dv-muted { font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; }
+.dv-start-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.dv-chip { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 7px 8px 7px 14px; border-radius: var(--radius-pill); background: var(--surface); border: 1px solid var(--line-strong); font-size: 13px; color: var(--text); transition: border-color .15s ease, background-color .15s ease; }
+.dv-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dv-chip em { font-style: normal; font: 600 12px/1 var(--font-sans); font-variant-numeric: tabular-nums; padding: 4px 7px; border-radius: var(--radius-pill); background: var(--surface-2); color: var(--text-2); }
+.dv-chip:hover { border-color: var(--line-control); background: var(--surface-2); }
+.dv-chip:hover em { background: var(--surface); }
+.dv-clear { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--text-3); border: 1px solid transparent; transition: color .15s ease, border-color .15s ease; }
+.dv-clear:hover { color: var(--text); border-color: var(--line-strong); }
+
+/* ---------- verdicts: better tech vs better buy ---------- */
+.dv-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.dv-badge { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px 0 7px; border-radius: var(--radius-pill); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.dv-badge svg { width: 13px; height: 13px; }
+.dv-badge.tech { background: var(--ink); color: var(--text-inverse); }
+.dv-badge.buy { background: transparent; color: var(--text); box-shadow: inset 0 0 0 1.5px var(--ink); }
+.dv-verdicts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.dv-verdict { display: flex; flex-direction: column; gap: 6px; }
+.dv-verdict-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 2px; }
+.dv-verdict-icon { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+.dv-verdict.tech .dv-verdict-icon { background: var(--ink); color: var(--text-inverse); }
+.dv-verdict.buy .dv-verdict-icon { box-shadow: inset 0 0 0 1.5px var(--ink); color: var(--text); }
+.dv-verdict-kind { font-size: 12px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text); }
+.dv-verdict-head small { font-size: 12px; color: var(--text-3); }
+.dv-verdict-name { font-size: 20px; line-height: 1.2; font-weight: 650; letter-spacing: -.02em; color: var(--text); overflow-wrap: anywhere; }
+.dv-verdict:not(.has-win) .dv-verdict-name { color: var(--text-2); }
+.dv-verdict p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--text-2); }
+.dv-verdict-fig { margin-top: auto; padding-top: var(--space-2); font-size: 12.5px; font-weight: 500; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.dv-verdict-sum { grid-column: 1 / -1; margin: 0; padding: 10px 14px; border-radius: var(--radius-md); background: var(--surface-2); font-size: 13.5px; color: var(--text-2); text-align: center; }
+.dv-verdict-sum.same { color: var(--text); font-weight: 500; }
+.dv-why-buy { display: flex; gap: var(--space-3); align-items: flex-start; margin-top: var(--space-2); padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface-2); }
+.dv-why-buy-icon { width: 22px; height: 22px; flex: none; border-radius: 50%; display: grid; place-items: center; box-shadow: inset 0 0 0 1.5px var(--text-2); color: var(--text-2); margin-top: 1px; }
+.dv-why-buy-icon svg { width: 12px; height: 12px; }
+.dv-why-buy > span:last-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dv-why-buy strong { font-size: 14px; font-weight: 500; color: var(--text); }
+.dv-why-buy small { font-size: 12.5px; color: var(--text-3); }
+
+@media (max-width: 900px) {
+  .dv-verdicts { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .dv-slot-cta { min-height: 72px; padding: var(--space-2); gap: var(--space-3); }
+  .dv-slot-glyph { width: 56px; height: 56px; border-radius: 16px; }
+  .dv-slot-glyph svg { width: 36px; height: 36px; }
+  .dv-verdict-name { font-size: 18px; }
+  .dv-chip { font-size: 12.5px; }
+}

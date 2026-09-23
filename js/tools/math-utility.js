@@ -1,13 +1,18 @@
 /* ============================================================
    TOOLBOX — Math Utility
-   Comprehensive mathematical knowledge, reference, computation,
-   and deterministic verification layer.
+   A computational maths workbench: the toolkit frontier models
+   reach for (SymPy / NumPy / SciPy-style), in the browser,
+   deterministic and verified.
 
-   Modules:
-   1. Mathematical Knowledge Library (24 categories, theorems, laws, formulas, proof status)
-   2. Deterministic Solver & Lab (Equations, calculus, matrices, number theory, combinatorics)
-   3. Collatz & Sequence Explorer (Deterministic Collatz with unproven conjecture tag, Fibonacci)
-   4. Four-Figure Tables & Mathematical Constants (Table approximations vs Machine values)
+   - One command bar ("integrate x^2 sin x dx", "eigen [[2,1],[1,2]]")
+     with live LaTeX preview, mode rail, examples and syntax help
+   - Engine: js/lib/mathx/* (exact BigInt rationals, CAS, calculus,
+     equations & ODEs, linear algebra, statistics, optimisation,
+     number theory, special functions) — DOM-free, node-testable
+   - Results as cards: LaTeX input/result, steps, verification line,
+     interactive monochrome plots, copy as LaTeX / plain text
+   - Reference: knowledge library, sequences & Collatz, four-figure
+     tables and constants (kept from the previous version)
    ============================================================ */
 
 import {
@@ -15,51 +20,28 @@ import {
   PROOF_STATUS,
   MATHEMATICAL_CONSTANTS,
   searchMathKnowledge,
-  getMathematicalConstant,
   lookupFourFigureTable
 } from '../lib/math-knowledge.js';
 
-import {
-  renderMath,
-  renderMathInText
-} from '../lib/math-renderer.js';
+import { renderMath, renderMathInText } from '../lib/math-renderer.js';
 
 import {
-  calculateMath,
-  solveQuadratic,
-  solveLinear,
   calculateCollatz,
-  calculateDerivative,
-  calculateIntegral,
-  calculateMatrixDeterminant,
-  calculateMatrixInverse,
-  calculateGcd,
-  calculateLcm,
-  calculateTotient,
-  isPrime,
-  primeFactors,
   generateFibonacci,
-  calculatePermutations,
-  calculateCombinations,
-  calculateNewtonRaphson,
-  solveOdeInitialValue,
-  calculateComplex,
-  calculateEigenvalues2x2,
-  solveLinearSystem,
-  calculateModularArithmetic,
-  calculateLinearRegression,
   calculateSequenceTerm,
   generateSequenceRange,
-  analyzeCollatz,
   compareSequences,
-  listAllSequences,
-  formatSequenceValue
+  listAllSequences
 } from '../lib/math-engine.js';
+
+import { run as runCommand, toPlainText, EXAMPLES } from '../lib/mathx/command.js';
+import { parse as parseExpr, toLatex as exprLatex } from '../lib/mathx/expr.js';
+import { mountPlot } from '../lib/mathx/plot-view.js';
 
 import { copyText } from '../utils.js';
 
 function escapeHtml(str) {
-  if (!str) return '';
+  if (str === null || str === undefined) return '';
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -71,40 +53,171 @@ function escapeHtml(str) {
 const SVG_ICONS = {
   sigma: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 4H6l6 8-6 8h12"/></svg>',
   book: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
-  play: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>',
   check: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
   table: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>',
-  copy: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'
+  copy: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  run: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>',
+  x: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  redo: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>',
+  warn: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5v.5"/></svg>',
+  chart: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15c2-6 4-6 6-2s4 3 6-4"/></svg>',
+  cmd: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l6-5-6-5"/><path d="M12 19h8"/></svg>'
 };
+
+const MODES = [
+  { id: 'algebra', label: 'Algebra', icon: '<path d="M4 7h7M7.5 3.5v7M13 17h7"/><path d="M4 20l6-6M4 14l6 6"/>' },
+  { id: 'calculus', label: 'Calculus', icon: '<path d="M9 21c-1.5 0-2-1-2-2.5V5.5C7 4 7.5 3 9 3"/><path d="M13 17c1.5-4 4.5-4 6-10"/>' },
+  { id: 'equations', label: 'Equations', icon: '<path d="M5 9h14M5 15h14"/>' },
+  { id: 'linalg', label: 'Linear algebra', icon: '<path d="M7 4H5v16h2M17 4h2v16h-2"/><path d="M10 9h.01M14 9h.01M10 15h.01M14 15h.01"/>' },
+  { id: 'stats', label: 'Statistics', icon: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>' },
+  { id: 'optimize', label: 'Optimisation', icon: '<path d="M3 5c4 0 5 14 9 14s5-14 9-14"/><circle cx="12" cy="19" r="1.4"/>' },
+  { id: 'number', label: 'Number theory', icon: '<path d="M9 3 7 21M17 3l-2 18M4 8h17M3 16h17"/>' },
+  { id: 'plot', label: 'Plot', icon: '<path d="M3 3v18h18"/><path d="M7 15c2-6 4-6 6-2s4 3 6-4"/>' },
+  { id: 'reference', label: 'Reference', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>' }
+];
+
+const SYNTAX = {
+  algebra: [['simplify E', 'canonical form, cancels, trig identities'], ['expand E', 'multiply out'], ['factor E', 'over ℚ; integers via Pollard ρ'], ['apart E', 'partial fractions'], ['collect E, x', 'group powers of x'], ['subs E, x=2', 'substitute'], ['(3+4i)/(1-2i)', 'exact complex & surd arithmetic']],
+  calculus: [['diff E [, x, n]', 'derivative, steps, finite-difference check'], ['integrate E dx', 'antiderivative, verified by differentiation'], ['integrate E from a to b', 'exact + adaptive quadrature (±oo ok)'], ['limit E x->a[+|-]', "L'Hôpital, degree rule, Richardson"], ['series E at a order n', 'Taylor / Maclaurin'], ['sum E k=1..oo', 'closed forms, telescoping, ζ'], ['grad / hessian / jacobian', 'multivariable']],
+  equations: [['solve E = F', 'exact roots, surds, general trig solutions'], ['solve e1, e2 [for x, y]', 'exact linear / substitution / Newton'], ['solve E < F', 'sign-chart inequality'], ['roots p(x)', 'all complex roots (Aberth)'], ["dsolve y''+y=0, y(0)=1", 'symbolic ODE + IVP'], ["ode x'=y, y'=-x, x(0)=1, y(0)=0, t=0..10", 'adaptive RK45 + plot'], ['nsolve E, x0', "Newton's method"]],
+  linalg: [['det / inverse / rank A', 'exact rational'], ['rref A', 'row operations shown'], ['eigen A', 'exact via char. poly + QR / Jacobi'], ['svd / lu / qr / cholesky A', 'factorisations with residual'], ['nullspace A', 'exact basis'], ['solve A b', 'Ax = b, exact'], ['expm A · lstsq A b', 'matrix exponential, least squares']],
+  stats: [['stats 1, 2, 3, …', 'descriptive statistics + CI'], ['normal(μ,σ) cdf x', 'also t(ν) chi2(k) f(a,b) binomial(n,p) poisson(λ) gamma beta'], ['… pdf | cdf | sf | quantile', 'density, CDF, tail, inverse'], ['ttest [..] mu=0 · ttest2 [..] [..]', 't-tests (Welch)'], ['chisq [[..],[..]] · anova [..] [..]', 'χ², one-way ANOVA'], ['regress [x] [y]', 'linear · poly 3 · exp · power'], ['corr [x] [y] · ci [..] 95%', 'Pearson/Spearman, intervals']],
+  optimize: [['minimize E [on [a,b]]', '1-D Brent'], ['minimize E(x,y) [from [..]]', 'BFGS + Nelder–Mead'], ['maximize c·x subject to …', 'exact simplex (LP)'], ['minimize E subject to g = 0', 'augmented Lagrangian'], ['catalan / stirling / partitions n', 'combinatorics (BigInt)']],
+  number: [['factor n', 'Pollard–Brent ρ, Miller–Rabin'], ['isprime n · nextprime n', 'deterministic < 3.3·10²⁴'], ['gcd a, b · lcm a, b', 'with Bézout'], ['a^b mod m · modinv a mod m', 'modular arithmetic'], ['crt 2 mod 3, 3 mod 5', 'Chinese remainder'], ['cf sqrt(7) · pell 61', 'continued fractions, Pell'], ['255 to base 2 · pi to 500 digits', 'bases, constants']],
+  plot: [['plot f, g [from a to b]', 'zoom with wheel / pinch, drag to pan'], ['plot x^2 + y^2 = 4', 'implicit curves'], ['parametric x(t), y(t)', 'parametric'], ['polar r(t)', 'polar'], ["slope field y' = f(x, y)", 'click to trace solutions'], ['vector field P, Q', 'vector fields'], ['surface f(x, y)', '3D, drag to rotate']]
+};
+
+const HISTORY_KEY = 'toolbox.math.history.v2';
+const KATEX_BASE = 'https://cdn.jsdelivr.net/npm/katex@0.16.22/dist';
+let katexPromise = null;
+function ensureKatex() {
+  if (typeof window === 'undefined') return Promise.resolve(null);
+  if (window.katex) return Promise.resolve(window.katex);
+  if (katexPromise) return katexPromise;
+  katexPromise = new Promise((resolve) => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet'; link.href = `${KATEX_BASE}/katex.min.css`; link.crossOrigin = 'anonymous';
+    document.head.appendChild(link);
+    const s = document.createElement('script');
+    s.src = `${KATEX_BASE}/katex.min.js`; s.crossOrigin = 'anonymous'; s.async = true;
+    const timer = setTimeout(() => resolve(null), 12000);
+    s.onload = () => { clearTimeout(timer); resolve(window.katex || null); if (window.katex) window.dispatchEvent(new CustomEvent('toolbox:katex-ready')); };
+    s.onerror = () => { clearTimeout(timer); resolve(null); };
+    document.head.appendChild(s);
+  });
+  return katexPromise;
+}
+function renderTex(el, tex, display = true) {
+  if (!el) return;
+  el.dataset.tex = tex;
+  el.dataset.display = display ? '1' : '0';
+  if (!tex) { el.innerHTML = ''; return; }
+  if (window.katex) {
+    try { window.katex.render(tex, el, { displayMode: display, throwOnError: false, strict: 'ignore', output: 'htmlAndMathml' }); return; } catch { /* fall back */ }
+  }
+  el.innerHTML = renderMath(fallbackTex(tex), { displayMode: display });
+}
+/** Rewrite constructs the built-in MathML fallback does not know (used only when KaTeX is unavailable). */
+function fallbackTex(tex) {
+  // column vectors -> (a, b)^T so they can nest inside aligned rows
+  tex = tex.replace(/\\begin\{pmatrix\}((?:(?!\\begin|\\end|&).)*?)\\end\{pmatrix\}/g, (m, body) => (/\\\\/.test(body) ? `\\left(${body.split('\\\\').map((q) => q.trim()).join(',\\, ')}\\right)^{T}` : m));
+  // true minus signs outside \text{…}
+  tex = tex.split(/(\\text\{[^}]*\})/).map((part, i) => (i % 2 ? part : part.replace(/-/g, '−'))).join('');
+  return tex
+    .replace(/\\[td]frac/g, '\\frac')
+    .replace(/\\binom\{([^{}]*)\}\{([^{}]*)\}/g, '\\begin{pmatrix} $1 \\\\ $2 \\end{pmatrix}')
+    .replace(/\\begin\{array\}\{[^}]*\}/g, '\\begin{matrix}').replace(/\\end\{array\}/g, '\\end{matrix}')
+    .replace(/\\overline\{([^{}]*)\}/g, '\\left($1\\right)')
+    .replace(/\\[lr]Vert/g, '‖').replace(/\\lfloor/g, '⌊').replace(/\\rfloor/g, '⌋').replace(/\\lceil/g, '⌈').replace(/\\rceil/g, '⌉')
+    .replace(/\\tilde\\infty/g, '\\infty').replace(/\\Big(?=[|(\[])/g, '').replace(/\\bmod/g, '\\text{ mod }')
+    .replace(/\\;/g, '\\,').replace(/\\!/g, '')
+    .replace(/\\(sin|cos|tan|ln|log|exp|arcsin|arccos|arctan|sinh|cosh|tanh)((?:\^\{[^}]*\})?)\s+(?=[A-Za-z0-9\\])/g, '\\$1$2\\,');
+}
+function rerenderTex(root) {
+  root.querySelectorAll('[data-tex]').forEach((el) => renderTex(el, el.dataset.tex, el.dataset.display === '1'));
+}
+
+function loadHistory() {
+  try { const v = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; }
+}
+function saveHistory(items) {
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, 30))); } catch { /* storage unavailable */ }
+}
+function serialise(r) {
+  const { plot, ...rest } = r;
+  return { ...rest, hadPlot: Boolean(plot), big: r.big ? r.big.slice(0, 12000) : undefined };
+}
+
+/** best-effort LaTeX preview of what the user is typing */
+function previewLatex(src) {
+  const s = src.trim();
+  if (!s) return '';
+  const tryParse = (t) => { try { return exprLatex(parseExpr(t)); } catch { return null; } };
+  let t = s.replace(/^(simplify|expand|factor|apart|together|cancel|diff|derivative|integrate|int|limit|lim|series|taylor|sum|product|solve|dsolve|ode|roots|nsolve|det|inverse|inv|rank|rref|eigen|svd|lu|qr|cholesky|expm|nullspace|plot|graph|surface|polar|parametric|implicit|minimize|maximize|min|max|isprime|collect|grad|gradient|hessian|jacobian)\s+(of\s+)?/i, '');
+  t = t.replace(/\s+d[a-z]\s*$/i, '').replace(/\s+(from|on|over|at|order|subject to|s\.t\.|for)\s+.*$/i, '').replace(/\s+[a-z]\s*(->|→).*$/i, '').replace(/\s+[a-z]\s*=\s*[^,]*\.\..*$/i, '');
+  const parts = t.split(/,(?![^[(]*[\])])/);
+  const first = tryParse(t) || tryParse(parts[0]);
+  return first;
+}
 
 export default {
   _cleanup: [],
+  _plots: [],
 
-  render(container, { analytics, tool, artifact } = {}) {
+  render(container) {
     this.destroy();
     this._cleanup = [];
+    this._plots = [];
+    const on = (el, ev, fn, opts) => { el.addEventListener(ev, fn, opts); this._cleanup.push(() => el.removeEventListener(ev, fn, opts)); };
 
     container.innerHTML = `
-      <div class="math-utility-wrapper" style="display:flex; flex-direction:column; gap:20px; font-family:var(--sans, sans-serif); color:var(--black);">
-
-        <!-- Top Tab Bar -->
-        <div class="tool-controls" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; border-bottom:1px solid var(--border); padding-bottom:14px;">
-          <div class="math-tab-nav" role="tablist" aria-label="Math Utility Views">
-            <button type="button" class="math-tab-btn active" data-tab="knowledge">
-              ${SVG_ICONS.book} Knowledge Library
-            </button>
-            <button type="button" class="math-tab-btn" data-tab="solver">
-              ${SVG_ICONS.play} Solver & Computation Lab
-            </button>
-            <button type="button" class="math-tab-btn" data-tab="collatz">
-              ${SVG_ICONS.sigma} Collatz & Sequences
-            </button>
-            <button type="button" class="math-tab-btn" data-tab="tables">
-              ${SVG_ICONS.table} Tables & Constants
-            </button>
+      <div class="mx" data-mode="calculus">
+        <form class="mx-bar" autocomplete="off" novalidate>
+          <label class="visually-hidden" for="mx-input">Ask or type an expression</label>
+          <div class="mx-bar-field">
+            <span class="mx-bar-icon" aria-hidden="true">${SVG_ICONS.cmd}</span>
+            <input id="mx-input" class="mx-input" type="text" spellcheck="false" autocapitalize="off" enterkeyhint="go"
+              placeholder="Ask or type an expression — e.g. integrate x^2 sin x dx">
+            <button type="submit" class="mx-run" aria-label="Run">${SVG_ICONS.run}<span>Run</span></button>
           </div>
+          <div class="mx-preview" aria-live="polite"><span class="mx-preview-label">Preview</span><span class="mx-preview-tex"></span></div>
+        </form>
+
+        <nav class="mx-modes" role="tablist" aria-label="Math areas">
+          ${MODES.map((m) => `<button type="button" role="tab" class="mx-mode" data-mode="${m.id}" aria-selected="${m.id === 'calculus'}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${m.icon}</svg>${m.label}</button>`).join('')}
+        </nav>
+
+        <div class="mx-work">
+          <section class="mx-feed-col" aria-label="Results">
+            <div class="mx-feed-head">
+              <h3>Results</h3>
+              <button type="button" class="btn btn-ghost mx-clear" hidden>Clear</button>
+            </div>
+            <div class="mx-feed" aria-live="polite"></div>
+          </section>
+          <aside class="mx-aside" aria-label="Examples and syntax">
+            <div class="mx-card mx-examples">
+              <div class="mx-aside-title">Try</div>
+              <div class="mx-chips"></div>
+            </div>
+            <details class="mx-card mx-syntax" open>
+              <summary class="mx-aside-title">Syntax</summary>
+              <dl class="mx-syntax-list"></dl>
+            </details>
+            <div class="mx-card mx-about">
+              <div class="mx-aside-title">How answers are checked</div>
+              <p>Exact arithmetic uses BigInt rationals. Every result carries a verification line: derivatives against finite differences, integrals by differentiating back and by adaptive quadrature, roots by substitution, matrix factorisations by reconstruction.</p>
+            </div>
+          </aside>
         </div>
 
+        <section class="mx-reference" hidden>
+          <nav class="mx-subtabs" role="tablist" aria-label="Reference sections">
+            <button type="button" role="tab" class="mx-subtab" data-ref="knowledge" aria-selected="true">${SVG_ICONS.book} Knowledge library</button>
+            <button type="button" role="tab" class="mx-subtab" data-ref="collatz" aria-selected="false">${SVG_ICONS.sigma} Sequences &amp; Collatz</button>
+            <button type="button" role="tab" class="mx-subtab" data-ref="tables" aria-selected="false">${SVG_ICONS.table} Tables &amp; constants</button>
+          </nav>
+          <div class="math-utility-wrapper">
         <!-- 1. TAB: KNOWLEDGE LIBRARY -->
         <div class="math-pane active" id="pane-knowledge" style="display:flex; flex-direction:column; gap:20px;">
           <!-- Filter Controls Strip -->
@@ -138,66 +251,6 @@ export default {
           <!-- Knowledge Cards Grid -->
           <div id="math-lib-results-grid" class="dynamic-tile-grid"></div>
         </div>
-
-        <!-- 2. TAB: SOLVER & COMPUTATION LAB -->
-        <div class="math-pane" id="pane-solver" style="display:none; flex-direction:column; gap:20px;">
-          <div class="math-split-grid">
-            <!-- Left: Operation Selector & Input Form -->
-            <div style="padding:16px; border:1px solid var(--border); border-radius:12px; background:var(--bg-card); box-shadow:0 2px 8px rgba(0,0,0,0.02); display:flex; flex-direction:column; gap:12px;">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-weight:700; font-size:0.9rem; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.04em;">Deterministic Solver</span>
-              </div>
-
-              <div>
-                <label class="tool-label" style="font-size:0.75rem; font-weight:700; margin-bottom:4px; display:block;">Operation</label>
-                <select id="math-solver-op" class="tool-select" style="width:100%; font-size:0.85rem; padding:7px 10px;">
-                  <option value="evaluate">Evaluate Expression (Arithmetic / Scientific)</option>
-                  <option value="solve_quadratic">Solve Quadratic Equation (ax² + bx + c = 0)</option>
-                  <option value="solve_linear">Solve Linear Equation (ax + b = 0)</option>
-                  <option value="newton_raphson">Numerical Methods: Newton-Raphson Root Finder</option>
-                  <option value="ode_rk4">Differential Equations: 4th-Order Runge-Kutta (RK4)</option>
-                  <option value="complex">Complex Numbers: Arithmetic & Polar Form</option>
-                  <option value="derivative">Calculus: Derivative d/dx f(x)</option>
-                  <option value="integral">Calculus: Definite / Indefinite Integral</option>
-                  <option value="matrix_det">Linear Algebra: Matrix Determinant</option>
-                  <option value="matrix_inv">Linear Algebra: Matrix Inverse</option>
-                  <option value="eigenvalues">Linear Algebra: 2×2 Characteristic Polynomial & Eigenvalues</option>
-                  <option value="solve_system">Linear Systems: Gaussian Elimination (Ax = b)</option>
-                  <option value="gcd">Number Theory: GCD & Bézout Identity</option>
-                  <option value="lcm">Number Theory: LCM</option>
-                  <option value="totient">Number Theory: Euler's Totient φ(n)</option>
-                  <option value="prime_factors">Number Theory: Prime Factorization</option>
-                  <option value="is_prime">Number Theory: Primality Test</option>
-                  <option value="modular_arithmetic">Number Theory: Modular Inverse & CRT</option>
-                  <option value="combinatorics">Combinatorics: P(n, r) and C(n, r)</option>
-                  <option value="linear_regression">Statistics: Ordinary Least Squares Linear Regression</option>
-                  <option value="statistics">Descriptive Statistics</option>
-                </select>
-              </div>
-
-              <!-- Dynamic Input Fields Container -->
-              <div id="math-solver-dynamic-inputs" style="display:flex; flex-direction:column; gap:10px;"></div>
-
-              <button type="button" id="math-solver-exec-btn" class="tool-btn" style="background:var(--black); color:var(--white); font-weight:700; font-size:0.85rem; padding:8px 14px; border-radius:8px; border:none; cursor:pointer; margin-top:4px;">
-                Calculate & Verify
-              </button>
-            </div>
-
-            <!-- Right: Structured Result Presentation -->
-            <div style="padding:16px; border:1px solid var(--border); border-radius:12px; background:var(--bg-card); box-shadow:0 2px 8px rgba(0,0,0,0.02); display:flex; flex-direction:column;">
-              <span style="font-weight:700; font-size:0.9rem; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.04em; margin-bottom:12px;">Authoritative Output</span>
-              <div id="math-solver-result-container" style="flex:1; display:flex; flex-direction:column; justify-content:center;">
-                <!-- Honest Empty State -->
-                <div id="math-solver-empty" style="text-align:center; padding:40px 16px; color:var(--text-muted); font-size:0.85rem;">
-                  <div style="font-size:1.5rem; margin-bottom:8px; color:var(--text-muted);">${SVG_ICONS.sigma}</div>
-                  <div style="font-weight:600; color:var(--text);">No Calculation Executed</div>
-                  <div style="margin-top:4px; font-size:0.78rem;">Select an operation, input parameters, and run deterministic computation.</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- 3. TAB: COLLATZ & SEQUENCES -->
         <div class="math-pane" id="pane-collatz" style="display:none; flex-direction:column; gap:20px;">
           <!-- Mathematical Sequence Engine (50+ Sequences) -->
@@ -300,7 +353,6 @@ export default {
             <div id="fib-result-zone" style="margin-top:4px;"></div>
           </div>
         </div>
-
         <!-- 4. TAB: FOUR-FIGURE TABLES & CONSTANTS -->
         <div class="math-pane" id="pane-tables" style="display:none; flex-direction:column; gap:20px;">
           <div class="math-split-grid">
@@ -364,28 +416,191 @@ export default {
             </div>
           </div>
         </div>
-
+          </div>
+        </section>
       </div>
     `;
 
-    // 1. Setup Tab Switching
-    const tabBtns = container.querySelectorAll('.math-tab-btn');
-    const panes = container.querySelectorAll('.math-pane');
+    const root = container.querySelector('.mx');
+    const form = root.querySelector('.mx-bar');
+    const input = root.querySelector('#mx-input');
+    const previewTex = root.querySelector('.mx-preview-tex');
+    const previewRow = root.querySelector('.mx-preview');
+    const feed = root.querySelector('.mx-feed');
+    const clearBtn = root.querySelector('.mx-clear');
+    const chips = root.querySelector('.mx-chips');
+    const syntaxList = root.querySelector('.mx-syntax-list');
+    const work = root.querySelector('.mx-work');
+    const reference = root.querySelector('.mx-reference');
 
-    tabBtns.forEach(btn => {
-      const handler = () => {
-        const target = btn.dataset.tab;
-        tabBtns.forEach(b => {
-          b.classList.toggle('active', b === btn);
-        });
-        panes.forEach(p => {
-          const isActive = p.id === `pane-${target}`;
-          p.style.display = isActive ? 'flex' : 'none';
-        });
-      };
-      btn.addEventListener('click', handler);
-      this._cleanup.push(() => btn.removeEventListener('click', handler));
+    let history = loadHistory();
+    let recall = -1;
+
+    /* ---------- mode rail ---------- */
+    const setMode = (mode) => {
+      root.dataset.mode = mode;
+      root.querySelectorAll('.mx-mode').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.mode === mode)));
+      const isRef = mode === 'reference';
+      reference.hidden = !isRef;
+      work.hidden = isRef;
+      form.hidden = isRef;
+      if (isRef) return;
+      const ex = EXAMPLES[mode] || [];
+      chips.innerHTML = ex.map((e) => `<button type="button" class="mx-chip" data-cmd="${escapeHtml(e)}">${escapeHtml(e)}</button>`).join('');
+      syntaxList.innerHTML = (SYNTAX[mode] || []).map(([k, v]) => `<dt><code>${escapeHtml(k)}</code></dt><dd>${escapeHtml(v)}</dd>`).join('');
+      try { localStorage.setItem('toolbox.math.mode', mode); } catch { /* ignore */ }
+    };
+    root.querySelectorAll('.mx-mode').forEach((b) => on(b, 'click', () => setMode(b.dataset.mode)));
+    on(chips, 'click', (e) => {
+      const c = e.target.closest('[data-cmd]'); if (!c) return;
+      input.value = c.dataset.cmd; updatePreview(); execute(c.dataset.cmd);
     });
+
+    /* ---------- preview ---------- */
+    let pvTimer = null;
+    const updatePreview = () => {
+      const tex = previewLatex(input.value);
+      previewRow.classList.toggle('is-empty', !tex);
+      renderTex(previewTex, tex || '', false);
+    };
+    on(input, 'input', () => { clearTimeout(pvTimer); pvTimer = setTimeout(updatePreview, 120); recall = -1; });
+    on(input, 'keydown', (e) => {
+      const cmds = history.map((h) => h.command).filter(Boolean);
+      if (e.key === 'ArrowUp' && cmds.length) { e.preventDefault(); recall = Math.min(cmds.length - 1, recall + 1); input.value = cmds[recall]; updatePreview(); }
+      else if (e.key === 'ArrowDown' && recall >= 0) { e.preventDefault(); recall -= 1; input.value = recall >= 0 ? cmds[recall] : ''; updatePreview(); }
+    });
+
+    /* ---------- result cards ---------- */
+    const CAT_LABEL = { algebra: 'Algebra', calculus: 'Calculus', equations: 'Equations', linalg: 'Linear algebra', stats: 'Statistics', optimize: 'Optimisation', number: 'Number theory', plot: 'Plot', reference: 'Reference' };
+    const cardHtml = (r, id) => {
+      const steps = r.steps || [];
+      const hasResult = r.result && r.result.trim();
+      return `
+        <article class="mx-result" data-id="${id}">
+          <header class="mx-result-head">
+            <div class="mx-result-titles">
+              <span class="mx-result-cat">${escapeHtml(CAT_LABEL[r.category] || 'Result')}</span>
+              <h4 class="mx-result-title">${escapeHtml(r.title || 'Result')}</h4>
+            </div>
+            <div class="mx-result-actions">
+              ${hasResult ? `<button type="button" class="mx-act" data-act="latex" title="Copy LaTeX">${SVG_ICONS.copy}<span>LaTeX</span></button>` : ''}
+              <button type="button" class="mx-act" data-act="text" title="Copy as plain text">${SVG_ICONS.copy}<span>Text</span></button>
+              <button type="button" class="mx-act mx-act-icon" data-act="edit" title="Edit command" aria-label="Edit command">${SVG_ICONS.redo}</button>
+              <button type="button" class="mx-act mx-act-icon" data-act="remove" title="Remove" aria-label="Remove result">${SVG_ICONS.x}</button>
+            </div>
+          </header>
+          <div class="mx-cmd"><code>${escapeHtml(r.command || '')}</code>${r.ms !== undefined ? `<span>${r.ms} ms</span>` : ''}</div>
+          ${r.input ? `<div class="mx-input-tex" data-tex="${escapeHtml(r.input)}" data-display="1"></div>` : ''}
+          ${hasResult ? `<div class="mx-answer"><div class="mx-answer-tex" data-tex="${escapeHtml(r.result)}" data-display="1"></div>${r.approx ? `<div class="mx-approx">≈ ${escapeHtml(r.approx)}</div>` : ''}</div>` : ''}
+          ${r.big ? `<div class="mx-big"><code>${escapeHtml(r.big)}</code></div>` : ''}
+          ${r.extra && r.extra.length ? `<dl class="mx-extra">${r.extra.map((e) => `<div${e.latex && e.latex.length > 40 ? ' class="is-wide"' : ''}><dt>${escapeHtml(e.label)}</dt><dd>${e.latex ? `<span data-tex="${escapeHtml(e.latex)}" data-display="0"></span>` : `<span class="u-mono">${escapeHtml(e.text)}</span>`}</dd></div>`).join('')}</dl>` : ''}
+          ${r.table ? `<div class="mx-table-wrap"><table class="mx-table"><thead><tr>${r.table.head.map((h) => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead><tbody>${r.table.rows.map((row) => `<tr>${row.map((c) => `<td>${escapeHtml(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : ''}
+          ${r.plot ? '<div class="mx-plot-host"></div>' : (r.hadPlot ? `<button type="button" class="mx-act mx-showplot" data-act="plot">${SVG_ICONS.chart}<span>Show plot</span></button>` : '')}
+          ${steps.length ? `<details class="mx-steps"${steps.length <= 4 ? ' open' : ''}><summary>Working · ${steps.length} step${steps.length === 1 ? '' : 's'}</summary><ol>${steps.map((st) => `<li><span class="mx-step-text">${escapeHtml(st.text)}</span>${st.latex ? `<div class="mx-step-tex" data-tex="${escapeHtml(st.latex)}" data-display="1"></div>` : ''}</li>`).join('')}</ol></details>` : ''}
+          ${r.verify ? `<div class="mx-verify ${r.verify.ok ? 'ok' : 'warn'}">${r.verify.ok ? SVG_ICONS.check : SVG_ICONS.warn}<span><strong>${r.verify.ok ? 'Verified' : 'Not verified'}</strong> — ${escapeHtml(r.verify.text || '')}</span></div>` : ''}
+          ${(r.notes || []).map((n) => `<p class="mx-note">${escapeHtml(n)}</p>`).join('')}
+        </article>`;
+    };
+    const errorHtml = (cmd, msg, id) => `
+      <article class="mx-result mx-error" data-id="${id}">
+        <header class="mx-result-head"><div class="mx-result-titles"><span class="mx-result-cat">Could not evaluate</span><h4 class="mx-result-title">${escapeHtml(msg)}</h4></div>
+        <div class="mx-result-actions"><button type="button" class="mx-act mx-act-icon" data-act="edit" aria-label="Edit command">${SVG_ICONS.redo}</button><button type="button" class="mx-act mx-act-icon" data-act="remove" aria-label="Remove">${SVG_ICONS.x}</button></div></header>
+        <div class="mx-cmd"><code>${escapeHtml(cmd)}</code></div>
+        <p class="mx-note">Check the syntax panel for the command forms, or press a Try chip for a working example.</p>
+      </article>`;
+
+    const emptyHtml = () => `
+      <div class="mx-empty">
+        <div class="mx-empty-mark" aria-hidden="true">${SVG_ICONS.sigma}</div>
+        <h4>A verified maths workbench</h4>
+        <p>Exact algebra, calculus, equations and ODEs, linear algebra, statistics, optimisation and number theory — every answer shows its working and how it was checked.</p>
+        <div class="mx-empty-chips">${['integrate x^2 sin x dx', 'solve x^3-6x^2+11x-6=0', 'eigen [[2,1],[1,2]]', 'factor 2^64+1', 'plot sin(x), cos(x)'].map((e) => `<button type="button" class="mx-chip" data-cmd="${escapeHtml(e)}">${escapeHtml(e)}</button>`).join('')}</div>
+      </div>`;
+
+    const results = new Map(); // id -> result (live, may contain plot)
+    let seq = 0;
+    const mountCardPlot = (card, r) => {
+      const host = card.querySelector('.mx-plot-host');
+      if (!host || !r.plot) return;
+      try { const destroy = mountPlot(host, r.plot); this._plots.push(destroy); } catch (err) { host.innerHTML = `<p class="mx-note">Plot unavailable: ${escapeHtml(err.message)}</p>`; }
+    };
+    const addCard = (r, { prepend = true, save = true } = {}) => {
+      const id = `r${++seq}`;
+      results.set(id, r);
+      const tmp = document.createElement('div');
+      tmp.innerHTML = r.error ? errorHtml(r.command, r.error, id) : cardHtml(r, id);
+      const card = tmp.firstElementChild;
+      const empty = feed.querySelector('.mx-empty'); if (empty) empty.remove();
+      if (prepend) feed.prepend(card); else feed.appendChild(card);
+      rerenderTex(card);
+      mountCardPlot(card, r);
+      if (save) {
+        history.unshift(r.error ? { command: r.command, error: r.error } : serialise(r));
+        history = history.slice(0, 30);
+        saveHistory(history);
+      }
+      clearBtn.hidden = false;
+      return card;
+    };
+    const execute = (cmd) => {
+      const c = String(cmd || '').trim();
+      if (!c) { input.focus(); return; }
+      let r;
+      try { r = runCommand(c); } catch (err) { r = { command: c, error: err.message || String(err) }; }
+      const card = addCard(r);
+      card.classList.add('is-new');
+      if (window.matchMedia('(max-width: 900px)').matches) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      recall = -1;
+    };
+    on(form, 'submit', (e) => { e.preventDefault(); execute(input.value); });
+
+    on(feed, 'click', (e) => {
+      const chip = e.target.closest('[data-cmd]');
+      if (chip) { input.value = chip.dataset.cmd; updatePreview(); execute(chip.dataset.cmd); return; }
+      const btn = e.target.closest('[data-act]'); if (!btn) return;
+      const card = btn.closest('.mx-result'); const id = card && card.dataset.id; const r = results.get(id);
+      const act = btn.dataset.act;
+      if (act === 'remove') {
+        const idx = [...feed.querySelectorAll('.mx-result')].indexOf(card);
+        card.remove(); results.delete(id);
+        if (idx >= 0) { history.splice(idx, 1); saveHistory(history); }
+        if (!feed.querySelector('.mx-result')) { feed.innerHTML = emptyHtml(); clearBtn.hidden = true; }
+      } else if (act === 'edit' && r) { input.value = r.command || ''; updatePreview(); input.focus(); input.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+      else if (act === 'latex' && r) copyTo(btn, `${r.input ? `${r.input} \\;\\Rightarrow\\; ` : ''}${r.result}`);
+      else if (act === 'text' && r) copyTo(btn, r.error ? `${r.command}: ${r.error}` : toPlainText(r));
+      else if (act === 'plot' && r) {
+        try { const fresh = runCommand(r.command); if (fresh.plot) { const host = document.createElement('div'); host.className = 'mx-plot-host'; btn.replaceWith(host); results.set(id, fresh); mountCardPlot(card, fresh); } } catch { btn.remove(); }
+      }
+    });
+    const copyTo = (btn, text) => {
+      const label = btn.querySelector('span');
+      try { copyText(text, label || btn); } catch { /* ignore */ }
+    };
+    on(clearBtn, 'click', () => {
+      this._plots.forEach((d) => { try { d(); } catch { /* ignore */ } });
+      this._plots = []; results.clear(); history = []; saveHistory(history);
+      feed.innerHTML = emptyHtml(); clearBtn.hidden = true;
+    });
+
+    // restore history (oldest last)
+    if (history.length) {
+      history.forEach((h) => addCard(h.error ? { command: h.command, error: h.error } : h, { prepend: false, save: false }));
+    } else feed.innerHTML = emptyHtml();
+
+    let startMode = 'calculus';
+    try { const m = localStorage.getItem('toolbox.math.mode'); if (m && MODES.some((x) => x.id === m)) startMode = m; } catch { /* ignore */ }
+    setMode(startMode);
+    if (window.matchMedia('(max-width: 900px)').matches) root.querySelector('.mx-syntax').open = false;
+    updatePreview();
+
+    ensureKatex().then((k) => { if (k && root.isConnected) rerenderTex(root); });
+
+    /* ---------- reference sub-tabs ---------- */
+    const refPanes = { knowledge: container.querySelector('#pane-knowledge'), collatz: container.querySelector('#pane-collatz'), tables: container.querySelector('#pane-tables') };
+    root.querySelectorAll('.mx-subtab').forEach((b) => on(b, 'click', () => {
+      root.querySelectorAll('.mx-subtab').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+      Object.entries(refPanes).forEach(([k, p]) => { if (p) p.style.display = k === b.dataset.ref ? 'flex' : 'none'; });
+    }));
 
     // 2. Setup Knowledge Library Search & Filtering
     const searchInput = container.querySelector('#math-lib-search');
@@ -491,585 +706,6 @@ export default {
     });
 
     renderKnowledgeList();
-
-    // 3. Setup Solver & Dynamic Inputs
-    const opSelect = container.querySelector('#math-solver-op');
-    const dynamicInputs = container.querySelector('#math-solver-dynamic-inputs');
-    const execBtn = container.querySelector('#math-solver-exec-btn');
-    const resultContainer = container.querySelector('#math-solver-result-container');
-
-    const updateSolverInputs = () => {
-      const op = opSelect.value;
-      if (op === 'solve_quadratic') {
-        dynamicInputs.innerHTML = `
-          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">a (x²)</label>
-              <input type="number" step="any" id="solver-a" class="tool-input" value="1" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">b (x)</label>
-              <input type="number" step="any" id="solver-b" class="tool-input" value="-5" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">c (const)</label>
-              <input type="number" step="any" id="solver-c" class="tool-input" value="6" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-          </div>
-        `;
-      } else if (op === 'solve_linear') {
-        dynamicInputs.innerHTML = `
-          <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:8px;">
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">a (x)</label>
-              <input type="number" step="any" id="solver-a" class="tool-input" value="2" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">b (const)</label>
-              <input type="number" step="any" id="solver-b" class="tool-input" value="-8" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-          </div>
-        `;
-      } else if (op === 'newton_raphson') {
-        dynamicInputs.innerHTML = `
-          <div>
-            <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Non-Linear Function f(x) = 0</label>
-            <input type="text" id="solver-expr" class="tool-input" value="cos(x) - x" style="width:100%; font-family:var(--mono, monospace);">
-          </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Initial Guess (x₀)</label>
-              <input type="number" step="any" id="solver-x0" class="tool-input" value="0.5" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Max Steps</label>
-              <input type="number" id="solver-steps" class="tool-input" value="25" min="1" max="100" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-          </div>
-        `;
-      } else if (op === 'ode_rk4') {
-        dynamicInputs.innerHTML = `
-          <div>
-            <label class="tool-label" style="font-size:0.72rem; font-weight:700;">First-Order ODE dy/dx = f(x, y)</label>
-            <input type="text" id="solver-expr" class="tool-input" value="x + y" style="width:100%; font-family:var(--mono, monospace);">
-          </div>
-          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Initial x₀</label>
-              <input type="number" step="any" id="solver-x0" class="tool-input" value="0" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Initial y₀</label>
-              <input type="number" step="any" id="solver-y0" class="tool-input" value="1" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Target xEnd</label>
-              <input type="number" step="any" id="solver-xend" class="tool-input" value="1" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-          </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Method</label>
-              <select id="solver-method" class="tool-select" style="width:100%; font-size:0.82rem;">
-                <option value="rk4">Runge-Kutta 4th Order (RK4)</option>
-                <option value="euler">Euler Method</option>
-              </select>
-            </div>
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Steps</label>
-              <input type="number" id="solver-steps" class="tool-input" value="20" min="2" max="1000" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-          </div>
-        `;
-      } else if (op === 'complex') {
-        dynamicInputs.innerHTML = `
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">First Complex (z₁)</label>
-              <input type="text" id="solver-z1" class="tool-input" value="3 + 4i" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Second Complex (z₂)</label>
-              <input type="text" id="solver-z2" class="tool-input" value="1 - 2i" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-          </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Operation</label>
-              <select id="solver-subop" class="tool-select" style="width:100%; font-size:0.82rem;">
-                <option value="add">Addition (z₁ + z₂)</option>
-                <option value="subtract">Subtraction (z₁ - z₂)</option>
-                <option value="multiply">Multiplication (z₁ × z₂)</option>
-                <option value="divide">Division (z₁ / z₂)</option>
-                <option value="polar">Polar & Modulus/Arg (z₁)</option>
-                <option value="power">De Moivre Power (z₁ⁿ)</option>
-              </select>
-            </div>
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Power n (if power)</label>
-              <input type="number" id="solver-power-n" class="tool-input" value="3" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-          </div>
-        `;
-      } else if (op === 'derivative') {
-        dynamicInputs.innerHTML = `
-          <div>
-            <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Function Expression f(x)</label>
-            <input type="text" id="solver-expr" class="tool-input" value="x^3" style="width:100%; font-family:var(--mono, monospace);">
-          </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Variable</label>
-              <input type="text" id="solver-var" class="tool-input" value="x" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Evaluate at point (optional)</label>
-              <input type="number" step="any" id="solver-at" class="tool-input" placeholder="e.g. 2" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-          </div>
-        `;
-      } else if (op === 'integral') {
-        dynamicInputs.innerHTML = `
-          <div>
-            <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Integrand f(x)</label>
-            <input type="text" id="solver-expr" class="tool-input" value="2x" style="width:100%; font-family:var(--mono, monospace);">
-          </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Lower Bound a (optional)</label>
-              <input type="number" step="any" id="solver-from" class="tool-input" placeholder="e.g. 0" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Upper Bound b (optional)</label>
-              <input type="number" step="any" id="solver-to" class="tool-input" placeholder="e.g. 5" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-          </div>
-        `;
-      } else if (op === 'matrix_det' || op === 'matrix_inv') {
-        dynamicInputs.innerHTML = `
-          <div>
-            <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Square Matrix (JSON format)</label>
-            <textarea id="solver-matrix" class="tool-input" rows="3" style="width:100%; font-family:var(--mono, monospace); font-size:0.85rem;">[[1, 2], [3, 4]]</textarea>
-          </div>
-        `;
-      } else if (op === 'eigenvalues') {
-        dynamicInputs.innerHTML = `
-          <div>
-            <label class="tool-label" style="font-size:0.72rem; font-weight:700;">2×2 Square Matrix (JSON format)</label>
-            <textarea id="solver-matrix" class="tool-input" rows="2" style="width:100%; font-family:var(--mono, monospace); font-size:0.85rem;">[[4, 1], [2, 3]]</textarea>
-          </div>
-        `;
-      } else if (op === 'solve_system') {
-        dynamicInputs.innerHTML = `
-          <div>
-            <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Coefficient Matrix A (n×n JSON)</label>
-            <textarea id="solver-matrix" class="tool-input" rows="3" style="width:100%; font-family:var(--mono, monospace); font-size:0.85rem;">[[2, 1], [1, -1]]</textarea>
-          </div>
-          <div>
-            <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Constant Vector b (JSON array)</label>
-            <input type="text" id="solver-vector" class="tool-input" value="[5, 1]" style="width:100%; font-family:var(--mono, monospace); font-size:0.85rem;">
-          </div>
-        `;
-      } else if (op === 'gcd' || op === 'lcm') {
-        dynamicInputs.innerHTML = `
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">First Integer (a)</label>
-              <input type="number" id="solver-a" class="tool-input" value="48" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Second Integer (b)</label>
-              <input type="number" id="solver-b" class="tool-input" value="18" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-          </div>
-        `;
-      } else if (op === 'totient' || op === 'prime_factors' || op === 'is_prime') {
-        dynamicInputs.innerHTML = `
-          <div>
-            <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Positive Integer (n)</label>
-            <input type="number" id="solver-n" class="tool-input" value="60" min="1" style="width:100%; font-family:var(--mono, monospace);">
-          </div>
-        `;
-      } else if (op === 'modular_arithmetic') {
-        dynamicInputs.innerHTML = `
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Operation</label>
-              <select id="solver-subop" class="tool-select" style="width:100%; font-size:0.82rem;">
-                <option value="inverse">Modular Inverse a⁻¹ mod m</option>
-                <option value="mod_exp">Modular Exponentiation a^b mod m</option>
-                <option value="crt">Chinese Remainder Theorem</option>
-              </select>
-            </div>
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Modulus m / Moduli [m₁, m₂...]</label>
-              <input type="text" id="solver-mod" class="tool-input" value="26" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-          </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">a / Base / Remainders [r₁, r₂...]</label>
-              <input type="text" id="solver-a" class="tool-input" value="7" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">b / Exponent (if mod exp)</label>
-              <input type="text" id="solver-b" class="tool-input" value="1" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-          </div>
-        `;
-      } else if (op === 'combinatorics') {
-        dynamicInputs.innerHTML = `
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Total Elements (n)</label>
-              <input type="number" id="solver-n" class="tool-input" value="5" min="0" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-            <div>
-              <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Subset Size (r)</label>
-              <input type="number" id="solver-r" class="tool-input" value="2" min="0" style="width:100%; font-family:var(--mono, monospace);">
-            </div>
-          </div>
-        `;
-      } else if (op === 'linear_regression') {
-        dynamicInputs.innerHTML = `
-          <div>
-            <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Independent Variable X (comma-separated)</label>
-            <input type="text" id="solver-x-data" class="tool-input" value="1, 2, 3, 4, 5" style="width:100%; font-family:var(--mono, monospace);">
-          </div>
-          <div>
-            <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Dependent Variable Y (comma-separated)</label>
-            <input type="text" id="solver-y-data" class="tool-input" value="2.2, 3.8, 6.1, 8.0, 9.9" style="width:100%; font-family:var(--mono, monospace);">
-          </div>
-        `;
-      } else if (op === 'statistics') {
-        dynamicInputs.innerHTML = `
-          <div>
-            <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Data Values (comma-separated)</label>
-            <input type="text" id="solver-data" class="tool-input" value="12, 15, 14, 10, 18, 22, 19, 15" style="width:100%; font-family:var(--mono, monospace);">
-          </div>
-        `;
-      } else {
-        dynamicInputs.innerHTML = `
-          <div>
-            <label class="tool-label" style="font-size:0.72rem; font-weight:700;">Expression or Equation</label>
-            <input type="text" id="solver-expr" class="tool-input" value="1837 * 492" style="width:100%; font-family:var(--mono, monospace);">
-          </div>
-        `;
-      }
-    };
-
-    opSelect.addEventListener('change', updateSolverInputs);
-    this._cleanup.push(() => opSelect.removeEventListener('change', updateSolverInputs));
-    updateSolverInputs();
-
-    // Execute computation in Solver & Lab
-    const handleExecute = () => {
-      const op = opSelect.value;
-      try {
-        let res;
-        if (op === 'solve_quadratic') {
-          const a = Number(container.querySelector('#solver-a').value);
-          const b = Number(container.querySelector('#solver-b').value);
-          const c = Number(container.querySelector('#solver-c').value);
-          res = solveQuadratic(a, b, c);
-        } else if (op === 'solve_linear') {
-          const a = Number(container.querySelector('#solver-a').value);
-          const b = Number(container.querySelector('#solver-b').value);
-          res = solveLinear(a, b);
-        } else if (op === 'newton_raphson') {
-          const expr = container.querySelector('#solver-expr').value;
-          const x0 = Number(container.querySelector('#solver-x0').value);
-          const steps = Number(container.querySelector('#solver-steps').value);
-          res = calculateNewtonRaphson(expr, { x0, maxSteps: steps });
-        } else if (op === 'ode_rk4') {
-          const expr = container.querySelector('#solver-expr').value;
-          const x0 = Number(container.querySelector('#solver-x0').value);
-          const y0 = Number(container.querySelector('#solver-y0').value);
-          const xEnd = Number(container.querySelector('#solver-xend').value);
-          const method = container.querySelector('#solver-method').value;
-          const steps = Number(container.querySelector('#solver-steps').value);
-          res = solveOdeInitialValue(expr, x0, y0, xEnd, { steps, method });
-        } else if (op === 'complex') {
-          const z1Str = container.querySelector('#solver-z1').value;
-          const z2Str = container.querySelector('#solver-z2').value;
-          const subOp = container.querySelector('#solver-subop').value;
-          const powerN = Number(container.querySelector('#solver-power-n').value);
-          res = calculateComplex(subOp, z1Str, z2Str, { power: powerN });
-        } else if (op === 'derivative') {
-          const expr = container.querySelector('#solver-expr').value;
-          const v = container.querySelector('#solver-var').value || 'x';
-          const atVal = container.querySelector('#solver-at').value;
-          res = calculateDerivative(expr, v, atVal !== '' ? atVal : null);
-        } else if (op === 'integral') {
-          const expr = container.querySelector('#solver-expr').value;
-          const fromVal = container.querySelector('#solver-from').value;
-          const toVal = container.querySelector('#solver-to').value;
-          res = calculateIntegral(expr, {
-            from: fromVal !== '' ? fromVal : null,
-            to: toVal !== '' ? toVal : null
-          });
-        } else if (op === 'matrix_det') {
-          const mStr = container.querySelector('#solver-matrix').value;
-          const mat = JSON.parse(mStr);
-          res = calculateMatrixDeterminant(mat);
-        } else if (op === 'matrix_inv') {
-          const mStr = container.querySelector('#solver-matrix').value;
-          const mat = JSON.parse(mStr);
-          res = calculateMatrixInverse(mat);
-        } else if (op === 'eigenvalues') {
-          const mStr = container.querySelector('#solver-matrix').value;
-          const mat = JSON.parse(mStr);
-          res = calculateEigenvalues2x2(mat);
-        } else if (op === 'solve_system') {
-          const mStr = container.querySelector('#solver-matrix').value;
-          const vStr = container.querySelector('#solver-vector').value;
-          const mat = JSON.parse(mStr);
-          const vec = JSON.parse(vStr);
-          res = solveLinearSystem(mat, vec);
-        } else if (op === 'gcd') {
-          const a = Number(container.querySelector('#solver-a').value);
-          const b = Number(container.querySelector('#solver-b').value);
-          res = calculateGcd(a, b);
-        } else if (op === 'lcm') {
-          const a = Number(container.querySelector('#solver-a').value);
-          const b = Number(container.querySelector('#solver-b').value);
-          res = calculateLcm(a, b);
-        } else if (op === 'totient') {
-          const n = Number(container.querySelector('#solver-n').value);
-          res = calculateTotient(n);
-        } else if (op === 'prime_factors') {
-          const n = Number(container.querySelector('#solver-n').value);
-          const factors = primeFactors(n);
-          res = {
-            operation: 'prime_factors',
-            input: n,
-            factors,
-            formatted: factors.map(f => `${f.prime}^${f.power}`).join(' × '),
-            message: `${n} = ${factors.map(f => `${f.prime}^${f.power}`).join(' × ')}`
-          };
-        } else if (op === 'is_prime') {
-          const n = Number(container.querySelector('#solver-n').value);
-          const prime = isPrime(n);
-          res = {
-            operation: 'is_prime',
-            input: n,
-            isPrime: prime,
-            message: `${n} is ${prime ? 'a prime number' : 'composite / not prime'}.`
-          };
-        } else if (op === 'modular_arithmetic') {
-          const subOp = container.querySelector('#solver-subop').value;
-          const aVal = container.querySelector('#solver-a').value;
-          const bVal = container.querySelector('#solver-b').value;
-          const modVal = container.querySelector('#solver-mod').value;
-          if (subOp === 'crt') {
-            const moduli = JSON.parse(modVal.startsWith('[') ? modVal : `[${modVal}]`);
-            const remainders = JSON.parse(aVal.startsWith('[') ? aVal : `[${aVal}]`);
-            res = calculateModularArithmetic({ subOp: 'crt', moduli, remainders });
-          } else if (subOp === 'mod_exp') {
-            res = calculateModularArithmetic({ subOp: 'mod_exp', a: Number(aVal), b: Number(bVal), m: Number(modVal) });
-          } else {
-            res = calculateModularArithmetic({ subOp: 'inverse', a: Number(aVal), m: Number(modVal) });
-          }
-        } else if (op === 'combinatorics') {
-          const n = Number(container.querySelector('#solver-n').value);
-          const r = Number(container.querySelector('#solver-r').value);
-          const perm = calculatePermutations(n, r);
-          const comb = calculateCombinations(n, r);
-          res = {
-            operation: 'combinatorics',
-            n, r,
-            permutations: perm.result,
-            combinations: comb.result,
-            steps: [perm.formula, comb.formula],
-            message: `P(${n}, ${r}) = ${perm.result} | C(${n}, ${r}) = ${comb.result}`
-          };
-        } else if (op === 'linear_regression') {
-          const xStr = container.querySelector('#solver-x-data').value;
-          const yStr = container.querySelector('#solver-y-data').value;
-          const xArr = xStr.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n));
-          const yArr = yStr.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n));
-          res = calculateLinearRegression(xArr, yArr);
-        } else {
-          const expr = container.querySelector('#solver-expr').value;
-          res = calculateMath({ expression: expr });
-        }
-
-        renderSolverOutput(res);
-      } catch (err) {
-        resultContainer.innerHTML = `
-          <div style="padding:12px; border-radius:8px; background:var(--bg-subtle); border:1px solid var(--border); color:var(--text); font-size:0.85rem;">
-            <strong>Computation Error:</strong> ${escapeHtml(err.message)}
-          </div>
-        `;
-      }
-    };
-
-    execBtn.addEventListener('click', handleExecute);
-    this._cleanup.push(() => execBtn.removeEventListener('click', handleExecute));
-
-    const renderSolverOutput = (data) => {
-      let mainContent = '';
-      if (data.roots) {
-        const rootsList = data.roots.map((r, i) => `x<sub>${i + 1}</sub> = <strong>${r}</strong>`).join('&nbsp;&nbsp;|&nbsp;&nbsp;');
-        mainContent = `
-          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Roots</div>
-          <div style="font-family:var(--mono, monospace); font-size:1.25rem; margin-top:4px; color:var(--text);">${rootsList}</div>
-          <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px;">${escapeHtml(data.nature)} (D = ${data.discriminant})</div>
-        `;
-      } else if (data.operation === 'newton_raphson') {
-        mainContent = `
-          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Numerical Root (Newton-Raphson)</div>
-          <div style="font-family:var(--mono, monospace); font-size:1.3rem; margin-top:4px; color:var(--text);">
-            Root x* = <strong>${data.root}</strong>
-          </div>
-          <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px;">
-            Residual |f(x*)| = ${data.residual} | Steps: ${data.iterationCount} | Initial x₀ = ${data.x0}
-          </div>
-        `;
-      } else if (data.operation === 'ode_rk4' || data.operation === 'ode_euler') {
-        mainContent = `
-          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">ODE Solution (${escapeHtml(data.method || 'RK4')})</div>
-          <div style="font-family:var(--mono, monospace); font-size:1.3rem; margin-top:4px; color:var(--text);">
-            y(${data.xEnd}) = <strong>${data.yEnd}</strong>
-          </div>
-          <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px;">
-            Initial: y(${data.x0}) = ${data.y0} | Step size h = ${data.stepSize} (${data.stepsCount} steps)
-          </div>
-        `;
-      } else if (data.operation === 'complex' && data.rectangular) {
-        mainContent = `
-          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Complex Result</div>
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:6px; margin-top:6px;">
-            <div style="padding:6px; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; text-align:center;">
-              <div style="font-size:0.65rem; color:var(--text-muted);">Cartesian</div>
-              <div style="font-family:var(--mono, monospace); font-weight:700; color:var(--text);">${escapeHtml(data.rectangular)}</div>
-            </div>
-            <div style="padding:6px; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; text-align:center;">
-              <div style="font-size:0.65rem; color:var(--text-muted);">Polar</div>
-              <div style="font-family:var(--mono, monospace); font-weight:700; color:var(--primary, var(--text));">${escapeHtml(data.polar?.notation || '')}</div>
-            </div>
-            <div style="padding:6px; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; text-align:center;">
-              <div style="font-size:0.65rem; color:var(--text-muted);">Modulus |z|</div>
-              <div style="font-family:var(--mono, monospace); font-weight:700; color:var(--text);">${escapeHtml(data.modulus)}</div>
-            </div>
-            <div style="padding:6px; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; text-align:center;">
-              <div style="font-size:0.65rem; color:var(--text-muted);">Arg θ</div>
-              <div style="font-family:var(--mono, monospace); font-weight:700; color:var(--text);">${escapeHtml(data.polar?.degrees)}°</div>
-            </div>
-          </div>
-        `;
-      } else if (data.operation === 'eigenvalues') {
-        const e1 = data.eigenvalues?.lambda1;
-        const e2 = data.eigenvalues?.lambda2;
-        mainContent = `
-          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Characteristic Polynomial & Eigenvalues</div>
-          <div style="font-family:var(--mono, monospace); font-size:0.9rem; margin-top:4px; color:var(--text);">p(λ) = ${escapeHtml(data.characteristicPolynomial)} = 0</div>
-          <div style="font-family:var(--mono, monospace); font-size:1.15rem; font-weight:700; margin-top:6px; color:var(--text);">
-            λ₁ = ${escapeHtml(e1?.formatted || e1?.val || '')} &nbsp;|&nbsp; λ₂ = ${escapeHtml(e2?.formatted || e2?.val || '')}
-          </div>
-          <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px;">Trace τ = ${escapeHtml(data.trace)} | Determinant Δ = ${escapeHtml(data.determinant)} | Residual = ${escapeHtml(data.residual)}</div>
-        `;
-      } else if (data.operation === 'solve_system') {
-        const solText = Array.isArray(data.solution) ? data.solution.map((v, i) => `x<sub>${i + 1}</sub> = <strong>${v}</strong>`).join('&nbsp;&nbsp;|&nbsp;&nbsp;') : '';
-        mainContent = `
-          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Linear System Solution (Ax = b)</div>
-          <div style="font-family:var(--mono, monospace); font-size:1.2rem; margin-top:4px; color:var(--text);">${solText}</div>
-          <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px;">Rank: ${data.rank} | Residual ||Ax - b|| = ${data.residual}</div>
-        `;
-      } else if (data.operation === 'linear_regression') {
-        mainContent = `
-          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Linear Regression (OLS)</div>
-          <div style="font-family:var(--mono, monospace); font-size:1.25rem; font-weight:700; margin-top:4px; color:var(--primary, var(--text));">
-            ${escapeHtml(data.equation)}
-          </div>
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(100px, 1fr)); gap:6px; margin-top:8px;">
-            <div style="padding:6px; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; text-align:center;">
-              <div style="font-size:0.65rem; color:var(--text-muted);">Slope (m)</div>
-              <div style="font-family:var(--mono, monospace); font-weight:700; color:var(--text);">${escapeHtml(data.slope)}</div>
-            </div>
-            <div style="padding:6px; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; text-align:center;">
-              <div style="font-size:0.65rem; color:var(--text-muted);">Intercept (c)</div>
-              <div style="font-family:var(--mono, monospace); font-weight:700; color:var(--text);">${escapeHtml(data.intercept)}</div>
-            </div>
-            <div style="padding:6px; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; text-align:center;">
-              <div style="font-size:0.65rem; color:var(--text-muted);">Pearson (r)</div>
-              <div style="font-family:var(--mono, monospace); font-weight:700; color:var(--text);">${escapeHtml(data.correlationR)}</div>
-            </div>
-            <div style="padding:6px; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; text-align:center;">
-              <div style="font-size:0.65rem; color:var(--text-muted);">R²</div>
-              <div style="font-family:var(--mono, monospace); font-weight:700; color:var(--text);">${escapeHtml(data.rSquared)}</div>
-            </div>
-          </div>
-        `;
-      } else if (data.operation === 'modular_arithmetic') {
-        const val = data.inverse !== undefined ? `Inverse = ${data.inverse}` : (data.crtSolution !== undefined ? `x ≡ ${data.crtSolution} (mod ${data.modulusProduct})` : data.result);
-        mainContent = `
-          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Modular Arithmetic (${escapeHtml(data.subOp || 'Computation')})</div>
-          <div style="font-family:var(--mono, monospace); font-weight:700; font-size:1.25rem; margin-top:4px; color:var(--text);">${escapeHtml(val)}</div>
-        `;
-      } else if (data.root !== undefined) {
-        mainContent = `
-          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Root</div>
-          <div style="font-family:var(--mono, monospace); font-size:1.25rem; margin-top:4px; color:var(--text);">${data.variable || 'x'} = <strong>${data.root}</strong></div>
-        `;
-      } else if (data.determinant !== undefined) {
-        mainContent = `
-          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Determinant</div>
-          <div style="font-family:var(--mono, monospace); font-size:1.3rem; margin-top:4px; color:var(--text);">det(A) = <strong>${data.determinant}</strong></div>
-        `;
-      } else if (data.inverse) {
-        const invRows = data.inverse.map(r => `[ ${r.join(', ')} ]`).join('\n');
-        mainContent = `
-          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Inverse Matrix A⁻¹</div>
-          <pre style="margin:6px 0 0 0; padding:8px; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; font-family:var(--mono, monospace); font-size:0.85rem; color:var(--text);">${escapeHtml(invRows)}</pre>
-        `;
-      } else if (data.permutations !== undefined) {
-        mainContent = `
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <div style="padding:8px; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; text-align:center;">
-              <div style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">Permutations P(${data.n}, ${data.r})</div>
-              <div style="font-family:var(--mono, monospace); font-weight:700; font-size:1.1rem; margin-top:2px; color:var(--text);">${data.permutations}</div>
-            </div>
-            <div style="padding:8px; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; text-align:center;">
-              <div style="font-size:0.68rem; font-weight:700; color:var(--text-muted);">Combinations C(${data.n}, ${data.r})</div>
-              <div style="font-family:var(--mono, monospace); font-weight:700; font-size:1.1rem; margin-top:2px; color:var(--text);">${data.combinations}</div>
-            </div>
-          </div>
-        `;
-      } else {
-        const val = data.result !== undefined ? data.result : (data.gcd || data.lcm || data.phi || data.message);
-        mainContent = `
-          <div style="font-family:var(--mono, monospace); font-weight:700; font-size:1.25rem; color:var(--text);">${escapeHtml(val)}</div>
-        `;
-      }
-
-      resultContainer.innerHTML = `
-        <div style="display:flex; flex-direction:column; gap:10px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
-            <span style="font-weight:700; font-size:0.85rem; color:var(--text);">${escapeHtml(data.operation || 'Result')}</span>
-            ${data.verified !== undefined ? `
-              <span class="math-proof-badge ${data.verified ? 'math-badge-proven' : 'math-badge-conjecture'}">
-                ${data.verified ? 'VERIFIED' : 'UNVERIFIED'}
-              </span>
-            ` : ''}
-          </div>
-
-          <div style="padding:12px; border-radius:8px; background:var(--bg-subtle); border:1px solid var(--border);">
-            ${mainContent}
-          </div>
-
-          ${Array.isArray(data.steps) && data.steps.length > 0 ? `
-            <div style="border:1px solid var(--border); border-radius:8px; padding:8px 10px; background:var(--bg-card);">
-              <div style="font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Verification & Steps:</div>
-              <ol style="margin:0 0 0 16px; padding:0; font-family:var(--mono, monospace); font-size:0.75rem; color:var(--text-secondary); display:flex; flex-direction:column; gap:2px;">
-                ${data.steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}
-              </ol>
-            </div>
-          ` : ''}
-        </div>
-      `;
-    };
-
     // 4. Setup Mathematical Sequence Suite (50+ Sequences)
     const seqSelect = container.querySelector('#seq-select');
     const seqCompareSelect = container.querySelector('#seq-compare-select');
@@ -1135,7 +771,7 @@ export default {
           `;
           const copyBtn = seqZone.querySelector('#copy-seq-val');
           if (copyBtn) {
-            copyBtn.addEventListener('click', () => copyText(String(res.termValue)));
+            copyBtn.addEventListener('click', () => copyText(String(res.termValue), copyBtn));
           }
         } else if (mode === 'range') {
           const fromVal = Number(seqFrom.value) || 1;
@@ -1373,6 +1009,8 @@ export default {
   },
 
   destroy() {
+    if (Array.isArray(this._plots)) this._plots.forEach((d) => { try { d(); } catch (e) { /* ignore */ } });
+    this._plots = [];
     if (Array.isArray(this._cleanup)) {
       this._cleanup.forEach(fn => {
         try { fn(); } catch (e) {}

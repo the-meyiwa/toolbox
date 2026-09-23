@@ -258,7 +258,7 @@ function renderChess(data, container) {
    Devices
    ============================================================ */
 
-const CAT_LABEL = { phones: 'phones', tablets: 'tablets', laptops: 'laptops', socs: 'mobile chips', cpus: 'processors', gpus: 'graphics cards', watches: 'smartwatches', audio: 'headphones', consoles: 'consoles' };
+const CAT_LABEL = { phones: 'phones', tablets: 'tablets', laptops: 'laptops', socs: 'mobile chips', cpus: 'processors', gpus: 'graphics cards', watches: 'smartwatches', audio: 'headphones', consoles: 'consoles', tvs: 'TVs', monitors: 'monitors' };
 const money = (v) => (v == null || v === '' ? '' : typeof v === 'number' ? `$${v.toLocaleString()}` : esc(v));
 const year = (v) => (v ? esc(String(v).slice(0, 10)) : '');
 
@@ -319,7 +319,7 @@ function renderDeviceCompare(data, container) {
   });
   const side = (d, key, score) => `
     <div class="astc-vs-side ${win === key ? 'is-win' : ''}">
-      ${win === key ? `<span class="astc-winner">${svg(I.trophy, 12)}Winner</span>` : ''}
+      ${win === key ? `<span class="astc-winner">${svg(I.trophy, 12)}Better tech</span>` : ''}
       <small>${esc(d.brand || '')}</small>
       <strong>${esc(d.name || '')}</strong>
       <span class="astc-vs-meta">${[year(d.released), money(d.price)].filter(Boolean).join(' · ')}</span>
@@ -328,6 +328,9 @@ function renderDeviceCompare(data, container) {
   const ROWS = 10;
   el.querySelector('.astc-body').innerHTML = `
     <div class="astc-vs">${side(a, 'a', sa)}<span class="astc-vs-mid">vs</span>${side(b, 'b', sb)}</div>
+    ${(data.betterTech || data.betterBuy) ? `<div class="astc-verdicts">${[['Better tech', data.betterTech], ['Better buy', data.betterBuy]].filter(([, v]) => v).map(([label, v]) => `
+      <div class="astc-verdict"><small>${label}</small><strong>${esc(v.headline || v.winner || '—')}</strong>${v.explanation ? `<p>${esc(v.explanation)}</p>` : ''}</div>`).join('')}
+      ${data.sameWinner ? '<p class="astc-verdict-note">The same device wins on both specs and value.</p>' : ''}</div>` : ''}
     ${subs.length ? `<div class="astc-subs">${subs.map(([k, label]) => {
       const x = Number(a.subScores?.[k]) || 0, y = Number(b.subScores?.[k]) || 0;
       return `<div class="astc-sub-row"><span class="u-num ${x > y ? 'is-win' : ''}">${Math.round(x)}</span><div class="astc-sub-bars"><i class="a ${x > y ? 'is-win' : ''}" style="width:${Math.min(100, x)}%"></i><em>${esc(label)}</em><i class="b ${y > x ? 'is-win' : ''}" style="width:${Math.min(100, y)}%"></i></div><span class="u-num ${y > x ? 'is-win' : ''}">${Math.round(y)}</span></div>`;

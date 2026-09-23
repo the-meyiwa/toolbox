@@ -1529,13 +1529,13 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
   },
   {
     name: 'calculate_math',
-    description: 'Performs authoritative, deterministic mathematical calculations and equation solving using the Math Utility. Supports: arithmetic, solving polynomial equations (linear, quadratic, cubic with exact Cardano/Viète trigonometric roots and residual verification, and general polynomials), calculus (derivatives and definite/indefinite integrals), linear algebra (matrix determinants, inverses with A*A^-1 verification, 2x2 eigenvalues/eigenvectors, linear system solving Ax = b), numerical methods (Newton-Raphson non-linear root finding with iteration residual checks, 4th-order Runge-Kutta RK4 and Euler ODE initial-value solvers), complex numbers (Cartesian, polar r∠θ, De Moivre powers), number theory (GCD with Bézout coefficients, LCM, primes, prime factorization, Euler totient, modular inverse, Chinese Remainder Theorem), statistics (mean, median, stdDev, ordinary least squares linear regression with Pearson r and R^2), sequences (Collatz with unproven conjecture status, Fibonacci), combinatorics (permutations, combinations), four-figure mathematical reference tables (log, antilog, ln, sin, cos, tan, sqrt, cbrt, reciprocal, squares, cubes), and mathematical constants (pi, e, phi, etc.).',
+    description: 'Performs authoritative, deterministic mathematical calculations and equation solving using the Math Utility. Supports: arithmetic, solving polynomial equations (linear, quadratic, cubic with exact Cardano/Viète trigonometric roots and residual verification, and general polynomials), calculus (derivatives and definite/indefinite integrals), linear algebra (matrix determinants, inverses with A*A^-1 verification, 2x2 eigenvalues/eigenvectors, linear system solving Ax = b), numerical methods (Newton-Raphson non-linear root finding with iteration residual checks, 4th-order Runge-Kutta RK4 and Euler ODE initial-value solvers), complex numbers (Cartesian, polar r∠θ, De Moivre powers), number theory (GCD with Bézout coefficients, LCM, primes, prime factorization, Euler totient, modular inverse, Chinese Remainder Theorem), statistics (mean, median, stdDev, ordinary least squares linear regression with Pearson r and R^2), sequences (Collatz with unproven conjecture status, Fibonacci), combinatorics (permutations, combinations), four-figure mathematical reference tables (log, antilog, ln, sin, cos, tan, sqrt, cbrt, reciprocal, squares, cubes), and mathematical constants (pi, e, phi, etc.). ADVANCED ENGINE (exact CAS + numerics, verified): use operation "command" with a natural command in "expression", e.g. "integrate x^2 sin x dx", "integrate e^(-x^2) from -oo to oo", "limit sin(x)/x x->0", "series tan x order 9", "sum 1/k^2 k=1..oo", "factor x^4+4", "factor 2^64+1", "apart 1/(x^2-1)", "solve x^3-6x^2+11x-6=0", "solve x+y=3, x^2+y^2=5", "solve (x-1)/(x+2) <= 0", "dsolve y\'\'+y=0, y(0)=1, y\'(0)=0", "ode y\'=y(1-y), y(0)=0.1, x=0..10", "eigen [[2,1],[1,2]]", "svd [[3,2,2],[2,3,-2]]", "normal cdf 1.96", "t(10) quantile 0.975", "ttest2 [..] [..]", "regress [x..] [y..]", "minimize (1-x)^2+100(y-x^2)^2", "maximize 3x+2y subject to x+y<=4, x>=0, y>=0", "crt 2 mod 3, 3 mod 5", "pell 61", "pi to 500 digits". Results include exact LaTeX, steps and a verification line.',
     parameters: {
       type: 'OBJECT',
       properties: {
         operation: {
           type: 'STRING',
-          description: 'Operation: "evaluate", "solve" (or "solve_cubic", "solve_quadratic", "solve_linear"), "derivative", "integral", "collatz", "graph", "plot", "matrix_determinant", "matrix_inverse", "eigenvalues", "solve_system", "newton_raphson", "ode_rk4", "complex", "modular_arithmetic", "linear_regression", "gcd", "lcm", "totient", "prime_factors", "is_prime", "fibonacci", "permutations", "combinations", "four_figure_table", "constant", "statistics".'
+          description: 'Operation: "command" (advanced engine; put the full natural command in expression — preferred for calculus, CAS, ODEs, linear algebra, statistics, optimisation, number theory), or one of the advanced shortcuts "simplify", "expand", "factor", "apart", "limit", "series", "sum", "dsolve", "ode", "roots", "eigen", "svd", "rref", "rank", "stats", "regress", "minimize", "maximize", "isprime", "crt" (operand in expression), or the classic ops "evaluate", "solve" (or "solve_cubic", "solve_quadratic", "solve_linear"), "derivative", "integral", "collatz", "graph", "plot", "matrix_determinant", "matrix_inverse", "eigenvalues", "solve_system", "newton_raphson", "ode_rk4", "complex", "modular_arithmetic", "linear_regression", "gcd", "lcm", "totient", "prime_factors", "is_prime", "fibonacci", "permutations", "combinations", "four_figure_table", "constant", "statistics".'
         },
         expression: {
           type: 'STRING',
@@ -1650,11 +1650,11 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
   },
   {
     name: 'evaluate_math_expression',
-    description: 'Deterministic mathematical expression evaluator. Computes exact numerical and algebraic answers.',
+    description: 'Deterministic mathematical expression evaluator. Computes exact numerical and algebraic answers (BigInt/rational exact arithmetic, surds, complex numbers, matrices). Also accepts any Math Utility command such as "integrate x e^x dx", "diff x^x", "factor x^6-1", "det [[1,2],[3,4]]" or "solve x^2-2=0".',
     parameters: {
       type: 'OBJECT',
       properties: {
-        expression: { type: 'STRING', description: 'The math expression to evaluate deterministically.' }
+        expression: { type: 'STRING', description: 'The math expression or Math Utility command to evaluate deterministically.' }
       },
       required: ['expression']
     }

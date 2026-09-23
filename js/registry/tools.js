@@ -498,7 +498,7 @@ export const TOOLS = [
   {
     id: 'math-utility',
     name: 'Math Utility',
-    description: 'Mathematical reference library, formula lookup, and computational solving workspace',
+    description: 'Verified maths workbench: exact CAS, calculus, equations and ODEs, linear algebra, statistics, optimisation, number theory, plots and a formula library',
     category: 'numbers',
     secondary: ['science', 'developer', 'reference'],
     keywords: [
@@ -506,14 +506,22 @@ export const TOOLS = [
       'quadratic', 'linear', 'derivative', 'integral', 'matrix', 'determinant',
       'inverse', 'collatz', 'fibonacci', 'four-figure tables', 'tables', 'constants',
       'theorems', 'conjectures', 'open problems', 'number theory', 'primes', 'gcd',
-      'lcm', 'totient', 'permutations', 'combinations', 'statistics', 'verification'
+      'lcm', 'totient', 'permutations', 'combinations', 'statistics', 'verification',
+      'cas', 'symbolic', 'simplify', 'expand', 'factor polynomial', 'partial fractions', 'limit', 'taylor series',
+      'sum', 'series', 'ode', 'differential equation', 'eigenvalues', 'svd', 'rref', 'null space', 'least squares',
+      'regression', 't-test', 'anova', 'chi-square', 'normal distribution', 'optimization', 'linear programming',
+      'simplex', 'modular inverse', 'chinese remainder', 'pell', 'continued fraction', 'plot', 'graph', 'function plot',
+      'implicit plot', 'slope field', '3d surface', 'latex', 'sympy', 'wolfram'
     ],
     synonyms: ['math knowledge', 'equation solver', 'math reference', 'math engine', 'collatz explorer'],
     intents: [
       'solve quadratic equation', 'solve equation', 'collatz sequence', 'run collatz',
       'lookup math formula', 'four figure tables', 'matrix determinant', 'matrix inverse',
       'gcd and lcm', 'calculate derivative', 'definite integral', 'fibonacci sequence',
-      'euler totient', 'prime factorization', 'mathematical constants'
+      'euler totient', 'prime factorization', 'mathematical constants',
+      'integrate a function', 'find a limit', 'taylor series', 'solve a system of equations', 'solve an inequality',
+      'solve a differential equation', 'eigenvalues of a matrix', 'plot a function', 'run a t-test',
+      'fit a regression', 'minimize a function', 'linear programming', 'factor a large number'
     ],
     related: ['calculator', 'percentage-calculator', 'unit-converter'],
     weight: 99,
@@ -1761,7 +1769,7 @@ export const TOOLS = [
   {
     id: 'tech-device-comparisons',
     name: 'Tech Device comparisons',
-    description: 'Compare 1,300+ phones, laptops, tablets, chips, graphics cards, watches, headphones and consoles head to head with scores, benchmarks and full specs',
+    description: 'Compare 1,500+ phones, laptops, tablets, TVs, monitors, chips, graphics cards, watches, headphones and consoles, with separate verdicts for the better tech and the better buy',
     category: 'everyday',
     secondary: ['developer', 'business', 'reference'],
     keywords: ['tech device comparisons', 'device comparison', 'versus', 'vs', 'specs', 'spec sheet', 'compare phones', 'compare laptops', 'smartphones', 'laptops', 'tablets', 'ipad', 'iphone', 'galaxy', 'pixel', 'macbook', 'cpu', 'processor', 'gpu', 'graphics card', 'rtx', 'radeon', 'snapdragon', 'dimensity', 'chipset', 'benchmark', 'geekbench', 'antutu', 'smartwatch', 'apple watch', 'earbuds', 'headphones', 'airpods', 'playstation', 'xbox', 'nintendo switch', 'steam deck', 'rankings', 'voltix', 'monitors', 'chargers', 'magsafe', 'keyboards', 'mice', 'tvs', 'appliances', 'gadgets', 'hardware'],

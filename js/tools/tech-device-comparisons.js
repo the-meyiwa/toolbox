@@ -8,14 +8,18 @@
    category. The online spec-sheet lookup (Icecat) remains as the
    third tab for products outside the built-in database.
 
-   1,300+ devices across phones, tablets, laptops, mobile chips,
-   processors, graphics cards, smartwatches, headphones and consoles
-   live in lib/devices/data. Settings: Preferences → Tools.
+   1,500+ devices across phones, tablets, laptops, TVs, monitors,
+   mobile chips, processors, graphics cards, smartwatches, headphones
+   and consoles live in lib/devices/data. Settings: Preferences → Tools.
+
+   Every category opens blank: the user picks both devices. The
+   verdict is split in two — "Better tech" (spec score, price ignored)
+   and "Better buy" (score weighed against launch price).
    ============================================================ */
 
 import {
   CATEGORIES, CATEGORY_ORDER, loadCategory, reasons, formatValue, winner, searchDevices,
-  defaultPair, suggestions, fmtDate,
+  suggestions, popular, verdicts, fmtDate,
 } from '../lib/devices/db.js';
 import IcecatPanel from '../lib/devices/icecat-panel.js';
 import { getToolSettings, onToolSettings } from '../lib/tool-settings.js';
@@ -27,12 +31,16 @@ const STORE = 'toolbox_devices_v2';
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const BENCH_KEYS = ['gb6s', 'gb6m', 'antutu', 'cb24s', 'cb24m', 'timespy', 'steelnomad', 'wildlife'];
 const RANK_PAGE = 40;
+/* lower-case a label but keep acronyms such as TVs */
+const lc = (t) => String(t).split(' ').map(w => (/^[A-Z]{2,}/.test(w) ? w : w.toLowerCase())).join(' ');
 
 /* Category glyphs, drawn at 48×48. */
 const GLYPH = {
   phones: '<rect x="15" y="5" width="18" height="38" rx="4"/><path d="M21 9h6"/><circle cx="24" cy="38" r="1.2"/>',
   tablets: '<rect x="9" y="6" width="30" height="36" rx="4"/><circle cx="24" cy="38" r="1.2"/>',
   laptops: '<rect x="10" y="11" width="28" height="19" rx="2.5"/><path d="M5 35h38l-3 4H8z"/>',
+  tvs: '<rect x="5" y="9" width="38" height="24" rx="2.5"/><path d="M17 40h14M24 33v7"/>',
+  monitors: '<rect x="6" y="7" width="36" height="24" rx="2.5"/><path d="M24 31v6M16 41h16"/><path d="M6 26h36"/>',
   socs: '<rect x="13" y="13" width="22" height="22" rx="3"/><rect x="19" y="19" width="10" height="10" rx="1.5"/><path d="M18 8v5M24 8v5M30 8v5M18 35v5M24 35v5M30 35v5M8 18h5M8 24h5M8 30h5M35 18h5M35 24h5M35 30h5"/>',
   cpus: '<rect x="11" y="11" width="26" height="26" rx="3"/><rect x="17" y="17" width="14" height="14" rx="2"/><path d="M16 6v5M22 6v5M28 6v5M34 6v5M16 37v5M22 37v5M28 37v5M34 37v5M6 16h5M6 22h5M6 28h5M6 34h5M37 16h5M37 22h5M37 28h5M37 34h5"/>',
   gpus: '<rect x="5" y="14" width="38" height="18" rx="3"/><circle cx="17" cy="23" r="5"/><circle cx="31" cy="23" r="5"/><path d="M9 32v4M14 32v3M19 32v3M24 32v3"/>',
@@ -47,6 +55,9 @@ const ic = {
   cross: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   search: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
   chevron: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  tag: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/></svg>',
+  bolt: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   sliders: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="14" y2="7"/><circle cx="16" cy="7" r="2"/><line x1="10" y1="17" x2="20" y2="17"/><circle cx="8" cy="17" r="2"/></svg>',
 };
 
@@ -55,10 +66,14 @@ export default {
     this.container = container;
     this.prefs = getToolSettings('tech-device-comparisons');
     const saved = this.load();
+    // A comparison handed over by the Assistant (device_compare) is applied once;
+    // otherwise every category opens blank and the user picks both devices.
+    const handoff = saved.handoff && CATEGORIES[saved.handoff.cat] && Array.isArray(saved.handoff.pair) ? saved.handoff : null;
+    this.handoff = handoff;
     this.state = {
-      cat: saved.cat && CATEGORIES[saved.cat] ? saved.cat : this.prefs.defaultCategory,
-      view: ['compare', 'rank', 'sheets'].includes(saved.view) ? saved.view : 'compare',
-      pairs: saved.pairs || {},
+      cat: handoff ? handoff.cat : saved.cat && CATEGORIES[saved.cat] ? saved.cat : this.prefs.defaultCategory,
+      view: handoff ? 'compare' : ['compare', 'rank', 'sheets'].includes(saved.view) ? saved.view : 'compare',
+      pairs: {},
       diffOnly: this.prefs.differencesOnly,
       rank: { q: '', brand: '', year: '', sort: 'score', shown: RANK_PAGE },
     };
@@ -85,7 +100,7 @@ export default {
 
   load() { try { return JSON.parse(localStorage.getItem(STORE) || '{}'); } catch { return {}; } },
   save() {
-    try { localStorage.setItem(STORE, JSON.stringify({ cat: this.state.cat, view: this.state.view, pairs: this.state.pairs, counts: this.counts })); } catch { /* private mode */ }
+    try { localStorage.setItem(STORE, JSON.stringify({ cat: this.state.cat, view: this.state.view, counts: this.counts })); } catch { /* private mode */ }
   },
   units() { return this.prefs.units === 'auto' ? (getSetting('unitSystem') === 'imperial' ? 'imperial' : 'metric') : this.prefs.units; },
   fmtScore(v) {
@@ -136,8 +151,10 @@ export default {
     this.data = await loadCategory(cat);
     if (!this.container || this.state.cat !== cat) return;
     this.counts[cat] = this.data.devices.length;
-    const pair = this.state.pairs[cat];
-    if (!pair || !this.data.byId.has(pair[0]) || !this.data.byId.has(pair[1])) this.state.pairs[cat] = defaultPair(this.data);
+    // blank on open — no preset comparison
+    const hand = this.handoff && this.handoff.cat === cat ? this.handoff.pair : null;
+    this.handoff = null;
+    this.state.pairs[cat] = hand ? hand.map(id => (this.data.byId.has(id) ? id : null)).slice(0, 2) : [null, null];
     this.save();
     this.renderCats();
     this.renderView();
@@ -154,41 +171,50 @@ export default {
 
   /* ---------------- compare ---------------- */
   pair() {
-    const [a, b] = this.state.pairs[this.state.cat] || [];
+    if (!this.state.pairs[this.state.cat]) this.state.pairs[this.state.cat] = [null, null];
+    const [a, b] = this.state.pairs[this.state.cat];
     return [this.data.byId.get(a), this.data.byId.get(b)];
   },
 
   renderCompare() {
     const [A, B] = this.pair();
     const cat = this.state.cat, def = CATEGORIES[cat];
-    if (!A || !B) { this.el.body.innerHTML = '<p class="dv-empty">Pick two devices to compare.</p>'; return; }
+    if (!A || !B) { this.renderStart(A, B); return; }
     const units = this.units();
-    const aWins = (A._score ?? -1) > (B._score ?? -1), bWins = (B._score ?? -1) > (A._score ?? -1);
+    const V = verdicts(cat, A, B);
+    const aWins = V.tech.winner === 'a', bWins = V.tech.winner === 'b';
     const lim = this.prefs.reasons;
-    const filter = (list) => list.filter(r => (this.prefs.showPrices || r.key !== 'price') && (this.prefs.showBenchmarks || !BENCH_KEYS.includes(r.key)));
+    const filter = (list) => list.filter(r => (this.prefs.showBenchmarks || !BENCH_KEYS.includes(r.key)));
     const whyA = filter(reasons(cat, A, B, units, lim + 4)).slice(0, lim), whyB = filter(reasons(cat, B, A, units, lim + 4)).slice(0, lim);
 
     const heroCard = (d, win, side) => `
       <div class="dv-hero-card${win ? ' win' : ''}" data-side="${side}">
-        <div class="dv-picker" data-slot="${side}">
-          <button type="button" class="dv-picker-btn" aria-haspopup="listbox" aria-expanded="false">
-            <span class="dv-picker-name">${esc(d.name)}</span>${ic.chevron}
-          </button>
-          <div class="dv-pop" hidden>
-            <label class="dv-pop-search">${ic.search}<input type="search" placeholder="Search ${esc(def.label.toLowerCase())}" aria-label="Search ${esc(def.label.toLowerCase())}" autocomplete="off"></label>
-            <ul class="dv-pop-list" role="listbox"></ul>
-          </div>
-        </div>
+        ${this.pickerHtml(d, side)}
         <div class="dv-hero-main">
           <span class="dv-hero-glyph">${glyph(cat, 56)}</span>
           <div class="dv-hero-meta">
             <span class="dv-brand">${esc(d.brand)}</span>
             <strong class="dv-hero-name">${esc(d.name)}</strong>
             <span class="dv-hero-sub">${esc([fmtDate(d.released), this.prefs.showPrices && d.price ? `$${Number(d.price).toLocaleString('en-US')}` : '', d.type || d.segment || ''].filter(Boolean).join(' · '))}</span>
+            ${(V.tech.winner === side || V.buy.winner === side) ? `<span class="dv-badges">${V.tech.winner === side ? `<span class="dv-badge tech">${ic.bolt}Better tech</span>` : ''}${V.buy.winner === side ? `<span class="dv-badge buy">${ic.tag}Better buy</span>` : ''}</span>` : ''}
           </div>
         </div>
         <div class="dv-ring${win ? ' win' : ''}">${ring(d._score)}<span class="dv-ring-val">${this.fmtScore(d._score)}</span><span class="dv-ring-cap">${d._rank ? `#${d._rank} of ${this.data.devices.length}` : 'Not ranked'}</span></div>
       </div>`;
+
+    const vCard = (kind, v, title, sub) => `
+      <div class="dv-card dv-verdict ${kind}${v.winner === 'a' || v.winner === 'b' ? ' has-win' : ''}">
+        <div class="dv-verdict-head"><span class="dv-verdict-icon">${kind === 'tech' ? ic.bolt : ic.tag}</span><span class="dv-verdict-kind">${title}</span><small>${sub}</small></div>
+        <strong class="dv-verdict-name">${esc(v.headline)}</strong>
+        <p>${esc(v.text)}</p>
+        ${v.figures ? `<span class="dv-verdict-fig">${esc(this.prefs.scoreScale === '10' ? v.figures.replace(/\b(Score|Value) (\d+) vs (\d+)/, (m, k, x, y) => `${k} ${(x / 10).toFixed(1)} vs ${(y / 10).toFixed(1)}`) : v.figures)}</span>` : ''}
+      </div>`;
+    const verdictHtml = `
+      <section class="dv-verdicts" aria-label="Verdict">
+        ${vCard('tech', V.tech, 'Better tech', 'Specs only, price ignored')}
+        ${this.prefs.showPrices ? vCard('buy', V.buy, 'Better buy', 'Score for the money, at launch price') : ''}
+        ${V.summary && this.prefs.showPrices ? `<p class="dv-verdict-sum${V.same ? ' same' : ''}">${esc(V.summary)}</p>` : ''}
+      </section>`;
 
     const subs = this.data.scores.filter(s => A._scores[s.key] != null || B._scores[s.key] != null);
     const scoresHtml = subs.map(s => {
@@ -203,10 +229,15 @@ export default {
       </div>`;
     }).join('');
 
+    const priceNote = (d, other) => {
+      if (!this.prefs.showPrices || !(d.price > 0) || !(other.price > 0) || d.price >= other.price) return '';
+      return `<div class="dv-why-buy"><span class="dv-why-buy-icon">${ic.tag}</span><span><strong>$${Number(other.price - d.price).toLocaleString('en-US')} cheaper at launch</strong><small>$${Number(d.price).toLocaleString('en-US')} vs $${Number(other.price).toLocaleString('en-US')} · counts towards Better buy, not Better tech</small></span></div>`;
+    };
     const whyCard = (d, other, list, side) => `
       <div class="dv-card dv-why-card" data-side="${side}">
-        <h3>Why is ${esc(d.name)} better than ${esc(other.name)}?</h3>
+        <h3>Where ${esc(d.name)} has better tech</h3>
         ${list.length ? `<ul>${list.map(r => `<li><span class="dv-check">${ic.check}</span><span><strong>${esc(r.title)}</strong>${r.detail ? `<small>${esc(r.detail)}</small>` : ''}</span></li>`).join('')}</ul>` : `<p class="dv-muted">Nothing stands out on paper.</p>`}
+        ${priceNote(d, other)}
       </div>`;
 
     // benchmarks
@@ -273,16 +304,71 @@ export default {
     this.el.body.innerHTML = `
       <section class="dv-hero">
         ${heroCard(A, aWins, 'a')}
-        <div class="dv-vs"><button type="button" class="dv-swap" data-act="swap" aria-label="Swap devices" title="Swap">${ic.swap}</button><span>VS</span></div>
+        <div class="dv-vs"><button type="button" class="dv-swap" data-act="swap" aria-label="Swap devices" title="Swap">${ic.swap}</button><span>VS</span><button type="button" class="dv-clear" data-act="clear" aria-label="Start a new comparison" title="New comparison">${ic.cross}</button></div>
         ${heroCard(B, bWins, 'b')}
       </section>
+      ${verdictHtml}
       ${subs.length ? `<section class="dv-card dv-breakdown"><header class="dv-sec-head"><h3>Score breakdown</h3><div class="dv-legend"><span class="a">${esc(A.name)}</span><span class="b">${esc(B.name)}</span></div></header>${scoresHtml}</section>` : ''}
       <section class="dv-why">${whyCard(A, B, whyA, 'a')}${whyCard(B, A, whyB, 'b')}</section>
       ${benchHtml}
       ${specHtml}
       ${relatedHtml}
-      <p class="dv-note">Scores compare each device with the rest of its category from the listed specs; they are not a review. Benchmark figures are typical published results and vary with software and cooling. <sup>*</sup> marks a value taken from the device's chip. Launch prices are US list prices for the base model.</p>`;
+      <p class="dv-note">Scores compare each device with the rest of its category from the listed specs and ignore price; they are not a review. Better buy weighs that score against the US launch price (street prices fall over time, especially for older models). Benchmark figures are typical published results and vary with software and cooling. <sup>*</sup> marks a value taken from the device's chip. Launch prices are US list prices for the base model.</p>`;
     requestAnimationFrame(() => this.el.body.querySelectorAll('.dv-bf-bar i, .dv-bench-bar i, .dv-ring').forEach(n => n.classList.add('in')));
+  },
+
+  pickerHtml(d, side) {
+    const def = CATEGORIES[this.state.cat];
+    return `<div class="dv-picker" data-slot="${side}">
+      <button type="button" class="dv-picker-btn${d ? '' : ' is-empty'}" aria-haspopup="listbox" aria-expanded="false">
+        <span class="dv-picker-name">${d ? esc(d.name) : `Choose a ${esc(def.singular)}`}</span>${ic.chevron}
+      </button>
+      <div class="dv-pop" hidden>
+        <label class="dv-pop-search">${ic.search}<input type="search" placeholder="Search ${esc(lc(def.label))}" aria-label="Search ${esc(lc(def.label))}" autocomplete="off"></label>
+        <ul class="dv-pop-list" role="listbox"></ul>
+      </div>
+    </div>`;
+  },
+
+  /** Blank comparison: two slots to fill, plus optional starting points (never auto-applied). */
+  renderStart(A, B) {
+    const cat = this.state.cat, def = CATEGORIES[cat];
+    const slot = (d, side) => d ? `
+      <div class="dv-hero-card" data-side="${side}">
+        ${this.pickerHtml(d, side)}
+        <div class="dv-hero-main">
+          <span class="dv-hero-glyph">${glyph(cat, 56)}</span>
+          <div class="dv-hero-meta">
+            <span class="dv-brand">${esc(d.brand)}</span>
+            <strong class="dv-hero-name">${esc(d.name)}</strong>
+            <span class="dv-hero-sub">${esc([fmtDate(d.released), this.prefs.showPrices && d.price ? `$${Number(d.price).toLocaleString('en-US')}` : ''].filter(Boolean).join(' · '))}</span>
+          </div>
+        </div>
+        <div class="dv-ring">${ring(d._score)}<span class="dv-ring-val">${this.fmtScore(d._score)}</span><span class="dv-ring-cap">${d._rank ? `#${d._rank} of ${this.data.devices.length}` : 'Not ranked'}</span></div>
+      </div>` : `
+      <div class="dv-hero-card dv-slot-empty" data-side="${side}">
+        ${this.pickerHtml(null, side)}
+        <button type="button" class="dv-slot-cta" data-act="open-slot" data-slot-open="${side}">
+          <span class="dv-slot-glyph">${glyph(cat, 44)}</span>
+          <span class="dv-slot-text"><strong>${side === 'a' ? 'First' : 'Second'} ${esc(def.singular)}</strong><small>Search ${this.counts[cat] || this.data.devices.length} ${esc(lc(def.label))}</small></span>
+          <span class="dv-slot-plus">${ic.plus}</span>
+        </button>
+      </div>`;
+    const chosen = A || B;
+    const chips = chosen ? suggestions(this.data, chosen.id, 7) : popular(this.data, 8);
+    this.el.body.innerHTML = `
+      <section class="dv-hero dv-hero-start">
+        ${slot(A, 'a')}
+        <div class="dv-vs"><span>VS</span>${chosen ? `<button type="button" class="dv-clear" data-act="clear" aria-label="Clear" title="Clear">${ic.cross}</button>` : ''}</div>
+        ${slot(B, 'b')}
+      </section>
+      <section class="dv-card dv-start">
+        <h3>${chosen ? `Now choose a ${esc(def.singular)} to compare with ${esc(chosen.name)}` : `Choose two ${esc(lc(def.label))} to compare`}</h3>
+        <p class="dv-muted">You'll get two verdicts: <strong>Better tech</strong> judges the specs alone, <strong>Better buy</strong> weighs them against the launch price. They don't always agree.</p>
+        ${chips.length ? `<div class="dv-start-chips-head">${chosen ? 'Close matches' : 'Popular right now'}<span class="dv-muted"> · tap to add</span></div>
+        <div class="dv-start-chips">${chips.map(d => `<button type="button" class="dv-chip" data-fill="${esc(d.id)}"><span>${esc(d.name)}</span><em>${this.fmtScore(d._score)}</em></button>`).join('')}</div>` : ''}
+      </section>`;
+    requestAnimationFrame(() => this.el?.body.querySelectorAll('.dv-ring').forEach(n => n.classList.add('in')));
   },
 
   /* ---------------- device picker ---------------- */
@@ -305,15 +391,15 @@ export default {
   },
   fillPicker(slotEl, q) {
     const list = slotEl.querySelector('.dv-pop-list');
-    const current = this.state.pairs[this.state.cat];
+    const current = this.state.pairs[this.state.cat] || [null, null];
     const other = current[slotEl.dataset.slot === 'a' ? 1 : 0];
     const found = searchDevices(this.data, q, 40).filter(d => d.id !== other);
     list.innerHTML = found.length ? found.map((d, i) => `<li role="option" tabindex="-1" data-pick="${esc(d.id)}" class="${i === 0 ? 'active' : ''}" aria-selected="${i === 0}">
       <span class="dv-pop-name">${esc(d.name)}</span><span class="dv-pop-meta">${esc(d.brand)} · ${esc(fmtDate(d.released))}</span><span class="dv-pop-score">${this.fmtScore(d._score)}</span></li>`).join('')
-      : `<li class="dv-pop-empty">No ${esc(CATEGORIES[this.state.cat].label.toLowerCase())} match “${esc(q)}”.</li>`;
+      : `<li class="dv-pop-empty">No ${esc(lc(CATEGORIES[this.state.cat].label))} match “${esc(q)}”.</li>`;
   },
   pick(slot, id) {
-    const pair = [...this.state.pairs[this.state.cat]];
+    const pair = [...(this.state.pairs[this.state.cat] || [null, null])];
     pair[slot === 'a' ? 0 : 1] = id;
     this.state.pairs[this.state.cat] = pair;
     this.save();
@@ -330,7 +416,7 @@ export default {
     const key = r.sort;
     const sub = this.data.scores.find(s => s.key === key);
     const field = def.fields.find(f => f.key === key);
-    const val = (d) => key === 'score' ? d._score : key === 'newest' ? (d.released || '') : sub ? d._scores[key] : d[key];
+    const val = (d) => key === 'score' ? d._score : key === 'value' ? d._value : key === 'newest' ? (d.released || '') : sub ? d._scores[key] : d[key];
     list = list.filter(d => val(d) != null || key === 'score');
     list.sort((a, b) => {
       const x = val(a), y = val(b);
@@ -347,17 +433,19 @@ export default {
       laptops: ['cpu', 'gpu', 'displaySize', 'weight'], socs: ['node', 'cores', 'maxClock', 'gpu'], cpus: ['cores', 'threads', 'boostClock', 'tdp'],
       gpus: ['vram', 'shaders', 'boostClock', 'tdp'], watches: ['displaySize', 'batteryDays', 'gps', 'water'], audio: ['type', 'anc', 'battery', 'codecs'],
       consoles: ['type', 'tflops', 'ram', 'storage'],
-    }[this.state.cat];
+      tvs: ['panel', 'displaySize', 'nits', 'refresh'], monitors: ['panel', 'displaySize', 'displayRes', 'refresh'],
+    }[this.state.cat] || [];
     const units = this.units();
     return pick.map(k => CATEGORIES[this.state.cat].fields.find(f => f.key === k)).filter(f => f && d[f.key] != null)
       .map(f => f.type === 'bool' ? (d[f.key] ? f.label : '') : f.type === 'num' && !f.unit ? `${formatValue(f, d[f.key], units)} ${f.label.toLowerCase()}` : formatValue(f, d[f.key], units)).filter(Boolean);
   },
   renderRank() {
     const r = this.state.rank, def = CATEGORIES[this.state.cat];
-    const sortOpts = [['score', 'Overall score'], ['newest', 'Newest'], ...this.data.scores.map(s => [s.key, s.label]),
+    const hasValue = this.prefs.showPrices && this.data.devices.some(d => d._value != null);
+    const sortOpts = [['score', 'Tech score'], ...(hasValue ? [['value', 'Best value (score for the money)']] : []), ['newest', 'Newest'], ...this.data.scores.map(s => [s.key, s.label]),
       ...def.fields.filter(f => f.better && f.type === 'num' && this.data.devices.some(d => d[f.key] != null) && (this.prefs.showPrices || f.key !== 'price') && (this.prefs.showBenchmarks || !BENCH_KEYS.includes(f.key))).map(f => [f.key, f.label])];
     const list = this.rankList();
-    const [pa, pb] = this.state.pairs[this.state.cat];
+    const [pa, pb] = this.state.pairs[this.state.cat] || [null, null];
     const sortField = def.fields.find(f => f.key === r.sort);
     const sub = this.data.scores.find(s => s.key === r.sort);
     const units = this.units();
@@ -365,15 +453,15 @@ export default {
     this.el.body.innerHTML = `
       <section class="dv-card dv-rank">
         <div class="dv-rank-tools">
-          <label class="dv-rank-search">${ic.search}<input type="search" data-rank="q" value="${esc(r.q)}" placeholder="Search ${esc(def.label.toLowerCase())}" aria-label="Search"></label>
+          <label class="dv-rank-search">${ic.search}<input type="search" data-rank="q" value="${esc(r.q)}" placeholder="Search ${esc(lc(def.label))}" aria-label="Search"></label>
           <select class="tool-select" data-rank="brand" aria-label="Brand"><option value="">All brands</option>${this.data.brands.map(b => `<option ${b === r.brand ? 'selected' : ''}>${esc(b)}</option>`).join('')}</select>
           <select class="tool-select" data-rank="year" aria-label="Year"><option value="">Any year</option>${this.data.years.map(y => `<option ${y === r.year ? 'selected' : ''}>${esc(y)}</option>`).join('')}</select>
           <select class="tool-select" data-rank="sort" aria-label="Sort by">${sortOpts.map(([k, l]) => `<option value="${k}" ${k === r.sort ? 'selected' : ''}>Sort: ${esc(l)}</option>`).join('')}</select>
         </div>
-        <p class="dv-muted dv-rank-count">${list.length} ${esc(list.length === 1 ? def.singular : def.label.toLowerCase())}</p>
+        <p class="dv-muted dv-rank-count">${list.length} ${esc(list.length === 1 ? def.singular : lc(def.label))}</p>
         <ol class="dv-rank-list">
           ${shown.map((d, i) => {
-            const metric = sortField ? formatValue(sortField, d[r.sort], units) : sub ? this.fmtScore(d._scores[r.sort]) : '';
+            const metric = sortField ? formatValue(sortField, d[r.sort], units) : sub ? this.fmtScore(d._scores[r.sort]) : r.sort === 'value' ? `Value ${this.fmtScore(d._value)}${d.price ? ` · $${Number(d.price).toLocaleString('en-US')}` : ''}` : '';
             return `<li class="dv-rank-row">
               <span class="dv-rank-pos">${i + 1}</span>
               <span class="dv-rank-glyph">${glyph(this.state.cat, 28)}</span>
@@ -415,13 +503,22 @@ export default {
       slot.querySelector('.dv-pop').hidden ? this.openPicker(slot) : this.closePickers();
       return;
     }
+    const slotOpen = t.closest('[data-slot-open]');
+    if (slotOpen) { const p = this.el.body.querySelector(`.dv-picker[data-slot="${slotOpen.dataset.slotOpen}"]`); if (p) this.openPicker(p); return; }
+    const fill = t.closest('[data-fill]');
+    if (fill) {
+      const pair = [...(this.state.pairs[this.state.cat] || [null, null])];
+      const idx = pair[0] ? 1 : 0;
+      if (pair[1 - idx] !== fill.dataset.fill) this.pick(idx ? 'b' : 'a', fill.dataset.fill);
+      return;
+    }
     const opt = t.closest('[data-pick]');
     if (opt) { this.pick(opt.closest('.dv-picker').dataset.slot, opt.dataset.pick); return; }
     const pairBtn = t.closest('[data-pair]');
     if (pairBtn) { this.state.pairs[this.state.cat] = pairBtn.dataset.pair.split('|'); this.save(); this.renderCompare(); this.container.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     const setSlot = t.closest('[data-slot-set]');
     if (setSlot) {
-      const pair = [...this.state.pairs[this.state.cat]];
+      const pair = [...(this.state.pairs[this.state.cat] || [null, null])];
       const idx = setSlot.dataset.slotSet === 'a' ? 0 : 1;
       if (pair[1 - idx] === setSlot.dataset.id) pair[1 - idx] = pair[idx];
       pair[idx] = setSlot.dataset.id;
@@ -433,7 +530,8 @@ export default {
     const act = t.closest('[data-act]');
     if (!act) return;
     switch (act.dataset.act) {
-      case 'swap': this.state.pairs[this.state.cat] = [...this.state.pairs[this.state.cat]].reverse(); this.save(); this.renderCompare(); break;
+      case 'swap': this.state.pairs[this.state.cat] = [...this.pair().map(d => d?.id ?? null)].reverse(); this.renderCompare(); break;
+      case 'clear': this.state.pairs[this.state.cat] = [null, null]; this.renderCompare(); break;
       case 'prefs': openSettings('tool:tech-device-comparisons'); break;
       case 'more': this.state.rank.shown += RANK_PAGE; this.renderRank(); break;
       case 'copy-md': copyText(this.markdown()); showToast('Comparison copied as a Markdown table'); break;
@@ -479,11 +577,13 @@ export default {
     const [A, B] = this.pair();
     const units = this.units(), def = CATEGORIES[this.state.cat];
     const c = (s) => String(s ?? '—').replace(/\|/g, '\\|');
-    let md = `| | ${c(A.name)} | ${c(B.name)} |\n| --- | --- | --- |\n| Score | ${this.fmtScore(A._score)} | ${this.fmtScore(B._score)} |\n`;
+    let md = `| | ${c(A.name)} | ${c(B.name)} |\n| --- | --- | --- |\n| Tech score | ${this.fmtScore(A._score)} | ${this.fmtScore(B._score)} |\n| Value score | ${this.fmtScore(A._value)} | ${this.fmtScore(B._value)} |\n`;
     for (const f of def.fields) {
       if (/Id$/.test(f.key) || (A[f.key] == null && B[f.key] == null)) continue;
       md += `| ${c(f.label)} | ${c(formatValue(f, A[f.key], units) || '—')} | ${c(formatValue(f, B[f.key], units) || '—')} |\n`;
     }
+    const V = verdicts(this.state.cat, A, B);
+    md += `\n**Better tech:** ${V.tech.headline}. ${V.tech.text}\n\n**Better buy:** ${V.buy.headline}. ${V.buy.text}\n`;
     return md;
   },
 };

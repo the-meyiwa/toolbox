@@ -9,6 +9,16 @@
   transition: opacity 120ms ease, transform 160ms var(--menu-ease), display 160ms allow-discrete;
 }
 .sv-open-dropdown-menu, .ast-attach-popup, .header-dropdown-menu { transform-origin: top right; }
+/* Header panels stay mounted and open/close by toggling .is-open (base.css).
+   The keyframe above uses fill:both, and an animation's filled value beats
+   the regular cascade - so it pinned opacity at 1 after the first open and
+   the notification panel could never fade out again (pointer-events went to
+   none, leaving a dead, still-visible panel). Let the class transition own it.
+   !important because the :is() list above contains an ID selector and so
+   outranks any plain class rule. */
+.header-dropdown-menu { animation: none !important; }
+.header-dropdown-menu:not(.is-open) { visibility: hidden; transition: opacity 120ms ease, transform 160ms var(--menu-ease), visibility 0s linear 160ms !important; }
+.header-dropdown-menu.is-open { visibility: visible; transition: opacity 120ms ease, transform 160ms var(--menu-ease), visibility 0s !important; }
 
 @keyframes menu-unfold {
   from { opacity:0; transform:perspective(900px) rotateX(-7deg) scale(.97); }

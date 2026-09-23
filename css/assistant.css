@@ -880,3 +880,12 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
   padding: 0 !important; border: 0 !important; border-radius: 0 !important;
   background: transparent !important; box-shadow: none !important; outline: 0 !important;
 }
+
+/* Device comparison verdicts: specs and value are judged separately */
+.astc-verdicts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin: var(--space-3) 0; }
+.astc-verdict { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-3); background: var(--surface-2); min-width: 0; }
+.astc-verdict small { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-3); }
+.astc-verdict strong { display: block; margin-top: 2px; font-size: 0.92rem; color: var(--text); }
+.astc-verdict p { margin: 4px 0 0; font-size: 0.8rem; line-height: 1.45; color: var(--text-2); }
+.astc-verdict-note { grid-column: 1 / -1; margin: 0; font-size: 0.8rem; color: var(--text-2); }
+@media (max-width: 520px) { .astc-verdicts { grid-template-columns: minmax(0, 1fr); } }

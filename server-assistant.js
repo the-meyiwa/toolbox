@@ -128,6 +128,28 @@ async function open(provider, model, payload, signal, plain = false) {
   return res;
 }
 
+/** Looks at the start of an SSE stream: 'ok' once there is content, reasoning or a tool call; an Error if the stream reports one. */
+function inspect(text) {
+  for (const line of text.split('\n')) {
+    if (!line.startsWith('data:')) continue;
+    const data = line.slice(5).trim();
+    if (!data || data === '[DONE]') continue;
+    let json;
+    try { json = JSON.parse(data); } catch { continue; }   // partial line; wait for more
+    if (json.error) return new Error(json.error.message || JSON.stringify(json.error).slice(0, 200));
+    const choice = json.choices?.[0];
+    const delta = choice?.delta || choice?.message || {};
+    if (delta.tool_calls?.length) return 'ok';
+    if (typeof delta.content === 'string' && delta.content.trim()) return 'ok';
+    const reasoning = delta.reasoning_content ?? delta.reasoning;
+    if (typeof reasoning === 'string' && reasoning.trim()) return 'ok';
+    if (choice?.finish_reason && !['stop', 'tool_calls', 'length'].includes(choice.finish_reason)) {
+      return new Error(`stopped (${choice.finish_reason})`);
+    }
+  }
+  return null;
+}
+
 export async function handleAssistantGateway(request, response, url) {
   if (url.pathname === '/api/assistant/v2/providers' && request.method === 'GET') {
     response.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
@@ -136,8 +158,15 @@ export async function handleAssistantGateway(request, response, url) {
   }
   if (url.pathname !== '/api/assistant/v2/chat' || request.method !== 'POST') return false;
 
+  let heartbeat = null;
   const fail = (status, error) => {
-    if (!response.headersSent) response.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    clearInterval(heartbeat);
+    if (response.headersSent) {
+      // Already streaming (heartbeats): report the failure as an SSE error event.
+      response.end(`event: error\ndata: ${JSON.stringify({ error, status })}\n\n`);
+      return true;
+    }
+    response.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
     response.end(JSON.stringify({ error }));
     return true;
   };
@@ -164,7 +193,18 @@ export async function handleAssistantGateway(request, response, url) {
     : configured;
 
   const controller = new AbortController();
-  response.on('close', () => controller.abort());
+  response.on('close', () => { clearInterval(heartbeat); controller.abort(); });
+
+  // Open the stream now and keep it alive while models think or fail over,
+  // so proxies (Cloudflare, Render) never see an idle connection.
+  response.writeHead(200, {
+    'Content-Type': 'text/event-stream; charset=utf-8',
+    'Cache-Control': 'no-store, no-transform',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+  response.write(': open\n\n');
+  heartbeat = setInterval(() => { try { response.write(': ping\n\n'); } catch { /* closed */ } }, 10_000);
 
   const errors = [];
   for (const provider of ordered) {
@@ -175,18 +215,38 @@ export async function handleAssistantGateway(request, response, url) {
         upstream = await open(provider, model, payload, controller.signal);
       } catch (err) {
         errors.push(err.message);
-        if (err.retryable === false) return fail(400, err.message);
+        if (err.retryable === false) break;   // this request won't suit this provider's other models either
         continue;
       }
-      response.writeHead(200, {
-        'Content-Type': 'text/event-stream; charset=utf-8',
-        'Cache-Control': 'no-store, no-transform',
-        Connection: 'keep-alive',
-        'X-Accel-Buffering': 'no',
-      });
-      response.write(`event: provider\ndata: ${JSON.stringify({ provider: provider.id, label: provider.label, model })}\n\n`);
+      // Hold the stream back until the model says something real, so an empty or
+      // failed answer can still fall over to the next model.
+      const reader = upstream.body.getReader();
+      const decoder = new TextDecoder();
+      const held = [];
+      let text = '';
+      let verdict = null;          // 'ok' | Error
       try {
-        const reader = upstream.body.getReader();
+        while (!verdict) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          held.push(value);
+          text += decoder.decode(value, { stream: true });
+          verdict = inspect(text);
+        }
+      } catch (err) {
+        verdict = err;
+      }
+      if (verdict !== 'ok') {
+        const why = verdict instanceof Error ? verdict.message : 'returned an empty answer';
+        errors.push(`${provider.label} (${model}): ${why}`);
+        console.warn('[assistant]', provider.label, model, why, text.slice(0, 300));
+        try { reader.cancel(); } catch { /* already closed */ }
+        continue;
+      }
+      clearInterval(heartbeat);
+      response.write(`event: provider\ndata: ${JSON.stringify({ provider: provider.id, label: provider.label, model })}\n\n`);
+      for (const chunk of held) response.write(Buffer.from(chunk));
+      try {
         for (;;) {
           const { value, done } = await reader.read();
           if (done) break;

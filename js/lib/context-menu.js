@@ -8,6 +8,55 @@
 import { removeMenu } from './menu-motion.js';
 let activeMenu = null;
 
+/* ---- Native menu guard ----------------------------------------------
+   Toolbox draws its own menus, so the browser's menu must never appear
+   on top of them. Two cases slipped through before:
+   1. Openers that react to pointerup (the 3D viewer, so a right-drag can
+      still pan) or to a touch long-press. On Windows the `contextmenu`
+      event fires *after* mouseup, and by then our menu is sitting under
+      the cursor, so the event targets the menu itself - an element no
+      opener listens on - and the native menu opened over ours.
+   2. Right-clicking inside an open Toolbox menu.
+   One capture listener covers every menu in the app (the shared engine
+   plus the Files and Playground menus). Editable fields are left alone
+   so copy/paste/spellcheck still work there. */
+const TOOLBOX_MENU_SELECTOR = '#toolbox-context-menu, #sv-finder-menu, #cpg-ctx-menu, .finder-context-menu';
+const SAME_GESTURE_MS = 600;
+let lastMenuOpenedAt = -Infinity;
+
+function isEditableTarget(el) {
+  return Boolean(el?.closest?.('input, textarea, select, [contenteditable=""], [contenteditable="true"], [contenteditable="plaintext-only"]'));
+}
+
+function eventElement(e) {
+  const t = e.target;
+  return t instanceof Element ? t : t?.parentElement || null;
+}
+
+function justOpenedMenu() {
+  return performance.now() - lastMenuOpenedAt < SAME_GESTURE_MS && document.querySelector(TOOLBOX_MENU_SELECTOR);
+}
+
+if (typeof window !== 'undefined' && !window.__toolboxNativeMenuGuard) {
+  window.__toolboxNativeMenuGuard = true;
+  window.addEventListener('contextmenu', (e) => {
+    const el = eventElement(e);
+    if (!el) return;
+    if (isEditableTarget(el)) return;
+    if (el.closest(TOOLBOX_MENU_SELECTOR)) { e.preventDefault(); return; }
+    if (justOpenedMenu()) e.preventDefault();
+  }, true);
+  // Menus built outside this engine (Files, Playground) are stamped as they
+  // mount; observer callbacks run before the next input event is dispatched.
+  const stamp = (records) => {
+    for (const r of records) for (const n of r.addedNodes) {
+      if (n.nodeType === 1 && n.matches(TOOLBOX_MENU_SELECTOR)) lastMenuOpenedAt = performance.now();
+    }
+  };
+  const observe = () => new MutationObserver(stamp).observe(document.body, { childList: true });
+  if (document.body) observe(); else document.addEventListener('DOMContentLoaded', observe, { once: true });
+}
+
 /**
  * Open a styled context menu
  * @param {Object} options
@@ -55,6 +104,7 @@ export function openContextMenu({ x, y, title = '', items = [], className = '', 
     `;
   });
 
+  lastMenuOpenedAt = performance.now();
   menu.innerHTML = html;
   menu.style.visibility = 'hidden';
   document.body.appendChild(menu);
@@ -98,6 +148,15 @@ export function openContextMenu({ x, y, title = '', items = [], className = '', 
     }
   };
 
+  // A right-click elsewhere closes this menu - but not the very event that
+  // belongs to the gesture which opened it (Windows fires it after mouseup).
+  const onGlobalContextMenu = (e) => {
+    const el = eventElement(e);
+    if (el && menu.contains(el)) return;
+    if (performance.now() - lastMenuOpenedAt < SAME_GESTURE_MS && el && !isEditableTarget(el)) return;
+    closeContextMenu();
+  };
+
   const onKeyDown = (e) => {
     if (e.key === 'Escape') {
       closeContextMenu();
@@ -118,7 +177,7 @@ export function openContextMenu({ x, y, title = '', items = [], className = '', 
   // Delay global listeners so the triggering click doesn't instantly dismiss
   const listenerTimer = setTimeout(() => {
     window.addEventListener('pointerdown', onGlobalPointerDown, true);
-    window.addEventListener('contextmenu', onGlobalPointerDown, true);
+    window.addEventListener('contextmenu', onGlobalContextMenu, true);
     window.addEventListener('scroll', closeContextMenu, { passive: true, capture: true });
     window.addEventListener('keydown', onKeyDown, true);
   }, 10);
@@ -128,7 +187,7 @@ export function openContextMenu({ x, y, title = '', items = [], className = '', 
     cleanup: () => {
       clearTimeout(listenerTimer);
       window.removeEventListener('pointerdown', onGlobalPointerDown, true);
-      window.removeEventListener('contextmenu', onGlobalPointerDown, true);
+      window.removeEventListener('contextmenu', onGlobalContextMenu, true);
       window.removeEventListener('scroll', closeContextMenu, true);
       window.removeEventListener('keydown', onKeyDown, true);
       removeMenu(menu);

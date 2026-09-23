@@ -42,7 +42,9 @@ export class AutomobileViewer {
     this.events = {
       pointerdown: event => {
         this.pointers.add(event.pointerId);
-        this.start = this.pointers.size === 1 ? { x: event.clientX, y: event.clientY, button: event.button } : null;
+        // macOS Control-click is a secondary click too: treat it like button 2.
+        const secondary = event.button === 2 || (event.button === 0 && event.ctrlKey && /Mac/i.test(navigator.platform || ''));
+        this.start = this.pointers.size === 1 ? { x: event.clientX, y: event.clientY, button: secondary ? 2 : event.button } : null;
       },
       pointerup: event => {
         if (this.start && Math.hypot(event.clientX - this.start.x, event.clientY - this.start.y) < 5) {

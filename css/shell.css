@@ -28,6 +28,34 @@ body.is-scrolled #app-header, body.in-tool #app-header { border-bottom-color: va
   transition: opacity var(--dur-2) ease;
 }
 .logo:hover { opacity: .7; }
+#app-header .logo { display: inline-flex; align-items: center; gap: 8px; }
+#app-header .logo:hover { opacity: 1; }
+/* Pixel mark: 56 one-unit cells on a 12x10 grid (24x20px, fixed box, so no
+   layout shift). Cells assemble along the diagonal (--i = row + col) on first
+   load, and ripple on hover for fine pointers only. */
+.logo-mark { display: block; flex: none; width: 24px; height: 20px; fill: currentColor; overflow: visible; }
+.logo-mark rect { transform-box: fill-box; transform-origin: center; }
+@keyframes logo-px-in {
+  0%   { opacity: 0; transform: translateY(-4px) scale(.2); }
+  60%  { opacity: 1; transform: translateY(.5px) scale(1.12); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes logo-px-wave {
+  0%, 100% { opacity: 1; transform: none; }
+  45% { opacity: .35; transform: translateY(-1.5px) scale(.55); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .logo.is-entering .logo-mark rect {
+    animation: logo-px-in 360ms cubic-bezier(.2,.8,.2,1) both;
+    animation-delay: calc(var(--i) * 22ms + 80ms);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .logo:hover .logo-mark rect {
+      animation: logo-px-wave 420ms cubic-bezier(.4,0,.2,1) both;
+      animation-delay: calc(var(--i) * 22ms);
+    }
+  }
+}
 .nav-links { display: flex; align-items: center; gap: var(--space-1); }
 .nav-link {
   position: relative;
@@ -536,3 +564,18 @@ html.theme-transition, html.theme-transition *, html.theme-transition *::before,
 }
 /* The tool cards are their own surfaces; the section around them stays flat. */
 .settings-page-panel > #sec-tools { background: none !important; border: 0 !important; box-shadow: none !important; padding: 4px 0 0 !important; }
+
+/* ---------- First-run username step (views/username-onboarding.js) ---------- */
+.uo-desc { margin-top: var(--space-2); font-size: 14px; line-height: 22px; }
+.uo-label { display: block; margin-top: var(--space-5); margin-bottom: var(--space-2); font-size: 13px; font-weight: 600; color: var(--text); }
+.uo-field { position: relative; }
+.uo-at { position: absolute; left: var(--space-3); top: 50%; transform: translateY(-50%); color: var(--text-3); font-size: 15px; pointer-events: none; }
+.uo-input.tool-input { width: 100%; padding-left: calc(var(--space-3) + 14px); font-size: 15px; }
+.uo-input[aria-invalid="true"] { border-color: var(--danger, var(--text)); }
+.uo-status { min-height: 20px; margin-top: var(--space-2); font-size: 13px; line-height: 20px; color: var(--text-2); }
+.uo-status[data-tone="error"] { color: var(--danger, var(--text)); }
+.uo-status[data-tone="ok"] { color: var(--text); }
+.uo-rules { font-size: 12px; line-height: 18px; color: var(--text-3); }
+.uo-footer { margin-top: var(--space-5); }
+.uo-footer .btn { min-width: 140px; }
+@media (max-width: 480px) { .uo-footer .btn { width: 100%; } }

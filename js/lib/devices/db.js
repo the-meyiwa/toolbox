@@ -25,6 +25,8 @@ const LOADERS = {
   watches: () => import('./data/watches.js').then(m => m.default),
   audio: () => import('./data/audio.js').then(m => m.default),
   consoles: () => import('./data/consoles.js').then(m => m.default),
+  tvs: () => import('./data/tvs.js').then(m => m.default),
+  monitors: () => import('./data/monitors.js').then(m => m.default),
 };
 
 /* Categories whose devices borrow benchmark data from a component category. */
@@ -100,6 +102,59 @@ export const parse = {
     if (/LOSSLESS/.test(s)) v = 1;
     return v;
   },
+  /** Contrast / black-level quality of a TV or monitor panel, 0..1. */
+  screen(t, zones) {
+    if (!t) return null;
+    const s = t.toLowerCase();
+    if (/oled/.test(s)) return /tandem|mla|4th gen|glare-free 2/.test(s) ? 1 : 0.95;
+    const z = Number(zones) || 0;
+    const zoneBonus = z ? Math.min(0.25, Math.log10(Math.max(10, z)) / 16) : 0;
+    if (/mini-?led/.test(s)) return Math.min(0.9, (/va/.test(s) ? 0.6 : 0.5) + zoneBonus);
+    if (/full-array/.test(s)) return (/va/.test(s) ? 0.5 : 0.4) + zoneBonus;
+    if (/ips black/.test(s)) return 0.35;
+    if (/\bva\b|va\)|\(va/.test(s)) return 0.4;
+    if (/ips/.test(s)) return 0.25;
+    if (/tn/.test(s)) return 0.15;
+    return 0.3;
+  },
+  hdrFormats(list) {
+    if (!Array.isArray(list)) return null;
+    const s = list.join(' ').toLowerCase();
+    return Math.min(1, (/hdr10\b|hdr10(?!\+)/.test(s) ? 0.4 : 0.2) + (/dolby vision/.test(s) ? 0.35 : 0) + (/hdr10\+/.test(s) ? 0.2 : 0) + (/hlg/.test(s) ? 0.05 : 0));
+  },
+  hdrCert(t) {
+    if (!t) return 0;
+    const s = t.toLowerCase();
+    if (/true black 600|true black 500/.test(s)) return 1;
+    if (/true black 400/.test(s)) return 0.85;
+    const m = /displayhdr\s*(\d{3,4})/.exec(s);
+    if (m) return Math.min(1, Number(m[1]) / 1400);
+    if (/dolby vision/.test(s)) return 0.8;
+    return /hdr/.test(s) ? 0.1 : 0;
+  },
+  vrr(list) {
+    if (!Array.isArray(list) || !list.length) return 0;
+    const s = list.join(' ').toLowerCase();
+    let v = 0.4;
+    if (/g-sync/.test(s)) v += 0.3;
+    if (/freesync premium|hdmi forum/.test(s)) v += 0.3;
+    return Math.min(1, v);
+  },
+  stand(t) {
+    if (!t) return null;
+    const s = t.toLowerCase();
+    if (/sold separately/.test(s)) return 0.3;
+    return Math.min(1, 0.2 + ['height', 'tilt', 'swivel', 'pivot'].filter(k => s.includes(k)).length * 0.2);
+  },
+  monitorPorts(d) {
+    const s = `${d.dp || ''} ${d.hdmi || ''}`.toLowerCase();
+    let v = 0.3;
+    if (/hdmi 2\.1/.test(s)) v += 0.25;
+    if (/displayport 2\.1|uhbr/.test(s)) v += 0.35;
+    else if (/displayport 1\.4/.test(s)) v += 0.15;
+    if (/in\/out/.test(s)) v += 0.1;
+    return Math.min(1, v);
+  },
   res(t) { if (!t) return null; const s = t.toUpperCase(); return /8K/.test(s) ? 1 : /4K|2160/.test(s) ? 0.8 : /1440|QHD/.test(s) ? 0.6 : /1080/.test(s) ? 0.45 : 0.3; },
 };
 
@@ -162,6 +217,18 @@ const SCORES = {
     { key: 'battery', label: 'Battery', weight: 0.30, metrics: [M('battery', 1, { log: true }), M('batteryTotal', 0.6, { log: true }), M(d => (d.wirelessCharging ? 1 : 0), 0.2, { fixed: true })] },
     { key: 'features', label: 'Features', weight: 0.30, metrics: [M(d => (d.multipoint ? 1 : 0), 0.8, { fixed: true }), M('bt', 0.5), M(d => parse.ip(d.water), 0.5, { fixed: true }), M('mics', 0.3)] },
   ],
+  tvs: [
+    { key: 'picture', label: 'Picture quality', weight: 0.35, metrics: [M(d => parse.screen(d.panel, d.zones), 1.6, { fixed: true }), M('dciP3', 0.8), M(d => parse.pixels(d.displayRes), 0.3, { log: true })] },
+    { key: 'hdr', label: 'Brightness & HDR', weight: 0.25, metrics: [M('nits', 1.4, { log: true }), M(d => parse.hdrFormats(d.hdr), 0.8, { fixed: true })] },
+    { key: 'gaming', label: 'Motion & gaming', weight: 0.20, metrics: [M('refresh', 1, { log: true }), M('inputLag', 0.8, { low: true }), M(d => d.hdmi21 ?? null, 0.8), M(d => parse.vrr(d.vrr), 0.4, { fixed: true })] },
+    { key: 'features', label: 'Sound & features', weight: 0.20, metrics: [M('audioW', 0.9, { log: true }), M(d => (d.atmos ? 1 : 0), 0.3, { fixed: true }), M('displaySize', 0.8), M(d => parse.wifi(d.wifi), 0.3)] },
+  ],
+  monitors: [
+    { key: 'picture', label: 'Picture quality', weight: 0.30, metrics: [M(d => parse.screen(d.panel, d.zones), 1.4, { fixed: true }), M('dciP3', 0.8), M('ppi', 0.8), M(d => parse.pixels(d.displayRes), 0.4, { log: true })] },
+    { key: 'hdr', label: 'Brightness & HDR', weight: 0.20, metrics: [M('nits', 1.2, { log: true }), M('sdrNits', 0.4), M(d => parse.hdrCert(d.hdrCert), 0.8, { fixed: true })] },
+    { key: 'motion', label: 'Motion & gaming', weight: 0.30, metrics: [M('refresh', 1.4, { log: true }), M('response', 1, { low: true, log: true }), M(d => parse.vrr(d.vrr), 0.4, { fixed: true })] },
+    { key: 'features', label: 'Connectivity & design', weight: 0.20, metrics: [M(d => d.usbPd ?? null, 0.8), M(d => (d.kvm ? 1 : 0), 0.4, { fixed: true }), M(d => parse.stand(d.stand), 0.5, { fixed: true }), M(d => parse.monitorPorts(d), 0.6, { fixed: true }), M(d => (d.speakers ? 1 : 0), 0.2, { fixed: true }), M('displaySize', 0.3)] },
+  ],
   consoles: [
     { key: 'performance', label: 'Performance', weight: 0.50, metrics: [M('tflops', 1.4, { log: true }), M('ram', 0.6, { log: true })] },
     { key: 'display', label: 'Display & output', weight: 0.25, metrics: [M(d => parse.res(d.maxRes), 1, { fixed: true }), M('maxFps', 0.6), M('refresh', 0.4)] },
@@ -178,6 +245,7 @@ const IMPORTANCE = {
   cores: 1.4, threads: 1.4, boostClock: 1.2, l3: 1.1, tdp: 1.2, npu: 1, displaySize: 0.9, maxFps: 1.4, driver: 0.6,
   anc: 2.6, ois: 1.2, wirelessCharging: 1.4, multipoint: 1.4, ecg: 1.4, spo2: 1.2, lte: 1.2, nfc: 1, esim: 0.8, jack: 1,
   sd: 1, fiveG: 1.4, touch: 1, cellular: 1.2, reverse: 0.7, spatial: 0.9, hires: 1, aod: 1, bt: 0.5, pcie: 1, shaders: 1.3, rtCores: 1, tensor: 0.9,
+  zones: 1.4, dciP3: 1.2, inputLag: 1.4, hdmi21: 1.4, audioW: 1, atmos: 0.8, hdmi: 0.5, power: 0.8, response: 1.6, sdrNits: 1, usbPd: 1.3, kvm: 0.9,
   camMainAperture: 1, maxClock: 1.1, gpuCores: 1, gpuClock: 0.8, transistors: 0.6, mics: 0.5, charger: 0.8, ramMax: 0.8,
 };
 
@@ -196,6 +264,9 @@ const PHRASE = {
   tdp: 'lower power draw', bandwidth: 'more memory bandwidth', shaders: 'more shader units', npu: 'faster NPU for AI',
   maxFps: 'higher maximum frame rate', driver: 'larger drivers', bt: 'newer Bluetooth', pcie: 'newer PCIe generation',
   rtCores: 'more ray-tracing units', tensor: 'more AI cores', gpuCores: 'more GPU cores', gpuClock: 'higher GPU clock',
+  zones: 'more local dimming zones', dciP3: 'wider colour gamut (DCI-P3)', inputLag: 'lower input lag', hdmi21: 'more HDMI 2.1 ports',
+  audioW: 'more powerful speakers', hdmi: 'more HDMI ports', power: 'lower power use', response: 'faster pixel response', sdrNits: 'brighter in SDR',
+  usbPd: 'more USB-C charging power',
   ramMax: 'more maximum RAM', charger: 'faster charger', mics: 'more microphones', transistors: 'more transistors',
 };
 const BOOL_PHRASE = {
@@ -203,7 +274,7 @@ const BOOL_PHRASE = {
   sd: 'Has a memory card slot', jack: 'Has a 3.5 mm headphone jack', nfc: 'Has NFC for payments', esim: 'Supports eSIM', fiveG: 'Supports 5G',
   touch: 'Has a touchscreen', cellular: 'Offers a cellular model', anc: 'Has active noise cancelling', spatial: 'Supports spatial audio',
   hires: 'Supports hi-res wireless audio', multipoint: 'Connects to two devices at once (multipoint)', wirelessCharging: 'Case charges wirelessly',
-  aod: 'Has an always-on display', ecg: 'Can take an ECG', spo2: 'Measures blood oxygen', lte: 'Available with LTE',
+  aod: 'Has an always-on display', atmos: 'Decodes Dolby Atmos', kvm: 'Has a built-in KVM switch', speakers: 'Has built-in speakers', ecg: 'Can take an ECG', spo2: 'Measures blood oxygen', lte: 'Available with LTE',
 };
 
 /* ---------- loading ---------- */
@@ -256,8 +327,13 @@ function enrich(cat, d, lookups) {
     }
     d._cpu = cpu?.id; d._gpu = gpu?.id;
   }
+  if (cat === 'monitors' && d.ppi == null && d.displaySize) {
+    const m = /(\d{3,5})\s*[x×]\s*(\d{3,5})/.exec(d.displayRes || '');
+    if (m) { d.ppi = Math.round(Math.hypot(Number(m[1]), Number(m[2])) / d.displaySize); derived.ppi = 'calculated from size and resolution'; }
+  }
   d._derived = derived;
-  d._search = `${d.name} ${d.brand} ${d.chip || ''} ${d.cpu || ''} ${d.gpu || ''} ${(d.released || '').slice(0, 4)}`.toLowerCase();
+  const extra = cat === 'tvs' || cat === 'monitors' ? ` ${d.panel || ''} ${d.type || ''} ${d.series || ''} ${d.displaySize ? `${d.displaySize}"` : ''} ${/oled/i.test(d.panel || '') ? 'oled' : ''} ${/mini-?led/i.test(d.panel || '') ? 'mini-led miniled' : ''}` : '';
+  d._search = `${d.name} ${d.brand} ${d.chip || ''} ${d.cpu || ''} ${d.gpu || ''} ${(d.released || '').slice(0, 4)}${extra}`.toLowerCase();
   return d;
 }
 
@@ -306,6 +382,15 @@ function score(cat, devices) {
     }
     d._score = totalW >= 0.5 ? Math.round(total / totalW) : null;
   }
+  // value for money: tech score weighed against launch price (log-scaled so a
+  // doubling of price must buy a clear jump in score), normalised to 15..99
+  const rawValue = (d) => (d._score != null && d.price > 0 ? Math.log(d._score) - 0.5 * Math.log(d.price) : null);
+  const vals = devices.map(rawValue).filter(v => v != null).sort((a, b) => a - b);
+  const vlo = quantile(vals, 0.03), vhi = Math.max(quantile(vals, 0.97), vlo + 1e-6);
+  for (const d of devices) {
+    const v = rawValue(d);
+    d._value = v == null ? null : Math.round(15 + Math.max(0, Math.min(1, (v - vlo) / (vhi - vlo))) * 84);
+  }
   // rank within the category
   const ranked = devices.filter(d => d._score != null).sort((a, b) => b._score - a._score);
   ranked.forEach((d, i) => { d._rank = i + 1; });
@@ -326,7 +411,7 @@ export function formatValue(field, v, units = 'metric') {
   if (v == null || v === '') return '';
   switch (field.type) {
     case 'bool': return v ? 'Yes' : 'No';
-    case 'list': return Array.isArray(v) ? v.join(', ') : String(v);
+    case 'list': return Array.isArray(v) ? (v.length ? v.join(', ') : 'None') : String(v);
     case 'nums': {
       const list = Array.isArray(v) ? v : [v];
       return list.map(x => (field.unit === 'GB' && x >= 1024 ? `${num(x / 1024, 1)} TB` : `${num(x)}`)).join(' / ') + (list.every(x => x < 1024) && field.unit ? ` ${field.unit}` : '');
@@ -343,6 +428,9 @@ export function formatValue(field, v, units = 'metric') {
       if (typeof v !== 'number') return String(v);
       const u = field.unit;
       if (field.key === 'price') return `$${num(v)}`;
+      if (field.key === 'usbPd' && v === 0) return 'None';
+      if (field.key === 'hdmi21' && v === 0) return 'None';
+      if (u === '%') return `${num(v)}%`;
       if (units === 'imperial') {
         if (u === 'g') return v >= 453.6 ? `${num(v / 453.592, 2)} lb` : `${num(v / 28.3495, 2)} oz`;
         if (u === 'kg') return `${num(v * 2.20462, 2)} lb`;
@@ -382,7 +470,7 @@ export function winner(field, a, b) {
 export function reasons(cat, a, b, units = 'metric', limit = 6) {
   const out = [];
   for (const field of CATEGORIES[cat].fields) {
-    if (!field.better || field.key === 'released') continue;
+    if (!field.better || field.key === 'released' || field.key === 'price') continue;
     const va = a[field.key], vb = b[field.key];
     if (field.type === 'bool') {
       if (va === true && vb === false && BOOL_PHRASE[field.key]) out.push({ key: field.key, weight: (IMPORTANCE[field.key] || 1) * 0.55, title: BOOL_PHRASE[field.key], detail: '' });
@@ -414,7 +502,113 @@ export function reasons(cat, a, b, units = 'metric', limit = 6) {
     const qa = parse.panel(a.panel), qb = parse.panel(b.panel);
     if (qa - qb >= 0.3) out.push({ key: 'panel', weight: 1.4, title: 'Better display technology', detail: `${a.panel} vs ${b.panel}` });
   }
+  if (cat === 'tvs' || cat === 'monitors') {
+    const qa = parse.screen(a.panel, a.zones), qb = parse.screen(b.panel, b.zones);
+    if (qa != null && qb != null && qa - qb >= 0.12) out.push({ key: 'panel', weight: 2.8, title: /oled/i.test(a.panel) ? 'Per-pixel OLED contrast (true blacks, no blooming)' : 'Better contrast and black levels', detail: `${a.panel} vs ${b.panel}` });
+    const ha = cat === 'tvs' ? parse.hdrFormats(a.hdr) : parse.hdrCert(a.hdrCert), hb = cat === 'tvs' ? parse.hdrFormats(b.hdr) : parse.hdrCert(b.hdrCert);
+    if (cat === 'tvs' && (a.hdr || []).includes('Dolby Vision') && !(b.hdr || []).includes('Dolby Vision')) out.push({ key: 'dv', weight: 1.6, title: 'Supports Dolby Vision', detail: `${b.name} lacks it` });
+    else if (cat === 'tvs' && (a.hdr || []).includes('HDR10+') && !(b.hdr || []).includes('HDR10+')) out.push({ key: 'hdr10p', weight: 1.1, title: 'Supports HDR10+', detail: `${b.name} lacks it` });
+    else if (cat === 'monitors' && ha - hb >= 0.2) out.push({ key: 'hdrCert', weight: 1.4, title: 'Higher HDR certification', detail: `${a.hdrCert || 'none'} vs ${b.hdrCert || 'none'}` });
+    const pa = parse.pixels(a.displayRes), pb = parse.pixels(b.displayRes);
+    if (pa && pb && pa / pb >= 1.3) out.push({ key: 'res', weight: 2, title: `${num(pa / pb, 1)}× the pixels`, detail: `${a.displayRes} vs ${b.displayRes}` });
+    if (cat === 'monitors') {
+      const va = parse.vrr(a.vrr), vb = parse.vrr(b.vrr);
+      if (va - vb >= 0.3) out.push({ key: 'vrr', weight: 1, title: 'Better variable-refresh support', detail: `${(a.vrr || []).join(', ') || 'none'} vs ${(b.vrr || []).join(', ') || 'none'}` });
+      const sa = parse.stand(a.stand), sb = parse.stand(b.stand);
+      if (sa != null && sb != null && sa - sb >= 0.2) out.push({ key: 'stand', weight: 0.9, title: 'More adjustable stand', detail: `${a.stand} vs ${b.stand}` });
+    }
+  }
   return out.sort((p, q) => q.weight - p.weight).slice(0, limit);
+}
+
+/* ---------- verdicts: better tech vs better buy ---------- */
+const money = (v) => `$${num(v)}`;
+const lowerLabel = (t) => t.split(' ').map(w => (/^[A-Z]{2,}/.test(w) ? w : w.toLowerCase())).join(' ');
+const listNames = (arr) => arr.length <= 1 ? arr.join('') : `${arr.slice(0, -1).join(', ')} and ${arr[arr.length - 1]}`;
+
+/**
+ * Two separate verdicts for a head-to-head.
+ * tech — pure spec score, price ignored.
+ * buy  — value for money: the tech score weighed against launch price.
+ * Each: { winner: 'a' | 'b' | 'tie' | null, name, headline, text, figures }.
+ */
+export function verdicts(cat, a, b) {
+  const def = CATEGORIES[cat];
+  const scores = SCORES[cat] || [];
+  const out = {};
+
+  // better tech
+  const sa = a._score, sb = b._score;
+  if (sa == null || sb == null) {
+    out.tech = { winner: null, headline: 'Not enough data', text: `${sa == null ? a.name : b.name} doesn't have enough listed specs to score.`, figures: `${sa ?? '—'} vs ${sb ?? '—'}` };
+  } else if (Math.abs(sa - sb) <= 1) {
+    out.tech = { winner: 'tie', headline: 'Too close to call', text: `On specs alone they are within a point of each other (${sa} vs ${sb}); pick on the individual differences below.`, figures: `Score ${sa} vs ${sb}` };
+  } else {
+    const [w, l, ws, ls] = sa > sb ? [a, b, sa, sb] : [b, a, sb, sa];
+    const leads = scores.filter(s => w._scores[s.key] != null && l._scores[s.key] != null && w._scores[s.key] - l._scores[s.key] >= 5)
+      .sort((x, y) => (w._scores[y.key] - l._scores[y.key]) - (w._scores[x.key] - l._scores[x.key])).slice(0, 2).map(s => lowerLabel(s.label));
+    const behind = scores.filter(s => w._scores[s.key] != null && l._scores[s.key] != null && l._scores[s.key] - w._scores[s.key] >= 5).map(s => lowerLabel(s.label));
+    out.tech = {
+      winner: sa > sb ? 'a' : 'b', name: w.name, headline: w.name,
+      text: `Scores ${ws} vs ${ls} on specs alone${leads.length ? `, mainly on ${listNames(leads)}` : ''}${behind.length ? `; ${l.name} still wins on ${listNames(behind.slice(0, 2))}` : ''}. Price is not counted.`,
+      figures: `Score ${sa} vs ${sb}`,
+    };
+  }
+
+  // better buy
+  const hasPriceField = def.fields.some(f => f.key === 'price');
+  if (!hasPriceField) {
+    out.buy = { winner: null, noPrice: true, headline: 'No price data', text: `${def.label} aren't sold on their own, so there is no launch price to weigh against the score.`, figures: '' };
+  } else if (!(a.price > 0) || !(b.price > 0)) {
+    const missing = [a, b].filter(d => !(d.price > 0)).map(d => d.name);
+    out.buy = { winner: null, noPrice: true, headline: 'No price data', text: `No US launch price is listed for ${listNames(missing)}, so value for money can't be judged. Better tech still applies.`, figures: [a, b].map(d => (d.price > 0 ? money(d.price) : 'no price')).join(' vs ') };
+  } else if (a._value == null || b._value == null) {
+    out.buy = { winner: null, noPrice: true, headline: 'Not enough data', text: 'One of these has no score, so value can\'t be judged.', figures: `${money(a.price)} vs ${money(b.price)}` };
+  } else {
+    const va = a._value, vb = b._value;
+    const figures = `Value ${va} vs ${vb} · ${money(a.price)} vs ${money(b.price)}`;
+    if (Math.abs(va - vb) <= 2) {
+      out.buy = { winner: 'tie', headline: 'About even', text: `Price and performance balance out: ${a.name} and ${b.name} give about the same score for the money.`, figures };
+    } else {
+      const aWins = va > vb;
+      const [w, l] = aWins ? [a, b] : [b, a];
+      let text;
+      if (w.price < l.price && (w._score ?? 0) < (l._score ?? 0)) {
+        text = `Gets ${Math.round(w._score / l._score * 100)}% of ${l.name}'s score for ${Math.round(w.price / l.price * 100)}% of its launch price (${money(l.price - w.price)} less).`;
+      } else if (w.price <= l.price) {
+        text = `Scores higher${w.price < l.price ? ` and cost ${money(l.price - w.price)} less at launch` : ' for the same launch price'}; an easy pick.`;
+      } else {
+        text = `Costs ${money(w.price - l.price)} more at launch, but the ${w._score - l._score}-point lead is worth the premium.`;
+      }
+      out.buy = { winner: aWins ? 'a' : 'b', name: w.name, headline: w.name, text, figures };
+    }
+  }
+
+  const tw = out.tech.winner, bw = out.buy.winner;
+  out.same = (tw === 'a' || tw === 'b') && tw === bw;
+  out.summary = out.same
+    ? `${out.tech.name} is both the better tech and the better buy.`
+    : (tw === 'a' || tw === 'b') && (bw === 'a' || bw === 'b')
+      ? `${out.tech.name} is the better tech, but ${out.buy.name} is the better buy.`
+      : '';
+  return out;
+}
+
+/** A handful of well-scored recent devices to start a comparison from (never auto-applied). */
+export function popular(data, n = 8) {
+  const years = data.years.slice(0, 3);
+  const pool = data.devices.filter(d => d._score != null && years.includes((d.released || '').slice(0, 4))).sort((a, b) => b._score - a._score);
+  const fam = (d) => d.series || d.name.replace(/\s+\d+(\.\d+)?"$/, '');
+  // for size ranges (TVs), show the most common size of each family
+  const rep = (d) => pool.find(x => fam(x) === fam(d) && x.displaySize === 65) || d;
+  const out = [], brands = new Map(), seen = new Set();
+  for (const d of pool) {
+    const f = fam(d);
+    if (seen.has(f) || (brands.get(d.brand) || 0) >= 2) continue;
+    seen.add(f); brands.set(d.brand, (brands.get(d.brand) || 0) + 1); out.push(rep(d));
+    if (out.length >= n) break;
+  }
+  return out;
 }
 
 /** Search a loaded category. */
@@ -434,17 +628,6 @@ export function searchDevices(data, query, limit = 12) {
     scored.push([s, d]);
   }
   return scored.sort((a, b) => b[0] - a[0]).slice(0, limit).map(x => x[1]);
-}
-
-/** Two sensible defaults to open a category with (newest flagships from different brands). */
-export function defaultPair(data) {
-  const byScore = data.devices.filter(d => d._score != null).sort((a, b) => (b.released || '').localeCompare(a.released || '') || b._score - a._score);
-  const recent = byScore.filter(d => (d.released || '') >= (byScore[0]?.released || '').slice(0, 4) - 1 + '');
-  const pool = (recent.length > 4 ? recent : byScore).sort((a, b) => b._score - a._score);
-  const a = pool[0];
-  const sameKind = (d) => (a?.segment ? d.segment === a.segment : true) && (a?.type ? d.type === a.type : true);
-  const b = pool.find(d => d.id !== a?.id && d.brand !== a?.brand && sameKind(d)) || pool.find(d => d.id !== a?.id && sameKind(d)) || pool[1];
-  return [a?.id, b?.id];
 }
 
 /** A few pairings people would plausibly compare next. */

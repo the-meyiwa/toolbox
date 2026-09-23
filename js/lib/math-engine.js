@@ -31,6 +31,43 @@ import {
   formatSequenceValue
 } from './math-sequences.js';
 
+import { run as runMathCommand, toPlainText as mathxPlainText, latexToPlain as mathxLatexToPlain } from './mathx/command.js';
+
+/**
+ * Advanced engine bridge (js/lib/mathx): CAS, calculus, equations & ODEs, linear algebra,
+ * statistics, optimisation, number theory, special functions. Returns the flat, string-based
+ * result shape the Assistant renderer understands (result / steps / verified / message).
+ */
+export function runAdvancedMath(command) {
+  const r = runMathCommand(command);
+  return {
+    operation: r.title,
+    title: r.title,
+    category: r.category,
+    expression: r.command,
+    result: r.plain || mathxLatexToPlain(r.result || ''),
+    latex: r.result,
+    inputLatex: r.input,
+    approx: r.approx || undefined,
+    extra: (r.extra || []).map((e) => ({ label: e.label, value: e.text || mathxLatexToPlain(e.latex || '') })),
+    table: r.table || undefined,
+    steps: (r.steps || []).map((st) => (st.latex ? `${st.text}: ${mathxLatexToPlain(st.latex)}` : st.text)),
+    verified: r.verify ? Boolean(r.verify.ok) : undefined,
+    verification: r.verify ? r.verify.text : undefined,
+    notes: r.notes && r.notes.length ? r.notes : undefined,
+    message: mathxPlainText(r)
+  };
+}
+
+const ADVANCED_OPS = new Set([
+  'simplify', 'expand', 'factor', 'collect', 'apart', 'partial_fractions', 'together', 'cancel', 'subs', 'substitute',
+  'diff', 'gradient', 'jacobian', 'hessian', 'limit', 'series', 'taylor', 'sum', 'product', 'dsolve', 'ode', 'nsolve', 'roots',
+  'det', 'rank', 'rref', 'nullspace', 'eigen', 'svd', 'lu', 'qr', 'cholesky', 'expm', 'transpose', 'trace', 'charpoly', 'lstsq',
+  'stats', 'ttest', 'ttest2', 'paired', 'ztest', 'chisq', 'anova', 'ci', 'corr', 'regress', 'fit',
+  'minimize', 'maximize', 'isprime', 'nextprime', 'modinv', 'powmod', 'crt', 'divisors', 'cf', 'pell', 'diophantine', 'base', 'primepi', 'digits',
+  'catalan', 'stirling', 'bell', 'partitions', 'derangements', 'normal', 't', 'chi2', 'f', 'binomial', 'poisson', 'gamma', 'beta', 'exponential', 'uniform'
+]);
+
 export {
   calculateSequenceTerm,
   generateSequenceRange,
@@ -2238,10 +2275,19 @@ export function calculateMath({
   seq1 = null,
   seq2 = null,
   count = null,
-  term = null
+  term = null,
+  remainders = null
 } = {}) {
   const op = (operation || 'evaluate').toLowerCase().trim();
   let resultObj = null;
+
+  if (op === 'command' || op === 'cas' || op === 'advanced' || op === 'mathx') {
+    return { status: 'success', type: 'math-result', ...runAdvancedMath(String(expression || input || '')) };
+  }
+  if (ADVANCED_OPS.has(op)) {
+    const arg = String(expression || (matrix ? JSON.stringify(matrix) : '') || (data ? data.join(', ') : '') || (input ?? '')).trim();
+    return { status: 'success', type: 'math-result', ...runAdvancedMath(`${op.replace('partial_fractions', 'apart').replace('substitute', 'subs')} ${arg}`) };
+  }
 
   switch (op) {
     case 'collatz':
@@ -2476,16 +2522,25 @@ export function calculateMath({
         }
         break;
       }
-      if (typeof expression === 'string' && expression.includes('=')) {
-        resultObj = solveEquation(expression);
-      } else {
-        const val = evaluateExpression(expression);
-        resultObj = {
-          operation: 'evaluate',
-          expression,
-          result: val,
-          message: `${expression} = ${val}`
-        };
+      try {
+        if (typeof expression === 'string' && expression.includes('=')) {
+          resultObj = solveEquation(expression);
+        } else {
+          const val = evaluateExpression(expression);
+          resultObj = {
+            operation: 'evaluate',
+            expression,
+            result: val,
+            message: `${expression} = ${val}`
+          };
+        }
+      } catch (legacyErr) {
+        // Fall back to the advanced engine (symbols, commands like "integrate …", matrices, complex numbers).
+        try {
+          resultObj = runAdvancedMath(String(expression || ''));
+        } catch {
+          throw legacyErr;
+        }
       }
       break;
     }

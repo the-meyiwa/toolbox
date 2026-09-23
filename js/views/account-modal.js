@@ -29,6 +29,7 @@ import { openSettings } from '../lib/settings-ui.js';
 import { PROFILE_PICTURES, getUserAvatarHtml } from '../lib/profile-pictures.js';
 import { updateSettings } from '../lib/settings.js';
 import { showToast } from '../utils.js';
+import { needsUsernameChoice, openUsernameOnboarding } from './username-onboarding.js';
 
 function escapeHtml(str) {
   if (!str) return '';
@@ -68,6 +69,11 @@ let pendingConfirmationEmail = null;
 
 let previousFocus = null;
 export async function openAccountModal(modeOrSignUp = false, context = null) {
+  // New accounts pick a username before the optional Mail setup.
+  if (modeOrSignUp === 'mail-onboarding' && needsUsernameChoice()) {
+    if (modalEl?.style.display === 'flex') closeAccountModal();
+    await openUsernameOnboarding();
+  }
   previousFocus = document.activeElement;
   if (typeof modeOrSignUp === 'string') {
     authMode = modeOrSignUp;
@@ -999,8 +1005,7 @@ function renderModalContent() {
               authMode = 'verify-pending';
               renderModalContent();
             } else {
-              authMode = 'mail-onboarding';
-              renderModalContent();
+              openAccountModal('mail-onboarding');
             }
           } else {
             authMsg.style.display = 'block';

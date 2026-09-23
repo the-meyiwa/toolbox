@@ -83,20 +83,20 @@ export const EXTRA_TOOL_DECLARATIONS = [
   },
   {
     name: 'device_specs',
-    description: 'Look up specifications from the Toolbox device database (1,300+ phones, tablets, laptops, mobile chips, processors, graphics cards, smartwatches, headphones/earbuds, consoles). Returns specs, benchmark scores and Toolbox scores. Use for any question about a specific device\'s specs or for "best X" rankings.',
+    description: 'Look up specifications from the Toolbox device database (1,500+ phones, tablets, laptops, TVs, monitors, mobile chips, processors, graphics cards, smartwatches, headphones/earbuds, consoles). Returns specs, benchmark scores and Toolbox scores. Use for any question about a specific device\'s specs or for "best X" rankings.',
     parameters: {
       type: 'object',
       properties: {
         query: { type: 'string', description: 'Device name, e.g. "iPhone 17 Pro", "RTX 4070", "Snapdragon 8 Elite".' },
-        category: { type: 'string', enum: ['phones', 'tablets', 'laptops', 'socs', 'cpus', 'gpus', 'watches', 'audio', 'consoles'], description: 'Optional category to search.' },
-        rank_by: { type: 'string', description: 'Optional: return the top devices in the category sorted by this (score, price, battery, gb6m, timespy …) instead of searching.' },
+        category: { type: 'string', enum: ['phones', 'tablets', 'laptops', 'tvs', 'monitors', 'socs', 'cpus', 'gpus', 'watches', 'audio', 'consoles'], description: 'Optional category to search.' },
+        rank_by: { type: 'string', description: 'Optional: return the top devices in the category sorted by this (score, value, price, battery, gb6m, timespy, nits …; value = best score for the money) instead of searching.' },
         limit: { type: 'number', description: 'Max results (default 5, max 15).' },
       },
     },
   },
   {
     name: 'device_compare',
-    description: 'Compare two devices head to head (scores, reasons each wins, key specs) and show a comparison card. Opens nicely in Tech Device Comparisons.',
+    description: 'Compare two devices head to head and show a comparison card. Returns two separate verdicts: betterTech (spec score only, price ignored) and betterBuy (value: score weighed against launch price) — report both, since the better buy is not always the better tech. Also returns reasons each wins and key specs. Opens in Tech Device Comparisons.',
     parameters: {
       type: 'object',
       properties: {
@@ -370,13 +370,13 @@ async function deviceSpecs({ query = '', category, rank_by: rankBy, limit = 5 })
     const data = await db.loadCategory(category);
     const field = db.CATEGORIES[category].fields.find(f => f.key === rankBy);
     const sub = data.scores.find(s => s.key === rankBy);
-    const val = (d) => rankBy === 'score' ? d._score : sub ? d._scores[rankBy] : d[rankBy];
+    const val = (d) => rankBy === 'score' ? d._score : rankBy === 'value' ? d._value : sub ? d._scores[rankBy] : d[rankBy];
     let list = data.devices.filter(d => val(d) != null && (!query || d._search.includes(lower(query))));
     list.sort((a, b) => (field?.better === 'low' ? val(a) - val(b) : val(b) - val(a)));
     list = list.slice(0, n);
     return {
       status: 'success', renderer: 'device-list', type: 'device-list', category, rankBy,
-      devices: list.map(d => ({ id: d.id, name: d.name, brand: d.brand, released: d.released, price: d.price, score: d._score, value: field ? db.formatValue(field, d[rankBy], 'metric') : val(d) })),
+      devices: list.map(d => ({ id: d.id, name: d.name, brand: d.brand, released: d.released, price: d.price, score: d._score, valueScore: d._value, value: field ? db.formatValue(field, d[rankBy], 'metric') : val(d) })),
       message: `Top ${list.length} ${db.CATEGORIES[category].label.toLowerCase()} by ${field?.label || rankBy}.`,
     };
   }
@@ -394,7 +394,7 @@ async function deviceSpecs({ query = '', category, rank_by: rankBy, limit = 5 })
     status: 'success', renderer: 'device-list', type: 'device-list',
     devices: top.map(({ d, c }) => ({
       id: d.id, category: c, name: d.name, brand: d.brand, released: d.released, price: d.price,
-      score: d._score, rank: d._rank, subScores: d._scores, specs: keySpecs(db, c, d),
+      score: d._score, valueScore: d._value, rank: d._rank, subScores: d._scores, specs: keySpecs(db, c, d),
     })),
     message: `Found ${top.length} device(s) for "${query}".`,
   };
@@ -410,21 +410,27 @@ async function deviceCompare({ a, b, category }) {
   const c = A.category, x = A.device, y = B.device;
   try {
     const store = JSON.parse(localStorage.getItem('toolbox_devices_v2') || '{}');
-    store.cat = c; store.view = 'compare'; store.pairs = { ...(store.pairs || {}), [c]: [x.id, y.id] };
+    // one-shot hand-over: the tool applies it once, otherwise categories open blank
+    store.cat = c; store.view = 'compare'; store.handoff = { cat: c, pair: [x.id, y.id] };
     localStorage.setItem('toolbox_devices_v2', JSON.stringify(store));
   } catch { /* storage unavailable */ }
   const specRows = db.CATEGORIES[c].fields.filter(f => !/Id$/.test(f.key) && (x[f.key] != null || y[f.key] != null)).slice(0, 40)
     .map(f => ({ label: f.label, a: db.formatValue(f, x[f.key], 'metric') || '—', b: db.formatValue(f, y[f.key], 'metric') || '—', winner: db.winner(f, x[f.key], y[f.key]) }));
+  const V = db.verdicts(c, x, y);
+  const verdict = (v) => ({ winner: v.winner === 'a' ? x.name : v.winner === 'b' ? y.name : v.winner, side: v.winner, headline: v.headline, explanation: v.text, figures: v.figures, ...(v.noPrice ? { noPriceData: true } : {}) });
   return {
     status: 'success', renderer: 'device-compare', type: 'device-compare', category: c,
-    a: { id: x.id, name: x.name, brand: x.brand, score: x._score, rank: x._rank, subScores: x._scores, released: x.released, price: x.price },
-    b: { id: y.id, name: y.name, brand: y.brand, score: y._score, rank: y._rank, subScores: y._scores, released: y.released, price: y.price },
+    a: { id: x.id, name: x.name, brand: x.brand, score: x._score, valueScore: x._value, rank: x._rank, subScores: x._scores, released: x.released, price: x.price },
+    b: { id: y.id, name: y.name, brand: y.brand, score: y._score, valueScore: y._value, rank: y._rank, subScores: y._scores, released: y.released, price: y.price },
+    betterTech: verdict(V.tech),
+    betterBuy: verdict(V.buy),
+    sameWinner: V.same,
     subScoreLabels: Object.fromEntries(A.data.scores.map(s => [s.key, s.label])),
     whyA: db.reasons(c, x, y, 'metric', 6).map(r => `${r.title}${r.detail ? ` (${r.detail})` : ''}`),
     whyB: db.reasons(c, y, x, 'metric', 6).map(r => `${r.title}${r.detail ? ` (${r.detail})` : ''}`),
     specs: specRows,
     openHash: '#tech-device-comparisons',
-    message: `${x.name} scores ${x._score ?? '—'} and ${y.name} scores ${y._score ?? '—'} out of 100 in Toolbox's ${db.CATEGORIES[c].label.toLowerCase()} ranking.`,
+    message: `${x.name} scores ${x._score ?? '—'} and ${y.name} scores ${y._score ?? '—'} out of 100 on specs in Toolbox's ${db.CATEGORIES[c].label.toLowerCase()} ranking. Better tech: ${V.tech.headline} — ${V.tech.text} Better buy: ${V.buy.headline} — ${V.buy.text}${V.summary ? ` ${V.summary}` : ''}`,
   };
 }
 

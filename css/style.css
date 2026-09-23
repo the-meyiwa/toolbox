@@ -10,6 +10,7 @@
 @import url("./legacy.css");
 @import url("./chess.css");
 @import url("./devices.css");
+@import './math.css';
 @import './assistant.css';
 @import url("./fit.css");
 @import url("./notes.css");

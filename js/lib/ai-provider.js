@@ -101,12 +101,15 @@ export function setPreferredProvider(id) {
 /* ---------------- tool list ---------------- */
 
 /** Gemini-style schemas ('OBJECT', 'STRING') → JSON Schema every provider accepts. */
+const UNSUPPORTED_SCHEMA_KEYS = new Set(['additionalProperties', 'default', 'examples', 'example', '$schema', '$id', 'pattern', 'minLength', 'maxLength', 'title', 'const']);
+
 function normalizeSchema(node) {
   if (Array.isArray(node)) return node.map(normalizeSchema);
   if (!node || typeof node !== 'object') return node;
   const out = {};
   for (const [k, v] of Object.entries(node)) {
     if (v === undefined || v === null) continue;
+    if (UNSUPPORTED_SCHEMA_KEYS.has(k)) continue;   // keys some providers (Gemini) reject
     if (k === 'type' && typeof v === 'string') out.type = v.toLowerCase();
     else if (k === 'properties' && v && typeof v === 'object') {
       out.properties = {};
@@ -280,7 +283,15 @@ async function openGateway(body, signal) {
       body: JSON.stringify(body),
       signal,
     });
-    if (res.ok && res.body) return res;
+    if (res.ok && res.body) {
+      if (!/event-stream/i.test(res.headers.get('content-type') || '')) {
+        const txt = await res.text().catch(() => '');
+        let msg = '';
+        try { msg = JSON.parse(txt).error || ''; } catch { /* not JSON */ }
+        throw new GatewayError(msg || 'The Toolbox server answered in an unexpected format. Redeploy the API on Render so it has the new Assistant service.', 502);
+      }
+      return res;
+    }
     const payload = await res.json().catch(() => ({}));
     if (res.status === 401 && attempt === 0 && getCurrentUser()?.refreshToken) continue;
     if (res.status === 404) throw new GatewayError('The Assistant service is not available on this server yet. Redeploy the Toolbox API.', 404);
@@ -382,6 +393,9 @@ async function readTurn(res, { onText, onThinking, onProvider, signal }) {
   }
   if (pending) {
     if (inThought) { thinking += pending; onThinking(pending); } else { text += pending; onText(pending); }
+  }
+  if (!provider && !text && !thinking && !calls.length && !signal?.aborted) {
+    throw new GatewayError('The model service closed the connection without answering. Try again in a moment.', 502);
   }
   const toolCalls = calls.filter(c => c && c.function.name).map((c, i) => ({ ...c, id: c.id || `call_${Date.now().toString(36)}_${i}` }));
   return { text, thinking, toolCalls, finish, provider };

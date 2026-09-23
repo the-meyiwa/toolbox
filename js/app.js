@@ -32,6 +32,9 @@ import { initHomeScrollNarrative } from './home-scroll.js';
 import { listJoinedSpaces } from './lib/space-engine.js';
 import { openContextMenu } from './lib/context-menu.js';
 import { initMessageNotifications } from './lib/message-notifications.js';
+import { installSessionKeeper } from './lib/session-keeper.js';
+
+installSessionKeeper();
 
 /* --------------- state --------------- */
 
@@ -807,6 +810,9 @@ window.addEventListener('scroll', onScrollState, { passive: true });
 onScrollState();
 $('tool-prefs-btn')?.addEventListener('click', () => { if (currentToolId) openSettings(`tool:${currentToolId}`); });
 logo.addEventListener('click', (e) => { e.preventDefault(); window.location.hash = '#home'; });
+// The pixel mark assembles once on entry; drop the class afterwards so ending
+// a hover ripple doesn't replay the entrance (shell.css .logo.is-entering).
+setTimeout(() => logo.classList.remove('is-entering'), 1100);
 window.addEventListener('hashchange', handleHash);
 window.addEventListener('pagehide', () => currentSession?.dispose());
 
@@ -1075,7 +1081,11 @@ reflectSavedWork();
 
 
 viewport.addEventListener('contextmenu', (e) => {
-  if (['INPUT', 'TEXTAREA'].includes(e.target.tagName) || e.target.closest('[contenteditable="true"]')) return;
+  // A tool that already handled the right-click (its own menu, or the 3D
+  // viewer, which opens its part menu on pointerup) owns the gesture; opening
+  // the generic menu here would replace the tool's menu.
+  if (e.defaultPrevented) return;
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.target.closest('[contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]')) return;
   
   let items = [];
   if (currentToolInstance && typeof currentToolInstance.getContextMenu === 'function') {
