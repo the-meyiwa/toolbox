@@ -188,6 +188,25 @@ export default {
       tab: 'layout',
     };
 
+    // One-shot hand-off from the Assistant's container designer (js/lib/container-design.js):
+    // the unit's size, colour and items already in this tool's own shape.
+    let handoff = null;
+    try {
+      handoff = JSON.parse(localStorage.getItem('toolbox.container.handoff') || 'null');
+      localStorage.removeItem('toolbox.container.handoff');
+    } catch { handoff = null; }
+    if (handoff && Array.isArray(handoff.items) && handoff.len > 0 && handoff.wid > 0 && handoff.hgt > 0) {
+      Object.assign(state, {
+        preset: PRESETS.some(g => g.items.some(p => p.id === handoff.preset)) ? handoff.preset : 'custom',
+        len: handoff.len, wid: handoff.wid, hgt: handoff.hgt,
+        color: SHELL_COLORS.some(c => c.id === handoff.color) ? handoff.color : state.color,
+        spec: { ...state.spec, ...(handoff.spec || {}) },
+      });
+      state.items = handoff.items
+        .filter(it => (it.kind === 'opening' && OPENINGS[it.type] && WALLS.some(w => w.id === it.wall)) || (it.kind === 'fitting' && FITTINGS[it.type]))
+        .map(it => ({ ...it, key: state.nextKey++, ...(it.kind === 'fitting' ? { rot: (((Number(it.rot) || 0) % 4) + 4) % 4 } : {}) }));
+    } else handoff = null;
+
     const persist = () => {
       try {
         localStorage.setItem(LS_RATES, JSON.stringify(state.rates));
@@ -233,7 +252,7 @@ export default {
                 <div class="cp-row">
                   <span class="cp-row-label">Colour</span>
                   <div class="cp-swatches" id="cp-colors">
-                    ${SHELL_COLORS.map(c => `<button class="cp-swatch${c.id === 'green' ? ' is-active' : ''}" data-color="${c.id}"
+                    ${SHELL_COLORS.map(c => `<button class="cp-swatch${c.id === state.color ? ' is-active' : ''}" data-color="${c.id}"
                        title="${c.name}" aria-label="${c.name}" style="background:#${c.hex.toString(16).padStart(6, '0')}"></button>`).join('')}
                   </div>
                 </div>
@@ -1535,9 +1554,14 @@ export default {
     }
     container.querySelector('#cq-currency').value = state.currency;
 
-    // A realistic opening layout beats an empty box.
-    addOpening('personnel-door');
-    addOpening('window');
+    // A realistic opening layout beats an empty box (unless the Assistant handed one over).
+    if (handoff) {
+      presetSel.value = state.preset;
+      customBox.hidden = state.preset !== 'custom';
+    } else {
+      addOpening('personnel-door');
+      addOpening('window');
+    }
 
     syncCustomInputs();
     refreshLayout();

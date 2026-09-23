@@ -25,6 +25,18 @@ import { renderMarkdown, patchHtml, handleMarkdownClick, cleanReplyText } from '
 import { ConversationStore, newId } from '../lib/assistant/conversations.js';
 import '../lib/assistant/renderers.js';
 
+/* Files from Toolbox Files arrive as raw bytes. */
+function bytesToBase64(bytes) {
+  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes || []);
+  let bin = '';
+  for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+const MIME_BY_EXT = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', pdf: 'application/pdf', txt: 'text/plain', md: 'text/markdown', csv: 'text/csv', json: 'application/json', html: 'text/html', css: 'text/css', js: 'text/javascript', py: 'text/x-python', xml: 'application/xml', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', zip: 'application/zip' };
+function mimeFromName(name = '') { return MIME_BY_EXT[String(name).split('.').pop().toLowerCase()] || 'application/octet-stream'; }
+
+
 /* ---------------- helpers ---------------- */
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -1134,7 +1146,7 @@ function mountAssistant(container, state) {
     const list = backdrop.querySelector('.ast-modal-list');
     const search = backdrop.querySelector('input');
     try {
-      const meta = await (fs.listAllMeta ? fs.listAllMeta() : ToolboxFilesystem.listAllMeta());
+      const meta = await fs.listAllMeta();
       const files = (meta || []).filter(f => !f.isDirectory);
       const paint = () => {
         const q = search.value.trim().toLowerCase();
@@ -1154,15 +1166,17 @@ function mountAssistant(container, state) {
         const f = files.find(x => x.path === row.dataset.path);
         row.classList.add('is-loading');
         try {
-          const dataUrl = await ToolboxFilesystem.readFile(f.path, { encoding: 'dataurl' });
-          const type = f.mimeType || (String(dataUrl).match(/^data:([^;,]+)/)?.[1]) || 'application/octet-stream';
+          const type = f.mimeType || mimeFromName(f.name);
           const pseudo = { name: f.name, size: f.size || 0, type };
           let att;
           if (isTextFile(pseudo) && !/^image\//.test(type)) {
-            const text = await ToolboxFilesystem.readFile(f.path, { encoding: 'utf-8' });
-            att = { id: newId('f'), ...pseudo, text, base64: b64FromText(String(text)), isText: true, path: f.path };
+            const text = String(await fs.readFile(f.path, { encoding: 'utf-8' }));
+            att = { id: newId('f'), ...pseudo, text, base64: b64FromText(text), isText: true, path: f.path };
           } else {
-            att = { id: newId('f'), ...pseudo, dataUrl, base64: String(dataUrl).split(',')[1] || null, path: f.path };
+            const bytes = await fs.readFile(f.path, { encoding: 'binary' });
+            const base64 = bytesToBase64(bytes);
+            const dataUrl = `data:${type};base64,${base64}`;
+            att = { id: newId('f'), ...pseudo, size: pseudo.size || bytes.length, dataUrl, base64, path: f.path };
             if (/^image\//.test(type)) att.thumb = await makeThumb(dataUrl);
             const prev = attachments.find(a => !a.isText);
             if (prev) attachments = attachments.filter(a => a !== prev);

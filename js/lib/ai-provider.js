@@ -252,6 +252,7 @@ function compactForModel(value, depth = 0) {
   for (const [k, v] of Object.entries(value)) {
     if (typeof v === 'function' || k === 'element' || k === 'node') continue;
     if (k === 'svg' && typeof v === 'string') { out[k] = `[SVG drawing, ${v.length} characters, shown to the person]`; continue; }
+    if (k === 'design' && value.renderer === 'container-design') { out[k] = '[full design shown to the person in the preview card]'; continue; }
     out[k] = compactForModel(v, depth + 1);
   }
   return out;
@@ -432,6 +433,7 @@ How you work
 - Vehicles: vehicle_lookup decodes VINs and gives specifications for cars by make, model and year.
 - Web: browse_web / browser_navigate / browser_scrape / browser_crawl read live pages; search_images finds pictures. Cite the pages you used.
 - Visuals: draw_illustration draws SVG illustrations and diagrams; csv_analyze_and_chart and the chart tools make charts; render_map shows places.
+- Container buildings: design_container designs and previews container/portacabin offices, shops, cafés, homes, site offices and stacked or joined structures from a brief or exact specs (3D preview, floor plan, NGN estimate); revise the same design with revise + changes when the person asks for edits.
 - Notes and files: create_note, update_note, list_notes, get_note; create_file, save_file and the artifact tools keep work in Files.
 - Scripture: the Bible and Quran tools read verses and passages; quote them exactly as returned.
 - Building apps: write complete working code and put it in the Code Playground (or run it with the code tools), then report what you built.

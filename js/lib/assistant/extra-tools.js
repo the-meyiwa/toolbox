@@ -5,7 +5,8 @@
    assistant-tools.js: chess (analysis, playing, opening in the
    board), the device-specs database, vehicles, notes editing,
    drawing SVG illustrations, a visible task plan for multi-step
-   work, and discovery/running of any Toolbox tool.
+   work, container structure design with a 3D preview, and
+   discovery/running of any Toolbox tool.
 
    Each result carries `renderer` so the chat can draw a card,
    plus plain fields the model reads back.
@@ -144,6 +145,67 @@ export const EXTRA_TOOL_DECLARATIONS = [
         caption: { type: 'string' },
       },
       required: ['svg'],
+    },
+  },
+  {
+    name: 'design_container',
+    description: 'Design and preview a shipping-container or portacabin structure: offices, site offices, shops, kiosks, cafés, homes, staff quarters, clinics, salons, gatehouses, storage, stacked or joined units. Shows an interactive isometric 3D preview, dimensioned floor plan and NGN cost estimate. Give just the intent in `brief` (use, headcount, rooms, size, levels, arrangement, budget, colour, style) and the engine picks sizes and lays out rooms, doors, windows, furniture and stairs; or give exact `modules` with openings/fittings; mix both. To change an existing design ("add a window on the left", "make it 40ft", "paint it blue", "add a roof deck"), call again with `revise` = its design id (or "last") plus `changes` — never start over. Use for ANY container building request instead of drawing it yourself. Lengths in metres; walls: front = door end, back, left, right (long sides).',
+    parameters: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Optional name for the design.' },
+        revise: { type: 'string', description: 'Design id to update (from an earlier result), or "last". Omit to create a new design.' },
+        brief: {
+          type: 'object',
+          description: 'What the person wants. Fill only what they said; the engine decides the rest.',
+          properties: {
+            use: { type: 'string', description: 'e.g. office, site office, coffee shop, shop, kiosk, home, bunkhouse, clinic, salon, gatehouse, storage, classroom, toilet block.' },
+            headcount: { type: 'number', description: 'Staff / desks, seats for a café, or beds for quarters.' },
+            rooms: { type: 'array', description: 'Rooms wanted, e.g. ["toilet", "reception", "manager\'s office upstairs", "meeting room upstairs", "2 bedrooms"]. Objects allowed: {name, level ("ground"|"upper"), desks, seats, bunks, length_m}.', items: { type: 'object', properties: { name: { type: 'string' }, level: { type: 'string' }, desks: { type: 'number' }, seats: { type: 'number' }, bunks: { type: 'number' }, length_m: { type: 'number' } } } },
+            size: { type: 'string', description: '10ft, 20ft, 40ft, 40hc, 45hc, or a cabin: pc12, pc16, pc20, pc24, pc32.' },
+            containers: { type: 'number', description: 'Total number of units, if stated.' },
+            levels: { type: 'number', description: 'Storeys (1 or 2).' },
+            arrangement: { type: 'string', enum: ['single', 'side-by-side', 'row', 'L', 'T', 'stacked'] },
+            budget_ngn: { type: 'number' },
+            color: { type: 'string', description: 'green, blue, red, grey, white or sand.' },
+            style: { type: 'array', items: { type: 'string' }, description: 'Keywords: glass front, timber, composite cladding, canopy, deck, roof deck, pitched roof, modern.' },
+          },
+        },
+        modules: {
+          type: 'array',
+          description: 'Exact units, when the person specifies them. Omitted fields are auto-filled.',
+          items: {
+            type: 'object',
+            properties: {
+              size: { type: 'string' }, length_m: { type: 'number' }, width_m: { type: 'number' }, height_m: { type: 'number' },
+              x_m: { type: 'number', description: 'Site position of the back-left corner.' }, z_m: { type: 'number' },
+              level: { type: 'number', description: '0 = ground, 1 = stacked on top.' }, rotation: { type: 'number', enum: [0, 90] }, color: { type: 'string' },
+              rooms: { type: 'array', description: 'Back to front, e.g. ["toilet", "office", "reception"].', items: { type: 'string' } },
+              openings: { type: 'array', items: { type: 'object', properties: { type: { type: 'string', description: 'door, double-door, glass-door, roller-door, window, small-window, vent, serving-hatch, glass-wall.' }, wall: { type: 'string', enum: ['front', 'back', 'left', 'right'] }, along_m: { type: 'number', description: 'Centre, metres from the wall’s start. Omit to auto-place.' }, room: { type: 'string' }, width_m: { type: 'number' } } } },
+              fittings: { type: 'array', items: { type: 'object', properties: { type: { type: 'string', description: 'partition, desk, chair, bed, bunk, kitchen, toilet, shower, basin, rack, cabinet, table, sofa, counter, reception, fridge, stool, bistro, ac.' }, room: { type: 'string' }, x_m: { type: 'number' }, z_m: { type: 'number' }, rotation: { type: 'number' } } } },
+            },
+          },
+        },
+        changes: {
+          type: 'array',
+          description: 'Edits for `revise`. action: add_opening {type, wall, along_m?, room?} | add_fitting {type, room?} | remove {type or item id, wall?, all?} | move {item, wall?, along_m?} | resize {size or length_m} | recolor {color} | add_room {room} | set_rooms {rooms} | add_module {size, level} | remove_module | set_extras {stairs, roof_deck, canopy, pitched_roof, cladding, glass_wall, deck} | set_brief {…brief fields}. `module` = unit id ("m2") or number, default the first.',
+          items: { type: 'object', properties: { action: { type: 'string' }, module: { type: 'string' }, type: { type: 'string' }, wall: { type: 'string' }, along_m: { type: 'number' }, item: { type: 'string' }, room: { type: 'string' }, size: { type: 'string' }, length_m: { type: 'number' }, color: { type: 'string' }, rooms: { type: 'array', items: { type: 'string' } }, level: { type: 'number' }, all: { type: 'boolean' } } },
+        },
+        extras: {
+          type: 'object',
+          properties: {
+            stairs: { type: 'boolean', description: 'External stair (auto for two storeys or a roof deck).' },
+            roof_deck: { type: 'boolean' }, pitched_roof: { type: 'boolean' },
+            canopy: { type: 'string', enum: ['none', 'entrance', 'full'] },
+            cladding: { type: 'string', enum: ['none', 'timber', 'composite'] },
+            glass_wall: { type: 'boolean', description: 'Glass curtain wall on the entrance side.' },
+            deck: { type: 'boolean', description: 'Deck / verandah beside the entrance.' },
+          },
+        },
+        spec_level: { type: 'string', enum: ['economy', 'standard', 'premium'], description: 'Finish specification for the estimate (default standard; economy is chosen automatically to meet a budget).' },
+        units: { type: 'string', enum: ['ft', 'm'], description: 'Units shown on the plan (default ft).' },
+        client_supplies_container: { type: 'boolean' },
+      },
     },
   },
   {
@@ -551,6 +613,27 @@ async function runTool({ tool_id: id, input = '', options = {} }) {
   return { status: 'success', openedToolId: tool.id, message: `${tool.name} can't run inside chat, so it was opened for the user.` };
 }
 
+/* ---------------- container design ---------------- */
+
+function savedContainerRates() {
+  try { return JSON.parse(localStorage.getItem('toolbox.container.rates') || '{}'); } catch { return {}; }
+}
+
+async function designContainerTool(args) {
+  const { designContainer } = await import('../container-design.js');
+  const design = designContainer(args, { rateBook: savedContainerRates() });
+  const openingsBrief = (m) => m.items.filter(i => i.kind === 'opening').map(o => ({ id: o.id, type: o.type, wall: o.wall, along_m: o.along }));
+  return {
+    status: 'success', renderer: 'container-design', type: 'container-design',
+    designId: design.id, version: design.version, title: design.title,
+    message: `${design.version > 1 ? `Updated design ${design.id} (v${design.version})${design.changes?.length ? `: ${design.changes.join(', ')}` : ''}.` : `Created design ${design.id}.`} The preview card is shown to the person. Revise it with revise="${design.id}".\n${design.summary}`,
+    units: design.modules.map(m => ({ id: m.id, label: m.label, size: m.size, level: m.level, x_m: m.x, z_m: m.z, rotation: m.rot, color: m.color, rooms: m.rooms.map(r => `${r.name} (${r.area} m²)`), openings: openingsBrief(m), furniture: m.items.filter(i => i.kind === 'fitting' && i.type !== 'partition').length })),
+    estimateNgn: design.cost.total, specLevel: design.specLevel,
+    warnings: design.warnings.map(w => w.text),
+    design,
+  };
+}
+
 /* ---------------- dispatcher ---------------- */
 
 export const EXTRA_TOOL_NAMES = new Set(EXTRA_TOOL_DECLARATIONS.map(d => d.name));
@@ -573,6 +656,7 @@ export async function executeExtraTool(name, args = {}) {
       const svg = sanitizeSvg(args.svg);
       return { status: 'success', renderer: 'svg-illustration', type: 'svg-illustration', title: args.title || 'Illustration', caption: args.caption || '', svg, message: 'Illustration shown to the user.' };
     }
+    case 'design_container': return designContainerTool(args);
     case 'find_toolbox_tools': return findTools(args.query || '');
     case 'run_toolbox_tool': return runTool(args);
     case 'open_toolbox_tool': {

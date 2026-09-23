@@ -572,7 +572,9 @@ export class ToolboxFilesystem {
       if (encoding === 'binary') return bytes;
       if (encoding === 'blob') return new Blob([bytes], { type: rec.mimeType || 'application/octet-stream' });
       if (encoding === 'dataurl') {
-        const base64 = btoa(String.fromCharCode(...bytes));
+        let bin = '';
+        for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+        const base64 = btoa(bin);
         return `data:${rec.mimeType || 'application/octet-stream'};base64,${base64}`;
       }
       return new TextDecoder('utf-8').decode(bytes);

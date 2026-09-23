@@ -4,7 +4,7 @@
    Registers renderers for the result types produced by
    js/lib/assistant/extra-tools.js (and the Notes tools):
      task-plan · chess-board · device-list · device-compare ·
-     vehicle · svg-illustration · note
+     vehicle · svg-illustration · note · container-design
    Each renderer receives the plain result object and returns
    the card element it appended. Cards size themselves with
    container queries, so they fit the chat column at any width.
@@ -13,6 +13,7 @@
 import { registerResultRenderer } from '../assistant-result-renderer.js';
 import { pieceSvg } from '../chess/pieces.js';
 import { sanitizeSvg } from './extra-tools.js';
+import { renderContainerDesign } from './container-design-card.js';
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
@@ -496,4 +497,5 @@ registerResultRenderer('device-list', renderDeviceList);
 registerResultRenderer('device-compare', renderDeviceCompare);
 registerResultRenderer('vehicle', renderVehicle);
 registerResultRenderer('svg-illustration', renderIllustration);
+registerResultRenderer('container-design', renderContainerDesign, { match: d => Boolean(d?.design?.modules && d?.design?.levels) });
 registerResultRenderer('note', renderNote, { match: d => Boolean(d?.noteId && typeof d?.title === 'string' && d?.status !== 'error') });
