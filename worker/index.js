@@ -25,4 +25,11 @@ export default {
 
     return env.ASSETS.fetch(request);
   },
+
+  // Runs every 10 minutes (see "triggers" in wrangler.jsonc). Render's free plan puts the
+  // API to sleep after 15 idle minutes and the first request then waits ~30-50 s for it to
+  // wake; a light health check keeps it awake so the Assistant answers straight away.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(fetch(new URL('/health', env.BACKEND_URL), { headers: { 'User-Agent': 'toolbox-keepwarm' } }).catch(() => {}));
+  },
 };

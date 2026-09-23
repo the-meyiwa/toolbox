@@ -15,5 +15,7 @@
   "vars": {
     "BACKEND_URL": "https://toolbox-signaling.onrender.com"
   },
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  // Keeps the Render API awake (see scheduled() in worker/index.js).
+  "triggers": { "crons": ["*/10 * * * *"] }
 }

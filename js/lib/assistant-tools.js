@@ -50,8 +50,10 @@ let activeAssistantAudios = [];
  */
 const registryDeclarations = toolDiscovery.generateNavigationDeclarations();
 
+// Per-tool "open X" declarations used to be spread in here too; they shadowed hand-written tools
+// with the same name (unit_converter, weather_forecast, regex_tester…) and are now covered by
+// find_toolbox_tools / run_toolbox_tool / open_toolbox_tool.
 export const ASSISTANT_TOOL_DECLARATIONS = [
-  ...registryDeclarations,
   {
     name: 'list_saved_artifacts',
     description: 'List all saved files and artifacts in Toolbox (Files/Saved view).',
@@ -1435,7 +1437,6 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
       required: ['name', 'content']
     }
   },
-  ...registryDeclarations,
   {
     name: 'play_sound',
     description: 'Searches for and plays a sound effect, song preview, instrument tone, or audio clip in the Assistant chat conversation, rendering an interactive live audio player.',
