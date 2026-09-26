@@ -471,7 +471,7 @@ function buildMessages(history, currentFile, system) {
 
 /* ---------------- tool results → model ---------------- */
 
-function compactForModel(value, depth = 0) {
+export function compactForModel(value, depth = 0) {
   if (value == null) return value;
   if (typeof value === 'string') {
     if (/^data:[\w/+.-]+;base64,/.test(value) && value.length > 400) return `[binary data, ${Math.round(value.length * 0.75 / 1024)} KB]`;
@@ -489,6 +489,7 @@ function compactForModel(value, depth = 0) {
     if (typeof v === 'function' || k === 'element' || k === 'node') continue;
     if (k === 'svg' && typeof v === 'string') { out[k] = `[SVG drawing, ${v.length} characters, shown to the person]`; continue; }
     if (k === 'design' && value.renderer === 'container-design') { out[k] = '[full design shown to the person in the preview card]'; continue; }
+    if ((k === 'mapLayers' || k === 'directions') && value.renderer === 'map-view') continue; // drawn on the map card only
     out[k] = compactForModel(v, depth + 1);
   }
   return out;
@@ -743,7 +744,7 @@ How you answer
 
 const LEGACY_RULES = `- Currency: default to Nigerian Naira (₦, NGN) for prices, invoices and quotes unless the person asks for another currency. Nigerian VAT is 7.5%.
 - Use a tool only when it fits the request. Medical conditions and symptoms: search_diseases. Drugs, medicines, chemicals and compounds: lookup_compound. Elements: lookup_element. Never send a substance to the disease database, and always answer about exactly the substance or element named: if a lookup finds nothing, say so and answer from general knowledge marked as such, never about a different substance.
-- Places: for "nearest", named businesses or directions, use search_places_nearby and keep the exact business name in query (e.g. "Shoprite"), separate from category and location. Lead with the nearest result and its distance. The map card already lists the places, so do not repeat them as a list, and do not call render_map after search_places_nearby.
+- Places: for directions or "how do I get to" (including by bus, taxi, keke or any local transport) use get_directions; for "nearest" or named businesses use search_places_nearby and keep the exact business name in query (e.g. "Shoprite"), separate from category and location. Lead with the nearest result and its distance. The map card already lists the places, so do not repeat them as a list, and do not call render_map after search_places_nearby or get_directions.
 - Audio: "play …" requests use play_sound.
 - Maths: every computation goes through calculate_math (never compute in your head); references and theorems through query_math_knowledge. Never present conjectures (Collatz, Goldbach, Riemann) as proven. Show the equation, the result, the key steps and a check.
 - Anatomy: anatomy_lookup for facts (nerve and blood supply, relations, system overviews); explore_anatomy with the exact structure name when seeing it in 3D helps.

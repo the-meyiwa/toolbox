@@ -97,6 +97,8 @@ export function formatToolProgressStatus(toolName, toolArgs = {}) {
   switch (toolName) {
     case 'search_places_nearby': return `Searching verified places for "${toolArgs?.query || 'locations'}"...`;
     case 'render_map': return 'Rendering interactive map...';
+    case 'get_directions': return `Planning a route to ${toolArgs?.to || 'the destination'}...`;
+    case 'find_place': return `Finding ${toolArgs?.query || 'the place'} on the map...`;
     case 'search_web':
     case 'browse_web': return `Searching the web for "${toolArgs?.query || toolArgs?.url || 'information'}"...`;
     case 'search_images': return `Searching verified images for "${toolArgs?.query || 'subject'}"...`;
@@ -183,6 +185,8 @@ const TOOL_META = {
   ide_run_tests: ['code', 'Running tests', 'Ran tests'],
   search_places_nearby: ['pin', 'Finding places', 'Found places'],
   render_map: ['pin', 'Drawing a map', 'Drew a map'],
+  get_directions: ['pin', 'Planning the route', 'Planned the route'],
+  find_place: ['pin', 'Finding the place', 'Found the place'],
   get_current_location: ['pin', 'Finding your location', 'Found your location'],
   play_sound: ['music', 'Finding audio', 'Found audio'],
   calendar_add_event: ['calendar', 'Adding to your calendar', 'Added to your calendar'],

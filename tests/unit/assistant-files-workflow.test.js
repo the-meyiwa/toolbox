@@ -459,26 +459,26 @@ test('Assistant Tool build_logic_circuit: constructs interactive logic schematic
   assert.ok(card.textContent.includes('Open in Logic Lab'));
 });
 
-test('Assistant Tool render_map: generates route map with geographic waypoints', async () => {
+test('Assistant Tool render_map: shows the given waypoints without inventing any', async () => {
   const res = await executeAssistantTool('render_map', {
     title: 'Trans-European Express Route',
-    markers: [
+    places: [
       { name: 'London', lat: 51.50, lng: -0.12 },
       { name: 'Paris', lat: 48.85, lng: 2.35 },
       { name: 'Berlin', lat: 52.52, lng: 13.40 }
-    ],
-    distanceKm: 1100
-  });
+    ]
+  }, { taskState: { userLocation: { lat: 51.5, lng: -0.12 } } });
 
   assert.equal(res.status, 'success');
   assert.equal(res.type, 'map-view');
+  assert.deepEqual(res.places.map(p => p.name), ['London', 'Paris', 'Berlin']);
 
   const container = new MockElement('div');
   const card = MapResultRenderer.render({ data: res }, container);
   assert.ok(card);
   assert.ok(card.textContent.includes('Trans-European Express Route'));
   assert.ok(card.textContent.includes('London'));
-  assert.ok(card.textContent.includes('Open Interactive Map'));
+  assert.ok(card.textContent.includes('Open in Maps'));
 });
 
 test('Assistant Tool tune_instrument: prepares reference frequency buttons', async () => {
@@ -540,23 +540,14 @@ test('Diseases Database Guardrail: rejects non-medical queries like driving scho
   assert.ok(toolRes2.message.includes('not a medical condition'));
 });
 
-test('Assistant Tool render_map: resolves Kosofe driving schools and localized markers', async () => {
+test('Assistant Tool render_map: never fills an empty request with made-up places', async () => {
   const res = await executeAssistantTool('render_map', {
     title: 'Driving Schools in Kosofe',
     location: 'Kosofe, Lagos',
     query: 'nearest driving schools'
   });
-
-  assert.equal(res.status, 'success');
-  assert.equal(res.type, 'map-view');
-  assert.ok(res.markers.length >= 3);
-  assert.ok(res.markers.some(m => m.name.includes('Driving') || m.description.includes('Kosofe')));
-
-  const container = new MockElement('div');
-  const card = MapResultRenderer.render({ data: res }, container);
-  assert.ok(card);
-  assert.ok(card.textContent.includes('Kosofe'));
-  assert.ok(card.textContent.includes('Open Interactive Map'));
+  assert.equal(res.success, false);
+  assert.ok(!res.places && !res.markers);
 });
 
 test('Currency Localization: defaults to Nigerian Naira (NGN, ₦)', async () => {
