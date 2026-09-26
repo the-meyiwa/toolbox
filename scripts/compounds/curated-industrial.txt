@@ -1,0 +1,184 @@
+# Industrial chemicals, solvents, monomers, fuels, dyes: name | use
+sulfuric acid | Most-produced industrial chemical; fertilizers, processing
+nitric acid | Fertilizers, nitration
+hydrochloric acid | Pickling, pH control
+hydrofluoric acid | Glass etching, fluorochemicals (highly toxic)
+phosphoric acid | Fertilizers, food, rust removal
+sodium hydroxide | Caustic soda; pulp, soap, alumina
+potassium hydroxide | Caustic potash; soaps, batteries
+ammonia | Fertilizers, refrigerant
+chlorine | Water treatment, PVC, bleach
+sodium hypochlorite | Bleach, disinfectant
+calcium hypochlorite | Pool chlorination
+chlorine dioxide | Pulp bleaching, water treatment
+hydrogen peroxide | Bleaching, oxidizer
+sodium carbonate | Soda ash; glass, detergents
+sodium silicate | Water glass; adhesives, detergents
+calcium oxide | Quicklime; steel, cement
+calcium hydroxide | Slaked lime; mortar, water treatment
+titanium dioxide | White pigment
+carbon black | Rubber reinforcement, pigment
+sodium sulfate | Detergent filler, kraft pulping
+sodium sulfide | Kraft pulping, leather dehairing
+aluminium sulfate | Water treatment coagulant
+iron(iii) chloride | Water treatment, PCB etching
+sodium cyanide | Gold mining, electroplating (highly toxic)
+potassium cyanide | Electroplating (highly toxic)
+hydrogen cyanide | Chemical intermediate (highly toxic)
+methanol | Solvent, formaldehyde feedstock, fuel
+ethanol | Solvent, fuel
+isopropyl alcohol | Solvent, disinfectant
+1-butanol | Solvent
+2-butanol | Solvent
+isobutanol | Solvent
+tert-butanol | Solvent, fuel additive
+acetone | Solvent
+methyl ethyl ketone | Solvent
+methyl isobutyl ketone | Solvent
+cyclohexanone | Solvent, nylon precursor
+ethyl acetate | Solvent
+butyl acetate | Solvent
+diethyl ether | Solvent, historical anesthetic
+tetrahydrofuran | Solvent, polymer precursor
+1,4-dioxane | Solvent (probable carcinogen)
+methyl tert-butyl ether | Gasoline oxygenate
+dimethyl sulfoxide | Polar aprotic solvent
+n,n-dimethylformamide | Polar aprotic solvent
+n-methyl-2-pyrrolidone | Polar aprotic solvent
+acetonitrile | Solvent, HPLC mobile phase
+dichloromethane | Solvent, paint stripper
+chloroform | Solvent
+carbon tetrachloride | Former solvent (ozone-depleting, toxic)
+trichloroethylene | Degreasing solvent (carcinogen)
+tetrachloroethylene | Dry-cleaning solvent
+1,1,1-trichloroethane | Former degreasing solvent
+hexane | Extraction solvent
+heptane | Solvent, octane-rating reference
+cyclohexane | Solvent, nylon precursor
+benzene | Chemical feedstock (carcinogen)
+toluene | Solvent, feedstock
+o-xylene | Phthalic anhydride feedstock
+m-xylene | Chemical feedstock
+p-xylene | PET feedstock
+ethylbenzene | Styrene precursor
+cumene | Phenol/acetone precursor
+styrene | Polystyrene monomer
+ethylene | Polyethylene monomer
+propylene | Polypropylene monomer
+1,3-butadiene | Synthetic rubber monomer
+isoprene | Rubber monomer
+vinyl chloride | PVC monomer (carcinogen)
+vinyl acetate | PVA monomer
+vinylidene chloride | PVDC monomer
+acrylonitrile | Acrylic fiber, ABS monomer
+acrylic acid | Superabsorbent polymer monomer
+methyl methacrylate | Acrylic glass monomer
+methyl acrylate | Acrylate monomer
+butyl acrylate | Acrylate monomer
+acrylamide | Polyacrylamide monomer (neurotoxic)
+caprolactam | Nylon 6 monomer
+adipic acid | Nylon 6,6 monomer
+hexamethylenediamine | Nylon 6,6 monomer
+terephthalic acid | PET monomer
+dimethyl terephthalate | PET monomer
+ethylene glycol | PET monomer, antifreeze
+diethylene glycol | Solvent, humectant
+triethylene glycol | Gas dehydration
+bisphenol a | Polycarbonate, epoxy monomer
+epichlorohydrin | Epoxy resin precursor
+phosgene | Polycarbonate/isocyanate intermediate (highly toxic)
+toluene diisocyanate | Polyurethane monomer
+methylene diphenyl diisocyanate | Polyurethane monomer
+hexamethylene diisocyanate | Polyurethane coatings
+methyl isocyanate | Carbamate intermediate (highly toxic)
+formaldehyde | Resins, disinfectant (carcinogen)
+acetaldehyde | Chemical intermediate
+phenol | Resins, bisphenol A precursor
+aniline | Dye, polyurethane precursor
+nitrobenzene | Aniline precursor
+maleic anhydride | Resin precursor
+phthalic anhydride | Plasticizer precursor
+acetic anhydride | Acetylation reagent
+ethylene oxide | Sterilant, glycol precursor
+propylene oxide | Polyol precursor
+melamine | Melamine resin monomer
+urea | Resins, fertilizer
+pentaerythritol | Alkyd resin polyol
+glycerol | Polyol, chemical feedstock
+dioctyl phthalate | Plasticizer (DEHP)
+dibutyl phthalate | Plasticizer
+diisononyl phthalate | Plasticizer
+benzyl butyl phthalate | Plasticizer
+diethylhexyl adipate | Plasticizer
+tricresyl phosphate | Plasticizer, flame retardant
+triphenyl phosphate | Flame retardant
+decabromodiphenyl ether | Brominated flame retardant (restricted)
+tetrabromobisphenol a | Brominated flame retardant
+hexabromocyclododecane | Flame retardant (restricted)
+antimony trioxide | Flame retardant synergist
+perfluorooctanoic acid | PFAS surfactant (restricted)
+perfluorooctanesulfonic acid | PFAS surfactant (restricted)
+tetrafluoroethylene | PTFE monomer
+dichlorodifluoromethane | CFC refrigerant (phased out)
+trichlorofluoromethane | CFC refrigerant (phased out)
+chlorodifluoromethane | HCFC refrigerant
+1,1,1,2-tetrafluoroethane | HFC refrigerant
+difluoromethane | HFC refrigerant
+2,3,3,3-tetrafluoropropene | HFO refrigerant
+sulfur hexafluoride | Electrical insulating gas (potent greenhouse gas)
+nitrogen trifluoride | Electronics etchant
+methane | Natural gas fuel
+ethane | Ethylene feedstock
+propane | Fuel gas, refrigerant
+butane | Fuel gas
+isobutane | Refrigerant, propellant
+pentane | Blowing agent
+isooctane | Gasoline octane reference
+n-dodecane | Kerosene component
+hydrogen | Fuel, ammonia feedstock
+carbon monoxide | Syngas component (toxic)
+hydrogen sulfide | Refinery byproduct (highly toxic)
+sulfur dioxide | Sulfuric acid feedstock
+acetylene | Welding fuel gas
+naphthalene | Phthalic anhydride precursor, moth repellent
+anthracene | Dye precursor
+tetraethyllead | Former gasoline antiknock (highly toxic)
+ferrocene | Fuel additive, catalyst
+dimethyl ether | Aerosol propellant, fuel
+biodiesel methyl oleate | Biodiesel component
+triethanolamine | Surfactant, gas treating
+monoethanolamine | CO2 capture, gas treating
+diethanolamine | Gas treating
+sodium dodecylbenzenesulfonate | Detergent surfactant
+nonylphenol | Surfactant precursor (endocrine disruptor)
+sodium tripolyphosphate | Detergent builder
+sodium percarbonate | Oxygen bleach
+sodium perborate | Oxygen bleach
+tetraacetylethylenediamine | Bleach activator
+zeolite a | Detergent builder
+sodium metasilicate | Detergent builder
+indigo | Denim dye
+alizarin | Red dye
+methyl orange | Azo dye, pH indicator
+congo red | Azo dye
+malachite green | Triphenylmethane dye (banned in aquaculture)
+crystal violet | Triphenylmethane dye, stain
+rhodamine b | Fluorescent dye
+phthalocyanine blue | Copper phthalocyanine pigment
+2-mercaptobenzothiazole | Rubber vulcanization accelerator
+tetramethylthiuram disulfide | Rubber accelerator, fungicide
+zinc stearate | Lubricant, release agent
+dibutyltin dilaurate | Polyurethane catalyst
+2-ethylhexanol | Plasticizer alcohol
+propylene carbonate | Battery electrolyte solvent
+ethylene carbonate | Battery electrolyte solvent
+lithium hexafluorophosphate | Lithium-ion battery electrolyte salt
+sodium hydrosulfite | Reducing bleach, vat dyeing
+hydrazine | Rocket propellant, oxygen scavenger (toxic)
+nitroglycerin | Explosive, vasodilator
+2,4,6-trinitrotoluene | Military/mining explosive
+ammonium perchlorate | Solid rocket oxidizer
+potassium chlorate | Oxidizer, matches
+potassium perchlorate | Pyrotechnic oxidizer
+barium nitrate | Green pyrotechnic colorant
+strontium nitrate | Red pyrotechnic colorant

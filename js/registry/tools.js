@@ -1543,10 +1543,10 @@ export const TOOLS = [
   {
     id: 'compound-database',
     name: 'Chemical Compound Database',
-    description: 'Search 4,000+ chemical formulas, IUPAC names, pharmaceuticals, CAS numbers, physical constants, and GHS safety data',
+    description: 'Search 76,000+ chemicals with CAS numbers, formulas and physical constants, curated by field (drugs, agrochemicals, food, cosmetics, lab, industrial, toxic), plus live PubChem lookup and GHS hazards',
     category: 'science',
     secondary: ['reference'],
-    keywords: ['compound', 'chemicals', 'cas number', 'iupac', 'molar mass', 'formula', 'density', 'safety', 'pharmaceutical', 'drug', 'medicine', 'biochemistry', 'organic', 'inorganic'],
+    keywords: ['compound', 'chemicals', 'cas number', 'iupac', 'molar mass', 'formula', 'density', 'safety', 'pharmaceutical', 'drug', 'medicine', 'biochemistry', 'organic', 'inorganic', 'pesticide', 'herbicide', 'food additive', 'cosmetic ingredient', 'toxic', 'hazard', 'ghs', 'pubchem', 'solvent', 'reagent'],
     intents: ['look up compound', 'chemical formula lookup', 'cas search', 'drug lookup', 'pharmaceutical database'],
     related: ['periodic-table', 'chemical-equation-balancer', 'stoichiometry-calculator'],
     weight: 75,

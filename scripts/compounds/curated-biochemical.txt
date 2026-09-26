@@ -1,0 +1,146 @@
+# Biochemicals: name | role
+glycine | Amino acid
+l-alanine | Amino acid
+l-valine | Essential amino acid
+l-leucine | Essential amino acid
+l-isoleucine | Essential amino acid
+l-proline | Amino acid
+l-phenylalanine | Essential amino acid
+l-tyrosine | Amino acid
+l-tryptophan | Essential amino acid
+l-serine | Amino acid
+l-threonine | Essential amino acid
+l-cysteine | Amino acid
+l-methionine | Essential amino acid
+l-aspartic acid | Amino acid
+l-glutamic acid | Amino acid, neurotransmitter
+l-asparagine | Amino acid
+l-glutamine | Amino acid
+l-lysine | Essential amino acid
+l-arginine | Amino acid
+l-histidine | Essential amino acid
+l-selenocysteine | Amino acid (21st)
+l-ornithine | Urea-cycle amino acid
+l-citrulline | Urea-cycle amino acid
+taurine | Amino sulfonic acid
+gamma-aminobutyric acid | Inhibitory neurotransmitter
+glutathione | Antioxidant tripeptide
+carnosine | Dipeptide
+adenine | Purine nucleobase
+guanine | Purine nucleobase
+cytosine | Pyrimidine nucleobase
+thymine | Pyrimidine nucleobase
+uracil | Pyrimidine nucleobase
+adenosine | Nucleoside
+guanosine | Nucleoside
+cytidine | Nucleoside
+uridine | Nucleoside
+thymidine | Deoxynucleoside
+inosine | Nucleoside
+adenosine triphosphate | Energy currency (ATP)
+adenosine diphosphate | ADP
+adenosine monophosphate | AMP
+cyclic adenosine monophosphate | Second messenger (cAMP)
+guanosine triphosphate | GTP
+nicotinamide adenine dinucleotide | Redox coenzyme (NAD+)
+flavin adenine dinucleotide | Redox coenzyme (FAD)
+coenzyme a | Acyl-carrier coenzyme
+acetyl coenzyme a | Metabolic hub
+s-adenosylmethionine | Methyl donor (SAM)
+tetrahydrofolic acid | One-carbon carrier
+pyridoxal phosphate | Coenzyme (vitamin B6)
+thiamine pyrophosphate | Coenzyme (vitamin B1)
+lipoic acid | Coenzyme
+ubiquinone | Electron carrier (CoQ10)
+heme b | Oxygen-binding prosthetic group
+chlorophyll a | Photosynthetic pigment
+bilirubin | Heme breakdown product
+biliverdin | Heme breakdown product
+d-glucose | Monosaccharide
+d-fructose | Monosaccharide
+d-galactose | Monosaccharide
+d-mannose | Monosaccharide
+d-ribose | Pentose sugar
+2-deoxy-d-ribose | DNA sugar
+d-xylose | Pentose sugar
+l-arabinose | Pentose sugar
+l-fucose | Deoxy sugar
+n-acetylglucosamine | Amino sugar
+glucosamine | Amino sugar
+sialic acid | N-acetylneuraminic acid
+sucrose | Disaccharide
+lactose | Disaccharide
+maltose | Disaccharide
+cellobiose | Disaccharide
+trehalose | Disaccharide
+raffinose | Trisaccharide
+glucose 6-phosphate | Glycolysis intermediate
+fructose 1,6-bisphosphate | Glycolysis intermediate
+glyceraldehyde 3-phosphate | Glycolysis intermediate
+dihydroxyacetone phosphate | Glycolysis intermediate
+phosphoenolpyruvic acid | Glycolysis intermediate
+pyruvic acid | Glycolysis end product
+lactic acid | Anaerobic metabolite
+citric acid | Krebs cycle intermediate
+isocitric acid | Krebs cycle intermediate
+alpha-ketoglutaric acid | Krebs cycle intermediate
+succinic acid | Krebs cycle intermediate
+fumaric acid | Krebs cycle intermediate
+malic acid | Krebs cycle intermediate
+oxaloacetic acid | Krebs cycle intermediate
+acetoacetic acid | Ketone body
+beta-hydroxybutyric acid | Ketone body
+urea | Nitrogen excretion product
+uric acid | Purine end product
+creatine | Energy buffer
+creatinine | Muscle metabolite (kidney marker)
+choline | Nutrient, acetylcholine precursor
+acetylcholine | Neurotransmitter
+dopamine | Neurotransmitter
+norepinephrine | Neurotransmitter, hormone
+epinephrine | Hormone (adrenaline)
+serotonin | Neurotransmitter
+melatonin | Sleep hormone
+histamine | Immune mediator, neurotransmitter
+glutamate | Excitatory neurotransmitter
+anandamide | Endocannabinoid
+nitric oxide | Signaling gas
+cholesterol | Membrane sterol
+cortisol | Glucocorticoid hormone
+aldosterone | Mineralocorticoid hormone
+testosterone | Androgen hormone
+dihydrotestosterone | Androgen hormone
+estradiol | Estrogen hormone
+estrone | Estrogen hormone
+estriol | Estrogen hormone
+progesterone | Progestogen hormone
+pregnenolone | Steroid precursor
+dehydroepiandrosterone | Adrenal androgen (DHEA)
+calcitriol | Active vitamin D hormone
+thyroxine | Thyroid hormone (T4)
+triiodothyronine | Thyroid hormone (T3)
+prostaglandin e2 | Lipid mediator
+prostaglandin f2alpha | Lipid mediator
+thromboxane a2 | Platelet aggregator
+leukotriene b4 | Inflammatory mediator
+arachidonic acid | Omega-6 fatty acid
+palmitic acid | Saturated fatty acid
+stearic acid | Saturated fatty acid
+oleic acid | Monounsaturated fatty acid
+linoleic acid | Omega-6 fatty acid
+docosahexaenoic acid | Omega-3 fatty acid
+butyric acid | Short-chain fatty acid
+phosphatidylcholine | Membrane phospholipid
+sphingosine | Sphingolipid backbone
+ceramide | Sphingolipid
+squalene | Sterol precursor
+beta-carotene | Carotenoid
+retinal | Visual chromophore
+bile acid cholic acid | Primary bile acid
+cholic acid | Primary bile acid
+chenodeoxycholic acid | Primary bile acid
+luciferin | Bioluminescent substrate
+auxin | Plant hormone (IAA)
+ethylene | Plant ripening hormone
+salicylic acid | Plant defense hormone
+jasmonic acid | Plant defense hormone

@@ -1,0 +1,435 @@
+# Pharmaceuticals: name | therapeutic class
+# Names are matched against the PubChem-derived identifier table; unmatched names
+# ship as lookup stubs that resolve live from PubChem.
+paracetamol | Analgesic, antipyretic
+aspirin | NSAID, antiplatelet
+ibuprofen | NSAID analgesic
+naproxen | NSAID analgesic
+diclofenac | NSAID analgesic
+ketoprofen | NSAID analgesic
+indomethacin | NSAID
+celecoxib | COX-2 selective NSAID
+meloxicam | NSAID (oxicam)
+piroxicam | NSAID (oxicam)
+ketorolac | NSAID analgesic
+metamizole | Analgesic, antipyretic
+morphine | Opioid analgesic
+codeine | Opioid analgesic, antitussive
+oxycodone | Opioid analgesic
+hydrocodone | Opioid analgesic
+hydromorphone | Opioid analgesic
+fentanyl | Synthetic opioid analgesic
+methadone | Opioid agonist (pain, opioid use disorder)
+buprenorphine | Partial opioid agonist
+tramadol | Opioid analgesic
+tapentadol | Opioid analgesic
+pethidine | Opioid analgesic
+naloxone | Opioid antagonist (overdose reversal)
+naltrexone | Opioid antagonist
+lidocaine | Local anesthetic, antiarrhythmic
+bupivacaine | Local anesthetic
+procaine | Local anesthetic
+benzocaine | Topical anesthetic
+articaine | Dental local anesthetic
+propofol | General anesthetic
+ketamine | Dissociative anesthetic
+etomidate | General anesthetic
+thiopental | Barbiturate anesthetic
+sevoflurane | Inhaled anesthetic
+isoflurane | Inhaled anesthetic
+desflurane | Inhaled anesthetic
+halothane | Inhaled anesthetic
+nitrous oxide | Inhaled anesthetic, analgesic
+midazolam | Benzodiazepine sedative
+diazepam | Benzodiazepine anxiolytic
+lorazepam | Benzodiazepine anxiolytic
+alprazolam | Benzodiazepine anxiolytic
+clonazepam | Benzodiazepine anticonvulsant
+temazepam | Benzodiazepine hypnotic
+zolpidem | Z-drug hypnotic
+buspirone | Anxiolytic (5-HT1A partial agonist)
+phenobarbital | Barbiturate anticonvulsant
+phenytoin | Anticonvulsant
+carbamazepine | Anticonvulsant, mood stabilizer
+oxcarbazepine | Anticonvulsant
+valproic acid | Anticonvulsant, mood stabilizer
+lamotrigine | Anticonvulsant, mood stabilizer
+levetiracetam | Anticonvulsant
+topiramate | Anticonvulsant
+gabapentin | Anticonvulsant, neuropathic pain
+pregabalin | Anticonvulsant, neuropathic pain
+ethosuximide | Anticonvulsant (absence seizures)
+lithium carbonate | Mood stabilizer
+fluoxetine | SSRI antidepressant
+sertraline | SSRI antidepressant
+paroxetine | SSRI antidepressant
+citalopram | SSRI antidepressant
+escitalopram | SSRI antidepressant
+fluvoxamine | SSRI antidepressant
+venlafaxine | SNRI antidepressant
+duloxetine | SNRI antidepressant
+bupropion | NDRI antidepressant, smoking cessation
+mirtazapine | Tetracyclic antidepressant
+trazodone | SARI antidepressant
+amitriptyline | Tricyclic antidepressant
+nortriptyline | Tricyclic antidepressant
+imipramine | Tricyclic antidepressant
+clomipramine | Tricyclic antidepressant
+phenelzine | MAO inhibitor antidepressant
+selegiline | MAO-B inhibitor (Parkinson's)
+haloperidol | Typical antipsychotic
+chlorpromazine | Typical antipsychotic
+fluphenazine | Typical antipsychotic
+risperidone | Atypical antipsychotic
+olanzapine | Atypical antipsychotic
+quetiapine | Atypical antipsychotic
+clozapine | Atypical antipsychotic
+aripiprazole | Atypical antipsychotic
+ziprasidone | Atypical antipsychotic
+methylphenidate | CNS stimulant (ADHD)
+amphetamine | CNS stimulant (ADHD)
+atomoxetine | Non-stimulant ADHD medication
+modafinil | Wakefulness-promoting agent
+caffeine | CNS stimulant
+levodopa | Antiparkinson (dopamine precursor)
+carbidopa | Decarboxylase inhibitor (with levodopa)
+pramipexole | Dopamine agonist
+ropinirole | Dopamine agonist
+amantadine | Antiparkinson, antiviral
+donepezil | Acetylcholinesterase inhibitor (Alzheimer's)
+rivastigmine | Cholinesterase inhibitor (Alzheimer's)
+galantamine | Acetylcholinesterase inhibitor (Alzheimer's)
+memantine | NMDA antagonist (Alzheimer's)
+sumatriptan | Triptan (migraine)
+metformin | Biguanide antidiabetic
+glibenclamide | Sulfonylurea antidiabetic
+glipizide | Sulfonylurea antidiabetic
+gliclazide | Sulfonylurea antidiabetic
+glimepiride | Sulfonylurea antidiabetic
+pioglitazone | Thiazolidinedione antidiabetic
+sitagliptin | DPP-4 inhibitor antidiabetic
+empagliflozin | SGLT2 inhibitor antidiabetic
+dapagliflozin | SGLT2 inhibitor antidiabetic
+canagliflozin | SGLT2 inhibitor antidiabetic
+acarbose | Alpha-glucosidase inhibitor
+levothyroxine | Thyroid hormone replacement
+liothyronine | Thyroid hormone replacement
+methimazole | Antithyroid
+propylthiouracil | Antithyroid
+atorvastatin | Statin (lipid lowering)
+simvastatin | Statin (lipid lowering)
+rosuvastatin | Statin (lipid lowering)
+pravastatin | Statin (lipid lowering)
+lovastatin | Statin (lipid lowering)
+ezetimibe | Cholesterol absorption inhibitor
+fenofibrate | Fibrate (lipid lowering)
+gemfibrozil | Fibrate (lipid lowering)
+niacin | Vitamin B3, lipid lowering
+lisinopril | ACE inhibitor (hypertension)
+enalapril | ACE inhibitor (hypertension)
+ramipril | ACE inhibitor (hypertension)
+captopril | ACE inhibitor (hypertension)
+losartan | Angiotensin receptor blocker
+valsartan | Angiotensin receptor blocker
+irbesartan | Angiotensin receptor blocker
+candesartan | Angiotensin receptor blocker
+telmisartan | Angiotensin receptor blocker
+amlodipine | Calcium channel blocker
+nifedipine | Calcium channel blocker
+diltiazem | Calcium channel blocker
+verapamil | Calcium channel blocker
+metoprolol | Beta blocker
+atenolol | Beta blocker
+propranolol | Beta blocker
+bisoprolol | Beta blocker
+carvedilol | Alpha/beta blocker
+labetalol | Alpha/beta blocker
+nebivolol | Beta blocker
+doxazosin | Alpha-1 blocker
+prazosin | Alpha-1 blocker
+tamsulosin | Alpha-1 blocker (BPH)
+finasteride | 5-alpha-reductase inhibitor
+clonidine | Alpha-2 agonist (hypertension)
+hydralazine | Vasodilator
+minoxidil | Vasodilator, hair-growth agent
+nitroglycerin | Nitrate vasodilator (angina)
+isosorbide mononitrate | Nitrate vasodilator (angina)
+hydrochlorothiazide | Thiazide diuretic
+chlorthalidone | Thiazide-like diuretic
+indapamide | Thiazide-like diuretic
+furosemide | Loop diuretic
+bumetanide | Loop diuretic
+torsemide | Loop diuretic
+spironolactone | Potassium-sparing diuretic
+eplerenone | Aldosterone antagonist
+amiloride | Potassium-sparing diuretic
+acetazolamide | Carbonic anhydrase inhibitor
+mannitol | Osmotic diuretic
+digoxin | Cardiac glycoside
+amiodarone | Class III antiarrhythmic
+sotalol | Class III antiarrhythmic
+flecainide | Class IC antiarrhythmic
+adenosine | Antiarrhythmic (SVT)
+warfarin | Vitamin K antagonist anticoagulant
+apixaban | Factor Xa inhibitor anticoagulant
+rivaroxaban | Factor Xa inhibitor anticoagulant
+dabigatran | Direct thrombin inhibitor
+clopidogrel | P2Y12 antiplatelet
+ticagrelor | P2Y12 antiplatelet
+prasugrel | P2Y12 antiplatelet
+tranexamic acid | Antifibrinolytic
+phytonadione | Vitamin K1 (warfarin reversal)
+epinephrine | Adrenergic agonist (anaphylaxis)
+norepinephrine | Vasopressor
+dopamine | Inotrope, vasopressor
+dobutamine | Inotrope
+isoprenaline | Beta agonist
+phenylephrine | Alpha-1 agonist decongestant
+pseudoephedrine | Decongestant
+ephedrine | Sympathomimetic
+salbutamol | Short-acting beta-2 agonist (asthma)
+terbutaline | Beta-2 agonist
+salmeterol | Long-acting beta-2 agonist
+formoterol | Long-acting beta-2 agonist
+ipratropium bromide | Anticholinergic bronchodilator
+tiotropium bromide | Long-acting anticholinergic bronchodilator
+theophylline | Methylxanthine bronchodilator
+montelukast | Leukotriene receptor antagonist
+atropine | Anticholinergic
+scopolamine | Anticholinergic (motion sickness)
+glycopyrronium bromide | Anticholinergic
+oxybutynin | Antimuscarinic (overactive bladder)
+neostigmine | Cholinesterase inhibitor
+pyridostigmine bromide | Cholinesterase inhibitor (myasthenia gravis)
+physostigmine | Cholinesterase inhibitor
+pilocarpine | Muscarinic agonist (glaucoma)
+succinylcholine chloride | Depolarizing neuromuscular blocker
+rocuronium bromide | Neuromuscular blocker
+baclofen | Muscle relaxant
+cyclobenzaprine | Muscle relaxant
+dantrolene | Muscle relaxant (malignant hyperthermia)
+diphenhydramine | First-generation antihistamine
+chlorphenamine | First-generation antihistamine
+promethazine | Antihistamine, antiemetic
+hydroxyzine | Antihistamine, anxiolytic
+cetirizine | Second-generation antihistamine
+loratadine | Second-generation antihistamine
+fexofenadine | Second-generation antihistamine
+desloratadine | Second-generation antihistamine
+ranitidine | H2 antagonist
+famotidine | H2 antagonist
+cimetidine | H2 antagonist
+omeprazole | Proton pump inhibitor
+esomeprazole | Proton pump inhibitor
+lansoprazole | Proton pump inhibitor
+pantoprazole | Proton pump inhibitor
+ondansetron | 5-HT3 antagonist antiemetic
+metoclopramide | Prokinetic antiemetic
+domperidone | Prokinetic antiemetic
+loperamide | Antidiarrheal
+bisacodyl | Stimulant laxative
+lactulose | Osmotic laxative
+mesalazine | Aminosalicylate (IBD)
+sulfasalazine | Aminosalicylate (IBD, RA)
+ursodiol | Bile acid (gallstones)
+prednisone | Corticosteroid
+prednisolone | Corticosteroid
+methylprednisolone | Corticosteroid
+dexamethasone | Corticosteroid
+hydrocortisone | Corticosteroid
+betamethasone | Corticosteroid
+budesonide | Inhaled/oral corticosteroid
+fluticasone propionate | Inhaled corticosteroid
+beclomethasone dipropionate | Inhaled corticosteroid
+triamcinolone | Corticosteroid
+fludrocortisone | Mineralocorticoid
+estradiol | Estrogen
+ethinylestradiol | Synthetic estrogen (contraceptive)
+progesterone | Progestogen
+norethisterone | Progestin (contraceptive)
+levonorgestrel | Progestin (contraceptive)
+medroxyprogesterone acetate | Progestin
+testosterone | Androgen
+nandrolone | Anabolic steroid
+tamoxifen | Selective estrogen receptor modulator
+raloxifene | Selective estrogen receptor modulator
+letrozole | Aromatase inhibitor
+anastrozole | Aromatase inhibitor
+clomifene | Ovulation inducer
+mifepristone | Antiprogestogen
+misoprostol | Prostaglandin E1 analog
+oxytocin | Uterotonic hormone
+alendronic acid | Bisphosphonate (osteoporosis)
+risedronic acid | Bisphosphonate (osteoporosis)
+zoledronic acid | Bisphosphonate
+allopurinol | Xanthine oxidase inhibitor (gout)
+febuxostat | Xanthine oxidase inhibitor (gout)
+colchicine | Anti-gout
+probenecid | Uricosuric
+methotrexate | Antimetabolite, DMARD
+hydroxychloroquine | Antimalarial, DMARD
+leflunomide | DMARD
+azathioprine | Immunosuppressant
+mycophenolic acid | Immunosuppressant
+cyclosporin a | Calcineurin inhibitor immunosuppressant
+tacrolimus | Calcineurin inhibitor immunosuppressant
+sirolimus | mTOR inhibitor immunosuppressant
+tofacitinib | JAK inhibitor
+penicillin g | Beta-lactam antibiotic
+penicillin v | Beta-lactam antibiotic
+amoxicillin | Aminopenicillin antibiotic
+ampicillin | Aminopenicillin antibiotic
+clavulanic acid | Beta-lactamase inhibitor
+flucloxacillin | Penicillinase-resistant penicillin
+piperacillin | Antipseudomonal penicillin
+cefalexin | First-generation cephalosporin
+cefazolin | First-generation cephalosporin
+cefuroxime | Second-generation cephalosporin
+ceftriaxone | Third-generation cephalosporin
+cefotaxime | Third-generation cephalosporin
+ceftazidime | Third-generation cephalosporin
+cefepime | Fourth-generation cephalosporin
+meropenem | Carbapenem antibiotic
+imipenem | Carbapenem antibiotic
+aztreonam | Monobactam antibiotic
+vancomycin | Glycopeptide antibiotic
+gentamicin | Aminoglycoside antibiotic
+amikacin | Aminoglycoside antibiotic
+tobramycin | Aminoglycoside antibiotic
+streptomycin | Aminoglycoside antibiotic
+neomycin | Aminoglycoside antibiotic
+erythromycin | Macrolide antibiotic
+azithromycin | Macrolide antibiotic
+clarithromycin | Macrolide antibiotic
+tetracycline | Tetracycline antibiotic
+doxycycline | Tetracycline antibiotic
+minocycline | Tetracycline antibiotic
+tigecycline | Glycylcycline antibiotic
+chloramphenicol | Broad-spectrum antibiotic
+clindamycin | Lincosamide antibiotic
+linezolid | Oxazolidinone antibiotic
+ciprofloxacin | Fluoroquinolone antibiotic
+levofloxacin | Fluoroquinolone antibiotic
+moxifloxacin | Fluoroquinolone antibiotic
+norfloxacin | Fluoroquinolone antibiotic
+nalidixic acid | Quinolone antibiotic
+sulfamethoxazole | Sulfonamide antibiotic
+trimethoprim | Dihydrofolate reductase inhibitor antibiotic
+nitrofurantoin | Urinary antibacterial
+metronidazole | Nitroimidazole antibacterial, antiprotozoal
+tinidazole | Nitroimidazole antiprotozoal
+rifampicin | Rifamycin antibiotic (tuberculosis)
+isoniazid | Antitubercular
+pyrazinamide | Antitubercular
+ethambutol | Antitubercular
+dapsone | Antibacterial (leprosy)
+daptomycin | Lipopeptide antibiotic
+colistin | Polymyxin antibiotic
+fosfomycin | Phosphonic antibiotic
+fusidic acid | Topical antibiotic
+mupirocin | Topical antibiotic
+fluconazole | Triazole antifungal
+itraconazole | Triazole antifungal
+voriconazole | Triazole antifungal
+ketoconazole | Imidazole antifungal
+clotrimazole | Imidazole antifungal
+miconazole | Imidazole antifungal
+terbinafine | Allylamine antifungal
+nystatin | Polyene antifungal
+amphotericin b | Polyene antifungal
+griseofulvin | Antifungal
+acyclovir | Antiviral (herpes)
+valacyclovir | Antiviral (herpes)
+ganciclovir | Antiviral (CMV)
+oseltamivir | Neuraminidase inhibitor (influenza)
+zanamivir | Neuraminidase inhibitor (influenza)
+ribavirin | Antiviral
+zidovudine | NRTI antiretroviral
+lamivudine | NRTI antiretroviral
+tenofovir disoproxil | NRTI antiretroviral
+emtricitabine | NRTI antiretroviral
+abacavir | NRTI antiretroviral
+efavirenz | NNRTI antiretroviral
+nevirapine | NNRTI antiretroviral
+ritonavir | Protease inhibitor antiretroviral
+lopinavir | Protease inhibitor antiretroviral
+dolutegravir | Integrase inhibitor antiretroviral
+raltegravir | Integrase inhibitor antiretroviral
+sofosbuvir | NS5B inhibitor (hepatitis C)
+remdesivir | Antiviral (RNA polymerase inhibitor)
+chloroquine | Antimalarial
+quinine | Antimalarial
+mefloquine | Antimalarial
+primaquine | Antimalarial
+artemisinin | Antimalarial
+artesunate | Antimalarial
+atovaquone | Antimalarial, antiprotozoal
+proguanil | Antimalarial
+pyrimethamine | Antimalarial, antiprotozoal
+ivermectin | Antiparasitic
+albendazole | Anthelmintic
+mebendazole | Anthelmintic
+praziquantel | Anthelmintic
+niclosamide | Anthelmintic
+permethrin | Topical scabicide, insecticide
+cyclophosphamide | Alkylating antineoplastic
+ifosfamide | Alkylating antineoplastic
+chlorambucil | Alkylating antineoplastic
+melphalan | Alkylating antineoplastic
+busulfan | Alkylating antineoplastic
+carmustine | Nitrosourea antineoplastic
+temozolomide | Alkylating antineoplastic
+cisplatin | Platinum antineoplastic
+carboplatin | Platinum antineoplastic
+oxaliplatin | Platinum antineoplastic
+fluorouracil | Antimetabolite antineoplastic
+capecitabine | Antimetabolite antineoplastic
+cytarabine | Antimetabolite antineoplastic
+gemcitabine | Antimetabolite antineoplastic
+mercaptopurine | Antimetabolite antineoplastic
+hydroxyurea | Antimetabolite antineoplastic
+doxorubicin | Anthracycline antineoplastic
+daunorubicin | Anthracycline antineoplastic
+bleomycin | Antitumor antibiotic
+mitomycin | Antitumor antibiotic
+vincristine | Vinca alkaloid antineoplastic
+vinblastine | Vinca alkaloid antineoplastic
+paclitaxel | Taxane antineoplastic
+docetaxel | Taxane antineoplastic
+etoposide | Topoisomerase II inhibitor
+irinotecan | Topoisomerase I inhibitor
+imatinib | Tyrosine kinase inhibitor
+erlotinib | EGFR tyrosine kinase inhibitor
+gefitinib | EGFR tyrosine kinase inhibitor
+sorafenib | Multikinase inhibitor
+bortezomib | Proteasome inhibitor
+thalidomide | Immunomodulator
+lenalidomide | Immunomodulator
+bicalutamide | Antiandrogen
+tretinoin | Retinoid (acne, APL)
+isotretinoin | Retinoid (acne)
+sildenafil | PDE5 inhibitor
+tadalafil | PDE5 inhibitor
+latanoprost | Prostaglandin analog (glaucoma)
+timolol | Beta blocker (glaucoma)
+dorzolamide | Carbonic anhydrase inhibitor (glaucoma)
+disulfiram | Alcohol deterrent
+varenicline | Smoking cessation
+acetylcysteine | Mucolytic, paracetamol antidote
+dextromethorphan | Antitussive
+guaifenesin | Expectorant
+flumazenil | Benzodiazepine antagonist
+fomepizole | Antidote (methanol/ethylene glycol)
+pralidoxime | Antidote (organophosphate poisoning)
+deferoxamine | Iron chelator
+dimercaprol | Heavy-metal chelator
+edetate calcium disodium | Lead chelator
+penicillamine | Chelator, DMARD
+methylene blue | Antidote (methemoglobinemia)
+hydroxocobalamin | Vitamin B12, cyanide antidote
+sodium thiosulfate | Cyanide antidote
+potassium iodide | Thyroid blocker (radiation emergency)
+activated charcoal | Adsorbent antidote
+glucagon | Hypoglycemia treatment
+heparin | Anticoagulant
+insulin | Antidiabetic hormone

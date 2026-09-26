@@ -1,0 +1,160 @@
+# Cosmetic and personal care ingredients: name | use
+sodium lauryl sulfate | Anionic surfactant (cleanser, foaming)
+sodium laureth sulfate | Anionic surfactant (shampoo)
+ammonium lauryl sulfate | Anionic surfactant
+cocamidopropyl betaine | Amphoteric surfactant
+sodium lauroyl sarcosinate | Mild anionic surfactant
+decyl glucoside | Nonionic surfactant
+cetrimonium bromide | Cationic conditioning agent
+behentrimonium chloride | Hair conditioning agent
+benzalkonium chloride | Preservative, antiseptic
+cetylpyridinium chloride | Antiseptic (mouthwash)
+chlorhexidine | Antiseptic
+triclosan | Antibacterial (restricted)
+triclocarban | Antibacterial soap agent
+glycerol | Humectant
+propylene glycol | Humectant, solvent
+butylene glycol | Humectant, solvent
+hyaluronic acid | Humectant
+urea | Humectant, keratolytic
+sodium pca | Humectant
+panthenol | Provitamin B5 moisturizer
+allantoin | Skin protectant
+niacinamide | Skin-conditioning vitamin B3
+retinol | Anti-aging retinoid
+retinyl palmitate | Retinoid ester
+tocopheryl acetate | Vitamin E antioxidant
+ascorbyl palmitate | Vitamin C derivative
+salicylic acid | Beta-hydroxy acid exfoliant, anti-acne
+glycolic acid | Alpha-hydroxy acid exfoliant
+lactic acid | Alpha-hydroxy acid exfoliant
+mandelic acid | Alpha-hydroxy acid exfoliant
+azelaic acid | Anti-acne, anti-rosacea
+benzoyl peroxide | Anti-acne agent
+kojic acid | Skin-lightening agent
+arbutin | Skin-lightening agent
+hydroquinone | Skin-lightening agent (restricted)
+tranexamic acid | Hyperpigmentation treatment
+caffeine | Skin-care active
+squalane | Emollient
+squalene | Emollient
+isopropyl myristate | Emollient
+isopropyl palmitate | Emollient
+cetyl alcohol | Fatty-alcohol emollient, thickener
+stearyl alcohol | Fatty-alcohol emollient
+cetearyl alcohol | Emulsion stabilizer
+stearic acid | Emulsifier, thickener
+palmitic acid | Emollient, cleanser
+myristic acid | Cleanser
+lauric acid | Soap fatty acid
+oleic acid | Emollient
+glyceryl stearate | Emulsifier
+caprylic/capric triglyceride | Emollient
+dimethicone | Silicone emollient
+cyclopentasiloxane | Volatile silicone
+octamethylcyclotetrasiloxane | Volatile silicone (restricted in EU)
+mineral oil | Occlusive emollient
+petrolatum | Occlusive emollient
+lanolin | Emollient
+beeswax | Thickener, emollient
+paraffin | Wax
+carbomer | Thickener
+triethanolamine | pH adjuster
+sodium hydroxide | pH adjuster, saponification
+citric acid | pH adjuster
+disodium edta | Chelating agent
+tetrasodium edta | Chelating agent
+methylparaben | Preservative
+propylparaben | Preservative
+butylparaben | Preservative
+phenoxyethanol | Preservative
+benzyl alcohol | Preservative, solvent
+sodium benzoate | Preservative
+potassium sorbate | Preservative
+dmdm hydantoin | Formaldehyde-releasing preservative
+imidazolidinyl urea | Formaldehyde-releasing preservative
+methylisothiazolinone | Preservative (sensitizer)
+methylchloroisothiazolinone | Preservative (sensitizer)
+chlorphenesin | Preservative
+ethylhexylglycerin | Preservative booster
+caprylyl glycol | Humectant, preservative booster
+avobenzone | UVA filter
+oxybenzone | UV filter (benzophenone-3)
+octinoxate | UVB filter
+octocrylene | UVB filter
+homosalate | UVB filter
+octisalate | UVB filter
+ensulizole | UVB filter
+ecamsule | UVA filter
+bemotrizinol | Broad-spectrum UV filter
+titanium dioxide | Mineral UV filter, white pigment
+zinc oxide | Mineral UV filter
+zinc pyrithione | Anti-dandruff agent
+ketoconazole | Anti-dandruff antifungal
+selenium disulfide | Anti-dandruff agent
+piroctone olamine | Anti-dandruff agent
+sodium fluoride | Anticavity toothpaste agent
+stannous fluoride | Anticavity toothpaste agent
+sodium monofluorophosphate | Anticavity toothpaste agent
+hydroxyapatite | Remineralizing agent
+calcium carbonate | Toothpaste abrasive
+hydrated silica | Toothpaste abrasive
+potassium nitrate | Desensitizing toothpaste agent
+hydrogen peroxide | Tooth whitener, hair bleach
+carbamide peroxide | Tooth whitener
+aluminium chlorohydrate | Antiperspirant
+aluminium chloride | Antiperspirant
+aluminium zirconium tetrachlorohydrex gly | Antiperspirant
+thioglycolic acid | Hair perm/depilatory agent
+ammonium thioglycolate | Hair perm agent
+calcium thioglycolate | Depilatory agent
+p-phenylenediamine | Permanent hair dye (sensitizer)
+resorcinol | Hair dye coupler
+ammonium persulfate | Hair bleach booster
+lawsone | Henna dye
+ethanol | Solvent, astringent
+isopropyl alcohol | Solvent, antiseptic
+acetone | Nail polish remover
+ethyl acetate | Nail polish solvent
+butyl acetate | Nail polish solvent
+nitrocellulose | Nail polish film former
+toluene | Nail polish solvent (restricted)
+formaldehyde | Nail hardener (restricted)
+camphor | Fragrance, cooling agent
+menthol | Cooling agent
+eucalyptol | Fragrance, cooling agent
+linalool | Fragrance (lavender)
+geraniol | Fragrance (rose)
+citronellol | Fragrance (rose)
+limonene | Fragrance (citrus)
+coumarin | Fragrance (hay/tonka)
+eugenol | Fragrance (clove)
+isoeugenol | Fragrance (sensitizer)
+cinnamal | Fragrance (cinnamon)
+hydroxycitronellal | Fragrance (lily)
+benzyl benzoate | Fragrance fixative, scabicide
+benzyl salicylate | Fragrance fixative
+hexyl cinnamal | Fragrance (jasmine)
+alpha-isomethyl ionone | Fragrance (violet)
+beta-ionone | Fragrance (violet)
+iso e super | Fragrance (woody)
+galaxolide | Polycyclic musk
+tonalide | Polycyclic musk
+muscone | Macrocyclic musk
+ambroxide | Fragrance (ambergris)
+hedione | Fragrance (jasmine)
+vanillin | Fragrance (vanilla)
+phenethyl alcohol | Fragrance (rose)
+diethyl phthalate | Fragrance solvent
+diethyltoluamide | Insect repellent (DEET)
+dihydroxyacetone | Self-tanning agent
+erythrulose | Self-tanning agent
+iron oxide black | Cosmetic pigment
+ultramarine blue | Cosmetic pigment
+chromium(iii) oxide | Green cosmetic pigment
+bismuth oxychloride | Pearlescent pigment
+mica | Shimmer pigment
+talc | Absorbent powder
+kaolin | Clay absorbent
+bentonite | Clay thickener
+magnesium aluminum silicate | Thickener

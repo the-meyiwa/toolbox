@@ -1,0 +1,146 @@
+# Toxic and hazardous chemicals: name | hazard profile | note
+# Identification, properties and safety only. Profiles map to handling guidance in build-compounds.py.
+hydrogen cyanide | cyanide | Rapidly fatal by inhalation; blocks cellular respiration (cytochrome c oxidase)
+sodium cyanide | cyanide | Fatal if swallowed or on contact with acids (releases HCN)
+potassium cyanide | cyanide | Fatal if swallowed or on contact with acids (releases HCN)
+cyanogen chloride | cyanide | Toxic gas; CWC Schedule 3
+acetone cyanohydrin | cyanide | Decomposes to HCN
+acrylonitrile | cyanide | Metabolized to cyanide; probable carcinogen
+phosgene | toxic-gas | Delayed pulmonary edema; CWC Schedule 3
+chlorine | toxic-gas | Severe respiratory irritant; used as a WWI weapon
+hydrogen sulfide | toxic-gas | Olfactory fatigue masks lethal concentrations
+carbon monoxide | toxic-gas | Binds hemoglobin; odorless asphyxiant
+nitrogen dioxide | toxic-gas | Delayed pulmonary edema
+sulfur dioxide | toxic-gas | Severe respiratory irritant
+ammonia | toxic-gas | Corrosive to airways and eyes
+arsine | toxic-gas | Causes massive hemolysis
+phosphine | toxic-gas | Highly toxic fumigant gas
+stibine | toxic-gas | Hemolytic toxic gas
+diborane | toxic-gas | Pyrophoric, highly toxic gas
+germane | toxic-gas | Toxic flammable gas
+silane | pyrophoric | Ignites spontaneously in air
+fluorine | toxic-gas | Extremely reactive, corrosive oxidizing gas
+hydrogen fluoride | corrosive | Penetrates skin; systemic fluoride toxicity (calcium depletion)
+hydrogen chloride | corrosive | Corrosive gas/acid
+hydrogen bromide | corrosive | Corrosive gas/acid
+chlorine trifluoride | oxidizer | Violently reactive oxidizer; ignites most materials
+ozone | toxic-gas | Strong oxidizer, respiratory toxicant
+methyl isocyanate | toxic-gas | Bhopal disaster (1984) chemical
+formaldehyde | carcinogen | IARC Group 1 carcinogen, sensitizer
+acrolein | toxic-gas | Severe irritant, highly toxic by inhalation
+ethylene oxide | carcinogen | Flammable toxic gas, IARC Group 1 carcinogen
+methyl bromide | toxic-gas | Neurotoxic fumigant
+chloropicrin | toxic-gas | Lachrymator, pulmonary agent; CWC Schedule 3
+sarin | nerve-agent | Organophosphorus nerve agent; CWC Schedule 1 (prohibited)
+soman | nerve-agent | Organophosphorus nerve agent; CWC Schedule 1 (prohibited)
+tabun | nerve-agent | Organophosphorus nerve agent; CWC Schedule 1 (prohibited)
+vx | nerve-agent | Persistent nerve agent; CWC Schedule 1 (prohibited)
+cyclosarin | nerve-agent | Organophosphorus nerve agent; CWC Schedule 1 (prohibited)
+bis(2-chloroethyl) sulfide | vesicant | Sulfur mustard blister agent; CWC Schedule 1 (prohibited)
+lewisite | vesicant | Arsenical blister agent; CWC Schedule 1 (prohibited)
+parathion | organophosphate | Acetylcholinesterase inhibitor; banned in many countries
+methyl parathion | organophosphate | Acetylcholinesterase inhibitor
+tetraethyl pyrophosphate | organophosphate | Highly toxic acetylcholinesterase inhibitor
+dichlorvos | organophosphate | Acetylcholinesterase inhibitor
+mevinphos | organophosphate | Highly toxic acetylcholinesterase inhibitor
+aldicarb | organophosphate | Highly toxic carbamate cholinesterase inhibitor
+carbofuran | organophosphate | Highly toxic carbamate cholinesterase inhibitor
+paraquat | pesticide-toxic | No antidote; progressive pulmonary fibrosis
+sodium fluoroacetate | pesticide-toxic | Compound 1080; blocks the citric acid cycle
+strychnine | pesticide-toxic | Glycine receptor antagonist; convulsant
+brodifacoum | pesticide-toxic | Long-acting anticoagulant (superwarfarin)
+tetramethylenedisulfotetramine | pesticide-toxic | Banned convulsant rodenticide
+thallium(i) sulfate | heavy-metal | Former rodenticide; causes alopecia, neuropathy
+arsenic trioxide | heavy-metal | IARC Group 1 carcinogen; also a leukemia drug
+arsenic | heavy-metal | IARC Group 1 carcinogen
+sodium arsenite | heavy-metal | Highly toxic arsenical
+lead(ii) acetate | heavy-metal | Neurotoxic; reproductive toxicant
+lead(ii) nitrate | heavy-metal | Neurotoxic; oxidizer
+tetraethyllead | heavy-metal | Neurotoxic organolead
+mercury | heavy-metal | Vapor is neurotoxic
+mercury(ii) chloride | heavy-metal | Corrosive, nephrotoxic
+methylmercury chloride | heavy-metal | Minamata disease neurotoxicant
+dimethylmercury | heavy-metal | Extremely toxic; permeates lab gloves
+cadmium | heavy-metal | IARC Group 1 carcinogen; nephrotoxic
+cadmium chloride | heavy-metal | IARC Group 1 carcinogen
+cadmium oxide | heavy-metal | Fume causes chemical pneumonitis
+chromium trioxide | heavy-metal | Hexavalent chromium; carcinogen, oxidizer
+potassium dichromate | heavy-metal | Hexavalent chromium; carcinogen, sensitizer
+sodium chromate | heavy-metal | Hexavalent chromium; carcinogen
+beryllium | heavy-metal | Chronic beryllium disease; IARC Group 1
+beryllium oxide | heavy-metal | Chronic beryllium disease; IARC Group 1
+nickel carbonyl | heavy-metal | Extremely toxic volatile metal carbonyl
+nickel subsulfide | heavy-metal | IARC Group 1 carcinogen
+osmium tetroxide | heavy-metal | Volatile; fixes tissue and damages eyes
+barium chloride | heavy-metal | Soluble barium causes hypokalemia
+antimony trichloride | heavy-metal | Corrosive, toxic
+selenium dioxide | heavy-metal | Toxic, corrosive
+tributyltin oxide | heavy-metal | Organotin biocide (restricted)
+benzene | carcinogen | IARC Group 1 (leukemia)
+vinyl chloride | carcinogen | IARC Group 1 (liver angiosarcoma)
+1,3-butadiene | carcinogen | IARC Group 1
+bis(chloromethyl) ether | carcinogen | IARC Group 1
+2-naphthylamine | carcinogen | IARC Group 1 (bladder cancer)
+benzidine | carcinogen | IARC Group 1 (bladder cancer)
+4-aminobiphenyl | carcinogen | IARC Group 1
+2,3,7,8-tetrachlorodibenzo-p-dioxin | carcinogen | TCDD dioxin; IARC Group 1
+benzo[a]pyrene | carcinogen | IARC Group 1 polycyclic aromatic hydrocarbon
+aflatoxin b1 | carcinogen | IARC Group 1 mycotoxin
+trichloroethylene | carcinogen | IARC Group 1 (kidney cancer)
+1,2-dichloroethane | carcinogen | Probable carcinogen
+carbon tetrachloride | solvent-toxic | Hepatotoxic; ozone-depleting
+chloroform | solvent-toxic | Hepatotoxic, possible carcinogen
+methanol | solvent-toxic | Metabolized to formic acid; blindness
+ethylene glycol | solvent-toxic | Metabolized to oxalate; kidney failure
+diethylene glycol | solvent-toxic | Kidney failure (medicine-contamination incidents)
+n-hexane | solvent-toxic | Peripheral neuropathy
+toluene | solvent-toxic | CNS depressant, reproductive toxicant
+dichloromethane | solvent-toxic | Metabolized to carbon monoxide
+aniline | solvent-toxic | Methemoglobinemia
+nitrobenzene | solvent-toxic | Methemoglobinemia
+phenol | corrosive | Rapid skin absorption; systemic toxicity
+hydrazine | carcinogen | Toxic, probable carcinogen, unstable
+dimethyl sulfate | carcinogen | Potent alkylating agent
+iodomethane | carcinogen | Alkylating agent
+acrylamide | carcinogen | Neurotoxic, probable carcinogen
+epichlorohydrin | carcinogen | Probable carcinogen, sensitizer
+toluene diisocyanate | toxic-gas | Respiratory sensitizer (occupational asthma)
+sulfuric acid | corrosive | Severe burns; dehydrating
+nitric acid | corrosive | Severe burns; strong oxidizer
+perchloric acid | oxidizer | Explosive perchlorates form on contact with organics
+sodium hydroxide | corrosive | Severe caustic burns
+potassium hydroxide | corrosive | Severe caustic burns
+bromine | corrosive | Volatile corrosive halogen
+white phosphorus | pyrophoric | Ignites in air; severe burns and systemic toxicity
+sodium | pyrophoric | Reacts violently with water
+potassium | pyrophoric | Reacts violently with water; forms peroxides
+diethylzinc | pyrophoric | Ignites in air
+trimethylaluminium | pyrophoric | Ignites in air, reacts violently with water
+tert-butyllithium | pyrophoric | Ignites in air
+hydrogen peroxide | oxidizer | Concentrated solutions are corrosive oxidizers
+ammonium nitrate | oxidizer | Oxidizer; detonation hazard in bulk (Beirut 2020)
+potassium chlorate | oxidizer | Oxidizer; sensitive mixtures with fuels
+sodium azide | toxic-solid | Highly toxic; forms explosive metal azides in drains
+colchicine | toxin | Microtubule poison; narrow therapeutic index
+digoxin | toxin | Cardiac glycoside; narrow therapeutic index
+aconitine | toxin | Aconite alkaloid; cardiotoxic, neurotoxic
+atropine | toxin | Anticholinergic poison (belladonna)
+nicotine | toxin | Highly toxic by all routes
+ricinine | toxin | Castor-plant alkaloid
+tetrodotoxin | toxin | Pufferfish sodium-channel blocker
+saxitoxin | toxin | Paralytic shellfish toxin; CWC Schedule 1
+batrachotoxin | toxin | Poison-dart frog sodium-channel toxin
+amanitin | toxin | Death-cap mushroom hepatotoxin
+muscarine | toxin | Mushroom muscarinic toxin
+cicutoxin | toxin | Water hemlock convulsant
+coniine | toxin | Poison hemlock alkaloid
+ouabain | toxin | Cardiac glycoside
+palytoxin | toxin | Marine toxin
+microcystin-lr | toxin | Cyanobacterial hepatotoxin
+ergotamine | toxin | Ergot alkaloid
+T-2 toxin | toxin | Trichothecene mycotoxin
+polonium | radioactive | Alpha emitter; extremely toxic if ingested
+radium | radioactive | Bone-seeking alpha emitter
+plutonium | radioactive | Alpha emitter; fissile
+uranium hexafluoride | radioactive | Corrosive; releases HF on contact with moisture
+pcb 153 | carcinogen | Polychlorinated biphenyl congener (persistent)

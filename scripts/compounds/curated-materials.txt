@@ -1,0 +1,117 @@
+# Materials, ceramics, semiconductors, pigments, battery materials: name | use
+silicon | Semiconductor, solar cells
+germanium | Semiconductor, IR optics
+gallium arsenide | III-V semiconductor (LEDs, RF)
+gallium nitride | Wide-bandgap semiconductor (blue LEDs, power)
+gallium phosphide | LED semiconductor
+indium phosphide | Photonics semiconductor
+indium arsenide | IR detector semiconductor
+indium tin oxide | Transparent conductor
+indium(iii) oxide | Transparent conductor
+silicon carbide | Wide-bandgap semiconductor, abrasive
+silicon nitride | Engineering ceramic
+silicon dioxide | Glass, quartz, dielectric
+aluminium oxide | Alumina ceramic, sapphire
+aluminium nitride | Thermally conductive ceramic
+boron nitride | Ceramic, lubricant
+boron carbide | Armor ceramic, abrasive
+tungsten carbide | Cutting tools
+titanium carbide | Hard coating
+titanium nitride | Hard gold-colored coating
+zirconium dioxide | Zirconia ceramic
+yttrium oxide | Ceramic, phosphor host
+hafnium dioxide | High-k dielectric
+tantalum pentoxide | Dielectric, capacitors
+magnesium oxide | Refractory, insulator
+calcium fluoride | Optical crystal
+magnesium fluoride | Optical coating
+barium titanate | Ferroelectric ceramic capacitor
+lead zirconate titanate | Piezoelectric ceramic
+lithium niobate | Nonlinear optical crystal
+strontium titanate | Dielectric substrate
+yttrium aluminium garnet | Laser host crystal
+cadmium telluride | Thin-film solar cell
+cadmium sulfide | Semiconductor, pigment
+cadmium selenide | Quantum dots
+zinc selenide | IR optics
+zinc sulfide | Phosphor, IR optics
+lead sulfide | IR detector
+lead(ii) iodide | Perovskite precursor
+molybdenum disulfide | 2D semiconductor, lubricant
+tungsten disulfide | 2D semiconductor, lubricant
+graphite | Electrode, lubricant
+fullerene | Carbon nanomaterial (C60)
+diamond | Superhard material
+lithium cobalt oxide | Li-ion battery cathode
+lithium iron phosphate | Li-ion battery cathode (LFP)
+lithium manganese oxide | Li-ion battery cathode
+lithium titanate | Li-ion battery anode
+lithium carbonate | Battery precursor, mood stabilizer
+lithium hydroxide | Battery precursor
+nickel(ii) hydroxide | NiMH/NiCd electrode
+manganese dioxide | Alkaline battery cathode
+lead dioxide | Lead-acid battery cathode
+cobalt(ii) oxide | Pigment, catalyst
+nickel(ii) oxide | Ceramic, catalyst
+iron(ii,iii) oxide | Magnetite pigment, magnetic material
+iron(iii) oxide | Rust, red pigment, thermite
+chromium(iii) oxide | Green pigment
+cobalt aluminate | Cobalt blue pigment
+prussian blue | Blue pigment, thallium antidote
+lead(ii) chromate | Chrome yellow pigment (toxic)
+lead(ii,iv) oxide | Red lead pigment
+basic lead carbonate | Lead white pigment (toxic)
+zinc chromate | Anticorrosion primer (carcinogen)
+cadmium red | Red pigment
+vermilion | Mercury sulfide red pigment
+copper(i) oxide | Antifouling paint, pigment
+copper(ii) oxide | Pigment, catalyst
+tin(iv) oxide | Opacifier, conductor
+antimony pentoxide | Flame retardant
+bismuth vanadate | Yellow pigment
+calcium silicate | Insulation, cement component
+tricalcium silicate | Portland cement phase (alite)
+dicalcium silicate | Portland cement phase (belite)
+tricalcium aluminate | Portland cement phase
+hydroxyapatite | Bone mineral, biomaterial
+tricalcium phosphate | Bone graft, food additive
+calcium sulfate dihydrate | Gypsum plaster
+calcium sulfate hemihydrate | Plaster of Paris
+sodium chloride | Salt, optical windows
+potassium bromide | IR spectroscopy windows
+cesium iodide | Scintillator
+sodium iodide | Scintillator (doped)
+bismuth germanate | Scintillator
+lutetium oxyorthosilicate | PET scintillator
+europium(iii) oxide | Red phosphor
+neodymium(iii) oxide | Magnet, laser glass
+neodymium iron boron | Permanent magnet
+samarium cobalt | Permanent magnet
+cerium(iv) oxide | Polishing compound, catalyst
+lanthanum(iii) oxide | Optical glass
+gadolinium(iii) oxide | Phosphor, MRI research
+vanadium(v) oxide | Catalyst (sulfuric acid)
+platinum | Catalyst, electrodes
+palladium | Catalyst, hydrogen storage
+rhodium | Catalytic converter
+ruthenium(iv) oxide | Electrode catalyst
+iridium(iv) oxide | Water-electrolysis catalyst
+gold | Electronics, catalyst
+silver | Conductors, antimicrobial
+copper | Electrical conductor
+aluminium | Structural metal
+titanium | Aerospace metal
+nickel | Alloys, plating
+cobalt | Superalloys, batteries
+tungsten | Filaments, heavy alloys
+molybdenum | Alloys, catalysts
+tantalum | Capacitors
+niobium | Superconducting alloys
+zirconium | Nuclear fuel cladding
+hafnium | Control rods
+magnesium | Lightweight alloys
+beryllium | Aerospace, X-ray windows (toxic dust)
+lithium | Batteries, alloys
+sodium | Coolant, reducing agent
+uranium dioxide | Nuclear fuel
+thorium dioxide | Nuclear/refractory material
