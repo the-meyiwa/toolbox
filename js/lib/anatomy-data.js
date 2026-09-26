@@ -1178,7 +1178,8 @@ class AnatomyService {
         ...this._defaultDetail(name, system || match.system),
         ...match,
         name: name, // Keep full specific name
-        commonName: `${name.replace(/^(left|right)\s+/i, '')} (${name.match(/^(left|right)/i)?.[0] || 'bilateral'})`,
+        // The matched entry's everyday name ("Thigh Bone" for "left femur").
+        commonName: match.commonName || name,
       };
       this._cache.set(rawKey, entry);
       return entry;
@@ -1523,7 +1524,7 @@ export async function resolveAnatomyQuery(query = '', indexData = null) {
         name: detail.name || s.name,
         commonName: detail.commonName || s.name,
         system: s.system,
-        region: detail.region,
+        region: s.region || detail.region,
         functionDesc: detail.functionDesc,
         clinicalNotes: detail.clinicalNotes,
         innervation: detail.innervation,
