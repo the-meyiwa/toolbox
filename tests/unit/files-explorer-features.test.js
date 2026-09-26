@@ -137,11 +137,12 @@ test('Files View: Canvas Context Menu opens on right-click on blank canvas', asy
   });
   canvas.dispatchEvent(ctxEvent);
 
-  const menu = document.getElementById('sv-finder-menu');
+  const menu = document.getElementById('toolbox-context-menu');
   assert.ok(menu, 'Canvas context menu must appear on right click on canvas');
-  assert.ok(menu.querySelector('[data-canvas-act="select-all"]'), 'Menu must have Select All option');
-  assert.ok(menu.querySelector('[data-canvas-act="properties"]'), 'Menu must have Properties option');
-  assert.ok(menu.querySelector('[data-canvas-act="new-folder"]'), 'Menu must have New Folder option');
+  const labels = [...menu.querySelectorAll('.finder-menu-label')].map(el => el.textContent.trim());
+  assert.ok(labels.includes('Select all'), 'Menu must have Select all option');
+  assert.ok(labels.includes('Folder info'), 'Menu must have Folder info option');
+  assert.ok(labels.includes('New folder'), 'Menu must have New folder option');
 
   menu.remove();
   unmount();

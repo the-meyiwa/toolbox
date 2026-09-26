@@ -110,7 +110,11 @@ export function openContextMenu({ x, y, title = '', items = [], className = '', 
   document.body.appendChild(menu);
 
   // Smart Viewport Collision Detection
-  const rect = menu.getBoundingClientRect();
+  // Layout size, not getBoundingClientRect: the open animation starts the
+  // menu scaled and tilted, which under-measures it and lets the bottom of a
+  // tall menu run off the screen.
+  const box = menu.getBoundingClientRect();
+  const rect = { width: menu.offsetWidth || box.width, height: menu.offsetHeight || box.height };
   const margin = 10;
   let left = x;
   let top = y;
