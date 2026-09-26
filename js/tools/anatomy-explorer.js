@@ -418,7 +418,9 @@ export default {
         if (!on && viewer.selected?.userData.structure?.system === key) viewer.select(null);
         applyAppearance();
         renderList();
-        if (on && loaded.size === 1) viewer.frame(root, 1.15);
+        // Frame the system just switched on. Framing the whole body left small
+        // systems (the nervous system is only the brain) as a speck off-centre.
+        if (on) viewer.frame(loaded.get(key), 1.15);
       } catch (err) {
         e.target.checked = false;
         showProgress(`Could not load ${key}: ${err.message}`);

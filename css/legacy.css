@@ -7706,7 +7706,9 @@ body[data-tool-id="mail"] #viewport-content {
   background: transparent !important;
   position: relative !important;
   z-index: 1 !important;
-  flex-shrink: 0 !important;
+  /* Grow to share leftover width so the bar has no empty tail on wide screens;
+     never shrink, so narrow screens still scroll. */
+  flex: 1 0 auto !important;
   white-space: nowrap !important;
 }
 .calc-mode-btn:hover {
