@@ -33,9 +33,9 @@ export const TOOL_GROUPS = {
     match: /\b(loan|mortgage|interest|amorti[sz]|npv|irr|roi|invest|budget|spend|expense|debt|bank statement|invoice|quotation|quote for|owes?|overdue|receivable|wht|withholding|bill|vat|tax|salary|payroll|profit|margin|revenue|cash ?flow|naira|₦|ngn|usd|\$|dollar|currency|exchange rate)\b/i,
   },
   science: {
-    label: 'Science: chemistry, elements, anatomy, diseases',
-    tools: ['calculate_chemistry', 'explore_elements', 'search_diseases', 'explore_anatomy'],
-    match: /\b(chemi|molar|molecule|compound|reaction|balance .*equation|stoichiom|element|periodic|atom|anatomy|organ|bone|vertebra|muscle|disease|symptom|diagnos|icd|patholog|syndrome|infection)\b/i,
+    label: 'Science: drugs and compounds, elements, chemistry, anatomy, diseases',
+    tools: ['lookup_compound', 'lookup_element', 'anatomy_lookup', 'calculate_chemistry', 'explore_elements', 'search_diseases', 'explore_anatomy'],
+    match: /\b(chemi\w*|molar|molecules?|compounds?|reactions?|balance .*equation|stoichiom\w*|elements?|periodic|atoms?|atomic|drugs?|medicines?|medications?|tablets?|dosage|pharma\w*|antibiotics?|cas|formula of|anatomy|organs?|bones?|vertebra\w*|muscles?|nerves?|nervous|arter(y|ies)|veins?|brain|spinal|disease|symptoms?|diagnos\w*|icd|patholog\w*|syndrome|infection)\b|\w+(azole|mycin|cillin|oxacin|prazole|sartan|olol|pril|statin|caine|cycline)\b/i,
   },
   files: {
     label: 'Files: create, read, move, rename, zip and save files and artifacts',
@@ -43,9 +43,9 @@ export const TOOL_GROUPS = {
     match: /\b(files?|folder|save|saved|download|zip|unzip|archive|rename|move|delete|artifact|document|export)\b/i,
   },
   documents: {
-    label: 'Documents: PDF tools, PDF to Word, annotate, clean text',
-    tools: ['pdf_process', 'convert_pdf_to_word', 'annotate_pdf', 'clean_text'],
-    match: /\b(pdf|word|docx|document|page[s]?|merge|split|annotate|redact|watermark|clean (up )?text|contract|agreement)\b/i,
+    label: 'Documents: create Word, spreadsheet and slide files; PDF tools, PDF to Word, annotate, clean text',
+    tools: ['generate_document', 'pdf_process', 'convert_pdf_to_word', 'annotate_pdf', 'clean_text'],
+    match: /\b(pdf|word|docx?|odt|rtf|xlsx|pptx|document|report|letter|memo|proposal|cv|resume|essay|slides?|deck|presentation|powerpoint|spreadsheet|workbook|excel|page[s]?|merge|split|annotate|redact|watermark|clean (up )?text|contract|agreement)\b/i,
   },
   legal: {
     label: 'Legal (Nigeria): review contracts and leases, parse citations and build tables of authorities, digest judgments',
@@ -98,14 +98,14 @@ export const TOOL_GROUPS = {
     match: /\b(phone|iphone|samsung|galaxy|pixel|tecno|infinix|xiaomi|laptop|macbook|tablet|ipad|tv|television|monitor|oled|gpu|rtx|cpu|processor|snapdragon|chip|smartwatch|watch|earbuds|headphones|airpods|console|playstation|ps5|xbox|switch|specs?|versus|vs\.?)\b/i,
   },
   vehicles: {
-    label: 'Vehicles: VIN decoding and car specifications',
-    tools: ['vehicle_lookup'],
-    match: /\b(car|vehicle|vin|toyota|honda|lexus|mercedes|bmw|ford|engine|horsepower|torque|sedan|suv|truck|corolla|camry)\b/i,
+    label: 'Vehicles: fault diagnosis (symptoms to causes and fixes), VIN decoding and car specifications',
+    tools: ['diagnose_vehicle', 'vehicle_lookup'],
+    match: /\b(cars?|vehicles?|vin|toyota|honda|lexus|mercedes|bmw|ford|kia|hyundai|nissan|engine|horsepower|torque|sedan|suv|truck|corolla|camry|mechanic\w*|wipers?|windscreen|windshield|brakes?|battery|alternator|starter|radiator|coolant|overheat\w*|gear ?box|transmission|clutch|tyres?|tires?|suspension|steering|exhaust|spark plugs?|fuel pump|check engine|obd|p0\d{3}|headlights?|indicators?|a\/c|aircon|won'?t start)\b/i,
   },
   building: {
-    label: 'Buildings: container and portacabin design, quotes, floor plans, construction cost estimates and bills of quantities',
-    tools: ['design_container', 'plan_container_quote', 'generate_floor_plan', 'estimate_construction'],
-    match: /\b(container|portacabin|porta ?cabin|cabin|20 ?ft|40 ?ft|high cube|site office|shop|kiosk|floor ?plan|office space|build(ing)?|structure|quote|quotation|boq|bill of quantities|building cost|cement|concrete|rebar|iron rods?|sandcrete|blockwork|slab|foundation|footing|roofing|plaster(ing)?|bungalow|duplex|construction)\b/i,
+    label: 'Architecture and buildings: architecture advice (structure, climate, software/system design), container and portacabin design, quotes, floor plans, construction cost estimates',
+    tools: ['architecture_advisor', 'design_container', 'plan_container_quote', 'generate_floor_plan', 'estimate_construction'],
+    match: /\b(architect\w*|microservices?|monolith|kubernetes|k8s|docker|system design|scalab\w*|beams?|columns?|spans?|stairs?|staircase|ventilation|container|portacabin|porta ?cabin|cabin|20 ?ft|40 ?ft|high cube|site office|shop|kiosk|floor ?plan|office space|build(ing)?|structure|quote|quotation|boq|bill of quantities|building cost|cement|concrete|rebar|iron rods?|sandcrete|blockwork|slab|foundation|footing|roofing|plaster(ing)?|bungalow|duplex|construction)\b/i,
   },
   scripture: {
     label: 'Scripture: Bible and Quran passages',
