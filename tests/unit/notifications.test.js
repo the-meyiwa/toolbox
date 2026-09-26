@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'fs';
 import path from 'path';
+import { readStylesheet } from '../helpers/stylesheet.js';
 
 test('Notifications: index.html has notification button and badge', () => {
   const html = fs.readFileSync(path.resolve('index.html'), 'utf-8');
@@ -11,7 +12,7 @@ test('Notifications: index.html has notification button and badge', () => {
 });
 
 test('Notifications: css/style.css defines notification button and badge styles', () => {
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const css = readStylesheet();
   assert.ok(css.includes('.header-notif-btn'), 'css/style.css must define .header-notif-btn');
   assert.ok(css.includes('.header-notif-badge'), 'css/style.css must define .header-notif-badge');
 });

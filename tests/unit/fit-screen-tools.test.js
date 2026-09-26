@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'fs';
 import path from 'path';
+import { readStylesheet } from '../helpers/stylesheet.js';
 
 test('Fit Screen Tools: isFitScreenTool accurately classifies tools in app.js', () => {
   const appJs = fs.readFileSync(path.resolve('js/app.js'), 'utf-8');
@@ -26,7 +27,7 @@ test('Fit Screen Tools: isFitScreenTool accurately classifies tools in app.js', 
 });
 
 test('Fit Screen Tools: Desktop non-scrollable outer container rules defined in CSS', () => {
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const css = readStylesheet();
 
   // Must have media query for min-width 769px
   assert.ok(

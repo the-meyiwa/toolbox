@@ -6,6 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setupDOMEnvironment } from '../helpers/dom-env.js';
 import { THEMES, getStoredTheme, applyTheme, initTheme } from '../../js/lib/theme.js';
+import { readStylesheet } from '../helpers/stylesheet.js';
 
 test('Theme: contains canonical palettes', () => {
   assert.equal(THEMES.length, 7, 'Expected exactly seven curated themes');
@@ -33,7 +34,7 @@ test('Theme: contains canonical palettes', () => {
 test('Theme: all curated themes have CSS definitions in css/style.css', async () => {
   const fs = await import('fs');
   const path = await import('path');
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf8');
+  const css = readStylesheet();
 
   for (const theme of THEMES) {
     assert.ok(
@@ -84,7 +85,7 @@ test('Theme: initTheme hydrates theme on boot', () => {
 test('Desktop Tool Viewport: width aligns all tools (1100px) with exceptions for container-planner and assistant', async () => {
   const fs = await import('fs');
   const path = await import('path');
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf8');
+  const css = readStylesheet();
 
   // 1. Tool viewport standard desktop alignment
   assert.ok(
@@ -113,7 +114,7 @@ test('Desktop Tool Viewport: width aligns all tools (1100px) with exceptions for
 test('Calculator Tool: Button Group Spacing & Pill Chips Styling', async () => {
   const fs = await import('fs');
   const path = await import('path');
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf8');
+  const css = readStylesheet();
 
   // 1. .calc-btn-group-row must have flex, wrap and gap to prevent buttons touching
   assert.ok(
@@ -136,7 +137,7 @@ test('Header: Circular Avatar Preferences Button & Mobile About Link', async () 
   const fs = await import('fs');
   const path = await import('path');
   const html = fs.readFileSync(path.resolve('index.html'), 'utf8');
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf8');
+  const css = readStylesheet();
 
   // 1. Mobile about link in header
   assert.ok(
@@ -162,7 +163,7 @@ test('Header: Circular Avatar Preferences Button & Mobile About Link', async () 
 test('Pill Buttons, Segmented Switchers & Typography Smoothing', async () => {
   const fs = await import('fs');
   const path = await import('path');
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf8');
+  const css = readStylesheet();
 
   // 1. Most buttons must be pill shaped (border-radius: 9999px)
   assert.ok(
@@ -200,7 +201,7 @@ test('Home Page Suggested Tools: excludes Assistant from #home-quick row and is 
   const fs = await import('fs');
   const path = await import('path');
   const appJs = fs.readFileSync(path.resolve('js/app.js'), 'utf8');
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf8');
+  const css = readStylesheet();
 
   assert.ok(
     appJs.includes("t.id !== 'assistant'") && appJs.includes('popular(8)'),
@@ -216,7 +217,7 @@ test('Home Page Suggested Tools: excludes Assistant from #home-quick row and is 
 test('Theme: Grayscale token bridge, accent contrast & universal tool compatibility', async () => {
   const fs = await import('fs');
   const path = await import('path');
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf8');
+  const css = readStylesheet();
 
   // 1. All 28 themes must have grayscale bridge (--g50 through --g900)
   for (const theme of THEMES) {
@@ -271,7 +272,7 @@ test('Theme: Grayscale token bridge, accent contrast & universal tool compatibil
 test('Theme: Tiles are arranged vertically as long horizontal bars', async () => {
   const fs = await import('fs');
   const path = await import('path');
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const css = readStylesheet();
   const settingsUi = fs.readFileSync(path.resolve('js/lib/settings-ui.js'), 'utf-8');
 
   // 1. .theme-grid must use a vertical column flex layout
@@ -308,7 +309,7 @@ test('Theme: Tiles are arranged vertically as long horizontal bars', async () =>
 test('UI Refinements: Top Bar About Link is strictly mobile only', async () => {
   const fs = await import('fs');
   const path = await import('path');
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const css = readStylesheet();
 
   // Header about link must have display: none !important on desktop
   assert.ok(
@@ -328,7 +329,7 @@ test('UI Refinements: Top Bar About Link is strictly mobile only', async () => {
 test('UI Refinements: Files view is hidden with !important and unmount clears DOM', async () => {
   const fs = await import('fs');
   const path = await import('path');
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const css = readStylesheet();
   const savedJs = fs.readFileSync(path.resolve('js/views/saved.js'), 'utf-8');
   const appJs = fs.readFileSync(path.resolve('js/app.js'), 'utf-8');
 
@@ -356,7 +357,7 @@ test('UI Refinements: Files view is hidden with !important and unmount clears DO
 test('UI Refinements: Avatar Selector styling and card grid', async () => {
   const fs = await import('fs');
   const path = await import('path');
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const css = readStylesheet();
 
   // .settings-avatar-grid-gallery grid layout
   assert.ok(
@@ -378,7 +379,7 @@ test('UI Refinements: Avatar Selector styling and card grid', async () => {
 test('UI Refinements: Calendar month switcher slide/fade animations', async () => {
   const fs = await import('fs');
   const path = await import('path');
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const css = readStylesheet();
   const calJs = fs.readFileSync(path.resolve('js/tools/calendar.js'), 'utf-8');
 
   // CSS keyframes
@@ -406,7 +407,7 @@ test('UI Refinements: Calendar month switcher slide/fade animations', async () =
 test('UI Refinements: Assistant fullscreen without width stretch, zero outer scroll', async () => {
   const fs = await import('fs');
   const path = await import('path');
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const css = readStylesheet();
   const appJs = fs.readFileSync(path.resolve('js/app.js'), 'utf-8');
 
   // Popout button and related tools suppressed
@@ -444,7 +445,7 @@ test('UI Refinements: Assistant fullscreen without width stretch, zero outer scr
 test('UI Refinements: Container Quote Builder fullscreen and mobile scaling', async () => {
   const fs = await import('fs');
   const path = await import('path');
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const css = readStylesheet();
   const appJs = fs.readFileSync(path.resolve('js/app.js'), 'utf-8');
 
   // Suppress popout button and related tools

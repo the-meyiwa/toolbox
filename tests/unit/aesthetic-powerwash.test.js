@@ -16,15 +16,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { THEMES } from '../../js/lib/theme.js';
+import { readStylesheet } from '../helpers/stylesheet.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '../..');
-const styleCssPath = path.join(projectRoot, 'css/style.css');
 const indexHtmlPath = path.join(projectRoot, 'index.html');
 
 // Read files synchronously once for all tests
-const styleCss = fs.readFileSync(styleCssPath, 'utf8');
+const styleCss = readStylesheet();
 const indexHtml = fs.readFileSync(indexHtmlPath, 'utf8');
 
 /* ============================================================

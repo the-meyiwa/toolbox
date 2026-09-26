@@ -45,8 +45,23 @@ test('NPM Client: buildImportMap constructs standard ESM CDN import maps', () =>
   assert.equal(map.imports['lodash/'], 'https://esm.sh/lodash@4.17.21/');
 });
 
-test('NPM Client: fetchPackageMetadata queries official registry and extracts manifest', async () => {
+test('NPM Client: fetchPackageMetadata queries official registry and extracts manifest', async (t) => {
+  const originalFetch = globalThis.fetch;
+  t.after(() => { globalThis.fetch = originalFetch; });
+  const requested = [];
+  globalThis.fetch = async (url) => {
+    requested.push(String(url));
+    return new Response(JSON.stringify({
+      name: 'canvas-confetti',
+      'dist-tags': { latest: '1.9.4' },
+      versions: { '1.9.4': { description: 'confetti', license: 'ISC', dist: { tarball: 'https://registry.npmjs.org/canvas-confetti/-/canvas-confetti-1.9.4.tgz' } } }
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  };
+
   const meta = await fetchPackageMetadata('canvas-confetti');
+  assert.deepEqual(requested, ['https://registry.npmjs.org/canvas-confetti']);
+  assert.equal(meta.source, 'registry.npmjs.org');
+  assert.equal(meta.version, '1.9.4');
   assert.equal(meta.success, true);
   assert.equal(meta.name, 'canvas-confetti');
   assert.ok(meta.version, 'Must have resolved version');

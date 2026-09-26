@@ -7,9 +7,10 @@ import assert from 'node:assert/strict';
 import fs from 'fs';
 import path from 'path';
 import { TOOLS } from '../../js/registry/index.js';
+import { readStylesheet } from '../helpers/stylesheet.js';
 
 test('Mobile UI: Tool Viewport enforces bottom dock clearance on mobile screens', () => {
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const css = readStylesheet();
 
   // Verify mobile media query on tool-viewport
   assert.ok(
@@ -19,7 +20,7 @@ test('Mobile UI: Tool Viewport enforces bottom dock clearance on mobile screens'
 });
 
 test('Mobile UI: Universal two-column and multi-column layouts stack to single column on mobile', () => {
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const css = readStylesheet();
 
   const requiredStackClasses = [
     '.tool-row',
@@ -49,7 +50,7 @@ test('Mobile UI: Universal two-column and multi-column layouts stack to single c
 });
 
 test('Mobile UI: Action bars, buttons, and control groups wrap on mobile', () => {
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const css = readStylesheet();
 
   assert.ok(
     css.includes('.tool-controls') && css.includes('flex-wrap: wrap !important;'),
@@ -62,7 +63,7 @@ test('Mobile UI: Action bars, buttons, and control groups wrap on mobile', () =>
 });
 
 test('Mobile UI: Touch targets maintain comfortable finger tap sizes (min 38px - 44px)', () => {
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const css = readStylesheet();
 
   assert.ok(
     css.includes('min-height: 40px !important;') || css.includes('min-height: 42px !important;'),
@@ -71,7 +72,7 @@ test('Mobile UI: Touch targets maintain comfortable finger tap sizes (min 38px -
 });
 
 test('Mobile UI: Diagram and modeling palettes convert to horizontal scroll bars', () => {
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const css = readStylesheet();
 
   assert.ok(
     css.includes('.flw-palette') && css.includes('overflow-x: auto !important;'),
@@ -92,7 +93,7 @@ test('Mobile UI: Diagram and modeling palettes convert to horizontal scroll bars
 });
 
 test('Mobile UI: Visual stages and canvas elements scale within viewport bounds', () => {
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const css = readStylesheet();
 
   assert.ok(
     css.includes('.cr-stage') && css.includes('max-height: 280px !important;'),
@@ -113,7 +114,7 @@ test('Mobile UI: Visual stages and canvas elements scale within viewport bounds'
 });
 
 test('Mobile UI: Periodic table and wide data containers support touch horizontal scroll', () => {
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const css = readStylesheet();
 
   assert.ok(
     css.includes('.pt-wrap') && css.includes('overflow-x: auto !important;'),
@@ -126,7 +127,7 @@ test('Mobile UI: Periodic table and wide data containers support touch horizonta
 });
 
 test('Mobile UI: All 14 Tool Categories have distinct mobile rules in css/style.css', () => {
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const css = readStylesheet();
 
   const categorySelectors = {
     'developer': ['.diff-split', '.cron-grid', '.hm-grid', '.jview-split', '.sql-grid'],
@@ -165,7 +166,7 @@ test('Mobile UI: Every registered tool has viewport rendering capability and res
 });
 
 test('Modern UI/UX Standards: Universal Search Box sizing is strictly restrained and sleek (<= 36px desktop / 38px mobile)', () => {
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const css = readStylesheet();
   const indexHtml = fs.readFileSync(path.resolve('index.html'), 'utf-8');
 
   // Hero search bar in index.html is modern and sleek
@@ -190,7 +191,7 @@ test('Modern UI/UX Standards: Universal Search Box sizing is strictly restrained
 });
 
 test('Modern UI/UX Standards: Files View buttons have compact desktop height (26px - 28px)', () => {
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8');
+  const css = readStylesheet();
   const savedJs = fs.readFileSync(path.resolve('js/views/saved.js'), 'utf-8');
 
   assert.ok(
@@ -212,7 +213,7 @@ test('Modern UI/UX Standards: Files View buttons have compact desktop height (26
 });
 
 test('Mobile-Adapted Tool Behaviors: Progressive disclosure switchers linearize desktop-heavy multi-pane layouts', () => {
-  const css = fs.readFileSync(path.resolve('css/style.css'), 'utf-8') + fs.readFileSync(path.resolve('css/code-playground.css'), 'utf-8');
+  const css = readStylesheet() + fs.readFileSync(path.resolve('css/code-playground.css'), 'utf-8');
   const cpgJs = fs.readFileSync(path.resolve('js/tools/code-playground.js'), 'utf-8') + fs.readFileSync(path.resolve('js/lib/playground/ide.js'), 'utf-8');
   const flJs = fs.readFileSync(path.resolve('js/tools/flowchart.js'), 'utf-8');
   const umlJs = fs.readFileSync(path.resolve('js/tools/uml-diagram.js'), 'utf-8');

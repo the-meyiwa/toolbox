@@ -977,6 +977,11 @@ export function setupDOMEnvironment() {
       unobserve() {}
       disconnect() {}
     },
+    MutationObserver: class {
+      observe() {}
+      disconnect() {}
+      takeRecords() { return []; }
+    },
     Image: class extends MockElement {
       constructor() {
         super('img');
@@ -1016,6 +1021,7 @@ export function setupDOMEnvironment() {
   defineGlobal('webkitAudioContext', MockAudioContext);
   defineGlobal('ResizeObserver', win.ResizeObserver);
   defineGlobal('IntersectionObserver', win.IntersectionObserver);
+  defineGlobal('MutationObserver', win.MutationObserver);
   defineGlobal('requestAnimationFrame', win.requestAnimationFrame);
   defineGlobal('cancelAnimationFrame', win.cancelAnimationFrame);
   defineGlobal('matchMedia', win.matchMedia);

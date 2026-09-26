@@ -8,7 +8,7 @@ import { run } from 'node:test';
 import { spec } from 'node:test/reporters';
 import path from 'node:path';
 import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,6 +28,13 @@ function getTestFiles(dir) {
 }
 
 const testFiles = getTestFiles(__dirname);
+
+// Every test process preloads the offline guard so no test waits on the real
+// network. Set TOOLBOX_TEST_NETWORK=1 to allow outbound requests.
+const offlineGuard = path.join(__dirname, 'helpers', 'offline.js');
+process.env.NODE_OPTIONS = [process.env.NODE_OPTIONS, `--import=${pathToFileURL(offlineGuard).href}`]
+  .filter(Boolean)
+  .join(' ');
 
 console.log('╔══════════════════════════════════════════════════════════════════╗');
 console.log('║                      TOOLBOX TEST SUITE                         ║');
