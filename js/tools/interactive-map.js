@@ -227,7 +227,7 @@ export default {
       try {
         const res = await api.nearby({ q: '', category: label, near: at, limit: 15 });
         const places = res.places || [];
-        showResults(places, places.length ? `${label} nearby` : `No ${label.toLowerCase()} is mapped within ${formatDistance(res.radius)}.`);
+        showResults(places, places.length ? `${label} nearby` : `No ${label.toLowerCase()} is mapped ${Number.isFinite(res.radius) ? `within ${formatDistance(res.radius)}` : 'nearby'}.`);
       } catch (err) {
         toast(`Nearby search failed: ${err.message}`);
       } finally {

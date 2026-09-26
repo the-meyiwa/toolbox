@@ -13,10 +13,16 @@ async function call(path, { method = 'GET', body, signal } = {}) {
   });
   let json = null;
   try { json = await res.json(); } catch { /* not JSON */ }
-  if (!res.ok && !(json && json.status === 'not_found')) {
+  // Anything but JSON means the request never reached the maps API (for example a server
+  // still running an older build answers with an HTML page). That is a failure, never
+  // "nothing found".
+  if (!json || typeof json !== 'object') {
+    throw new Error('The maps service is not available on the server right now');
+  }
+  if (!res.ok && json.status !== 'not_found') {
     throw new Error(json?.error || json?.message || `The map service answered ${res.status}`);
   }
-  return json || {};
+  return json;
 }
 
 const qs = (o) => Object.entries(o)
