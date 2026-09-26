@@ -18,6 +18,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'node:url';
 import { setupDOMEnvironment } from '../helpers/dom-env.js';
+import { readStylesheet } from '../helpers/stylesheet.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -235,8 +236,7 @@ test('Math Utility UI: Comprehensive Component & Interaction Suite', async (t) =
 });
 
 test('Math Utility CSS Theme Tokens Audit', () => {
-  const cssPath = path.resolve(__dirname, '../../css/style.css');
-  const cssContent = fs.readFileSync(cssPath, 'utf-8');
+  const cssContent = readStylesheet();
 
   // Verify math utility classes exist
   assert.ok(cssContent.includes('.math-controls-bar'), 'css contains .math-controls-bar');
