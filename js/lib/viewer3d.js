@@ -239,6 +239,12 @@ export class Viewer3D {
   onHover(fn)  { this._pickHandlers.hover = fn; }
   onSelect(fn) { this._pickHandlers.select = fn; }
 
+  // Replace the default emissive hover/selection highlight. Tools that share
+  // one material across many meshes pass a handler that swaps materials
+  // instead, because editing a shared material's emissive lights up every
+  // mesh using it. Called as fn(root, { hovered, selected }).
+  setEmphasisHandler(fn) { this._emphasisHandler = fn; }
+
   _setHovered(obj) {
     if (this.hovered === obj) return;
     if (this.hovered) this._applyEmphasis(this.hovered, false);
@@ -257,6 +263,10 @@ export class Viewer3D {
   }
 
   _applyEmphasis(root, on) {
+    if (this._emphasisHandler) {
+      this._emphasisHandler(root, { hovered: on, selected: this.selected === root });
+      return;
+    }
     const meshes = this._rootMeshCache.get(root) || [];
     for (let i = 0; i < meshes.length; i++) {
       const node = meshes[i];
@@ -272,6 +282,10 @@ export class Viewer3D {
   }
 
   _applyOutline(root, on) {
+    if (this._emphasisHandler) {
+      this._emphasisHandler(root, { hovered: this.hovered === root, selected: on });
+      return;
+    }
     const meshes = this._rootMeshCache.get(root) || [];
     for (let i = 0; i < meshes.length; i++) {
       const node = meshes[i];
@@ -412,7 +426,9 @@ export class Viewer3D {
   _tick() {
     if (this.disposed) return;
     this.controls.update();
-    if (this._pointerMoved) {
+    // Skip hover picking while a button is held: that is an orbit or pan
+    // drag, and raycasting large scenes every frame makes it stutter.
+    if (this._pointerMoved && !this._downAt) {
       const hit = this._raycast();
       this._setHovered(hit ? hit.object : null);
       this._pointerMoved = false;
