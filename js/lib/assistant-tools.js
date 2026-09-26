@@ -1368,7 +1368,8 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
       properties: {
         action: {
           type: 'STRING',
-          description: 'Action: "molar_mass", "balance_equation", "search_compound".',
+          enum: ['molar_mass', 'balance_equation', 'search_compound'],
+          description: 'molar_mass, balance_equation, or search_compound (prefer lookup_compound for facts about a substance).',
         },
         formulaOrQuery: {
           type: 'STRING',
@@ -4245,6 +4246,11 @@ if (container) {
         };
       }
 
+      const { findCompound } = await import('./assistant/knowledge-tools.js');
+      const substance = await findCompound(query).catch(() => null);
+      if (substance?.matchedBy === 'exact') {
+        return { status: 'error', success: false, diseases: [], message: `"${query}" is a substance (${substance.compound.name}), not a disease. Use lookup_compound for it.` };
+      }
       const diseases = searchDiseases(query, {
         system: args.system,
         limit: args.limit || 5
@@ -4421,15 +4427,14 @@ if (container) {
         const balanced = balanceChemicalEquation(formulaOrQuery);
         return { status: 'success', input: formulaOrQuery, balancedEquation: balanced.equation, isBalanced: balanced.balanced };
       } else if (action === 'search_compound') {
-        const { COMPOUNDS_DATA } = await import('./compounds-dataset.js');
-        const q = formulaOrQuery.toLowerCase().trim();
-        const results = COMPOUNDS_DATA.filter(c => 
-          c.name.toLowerCase().includes(q) || 
-          (c.formula || '').toLowerCase().includes(q) || 
-          (c.cas && c.cas.includes(q)) || 
-          (c.iupac && c.iupac.toLowerCase().includes(q))
-        ).slice(0, 5);
-        return { status: 'success', query: formulaOrQuery, totalFound: results.length, matches: results };
+        const { executeKnowledgeTool } = await import('./assistant/knowledge-tools.js');
+        return executeKnowledgeTool('lookup_compound', { query: formulaOrQuery });
+      }
+      // Anything else ("search", "lookup", "info") is a lookup of a name, not a calculation.
+      if (formulaOrQuery) {
+        const { executeKnowledgeTool, findElement } = await import('./assistant/knowledge-tools.js');
+        if (await findElement(formulaOrQuery).catch(() => null) && !/\d/.test(formulaOrQuery)) return executeKnowledgeTool('lookup_element', { elements: [formulaOrQuery] });
+        return executeKnowledgeTool('lookup_compound', { query: formulaOrQuery });
       }
       return { status: 'error', message: `Unknown chemistry action: ${action}` };
     }
@@ -4734,13 +4739,16 @@ if (container) {
 
     case 'explore_elements': {
       const { ELEMENTS } = await import('./chemistry-data.js');
-      const requested = Array.isArray(args.elements) ? args.elements.map(e => String(e).trim().toLowerCase()) : ['c', 'si', 'ge'];
-      const matched = ELEMENTS.filter(el =>
-        requested.includes(el.symbol.toLowerCase()) ||
-        requested.includes(el.name.toLowerCase()) ||
-        requested.includes(String(el.number))
-      );
-
+      const { findElement } = await import('./assistant/knowledge-tools.js');
+      const requested = Array.isArray(args.elements) ? args.elements : [args.elements].filter(Boolean);
+      const matched = [];
+      for (const r of requested) {
+        const hit = await findElement(r);
+        if (hit && !matched.includes(hit.element)) matched.push(hit.element);
+      }
+      if (!matched.length) {
+        return { status: 'not_found', requested, message: `No element matches ${requested.map(r => `"${r}"`).join(', ') || 'the request'}. Say so; do not describe other elements.` };
+      }
       const elements = matched.length ? matched : ELEMENTS.slice(0, 4);
 
       return {
