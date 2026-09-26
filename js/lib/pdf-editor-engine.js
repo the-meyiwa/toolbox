@@ -4,17 +4,8 @@
    Optimized with event-loop yielding for smooth 60fps & low INP.
    ============================================================ */
 
-let pdfJsPromise = null;
-
-export async function loadPdfJs() {
-  if (!pdfJsPromise) {
-    pdfJsPromise = import('pdfjs-dist').then(pdfjsLib => {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href;
-      return pdfjsLib;
-    });
-  }
-  return pdfJsPromise;
-}
+// pdf.js loading (worker URL, Map upsert polyfill) is shared with the PDF workspace.
+export { loadPdfJs } from './pdf/pdfjs-loader.js';
 
 const yieldFrame = () => new Promise(resolve => {
   if (typeof requestAnimationFrame !== 'undefined') {
@@ -38,69 +29,6 @@ export async function renderPageToCanvas(pdfDoc, pageIndex, canvas, scale = 1) {
   };
   await page.render(renderContext).promise;
   return viewport;
-}
-
-export async function renderPageThumbnail(pdfDoc, pageIndex, canvas, maxHeight = 150) {
-  const page = await pdfDoc.getPage(pageIndex + 1);
-  const viewport = page.getViewport({ scale: 1 });
-  const scale = maxHeight / viewport.height;
-  return renderPageToCanvas(pdfDoc, pageIndex, canvas, scale);
-}
-
-export async function flattenAnnotations(pdfLibDoc, annotations) {
-  const { rgb } = await import('pdf-lib');
-  const pages = pdfLibDoc.getPages();
-
-  for (const ann of annotations) {
-    const page = pages[ann.page];
-    if (!page) continue;
-
-    const { height } = page.getSize();
-    const y = height - ann.y;
-
-    if (ann.type === 'text') {
-      page.drawText(ann.text || '', { x: ann.x, y: y - (ann.size || 12), size: ann.size || 12, color: rgb(0, 0, 0) });
-    } else if (ann.type === 'highlight') {
-      page.drawRectangle({
-        x: ann.x,
-        y: y - ann.h,
-        width: ann.w,
-        height: ann.h,
-        color: rgb(1, 1, 0),
-        opacity: 0.4,
-      });
-    } else if (ann.type === 'shape') {
-      if (ann.shape === 'rect') {
-        page.drawRectangle({
-          x: ann.x,
-          y: y - ann.h,
-          width: ann.w,
-          height: ann.h,
-          borderColor: rgb(1, 0, 0),
-          borderWidth: 2,
-        });
-      } else if (ann.shape === 'circle') {
-        page.drawEllipse({
-          x: ann.x + ann.w / 2,
-          y: y - ann.h / 2,
-          xScale: ann.w / 2,
-          yScale: ann.h / 2,
-          borderColor: rgb(1, 0, 0),
-          borderWidth: 2,
-        });
-      }
-    } else if (ann.type === 'image') {
-      try {
-        const res = await fetch(ann.src);
-        const bytes = await res.arrayBuffer();
-        const isPng = ann.src.includes('png') || ann.src.startsWith('data:image/png');
-        const embedded = isPng ? await pdfLibDoc.embedPng(bytes) : await pdfLibDoc.embedJpg(bytes);
-        page.drawImage(embedded, { x: ann.x, y: y - ann.h, width: ann.w, height: ann.h });
-      } catch (e) {
-        console.error('Failed to embed image annotation', e);
-      }
-    }
-  }
 }
 
 export async function convertToDocx(pdfDoc, pageCount) {

@@ -1152,3 +1152,9 @@ document.getElementById('mobile-nav')?.addEventListener('click', (e) => {
 });
 requestAnimationFrame(updateMobileNavIndicator);
 
+// Assistant evaluation harness (js/lib/assistant/eval/README.md). Lazy: nothing loads until called.
+window.toolboxEvalLoad = () => import('./lib/assistant/eval/runner.js');
+if (/assistant-eval/.test(window.location.search) || window.__TOOLBOX_EVAL__) {
+  window.toolboxEvalLoad().then((m) => { window.toolboxEval = { run: m.run, cases: m.cases }; }).catch(() => {});
+}
+

@@ -4,7 +4,9 @@
    Registers renderers for the result types produced by
    js/lib/assistant/extra-tools.js (and the Notes tools):
      task-plan · chess-board · device-list · device-compare ·
-     vehicle · svg-illustration · note · container-design
+     vehicle · svg-illustration · note · container-design ·
+     invoice-card · invoice-list ·
+     construction-estimate
    Each renderer receives the plain result object and returns
    the card element it appended. Cards size themselves with
    container queries, so they fit the chat column at any width.
@@ -488,14 +490,203 @@ function renderNote(data, container) {
 }
 
 /* ============================================================
+   Invoices (create_invoice / list_invoices)
+   ============================================================ */
+
+const INVOICE_ICON = '<path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6M9 15h4"/>';
+
+async function openInvoice(id, view = 'doc') {
+  try {
+    const { getStore } = await import('../invoicing/store.js');
+    const store = getStore();
+    store.setPending({ open: view, id });
+    if (window.location.hash === '#invoice-generator') return;
+    window.location.hash = '#invoice-generator';
+  } catch { window.location.hash = '#invoice-generator'; }
+}
+
+function renderInvoiceCard(data, container) {
+  const inv = data.invoice || {};
+  const d = inv.display || {};
+  const isQuote = inv.type === 'quote';
+  const el = card('invoice', {
+    icon: INVOICE_ICON,
+    title: `${isQuote ? 'Quote' : 'Invoice'} ${inv.number || ''}`,
+    sub: `${esc(inv.client || 'No client')} &middot; ${esc(inv.statusLabel || 'Draft')}${inv.dueDate ? ` &middot; ${isQuote ? 'valid to' : 'due'} ${esc(inv.dueDateText || inv.dueDate)}` : ''}`,
+    actions: btn(isQuote ? 'Open quote' : 'Open invoice', I.external, 'data-act="open"'),
+  });
+  const items = Array.isArray(inv.items) ? inv.items : [];
+  el.querySelector('.astc-body').innerHTML = `
+    <ul class="astc-inv-items">
+      ${items.slice(0, 6).map(i => `<li><span>${esc(i.description)}</span><span class="u-num">${esc(i.qty)}${i.unit ? ` ${esc(i.unit)}` : ''} &times; ${esc(Number(i.rate).toLocaleString('en-US', { maximumFractionDigits: 2 }))}</span></li>`).join('')}
+      ${items.length > 6 ? `<li class="astc-muted">and ${items.length - 6} more</li>` : ''}
+    </ul>
+    <dl class="astc-inv-tot">
+      <div><dt>Subtotal</dt><dd>${esc(d.subtotal)}</dd></div>
+      ${inv.vatRate ? `<div><dt>VAT ${esc(inv.vatRate)}%</dt><dd>${esc(d.vat)}</dd></div>` : ''}
+      <div class="is-total"><dt>Total</dt><dd>${esc(d.total)}</dd></div>
+      ${inv.wht && !isQuote ? `<div><dt>Less WHT ${esc(inv.whtRate)}%</dt><dd>(${esc(d.wht)})</dd></div><div class="is-key"><dt>Amount payable</dt><dd>${esc(d.payable)}</dd></div>` : ''}
+    </dl>
+    ${inv.amountInWords ? `<p class="astc-inv-words">${esc(inv.amountInWords)}</p>` : ''}`;
+  el.addEventListener('click', (e) => { if (e.target.closest('[data-act="open"]')) openInvoice(inv.id); });
+  container.appendChild(el);
+  return el;
+}
+
+function renderInvoiceList(data, container) {
+  const rows = Array.isArray(data.invoices) ? data.invoices : [];
+  const sum = data.summary || {};
+  const isQuote = data.docType === 'quote';
+  const el = card('invoice-list', {
+    icon: INVOICE_ICON,
+    title: `${isQuote ? 'Quotes' : 'Invoices'}${data.filter && data.filter !== 'all' ? `: ${data.filter}` : ''}${data.client ? ` for ${data.client}` : ''}`,
+    sub: `<span class="u-num">${esc(data.count ?? rows.length)}</span> found`,
+    actions: btn('Open Invoices', I.external, 'data-act="open-all"'),
+  });
+  el.querySelector('.astc-body').innerHTML = `
+    ${isQuote ? '' : `<div class="astc-inv-stats">
+      <div><span>Outstanding</span><strong>${esc(sum.outstanding)}</strong></div>
+      <div${sum.overdueCount ? ' data-tone="bad"' : ''}><span>Overdue</span><strong>${esc(sum.overdue)}</strong></div>
+      <div><span>Paid this month</span><strong>${esc(sum.paidThisMonth)}</strong></div>
+    </div>`}
+    ${rows.length ? `<ul class="astc-inv-rows">${rows.map(r => `
+      <li><button type="button" data-open="${esc(r.id)}">
+        <span class="astc-inv-num">${esc(r.number)}</span>
+        <span class="astc-inv-client">${esc(r.client || 'No client')}</span>
+        <span class="astc-inv-amt u-num">${esc(r.balance > 0 && !isQuote ? r.display?.balance : r.display?.total)}</span>
+        <span class="astc-inv-st" data-s="${esc(r.status)}">${esc(r.statusLabel)}</span>
+      </button></li>`).join('')}</ul>` : `<p class="astc-muted">${esc(data.message || 'Nothing to show.')}</p>`}`;
+  el.addEventListener('click', (e) => {
+    const row = e.target.closest('[data-open]');
+    if (row) openInvoice(row.dataset.open);
+    else if (e.target.closest('[data-act="open-all"]')) window.location.hash = '#invoice-generator';
+  });
+  container.appendChild(el);
+  return el;
+}
+
+/* ============================================================
    Registration
    ============================================================ */
+
+/* ============================================================
+   Construction estimate (estimate_construction)
+   ============================================================ */
+
+const CE_ICON = '<path d="M3 20h18"/><path d="M5 20V9l7-5 7 5v11"/><path d="M9 20v-6h6v6"/>';
+const ngn = (v) => (Number.isFinite(Number(v)) ? `₦${Math.round(Number(v)).toLocaleString('en-US')}` : '—');
+const ngnShort = (v) => { const x = Number(v) || 0; return x >= 1e6 ? `₦${(x / 1e6).toFixed(x >= 1e8 ? 0 : 2)}m` : ngn(x); };
+
+function renderConstructionEstimate(data, container) {
+  const sections = data.sections || [];
+  const shop = data.shopping || [];
+  const el = card('construction', {
+    icon: CE_ICON,
+    title: data.project?.name || 'Construction estimate',
+    sub: `${sections.length} section${sections.length === 1 ? '' : 's'} · ${esc(data.region || 'Lagos')} rates, editable estimates`,
+    actions: btn('Open in Construction Estimator', I.external, 'data-act="open"'),
+  });
+  const max = Math.max(1, ...sections.map(s => s.subtotal || 0));
+  const top = [...sections].sort((a, b) => b.subtotal - a.subtotal);
+  const SHOW = 6;
+  const keyShop = shop.filter(s => s.label !== 'All reinforcement' && s.unit !== 'L');
+  el.querySelector('.astc-body').innerHTML = `
+    <div class="astc-ce-hero">
+      <div><small>Estimated total</small><strong class="u-num">${ngn(data.total)}</strong>
+        <span class="u-num">${data.costPerM2 ? `${ngn(data.costPerM2)} per m² · ${Math.round(data.floorArea)} m²` : ''}</span></div>
+      <dl class="astc-ce-split">
+        <div><dt>Materials</dt><dd class="u-num">${ngnShort(data.materials)}</dd></div>
+        <div><dt>Labour</dt><dd class="u-num">${ngnShort(data.labour)}</dd></div>
+        <div><dt>Contingency ${esc(data.contingencyPct)}%</dt><dd class="u-num">${ngnShort(data.contingency)}</dd></div>
+        <div><dt>VAT</dt><dd class="u-num">${data.vatOn ? ngnShort(data.vat) : 'Not added'}</dd></div>
+      </dl>
+    </div>
+    <div class="astc-ce-cols">
+      <section><h5>Bill by section</h5><ol class="astc-ce-secs">${top.map((s, i) => `
+        <li class="${i >= SHOW ? 'is-more' : ''}"><span>${esc(s.name)}</span><b class="u-num">${ngnShort(s.subtotal)}</b><i style="width:${(s.subtotal / max * 100).toFixed(1)}%"></i></li>`).join('')}</ol></section>
+      <section><h5>Shopping list</h5><ul class="astc-ce-shop">${keyShop.map((s, i) => `
+        <li class="${i >= SHOW + 2 ? 'is-more' : ''}"><b class="u-num">${Number(s.qty).toLocaleString('en-US')}</b><em>${esc(s.unit)}</em><span>${esc(s.label)}${s.detail ? `<small>${esc(s.detail)}</small>` : ''}</span></li>`).join('')}</ul></section>
+    </div>
+    ${(sections.length > SHOW || keyShop.length > SHOW + 2) ? '<button type="button" class="astc-more" data-act="more">Show everything</button>' : ''}
+    <p class="astc-ce-note">Rates dated ${esc(String(data.ratesDate || '').slice(0, 7))}. Prices move; confirm with suppliers before quoting.</p>`;
+  el.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-act]');
+    if (!t) return;
+    if (t.dataset.act === 'more') { el.classList.toggle('show-all'); t.textContent = el.classList.contains('show-all') ? 'Show less' : 'Show everything'; }
+    if (t.dataset.act === 'open') {
+      try { localStorage.setItem('toolbox_construction_handoff', JSON.stringify({ project: data.project, at: Date.now() })); } catch { /* storage blocked */ }
+      window.location.hash = '#concrete-estimator';
+    }
+  });
+  container.appendChild(el);
+  return el;
+}
 
 registerResultRenderer('task-plan', renderPlan);
 registerResultRenderer('chess-board', renderChess, { match: d => typeof d?.fen === 'string' && Array.isArray(d?.legalMoves) });
 registerResultRenderer('device-list', renderDeviceList);
 registerResultRenderer('device-compare', renderDeviceCompare);
 registerResultRenderer('vehicle', renderVehicle);
+registerResultRenderer('construction-estimate', renderConstructionEstimate);
 registerResultRenderer('svg-illustration', renderIllustration);
 registerResultRenderer('container-design', renderContainerDesign, { match: d => Boolean(d?.design?.modules && d?.design?.levels) });
 registerResultRenderer('note', renderNote, { match: d => Boolean(d?.noteId && typeof d?.title === 'string' && d?.status !== 'error') });
+registerResultRenderer('invoice-card', renderInvoiceCard);
+registerResultRenderer('invoice-list', renderInvoiceList);
+
+/* ============================================================
+   Legal (analyze_legal_document · parse_citations · case_digest)
+   ============================================================ */
+
+const LG_ICON = '<path d="M12 3v18M7 21h10M5 7h14"/><path d="m5 7-3 6a3 3 0 0 0 6 0zM19 7l-3 6a3 3 0 0 0 6 0z"/>';
+const LG_NOTE = '<p class="astc-lg-note">Extracted by pattern matching. Check against the source before relying on it.</p>';
+const lgSev = (s) => `<span class="astc-lg-sev" data-sev="${esc(s)}">${esc(s)}</span>`;
+const lgPill = (o) => (o ? `<span class="astc-lg-pill" data-tone="${{ allowed: 'good', dismissed: 'bad', 'struck out': 'bad', 'partly allowed': 'mid' }[o] || ''}">${esc(o[0].toUpperCase() + o.slice(1))}</span>` : '');
+
+function renderLegalContract(data, container) {
+  const risks = data.risks || [], obs = (data.obligations || []).filter(o => o.due || o.deadline).sort((x, y) => String(x.due || '9').localeCompare(String(y.due || '9')));
+  const el = card('legal', { icon: LG_ICON, title: data.title || 'Document review', sub: esc([data.docType, (data.parties || []).map(p => `${p.name} (${p.role})`).join(' · ')].filter(Boolean).join(' — ')), actions: btn('Open analyzer', I.external, 'data-act="open"') });
+  el.querySelector('.astc-body').innerHTML = `
+    <div class="astc-lg-stats"><div data-tone="${data.counts?.high ? 'bad' : ''}"><b>${esc(data.counts?.high ?? 0)}</b><span>High</span></div><div data-tone="${data.counts?.medium ? 'mid' : ''}"><b>${esc(data.counts?.medium ?? 0)}</b><span>Medium</span></div><div><b>${esc(data.counts?.clauses ?? 0)}</b><span>Clauses</span></div><div><b>${esc(data.counts?.obligations ?? 0)}</b><span>Obligations</span></div></div>
+    ${risks.length ? `<h5 class="astc-lg-h">Risk flags</h5><ul class="astc-lg-list">${risks.slice(0, 6).map(r => `<li>${lgSev(r.severity)}<div><strong>${esc(r.title)}</strong>${r.where ? `<small>${esc(r.where)}</small>` : ''}</div></li>`).join('')}${risks.length > 6 ? `<li class="astc-muted">and ${risks.length - 6} more</li>` : ''}</ul>` : '<p class="astc-muted">No risk flags raised.</p>'}
+    ${obs.length ? `<h5 class="astc-lg-h">Deadlines</h5><ul class="astc-lg-list">${obs.slice(0, 5).map(o => `<li><span class="astc-lg-date">${esc(o.due || '—')}</span><div><strong>${esc(o.party)}</strong><small>${esc(o.action)}</small></div></li>`).join('')}</ul>` : ''}
+    ${(data.missing || []).filter(m => m.required).length ? `<h5 class="astc-lg-h">Not found</h5><div class="astc-lg-chips">${data.missing.filter(m => m.required).map(m => `<span>${esc(m.label)}</span>`).join('')}</div>` : ''}
+    ${LG_NOTE}`;
+  el.addEventListener('click', (e) => { if (e.target.closest('[data-act="open"]')) window.location.hash = '#legal-document-analyzer'; });
+  container.appendChild(el);
+  return el;
+}
+
+function renderLegalCitations(data, container) {
+  const cases = data.cases || [];
+  const toa = [...cases.map(c => `${c.title || 'Unnamed case'} ${c.citations.join('; ')}${c.court ? ` (${c.court})` : ''}`), ...(data.statutes || []).map(s => `${s.name}${s.provisions.length ? `: ${s.provisions.join(', ')}` : ''}`)].join('\n');
+  const el = card('legal', { icon: LG_ICON, title: 'Table of authorities', sub: `${cases.length} case${cases.length === 1 ? '' : 's'} · ${(data.statutes || []).length} statute${(data.statutes || []).length === 1 ? '' : 's'} · weight before the ${esc(data.forum || 'HC')}`, actions: btn('Copy', I.copy, 'data-act="copy"') });
+  el.querySelector('.astc-body').innerHTML = `
+    ${cases.length ? `<ul class="astc-lg-list">${cases.slice(0, 12).map(c => `<li><div><strong><em>${esc(c.title || 'Unnamed case')}</em></strong><code>${esc(c.citations.join('; '))}</code><small>${esc([c.court ? `${c.court}${c.courtInferred ? ' (inferred)' : ''}` : 'Court not stated', c.weight, c.pinpoints?.length ? `at ${c.pinpoints.join(', ')}` : '', c.treatments?.length ? c.treatments.join(', ') : ''].filter(Boolean).join(' · '))}</small></div></li>`).join('')}</ul>` : '<p class="astc-muted">No case citations recognised.</p>'}
+    ${(data.statutes || []).length ? `<h5 class="astc-lg-h">Statutes</h5><ul class="astc-lg-list">${data.statutes.map(s => `<li><div><strong>${esc(s.name)}</strong>${s.provisions.length ? `<small>${esc(s.provisions.join(', '))}</small>` : ''}</div></li>`).join('')}</ul>` : ''}
+    ${LG_NOTE}`;
+  el.addEventListener('click', (e) => { const b = e.target.closest('[data-act="copy"]'); if (b) copy(toa, b); });
+  container.appendChild(el);
+  return el;
+}
+
+function renderLegalDigest(data, container) {
+  const el = card('legal', { icon: LG_ICON, title: data.title || 'Case digest', sub: esc([data.court, data.suitNo, data.date].filter(Boolean).join(' · ')), actions: btn('Open Case Digest', I.external, 'data-act="open"') });
+  const list = (h, items, n = 5) => (items?.length ? `<h5 class="astc-lg-h">${h}</h5><ol class="astc-lg-ol">${items.slice(0, n).map(x => `<li>${esc(x.text)}${x.resolution ? `<small>${esc(x.resolution)}</small>` : ''}</li>`).join('')}</ol>` : '');
+  el.querySelector('.astc-body').innerHTML = `
+    <div class="astc-lg-cite">${lgPill(data.outcome)}<code>${esc(data.citation)}</code><button type="button" class="astc-btn" data-act="cite">${svg(I.copy, 14)}<span>Copy</span></button></div>
+    ${list('Issues', data.issues)}${list('Ratio decidendi (candidates)', data.ratio, 3)}${list('Orders', data.orders, 4)}
+    ${data.authorities?.length ? `<p class="astc-muted">${data.authorities.length} case${data.authorities.length === 1 ? '' : 's'} and ${data.statutes?.length || 0} statute${data.statutes?.length === 1 ? '' : 's'} cited.</p>` : ''}
+    ${LG_NOTE}`;
+  el.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-act]');
+    if (b?.dataset.act === 'cite') copy(data.citation, b);
+    if (b?.dataset.act === 'open') window.location.hash = '#case-digest';
+  });
+  container.appendChild(el);
+  return el;
+}
+
+registerResultRenderer('legal-contract', renderLegalContract);
+registerResultRenderer('legal-citations', renderLegalCitations);
+registerResultRenderer('legal-digest', renderLegalDigest);

@@ -3,15 +3,126 @@
 
    Geometry: BodyParts3D (© 2008 DBCLS, CC BY-SA 2.1 JP), converted
    to Draco-compressed GLB. Real-time 60 FPS spatial raycasting,
-   virtualized structure list selection, and rich clinical ontology
-   with regional filters, innervation, blood supply, and relationships.
+   virtual-scrolled structure list (handles 1000+ items without DOM
+   bloat), search token pre-index, shared system materials, raycast
+   suppression during OrbitControls drag, pill region filters, and
+   rich clinical ontology with innervation, blood supply, and relations.
    ============================================================ */
 
 import { anatomyService, ANATOMICAL_REGIONS, stemWord } from '../lib/anatomy-data.js';
 
-const ROOT   = import.meta.env?.BASE_URL ?? '/';
-const BASE   = `${ROOT}anatomy/`.replace(/\/{2,}/g, '/');
-const DRACO  = `${ROOT}draco/`.replace(/\/{2,}/g, '/');
+const ROOT  = import.meta.env?.BASE_URL ?? '/';
+const BASE  = `${ROOT}anatomy/`.replace(/\/{2,}/g, '/');
+const DRACO = `${ROOT}draco/`.replace(/\/{2,}/g, '/');
+
+/* ── virtual scroller ──────────────────────────────────────── */
+
+/**
+ * Lightweight virtual scroller.  Only the visible rows (plus a small
+ * overscan buffer) are in the DOM at any time; the rest is filled by a
+ * single transparent spacer element so the scrollbar stays correct.
+ *
+ * Usage:
+ *   const vs = new VirtualScroller(containerEl, itemHeight, renderRow);
+ *   vs.setItems(array);          // initial population or filter update
+ *   vs.scrollToId('FMA12345');   // scroll a particular id into view
+ */
+class VirtualScroller {
+  constructor(container, itemHeight, renderRow) {
+    this._el        = container;
+    this._ih        = itemHeight;
+    this._render    = renderRow;
+    this._items     = [];
+    this._pool      = [];  // recycled DOM nodes
+    this._nodes     = new Map(); // index → DOM node
+    this._overscan  = 4;
+
+    this._spacer    = document.createElement('div');
+    this._spacer.style.cssText = 'pointer-events:none;';
+    this._el.appendChild(this._spacer);
+
+    this._el.addEventListener('scroll', () => this._update(), { passive: true });
+  }
+
+  setItems(items) {
+    this._items = items;
+    // clear existing rendered nodes
+    for (const [, node] of this._nodes) this._recycle(node);
+    this._nodes.clear();
+    this._spacer.style.height = `${items.length * this._ih}px`;
+    this._update();
+  }
+
+  _update() {
+    const scrollTop = this._el.scrollTop;
+    const height    = this._el.clientHeight;
+    const start = Math.max(0, Math.floor(scrollTop / this._ih) - this._overscan);
+    const end   = Math.min(this._items.length, Math.ceil((scrollTop + height) / this._ih) + this._overscan);
+
+    // remove nodes scrolled out of view
+    for (const [i, node] of this._nodes) {
+      if (i < start || i >= end) {
+        this._recycle(node);
+        this._nodes.delete(i);
+      }
+    }
+
+    // create/update nodes now in view
+    for (let i = start; i < end; i++) {
+      if (this._nodes.has(i)) continue;
+      const node = this._acquire();
+      node.style.position  = 'absolute';
+      node.style.top       = `${i * this._ih}px`;
+      node.style.width     = '100%';
+      this._render(node, this._items[i], i);
+      this._el.appendChild(node);
+      this._nodes.set(i, node);
+    }
+  }
+
+  _acquire() {
+    return this._pool.length ? this._pool.pop() : document.createElement('div');
+  }
+
+  _recycle(node) {
+    node.remove();
+    this._pool.push(node);
+  }
+
+  scrollToId(id) {
+    const idx = this._items.findIndex(s => s.id === id);
+    if (idx === -1) return;
+    this._el.scrollTop = Math.max(0, idx * this._ih - 40);
+  }
+
+  markSelected(id) {
+    for (const [i, node] of this._nodes) {
+      const item = this._items[i];
+      node.firstChild?.classList.toggle('is-selected', item?.id === id);
+    }
+  }
+}
+
+/* ── search index ──────────────────────────────────────────── */
+
+/**
+ * Pre-built token index for fast O(1) filtered lookup.
+ * Built once after the structure list is loaded; each search hit is a
+ * pre-lowercased concatenation of the structure name + common name so
+ * we don't call anatomyService.getDetail() on every keystroke.
+ */
+function buildSearchIndex(structures) {
+  return structures.map(s => {
+    const detail = anatomyService.getDetail(s.name, s.system);
+    return {
+      ...s,
+      _idx: `${s.name} ${detail.commonName || ''}`.toLowerCase(),
+      _region: detail.region,
+    };
+  });
+}
+
+/* ── main export ───────────────────────────────────────────── */
 
 export default {
   async render(container) {
@@ -29,8 +140,8 @@ export default {
         fetch(`${BASE}index.json`),
       ]);
       ({ Viewer3D, THREE } = viewerMod);
-      ({ GLTFLoader } = gltfMod);
-      ({ DRACOLoader } = dracoMod);
+      ({ GLTFLoader }      = gltfMod);
+      ({ DRACOLoader }     = dracoMod);
       if (!indexRes.ok) throw new Error(`anatomy index missing (HTTP ${indexRes.status})`);
       index = await indexRes.json();
     } catch (err) {
@@ -41,12 +152,20 @@ export default {
     }
     if (!this._alive) return;
 
-    const systemKeys = Object.keys(index.systems).sort((a, b) => index.systems[a].order - index.systems[b].order);
+    const systemKeys = Object.keys(index.systems).sort(
+      (a, b) => index.systems[a].order - index.systems[b].order,
+    );
     const byId = new Map(index.structures.map(s => [s.id, s]));
-    const hex = (c) => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '0')).join('');
-    const kb  = (b) => b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.round(b / 1024)} KB`;
+    const hex  = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '0')).join('');
+    const kb   = b => b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.round(b / 1024)} KB`;
 
-    /* ---------------- layout ---------------- */
+    /* ── shared materials (one per system instead of one per mesh) ── */
+    // Populated lazily when a system is loaded; avoids cloning materials
+    // per mesh which explodes WebGL draw calls with 900+ structures.
+    const systemMats   = {};   // key → THREE.MeshStandardMaterial (base)
+    const highlightMat = {};   // key → THREE.MeshStandardMaterial (selected)
+
+    /* ── layout ──────────────────────────────────────────────────── */
 
     container.innerHTML = `
       <div class="t3d">
@@ -63,7 +182,7 @@ export default {
               <input type="range" id="an-opacity" min="15" max="100" value="100" class="tool-range">
               <output id="an-opacity-out">100%</output></label>
             <label class="tool-checkbox"><input type="checkbox" id="an-isolate"> <span>Isolate selection</span></label>
-            
+
             <div style="margin-top:10px;">
               <span class="tool-label" style="margin-bottom:4px; font-size:0.75rem;">Cross-section Plane:</span>
               <div class="btn-group t3d-seg" id="an-plane">
@@ -86,13 +205,18 @@ export default {
               <span id="an-count" class="t3d-count"></span>
             </div>
 
-            <!-- Region Filter -->
-            <select id="an-region-filter" class="tool-select" style="margin-bottom:6px; font-size:0.78rem; padding:4px 8px;">
-              ${ANATOMICAL_REGIONS.map(r => `<option value="${r.id}">${r.label}</option>`).join('')}
-            </select>
+            <!-- Pill region filters -->
+            <div id="an-region-pills" class="an-pill-filters" style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;">
+              ${ANATOMICAL_REGIONS.map((r, i) =>
+                `<button class="an-pill${i === 0 ? ' is-active' : ''}" data-region="${r.id}">${r.label}</button>`
+              ).join('')}
+            </div>
 
-            <input type="text" id="an-filter" class="tool-input t3d-filter" placeholder="Search structures, organs, bones…" autocomplete="off" spellcheck="false">
-            <div id="an-list" class="t3d-list"></div>
+            <input type="text" id="an-filter" class="tool-input t3d-filter"
+                   placeholder="Search structures, organs, bones…"
+                   autocomplete="off" spellcheck="false">
+            <!-- Virtual-scrolled list: position:relative so absolute children work -->
+            <div id="an-list" class="t3d-list" style="position:relative; overflow-y:auto;"></div>
           </section>
         </aside>
 
@@ -134,7 +258,7 @@ export default {
         </div>
       </div>`;
 
-    /* ---------------- scene ---------------- */
+    /* ── scene ───────────────────────────────────────────────────── */
 
     const mount  = container.querySelector('#an-canvas');
     const viewer = new Viewer3D(mount, { background: 0x000000, ground: false, fov: 40 });
@@ -154,31 +278,71 @@ export default {
     viewer.controls.maxDistance = 8;
     viewer.controls.update();
 
-    const loaded  = new Map();      // system key -> THREE.Group
+    const loaded  = new Map();   // system key → THREE.Group
     const visible = Object.fromEntries(systemKeys.map(k => [k, false]));
-    const hidden  = new Set();      // structure ids the user has hidden
+    const hidden  = new Set();   // structure ids hidden by the user
     let opacity = 1;
     let isolate = false;
     let selectedRegion = 'all';
     this._loaded = loaded;
 
-    /* ---------------- loading ---------------- */
+    /* ── raycast suppression during camera drag ──────────────────── */
+    // OrbitControls sets .state to -1 when idle, anything else while dragging.
+    // Skipping raycasting during drag keeps frame rate smooth on large scenes.
+    let _isDragging = false;
+    mount.addEventListener('pointerdown', () => { _isDragging = true; },  { passive: true });
+    window.addEventListener('pointerup',  () => { _isDragging = false; }, { passive: true });
+
+    // Monkey-patch the viewer's internal tick so raycasting is suppressed.
+    // This is safe because Viewer3D calls a registered onPick callback that we
+    // can simply not fire — the geometry still renders at full FPS.
+    const _origTick = viewer._tick?.bind(viewer);
+    if (_origTick) {
+      viewer._tick = function () {
+        if (_isDragging) {
+          // Still call controls.update() + renderer.render(); skip raycast only.
+          this.controls.update();
+          this.renderer.render(this.scene, this.camera);
+          return;
+        }
+        _origTick();
+      };
+    }
+
+    /* ── loading ─────────────────────────────────────────────────── */
 
     const progressEl   = container.querySelector('#an-progress');
     const progressText = container.querySelector('#an-progress-text');
-    const showProgress = (msg) => { progressEl.hidden = false; progressText.textContent = msg; };
-    const hideProgress = () => { progressEl.hidden = true; };
+    const showProgress = msg => { progressEl.hidden = false; progressText.textContent = msg; };
+    const hideProgress = ()  => { progressEl.hidden = true; };
 
     async function loadSystem(key) {
       if (loaded.has(key)) return loaded.get(key);
       const meta = index.systems[key];
       showProgress(`Loading ${meta.label.toLowerCase()} — ${kb(meta.bytes)}…`);
 
+      // Create shared materials for this system once
+      if (!systemMats[key]) {
+        systemMats[key] = new THREE.MeshStandardMaterial({
+          color: new THREE.Color(...meta.color),
+          roughness: 0.72,
+          metalness: 0.02,
+          side: THREE.DoubleSide,
+        });
+        highlightMat[key] = new THREE.MeshStandardMaterial({
+          color: new THREE.Color(...meta.color).multiplyScalar(1.5),
+          roughness: 0.5,
+          metalness: 0.05,
+          side: THREE.DoubleSide,
+          emissive: new THREE.Color(...meta.color).multiplyScalar(0.2),
+        });
+      }
+
       const gltf = await new Promise((resolve, reject) => {
         gltfLoader.load(
           `${BASE}${meta.file}`,
           resolve,
-          (evt) => {
+          evt => {
             if (evt.total) showProgress(`Loading ${meta.label.toLowerCase()} — ${Math.round(evt.loaded / evt.total * 100)}%`);
           },
           reject,
@@ -187,12 +351,15 @@ export default {
 
       const group = gltf.scene;
       group.name = `system:${key}`;
+      const sharedMat = systemMats[key];
       for (const child of group.children) {
         child.userData.structure = byId.get(child.name) || { id: child.name, name: child.name, system: key };
         child.traverse(n => {
           if (!n.isMesh) return;
-          n.castShadow = n.receiveShadow = false;
-          n.material = n.material.clone();
+          n.castShadow    = false;
+          n.receiveShadow = false;
+          // Use shared material — no clone(), which is the key perf win.
+          n.material = sharedMat;
         });
         viewer.registerPickable(child);
       }
@@ -202,40 +369,56 @@ export default {
       return group;
     }
 
-    /* ---------------- appearance ---------------- */
+    /* ── appearance ──────────────────────────────────────────────── */
 
     let prevOpacity = 1;
+    let prevSelId   = null;
+
     function applyAppearance() {
       const selId = viewer.selected?.userData.structure?.id ?? null;
-      const isTransparent = opacity < 1;
+      const selSystem = viewer.selected?.userData.structure?.system ?? null;
+      const isTransparent  = opacity < 1;
       const opacityChanged = prevOpacity !== opacity;
+      const selChanged     = prevSelId !== selId;
       prevOpacity = opacity;
+      prevSelId   = selId;
 
       for (const [key, group] of loaded) {
         group.visible = visible[key];
         if (!visible[key]) continue;
+
+        const baseMat = systemMats[key];
+        const hlMat   = highlightMat[key];
+
         for (const child of group.children) {
           const id = child.userData.structure?.id;
           const shouldBeVisible = !hidden.has(id) && (!isolate || !selId || id === selId);
-          if (child.visible !== shouldBeVisible) {
-            child.visible = shouldBeVisible;
-          }
+          if (child.visible !== shouldBeVisible) child.visible = shouldBeVisible;
+
           if (opacityChanged) {
+            baseMat.transparent  = isTransparent;
+            baseMat.depthWrite   = opacity > 0.85;
+            baseMat.opacity      = opacity;
+            baseMat.needsUpdate  = true;
+            if (hlMat) {
+              hlMat.transparent = isTransparent;
+              hlMat.opacity     = opacity;
+              hlMat.needsUpdate = true;
+            }
+          }
+
+          // Swap to highlight material for selected object; restore others.
+          if (selChanged && hlMat) {
             child.traverse(n => {
-              if (!n.isMesh || !n.material) return;
-              if (n.material.transparent !== isTransparent) {
-                n.material.transparent = isTransparent;
-                n.material.depthWrite = opacity > 0.85;
-                n.material.needsUpdate = true;
-              }
-              n.material.opacity = opacity;
+              if (!n.isMesh) return;
+              n.material = (id === selId && key === selSystem) ? hlMat : baseMat;
             });
           }
         }
       }
     }
 
-    /* ---------------- system toggles ---------------- */
+    /* ── system toggles ──────────────────────────────────────────── */
 
     const systemsEl = container.querySelector('#an-systems');
     systemsEl.innerHTML = systemKeys.map(k => {
@@ -248,7 +431,7 @@ export default {
       </label>`;
     }).join('');
 
-    systemsEl.addEventListener('change', async (e) => {
+    systemsEl.addEventListener('change', async e => {
       const key = e.target.dataset.system;
       if (!key) return;
       const on = e.target.checked;
@@ -270,7 +453,7 @@ export default {
       }
     });
 
-    /* ---------------- display controls ---------------- */
+    /* ── display controls ────────────────────────────────────────── */
 
     const opacityEl = container.querySelector('#an-opacity');
     opacityEl.addEventListener('input', () => {
@@ -279,7 +462,7 @@ export default {
       applyAppearance();
     });
 
-    container.querySelector('#an-isolate').addEventListener('change', (e) => {
+    container.querySelector('#an-isolate').addEventListener('change', e => {
       isolate = e.target.checked;
       applyAppearance();
     });
@@ -293,9 +476,9 @@ export default {
       renderList();
     });
 
-    /* ---------------- cross-section ---------------- */
+    /* ── cross-section ───────────────────────────────────────────── */
 
-    const RANGE = { x: [-0.5, 0.5], y: [0, 1.9], z: [-0.4, 0.4] };
+    const RANGE  = { x: [-0.5, 0.5], y: [0, 1.9], z: [-0.4, 0.4] };
     let planeAxis = null;
     const planeRow  = container.querySelector('#an-plane-row');
     const flipRow   = container.querySelector('#an-flip-row');
@@ -308,7 +491,7 @@ export default {
       viewer.setClipPlane(planeAxis, lo + (hi - lo) * (Number(planePos.value) / 100), flipInput.checked);
     };
 
-    container.querySelector('#an-plane').addEventListener('click', (e) => {
+    container.querySelector('#an-plane').addEventListener('click', e => {
       const btn = e.target.closest('[data-plane]');
       if (!btn) return;
       for (const b of container.querySelectorAll('#an-plane .btn')) b.classList.toggle('is-active', b === btn);
@@ -322,58 +505,63 @@ export default {
     });
     flipInput.addEventListener('change', applyPlane);
 
-    /* ---------------- structure list ---------------- */
+    /* ── search index + virtual list ─────────────────────────────── */
 
+    // Pre-build search index once (O(n) single pass at startup).
+    const searchIndex = buildSearchIndex(index.structures);
+
+    const ITEM_HEIGHT = 34; // px — must match CSS .t3d-list-item height
     const listEl   = container.querySelector('#an-list');
     const filterEl = container.querySelector('#an-filter');
-    const regionSelect = container.querySelector('#an-region-filter');
-    const countEl = container.querySelector('#an-count');
+    const countEl  = container.querySelector('#an-count');
+
+    // Render a single row into a recycled node
+    function renderRow(node, s) {
+      const isOff = !visible[s.system];
+      const isHid = hidden.has(s.id);
+      const isSel = viewer.selected?.userData.structure?.id === s.id;
+      node.innerHTML = `<button class="t3d-list-item${isSel ? ' is-selected' : ''}${isOff ? ' is-off' : ''}"
+              data-id="${s.id}" data-system="${s.system}" data-name="${s.name}" title="${s.name}">
+        <span class="t3d-dot" style="background:${hex(index.systems[s.system].color)}"></span>
+        <span class="an-item-name">${s.name}</span>
+        ${isHid ? '<span class="an-item-tag">hidden</span>' : ''}
+      </button>`;
+    }
+
+    const scroller = new VirtualScroller(listEl, ITEM_HEIGHT, renderRow);
 
     let filterTimeout;
     function renderList() {
-      const q = filterEl.value.trim().toLowerCase();
+      const q     = filterEl.value.trim().toLowerCase();
       const qStem = stemWord(q);
-      const selId = viewer.selected?.userData.structure?.id;
 
-      const rows = index.structures.filter(s => {
+      const rows = searchIndex.filter(s => {
         if (q) {
-          const sName = s.name.toLowerCase();
-          const matchDirect = sName.includes(q) || (qStem && sName.includes(qStem));
-          if (!matchDirect) {
-            const detail = anatomyService.getDetail(s.name, s.system);
-            const cName = (detail.commonName || '').toLowerCase();
-            if (!cName.includes(q) && !(qStem && cName.includes(qStem))) return false;
-          }
+          const hit = s._idx.includes(q) || (qStem && s._idx.includes(qStem));
+          if (!hit) return false;
         }
-        if (selectedRegion !== 'all') {
-          const detail = anatomyService.getDetail(s.name, s.system);
-          if (detail.region !== selectedRegion) return false;
-        }
+        if (selectedRegion !== 'all' && s._region !== selectedRegion) return false;
         return true;
-      }).slice(0, 300);
+      });
 
       countEl.textContent = `${rows.length}`;
-
-      if (!rows.length) {
-        listEl.innerHTML = `<p class="t3d-list-empty">No structures match this search/region.</p>`;
-        return;
-      }
-
-      listEl.innerHTML = rows.map(s => `
-        <button class="t3d-list-item${s.id === selId ? ' is-selected' : ''}${visible[s.system] ? '' : ' is-off'}"
-                data-id="${s.id}" data-system="${s.system}" data-name="${s.name}" title="${s.name}">
-          <span class="t3d-dot" style="background:${hex(index.systems[s.system].color)}"></span>
-          <span class="an-item-name">${s.name}</span>
-          ${hidden.has(s.id) ? '<span class="an-item-tag">hidden</span>' : ''}
-        </button>`).join('');
+      scroller.setItems(rows);
     }
 
-    regionSelect.addEventListener('change', (e) => {
-      selectedRegion = e.target.value;
+    /* ── pill region filter ──────────────────────────────────────── */
+
+    container.querySelector('#an-region-pills').addEventListener('click', e => {
+      const btn = e.target.closest('.an-pill');
+      if (!btn) return;
+      for (const b of container.querySelectorAll('.an-pill')) b.classList.remove('is-active');
+      btn.classList.add('is-active');
+      selectedRegion = btn.dataset.region;
       renderList();
     });
 
-    listEl.addEventListener('click', async (e) => {
+    /* ── list click (delegated) ──────────────────────────────────── */
+
+    listEl.addEventListener('click', async e => {
       const btn = e.target.closest('[data-id]');
       if (!btn) return;
       const { id, system } = btn.dataset;
@@ -398,7 +586,7 @@ export default {
       filterTimeout = setTimeout(renderList, 120);
     });
 
-    /* ---------------- info panel ---------------- */
+    /* ── info panel ──────────────────────────────────────────────── */
 
     const infoEl = container.querySelector('#an-info');
 
@@ -413,7 +601,7 @@ export default {
       viewer.controls.update();
     }
 
-    viewer.onSelect((obj) => {
+    viewer.onSelect(obj => {
       const badgeEl = container.querySelector('#an-render-badge');
       const s = obj?.userData.structure;
       if (!s) {
@@ -423,12 +611,12 @@ export default {
           <span>Left-drag to rotate · scroll to zoom · right-drag to pan</span></div>`;
       } else {
         const detail = anatomyService.getDetail(s.name, s.system);
-        const sys = index.systems[s.system] || { label: s.system, color: [0.5, 0.5, 0.5] };
+        const sys    = index.systems[s.system] || { label: s.system, color: [0.5, 0.5, 0.5] };
         const fmaUrl = (s.fma || detail.fma)
           ? `https://bioportal.bioontology.org/ontologies/FMA?p=classes&conceptid=http%3A%2F%2Fpurl.org%2Fsig%2Font%2Ffma%2Ffma${s.fma || detail.fma}`
           : null;
 
-        // Render inline HUD badge directly within the 3D canvas viewport
+        // HUD badge
         if (badgeEl) {
           badgeEl.style.display = 'flex';
           badgeEl.innerHTML = `
@@ -449,13 +637,11 @@ export default {
               </button>
             </div>
           `;
-
-          badgeEl.querySelector('#an-badge-close')?.addEventListener('click', (e) => {
+          badgeEl.querySelector('#an-badge-close')?.addEventListener('click', e => {
             e.stopPropagation();
             badgeEl.style.display = 'none';
           });
-
-          badgeEl.querySelector('#an-badge-show-more')?.addEventListener('click', (e) => {
+          badgeEl.querySelector('#an-badge-show-more')?.addEventListener('click', e => {
             e.stopPropagation();
             infoEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
           });
@@ -481,8 +667,8 @@ export default {
             <p style="margin:2px 0 0; font-size:0.82rem; line-height:1.45; color:var(--g800);">${detail.functionDesc}</p>
           </div>
 
-          <!-- Clinical Pearls & Surgical Anatomy -->
-          <div style="margin-bottom:8px; background:rgba(239, 68, 68, 0.05); border-left:3px solid var(--danger); padding:6px 10px; border-radius:0 6px 6px 0;">
+          <!-- Clinical Pearls -->
+          <div style="margin-bottom:8px; background:rgba(239,68,68,0.05); border-left:3px solid var(--danger); padding:6px 10px; border-radius:0 6px 6px 0;">
             <span style="font-size:0.74rem; font-weight:700; text-transform:uppercase; color:var(--danger); letter-spacing:0.04em;">Clinical Pearls &amp; Pathology</span>
             <p style="margin:2px 0 0; font-size:0.8rem; line-height:1.4; color:#7f1d1d;">${detail.clinicalNotes}</p>
           </div>
@@ -502,7 +688,7 @@ export default {
                 </div>` : ''}
             </div>` : ''}
 
-          <!-- Articulating / Connected Structures -->
+          <!-- Articulations / Related Structures -->
           ${(detail.relations && detail.relations.length) ? `
             <div style="margin-top:6px;">
               <span style="font-size:0.74rem; font-weight:700; text-transform:uppercase; color:var(--g600);">Articulations / Related</span>
@@ -514,24 +700,13 @@ export default {
       }
 
       if (isolate) applyAppearance();
-
-      // Fast UI class update without wiping list DOM
-      const prevSelected = listEl.querySelector('.is-selected');
-      if (prevSelected) prevSelected.classList.remove('is-selected');
-      if (s?.id) {
-        const item = listEl.querySelector(`[data-id="${s.id}"]`);
-        if (item) {
-          item.classList.add('is-selected');
-          // Scroll within list only without moving entire window
-          const offset = item.offsetTop - listEl.offsetTop;
-          listEl.scrollTop = Math.max(0, offset - 40);
-        }
-      }
+      scroller.markSelected(s?.id ?? null);
+      if (s?.id) scroller.scrollToId(s.id);
     });
 
-    /* ---------------- toolbar ---------------- */
+    /* ── toolbar ─────────────────────────────────────────────────── */
 
-    container.querySelector('#an-views').addEventListener('click', (e) => {
+    container.querySelector('#an-views').addEventListener('click', e => {
       const btn = e.target.closest('[data-view]');
       if (!btn) return;
       for (const b of container.querySelectorAll('#an-views .btn')) b.classList.toggle('is-active', b === btn);
@@ -542,7 +717,7 @@ export default {
       viewer.controls.update();
     });
 
-    container.querySelector('#an-spin').addEventListener('change', (e) => { viewer.controls.autoRotate = e.target.checked; });
+    container.querySelector('#an-spin').addEventListener('change', e => { viewer.controls.autoRotate = e.target.checked; });
 
     container.querySelector('#an-reset').addEventListener('click', () => {
       hidden.clear();
@@ -560,15 +735,16 @@ export default {
       if (loaded.size) viewer.frame(root, 1.15);
     });
 
-    /* ---------------- start ---------------- */
+    /* ── start ───────────────────────────────────────────────────── */
 
     renderList();
-    // Render the full anatomy by enabling all systems
-    const systemCBs = systemsEl.querySelectorAll('input[type="checkbox"]');
-    systemCBs.forEach(cb => {
-      cb.checked = true;
-      cb.dispatchEvent(new Event('change', { bubbles: true }));
-    });
+    // Don't auto-load all systems — let the user select.
+    // Auto-load skeletal only as the default starting point.
+    const skeletalCb = systemsEl.querySelector('[data-system="skeletal"]');
+    if (skeletalCb) {
+      skeletalCb.checked = true;
+      skeletalCb.dispatchEvent(new Event('change', { bubbles: true }));
+    }
   },
 
   destroy() {

@@ -28,9 +28,9 @@ export const TOOL_GROUPS = {
     match: /\b(calculat|compute|solve|equation|integral|integrate|derivative|differentiat|limit|matrix|eigen|determinant|factor|prime|probability|statistic|mean|median|variance|regression|convert|units?|km|miles|kg|pounds|celsius|fahrenheit|percent|%|sqrt|log|sin|cos|tan|theorem|proof|formula)\b|[\d)]\s*[-+*/^×÷]\s*[\d(]/i,
   },
   finance: {
-    label: 'Money: loans, interest, budgets, debts, bank statements, invoices',
-    tools: ['calculate_financial', 'analyze_budget_spending', 'manage_debts', 'import_bank_statement', 'generate_invoice'],
-    match: /\b(loan|mortgage|interest|amorti[sz]|npv|irr|roi|invest|budget|spend|expense|debt|bank statement|invoice|bill|vat|tax|salary|payroll|profit|margin|revenue|cash ?flow|naira|₦|ngn|usd|\$|dollar|currency|exchange rate)\b/i,
+    label: 'Money: loans, interest, budgets, debts, bank statements, invoices and quotes',
+    tools: ['calculate_financial', 'analyze_budget_spending', 'manage_debts', 'import_bank_statement', 'generate_invoice', 'create_invoice', 'list_invoices'],
+    match: /\b(loan|mortgage|interest|amorti[sz]|npv|irr|roi|invest|budget|spend|expense|debt|bank statement|invoice|quotation|quote for|owes?|overdue|receivable|wht|withholding|bill|vat|tax|salary|payroll|profit|margin|revenue|cash ?flow|naira|₦|ngn|usd|\$|dollar|currency|exchange rate)\b/i,
   },
   science: {
     label: 'Science: chemistry, elements, anatomy, diseases',
@@ -46,6 +46,11 @@ export const TOOL_GROUPS = {
     label: 'Documents: PDF tools, PDF to Word, annotate, clean text',
     tools: ['pdf_process', 'convert_pdf_to_word', 'annotate_pdf', 'clean_text'],
     match: /\b(pdf|word|docx|document|page[s]?|merge|split|annotate|redact|watermark|clean (up )?text|contract|agreement)\b/i,
+  },
+  legal: {
+    label: 'Legal (Nigeria): review contracts and leases, parse citations and build tables of authorities, digest judgments',
+    tools: ['analyze_legal_document', 'parse_citations', 'case_digest'],
+    match: /\b(contracts?|agreements?|clauses?|judgm?ents?|rulings?|NWLR|LPELR|FWLR|SCNJ|plaintiffs?|defendants?|appellants?|respondents?|claimants?|court|statutes?|sections? \d|deeds?|lease|tenancy|tenant|landlord|affidavits?|brief of argument|indemnit\w*|governing law|arbitration|ratio decidendi|obiter|citation|authorit(?:y|ies)|precedent|suit no|CAMA|LFN|stamp duty)\b/i,
   },
   images: {
     label: 'Images and drawing: convert, crop, compress, illustrate, QR codes',
@@ -98,9 +103,9 @@ export const TOOL_GROUPS = {
     match: /\b(car|vehicle|vin|toyota|honda|lexus|mercedes|bmw|ford|engine|horsepower|torque|sedan|suv|truck|corolla|camry)\b/i,
   },
   building: {
-    label: 'Buildings: container and portacabin design, quotes, floor plans',
-    tools: ['design_container', 'plan_container_quote', 'generate_floor_plan'],
-    match: /\b(container|portacabin|porta ?cabin|cabin|20 ?ft|40 ?ft|high cube|site office|shop|kiosk|floor ?plan|office space|build(ing)?|structure|quote|quotation)\b/i,
+    label: 'Buildings: container and portacabin design, quotes, floor plans, construction cost estimates and bills of quantities',
+    tools: ['design_container', 'plan_container_quote', 'generate_floor_plan', 'estimate_construction'],
+    match: /\b(container|portacabin|porta ?cabin|cabin|20 ?ft|40 ?ft|high cube|site office|shop|kiosk|floor ?plan|office space|build(ing)?|structure|quote|quotation|boq|bill of quantities|building cost|cement|concrete|rebar|iron rods?|sandcrete|blockwork|slab|foundation|footing|roofing|plaster(ing)?|bungalow|duplex|construction)\b/i,
   },
   scripture: {
     label: 'Scripture: Bible and Quran passages',

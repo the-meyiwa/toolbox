@@ -258,12 +258,13 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
   },
   {
     name: 'bible_quran_lookup',
-    description: 'Searches and retrieves scripture passages from the Holy Bible or Holy Quran.',
+    description: 'Retrieves the exact text of Bible or Quran passages (with Arabic for the Quran). Quote the returned text exactly.',
     parameters: {
       type: 'OBJECT',
       properties: {
         scripture: { type: 'STRING', description: 'Scripture: "bible" or "quran".' },
-        reference: { type: 'STRING', description: 'Reference or query (e.g. "John 3:16", "Genesis 1:1", "Al-Fatiha", "Surah 1:1", "Ayat al-Kursi").' }
+        reference: { type: 'STRING', description: 'Reference or query (e.g. "John 3:16", "Genesis 1:1", "Al-Fatiha", "Surah 1:1", "Ayat al-Kursi").' },
+        translation: { type: 'STRING', description: 'Optional. Bible: web (default), kjv, bbe, asv, ylt, oeb-us. Quran: translation id (20 = Saheeh International, default).' }
       },
       required: ['scripture', 'reference']
     }
@@ -321,18 +322,29 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
   },
   {
     name: 'pdf_process',
-    description: 'Converts PDF documents to Word (.docx), inspects page counts, or stamps watermarks onto PDF files.',
+    description: 'Works on the attached PDF(s) in the browser and returns a downloadable file: merge, split, extract or delete pages, rotate, compress, extract text (.txt/.md), watermark, page numbers or Bates numbers, render pages to PNG/JPEG, inspect, or convert to Word.',
     parameters: {
       type: 'OBJECT',
       properties: {
         operation: {
           type: 'STRING',
-          description: 'Operation: "convert_to_word", "convert_to_docx", "inspect", "stamp_watermark", "page_count".'
+          description: 'One of: "merge" (all attached PDFs, in order), "split", "extract_pages", "delete_pages", "rotate", "compress", "extract_text", "watermark", "page_numbers", "to_images", "inspect", "convert_to_word".'
         },
-        watermarkText: {
-          type: 'STRING',
-          description: 'Text to stamp as watermark on each page (for stamp_watermark).'
-        }
+        pages: { type: 'STRING', description: 'Page selection like "1-3, 5, 8-" (extract_pages, delete_pages, rotate, watermark, page_numbers, to_images, extract_text).' },
+        ranges: { type: 'STRING', description: 'split: each comma-separated range becomes its own PDF, e.g. "1-3, 4-10, 11-".' },
+        everyN: { type: 'NUMBER', description: 'split: put this many pages in each file.' },
+        mode: { type: 'STRING', description: 'split: "each" (one file per page), "every" (with everyN) or "bookmarks".' },
+        angle: { type: 'NUMBER', description: 'rotate: 90, 180 or 270 (clockwise).' },
+        text: { type: 'STRING', description: 'watermark: the text to stamp (default CONFIDENTIAL).' },
+        watermarkText: { type: 'STRING', description: 'Alias of text for watermark.' },
+        opacity: { type: 'NUMBER', description: 'watermark: 0.05 to 1 (default 0.18).' },
+        layout: { type: 'STRING', description: 'watermark: "center" or "tile".' },
+        position: { type: 'STRING', description: 'page_numbers: top-left, top-center, top-right, bottom-left, bottom-center (default) or bottom-right.' },
+        template: { type: 'STRING', description: 'page_numbers: text with {n}, {total}, {bates}, {date}, {file}, e.g. "Page {n} of {total}".' },
+        batesPrefix: { type: 'STRING', description: 'page_numbers: Bates prefix, e.g. "ACME"; turns on Bates numbering.' },
+        start: { type: 'NUMBER', description: 'page_numbers: first number (default 1).' },
+        format: { type: 'STRING', description: 'extract_text: "txt" or "md". to_images: "png" or "jpeg".' },
+        dpi: { type: 'NUMBER', description: 'to_images: resolution (default 144). compress: re-render pages at this dpi (shrinks scans, flattens text).' }
       },
       required: ['operation']
     }
@@ -961,7 +973,7 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
   },
   {
     name: 'generate_invoice',
-    description: 'Generates a professional financial invoice with line items, tax, discount calculations, payment terms, and direct PDF export or handoff to Invoice Generator. Defaults to Nigerian Naira (NGN, ₦) unless specified.',
+    description: 'Generates a professional financial invoice with line items, tax, discount calculations, payment terms, and direct PDF export or handoff to Invoice Generator. Defaults to Nigerian Naira (NGN, ₦) unless specified. This only shows a one-off preview; to save the invoice in the user\'s records (numbered, trackable, with WHT) use create_invoice.',
     parameters: {
       type: 'OBJECT',
       properties: {
@@ -2211,13 +2223,50 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
     }
 
     case 'bible_quran_lookup': {
-      const { scripture, reference } = args;
-      return {
-        status: 'success',
-        scripture,
-        reference,
-        message: `Retrieved reference for ${scripture}: "${reference}"`
-      };
+      // Returns the actual verse text so the model can quote it exactly.
+      const scripture = String(args.scripture || '').toLowerCase().includes('quran') || /surah|sura|ayat|al-/i.test(args.reference || '') ? 'quran' : 'bible';
+      const reference = String(args.reference || '').trim();
+      const strip = (h) => String(h || '').replace(/<sup[^>]*>.*?<\/sup>/g, '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+      try {
+        if (scripture === 'bible') {
+          const translation = String(args.translation || 'web').toLowerCase();
+          const res = await fetch(`https://bible-api.com/${encodeURIComponent(reference)}?translation=${encodeURIComponent(translation)}`);
+          if (!res.ok) return { status: 'error', success: false, message: res.status === 404 ? `Could not find "${reference}" in the Bible (${translation}).` : `The Bible service answered ${res.status}.` };
+          const j = await res.json();
+          const verses = (j.verses || []).slice(0, 80).map(v => ({ ref: `${v.book_name} ${v.chapter}:${v.verse}`, text: String(v.text || '').replace(/\s+/g, ' ').trim() }));
+          return { status: 'success', scripture: 'bible', reference: j.reference || reference, translation: j.translation_name || translation, verses, text: verses.map(v => v.text).join(' '), message: `${j.reference || reference} (${j.translation_name || translation})` };
+        }
+        // Quran: "2:255", "Surah 1", "1:1-7", "Al-Fatiha", "Ayat al-Kursi"
+        const QA = 'https://api.quran.com/api/v4';
+        const NAMED = { 'ayat al-kursi': '2:255', 'ayatul kursi': '2:255', 'ayat ul kursi': '2:255', 'throne verse': '2:255' };
+        let ref = NAMED[reference.toLowerCase()] || reference;
+        let m = /(\d{1,3})\s*[:.]\s*(\d{1,3})(?:\s*-\s*(\d{1,3}))?/.exec(ref);
+        let surah, from, to;
+        if (m) { surah = +m[1]; from = +m[2]; to = +(m[3] || m[2]); }
+        else {
+          const num = /(\d{1,3})/.exec(ref);
+          if (num) surah = +num[1];
+          else {
+            const norm = (x) => String(x).toLowerCase().replace(/^(surah|sura|surat)\s+/, '').replace(/[^a-z]/g, '');
+            const chapters = (await (await fetch(`${QA}/chapters?language=en`)).json()).chapters || [];
+            const target = norm(ref);
+            const hit = chapters.find(c => norm(c.name_simple) === target || norm(c.name_complex) === target || norm(c.translated_name?.name) === target)
+              || chapters.find(c => norm(c.name_simple).includes(target) || target.includes(norm(c.name_simple)));
+            if (!hit) return { status: 'error', success: false, message: `Could not find the surah "${reference}".` };
+            surah = hit.id;
+          }
+        }
+        if (!(surah >= 1 && surah <= 114)) return { status: 'error', success: false, message: `There is no surah ${surah}.` };
+        const tr = Number(args.translation) || 20;   // 20 = Saheeh International
+        const j = await (await fetch(`${QA}/verses/by_chapter/${surah}?translations=${tr}&fields=text_uthmani&per_page=300`)).json();
+        let verses = (j.verses || []).map(v => ({ ref: v.verse_key, arabic: v.text_uthmani, text: strip(v.translations?.[0]?.text) }));
+        if (from) verses = verses.filter(v => { const a = +v.ref.split(':')[1]; return a >= from && a <= to; });
+        verses = verses.slice(0, 80);
+        if (!verses.length) return { status: 'error', success: false, message: `No verses found for "${reference}".` };
+        return { status: 'success', scripture: 'quran', reference: from ? `${surah}:${from}${to !== from ? `-${to}` : ''}` : `Surah ${surah}`, translation: tr === 20 ? 'Saheeh International' : `translation ${tr}`, verses, text: verses.map(v => v.text).join(' '), message: `Quran ${verses[0].ref}${verses.length > 1 ? `–${verses.at(-1).ref}` : ''}` };
+      } catch (err) {
+        return { status: 'error', success: false, message: `Could not reach the scripture service: ${err.message}` };
+      }
     }
 
     case 'image_convert_and_resize':
@@ -2305,13 +2354,28 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
     case 'pdf_process': {
       const { operation = (name === 'convert_pdf_to_word' ? 'convert_to_word' : 'inspect'), watermarkText = 'CONFIDENTIAL' } = args;
       const op = (operation || 'inspect').toLowerCase();
-      const pdfDataUrl = currentFile?.dataUrl || taskState?.lastProcessedFile?.dataUrl || taskState?.lastPdfDataUrl;
+      const pdfDataUrl = currentFile?.dataUrl || (currentFile?.base64 ? `data:${currentFile.type || 'application/pdf'};base64,${currentFile.base64}` : null) || taskState?.lastProcessedFile?.dataUrl || taskState?.lastPdfDataUrl;
 
       if (!pdfDataUrl) {
         return {
           status: 'needs_file',
           message: 'Please drag & drop or upload your PDF document to perform this operation.'
         };
+      }
+
+      // Everything except Word conversion runs on the shared PDF engine (js/lib/pdf).
+      if (!/word|docx/.test(op)) {
+        const { runPdfOperation } = await import('./pdf/assistant-ops.js');
+        const current = { name: currentFile?.name || 'document.pdf', type: currentFile?.type || 'application/pdf', dataUrl: pdfDataUrl };
+        if (taskState) {
+          taskState.pdfFiles = (taskState.pdfFiles || []).filter(f => f.dataUrl !== pdfDataUrl).concat(currentFile?.dataUrl || currentFile?.base64 ? [current] : []).slice(-8);
+        }
+        const files = op === 'merge'
+          ? [...(Array.isArray(currentFile?.files) ? currentFile.files : (taskState?.pdfFiles || [current]))]
+          : [current];
+        const result = await runPdfOperation(op, args, { files });
+        if (taskState && result?.status === 'success' && result.format === 'pdf') { taskState.lastProcessedFile = result; taskState.lastPdfDataUrl = result.dataUrl; }
+        return result;
       }
 
       // 1. PDF -> Word Conversion

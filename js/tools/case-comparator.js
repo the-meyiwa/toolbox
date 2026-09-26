@@ -1,266 +1,129 @@
-import { tbAlert } from '../lib/dialog.js';
 /* ============================================================
-   Case Comparator — Comparative Precedent & Ruling Analysis.
+   Case Comparator — two judgments side by side.
 
-   Compare two or more judgments side by side:
-   Facts, Issues, Holdings, Ratio Decidendi, Authorities,
-   Distinctions, and Precedential Relationships (Applied, Distinguished,
-   Followed, Overruled). Grounded strictly in provided material.
+   Which court is superior and whether either decision binds the
+   other's court, which came first and whether the later one
+   cites the earlier (and how), issues aligned by wording,
+   authorities in common (flagging different treatment), and
+   facts, holdings, ratio and orders next to each other.
    ============================================================ */
 
-import { copyText } from '../utils.js';
-import { dropZone, attachFileInput, downloadBlob } from '../lib/file-engine.js';
-import { loadPdfJs } from '../lib/pdf-editor-engine.js';
+import { compareJudgments, comparisonMarkdown } from '../lib/legal/compare.js';
+import { LEVEL_LABEL } from '../lib/legal/courts.js';
+import { esc, icon, pageChip, note, sourceCard, bindSource, download, copyToClipboard, printMarkdown, plural } from '../lib/legal/view.js';
+
+const cap = (s) => String(s || '').toLowerCase().replace(/^./, c => c.toUpperCase());
+const TONE = { allowed: 'good', dismissed: 'bad', 'partly allowed': 'mid', 'struck out': 'bad' };
 
 export default {
-  async render(container, { analytics } = {}) {
-    this._cleanup = [];
-
+  render(container, { analytics } = {}) {
+    this.cleanup = [];
     container.innerHTML = `
-      <div class="tool-section">
-        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;">
-          <label class="tool-label" style="margin:0;">Select or Paste Cases for Comparison</label>
-          <span style="font-size:0.78rem; color:var(--g600);">Compare 2 or more judgments</span>
-        </div>
-
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:14px;">
-          <!-- Case A Box -->
-          <div style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <strong style="font-size:0.85rem; color:var(--black);">Case A (Primary Precedent / Decision)</strong>
-              <span style="font-size:0.72rem; color:var(--g500);">PDF / Text</span>
-            </div>
-            ${dropZone('cmp-zone-a', { label: 'Drop Case A PDF / text', accept: '.pdf,.txt' })}
-            <textarea class="tool-textarea" id="cmp-in-a" rows="6" placeholder="Paste Case A text (Parties, Facts, Ratio)..." style="margin-top:8px; font-family:var(--mono); font-size:0.78rem;"></textarea>
+      <div class="lg lg-compare">
+        <section class="lg-card lg-input">
+          <div class="lg-sources2">
+            ${sourceCard('cmpa', { label: 'Case A', placeholder: 'Paste the first judgment…', rows: 8, compact: true })}
+            ${sourceCard('cmpb', { label: 'Case B', placeholder: 'Paste the second judgment…', rows: 8, compact: true })}
           </div>
-
-          <!-- Case B Box -->
-          <div style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <strong style="font-size:0.85rem; color:var(--black);">Case B (Comparing Case / Instant Case)</strong>
-              <span style="font-size:0.72rem; color:var(--g500);">PDF / Text</span>
+          <div class="lg-bar">
+            <div class="lg-bar-main">
+              <button type="button" class="btn btn-primary" id="cmp-run">Compare judgments</button>
+              <button type="button" class="btn btn-ghost" id="cmp-swap">Swap A and B</button>
+              <button type="button" class="btn btn-ghost" id="cmp-clear">Clear</button>
             </div>
-            ${dropZone('cmp-zone-b', { label: 'Drop Case B PDF / text', accept: '.pdf,.txt' })}
-            <textarea class="tool-textarea" id="cmp-in-b" rows="6" placeholder="Paste Case B text (Parties, Facts, Ratio)..." style="margin-top:8px; font-family:var(--mono); font-size:0.78rem;"></textarea>
           </div>
-        </div>
-      </div>
+        </section>
+        <div id="cmp-out" class="lg-out" hidden></div>
+      </div>`;
+    const $ = (s) => container.querySelector(s);
+    const out = $('#cmp-out');
+    const A = bindSource(container, 'cmpa'), B = bindSource(container, 'cmpb');
+    this.cleanup.push(A.off, B.off);
+    let result = null;
 
-      <div class="tool-controls" style="justify-content:space-between; flex-wrap:wrap; gap:10px;">
-        <div style="display:flex; gap:8px;">
-          <button class="btn btn-primary" id="cmp-compare-btn">Compare Precedents</button>
-          <button class="btn btn-secondary btn-sm" id="cmp-clear-btn">Clear</button>
-        </div>
-        <div style="display:flex; gap:8px;">
-          <button class="btn btn-secondary btn-sm" id="cmp-copy-btn" disabled>Copy Comparison</button>
-          <button class="btn btn-secondary btn-sm" id="cmp-export-btn" disabled>Export Matrix</button>
-        </div>
-      </div>
+    const run = () => {
+      const ta = A.textarea.value.trim(), tb = B.textarea.value.trim();
+      if (ta.length < 80 || tb.length < 80) { (ta.length < 80 ? A : B).setStatus('Add the judgment text first.', 'warn'); return; }
+      analytics?.started?.();
+      result = compareJudgments(ta, tb);
+      render();
+      analytics?.completed?.();
+    };
 
-      <!-- Comparison Matrix View -->
-      <div id="cmp-result-wrap" hidden style="margin-top:20px;">
-        <!-- Precedential Relationship Banner -->
-        <div style="background:var(--g100); border-left:4px solid var(--text); border-radius:6px; padding:12px 16px; margin-bottom:16px;">
-          <div style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:var(--g700); margin-bottom:2px;">Judicial &amp; Precedential Relationship</div>
-          <div id="cmp-relation-text" style="font-size:0.95rem; font-weight:600; color:var(--black);">Distinguishable on Facts / Consistent Principle</div>
-        </div>
+    const heroCard = (k, d, isSup) => `
+      <section class="lg-card lg-vs-card${isSup ? ' is-superior' : ''}">
+        <div class="lg-kicker"><span class="lg-side ${k}">${k.toUpperCase()}</span>${d.court ? `<span class="lg-badge">${esc(d.court.short || d.court.name)}</span>` : '<span class="lg-badge is-muted">Court not identified</span>'}${d.court ? `<span>${esc(LEVEL_LABEL[d.court.level] || '')}</span>` : ''}</div>
+        <h2 class="lg-title">${esc(d.title)}</h2>
+        <p class="lg-meta">${[d.suitNo && esc(d.suitNo), d.date && esc(d.date.text)].filter(Boolean).join('<i></i>') || '—'}</p>
+        ${d.outcome ? `<p class="lg-meta"><span class="lg-pill" data-tone="${TONE[d.outcome.label] || 'none'}">${esc(cap(d.outcome.label))}</span></p>` : ''}
+      </section>`;
+    const auth = (list, cls = '') => (list.length ? `<ul class="lg-auth-list">${list.map(c => `<li class="${cls}"><em>${esc(c.title || 'Unnamed case')}</em>${c.isOther ? ` <span class="lg-tag">this is Case ${c.isOther}</span>` : ''}<code>${esc(c.citations.join('; '))}</code></li>`).join('')}</ul>` : '<p class="lg-empty">None.</p>');
+    const cell = (x) => (x ? `${esc(x.text)}${pageChip(x.page)}${x.resolution ? `<span class="lg-sub">${esc(x.resolution)}</span>` : ''}` : '<span class="lg-muted">No matching issue</span>');
+    const joinItems = (list, n = 3) => (list.length ? list.slice(0, n).map(x => `<p class="lg-cellp">${esc(x.text)}${pageChip(x.page)}</p>`).join('') : '<span class="lg-muted">Not found</span>');
 
-        <!-- Side-by-Side Comparison Table -->
-        <div style="overflow-x:auto; background:var(--white); border:1px solid var(--g200); border-radius:8px;">
-          <table style="width:100%; border-collapse:collapse; font-size:0.84rem; text-align:left;">
-            <thead>
-              <tr style="background:var(--g50); border-bottom:1px solid var(--g200);">
-                <th style="padding:10px 14px; width:22%; font-weight:700; color:var(--g700);">Legal Dimension</th>
-                <th id="cmp-col-a-title" style="padding:10px 14px; width:39%; font-weight:700; color:var(--black); border-left:1px solid var(--g200);">Case A</th>
-                <th id="cmp-col-b-title" style="padding:10px 14px; width:39%; font-weight:700; color:var(--black); border-left:1px solid var(--g200);">Case B</th>
-              </tr>
-            </thead>
-            <tbody id="cmp-table-body">
-              <!-- Rows injected here -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
+    const render = () => {
+      const r = result, a = r.a, b = r.b;
+      const supText = r.superior === 'a' ? `A — ${a.court.short}` : r.superior === 'b' ? `B — ${b.court.short}` : r.superior === 'equal' ? 'Coordinate courts' : 'Unknown';
+      const citeLine = r.cites.bCitesA ? `B cites A${r.cites.bCitesA.treatment ? ` and ${r.cites.bCitesA.treatment === 'referred to' ? 'refers to' : r.cites.bCitesA.treatment} it` : ''}` : r.cites.aCitesB ? `A cites B${r.cites.aCitesB.treatment ? ` and ${r.cites.aCitesB.treatment} it` : ''}` : 'Neither cites the other';
+      out.innerHTML = `
+        <div class="lg-vs">${heroCard('a', a, r.superior === 'a')}<div class="lg-vs-mid">VS</div>${heroCard('b', b, r.superior === 'b')}</div>
+        <section class="lg-card">
+          <header class="lg-sec-head"><h3>Precedent</h3>
+            <div class="lg-sec-tools">
+              <button type="button" class="btn btn-secondary btn-sm" data-act="copy">${icon('copy', 14)}<span>Copy</span></button>
+              <button type="button" class="btn btn-secondary btn-sm" data-act="md">${icon('download', 14)}<span>Markdown</span></button>
+              <button type="button" class="btn btn-secondary btn-sm" data-act="print">${icon('print', 14)}<span>Print / PDF</span></button>
+            </div></header>
+          <div class="lg-rel">
+            <div><small>Superior court</small><strong>${esc(supText)}</strong><p>${r.superior && r.superior !== 'equal' ? esc(`${LEVEL_LABEL[(r.superior === 'a' ? a : b).court.level]}.`) : r.superior === 'equal' ? 'Same level in the hierarchy.' : 'Identify both courts to compare them.'}</p></div>
+            <div><small>A before B's court</small><strong>${esc(r.aOnB?.label || '—')}</strong><p>${esc(r.aOnB?.reason || 'Court of one or both judgments not identified.')}</p></div>
+            <div><small>B before A's court</small><strong>${esc(r.bOnA?.label || '—')}</strong><p>${esc(r.bOnA?.reason || '')}</p></div>
+            <div><small>Date order</small><strong>${esc(r.order ? r.order.text.split(' (')[0] : 'Dates not found')}</strong><p>${esc(citeLine)}.${r.order && r.superior && r.superior !== 'equal' && r.order.later !== r.superior && r.order.later !== 'same' ? ' The later decision is from the lower court: it should follow the earlier one unless it distinguishes it.' : ''}</p></div>
+          </div>
+        </section>
+        <section class="lg-card">
+          <header class="lg-sec-head"><h3>Issues aligned</h3><span class="lg-sec-sub">Matched by wording · ${plural(r.issues.filter(x => x.a && x.b).length, 'pair')}</span></header>
+          ${r.issues.length ? `<table class="lg-align"><thead><tr><th>Case A</th><th class="lg-sim">Match</th><th>Case B</th></tr></thead><tbody>
+            ${r.issues.map(row => `<tr><td data-label="Case A">${cell(row.a)}</td><td class="lg-sim" data-label="Match">${row.a && row.b ? `${row.score}%<span class="lg-meter"><i style="width:${Math.min(100, row.score)}%"></i></span>` : '—'}</td><td data-label="Case B">${cell(row.b)}</td></tr>`).join('')}
+          </tbody></table>` : '<p class="lg-empty">No issues for determination were found in either judgment.</p>'}
+        </section>
+        <section class="lg-card">
+          <header class="lg-sec-head"><h3>Authorities</h3><span class="lg-sec-sub">${plural(r.shared.length, 'case')} in common${r.conflicts ? ` · ${plural(r.conflicts, 'case')} treated differently` : ''}</span></header>
+          <div class="lg-auth-cols">
+            <div><h4 class="lg-h4">Relied on by both</h4>${r.shared.length ? `<ul class="lg-auth-list">${r.shared.map(s => `<li class="${s.conflict ? 'is-conflict' : ''}"><em>${esc(s.title || s.citations[0])}</em><code>${esc(s.citations.join('; '))}</code><span class="lg-sub">A: ${esc(s.treatmentA.join(', ') || 'cited')} · B: ${esc(s.treatmentB.join(', ') || 'cited')}${s.conflict ? ' · treated differently' : ''}</span></li>`).join('')}</ul>` : '<p class="lg-empty">None.</p>'}
+              ${r.sharedStatutes.length ? `<h4 class="lg-h4">Statutes in common</h4><ul class="lg-auth-list">${r.sharedStatutes.map(s => `<li>${esc(s.name)}${s.provisions.length ? `<code>${esc(s.provisions.join(', '))}</code>` : ''}</li>`).join('')}</ul>` : ''}</div>
+            <div><h4 class="lg-h4">Only in A</h4>${auth(r.onlyA)}</div>
+            <div><h4 class="lg-h4">Only in B</h4>${auth(r.onlyB)}</div>
+          </div>
+        </section>
+        <section class="lg-card">
+          <header class="lg-sec-head"><h3>Side by side</h3></header>
+          <table class="lg-align"><thead><tr><th class="lg-rowhead"></th><th>Case A</th><th>Case B</th></tr></thead><tbody>
+            <tr><td data-label=""><strong>Facts</strong></td><td data-label="Case A">${joinItems(a.facts, 1)}</td><td data-label="Case B">${joinItems(b.facts, 1)}</td></tr>
+            <tr><td data-label=""><strong>Holding</strong></td><td data-label="Case A">${a.outcome ? `<p class="lg-cellp"><b>${esc(cap(a.outcome.label))}.</b></p>` : ''}${joinItems(a.holdings, 2)}</td><td data-label="Case B">${b.outcome ? `<p class="lg-cellp"><b>${esc(cap(b.outcome.label))}.</b></p>` : ''}${joinItems(b.holdings, 2)}</td></tr>
+            <tr><td data-label=""><strong>Ratio (candidates)</strong></td><td data-label="Case A">${joinItems(a.ratio)}</td><td data-label="Case B">${joinItems(b.ratio)}</td></tr>
+            <tr><td data-label=""><strong>Orders</strong></td><td data-label="Case A">${joinItems(a.orders, 4)}</td><td data-label="Case B">${joinItems(b.orders, 4)}</td></tr>
+          </tbody></table>
+        </section>
+        ${note('Compared on your device by pattern matching. Issue matching is by wording only; read both judgments before treating one as following or conflicting with the other.')}`;
+      out.hidden = false;
+    };
 
-    const zoneA     = container.querySelector('#cmp-zone-a');
-    const inputA    = container.querySelector('#cmp-zone-a-input');
-    const textA     = container.querySelector('#cmp-in-a');
-    const zoneB     = container.querySelector('#cmp-zone-b');
-    const inputB    = container.querySelector('#cmp-zone-b-input');
-    const textB     = container.querySelector('#cmp-in-b');
-    const cmpBtn    = container.querySelector('#cmp-compare-btn');
-    const clearBtn  = container.querySelector('#cmp-clear-btn');
-    const copyBtn   = container.querySelector('#cmp-copy-btn');
-    const exportBtn = container.querySelector('#cmp-export-btn');
-    const resultWrap= container.querySelector('#cmp-result-wrap');
-    const colATitle = container.querySelector('#cmp-col-a-title');
-    const colBTitle = container.querySelector('#cmp-col-b-title');
-    const relText   = container.querySelector('#cmp-relation-text');
-    const tableBody = container.querySelector('#cmp-table-body');
-
-    async function loadPdfInto(file, targetEl) {
-      const origText = cmpBtn.textContent;
-      cmpBtn.disabled = true;
-      cmpBtn.textContent = 'Reading PDF…';
-      try {
-        const pdfjsLib = await loadPdfJs();
-        const arrayBuffer = await file.arrayBuffer();
-        const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        let full = '';
-        const maxP = Math.min(pdfDoc.numPages, 40);
-        for (let i = 1; i <= maxP; i++) {
-          const page = await pdfDoc.getPage(i);
-          const c = await page.getTextContent();
-          full += `\n` + c.items.map(it => it.str).join(' ');
-        }
-        targetEl.value = full.trim();
-        if (textA.value.trim() && textB.value.trim()) {
-          runComparison();
-        }
-      } catch (err) {
-        console.error('[Case Comparator PDF Error]', err);
-        tbAlert('Could not read PDF: ' + err.message);
-      } finally {
-        cmpBtn.disabled = false;
-        cmpBtn.textContent = origText;
-      }
-    }
-
-    this._cleanup.push(attachFileInput(zoneA, inputA, async (f) => {
-      if (!f || !f[0]) return;
-      const file = f[0];
-      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-        await loadPdfInto(file, textA);
-      } else {
-        const t = await file.text();
-        textA.value = t;
-        if (textA.value.trim() && textB.value.trim()) runComparison();
-      }
-    }));
-
-    this._cleanup.push(attachFileInput(zoneB, inputB, async (f) => {
-      if (!f || !f[0]) return;
-      const file = f[0];
-      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-        await loadPdfInto(file, textB);
-      } else {
-        const t = await file.text();
-        textB.value = t;
-        if (textA.value.trim() && textB.value.trim()) runComparison();
-      }
-    }));
-
-    function extractElements(raw) {
-      const titleMatch = raw.match(/([A-Z0-9\s.,&'-]{3,60})\s+(?:V\.|VS\.?)\s+([A-Z0-9\s.,&'-]{3,60})/i);
-      const title = titleMatch ? `${titleMatch[1].trim()} v. ${titleMatch[2].trim()}` : raw.slice(0, 45) || 'Case Record';
-
-      let court = 'Superior Court of Record';
-      if (/supreme court/i.test(raw)) court = 'Supreme Court';
-      else if (/court of appeal/i.test(raw)) court = 'Court of Appeal';
-      else if (/high court/i.test(raw)) court = 'High Court';
-
-      const factsMatch = raw.match(/(?:FACTS|BACKGROUND)[\s:]*([\s\S]*?)(?=(?:ISSUES|HELD|DECISION|$))/i);
-      const facts = factsMatch ? factsMatch[1].trim().slice(0, 400) : raw.slice(0, 300);
-
-      const issueMatch = raw.match(/(?:whether\s+[\w\s,;?'-]+(?:\?|\.))/i);
-      const issue = issueMatch ? issueMatch[0].trim() : 'Determination of rights and liabilities on the balance of probabilities.';
-
-      const heldMatch = raw.match(/(?:HELD|ORDER|DECISION|JUDGMENT)[\s:]*([\s\S]*?)(?=(?:RATIO|OBITER|$))/i);
-      const holding = heldMatch ? heldMatch[1].trim().slice(0, 300) : (raw.includes('allowed') ? 'Appeal Allowed.' : 'Appeal Dismissed.');
-
-      const ratioMatch = raw.match(/(?:RATIO|PRINCIPLE)[\s:]*([\s\S]*?)(?=(?:OBITER|ORDER|$))/i);
-      const ratio = ratioMatch ? ratioMatch[1].trim().slice(0, 300) : 'Application of standard burden of proof and statutory interpretation.';
-
-      return { title, court, facts, issue, holding, ratio };
-    }
-
-    let comparisonData = null;
-
-    function runComparison() {
-      const aRaw = textA.value.trim();
-      const bRaw = textB.value.trim();
-
-      if (!aRaw || !bRaw) {
-        tbAlert('Please provide text or documents for both Case A and Case B.');
-        return;
-      }
-
-      analytics?.started();
-
-      const caseA = extractElements(aRaw);
-      const caseB = extractElements(bRaw);
-
-      colATitle.textContent = caseA.title;
-      colBTitle.textContent = caseB.title;
-
-      // Assess relationship
-      let relation = 'Compatible Precedent — Followed / Applied on Consistent Legal Principle';
-      if (caseA.holding.toLowerCase().includes('dismissed') !== caseB.holding.toLowerCase().includes('dismissed')) {
-        relation = 'Distinguished on Material Facts & Specific Statutory Context';
-      }
-
-      relText.textContent = relation;
-
-      const rows = [
-        { dim: 'Court & Jurisdiction', a: caseA.court, b: caseB.court },
-        { dim: 'Material Facts', a: caseA.facts, b: caseB.facts },
-        { dim: 'Central Legal Issue', a: caseA.issue, b: caseB.issue },
-        { dim: 'Decision / Holding', a: caseA.holding, b: caseB.holding },
-        { dim: 'Ratio Decidendi', a: caseA.ratio, b: caseB.ratio },
-        {
-          dim: 'Precedential Distinction',
-          a: 'Primary ruling establishing baseline precedent in this line of authority.',
-          b: `Evaluated in light of ${caseA.title} — applied or distinguished based on factual matrix.`,
-        },
-      ];
-
-      tableBody.innerHTML = rows.map((r, i) => `
-        <tr style="border-bottom:1px solid var(--g200); background:${i % 2 === 0 ? 'var(--white)' : 'var(--g50)'};">
-          <td style="padding:12px 14px; font-weight:600; color:var(--g800);">${r.dim}</td>
-          <td style="padding:12px 14px; color:var(--g900); border-left:1px solid var(--g200); line-height:1.5;">${r.a}</td>
-          <td style="padding:12px 14px; color:var(--g900); border-left:1px solid var(--g200); line-height:1.5;">${r.b}</td>
-        </tr>
-      `).join('');
-
-      comparisonData = { caseA, caseB, relation, rows };
-      resultWrap.hidden = false;
-      copyBtn.disabled = false;
-      exportBtn.disabled = false;
-
-      analytics?.completed();
-    }
-
-    cmpBtn.addEventListener('click', runComparison);
-
-    copyBtn.addEventListener('click', (e) => {
-      if (!comparisonData) return;
-      const text = `# CASE COMPARISON\nCase A: ${comparisonData.caseA.title} (${comparisonData.caseA.court})\nCase B: ${comparisonData.caseB.title} (${comparisonData.caseB.court})\n\nRelationship: ${comparisonData.relation}\n\n` +
-        comparisonData.rows.map(r => `### ${r.dim}\n- **Case A**: ${r.a}\n- **Case B**: ${r.b}\n`).join('\n');
-      copyText(text, e.target);
-      analytics?.copied({ outputKind: 'text' });
+    out.addEventListener('click', (e) => {
+      const a = e.target.closest('[data-act]');
+      if (!a || !result) return;
+      const md = comparisonMarkdown(result);
+      if (a.dataset.act === 'copy') copyToClipboard(md, a);
+      if (a.dataset.act === 'md') download('case-comparison.md', md);
+      if (a.dataset.act === 'print') printMarkdown('Case comparison', md);
     });
-
-    exportBtn.addEventListener('click', () => {
-      if (!comparisonData) return;
-      const md = `# Case Comparison: ${comparisonData.caseA.title} vs. ${comparisonData.caseB.title}\n\n**Precedential Relation**: ${comparisonData.relation}\n\n| Legal Dimension | ${comparisonData.caseA.title} | ${comparisonData.caseB.title} |\n| --- | --- | --- |\n` +
-        comparisonData.rows.map(r => `| **${r.dim}** | ${r.a.replace(/\|/g, '\\|')} | ${r.b.replace(/\|/g, '\\|')} |`).join('\n');
-      downloadBlob(new Blob([md], { type: 'text/markdown' }), `case_comparison_${Date.now()}.md`);
-      analytics?.downloaded({ fileCount: 1 });
-    });
-
-    clearBtn.addEventListener('click', () => {
-      textA.value = '';
-      textB.value = '';
-      resultWrap.hidden = true;
-      copyBtn.disabled = true;
-      exportBtn.disabled = true;
-      comparisonData = null;
-    });
+    $('#cmp-run').addEventListener('click', run);
+    $('#cmp-swap').addEventListener('click', () => { const t = A.textarea.value; A.textarea.value = B.textarea.value; B.textarea.value = t; if (result) run(); });
+    $('#cmp-clear').addEventListener('click', () => { A.textarea.value = ''; B.textarea.value = ''; out.hidden = true; result = null; });
   },
 
   destroy() {
-    for (const fn of this._cleanup ?? []) fn();
-    this._cleanup = [];
+    for (const fn of this.cleanup || []) { try { fn(); } catch { /* ignore */ } }
+    this.cleanup = [];
   },
 };

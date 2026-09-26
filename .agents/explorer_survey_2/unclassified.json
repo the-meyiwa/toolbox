@@ -1,0 +1,767 @@
+[
+  {
+    "id": "BP51",
+    "name": "orbital gyri straight gyrus",
+    "size": 1069484
+  },
+  {
+    "id": "FMA11336",
+    "name": "linea alba",
+    "size": 475884
+  },
+  {
+    "id": "FMA12513",
+    "name": "eyeball",
+    "size": 816584
+  },
+  {
+    "id": "FMA12519",
+    "name": "atlas",
+    "size": 308684
+  },
+  {
+    "id": "FMA12520",
+    "name": "axis",
+    "size": 343584
+  },
+  {
+    "id": "FMA13388",
+    "name": "right scalenus posterior",
+    "size": 667484
+  },
+  {
+    "id": "FMA13389",
+    "name": "left scalenus posterior",
+    "size": 658784
+  },
+  {
+    "id": "FMA13390",
+    "name": "right scalenus medius",
+    "size": 1061984
+  },
+  {
+    "id": "FMA13391",
+    "name": "left scalenus medius",
+    "size": 1060184
+  },
+  {
+    "id": "FMA13392",
+    "name": "right scalenus anterior",
+    "size": 699284
+  },
+  {
+    "id": "FMA13393",
+    "name": "left scalenus anterior",
+    "size": 685084
+  },
+  {
+    "id": "FMA13411",
+    "name": "left subclavius",
+    "size": 407784
+  },
+  {
+    "id": "FMA13412",
+    "name": "right subclavius",
+    "size": 407784
+  },
+  {
+    "id": "FMA18247",
+    "name": "glans penis",
+    "size": 262684
+  },
+  {
+    "id": "FMA19235",
+    "name": "right deferent duct",
+    "size": 75284
+  },
+  {
+    "id": "FMA19236",
+    "name": "left deferent duct",
+    "size": 74984
+  },
+  {
+    "id": "FMA19617nsn",
+    "name": "corpus spongiosum of penis, nsn",
+    "size": 110184
+  },
+  {
+    "id": "FMA19618",
+    "name": "corpus cavernosum of penis",
+    "size": 243084
+  },
+  {
+    "id": "FMA21930",
+    "name": "external anal sphincter",
+    "size": 183484
+  },
+  {
+    "id": "FMA22346",
+    "name": "right pyramidalis",
+    "size": 560784
+  },
+  {
+    "id": "FMA22347",
+    "name": "left pyramidalis",
+    "size": 552284
+  },
+  {
+    "id": "FMA22425",
+    "name": "right tensor fasciae latae",
+    "size": 934484
+  },
+  {
+    "id": "FMA22426",
+    "name": "left tensor fasciae latae",
+    "size": 925784
+  },
+  {
+    "id": "FMA23083",
+    "name": "thoracic rotator",
+    "size": 4419784
+  },
+  {
+    "id": "FMA23089",
+    "name": "right lumbar rotator",
+    "size": 1449584
+  },
+  {
+    "id": "FMA23090",
+    "name": "left lumbar rotator",
+    "size": 1294784
+  },
+  {
+    "id": "FMA23725",
+    "name": "right trapezoid",
+    "size": 30884
+  },
+  {
+    "id": "FMA24435",
+    "name": "right scaphoid",
+    "size": 53784
+  },
+  {
+    "id": "FMA24436",
+    "name": "left scaphoid",
+    "size": 53584
+  },
+  {
+    "id": "FMA24437",
+    "name": "right lunate",
+    "size": 43284
+  },
+  {
+    "id": "FMA24438",
+    "name": "left lunate",
+    "size": 43384
+  },
+  {
+    "id": "FMA24439",
+    "name": "right triquetral",
+    "size": 35284
+  },
+  {
+    "id": "FMA24440",
+    "name": "left triquetral",
+    "size": 34984
+  },
+  {
+    "id": "FMA24441",
+    "name": "right pisiform",
+    "size": 19884
+  },
+  {
+    "id": "FMA24442",
+    "name": "left pisiform",
+    "size": 19884
+  },
+  {
+    "id": "FMA24443",
+    "name": "right trapezium",
+    "size": 51384
+  },
+  {
+    "id": "FMA24444",
+    "name": "left trapezium",
+    "size": 52984
+  },
+  {
+    "id": "FMA24445",
+    "name": "left trapezoid",
+    "size": 30684
+  },
+  {
+    "id": "FMA24446",
+    "name": "right capitate",
+    "size": 64284
+  },
+  {
+    "id": "FMA24447",
+    "name": "left capitate",
+    "size": 63984
+  },
+  {
+    "id": "FMA24448",
+    "name": "right hamate",
+    "size": 57584
+  },
+  {
+    "id": "FMA24449",
+    "name": "left hamate",
+    "size": 56584
+  },
+  {
+    "id": "FMA32551",
+    "name": "right teres major",
+    "size": 857484
+  },
+  {
+    "id": "FMA32552",
+    "name": "left teres major",
+    "size": 855684
+  },
+  {
+    "id": "FMA32553",
+    "name": "right teres minor",
+    "size": 761284
+  },
+  {
+    "id": "FMA32554",
+    "name": "left teres minor",
+    "size": 757584
+  },
+  {
+    "id": "FMA38463",
+    "name": "right palmaris longus",
+    "size": 2220584
+  },
+  {
+    "id": "FMA38464",
+    "name": "left palmaris longus",
+    "size": 2153184
+  },
+  {
+    "id": "FMA45856",
+    "name": "right puborectalis",
+    "size": 896284
+  },
+  {
+    "id": "FMA45857",
+    "name": "left puborectalis",
+    "size": 891984
+  },
+  {
+    "id": "FMA46759",
+    "name": "right frontalis",
+    "size": 2944884
+  },
+  {
+    "id": "FMA46760",
+    "name": "left frontalis",
+    "size": 2929684
+  },
+  {
+    "id": "FMA46768",
+    "name": "aponeurosis of epicranius",
+    "size": 20283984
+  },
+  {
+    "id": "FMA46782",
+    "name": "orbital part of right orbicularis oculi",
+    "size": 416584
+  },
+  {
+    "id": "FMA46783",
+    "name": "orbital part of left orbicularis oculi",
+    "size": 414084
+  },
+  {
+    "id": "FMA46785",
+    "name": "palpebral part of right orbicularis oculi",
+    "size": 1195384
+  },
+  {
+    "id": "FMA46786",
+    "name": "palpebral part of left orbicularis oculi",
+    "size": 1152184
+  },
+  {
+    "id": "FMA46796",
+    "name": "right corrugator supercilii",
+    "size": 139284
+  },
+  {
+    "id": "FMA46797",
+    "name": "left corrugator supercilii",
+    "size": 138484
+  },
+  {
+    "id": "FMA46803",
+    "name": "right levator labii superioris alaeque nasi",
+    "size": 84484
+  },
+  {
+    "id": "FMA46804",
+    "name": "left levator labii superioris alaeque nasi",
+    "size": 82384
+  },
+  {
+    "id": "FMA46806",
+    "name": "right levator labii superioris",
+    "size": 271984
+  },
+  {
+    "id": "FMA46807",
+    "name": "left levator labii superioris",
+    "size": 268784
+  },
+  {
+    "id": "FMA46817",
+    "name": "right depressor labii inferioris",
+    "size": 498084
+  },
+  {
+    "id": "FMA46818",
+    "name": "left depressor labii inferioris",
+    "size": 491684
+  },
+  {
+    "id": "FMA46823",
+    "name": "right levator anguli oris",
+    "size": 202084
+  },
+  {
+    "id": "FMA46824",
+    "name": "left levator anguli oris",
+    "size": 199584
+  },
+  {
+    "id": "FMA46826",
+    "name": "right mentalis",
+    "size": 94684
+  },
+  {
+    "id": "FMA46827",
+    "name": "left mentalis",
+    "size": 92684
+  },
+  {
+    "id": "FMA46829",
+    "name": "right depressor anguli oris",
+    "size": 273184
+  },
+  {
+    "id": "FMA46830",
+    "name": "left depressor anguli oris",
+    "size": 268684
+  },
+  {
+    "id": "FMA46835",
+    "name": "right buccinator",
+    "size": 442984
+  },
+  {
+    "id": "FMA46836",
+    "name": "left buccinator",
+    "size": 441884
+  },
+  {
+    "id": "FMA46839",
+    "name": "right risorius",
+    "size": 336884
+  },
+  {
+    "id": "FMA46840",
+    "name": "left risorius",
+    "size": 334284
+  },
+  {
+    "id": "FMA46841",
+    "name": "orbicularis oris",
+    "size": 1880784
+  },
+  {
+    "id": "FMA52780",
+    "name": "ear",
+    "size": 1185784
+  },
+  {
+    "id": "FMA54737",
+    "name": "right inferior nasal concha",
+    "size": 80884
+  },
+  {
+    "id": "FMA54738",
+    "name": "left inferior nasal concha",
+    "size": 74284
+  },
+  {
+    "id": "FMA55606",
+    "name": "right nasalis",
+    "size": 369184
+  },
+  {
+    "id": "FMA55607",
+    "name": "left nasalis",
+    "size": 366384
+  },
+  {
+    "id": "FMA55608",
+    "name": "right depressor septi nasi",
+    "size": 129084
+  },
+  {
+    "id": "FMA55609",
+    "name": "left depressor septi nasi",
+    "size": 127284
+  },
+  {
+    "id": "FMA55610",
+    "name": "right procerus",
+    "size": 274584
+  },
+  {
+    "id": "FMA55611",
+    "name": "left procerus",
+    "size": 274184
+  },
+  {
+    "id": "FMA59815nsn",
+    "name": "labial part of mouth, nsn",
+    "size": 322084
+  },
+  {
+    "id": "FMA61844",
+    "name": "septum pellucidum",
+    "size": 1250684
+  },
+  {
+    "id": "FMA61961",
+    "name": "anterior commissure",
+    "size": 184584
+  },
+  {
+    "id": "FMA61975",
+    "name": "lamina terminalis",
+    "size": 122484
+  },
+  {
+    "id": "FMA62032",
+    "name": "habenula",
+    "size": 19284
+  },
+  {
+    "id": "FMA62072",
+    "name": "posterior commissure",
+    "size": 189384
+  },
+  {
+    "id": "FMA62327",
+    "name": "tuber cinereum",
+    "size": 348784
+  },
+  {
+    "id": "FMA62382",
+    "name": "right optic tract",
+    "size": 505584
+  },
+  {
+    "id": "FMA67936",
+    "name": "left optic tract",
+    "size": 506184
+  },
+  {
+    "id": "FMA70751",
+    "name": "set of head hairs",
+    "size": 4526384
+  },
+  {
+    "id": "FMA70754",
+    "name": "set of pubic hairs",
+    "size": 1408284
+  },
+  {
+    "id": "FMA71098",
+    "name": "set of eyebrows",
+    "size": 140984
+  },
+  {
+    "id": "FMA72653",
+    "name": "right superior frontal gyrus",
+    "size": 1522484
+  },
+  {
+    "id": "FMA72654",
+    "name": "left superior frontal gyrus",
+    "size": 1522584
+  },
+  {
+    "id": "FMA72655",
+    "name": "right middle frontal gyrus",
+    "size": 777984
+  },
+  {
+    "id": "FMA72656",
+    "name": "left middle frontal gyrus",
+    "size": 777284
+  },
+  {
+    "id": "FMA72661",
+    "name": "right precentral gyrus",
+    "size": 941984
+  },
+  {
+    "id": "FMA72662",
+    "name": "left precentral gyrus",
+    "size": 941884
+  },
+  {
+    "id": "FMA72665",
+    "name": "right postcentral gyrus",
+    "size": 843184
+  },
+  {
+    "id": "FMA72666",
+    "name": "left postcentral gyrus",
+    "size": 842984
+  },
+  {
+    "id": "FMA72667",
+    "name": "right supramarginal gyrus",
+    "size": 489184
+  },
+  {
+    "id": "FMA72668",
+    "name": "left supramarginal gyrus",
+    "size": 488984
+  },
+  {
+    "id": "FMA72669",
+    "name": "right angular gyrus",
+    "size": 658684
+  },
+  {
+    "id": "FMA72670",
+    "name": "left angular gyrus",
+    "size": 658284
+  },
+  {
+    "id": "FMA72685",
+    "name": "right middle temporal gyrus",
+    "size": 646384
+  },
+  {
+    "id": "FMA72686",
+    "name": "left middle temporal gyrus",
+    "size": 645984
+  },
+  {
+    "id": "FMA72687",
+    "name": "right inferior temporal gyrus",
+    "size": 652884
+  },
+  {
+    "id": "FMA72688",
+    "name": "left inferior temporal gyrus",
+    "size": 652084
+  },
+  {
+    "id": "FMA72689",
+    "name": "right fusiform gyrus",
+    "size": 307584
+  },
+  {
+    "id": "FMA72690",
+    "name": "left fusiform gyrus",
+    "size": 307484
+  },
+  {
+    "id": "FMA72701",
+    "name": "right accessory short gyrus",
+    "size": 767384
+  },
+  {
+    "id": "FMA72702",
+    "name": "left accessory short gyrus",
+    "size": 766584
+  },
+  {
+    "id": "FMA72717",
+    "name": "right cingulate gyrus",
+    "size": 585884
+  },
+  {
+    "id": "FMA72718",
+    "name": "left cingulate gyrus",
+    "size": 586284
+  },
+  {
+    "id": "FMA72800",
+    "name": "anterior part of right superior temporal gyrus",
+    "size": 417484
+  },
+  {
+    "id": "FMA72801",
+    "name": "anterior part of left superior temporal gyrus",
+    "size": 416984
+  },
+  {
+    "id": "FMA72804",
+    "name": "posterior part of right superior temporal gyrus",
+    "size": 523684
+  },
+  {
+    "id": "FMA72805",
+    "name": "posterior part of left superior temporal gyrus",
+    "size": 523684
+  },
+  {
+    "id": "FMA72908",
+    "name": "anterior limb of right internal capsule",
+    "size": 2436184
+  },
+  {
+    "id": "FMA72909",
+    "name": "anterior limb of left internal capsule",
+    "size": 2435684
+  },
+  {
+    "id": "FMA72939",
+    "name": "right stria terminalis",
+    "size": 153984
+  },
+  {
+    "id": "FMA72940",
+    "name": "left stria terminalis",
+    "size": 151384
+  },
+  {
+    "id": "FMA72977",
+    "name": "right insula",
+    "size": 612084
+  },
+  {
+    "id": "FMA72978",
+    "name": "left insula",
+    "size": 612184
+  },
+  {
+    "id": "FMA73303",
+    "name": "right lateral geniculate body",
+    "size": 131084
+  },
+  {
+    "id": "FMA73304",
+    "name": "left lateral geniculate body",
+    "size": 34384
+  },
+  {
+    "id": "FMA73309",
+    "name": "right medial geniculate body",
+    "size": 10484
+  },
+  {
+    "id": "FMA73310",
+    "name": "left medial geniculate body",
+    "size": 10084
+  },
+  {
+    "id": "FMA73422",
+    "name": "right superior colliculus",
+    "size": 10284
+  },
+  {
+    "id": "FMA73423",
+    "name": "left superior colliculus",
+    "size": 10284
+  },
+  {
+    "id": "FMA73434",
+    "name": "right inferior colliculus",
+    "size": 13584
+  },
+  {
+    "id": "FMA73435",
+    "name": "left inferior colliculus",
+    "size": 13584
+  },
+  {
+    "id": "FMA73461",
+    "name": "brachium of right superior colliculus",
+    "size": 36584
+  },
+  {
+    "id": "FMA73462",
+    "name": "brachium of left superior colliculus",
+    "size": 35784
+  },
+  {
+    "id": "FMA73463",
+    "name": "brachium of right inferior colliculus",
+    "size": 34384
+  },
+  {
+    "id": "FMA73464",
+    "name": "brachium of left inferior colliculus",
+    "size": 33684
+  },
+  {
+    "id": "FMA74075",
+    "name": "set of right levatores costarum longi",
+    "size": 2946284
+  },
+  {
+    "id": "FMA74076",
+    "name": "set of left levatores costarum longi",
+    "size": 2912784
+  },
+  {
+    "id": "FMA74077",
+    "name": "set of right levatores costarum breves",
+    "size": 1484784
+  },
+  {
+    "id": "FMA74078",
+    "name": "set of left levatores costarum breves",
+    "size": 1487084
+  },
+  {
+    "id": "FMA74877",
+    "name": "mammillary body",
+    "size": 83384
+  },
+  {
+    "id": "FMA75351",
+    "name": "interventricular foramen",
+    "size": 232184
+  },
+  {
+    "id": "FMA76891",
+    "name": "mesocolic taenia",
+    "size": 1576284
+  },
+  {
+    "id": "FMA76892",
+    "name": "omental taenia",
+    "size": 1855984
+  },
+  {
+    "id": "FMA76893",
+    "name": "free taenia",
+    "size": 2451484
+  },
+  {
+    "id": "FMA81752",
+    "name": "right cervical rotator",
+    "size": 773184
+  },
+  {
+    "id": "FMA81753",
+    "name": "left cervical rotator",
+    "size": 715784
+  },
+  {
+    "id": "FMA83740",
+    "name": "interpeduncular fossa",
+    "size": 21384
+  }
+]

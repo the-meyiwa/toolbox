@@ -10,10 +10,70 @@
 
 const opt = (value, label) => ({ value, label });
 
+const PDF_THUMB_FIELD = { key: 'thumbSize', label: 'Page thumbnails', type: 'segmented', default: 'medium',
+  options: [opt('small', 'Small'), opt('medium', 'Medium'), opt('large', 'Large')] };
+
 const QURAN_API = 'https://api.quran.com/api/v4';
 let quranTranslations = null, quranReciters = null;
 
 export const TOOL_SETTINGS = {
+  'case-digest': {
+    title: 'Case Digest',
+    hint: 'Page references, exports and the court authorities are weighed for',
+    groups: [{
+      title: 'Digest',
+      fields: [
+        { key: 'forum', label: 'Weigh authorities before', help: 'Shows whether each cited case binds this court.', type: 'select', default: 'HC',
+          options: [opt('SC', 'Supreme Court'), opt('CA', 'Court of Appeal'), opt('FHC', 'Federal High Court'), opt('HC', 'State High Court'), opt('FCTHC', 'FCT High Court'), opt('NIC', 'National Industrial Court'), opt('MC', "Magistrates' Court")] },
+        { key: 'pages', label: 'Show page references', help: 'For PDFs: the page each extract comes from.', type: 'toggle', default: true },
+        { key: 'exportToa', label: 'Include the table of authorities in exports', type: 'toggle', default: true },
+      ],
+    }],
+  },
+
+  'legal-document-analyzer': {
+    title: 'Legal Document Analyzer',
+    hint: 'Tenancy rules and calendar reminders',
+    groups: [{
+      title: 'Review',
+      fields: [
+        { key: 'state', label: 'Tenancy rules', help: 'Which State\'s tenancy law the checks assume.', type: 'select', default: 'auto',
+          options: [opt('auto', 'Detect from the document'), opt('lagos', 'Lagos State'), opt('fct', 'FCT'), opt('other', 'Another State')] },
+        { key: 'showInfo', label: 'Show suggestions for optional clauses', type: 'toggle', default: true },
+        { key: 'leadDays', label: 'Calendar reminder before each deadline', type: 'select', default: '7',
+          options: [opt('0', 'No reminder'), opt('1', '1 day before'), opt('3', '3 days before'), opt('7', '1 week before'), opt('14', '2 weeks before')] },
+      ],
+    }],
+  },
+
+  'legal-research': {
+    title: 'Legal Research Planner',
+    hint: 'Default court and databases',
+    groups: [{
+      title: 'Plans',
+      fields: [
+        { key: 'forum', label: 'Usual court', type: 'select', default: 'HC',
+          options: [opt('SC', 'Supreme Court'), opt('CA', 'Court of Appeal'), opt('FHC', 'Federal High Court'), opt('HC', 'State High Court'), opt('FCTHC', 'FCT High Court'), opt('NIC', 'National Industrial Court'), opt('MC', "Magistrates' Court")] },
+        { key: 'scholar', label: 'Include Google Scholar queries', type: 'toggle', default: true },
+      ],
+    }],
+  },
+
+  'legal-pdf': {
+    title: 'Legal PDF Bundle & Stamping',
+    hint: 'Numbering, exhibits and e-filing size',
+    groups: [{
+      title: 'Bundle',
+      fields: [
+        { key: 'pagePosition', label: 'Page number position', type: 'select', default: 'bottom-center',
+          options: [opt('bottom-center', 'Bottom centre'), opt('bottom-right', 'Bottom right'), opt('top-right', 'Top right')] },
+        { key: 'exhibitScheme', label: 'Exhibit marks', type: 'segmented', default: 'letters',
+          options: [opt('letters', 'A, B, C'), opt('numbers', '1, 2, 3'), opt('initials', 'Initials + number')] },
+        { key: 'capMB', label: 'E-filing size cap', help: 'Bundles above this are compressed; 0 turns it off.', type: 'range', min: 0, max: 50, step: 1, default: 10, format: (v) => (v ? `${v} MB` : 'Off') },
+      ],
+    }],
+  },
+
   chess: {
     title: 'Chess',
     hint: 'Board, computer opponent and coaching',
@@ -87,6 +147,35 @@ export const TOOL_SETTINGS = {
     ],
   },
 
+  'concrete-estimator': {
+    title: 'Construction Estimator',
+    hint: 'Units, pricing and default concrete',
+    groups: [
+      {
+        title: 'Measuring',
+        fields: [
+          { key: 'units', label: 'Dimensions in', help: 'Quantities in the bill stay metric, as materials are sold.', type: 'segmented', default: 'm',
+            options: [opt('m', 'Metres'), opt('ft', 'Feet')] },
+          { key: 'waste', label: 'Waste allowance', help: 'Added to materials only; labour is priced on net quantities.', type: 'range', min: 0, max: 20, step: 1, default: 5,
+            format: (v) => `${v}%` },
+          { key: 'grade', label: 'Default concrete', help: 'Used by any element set to "Project default". Blinding is always 1:3:6.', type: 'select', default: 'C20',
+            options: [opt('C15', 'C15 — 1:2:4'), opt('C20', 'C20 — 1:1.5:3'), opt('C25', 'C25 — 1:1:2'), opt('C30', 'C30 — about 1:1:1.5 (designed mix advised)')] },
+        ],
+      },
+      {
+        title: 'Pricing',
+        fields: [
+          { key: 'region', label: 'Rate region', help: 'Scales the built-in rates. Rates you type in yourself are kept as they are.', type: 'select', default: 'lagos',
+            options: [opt('lagos', 'Lagos'), opt('abuja', 'Abuja (FCT)'), opt('ph', 'Port Harcourt'), opt('southwest', 'Ibadan, Abeokuta, South-West'),
+              opt('southeast', 'Enugu, Onitsha, South-East'), opt('north', 'Kano, Kaduna, North')] },
+          { key: 'vat', label: 'Add VAT at 7.5%', help: 'New projects start with this; each project can switch it.', type: 'toggle', default: false },
+          { key: 'currency', label: 'Show amounts as', type: 'segmented', default: 'symbol',
+            options: [opt('symbol', '₦1,250,000'), opt('code', 'NGN 1,250,000'), opt('compact', '₦1.25m')] },
+        ],
+      },
+    ],
+  },
+
   mail: {
     title: 'Mail',
     hint: 'Layout, reading and sending',
@@ -154,6 +243,61 @@ export const TOOL_SETTINGS = {
     ],
   },
 
+  'invoice-generator': {
+    title: 'Invoice Generator',
+    hint: 'Currency, tax defaults, due dates and the invoice template',
+    groups: [
+      {
+        title: 'New invoices',
+        hint: 'Your business details, bank account and number prefixes are kept on the Business page of the tool.',
+        fields: [
+          { key: 'currency', label: 'Default currency', type: 'select', default: 'NGN',
+            options: [opt('NGN', 'Nigerian Naira (NGN)'), opt('USD', 'US Dollar (USD)'), opt('GBP', 'British Pound (GBP)'), opt('EUR', 'Euro (EUR)')] },
+          { key: 'vat', label: 'Charge VAT at 7.5%', help: 'New invoices start with VAT on every line. You can switch it per invoice or per line.', type: 'toggle', default: true },
+          { key: 'whtRate', label: 'Withholding tax', help: 'Deducted by the client and shown below the total. 5% for most contracts and supplies, 10% for professional and consultancy fees.',
+            type: 'segmented', default: '0', options: [opt('0', 'None'), opt('5', '5%'), opt('10', '10%')] },
+          { key: 'dueDays', label: 'Payment due', type: 'select', default: '14',
+            options: [opt('0', 'On receipt'), opt('7', 'In 7 days'), opt('14', 'In 14 days'), opt('30', 'In 30 days'), opt('45', 'In 45 days'), opt('60', 'In 60 days')] },
+        ],
+      },
+      {
+        title: 'Document',
+        fields: [
+          { key: 'template', label: 'Template', type: 'segmented', default: 'classic',
+            options: [opt('classic', 'Classic'), opt('modern', 'Modern'), opt('compact', 'Compact')] },
+          { key: 'numberFormat', label: 'Number format', type: 'select', default: 'standard',
+            options: [opt('standard', '1,234,567.89'), opt('space', '1 234 567.89'), opt('european', '1.234.567,89')] },
+          { key: 'amountInWords', label: 'Print the amount in words', help: 'For example "One Million Naira Only", as banks and many clients expect.', type: 'toggle', default: true },
+        ],
+      },
+    ],
+  },
+
+  timesheet: {
+    title: 'Timesheet & Billables',
+    hint: 'Billing increments, week start and defaults for new entries',
+    groups: [
+      {
+        title: 'Time',
+        fields: [
+          { key: 'increment', label: 'Round billed time up to', help: 'Six-minute units (a tenth of an hour) are usual for legal work.', type: 'select', default: '6',
+            options: [opt('0', 'The exact minute'), opt('6', '6 minutes (0.1 hour)'), opt('15', '15 minutes'), opt('30', '30 minutes')] },
+          { key: 'weekStart', label: 'Week starts on', type: 'segmented', default: '1', options: [opt('1', 'Monday'), opt('0', 'Sunday')] },
+          { key: 'billable', label: 'New entries are billable', type: 'toggle', default: true },
+          { key: 'currency', label: 'Currency for rates', type: 'select', default: 'NGN',
+            options: [opt('NGN', 'Nigerian Naira (NGN)'), opt('USD', 'US Dollar (USD)'), opt('GBP', 'British Pound (GBP)'), opt('EUR', 'Euro (EUR)')] },
+        ],
+      },
+      {
+        title: 'Invoicing',
+        fields: [
+          { key: 'group', label: 'Invoice lines', help: 'How unbilled time turns into invoice lines.', type: 'segmented', default: 'entry',
+            options: [opt('entry', 'One per entry'), opt('matter', 'One per matter')] },
+        ],
+      },
+    ],
+  },
+
   quran: {
     title: 'Quran',
     hint: 'Translation, recitation and reading size',
@@ -184,5 +328,72 @@ export const TOOL_SETTINGS = {
         ],
       },
     ],
+  },
+  /* The four PDF tools share one workspace; each keeps its own defaults. */
+  'pdf-editor': {
+    title: 'PDF Editor',
+    hint: 'Page grid, opening tab and export quality',
+    groups: [
+      {
+        title: 'Workspace',
+        fields: [
+          PDF_THUMB_FIELD,
+          { key: 'startTab', label: 'Open files on', type: 'select', default: 'organise',
+            options: [opt('organise', 'Organise'), opt('edit', 'Edit'), opt('sign', 'Sign'), opt('forms', 'Forms'), opt('protect', 'Protect'), opt('convert', 'Convert')] },
+          { key: 'annotColor', label: 'Default ink colour', type: 'segmented', default: '#d92626',
+            options: [opt('#d92626', 'Red'), opt('#111111', 'Black'), opt('#1f7a3a', 'Green')] },
+        ],
+      },
+      {
+        title: 'Export',
+        fields: [
+          { key: 'imageDpi', label: 'Page image resolution', help: 'Used for PNG/JPEG export, redaction and downsampling.', type: 'range', min: 72, max: 300, step: 6, default: 150, format: (v) => `${v} dpi` },
+          { key: 'textFormat', label: 'Extract text as', type: 'segmented', default: 'md', options: [opt('md', 'Markdown'), opt('txt', 'Plain text')] },
+        ],
+      },
+    ],
+  },
+
+  'pdf-split': {
+    title: 'PDF Split',
+    hint: 'Default split method and page grid',
+    groups: [{
+      title: 'Split',
+      fields: [
+        PDF_THUMB_FIELD,
+        { key: 'mode', label: 'Default method', type: 'select', default: 'ranges',
+          options: [opt('ranges', 'Page ranges'), opt('every', 'Every N pages'), opt('bookmarks', 'By bookmarks'), opt('selected', 'Selected pages'), opt('each', 'Every page')] },
+        { key: 'everyN', label: 'Pages per file (every N)', type: 'range', min: 1, max: 50, step: 1, default: 1, format: (v) => `${v} page${v === 1 ? '' : 's'}` },
+      ],
+    }],
+  },
+
+  'pdf-merge': {
+    title: 'PDF Merge',
+    hint: 'Bookmarks and page grid',
+    groups: [{
+      title: 'Merge',
+      fields: [
+        PDF_THUMB_FIELD,
+        { key: 'bookmarks', label: 'Add a bookmark for each file', help: 'Lets readers jump between the original documents.', type: 'toggle', default: true },
+        { key: 'compress', label: 'Compact the result', help: 'Re-save with object streams (lossless).', type: 'toggle', default: true },
+      ],
+    }],
+  },
+
+  'image-to-pdf': {
+    title: 'Image to PDF',
+    hint: 'Page size, margins and image quality',
+    groups: [{
+      title: 'Pages',
+      fields: [
+        { key: 'pageSize', label: 'Page size', type: 'select', default: 'a4',
+          options: [opt('a4', 'A4'), opt('letter', 'US Letter'), opt('legal', 'US Legal'), opt('a5', 'A5'), opt('a3', 'A3'), opt('fit', 'Fit to image')] },
+        { key: 'margin', label: 'Margin', type: 'segmented', default: 'normal',
+          options: [opt('none', 'None'), opt('small', 'Small'), opt('normal', 'Normal'), opt('large', 'Large')] },
+        { key: 'quality', label: 'Image quality', help: 'Original embeds JPEG and PNG files untouched.', type: 'select', default: 'original',
+          options: [opt('original', 'Original'), opt('high', 'High'), opt('balanced', 'Balanced'), opt('small', 'Small file')] },
+      ],
+    }],
   },
 };

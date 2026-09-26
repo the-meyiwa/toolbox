@@ -13,6 +13,7 @@
    ============================================================ */
 
 import { TOOLS } from '../../registry/index.js';
+import * as CE from '../construction/estimate.js';
 
 const lower = (v) => String(v ?? '').toLowerCase().trim();
 
@@ -209,6 +210,55 @@ export const EXTRA_TOOL_DECLARATIONS = [
     },
   },
   {
+    name: 'create_invoice',
+    description: "Create an invoice (or quotation) and save it as a draft in the user's Invoice Generator records, with Nigerian VAT (7.5%) and withholding tax handled. Amounts are in major units (naira, not kobo). The client is matched by name or created. Returns the number, totals and amount in words, with a card that opens the invoice. Prefer this over generate_invoice whenever the user wants the invoice kept, sent or tracked.",
+    parameters: {
+      type: 'object',
+      properties: {
+        client: { type: 'string', description: 'Client name. An existing client with this name is reused; otherwise one is created.' },
+        client_email: { type: 'string' },
+        client_address: { type: 'string' },
+        items: {
+          type: 'array',
+          description: 'Line items.',
+          items: {
+            type: 'object',
+            properties: {
+              description: { type: 'string' },
+              qty: { type: 'number', description: 'Quantity (default 1). Hours can be fractional.' },
+              rate: { type: 'number', description: 'Unit price in major units, e.g. 4850000 for ₦4,850,000.' },
+              unit: { type: 'string', description: 'Optional unit, e.g. hr, m², trip.' },
+              discount: { type: 'number', description: 'Optional discount percent for this line.' },
+            },
+            required: ['description', 'rate'],
+          },
+        },
+        type: { type: 'string', enum: ['invoice', 'quote'], description: 'Default invoice.' },
+        currency: { type: 'string', enum: ['NGN', 'USD', 'GBP', 'EUR'], description: 'Default: the user\'s preference (usually NGN).' },
+        fx_rate: { type: 'number', description: 'Naira per 1 unit of a foreign currency, for the Naira equivalent.' },
+        vat: { type: 'boolean', description: 'Charge VAT at 7.5% on all lines (default: the user\'s preference, usually yes).' },
+        wht: { type: 'number', description: 'Withholding tax percent deducted by the client: 0, 5 (contracts, supplies) or 10 (professional fees). Default: preference.' },
+        due_days: { type: 'number', description: 'Days until payment is due (default: preference, usually 14).' },
+        reference: { type: 'string', description: 'PO number or matter reference.' },
+        notes: { type: 'string' },
+      },
+      required: ['client', 'items'],
+    },
+  },
+  {
+    name: 'list_invoices',
+    description: "List the user's saved invoices or quotes with status (draft, sent, partially paid, paid, overdue, void) and totals, plus what is outstanding and overdue. Use to answer who owes money, what is overdue, or what was paid this month.",
+    parameters: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', enum: ['all', 'draft', 'outstanding', 'overdue', 'partial', 'paid', 'void', 'sent', 'accepted', 'converted', 'declined', 'expired'], description: 'Filter (default all).' },
+        type: { type: 'string', enum: ['invoice', 'quote'], description: 'Default invoice.' },
+        client: { type: 'string', description: 'Only this client (name).' },
+        limit: { type: 'number', description: 'Max rows (default 20).' },
+      },
+    },
+  },
+  {
     name: 'find_toolbox_tools',
     description: 'Search the 130+ Toolbox tools by what they do. Returns ids, names and descriptions. Use before run_toolbox_tool or open_toolbox_tool when unsure which tool fits.',
     parameters: {
@@ -231,12 +281,94 @@ export const EXTRA_TOOL_DECLARATIONS = [
     },
   },
   {
+    name: 'estimate_construction',
+    description: 'Price a building or container-conversion job in naira with the Toolbox Construction Estimator: bill of quantities by element (concrete, rebar, blocks, plaster, screed, tiles, paint, roofing, doors/windows, excavation, hardcore, DPM, formwork), contingency, VAT 7.5%, and an aggregated shopping list (bags of cement, tonnes and tipper trips of sand/granite, 12 m rods by size, blocks, buckets of paint). Give `building` for a quick whole-building estimate from its outline, `container_base` for container foundations, and/or explicit `elements`. All dimensions metric. Rates are editable 2026 Nigerian estimates, so present totals as estimates. The user can open the result in the full estimator.',
+    parameters: {
+      type: 'object',
+      properties: {
+        project_name: { type: 'string' },
+        client: { type: 'string' },
+        site: { type: 'string' },
+        building: {
+          type: 'object',
+          description: 'Rectangular building outline; generates footings, slab, columns, walls, lintels, beams, finishes and roof.',
+          properties: {
+            length: { type: 'number', description: 'metres' }, width: { type: 'number', description: 'metres' },
+            storeys: { type: 'number', description: '1-4 (default 1)' }, wall_height: { type: 'number', description: 'metres per storey (default 3)' },
+            finishes: { type: 'boolean', description: 'Include plaster, screed, tiles, paint, ceiling, doors and windows (default true).' },
+            roof: { type: 'boolean', description: 'Include long-span roof and trusses (default true).' },
+          },
+          required: ['length', 'width'],
+        },
+        container_base: {
+          type: 'object',
+          description: 'Pad footings, plinth pedestals and an apron slab for shipping containers.',
+          properties: { size: { type: 'string', enum: ['20', '40'] }, count: { type: 'number' }, apron: { type: 'boolean' } },
+        },
+        elements: {
+          type: 'array',
+          description: `Explicit elements. Each has "type" plus any of its fields (omitted fields use sensible defaults). Types and fields (m = metres, mm = millimetres, m2 = square metres): ${Object.entries(CE.ELEMENT_TYPES).map(([k, d]) => `${k}: ${d.fields.map(f => `${f.key}${['m', 'mm', 'm2', 'deg', 'pct'].includes(f.kind) ? `(${f.kind})` : f.kind === 'select' ? `(${f.options.map(o => o.value).join('|')})` : ''}`).join(', ')}`).join('; ')}.`,
+          items: {
+            type: 'object',
+            properties: {
+              type: { type: 'string', enum: Object.keys(CE.ELEMENT_TYPES) },
+              name: { type: 'string', description: 'Label for this section of the bill.' },
+            },
+            required: ['type'],
+          },
+        },
+        contingency_pct: { type: 'number', description: 'Default 5.' },
+        vat: { type: 'boolean', description: 'Add VAT at 7.5% (default: the user\'s preference).' },
+        waste_pct: { type: 'number', description: 'Material waste allowance (default: the user\'s preference, usually 5).' },
+        grade: { type: 'string', enum: ['C15', 'C20', 'C25', 'C30'], description: 'Default concrete grade.' },
+        region: { type: 'string', enum: Object.keys(CE.REGIONS), description: 'Rate region (default: the user\'s preference, Lagos).' },
+      },
+    },
+  },
+  {
     name: 'open_toolbox_tool',
     description: 'Open a Toolbox tool for the user (navigates the app). Use when the user wants to work in a tool themselves, or after preparing something they should continue in the full tool.',
     parameters: {
       type: 'object',
       properties: { tool_id: { type: 'string' } },
       required: ['tool_id'],
+    },
+  },
+  {
+    name: 'analyze_legal_document',
+    description: 'Review a contract, lease, tenancy agreement, deed or other legal instrument for Nigerian practice: parties, clause map, missing clauses, risk flags (one-sided indemnity, uncapped liability, automatic renewal, unilateral termination, foreign governing law, Lagos tenancy rules), obligations with deadlines, execution check and stamp duty / registration reminders. Pass the document text in `text` (for an attached PDF or Word file, pass the text you can read from it). Results are heuristic prompts for review, not advice.',
+    parameters: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Full text of the document.' },
+        doc_type: { type: 'string', enum: ['auto', 'tenancy', 'supply', 'services', 'employment', 'nda', 'loan', 'assignment', 'poa', 'mou', 'generic'], description: 'Document type (default: detect).' },
+        state: { type: 'string', enum: ['auto', 'lagos', 'fct', 'other'], description: 'Which State\'s tenancy rules apply (default: detect).' },
+      },
+      required: ['text'],
+    },
+  },
+  {
+    name: 'parse_citations',
+    description: 'Extract and normalise every legal citation in a text: Nigerian law reports (NWLR with Pt., LPELR, All FWLR, SC, SCNJ …), foreign reports (AC, QB, WLR, All ER, neutral citations), suit/appeal numbers, statutes (with Cap. LFN references), Constitution sections and rules of court (Order/Rule), and build a table of authorities with pinpoints, court and whether each case binds a chosen court. Only what is in the text is returned; nothing is looked up.',
+    parameters: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Text containing citations (a brief, judgment, opinion or list).' },
+        forum: { type: 'string', enum: ['SC', 'CA', 'FHC', 'HC', 'FCTHC', 'NIC', 'MC'], description: 'Court the authorities will be cited before, for the binding/persuasive column (default HC).' },
+      },
+      required: ['text'],
+    },
+  },
+  {
+    name: 'case_digest',
+    description: 'Digest a Nigerian judgment or ruling from its text: court, parties, appeal/suit number, date, coram and lead judgment, facts, issues for determination and how each was resolved, arguments, holding and outcome, candidate ratio decidendi and obiter, orders, and a table of authorities, plus a citation built from the judgment. Pass the judgment text in `text`.',
+    parameters: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Full text of the judgment.' },
+        forum: { type: 'string', enum: ['SC', 'CA', 'FHC', 'HC', 'FCTHC', 'NIC', 'MC'], description: 'Court to weigh the cited authorities against (default HC).' },
+      },
+      required: ['text'],
     },
   },
 ];
@@ -634,12 +766,204 @@ async function designContainerTool(args) {
   };
 }
 
+/* ---------------- construction estimate ---------------- */
+
+async function estimateConstruction(args = {}) {
+  let prefs = { units: 'm', waste: 5, grade: 'C20', region: 'lagos', vat: false };
+  let overrides = {}, trips = {};
+  try { prefs = { ...prefs, ...(await import('../tool-settings.js')).getToolSettings('concrete-estimator') }; } catch { /* defaults */ }
+  try {
+    const st = JSON.parse(localStorage.getItem('toolbox_construction_v1') || '{}');
+    overrides = st.rates?.overrides || {}; trips = st.rates?.trips || {};
+  } catch { /* storage unavailable */ }
+  const elements = [];
+  if (args.building && Number(args.building.length) > 0 && Number(args.building.width) > 0) {
+    const b = args.building;
+    elements.push(...CE.presetBuilding({ length: b.length, width: b.width, storeys: b.storeys, wallHeight: b.wall_height, finishes: b.finishes !== false, roof: b.roof !== false }));
+  }
+  if (args.container_base) elements.push(...CE.presetContainerBase(args.container_base));
+  for (const raw of Array.isArray(args.elements) ? args.elements : []) {
+    const type = String(raw?.type || '').toLowerCase().replace(/[\s-]+/g, '_');
+    if (!CE.ELEMENT_TYPES[type]) continue;
+    const def = CE.ELEMENT_TYPES[type];
+    const o = {};
+    for (const f of def.fields) {
+      const snake = f.key.replace(/[A-Z]/g, c => `_${c.toLowerCase()}`);
+      const v = raw[f.key] ?? raw[snake];
+      if (v === undefined || v === null) continue;
+      o[f.key] = f.kind === 'select' ? String(v) : f.kind === 'bool' ? Boolean(v) : f.kind === 'text' ? String(v) : Number(v);
+    }
+    if (raw.name) o.name = String(raw.name);
+    elements.push(CE.newElement(type, o));
+  }
+  if (!elements.length) return { status: 'error', message: 'Give a building outline (length and width), a container_base, or a list of elements to estimate.' };
+  const region = CE.REGIONS[args.region] ? args.region : prefs.region;
+  const project = CE.normaliseProject({
+    name: args.project_name || (args.building ? `${args.building.length} × ${args.building.width} m building` : 'Construction estimate'),
+    client: args.client, site: args.site,
+    contingency: args.contingency_pct ?? 5,
+    vat: typeof args.vat === 'boolean' ? args.vat : null,
+    elements,
+  });
+  const r = CE.estimate(project, {
+    rates: CE.resolveRates(overrides, region), trips,
+    waste: (Number.isFinite(Number(args.waste_pct)) ? Number(args.waste_pct) : prefs.waste) / 100,
+    grade: CE.GRADES[args.grade] ? args.grade : prefs.grade, vat: prefs.vat,
+  });
+  const ngn = (v) => `₦${Math.round(v).toLocaleString('en-US')}`;
+  const key = ['cement', 'sand', 'granite', 'rebar', 'block9', 'block6'];
+  const brief = r.shopping.filter(s => key.includes(s.key)).map(s => `${s.qty.toLocaleString('en-US')} ${s.unit} ${s.label.toLowerCase()}`).join(', ');
+  return {
+    status: 'success', renderer: 'construction-estimate', type: 'construction-estimate',
+    project: r.project,
+    region: CE.REGIONS[region].label, ratesDate: CE.RATES_DATE,
+    total: Math.round(r.total), subtotal: Math.round(r.subtotal), materials: Math.round(r.materialsCost), labour: Math.round(r.labourCost),
+    contingencyPct: r.contingencyPct, contingency: Math.round(r.contingency), vatOn: r.vatOn, vat: Math.round(r.vat),
+    floorArea: Math.round(r.floorArea * 10) / 10, costPerM2: Math.round(r.costPerM2),
+    sections: r.groups.map(g => ({ name: g.name, type: g.type, subtotal: Math.round(g.subtotal), lines: g.lines.length })),
+    shopping: r.shopping.map(s => ({ group: s.group, label: s.label, qty: s.qty, unit: s.unit, detail: s.detail, cost: s.cost == null ? null : Math.round(s.cost) })),
+    issues: r.issues,
+    openHash: '#concrete-estimator',
+    message: `${r.project.name}: estimated ${ngn(r.total)} (${r.groups.length} sections; subtotal ${ngn(r.subtotal)}, contingency ${r.contingencyPct}%${r.vatOn ? `, VAT ${ngn(r.vat)}` : ', no VAT'})${r.floorArea > 0 ? `, about ${ngn(r.costPerM2)} per m² over ${Math.round(r.floorArea)} m²` : ''}. Key materials: ${brief}. Rates are editable ${CE.REGIONS[region].label} 2026 estimates, not quotes; excludes plumbing, electrical and external works unless listed.`,
+  };
+}
+
+/* ---------------- invoicing ---------------- */
+
+async function invoicingDefaults() {
+  try {
+    const { getToolSettings } = await import('../tool-settings.js');
+    const p = getToolSettings('invoice-generator');
+    return { currency: p.currency, vat: p.vat !== false, whtRate: Number(p.whtRate) || 0, dueDays: Number(p.dueDays ?? 14), template: p.template, numberFormat: p.numberFormat };
+  } catch { return { currency: 'NGN', vat: true, whtRate: 0, dueDays: 14, template: 'classic', numberFormat: 'standard' }; }
+}
+
+function invoiceSummary(S, store, doc, fmt) {
+  const t = S.computeTotals(doc);
+  const client = store.getClient(doc.clientId);
+  const m = (v) => S.formatMoney(v, doc.currency, { format: fmt });
+  return {
+    id: doc.id, type: doc.type, number: doc.number, status: S.effectiveStatus(doc), statusLabel: S.STATUS_LABEL[S.effectiveStatus(doc)],
+    client: client?.name || '', currency: doc.currency, issueDate: doc.issueDate, dueDate: doc.dueDate, dueDateText: S.formatDate(doc.dueDate, 'short'),
+    items: doc.items.map(i => ({ description: i.description, qty: i.qty, unit: i.unit, rate: S.toMajor(i.rate) })),
+    vatRate: doc.vat.mode === 'none' ? 0 : doc.vat.rate, whtRate: t.whtRate,
+    subtotal: S.toMajor(t.subtotal), vat: S.toMajor(t.vat), total: S.toMajor(t.total), wht: S.toMajor(t.wht),
+    payable: S.toMajor(t.payable), paid: S.toMajor(t.paid), balance: S.toMajor(t.balance),
+    display: { subtotal: m(t.subtotal), vat: m(t.vat), total: m(t.total), wht: m(t.wht), payable: m(t.payable), paid: m(t.paid), balance: m(t.balance) },
+    amountInWords: S.amountInWords(doc.type === 'quote' ? t.total : t.payable, doc.currency),
+  };
+}
+
+async function createInvoiceTool(args) {
+  const S = await import('../invoicing/store.js');
+  const store = S.getStore();
+  const d = await invoicingDefaults();
+  const items = (Array.isArray(args.items) ? args.items : []).filter(i => i && (i.description || i.rate))
+    .map(i => ({ description: String(i.description || 'Item'), qty: Number(i.qty ?? 1) || 1, unit: i.unit || '', rate: S.toMinor(i.rate), discount: Number(i.discount) || 0, vat: true }));
+  if (!items.length) return { status: 'error', message: 'Give at least one line item with a description and rate.' };
+  if (!String(args.client || '').trim()) return { status: 'error', message: 'Say who the invoice is for.' };
+  const client = store.ensureClient({ name: String(args.client).trim(), email: args.client_email || '', address: args.client_address || '' });
+  const vatOn = typeof args.vat === 'boolean' ? args.vat : d.vat;
+  const currency = S.CURRENCIES[String(args.currency || '').toUpperCase()] ? String(args.currency).toUpperCase() : d.currency;
+  const doc = store.createDoc({
+    type: args.type === 'quote' ? 'quote' : 'invoice', clientId: client.id, currency, fxRate: args.fx_rate, items,
+    vat: { mode: vatOn ? 'global' : 'none', rate: 7.5 },
+    wht: { rate: args.wht !== undefined ? Number(args.wht) || 0 : d.whtRate },
+    dueDays: args.due_days !== undefined ? Number(args.due_days) : d.dueDays,
+    reference: args.reference || '', ...(args.notes ? { notes: String(args.notes) } : {}),
+  }, d);
+  const inv = invoiceSummary(S, store, doc, d.numberFormat);
+  return {
+    status: 'success', renderer: 'invoice-card', type: 'invoice-card', invoice: inv,
+    message: `Saved draft ${inv.type === 'quote' ? 'quote' : 'invoice'} ${inv.number} for ${inv.client}: total ${inv.display.total}${inv.wht ? `, ${inv.display.payable} payable after ${inv.whtRate}% WHT` : ''}. It is a draft in Invoice Generator; the user can open it to review, print or send.`,
+  };
+}
+
+async function listInvoicesTool(args) {
+  const S = await import('../invoicing/store.js');
+  const store = S.getStore();
+  const d = await invoicingDefaults();
+  const type = args.type === 'quote' ? 'quote' : 'invoice';
+  const client = args.client ? store.findClientByName(args.client) : null;
+  if (args.client && !client) return { status: 'error', message: `No client named "${args.client}". Clients: ${store.listClients().map(c => c.name).join(', ') || 'none yet'}.` };
+  const docs = store.listDocs({ type, status: args.status || 'all', clientId: client?.id || null });
+  const limit = Math.max(1, Math.min(50, Number(args.limit) || 20));
+  const dash = store.dashboard();
+  const m = (v) => S.formatMoney(v, 'NGN', { format: d.numberFormat });
+  const rows = docs.slice(0, limit).map(x => invoiceSummary(S, store, x, d.numberFormat)).map(({ items: _i, ...r }) => r);
+  return {
+    status: 'success', renderer: 'invoice-list', type: 'invoice-list', docType: type, filter: args.status || 'all', client: client?.name || null,
+    count: docs.length, invoices: rows,
+    summary: { outstanding: m(dash.outstanding), overdue: m(dash.overdue), paidThisMonth: m(dash.paidThisMonth), drafts: dash.drafts, outstandingCount: dash.counts.outstanding || 0, overdueCount: dash.counts.overdue || 0 },
+    message: docs.length
+      ? `${docs.length} ${type}${docs.length === 1 ? '' : 's'}${args.status && args.status !== 'all' ? ` (${args.status})` : ''}. Outstanding across all invoices: ${m(dash.outstanding)}; overdue ${m(dash.overdue)}; paid this month ${m(dash.paidThisMonth)}.`
+      : `No ${type}s match. Outstanding across all invoices: ${m(dash.outstanding)}.`,
+  };
+}
+
 /* ---------------- dispatcher ---------------- */
+
+/* ---------------- legal (Nigerian practice) ---------------- */
+
+const LEGAL_NOTE = 'Heuristic, on-device extraction: tell the user to check every point against the document; do not add case law that is not in the text.';
+const needText = (args) => (String(args?.text || '').trim().length >= 40 ? null : { status: 'error', message: 'Pass the document text in `text` (at least a few sentences). For an attached PDF or Word file, pass the text you can read from it.' });
+
+async function analyzeLegalDocument(args) {
+  const miss = needText(args); if (miss) return miss;
+  const { analyzeContract } = await import('../legal/contract.js');
+  const a = analyzeContract(args.text, { docType: args.doc_type && args.doc_type !== 'auto' ? args.doc_type : null, state: args.state || 'auto' });
+  const risks = a.flags.filter(f => f.severity !== 'info').map(f => ({ severity: f.severity, title: f.title, where: f.where, why: f.why, evidence: f.evidence, suggestion: f.suggestion }));
+  return {
+    status: 'success', renderer: 'legal-contract', type: 'legal-contract',
+    title: a.title, docType: a.docTypeLabel, parties: a.parties,
+    clauses: a.clauses.map(c => ({ number: c.number, heading: c.heading, type: c.typeLabel })),
+    missing: a.coverage.filter(c => !c.present).map(c => ({ label: c.label, required: c.required })),
+    risks, obligations: a.obligations.map(o => ({ party: o.party, action: o.action, deadline: o.deadline?.text || null, due: o.deadline?.due || null, clause: o.clause?.number || null })),
+    execution: a.execution, reminders: a.reminders.map(r => ({ title: r.title, why: r.why })),
+    definedTerms: a.defined.map(d => ({ term: d.term, used: d.count })),
+    counts: a.counts, openHash: '#legal-document-analyzer', note: LEGAL_NOTE,
+    message: `${a.title} (${a.docTypeLabel}): ${a.counts.clauses} clauses, ${a.counts.high} high and ${a.counts.medium} medium risk flags, ${a.counts.obligations} obligations. ${LEGAL_NOTE}`,
+  };
+}
+
+async function parseCitationsTool(args) {
+  const miss = needText(args); if (miss) return miss;
+  const { buildAuthorities } = await import('../legal/authorities.js');
+  const { findSuitNumbers } = await import('../legal/citations.js');
+  const toa = buildAuthorities(args.text, { forum: args.forum || 'HC' });
+  const cases = toa.cases.all.map(c => ({ title: c.title, citations: c.citations, court: c.courtName, courtInferred: Boolean(c.court?.inferred), foreign: c.foreign, weight: c.court && c.weight ? c.weight.label : null, pinpoints: c.pinpoints, treatments: c.treatments, warnings: c.warnings, mentions: c.mentions }));
+  const statutes = [...toa.constitution, ...toa.statutes].map(s => ({ name: s.name, provisions: s.provisions.map(p => p.ref) }));
+  return {
+    status: 'success', renderer: 'legal-citations', type: 'legal-citations', forum: args.forum || 'HC',
+    cases, statutes, rules: toa.rules, suits: findSuitNumbers(args.text).map(s => ({ number: s.normalised, court: s.court?.name || null })),
+    counts: toa.counts, note: LEGAL_NOTE,
+    message: `${cases.length} cases, ${statutes.length} statutes, ${toa.rules.length} rules of court recognised. ${LEGAL_NOTE}`,
+  };
+}
+
+async function caseDigestTool(args) {
+  const miss = needText(args); if (miss) return miss;
+  const { extractJudgment } = await import('../legal/judgment.js');
+  const d = extractJudgment(args.text, { forum: args.forum || 'HC' });
+  const pick = (list, n) => list.slice(0, n).map(x => ({ text: x.text, page: x.page, resolution: x.resolution || undefined }));
+  return {
+    status: 'success', renderer: 'legal-digest', type: 'legal-digest',
+    title: d.title, court: d.court?.name || null, suitNo: d.suitNo, date: d.date?.text || null, lead: d.lead, coram: d.coram,
+    outcome: d.outcome?.label || null, citation: d.citation,
+    facts: pick(d.facts, 2), issues: pick(d.issues, 8), holdings: pick(d.holdings, 6), ratio: pick(d.ratio, 5), obiter: pick(d.obiter, 4), orders: pick(d.orders, 8),
+    authorities: d.authorities.cases.all.map(c => ({ title: c.title, citations: c.citations, court: c.courtName })), statutes: [...d.authorities.constitution, ...d.authorities.statutes].map(s => s.name),
+    openHash: '#case-digest', note: LEGAL_NOTE,
+    message: `${d.title}${d.court ? `, ${d.court.name}` : ''}${d.date ? `, ${d.date.text}` : ''}: ${d.issues.length} issues, outcome ${d.outcome?.label || 'not found'}, ${d.authorities.counts.cases} cases cited. Ratio and obiter are candidates. ${LEGAL_NOTE}`,
+  };
+}
 
 export const EXTRA_TOOL_NAMES = new Set(EXTRA_TOOL_DECLARATIONS.map(d => d.name));
 
 export async function executeExtraTool(name, args = {}) {
   switch (name) {
+    case 'analyze_legal_document': return analyzeLegalDocument(args);
+    case 'parse_citations': return parseCitationsTool(args);
+    case 'case_digest': return caseDigestTool(args);
     case 'update_plan': {
       const steps = (args.steps || []).map(s => ({ title: String(s.title || ''), status: s.status || 'pending' }));
       const done = steps.filter(s => s.status === 'done').length;
@@ -657,8 +981,11 @@ export async function executeExtraTool(name, args = {}) {
       return { status: 'success', renderer: 'svg-illustration', type: 'svg-illustration', title: args.title || 'Illustration', caption: args.caption || '', svg, message: 'Illustration shown to the user.' };
     }
     case 'design_container': return designContainerTool(args);
+    case 'create_invoice': return createInvoiceTool(args);
+    case 'list_invoices': return listInvoicesTool(args);
     case 'find_toolbox_tools': return findTools(args.query || '');
     case 'run_toolbox_tool': return runTool(args);
+    case 'estimate_construction': return estimateConstruction(args);
     case 'open_toolbox_tool': {
       const tool = TOOLS.find(t => t.id === args.tool_id || t.id === String(args.tool_id).replace(/_/g, '-'));
       if (!tool) return { status: 'error', message: `No tool "${args.tool_id}".` };

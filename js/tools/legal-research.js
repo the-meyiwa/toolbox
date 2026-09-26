@@ -1,283 +1,203 @@
-import { tbAlert } from '../lib/dialog.js';
 /* ============================================================
-   Legal Research — Structured Issue Tree & Precedent Matrix.
+   Legal Research Planner — issues, threshold points, doctrines,
+   statutes, Boolean queries for LawPavilion, LegalPedia,
+   NigeriaLII and Google Scholar, an authority matrix and a
+   research log. Plans are saved in this browser (localStorage)
+   and export as Markdown.
 
-   Structures legal research questions into:
-   - Primary & Secondary Legal Issues
-   - Core Doctrinal Concepts & Tests
-   - Verified Search Strings (Boolean queries for LawPavilion, BAILII, CanLII)
-   - Research Verification Matrix & Notes
-   Zero hallucination: distinguishes verified citations from hypotheses.
+   The planner names statutes and doctrines only; authorities
+   are entered by the researcher, then parsed and weighed
+   against the court where the matter is.
    ============================================================ */
 
-import { copyText } from '../utils.js';
-import { downloadBlob } from '../lib/file-engine.js';
+import { buildPlan, assessAuthority, planMarkdown, AREAS } from '../lib/legal/research.js';
+import { FORUMS, COURTS } from '../lib/legal/courts.js';
+import { esc, icon, note, download, slug, copyToClipboard, printMarkdown, plural } from '../lib/legal/view.js';
+import { getToolSettings, onToolSettings } from '../lib/tool-settings.js';
+import { tbConfirm } from '../lib/dialog.js';
+
+const ID = 'legal-research';
+const KEY = 'toolbox_legal_research_v1';
+const STATUS = [['to find', 'To find'], ['to verify', 'To verify'], ['supports', 'Supports'], ['against', 'Against'], ['distinguishable', 'Distinguishable'], ['read', 'Read in full']];
+const WEIGHT_TONE = { binding: 'strong', self: 'strong', statute: 'strong', coordinate: 'mid', persuasive: 'soft', 'not-binding': 'soft', unknown: 'none' };
+
+function loadStore() {
+  try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && typeof s === 'object' && s.projects) return s; } catch { /* storage blocked */ }
+  return { current: null, projects: {} };
+}
+function saveStore(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* storage blocked */ } }
 
 export default {
-  async render(container, { analytics } = {}) {
-    this._cleanup = [];
-
+  render(container, { analytics } = {}) {
+    this.cleanup = [];
+    this.prefs = getToolSettings(ID);
+    const store = loadStore();
     container.innerHTML = `
-      <div class="tool-section">
-        <label class="tool-label" for="lr-question">Research Question or Fact Scenario</label>
-        <textarea class="tool-textarea" id="lr-question" rows="4" placeholder="Enter your legal research problem (e.g. Whether an oral variation of a written contract with a 'No Oral Modification' clause is enforceable in Nigerian commercial law)..." style="font-size:0.9rem;"></textarea>
-      </div>
-
-      <div class="tool-section" style="margin-top:12px;">
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px;">
-          <div>
-            <label class="tool-label" for="lr-jurisdiction">Jurisdiction / Legal Framework</label>
-            <select class="tool-select" id="lr-jurisdiction" style="width:100%;">
-              <option value="nigeria">Nigeria (Common Law / Statutes / Supreme Court)</option>
-              <option value="uk">United Kingdom (England &amp; Wales)</option>
-              <option value="commonlaw">General Commonwealth Common Law</option>
-              <option value="us">United States (Federal / State Common Law)</option>
-            </select>
-          </div>
-          <div>
-            <label class="tool-label" for="lr-area">Primary Area of Law</label>
-            <select class="tool-select" id="lr-area" style="width:100%;">
-              <option value="contract">Contract &amp; Commercial Transactions</option>
-              <option value="tort">Tort &amp; Civil Liabilities (Negligence, Nuisance)</option>
-              <option value="constitutional">Constitutional &amp; Administrative Law (Fundamental Rights)</option>
-              <option value="criminal">Criminal Law &amp; Procedure</option>
-              <option value="property">Property, Land &amp; Tenancy Law</option>
-              <option value="labour">Labour &amp; Employment Law (NICN)</option>
-              <option value="corporate">Company Law &amp; Corporate Governance (CAMA)</option>
-              <option value="evidence">Law of Evidence &amp; Civil Procedure</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div class="tool-controls" style="justify-content:space-between; flex-wrap:wrap; gap:10px;">
-        <div style="display:flex; gap:8px;">
-          <button class="btn btn-primary" id="lr-build-btn">Structure Research Plan</button>
-          <button class="btn btn-secondary btn-sm" id="lr-clear-btn">Clear</button>
-        </div>
-        <div style="display:flex; gap:8px;">
-          <button class="btn btn-secondary btn-sm" id="lr-copy-btn" disabled>Copy Research Framework</button>
-          <button class="btn btn-secondary btn-sm" id="lr-export-btn" disabled>Export Plan (MD)</button>
-        </div>
-      </div>
-
-      <!-- Results Framework -->
-      <div id="lr-result-wrap" hidden style="margin-top:20px;">
-        <!-- Research Summary Card -->
-        <div style="background:var(--white); border:1px solid var(--g200); border-radius:10px; padding:16px; margin-bottom:16px;">
-          <h3 id="lr-framework-title" style="font-size:1.15rem; font-weight:700; margin:0 0 6px 0; color:var(--black);">Structured Legal Research Plan</h3>
-          <p id="lr-framework-blurb" style="font-size:0.85rem; color:var(--g700); margin:0; line-height:1.5;"></p>
-        </div>
-
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px;">
-          <!-- Issues Tree -->
-          <div class="cd-card" style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:14px;">
-            <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase;">️ Legal Issues to Address</h4>
-            <ol id="lr-issues-list" style="margin:0; padding-left:18px; font-size:0.85rem; line-height:1.55;"></ol>
-          </div>
-
-          <!-- Doctrinal Concepts & Legal Tests -->
-          <div class="cd-card" style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:14px;">
-            <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase;"> Applicable Doctrines &amp; Legal Tests</h4>
-            <ul id="lr-doctrines-list" style="margin:0; padding-left:18px; font-size:0.85rem; line-height:1.55;"></ul>
-          </div>
-
-          <!-- Boolean Database Search Strings -->
-          <div class="cd-card" style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:14px; grid-column:1 / -1;">
-            <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0 0 8px 0; text-transform:uppercase;"> Optimized Boolean Search Strings</h4>
-            <div id="lr-search-strings" style="font-size:0.82rem; font-family:var(--mono); display:flex; flex-direction:column; gap:8px;"></div>
-          </div>
-
-          <!-- Note-taking & Verification Matrix -->
-          <div class="cd-card" style="background:var(--white); border:1px solid var(--g200); border-radius:8px; padding:14px; grid-column:1 / -1;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <h4 style="font-size:0.84rem; font-weight:700; color:var(--g700); margin:0; text-transform:uppercase;"> Verified Authorities &amp; Findings Matrix</h4>
-              <span style="font-size:0.75rem; color:var(--text); font-weight:600;">Grounded &amp; Editable</span>
+      <div class="lg lg-research">
+        <section class="lg-card lg-input">
+          <div class="lg-bar">
+            <div class="lg-proj">
+              <select class="tool-select" id="lr-projects" aria-label="Saved research"></select>
+              <button type="button" class="btn btn-secondary btn-sm" id="lr-new">${icon('plus', 14)}<span>New</span></button>
+              <button type="button" class="btn btn-ghost btn-sm" id="lr-delete">${icon('trash', 14)}<span>Delete</span></button>
             </div>
-            <div id="lr-matrix-container">
-              <table style="width:100%; border-collapse:collapse; font-size:0.82rem; text-align:left;">
-                <thead>
-                  <tr style="background:var(--g50); border-bottom:1px solid var(--g200);">
-                    <th style="padding:8px 10px;">Authority / Case Name</th>
-                    <th style="padding:8px 10px;">Status</th>
-                    <th style="padding:8px 10px;">Key Principle / Holding</th>
-                  </tr>
-                </thead>
-                <tbody id="lr-matrix-body"></tbody>
-              </table>
-            </div>
+            <span class="lg-source-status">Saved in this browser</span>
           </div>
-        </div>
-      </div>
-    `;
+          <label class="lg-field"><span>Research question or facts</span>
+            <textarea class="tool-textarea lg-textarea" id="lr-question" rows="4" placeholder="e.g. Whether a mortgagee can sell mortgaged land by private treaty without the Governor's consent and without first serving a notice of demand"></textarea></label>
+          <div class="lg-form-grid">
+            <label class="lg-field"><span>Area of law</span><select class="tool-select" id="lr-area"><option value="auto">Detect from the question</option>${Object.entries(AREAS).map(([k, a]) => `<option value="${k}">${esc(a.label)}</option>`).join('')}</select></label>
+            <label class="lg-field"><span>Court where the matter is</span><select class="tool-select" id="lr-forum">${FORUMS.map(f => `<option value="${f.id}">${esc(f.label)}</option>`).join('')}</select></label>
+            <label class="lg-field"><span>Stage</span><select class="tool-select" id="lr-stage"><option value="">Detect</option><option value="civil">Civil trial</option><option value="criminal">Criminal trial</option><option value="appeal">Appeal</option></select></label>
+          </div>
+          <div class="lg-bar"><div class="lg-bar-main"><button type="button" class="btn btn-primary" id="lr-build">Build research plan</button></div></div>
+        </section>
+        <div id="lr-out" class="lg-out" hidden></div>
+      </div>`;
+    const $ = (s) => container.querySelector(s);
+    const out = $('#lr-out');
+    $('#lr-forum').value = this.prefs.forum || 'HC';
+    let proj = store.current ? store.projects[store.current] : null;
 
-    const qInput     = container.querySelector('#lr-question');
-    const jurSelect  = container.querySelector('#lr-jurisdiction');
-    const areaSelect = container.querySelector('#lr-area');
-    const buildBtn   = container.querySelector('#lr-build-btn');
-    const clearBtn   = container.querySelector('#lr-clear-btn');
-    const copyBtn    = container.querySelector('#lr-copy-btn');
-    const exportBtn  = container.querySelector('#lr-export-btn');
-    const resultWrap = container.querySelector('#lr-result-wrap');
-    const fTitle     = container.querySelector('#lr-framework-title');
-    const fBlurb     = container.querySelector('#lr-framework-blurb');
-    const issuesList = container.querySelector('#lr-issues-list');
-    const doctrinesList = container.querySelector('#lr-doctrines-list');
-    const searchStrings = container.querySelector('#lr-search-strings');
-    const matrixBody = container.querySelector('#lr-matrix-body');
-
-    let currentFramework = null;
-
-    const DOCTRINES_MAP = {
-      contract: [
-        'Freedom of Contract & Sanctity of Agreement (Pacta Sunt Servanda)',
-        'Doctrine of Consideration & Promissory Estoppel',
-        'No Oral Modification (NOM) Clauses & Variation (Rock Advertising v MWB principle)',
-        'Remedies for Breach: Damages (Hadley v Baxendale rule) & Specific Performance',
-      ],
-      tort: [
-        'Duty of Care & Reasonable Foreseeability (Donoghue v Stevenson / Caparo test)',
-        'Standard of Care & Breach (The reasonable prudent person standard)',
-        'Causation in Fact (But-for test) and Remoteness of Damage (Wagon Mound No. 1)',
-        'Vicarious Liability & Defenses (Volenti non fit injuria, Contributory Negligence)',
-      ],
-      constitutional: [
-        'Supremacy of the Constitution (Section 1(1) & 1(3) CFRN 1999)',
-        'Locus Standi & Standing to Sue (Adesanya v President FRN standard & modern expansive trends)',
-        'Right to Fair Hearing (Audi alteram partem & Nemo judex in causa sua - Sec 36 CFRN)',
-        'Doctrine of Separation of Powers & Judicial Review',
-      ],
-      criminal: [
-        'Presumption of Innocence (Section 36(5) CFRN 1999)',
-        'Standard of Proof: Beyond Reasonable Doubt (Woolmington v DPP)',
-        'Concurrence of Mens Rea (Guilty Mind) and Actus Reus (Prohibited Act)',
-        'Statutory Defenses: Self-Defense, Insanity (M’Naghten Rule), Provocation',
-      ],
-      property: [
-        'Governor’s Consent Requirement (Section 22 Land Use Act 1978 / Savill v Savill)',
-        'Bona Fide Purchaser for Value Without Notice',
-        'Recovery of Residential Premises: Statutory Notice to Quit & 7-Day Notice of Owner’s Intention',
-        'Creation and Extinguishment of Easements & Restrictive Covenants',
-      ],
-      labour: [
-        'Unfair Dismissal vs Summary Dismissal for Gross Misconduct',
-        'Jurisdiction of the National Industrial Court (Sec 254C CFRN 1999 3rd Alteration)',
-        'International Labour Standards & ILO Conventions (Article 4 Termination of Employment)',
-        'Constructive Dismissal & Terminal Benefits Calculation',
-      ],
-      corporate: [
-        'Separate Legal Personality (Salomon v Salomon & Co Ltd)',
-        'Lifting the Veil of Incorporation (Fraud, Sham & Agency Exceptions)',
-        'Fiduciary Duties of Directors (Sections 305–309 CAMA 2020)',
-        'Minority Protection: Rule in Foss v Harbottle & Statutory Derivative Actions',
-      ],
-      evidence: [
-        'Admissibility of Electronically Generated Evidence (Section 84 Evidence Act 2011)',
-        'Legal Burden vs Evidential Burden of Proof (Sections 131–134 Evidence Act)',
-        'Hearsay Rule & Statutory Exceptions (Statements in Documents, Dying Declarations)',
-        'Doctrine of Estoppel by Record, Res Judicata & Issue Estoppel',
-      ],
+    const persist = () => { if (proj) { proj.updatedAt = Date.now(); store.projects[proj.id] = proj; store.current = proj.id; } saveStore(store); fillProjects(); };
+    const fillProjects = () => {
+      const list = Object.values(store.projects).sort((a, b) => b.updatedAt - a.updatedAt);
+      $('#lr-projects').innerHTML = list.length ? list.map(p => `<option value="${p.id}" ${proj && p.id === proj.id ? 'selected' : ''}>${esc(p.plan.question.slice(0, 80))}${p.plan.question.length > 80 ? '…' : ''}</option>`).join('') : '<option value="">No saved research yet</option>';
+      $('#lr-delete').disabled = !proj;
     };
 
-    function buildFramework() {
-      const q = qInput.value.trim();
-      if (!q) {
-        tbAlert('Please enter a research question or factual problem.');
-        return;
-      }
+    const build = () => {
+      const q = $('#lr-question').value.trim();
+      if (q.length < 12) { $('#lr-question').focus(); return; }
+      analytics?.started?.();
+      const plan = buildPlan(q, { area: $('#lr-area').value, forum: $('#lr-forum').value, stage: $('#lr-stage').value || undefined });
+      if (!this.prefs.scholar) plan.queries = plan.queries.filter(x => x.db !== 'scholar');
+      // Keep work already done on the same question.
+      const same = proj && proj.plan.question === plan.question ? proj : null;
+      if (same) {
+        for (const r of plan.matrix) { const old = same.plan.matrix.find(x => x.id === r.id); if (old) Object.assign(r, { authority: old.authority, proposition: old.proposition, status: old.status }); }
+        proj = { ...same, plan };
+      } else proj = { id: `r${Date.now().toString(36)}`, plan, checks: {}, log: [], updatedAt: Date.now() };
+      reassess();
+      persist();
+      render();
+      analytics?.completed?.();
+    };
+    const reassess = () => { for (const r of proj.plan.matrix) r.assessment = r.authority ? assessAuthority(r.authority, proj.plan.forum) : null; };
 
-      analytics?.started();
+    const assessHTML = (a) => (a ? `<span class="lg-assess">${a.ok ? `<span class="lg-weight" data-tone="${WEIGHT_TONE[a.weightStatus] || 'none'}" title="${esc(a.reason || '')}">${esc(a.weight)}</span>${esc([a.court, a.kind === 'case' ? a.normalised : ''].filter(Boolean).join(' · '))}${a.warnings?.length ? ` · ${esc(a.warnings.join('; '))}` : ''}` : esc(a.note)}</span>` : '');
 
-      const area = areaSelect.value;
-      const jur = jurSelect.value;
-      const jurLabel = jurSelect.selectedOptions[0].text;
-      const areaLabel = areaSelect.selectedOptions[0].text;
-
-      fTitle.textContent = `Research Framework: ${areaLabel}`;
-      fBlurb.textContent = `Target Jurisdiction: ${jurLabel}. Question: "${q.slice(0, 140)}${q.length > 140 ? '…' : ''}"`;
-
-      // 1. Issues
-      const issues = [
-        `Primary Issue: Whether, on the facts, the elements of ${areaLabel.toLowerCase()} are established.`,
-        `Sub-Issue 1: What is the relevant legal standard and statutory provision governing this dispute?`,
-        `Sub-Issue 2: Does any recognized common-law or statutory defense/exception apply?`,
-        `Procedural/Remedial Issue: What reliefs or remedies (declaratory, injunctive, or damages) are available?`,
-      ];
-      issuesList.innerHTML = issues.map(i => `<li style="margin-bottom:6px;">${i}</li>`).join('');
-
-      // 2. Doctrines
-      const doctrines = DOCTRINES_MAP[area] || DOCTRINES_MAP.contract;
-      doctrinesList.innerHTML = doctrines.map(d => `<li style="margin-bottom:6px;"><strong>${d}</strong></li>`).join('');
-
-      // 3. Search Strings
-      const keywords = q.split(/\s+/).filter(w => w.length > 4 && !/^(whether|where|which|about|their|there|would|should|under)$/i.test(w)).slice(0, 4);
-      const kwString = keywords.join(' AND ');
-
-      const queries = [
-        { label: 'LawPavilion / Nigerian Judgments', q: `"${keywords[0] || 'breach'}" AND "${keywords[1] || 'contract'}" AND "Supreme Court"` },
-        { label: 'BAILII / CanLII / Commonwealth', q: `(${keywords.slice(0, 2).join(' OR ')}) AND ("Court of Appeal" OR "Supreme Court")` },
-        { label: 'Google Scholar (Case Law)', q: `"${q.slice(0, 50).replace(/["']/g, '')}" legal principles` },
-      ];
-
-      searchStrings.innerHTML = queries.map(item => `
-        <div style="background:var(--g50); border:1px solid var(--g200); border-radius:6px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <span style="font-weight:600; color:var(--g700);">${item.label}:</span>
-            <code style="color:var(--black); margin-left:6px;">${item.q}</code>
+    const render = () => {
+      if (!proj) { out.hidden = true; return; }
+      const p = proj.plan;
+      $('#lr-question').value = p.question;
+      $('#lr-area').value = p.area;
+      $('#lr-forum').value = p.forum;
+      const found = p.matrix.filter(r => r.authority).length;
+      out.innerHTML = `
+        <section class="lg-card lg-head">
+          <div class="lg-kicker"><span class="lg-badge">${esc(p.areaLabel)}</span><span>Before the ${esc(COURTS[p.forum]?.short || p.forum)} · ${esc({ civil: 'civil trial', criminal: 'criminal trial', appeal: 'appeal' }[p.stage] || p.stage)}</span></div>
+          <h2 class="lg-title">${esc(p.issues[0].text)}</h2>
+          <div class="lg-stats">
+            <div class="lg-stat"><b>${p.issues.length}</b><span>Issues</span></div>
+            <div class="lg-stat"><b>${p.statutes.length}</b><span>Provisions to read</span></div>
+            <div class="lg-stat"><b>${found}/${p.matrix.length}</b><span>Matrix slots filled</span></div>
+            <div class="lg-stat"><b>${proj.log.length}</b><span>Searches logged</span></div>
           </div>
-          <button class="btn btn-secondary btn-sm" style="font-size:0.72rem; padding:2px 6px;" onclick="navigator.clipboard.writeText('${item.q.replace(/'/g, "\\'")}')">Copy</button>
+          <div class="lg-head-actions">
+            <button type="button" class="btn btn-secondary btn-sm" data-act="copy">${icon('copy', 14)}<span>Copy plan</span></button>
+            <button type="button" class="btn btn-secondary btn-sm" data-act="md">${icon('download', 14)}<span>Markdown</span></button>
+            <button type="button" class="btn btn-secondary btn-sm" data-act="print">${icon('print', 14)}<span>Print / PDF</span></button>
+          </div>
+        </section>
+        <div class="lg-grid">
+          <div class="lg-main">
+            <section class="lg-sec"><header class="lg-sec-head"><h3>Issues</h3><span class="lg-sec-sub">Reframe them to fit your facts</span></header>
+              <ol class="lg-items is-numbered">${p.issues.map(i => `<li><p>${esc(i.text)}</p></li>`).join('')}</ol></section>
+            <section class="lg-sec"><header class="lg-sec-head"><h3>Doctrines and provisions</h3><span class="lg-sec-sub">Read the current text of each provision</span></header>
+              ${p.doctrines.length ? `<ul class="lg-doctrines">${p.doctrines.map(d => `<li><strong>${esc(d.label)}</strong>${d.statutes.length ? `<span class="lg-provs">${d.statutes.map(s => `<code>${esc(s)}</code>`).join('')}</span>` : ''}</li>`).join('')}</ul>` : '<p class="lg-empty">Add more detail to the question to match doctrines.</p>'}</section>
+            <section class="lg-sec"><header class="lg-sec-head"><h3>Search queries</h3><span class="lg-sec-sub">Copy, run, then log what you found</span></header>
+              <div class="lg-queries">${p.queries.map((q, i) => `<div class="lg-query"><strong>${esc(q.label)}<small>${esc(q.note)}</small></strong><code>${esc(q.query)}</code>
+                <span class="lg-query-actions"><button type="button" class="btn btn-icon btn-sm" data-copyq="${i}" title="Copy query" aria-label="Copy query">${icon('copy', 14)}</button>${q.url ? `<a class="btn btn-icon btn-sm" href="${esc(q.url)}" target="_blank" rel="noopener" title="Open search" aria-label="Open ${esc(q.label)}">${icon('ext', 14)}</a>` : ''}<button type="button" class="btn btn-icon btn-sm" data-logq="${i}" title="Log this search" aria-label="Log this search">${icon('plus', 14)}</button></span></div>`).join('')}</div></section>
+          </div>
+          <aside class="lg-aside">
+            <section class="lg-card lg-facts"><h3 class="lg-aside-title">Threshold points</h3>
+              <ul class="lg-checklist">${p.threshold.map(t => `<li><label><input type="checkbox" data-check="${t.id}" ${proj.checks[t.id] ? 'checked' : ''}><span>${esc(t.text)}</span></label></li>`).join('')}</ul></section>
+          </aside>
         </div>
-      `).join('');
+        <section class="lg-card">
+          <header class="lg-sec-head"><h3>Authority matrix</h3><span class="lg-sec-sub">Type a citation: it is normalised and weighed before the ${esc(COURTS[p.forum]?.short || '')}</span></header>
+          <div class="lg-table-wrap"><table class="lg-matrix"><thead><tr><th>Slot</th><th>Authority</th><th>Proposition</th><th>Status</th></tr></thead><tbody>
+            ${p.issues.map((iss, n) => `<tr class="lg-issue-row"><td colspan="4">${n + 1}. ${esc(iss.text.length > 140 ? `${iss.text.slice(0, 139)}…` : iss.text)}</td></tr>${p.matrix.filter(r => r.issue === iss.id).map(r => `
+              <tr><td class="lg-slot">${esc(r.label)}</td>
+                <td><input class="tool-input" data-row="${r.id}" data-field="authority" value="${esc(r.authority)}" placeholder="${r.kind === 'statute' ? 'Act and section' : 'e.g. (2019) 10 NWLR (Pt. 1680) 1'}">${assessHTML(r.assessment)}</td>
+                <td><input class="tool-input" data-row="${r.id}" data-field="proposition" value="${esc(r.proposition)}" placeholder="What it decides"></td>
+                <td><select class="tool-select" data-row="${r.id}" data-field="status">${STATUS.map(([v, l]) => `<option value="${v}" ${r.status === v ? 'selected' : ''}>${l}</option>`).join('')}</select></td></tr>`).join('')}`).join('')}
+          </tbody></table></div>
+        </section>
+        <section class="lg-card">
+          <header class="lg-sec-head"><h3>Research log</h3><span class="lg-sec-sub">${plural(proj.log.length, 'entry', 'entries')}</span></header>
+          <form class="lg-log-form" id="lr-log-form">
+            <select class="tool-select" name="db" aria-label="Database">${['LawPavilion', 'LegalPedia', 'NigeriaLII', 'Google Scholar', 'Law report (print)', 'Library', 'Other'].map(d => `<option>${d}</option>`).join('')}</select>
+            <input class="tool-input" name="query" placeholder="Query or book searched" aria-label="Query">
+            <input class="tool-input" name="note" placeholder="What you found" aria-label="Result">
+            <button type="submit" class="btn btn-secondary btn-sm">Add</button>
+          </form>
+          ${proj.log.length ? `<ul class="lg-log">${proj.log.slice().reverse().map((e, i) => `<li><time>${esc(new Date(e.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))}</time><strong>${esc(e.db)}</strong><div><code>${esc(e.query)}</code>${e.note ? `<p>${esc(e.note)}</p>` : ''}</div><button type="button" class="btn btn-icon btn-sm" data-dellog="${proj.log.length - 1 - i}" aria-label="Remove entry">${icon('x', 14)}</button></li>`).join('')}</ul>` : ''}
+        </section>
+        ${note('The plan names statutes and doctrines from the question only. It never suggests cases: find, read and verify every authority yourself before citing it.')}`;
+      out.hidden = false;
+    };
 
-      // 4. Matrix Placeholder
-      const sampleAuthorities = [
-        { name: 'Leading Appellate Precedent (Record Verified Citation)', status: 'Primary Authority', principle: 'Establishes binding test applicable to main issue.' },
-        { name: 'Governing Statutory Act / Provision', status: 'Enactment', principle: 'Defines mandatory statutory procedure and requirements.' },
-      ];
-
-      matrixBody.innerHTML = sampleAuthorities.map(a => `
-        <tr style="border-bottom:1px solid var(--g200);">
-          <td style="padding:8px 10px; font-weight:600;">${a.name}</td>
-          <td style="padding:8px 10px;"><span style="background:var(--g100); padding:2px 6px; border-radius:4px; font-size:0.75rem;">${a.status}</span></td>
-          <td style="padding:8px 10px; color:var(--g800);">${a.principle}</td>
-        </tr>
-      `).join('');
-
-      currentFramework = { q, jurLabel, areaLabel, issues, doctrines, queries };
-      resultWrap.hidden = false;
-      copyBtn.disabled = false;
-      exportBtn.disabled = false;
-
-      analytics?.completed();
-    }
-
-    buildBtn.addEventListener('click', buildFramework);
-
-    copyBtn.addEventListener('click', (e) => {
-      if (!currentFramework) return;
-      const t = `# LEGAL RESEARCH PLAN\nQuestion: ${currentFramework.q}\nJurisdiction: ${currentFramework.jurLabel}\n\n## ISSUES\n${currentFramework.issues.join('\n')}\n\n## APPLICABLE DOCTRINES\n${currentFramework.doctrines.join('\n')}\n\n## SEARCH QUERIES\n${currentFramework.queries.map(q => `${q.label}: ${q.q}`).join('\n')}\n`;
-      copyText(t, e.target);
-      analytics?.copied({ outputKind: 'text' });
+    out.addEventListener('click', (e) => {
+      const cq = e.target.closest('[data-copyq]');
+      if (cq) { copyToClipboard(proj.plan.queries[cq.dataset.copyq].query, cq); return; }
+      const lq = e.target.closest('[data-logq]');
+      if (lq) { const q = proj.plan.queries[lq.dataset.logq]; const f = out.querySelector('#lr-log-form'); f.db.value = [...f.db.options].some(o => o.value === q.label) ? q.label : 'Other'; f.query.value = q.query; f.note.focus(); return; }
+      const dl = e.target.closest('[data-dellog]');
+      if (dl) { proj.log.splice(Number(dl.dataset.dellog), 1); persist(); render(); return; }
+      const a = e.target.closest('[data-act]');
+      if (!a) return;
+      const md = planMarkdown(proj.plan, proj.log);
+      if (a.dataset.act === 'copy') copyToClipboard(md, a);
+      if (a.dataset.act === 'md') { download(`research-${slug(proj.plan.question.slice(0, 50))}.md`, md); analytics?.downloaded?.({ fileCount: 1 }); }
+      if (a.dataset.act === 'print') printMarkdown('Research plan', md);
     });
-
-    exportBtn.addEventListener('click', () => {
-      if (!currentFramework) return;
-      const md = `# Legal Research Framework\n**Question**: ${currentFramework.q}\n**Jurisdiction**: ${currentFramework.jurLabel}\n**Area**: ${currentFramework.areaLabel}\n\n---\n\n### Issues to Determine\n${currentFramework.issues.map(i => `- ${i}`).join('\n')}\n\n### Core Legal Concepts & Doctrines\n${currentFramework.doctrines.map(d => `- ${d}`).join('\n')}\n\n### Boolean Search Queries\n${currentFramework.queries.map(q => `- **${q.label}**: \`${q.q}\``).join('\n')}\n`;
-      downloadBlob(new Blob([md], { type: 'text/markdown' }), `legal_research_plan_${Date.now()}.md`);
-      analytics?.downloaded({ fileCount: 1 });
+    out.addEventListener('change', (e) => {
+      const c = e.target.closest('[data-check]');
+      if (c) { proj.checks[c.dataset.check] = c.checked; persist(); return; }
+      const f = e.target.closest('[data-row]');
+      if (f) {
+        const row = proj.plan.matrix.find(r => r.id === f.dataset.row);
+        row[f.dataset.field] = f.value;
+        if (f.dataset.field === 'authority') { row.assessment = f.value ? assessAuthority(f.value, proj.plan.forum) : null; if (f.value && row.status === 'to find') row.status = 'to verify'; persist(); render(); }
+        else persist();
+      }
     });
-
-    clearBtn.addEventListener('click', () => {
-      qInput.value = '';
-      resultWrap.hidden = true;
-      copyBtn.disabled = true;
-      exportBtn.disabled = true;
-      currentFramework = null;
+    out.addEventListener('submit', (e) => {
+      if (e.target.id !== 'lr-log-form') return;
+      e.preventDefault();
+      const f = e.target;
+      if (!f.query.value.trim()) { f.query.focus(); return; }
+      proj.log.push({ at: new Date().toISOString(), db: f.db.value, query: f.query.value.trim(), note: f.note.value.trim() });
+      persist(); render();
     });
+    $('#lr-build').addEventListener('click', build);
+    $('#lr-new').addEventListener('click', () => { proj = null; store.current = null; saveStore(store); fillProjects(); $('#lr-question').value = ''; out.hidden = true; $('#lr-question').focus(); });
+    $('#lr-delete').addEventListener('click', async () => {
+      if (!proj) return;
+      const ok = await tbConfirm('Delete this research plan and its log?', { title: 'Delete research', confirmText: 'Delete', destructive: true });
+      if (!ok) return;
+      delete store.projects[proj.id]; proj = null; store.current = null; saveStore(store); fillProjects(); out.hidden = true; $('#lr-question').value = '';
+    });
+    $('#lr-projects').addEventListener('change', (e) => { proj = store.projects[e.target.value] || null; store.current = proj?.id || null; saveStore(store); if (proj) { reassess(); render(); } });
+    this.cleanup.push(onToolSettings(ID, (p) => { this.prefs = p; }));
+    fillProjects();
+    if (proj) { reassess(); render(); }
   },
 
   destroy() {
-    for (const fn of this._cleanup ?? []) fn();
-    this._cleanup = [];
+    for (const fn of this.cleanup || []) { try { fn(); } catch { /* ignore */ } }
+    this.cleanup = [];
   },
 };

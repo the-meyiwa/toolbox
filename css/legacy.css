@@ -1128,21 +1128,23 @@ input[type="password"] {
 .t3d-seg .btn.is-active { background: var(--black); color: var(--white); border-color: var(--black); }
 .t3d-filter { height: 34px; font-size: 0.82rem; }
 .t3d-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  max-height: 260px;
+  /* Virtual scroller container: fixed height, relative positioning
+     required so absolutely-placed row nodes stack correctly. */
+  position: relative;
+  height: 260px;
   overflow-y: auto;
+  overflow-x: hidden;
   border: 1px solid var(--g150);
   border-radius: 9px;
-  padding: 4px;
+  padding: 0;
 }
 .t3d-list-item {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 7px 9px;
+  height: 34px; /* must match ITEM_HEIGHT in anatomy-explorer.js */
+  padding: 0 9px;
   border: none;
   background: none;
   border-radius: 6px;
@@ -1152,11 +1154,44 @@ input[type="password"] {
   text-align: left;
   cursor: pointer;
   transition: background 120ms, color 120ms;
+  box-sizing: border-box;
 }
 .t3d-list-item:hover { background: var(--g50); color: var(--black); }
 .t3d-list-item.is-selected { background: var(--black); color: var(--white); }
 .t3d-list-item.is-selected .t3d-dot { border-color: rgb(255 255 255 / 0.4); }
 .t3d-list-empty { padding: 14px 10px; font-size: 0.8rem; color: var(--g400); }
+
+/* ── Anatomy region pill filters ─────────────────────────────── */
+.an-pill-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.an-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--g200);
+  background: none;
+  font: inherit;
+  font-size: 0.74rem;
+  color: var(--g600);
+  cursor: pointer;
+  transition: background 120ms, color 120ms, border-color 120ms;
+  white-space: nowrap;
+}
+.an-pill:hover {
+  background: var(--g50);
+  color: var(--black);
+  border-color: var(--g300);
+}
+.an-pill.is-active {
+  background: var(--black);
+  color: var(--white);
+  border-color: var(--black);
+}
 /* --- Stage --- */
 .t3d-stage {
   position: relative;
@@ -2106,46 +2141,6 @@ input[type="password"] {
 .cr-handle[data-h="ne"] { top: -7px; right: -7px; cursor: nesw-resize; }
 .cr-handle[data-h="sw"] { bottom: -7px; left: -7px; cursor: nesw-resize; }
 .cr-handle[data-h="se"] { bottom: -7px; right: -7px; cursor: nwse-resize; }
-/* --- pdf --- */
-.pdf-row { cursor: grab; }
-.pdf-row.is-dragging { opacity: 0.45; }
-.pdf-grip { color: var(--g300); font-size: 0.9rem; letter-spacing: -2px; cursor: grab; }
-.pdf-actions { display: flex; gap: 5px; flex-shrink: 0; }
-.pdf-actions .btn { min-width: 30px; padding: 4px 8px; }
-.pdf-pages {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
-  gap: 11px;
-  margin: 8px 0 20px;
-}
-.pdf-page { position: relative; text-align: center; cursor: pointer; }
-.pdf-page-box {
-  aspect-ratio: 1 / 1.414;
-  border: 1.5px solid var(--g200);
-  border-radius: 5px;
-  background: var(--white);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: border-color 140ms, background 140ms, transform 180ms;
-}
-.pdf-page.is-on .pdf-page-box { border-color: var(--black); background: var(--g50); }
-.pdf-page.is-on::after {
-  content: 'âœ“';
-  position: absolute;
-  top: 5px; right: 5px;
-  width: 17px; height: 17px;
-  background: var(--black);
-  color: var(--white);
-  border-radius: 50%;
-  font-size: 0.62rem;
-  display: flex; align-items: center; justify-content: center;
-}
-.pdf-page-num { font-family: var(--mono); font-size: 0.85rem; color: var(--g500); }
-.pdf-page.is-on .pdf-page-num { color: var(--black); }
-.pdf-page-meta { font-family: var(--mono); font-size: 0.58rem; color: var(--g400); margin-top: 3px; }
-.pdf-rotate { position: absolute; bottom: 20px; right: 4px; padding: 1px 5px; font-size: 0.7rem; opacity: 0; transition: opacity 140ms; }
-.pdf-page:hover .pdf-rotate { opacity: 1; }
 /* ============================================================
    MOBILE HARDENING
 
@@ -2215,10 +2210,7 @@ input[type="date"] {
 /* Coarse pointers get bigger hit areas regardless of viewport width. */
 @media (pointer: coarse) {
   .cp-swatch { width: 34px; height: 34px; }
-  .pdf-actions .btn { min-width: 40px; min-height: 40px; }
-  .ct-del,
-.pdf-rotate { min-width: 36px; min-height: 36px; }
-  .pdf-rotate { opacity: 1; }
+  .ct-del { min-width: 36px; min-height: 36px; }
 }
 /* Catch-all containment for tool content on phones.
 
@@ -3668,30 +3660,6 @@ input[type="date"] {
 /* ============================================================
    PDF EDITOR
    ============================================================ */
-.pde { display: grid; grid-template-columns: 160px 1fr; grid-template-rows: auto 1fr auto; gap: 0; min-height: 600px; border: 1px solid var(--g200); border-radius: 12px; overflow: hidden; }
-.pde-toolbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: var(--g50); border-bottom: 1px solid var(--g200); flex-wrap: wrap; }
-.pde-tool-btn { font-size: 0.78rem; }
-.pde-tool-btn.is-active { background: var(--black); color: var(--white); }
-.pde-tool-sep { width: 1px; height: 24px; background: var(--g200); margin: 0 4px; }
-.pde-zoom-controls { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; font-family: var(--mono); }
-.pde-zoom-controls #pe-zoom-val { min-width: 40px; text-align: center; }
-.pde-sidebar { grid-row: 2; overflow-y: auto; background: var(--g50); border-right: 1px solid var(--g200); padding: 8px; display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 200px); }
-.pde-thumb { cursor: pointer; border: 2px solid transparent; border-radius: 4px; padding: 4px; text-align: center; transition: border-color 0.15s; }
-.pde-thumb:hover { border-color: var(--g300); }
-.pde-thumb.is-active { border-color: var(--black); }
-.pde-thumb canvas { width: 100%; display: block; border-radius: 2px; }
-.pde-thumb-label { font-size: 0.7rem; color: var(--g500); margin-top: 2px; font-family: var(--mono); }
-.pde-canvas-area { grid-row: 2; overflow: auto; display: flex; align-items: flex-start; justify-content: center; padding: 24px; background: var(--g100); }
-.pde-canvas-wrapper { position: relative; box-shadow: 0 4px 20px rgba(0,0,0,0.1); background: var(--white); }
-.pde-page-canvas { display: block; }
-.pde-annot-canvas { position: absolute; top: 0; left: 0; cursor: crosshair; }
-.pde-text-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-.pde-text-box { position: absolute; pointer-events: auto; min-width: 50px; min-height: 20px; padding: 2px 4px; font-size: 14px; font-family: var(--sans); border: 1px dashed var(--g400); background: rgba(255,255,255,0.85); outline: none; cursor: text; }
-.pde-text-box:focus { border-color: var(--black); }
-.pde-convert-panel { grid-column: 1 / -1; padding: 12px 16px; background: var(--g50); border-top: 1px solid var(--g200); }
-.pde-convert-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.pde-convert-btn { font-size: 0.82rem; }
-.pde-convert-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 /* ============================================================
    SPACES â€” The Shared Desk
    "Local by default. Shared by intention."
@@ -3971,8 +3939,6 @@ input[type="date"] {
   .wk-toc-l3 { display: none; }
   .flw-split { grid-template-columns: 1fr; }
   .flw-code { min-height: 220px; }
-  .pde { grid-template-columns: 120px 1fr; }
-  .pde-sidebar { max-height: 400px; }
   .sp-desk-grid { grid-template-columns: 1fr; gap: 20px; }
 }
 @media (max-width: 600px) {
@@ -3995,10 +3961,6 @@ input[type="date"] {
   .qrn-verse { grid-template-columns: 1fr; gap: 10px; }
   .qrn-verse-side { flex-direction: row; justify-content: flex-start; }
   .flw-branches { flex-direction: column; gap: 6px; }
-  .pde { grid-template-columns: 1fr; }
-  .pde-sidebar { grid-row: auto; flex-direction: row; overflow-x: auto; overflow-y: hidden; max-height: none; border-right: none; border-bottom: 1px solid var(--g200); }
-  .pde-thumb { flex-shrink: 0; width: 80px; }
-  .pde-toolbar { overflow-x: auto; flex-wrap: nowrap; }
   /* Keep page-level cards clear of the viewport edge on narrow screens. */
   /* Spaces Mobile Layout */
   .sp-directory { padding:12px 16px 40px; box-sizing:border-box; }
@@ -7689,24 +7651,6 @@ body[data-tool-id="mail"] #viewport-content {
     max-height: 280px !important;
     margin: 0 auto !important;
   }
-  /* PDF Editor */
-  .pde-layout,
-.pde {
-    display: flex !important;
-    flex-direction: column !important;
-    min-height: auto !important;
-    height: auto !important;
-    border-radius: 12px !important;
-  }
-  .pde-toolbar {
-    width: 100% !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    display: flex !important;
-    flex-direction: row !important;
-    padding: 6px !important;
-    border-bottom: 1px solid var(--border) !important;
-  }
   /* Watermark Remover */
   .wm-layout {
     display: flex !important;
@@ -7716,13 +7660,6 @@ body[data-tool-id="mail"] #viewport-content {
     max-width: 100% !important;
     height: 260px !important;
     max-height: 280px !important;
-  }
-  /* PDF Split & Merge Pages */
-  .pdf-pages,
-.pdf-list {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
   }
   /* EXIF Metadata Table */
   .exif-split,
@@ -7981,18 +7918,13 @@ body[data-tool-id="mail"] #viewport-content {
 .wk-searchbar {
     width: 100% !important;
   }
-  /* Legal Tools (NDA, Privacy Policy, Contract Digest, Research, Comparator) */
+  /* Legal Tools (NDA, Privacy Policy) */
   .nda-grid,
 .privacy-grid,
-.contract-grid,
-.cd-grid {
+.contract-grid {
     display: grid !important;
     grid-template-columns: 1fr !important;
     gap: 12px !important;
-  }
-  .cd-card {
-    width: 100% !important;
-    padding: 14px !important;
   }
   /* Design Tools */
   .cp-layout,

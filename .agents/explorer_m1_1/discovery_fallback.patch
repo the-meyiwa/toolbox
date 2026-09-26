@@ -1,0 +1,126 @@
+--- a/scripts/anatomy-select.mjs
++++ b/scripts/anatomy-select.mjs
+@@ -17,4 +17,5 @@
+ const STL_DIR   = path.join(SRC, 'stl');
+ const RAW_BASE  = 'https://raw.githubusercontent.com/Kevin-Mattheus-Moerman/BodyParts3D/main/assets/BodyParts3D_data/stl';
++const COMMITTED_MANIFEST = path.join('scripts', 'data', 'bodyparts3d-available.json');
+ 
+ // Only the whole-body skin/soft-tissue blobs are genuinely too big; a
+@@ -99,4 +100,77 @@
+ }
+ 
++async function fetchPartsFromGitHub() {
++  const headers = {
++    'User-Agent': 'Toolbox-Anatomy-Pipeline',
++    'Accept': 'application/vnd.github.v3+json',
++  };
++  if (process.env.GITHUB_TOKEN) {
++    headers['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
++  }
++
++  // 1. Fetch parts list for English names
++  const rawPartsListUrl = 'https://raw.githubusercontent.com/Kevin-Mattheus-Moerman/BodyParts3D/main/assets/BodyParts3D_data/parts_list_e.txt';
++  const nameRes = await fetch(rawPartsListUrl);
++  if (!nameRes.ok) {
++    throw new Error(`Failed to fetch parts_list_e.txt: HTTP ${nameRes.status} ${nameRes.statusText}`);
++  }
++  const nameText = await nameRes.text();
++  const nameMap = new Map();
++  for (const line of nameText.split('\n')) {
++    const cols = line.split('\t');
++    if (cols.length >= 2) {
++      const id = cols[0].replace(/"/g, '').trim();
++      const name = cols[1].replace(/"/g, '').trim();
++      if (id && name) nameMap.set(id, name);
++    }
++  }
++
++  // 2. Fetch Git tree for STLs
++  const treeUrl = 'https://api.github.com/repos/Kevin-Mattheus-Moerman/BodyParts3D/git/trees/main?recursive=1';
++  const treeRes = await fetch(treeUrl, { headers });
++  if (!treeRes.ok) {
++    if (treeRes.status === 403) {
++      throw new Error(`GitHub API rate limit exceeded (HTTP 403). Set GITHUB_TOKEN environment variable or ensure ${COMMITTED_MANIFEST} exists.`);
++    }
++    throw new Error(`Failed to fetch GitHub tree: HTTP ${treeRes.status} ${treeRes.statusText}`);
++  }
++  const treeJson = await treeRes.json();
++  if (!treeJson.tree || !Array.isArray(treeJson.tree)) {
++    throw new Error('Invalid response structure from GitHub tree API');
++  }
++
++  const stlPrefix = 'assets/BodyParts3D_data/stl/';
++  const manifest = [];
++  for (const entry of treeJson.tree) {
++    if (entry.type === 'blob' && entry.path.startsWith(stlPrefix) && entry.path.endsWith('.stl')) {
++      const filename = path.basename(entry.path);
++      const id = filename.replace(/\.stl$/i, '');
++      const name = nameMap.get(id);
++      manifest.push({
++        id,
++        name: name || id,
++        file: filename,
++        bytes: entry.size,
++        size: entry.size,
++        sha: entry.sha,
++        concept: id,
++        conceptId: id,
++        fma: id.startsWith('FMA') ? id.slice(3) : null,
++      });
++    }
++  }
++
++  manifest.sort((a, b) => a.id.localeCompare(b.id));
++  return manifest;
++}
++
++async function loadAvailableParts() {
++  const localCachePath = path.join(SRC, 'available.json');
++
++  // Tier 1: Local cache in .anatomy-src/available.json
++  if (fs.existsSync(localCachePath)) {
++    try {
++      const data = JSON.parse(fs.readFileSync(localCachePath, 'utf8'));
++      if (Array.isArray(data) && data.length > 0) {
++        console.log(`[Discovery] Loaded ${data.length} parts from local cache (${localCachePath})`);
++        return data;
++      }
++    } catch (err) {
++      console.warn(`[Discovery] Warning: Failed to parse ${localCachePath}: ${err.message}`);
++    }
++  }
++
++  // Tier 2: Committed manifest in scripts/data/bodyparts3d-available.json
++  if (fs.existsSync(COMMITTED_MANIFEST)) {
++    try {
++      const data = JSON.parse(fs.readFileSync(COMMITTED_MANIFEST, 'utf8'));
++      if (Array.isArray(data) && data.length > 0) {
++        console.log(`[Discovery] Loaded ${data.length} parts from committed manifest (${COMMITTED_MANIFEST})`);
++        fs.mkdirSync(SRC, { recursive: true });
++        fs.writeFileSync(localCachePath, JSON.stringify(data, null, 2));
++        return data;
++      }
++    } catch (err) {
++      console.warn(`[Discovery] Warning: Failed to parse ${COMMITTED_MANIFEST}: ${err.message}`);
++    }
++  }
++
++  // Tier 3: Dynamic fetch from GitHub API
++  console.log('[Discovery] No local manifest found. Fetching catalog dynamically from GitHub upstream...');
++  const data = await fetchPartsFromGitHub();
++
++  fs.mkdirSync(SRC, { recursive: true });
++  fs.writeFileSync(localCachePath, JSON.stringify(data, null, 2));
++
++  const manifestDir = path.dirname(COMMITTED_MANIFEST);
++  fs.mkdirSync(manifestDir, { recursive: true });
++  fs.writeFileSync(COMMITTED_MANIFEST, JSON.stringify(data, null, 2));
++
++  console.log(`[Discovery] Successfully fetched and cached ${data.length} parts to ${localCachePath} and ${COMMITTED_MANIFEST}`);
++  return data;
++}
++
+ /* ---------------- main ---------------- */
+ 
+-const parts = JSON.parse(fs.readFileSync(path.join(SRC, 'available.json'), 'utf8'));
++const parts = await loadAvailableParts();

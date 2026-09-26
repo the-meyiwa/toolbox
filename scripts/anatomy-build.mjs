@@ -29,10 +29,18 @@ const OUT_DIR = path.join('public', 'anatomy');
 
 /* Structures are simplified toward a triangle budget rather than a
    fixed ratio: a 200k-triangle liver and a 2k-triangle gallbladder
-   need very different treatment. */
-const TARGET_TRIS = 6000;
-const MIN_RATIO   = 0.06;
-const SIMPLIFY_ERROR = 0.004;
+   need very different treatment.
+
+   With the full ~930-structure dataset (skeletal 268, muscular 428):
+   - TARGET_TRIS 8000 keeps major organs (liver, cerebrum, heart) visually
+     detailed while the adaptive ratio still aggressively decimates small
+     repetitive structures (toe phalanges, sesamoids).
+   - MIN_RATIO 0.04 allows the large systems to compress far enough that
+     skeletal.glb and muscular.glb each land below ~3 MB shipped.
+   - SIMPLIFY_ERROR 0.003 produces smoother results at lower ratios. */
+const TARGET_TRIS    = 8000;
+const MIN_RATIO      = 0.04;
+const SIMPLIFY_ERROR = 0.003;
 
 /* ---------------- binary STL ---------------- */
 
@@ -116,7 +124,11 @@ const SYSTEM_META = {
 
 /* ---------------- build ---------------- */
 
-const selected = JSON.parse(fs.readFileSync(path.join(SRC, 'selected.json'), 'utf8'));
+const _selectedRaw = JSON.parse(fs.readFileSync(path.join(SRC, 'selected.json'), 'utf8'));
+// selected.json may be a flat array (old format) or a system-keyed object (new format).
+const selected = Array.isArray(_selectedRaw)
+  ? _selectedRaw
+  : Object.values(_selectedRaw).flat();
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
 const io = new NodeIO()

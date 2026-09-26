@@ -159,9 +159,16 @@ const CONFIRM_TOOLS = {
   rename_file: (a) => `Rename ${a.path || a.from || 'the file'} to ${a.newName || a.to || 'the new name'}?`,
 };
 
+// Evaluation harness hook: when set, decides confirmations instead of showing the dialog.
+let confirmOverride = null;
+export function setConfirmOverride(fn) { confirmOverride = typeof fn === 'function' ? fn : null; }
+
 async function confirmAction(name, args) {
   const describe = CONFIRM_TOOLS[name];
   if (!describe) return true;
+  if (confirmOverride) {
+    try { return Boolean(await confirmOverride(name, args || {}, describe(args || {}))); } catch { return false; }
+  }
   try {
     return Boolean(await tbConfirm(describe(args || {}), { title: 'The Assistant wants to do this', confirmText: 'Allow', cancelText: 'Don\'t allow', destructive: /delete|cancel/.test(name) }));
   } catch { return false; }
@@ -254,6 +261,18 @@ function base64ToBytes(b64) {
   return out;
 }
 
+// pdf.js 6 uses Map#getOrInsertComputed, which older browsers lack.
+function polyfillMapUpserts() {
+  for (const C of [Map, WeakMap]) {
+    if (!C.prototype.getOrInsertComputed) {
+      Object.defineProperty(C.prototype, 'getOrInsertComputed', { configurable: true, writable: true, value(key, fn) { if (!this.has(key)) this.set(key, fn(key)); return this.get(key); } });
+    }
+    if (!C.prototype.getOrInsert) {
+      Object.defineProperty(C.prototype, 'getOrInsert', { configurable: true, writable: true, value(key, v) { if (!this.has(key)) this.set(key, v); return this.get(key); } });
+    }
+  }
+}
+
 async function preparePdf(file) {
   if (!file?.base64 || pdfCache.has(file)) return;
   const type = file.type || file.mimeType || '';
@@ -261,6 +280,7 @@ async function preparePdf(file) {
   const info = { text: '', pages: 0, images: [] };
   pdfCache.set(file, info);
   try {
+    polyfillMapUpserts();
     const pdfjs = await import('pdfjs-dist');
     if (!pdfjs.GlobalWorkerOptions.workerSrc) pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href;
     const doc = await pdfjs.getDocument({ data: base64ToBytes(file.base64) }).promise;
@@ -274,7 +294,7 @@ async function preparePdf(file) {
     }
     info.text = text.trim().slice(0, PDF_TEXT_LIMIT);
     // Little text per page → probably scanned: render the first pages for a vision model.
-    if (info.text.replace(/\[Page \d+\]/g, '').trim().length < 80 * Math.min(doc.numPages, SCAN_PAGES)) {
+    if (info.text.replace(/\[Page \d+\]/g, '').trim().length < 25 * Math.min(doc.numPages, SCAN_PAGES)) {
       for (let n = 1; n <= Math.min(doc.numPages, SCAN_PAGES); n++) {
         const page = await doc.getPage(n);
         const vp = page.getViewport({ scale: 1.6 });
@@ -291,10 +311,86 @@ async function preparePdf(file) {
   }
 }
 
+/* Word (.docx) and Excel (.xlsx) attachments are turned into text the same way. */
+const docCache = new WeakMap();
+
+async function unzipEntry(bytes, wanted) {
+  // Minimal ZIP reader: find the entry in the central directory, inflate it with the browser.
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let eocd = -1;
+  for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 66000); i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) return null;
+  let p = dv.getUint32(eocd + 16, true);
+  const count = dv.getUint16(eocd + 10, true);
+  const dec = new TextDecoder();
+  for (let n = 0; n < count; n++) {
+    const method = dv.getUint16(p + 10, true), size = dv.getUint32(p + 20, true);
+    const nameLen = dv.getUint16(p + 28, true), extra = dv.getUint16(p + 30, true), comment = dv.getUint16(p + 32, true);
+    const local = dv.getUint32(p + 42, true);
+    const name = dec.decode(bytes.subarray(p + 46, p + 46 + nameLen));
+    if (name === wanted) {
+      const start = local + 30 + dv.getUint16(local + 26, true) + dv.getUint16(local + 28, true);
+      const data = bytes.subarray(start, start + size);
+      if (method === 0) return dec.decode(data);
+      const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+      return await new Response(stream).text();
+    }
+    p += 46 + nameLen + extra + comment;
+  }
+  return null;
+}
+
+async function prepareOffice(file) {
+  if (!file?.base64 || docCache.has(file)) return;
+  const name = file.name || '';
+  const type = file.type || file.mimeType || '';
+  const isDocx = /\.docx$/i.test(name) || /wordprocessingml/.test(type);
+  const isXlsx = /\.xlsx$/i.test(name) || /spreadsheetml/.test(type);
+  if (!isDocx && !isXlsx) return;
+  const info = { text: '', kind: isDocx ? 'Word document' : 'Excel workbook' };
+  docCache.set(file, info);
+  try {
+    const bytes = base64ToBytes(file.base64);
+    if (isDocx) {
+      const xml = await unzipEntry(bytes, 'word/document.xml') || '';
+      info.text = xml
+        .replace(/<w:tab\/>/g, '\t').replace(/<w:br[^>]*\/>/g, '\n')
+        .replace(/<\/w:p>/g, '\n').replace(/<\/w:tc>/g, ' | ').replace(/<\/w:tr>/g, '\n')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+        .replace(/\n{3,}/g, '\n\n').trim();
+    } else {
+      const ExcelJS = (await import('exceljs')).default;
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.load(bytes.buffer);
+      const out = [];
+      wb.eachSheet((sheet) => {
+        out.push(`[Sheet: ${sheet.name}]`);
+        sheet.eachRow({ includeEmpty: false }, (row) => {
+          const cells = (row.values || []).slice(1).map(v => {
+            if (v == null) return '';
+            if (typeof v === 'object') return v.result ?? v.text ?? (v.richText ? v.richText.map(t => t.text).join('') : v instanceof Date ? v.toISOString().slice(0, 10) : '');
+            return v;
+          });
+          out.push(cells.join(','));
+        });
+      });
+      info.text = out.join('\n');
+    }
+    info.text = info.text.slice(0, PDF_TEXT_LIMIT);
+  } catch (err) {
+    info.error = err?.message || 'could not read the file';
+  }
+}
+
 function fileParts(file) {
   if (!file?.base64) return [];
   const type = file.type || file.mimeType || 'application/octet-stream';
   const name = file.name || 'attachment';
+  const office = docCache.get(file);
+  if (office && !office.error && office.text) {
+    return [{ type: 'text', text: `Attached ${office.kind} "${name}"${office.text.length >= PDF_TEXT_LIMIT ? ' (long: end cut off)' : ''}:\n${office.text}` }];
+  }
   const pdf = pdfCache.get(file);
   if (pdf && !pdf.error) {
     const { text, pages, images } = pdf;
@@ -711,7 +807,7 @@ export async function streamChatCompletion({
   };
   // Read attached PDFs (last two user messages) before building the request.
   const recentFiles = [currentFile, ...history.filter(m => m.role === 'user').slice(-2).map(m => m.fileData)].filter(Boolean);
-  await Promise.all(recentFiles.map(f => preparePdf(f).catch(() => {})));
+  await Promise.all(recentFiles.flatMap(f => [preparePdf(f).catch(() => {}), prepareOffice(f).catch(() => {})]));
   const messages = buildMessages(history, currentFile, system);
   let sticky = provider || getPreferredProvider() || undefined;
   const limit = maxSteps || (selectedMode === 'fast' ? 6 : selectedMode === 'auto' || selectedMode === 'files' ? 16 : 24);
