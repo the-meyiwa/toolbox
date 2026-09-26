@@ -1362,7 +1362,7 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
   },
   {
     name: 'calculate_chemistry',
-    description: 'Calculates chemical formula molar masses, balances reaction equations, or searches the 4,000+ Chemical Compounds database.',
+    description: 'Calculates chemical formula molar masses, balances reaction equations, or searches the curated Chemical Compounds database.',
     parameters: {
       type: 'OBJECT',
       properties: {
@@ -4425,7 +4425,7 @@ if (container) {
         const q = formulaOrQuery.toLowerCase().trim();
         const results = COMPOUNDS_DATA.filter(c => 
           c.name.toLowerCase().includes(q) || 
-          c.formula.toLowerCase().includes(q) || 
+          (c.formula || '').toLowerCase().includes(q) || 
           (c.cas && c.cas.includes(q)) || 
           (c.iupac && c.iupac.toLowerCase().includes(q))
         ).slice(0, 5);

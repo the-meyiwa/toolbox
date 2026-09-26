@@ -1,0 +1,146 @@
+# Laboratory reagents, buffers, indicators, stains: name | use
+tris(hydroxymethyl)aminomethane | Buffer (Tris)
+hepes | Good's buffer
+mops | Good's buffer
+mes | Good's buffer
+pipes | Good's buffer
+tricine | Good's buffer
+bicine | Good's buffer
+caps | Good's buffer
+glycine | Buffer, electrophoresis
+sodium dihydrogen phosphate | Phosphate buffer component
+disodium hydrogen phosphate | Phosphate buffer component
+potassium dihydrogen phosphate | Phosphate buffer component
+dipotassium hydrogen phosphate | Phosphate buffer component
+boric acid | Borate buffer, antiseptic
+imidazole | Buffer, His-tag elution
+edta | Chelator (metal ions)
+egta | Calcium-selective chelator
+sodium dodecyl sulfate | Denaturing detergent (SDS-PAGE)
+triton x-100 | Nonionic detergent
+tween 20 | Nonionic detergent
+chaps | Zwitterionic detergent
+guanidine hydrochloride | Protein denaturant
+urea | Protein denaturant
+dithiothreitol | Disulfide reducing agent (DTT)
+2-mercaptoethanol | Disulfide reducing agent
+tris(2-carboxyethyl)phosphine | Disulfide reducing agent (TCEP)
+iodoacetamide | Cysteine alkylating agent
+phenylmethylsulfonyl fluoride | Serine protease inhibitor (PMSF)
+leupeptin | Protease inhibitor
+aprotinin | Protease inhibitor
+acrylamide | Gel electrophoresis monomer
+n,n'-methylenebisacrylamide | Gel cross-linker
+ammonium persulfate | Polymerization initiator
+tetramethylethylenediamine | Polymerization catalyst (TEMED)
+agarose | Gel electrophoresis matrix
+ethidium bromide | DNA stain (mutagen)
+coomassie brilliant blue r-250 | Protein stain
+coomassie brilliant blue g-250 | Protein stain (Bradford)
+bromophenol blue | Tracking dye, pH indicator
+xylene cyanol | Tracking dye
+ponceau s | Membrane protein stain
+dapi | Nuclear DNA stain
+hoechst 33342 | Nuclear DNA stain
+propidium iodide | Dead-cell DNA stain
+acridine orange | Nucleic acid stain
+fluorescein | Fluorescent dye
+fluorescein isothiocyanate | Fluorescent label (FITC)
+rhodamine 6g | Laser dye
+eosin y | Histology stain
+hematoxylin | Histology nuclear stain
+methylene blue | Stain, redox indicator
+crystal violet | Gram stain
+safranin | Gram counterstain
+giemsa stain | Blood film stain
+trypan blue | Cell viability stain
+nile red | Lipid stain
+x-gal | Blue-white screening substrate
+iptg | Lac operon inducer
+ampicillin | Selection antibiotic
+kanamycin | Selection antibiotic
+chloramphenicol | Selection antibiotic
+tetracycline | Selection antibiotic
+hygromycin b | Selection antibiotic
+puromycin | Selection antibiotic
+geneticin | Selection antibiotic (G418)
+cycloheximide | Protein synthesis inhibitor
+actinomycin d | Transcription inhibitor
+colchicine | Microtubule inhibitor
+nocodazole | Microtubule inhibitor
+dimethyl sulfoxide | Cryoprotectant, solvent
+phenol red | Culture-medium pH indicator
+phenolphthalein | Acid-base indicator
+methyl red | Acid-base indicator
+bromothymol blue | Acid-base indicator
+thymol blue | Acid-base indicator
+bromocresol green | Acid-base indicator
+litmus | Acid-base indicator
+universal indicator | Acid-base indicator
+eriochrome black t | Complexometric indicator
+murexide | Complexometric indicator
+xylenol orange | Complexometric indicator
+starch | Iodometric indicator
+potassium permanganate | Oxidizing titrant
+potassium dichromate | Oxidizing titrant (carcinogen)
+cerium(iv) sulfate | Oxidizing titrant
+sodium thiosulfate | Iodometric titrant
+iodine | Titrant, starch test
+potassium iodide | Reagent, iodine source
+potassium hydrogen phthalate | Primary standard (acid)
+sodium carbonate | Primary standard (base)
+silver nitrate | Chloride titrant, stain
+barium chloride | Sulfate test reagent
+ammonium molybdate | Phosphate test reagent
+nessler's reagent | Ammonia test reagent
+dimethylglyoxime | Nickel test reagent
+1,10-phenanthroline | Iron test reagent
+ninhydrin | Amino acid detection
+biuret | Protein test (reagent basis)
+benedict's reagent | Reducing-sugar test
+fehling's solution | Reducing-sugar test
+tollens' reagent | Aldehyde test
+2,4-dinitrophenylhydrazine | Carbonyl test (Brady's reagent)
+schiff reagent | Aldehyde test
+lugol's iodine | Starch test
+diphenylamine | Nitrate/DNA test
+sodium borohydride | Reducing agent
+lithium aluminium hydride | Strong reducing agent
+diisobutylaluminium hydride | Reducing agent (DIBAL)
+sodium hydride | Strong base
+n-butyllithium | Organolithium base (pyrophoric)
+lithium diisopropylamide | Non-nucleophilic base (LDA)
+potassium tert-butoxide | Strong base
+triethylamine | Organic base
+pyridine | Base, solvent
+4-dimethylaminopyridine | Acylation catalyst (DMAP)
+1,8-diazabicyclo[5.4.0]undec-7-ene | Non-nucleophilic base (DBU)
+dicyclohexylcarbodiimide | Coupling reagent (DCC)
+n-bromosuccinimide | Brominating agent
+thionyl chloride | Chlorinating agent
+oxalyl chloride | Chlorinating agent
+phosphorus pentachloride | Chlorinating agent
+phosphorus oxychloride | Chlorinating agent
+trifluoroacetic acid | Strong organic acid, deprotection
+p-toluenesulfonic acid | Acid catalyst
+osmium tetroxide | Dihydroxylation reagent, EM stain (highly toxic)
+pyridinium chlorochromate | Oxidizing agent (PCC)
+dess-martin periodinane | Oxidizing agent
+meta-chloroperoxybenzoic acid | Epoxidation reagent (mCPBA)
+triphenylphosphine | Wittig/Mitsunobu reagent
+diethyl azodicarboxylate | Mitsunobu reagent
+tetrakis(triphenylphosphine)palladium(0) | Cross-coupling catalyst
+palladium(ii) acetate | Cross-coupling catalyst
+grubbs catalyst | Olefin metathesis catalyst
+trimethylsilyl chloride | Silylating agent
+tert-butyldimethylsilyl chloride | Protecting-group reagent
+di-tert-butyl dicarbonate | Boc protecting-group reagent
+deuterium oxide | NMR solvent
+deuterated chloroform | NMR solvent
+tetramethylsilane | NMR reference standard
+silica gel | Chromatography stationary phase
+magnesium sulfate | Drying agent
+sodium sulfate | Drying agent
+calcium chloride | Drying agent
+molecular sieves 4a | Drying agent
+celite | Filter aid

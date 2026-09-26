@@ -6,7 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ELEMENTS } from '../../js/lib/chemistry-data.js';
 import { parseChemicalFormula, calculateMolarMass, balanceChemicalEquation, calculateStoichiometry } from '../../js/lib/chemistry-engine.js';
-import { COMPOUNDS_DATA } from '../../js/lib/compounds-dataset.js';
+import { COMPOUNDS_DATA, COMPOUND_FIELDS } from '../../js/lib/compounds-dataset.js';
 
 test('Chemistry: periodic table contains 118 elements', () => {
   assert.equal(ELEMENTS.length, 118);
@@ -86,10 +86,34 @@ test('Chemistry: stoichiometry calculates limiting reactant and yields', () => {
 });
 
 test('Chemistry: compound database contains valid compound records', () => {
-  assert.ok(COMPOUNDS_DATA.length >= 10, 'Expected compounds in database');
+  assert.ok(COMPOUNDS_DATA.length >= 1000, 'Expected the curated compound set');
+  const seenCas = new Set();
   for (const c of COMPOUNDS_DATA) {
     assert.ok(c.name, 'Compound missing name');
-    assert.ok(c.formula, 'Compound missing formula');
-    assert.ok(c.molarMass > 0, 'Compound molarMass must be positive');
+    assert.ok(c.fields.length > 0, `${c.name} has no field`);
+    for (const f of c.fields) assert.ok(COMPOUND_FIELDS.includes(f), `${c.name} has unknown field ${f}`);
+    if (c.live) continue;
+    assert.ok(c.formula, `${c.name} missing formula`);
+    assert.ok(c.molarMass > 0, `${c.name} molarMass must be positive`);
+    assert.match(c.cas, /^\d{2,7}-\d{2}-\d$/, `${c.name} has a malformed CAS number`);
+    assert.ok(!seenCas.has(c.cas), `${c.cas} appears twice`);
+    seenCas.add(c.cas);
+  }
+});
+
+test('Chemistry: curated records carry verified identifiers', () => {
+  const byName = name => COMPOUNDS_DATA.find(c => c.name === name);
+  assert.equal(byName('Paracetamol').cas, '103-90-2');
+  assert.equal(byName('Paracetamol').formula, 'C8H9NO2');
+  assert.equal(byName('Glyphosate').cas, '1071-83-6');
+  assert.equal(byName('Benzene').formula, 'C6H6');
+  assert.ok(byName('Benzene').hazards.some(h => h.startsWith('IARC Group 1')));
+  assert.ok(byName('Hydrogen cyanide').handling, 'Toxic compounds carry handling guidance');
+  assert.ok(byName('Hydrogen cyanide').fields.includes('Toxic & Hazardous'));
+});
+
+test('Chemistry: every field has curated compounds', () => {
+  for (const f of COMPOUND_FIELDS) {
+    assert.ok(COMPOUNDS_DATA.filter(c => c.fields.includes(f)).length >= 50, `Too few compounds in ${f}`);
   }
 });

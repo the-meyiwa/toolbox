@@ -1,0 +1,219 @@
+# Food additives, flavors, nutrients: name | use (E number where applicable)
+citric acid | Acidulant (E330)
+malic acid | Acidulant (E296)
+tartaric acid | Acidulant (E334)
+lactic acid | Acidulant (E270)
+acetic acid | Acidulant, vinegar (E260)
+fumaric acid | Acidulant (E297)
+phosphoric acid | Acidulant in colas (E338)
+succinic acid | Acidity regulator (E363)
+adipic acid | Acidulant (E355)
+glucono delta-lactone | Acidifier, coagulant (E575)
+sodium citrate | Acidity regulator (E331)
+potassium citrate | Acidity regulator (E332)
+calcium citrate | Calcium fortificant (E333)
+sodium acetate | Preservative, acidity regulator (E262)
+sodium bicarbonate | Leavening agent (E500)
+ammonium bicarbonate | Leavening agent (E503)
+sodium aluminium phosphate | Leavening acid (E541)
+sodium acid pyrophosphate | Leavening acid (E450)
+monocalcium phosphate | Leavening acid (E341)
+potassium bitartrate | Cream of tartar (E336)
+sodium chloride | Table salt
+potassium iodate | Salt iodization
+sodium benzoate | Preservative (E211)
+benzoic acid | Preservative (E210)
+potassium sorbate | Preservative (E202)
+sorbic acid | Preservative (E200)
+calcium propionate | Preservative (E282)
+propionic acid | Preservative (E280)
+sodium nitrite | Curing salt preservative (E250)
+potassium nitrite | Curing salt preservative (E249)
+sodium metabisulfite | Preservative, antioxidant (E223)
+potassium metabisulfite | Preservative in wine (E224)
+sodium sulfite | Preservative (E221)
+sulfur dioxide | Preservative (E220)
+methylparaben | Preservative (E218)
+ethylparaben | Preservative (E214)
+natamycin | Antifungal preservative (E235)
+nisin | Antibacterial preservative (E234)
+hexamethylenetetramine | Preservative (E239)
+dimethyl dicarbonate | Beverage preservative (E242)
+ascorbic acid | Antioxidant, vitamin C (E300)
+sodium ascorbate | Antioxidant (E301)
+erythorbic acid | Antioxidant (E315)
+ascorbyl palmitate | Antioxidant (E304)
+alpha-tocopherol | Antioxidant, vitamin E (E307)
+butylated hydroxyanisole | Antioxidant BHA (E320)
+butylated hydroxytoluene | Antioxidant BHT (E321)
+tert-butylhydroquinone | Antioxidant TBHQ (E319)
+propyl gallate | Antioxidant (E310)
+ethoxyquin | Antioxidant (feed)
+edta | Sequestrant
+calcium disodium edta | Sequestrant (E385)
+sucrose | Sugar
+glucose | Sugar (dextrose)
+fructose | Sugar
+lactose | Milk sugar
+maltose | Malt sugar
+trehalose | Sugar, stabilizer
+isomaltulose | Low-glycemic sugar
+sorbitol | Sugar alcohol sweetener (E420)
+mannitol | Sugar alcohol sweetener (E421)
+xylitol | Sugar alcohol sweetener (E967)
+erythritol | Sugar alcohol sweetener (E968)
+maltitol | Sugar alcohol sweetener (E965)
+isomalt | Sugar alcohol sweetener (E953)
+lactitol | Sugar alcohol sweetener (E966)
+glycerol | Humectant (E422)
+propylene glycol | Humectant, carrier (E1520)
+saccharin | Artificial sweetener (E954)
+aspartame | Artificial sweetener (E951)
+acesulfame potassium | Artificial sweetener (E950)
+sucralose | Artificial sweetener (E955)
+sodium cyclamate | Artificial sweetener (E952)
+neotame | Artificial sweetener (E961)
+advantame | Artificial sweetener (E969)
+stevioside | Natural high-intensity sweetener (E960)
+rebaudioside a | Natural high-intensity sweetener (E960)
+glycyrrhizin | Licorice sweetener (E958)
+thaumatin | Sweet protein (E957)
+neohesperidin dihydrochalcone | Sweetener (E959)
+monosodium glutamate | Flavor enhancer (E621)
+glutamic acid | Flavor enhancer (E620)
+disodium inosinate | Flavor enhancer (E631)
+disodium guanylate | Flavor enhancer (E627)
+vanillin | Vanilla flavor
+ethyl vanillin | Vanilla flavor
+cinnamaldehyde | Cinnamon flavor
+benzaldehyde | Almond/cherry flavor
+citral | Lemon flavor
+limonene | Citrus flavor
+d-limonene | Citrus flavor
+menthol | Mint flavor, cooling agent
+carvone | Spearmint/caraway flavor
+anethole | Anise flavor
+eugenol | Clove flavor
+thymol | Thyme flavor, antiseptic
+isoamyl acetate | Banana flavor
+ethyl butyrate | Pineapple/fruit flavor
+ethyl acetate | Fruity flavor, solvent
+methyl anthranilate | Grape flavor
+allyl isothiocyanate | Mustard/wasabi pungency
+capsaicin | Chili pungency
+piperine | Black pepper pungency
+gingerol | Ginger pungency
+diacetyl | Butter flavor
+acetoin | Butter flavor
+maltol | Caramel flavor
+ethyl maltol | Caramel/cotton-candy flavor
+furaneol | Strawberry/caramel flavor
+gamma-decalactone | Peach flavor
+raspberry ketone | Raspberry flavor
+nootkatone | Grapefruit flavor
+1-octen-3-ol | Mushroom flavor
+2-acetyl-1-pyrroline | Bread/rice aroma
+methional | Potato/savory flavor
+dimethyl sulfide | Savory/corn flavor
+caffeine | Stimulant in beverages
+theobromine | Cocoa alkaloid
+quinine | Bitterant in tonic water
+naringin | Grapefruit bitterant
+curcumin | Yellow color (E100)
+riboflavin | Yellow color, vitamin B2 (E101)
+tartrazine | Yellow azo dye (E102)
+quinoline yellow | Yellow dye (E104)
+sunset yellow fcf | Orange azo dye (E110)
+carminic acid | Red color, cochineal (E120)
+azorubine | Red azo dye (E122)
+amaranth | Red azo dye (E123)
+ponceau 4r | Red azo dye (E124)
+erythrosine | Red dye (E127)
+allura red ac | Red azo dye (E129)
+patent blue v | Blue dye (E131)
+indigo carmine | Blue dye (E132)
+brilliant blue fcf | Blue dye (E133)
+fast green fcf | Green dye (E143)
+brilliant black bn | Black azo dye (E151)
+beta-carotene | Orange color, provitamin A (E160a)
+lycopene | Red color (E160d)
+lutein | Yellow color (E161b)
+canthaxanthin | Orange-red color (E161g)
+astaxanthin | Pink color (feed)
+bixin | Annatto color (E160b)
+betanin | Beet red color (E162)
+titanium dioxide | White pigment (E171)
+calcium carbonate | Color, firming agent (E170)
+iron(iii) oxide | Color (E172)
+lecithin | Emulsifier (E322)
+polysorbate 80 | Emulsifier (E433)
+sorbitan monostearate | Emulsifier (E491)
+glyceryl monostearate | Emulsifier (E471)
+sodium stearoyl lactylate | Emulsifier (E481)
+sodium alginate | Thickener (E401)
+agar | Gelling agent (E406)
+carrageenan | Thickener (E407)
+xanthan gum | Thickener (E415)
+pectin | Gelling agent (E440)
+sodium carboxymethyl cellulose | Thickener (E466)
+calcium chloride | Firming agent (E509)
+calcium lactate | Firming agent (E327)
+calcium sulfate | Tofu coagulant (E516)
+magnesium chloride | Tofu coagulant (nigari) (E511)
+sodium phosphate | Emulsifying salt (E339)
+disodium phosphate | Emulsifying salt (E339)
+sodium tripolyphosphate | Moisture retainer (E451)
+tetrasodium pyrophosphate | Emulsifying salt (E450)
+silicon dioxide | Anticaking agent (E551)
+magnesium stearate | Anticaking agent, lubricant (E470b)
+potassium ferrocyanide | Anticaking agent for salt (E536)
+dimethylpolysiloxane | Antifoaming agent (E900)
+carbon dioxide | Carbonation, propellant (E290)
+nitrogen | Packaging gas (E941)
+nitrous oxide | Whipped-cream propellant (E942)
+argon | Packaging gas (E938)
+potassium bromate | Flour improver (banned in many countries)
+azodicarbonamide | Flour improver (E927a)
+benzoyl peroxide | Flour bleaching agent
+l-cysteine | Dough conditioner (E920)
+retinol | Vitamin A
+thiamine | Vitamin B1
+riboflavin | Vitamin B2
+nicotinamide | Vitamin B3
+pantothenic acid | Vitamin B5
+pyridoxine | Vitamin B6
+biotin | Vitamin B7
+folic acid | Vitamin B9
+cyanocobalamin | Vitamin B12
+ascorbic acid | Vitamin C
+cholecalciferol | Vitamin D3
+ergocalciferol | Vitamin D2
+alpha-tocopherol | Vitamin E
+phylloquinone | Vitamin K1
+menaquinone | Vitamin K2
+choline chloride | Nutrient (feed/food)
+l-carnitine | Nutrient supplement
+creatine | Sports supplement
+taurine | Energy-drink supplement
+coenzyme q10 | Supplement
+omega-3 docosahexaenoic acid | Fatty acid supplement
+eicosapentaenoic acid | Omega-3 fatty acid
+linoleic acid | Omega-6 fatty acid
+alpha-linolenic acid | Omega-3 fatty acid
+ferrous sulfate | Iron fortificant
+ferrous fumarate | Iron fortificant
+zinc oxide | Zinc fortificant
+sodium fluoride | Fluoridation agent
+acrylamide | Heat-formed food contaminant (probable carcinogen)
+furan | Heat-formed food contaminant
+aflatoxin b1 | Mycotoxin contaminant (carcinogen)
+ochratoxin a | Mycotoxin contaminant
+patulin | Mycotoxin contaminant
+deoxynivalenol | Mycotoxin contaminant
+zearalenone | Mycotoxin contaminant
+histamine | Spoilage amine (scombroid poisoning)
+benzo[a]pyrene | Smoke/char contaminant (carcinogen)
+ethyl carbamate | Fermentation contaminant
+3-mcpd | Processing contaminant
+melamine | Adulterant (2008 milk scandal)
+solanine | Potato glycoalkaloid toxin

@@ -1,0 +1,205 @@
+# Agricultural chemicals: name | use
+glyphosate | Broad-spectrum herbicide
+glufosinate | Broad-spectrum herbicide
+atrazine | Triazine herbicide
+simazine | Triazine herbicide
+terbuthylazine | Triazine herbicide
+paraquat | Bipyridinium herbicide (highly toxic)
+diquat | Bipyridinium herbicide
+2,4-d | Phenoxy herbicide
+mcpa | Phenoxy herbicide
+mecoprop | Phenoxy herbicide
+2,4,5-t | Phenoxy herbicide (banned in most countries)
+dicamba | Benzoic acid herbicide
+clopyralid | Pyridine herbicide
+picloram | Pyridine herbicide
+triclopyr | Pyridine herbicide
+fluroxypyr | Pyridine herbicide
+metolachlor | Chloroacetanilide herbicide
+alachlor | Chloroacetanilide herbicide
+acetochlor | Chloroacetanilide herbicide
+butachlor | Chloroacetanilide herbicide
+propanil | Anilide herbicide
+trifluralin | Dinitroaniline herbicide
+pendimethalin | Dinitroaniline herbicide
+diuron | Urea herbicide
+linuron | Urea herbicide
+isoproturon | Urea herbicide
+chlorotoluron | Urea herbicide
+bromoxynil | Nitrile herbicide
+ioxynil | Nitrile herbicide
+bentazone | Herbicide
+metribuzin | Triazinone herbicide
+chlorsulfuron | Sulfonylurea herbicide
+metsulfuron-methyl | Sulfonylurea herbicide
+imazapyr | Imidazolinone herbicide
+imazethapyr | Imidazolinone herbicide
+oxyfluorfen | Diphenyl ether herbicide
+fluazifop-butyl | Aryloxyphenoxypropionate herbicide
+sethoxydim | Cyclohexanedione herbicide
+clethodim | Cyclohexanedione herbicide
+dalapon | Herbicide
+amitrole | Herbicide
+sodium chlorate | Non-selective herbicide, oxidizer
+chlorpyrifos | Organophosphate insecticide
+malathion | Organophosphate insecticide
+parathion | Organophosphate insecticide (highly toxic)
+methyl parathion | Organophosphate insecticide (highly toxic)
+diazinon | Organophosphate insecticide
+dichlorvos | Organophosphate insecticide
+dimethoate | Organophosphate insecticide
+fenitrothion | Organophosphate insecticide
+fenthion | Organophosphate insecticide
+phorate | Organophosphate insecticide (highly toxic)
+terbufos | Organophosphate insecticide (highly toxic)
+disulfoton | Organophosphate insecticide (highly toxic)
+methamidophos | Organophosphate insecticide (highly toxic)
+acephate | Organophosphate insecticide
+monocrotophos | Organophosphate insecticide (highly toxic)
+azinphos-methyl | Organophosphate insecticide
+phosmet | Organophosphate insecticide
+profenofos | Organophosphate insecticide
+ethion | Organophosphate insecticide
+carbaryl | Carbamate insecticide
+carbofuran | Carbamate insecticide (highly toxic)
+aldicarb | Carbamate insecticide (highly toxic)
+methomyl | Carbamate insecticide
+oxamyl | Carbamate insecticide
+propoxur | Carbamate insecticide
+pirimicarb | Carbamate insecticide
+ddt | Organochlorine insecticide (banned, persistent)
+dieldrin | Organochlorine insecticide (banned, persistent)
+aldrin | Organochlorine insecticide (banned, persistent)
+endrin | Organochlorine insecticide (banned, persistent)
+chlordane | Organochlorine insecticide (banned, persistent)
+heptachlor | Organochlorine insecticide (banned, persistent)
+lindane | Organochlorine insecticide
+endosulfan | Organochlorine insecticide (banned, persistent)
+toxaphene | Organochlorine insecticide (banned, persistent)
+mirex | Organochlorine insecticide (banned, persistent)
+methoxychlor | Organochlorine insecticide
+kepone | Organochlorine insecticide (banned)
+permethrin | Pyrethroid insecticide
+cypermethrin | Pyrethroid insecticide
+deltamethrin | Pyrethroid insecticide
+lambda-cyhalothrin | Pyrethroid insecticide
+bifenthrin | Pyrethroid insecticide
+fenvalerate | Pyrethroid insecticide
+esfenvalerate | Pyrethroid insecticide
+cyfluthrin | Pyrethroid insecticide
+tefluthrin | Pyrethroid insecticide
+allethrin | Pyrethroid insecticide
+pyrethrin i | Natural pyrethrum insecticide
+piperonyl butoxide | Insecticide synergist
+imidacloprid | Neonicotinoid insecticide
+thiamethoxam | Neonicotinoid insecticide
+clothianidin | Neonicotinoid insecticide
+acetamiprid | Neonicotinoid insecticide
+thiacloprid | Neonicotinoid insecticide
+fipronil | Phenylpyrazole insecticide
+chlorantraniliprole | Diamide insecticide
+spinosad | Spinosyn insecticide
+abamectin | Avermectin insecticide, acaricide
+emamectin benzoate | Avermectin insecticide
+diflubenzuron | Insect growth regulator
+methoprene | Insect growth regulator
+pyriproxyfen | Insect growth regulator
+rotenone | Botanical insecticide, piscicide
+nicotine | Botanical insecticide (historic)
+deet | Insect repellent
+icaridin | Insect repellent
+amitraz | Acaricide
+propargite | Acaricide
+mancozeb | Dithiocarbamate fungicide
+maneb | Dithiocarbamate fungicide
+zineb | Dithiocarbamate fungicide
+thiram | Dithiocarbamate fungicide
+ziram | Dithiocarbamate fungicide
+captan | Phthalimide fungicide
+folpet | Phthalimide fungicide
+captafol | Phthalimide fungicide
+chlorothalonil | Chloronitrile fungicide
+benomyl | Benzimidazole fungicide
+carbendazim | Benzimidazole fungicide
+thiabendazole | Benzimidazole fungicide
+thiophanate-methyl | Benzimidazole precursor fungicide
+tebuconazole | Triazole fungicide
+propiconazole | Triazole fungicide
+difenoconazole | Triazole fungicide
+epoxiconazole | Triazole fungicide
+hexaconazole | Triazole fungicide
+myclobutanil | Triazole fungicide
+triadimefon | Triazole fungicide
+azoxystrobin | Strobilurin fungicide
+pyraclostrobin | Strobilurin fungicide
+trifloxystrobin | Strobilurin fungicide
+metalaxyl | Phenylamide fungicide
+iprodione | Dicarboximide fungicide
+vinclozolin | Dicarboximide fungicide
+procymidone | Dicarboximide fungicide
+fludioxonil | Phenylpyrrole fungicide
+boscalid | SDHI fungicide
+cymoxanil | Fungicide
+fosetyl-aluminium | Phosphonate fungicide
+copper(ii) sulfate | Fungicide (Bordeaux mixture), algicide
+copper oxychloride | Copper fungicide
+sulfur | Fungicide, acaricide
+pentachlorophenol | Wood preservative, fungicide
+hexachlorobenzene | Fungicide (banned, persistent)
+metaldehyde | Molluscicide
+brodifacoum | Anticoagulant rodenticide
+bromadiolone | Anticoagulant rodenticide
+difenacoum | Anticoagulant rodenticide
+coumatetralyl | Anticoagulant rodenticide
+zinc phosphide | Rodenticide (releases phosphine)
+aluminium phosphide | Grain fumigant (releases phosphine)
+strychnine | Rodenticide (highly toxic)
+sodium fluoroacetate | Rodenticide 1080 (highly toxic)
+cholecalciferol | Vitamin D3, rodenticide
+methyl bromide | Soil fumigant (ozone-depleting)
+chloropicrin | Soil fumigant
+1,3-dichloropropene | Soil fumigant
+metam sodium | Soil fumigant
+dazomet | Soil fumigant
+sulfuryl fluoride | Structural fumigant
+ethylene dibromide | Fumigant (banned)
+dbcp | Nematicide (banned)
+urea | Nitrogen fertilizer
+ammonium nitrate | Nitrogen fertilizer, oxidizer
+ammonium sulfate | Nitrogen/sulfur fertilizer
+ammonium chloride | Fertilizer, food additive
+calcium nitrate | Nitrogen/calcium fertilizer
+sodium nitrate | Nitrogen fertilizer (Chile saltpeter)
+potassium nitrate | Fertilizer, oxidizer
+ammonia | Nitrogen fertilizer feedstock
+diammonium phosphate | Phosphate fertilizer
+monoammonium phosphate | Phosphate fertilizer
+calcium dihydrogen phosphate | Phosphate fertilizer (superphosphate)
+potassium chloride | Potash fertilizer
+potassium sulfate | Potash fertilizer
+magnesium sulfate | Magnesium fertilizer (Epsom salt)
+calcium carbonate | Agricultural lime
+calcium hydroxide | Soil liming agent
+calcium sulfate | Soil amendment (gypsum)
+iron(ii) sulfate | Micronutrient fertilizer, moss killer
+zinc sulfate | Micronutrient fertilizer
+manganese(ii) sulfate | Micronutrient fertilizer
+borax | Boron micronutrient
+sodium molybdate | Molybdenum micronutrient
+calcium cyanamide | Fertilizer, herbicide
+dicyandiamide | Nitrification inhibitor
+nitrapyrin | Nitrification inhibitor
+gibberellic acid | Plant growth regulator
+indole-3-acetic acid | Plant hormone (auxin)
+indole-3-butyric acid | Rooting hormone
+1-naphthaleneacetic acid | Synthetic auxin
+kinetin | Plant hormone (cytokinin)
+abscisic acid | Plant hormone
+ethephon | Plant growth regulator (ethylene release)
+chlormequat chloride | Plant growth regulator
+paclobutrazol | Plant growth regulator
+daminozide | Plant growth regulator
+maleic hydrazide | Sprout inhibitor
+chlorpropham | Sprout inhibitor
+1-methylcyclopropene | Ripening inhibitor
+monensin | Veterinary ionophore
