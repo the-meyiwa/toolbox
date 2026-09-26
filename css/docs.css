@@ -148,3 +148,48 @@
   .pdm-rail-actions { border-top: 0; flex-wrap: nowrap; }
   .pdm-main { padding: var(--space-3); }
 }
+
+/* ---------- Polish: the editor is the panel ----------
+   Scribe, Ledger and Podium sit edge to edge in the tool panel (no card
+   inside a card) and, on desktop, fill the window so the sheet tabs,
+   slide rail and page never push the header off screen. */
+body[data-tool-id="scribe"] #viewport-content,
+body[data-tool-id="ledger"] #viewport-content,
+body[data-tool-id="podium"] #viewport-content { padding: 0; overflow: hidden; }
+#viewport-content > .dx { border: 0; border-radius: inherit; }
+
+.dx-head { padding: 10px var(--space-4); background: var(--surface); }
+.dx-file { flex-direction: row; align-items: baseline; gap: var(--space-2); flex: 1 1 200px; }
+.dx-name { field-sizing: content; min-width: 8ch; max-width: min(46ch, 100%); }
+.dx-status { flex: 0 1 auto; }
+.dx-sep { width: 1px; height: 20px; background: var(--line); margin: 0 2px; flex: none; }
+.dx-ask { color: var(--text); background: var(--tint); }
+.dx-ask:hover { background: var(--surface-2); }
+.dx-ask svg { color: #7c3aed; }
+.dx-toolbar { background: var(--surface); box-shadow: 0 1px 0 var(--line); border-bottom: 0; }
+.dx-tbtn { transition: background-color var(--dur-1) ease, color var(--dur-1) ease; }
+.dx-foot { background: var(--surface); }
+
+@media (min-width: 769px) {
+  body.tool-fit-screen[data-tool-id="scribe"] .dx,
+  body.tool-fit-screen[data-tool-id="ledger"] .dx,
+  body.tool-fit-screen[data-tool-id="podium"] .dx { height: 100%; min-height: 520px; }
+  body.tool-fit-screen .dx > .dx-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  body.tool-fit-screen .dx-scribe .dx-canvas { flex: 1 1 auto; max-height: none; min-height: 0; }
+  body.tool-fit-screen .dx-ledger .ldg-viewport { flex: 1 1 auto; height: auto; min-height: 0; }
+  body.tool-fit-screen .dx-podium .pdm-layout { flex: 1 1 auto; min-height: 0; }
+  body.tool-fit-screen .dx-podium .pdm-rail { max-height: none; }
+  body.tool-fit-screen .dx-podium .pdm-main { overflow: auto; justify-content: center; }
+  body.tool-fit-screen .dx-podium .pdm-stage,
+  body.tool-fit-screen .dx-podium .pdm-notes { max-width: min(1100px, calc((100dvh - 560px) * 16 / 9)); }
+  body.tool-fit-screen .dx > .dx-head, body.tool-fit-screen .dx > .dx-toolbar, body.tool-fit-screen .dx > .dx-foot,
+  body.tool-fit-screen .dx-ledger .ldg-bar, body.tool-fit-screen .dx-ledger .ldg-tabs { flex-shrink: 0; }
+}
+@media (max-width: 900px) {
+  .dx-ask span, .dx-actions [data-dx="new"] span, .dx-open span { display: none; }
+}
+
+/* Podium: a calm stage surface */
+.dx-podium .pdm-main { background: var(--surface-2); }
+.pdm-rail { background: var(--surface); }
+.pdm-thumb.is-current { background: var(--tint); }

@@ -119,12 +119,13 @@ const WIDE_TOOL_IDS = new Set([
   'watermark-remover', 'math-utility', 'periodic-table', 'data-bot', 'financial-analyzer', 'wiki',
   'video-player', 'file-drop', 'compound-database', 'diseases-database', 'calculator', 'case-digest',
   'case-comparator', 'legal-research', 'text-diff', 'tech-device-comparisons', 'sound-effects', 'chess',
+  'scribe', 'ledger', 'podium',
 ]);
 /* Tools whose content should stretch to fill the panel's height. */
 const FILL_TOOL_IDS = new Set([
   'flowchart', 'architecture-editor', 'uml-diagram', 'logic-lab', 'algorithm-lab', 'pdf-editor',
   'watermark-remover', 'data-bot', 'video-player', 'calculator', 'timer',
-  'assistant', 'container-planner',
+  'assistant', 'container-planner', 'scribe', 'ledger', 'podium',
 ]);
 
 export function isFitScreenTool(id) {
@@ -538,7 +539,7 @@ async function openTool(id, routeState = {}) {
     if (incoming && typeof currentToolInstance.setArtifact === 'function') {
       try {
         currentToolInstance.setArtifact(incoming);
-        viewportContent.prepend(incomingBanner(incoming, BY_ID.get(incoming.from)));
+        if (!currentToolInstance.ownFileChrome) viewportContent.prepend(incomingBanner(incoming, BY_ID.get(incoming.from)));
       } catch (err) {
         console.error('tool could not accept the artifact', err);
       }
