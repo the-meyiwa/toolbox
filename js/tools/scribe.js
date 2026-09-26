@@ -68,6 +68,7 @@ async function sanitize(html) {
 }
 
 export default {
+  ownFileChrome: true,
   render(container, { artifact } = {}) {
     let page = null;
     const shell = mountShell(container, {
@@ -94,6 +95,10 @@ export default {
         setHtml(await sanitize(html));
       },
       blank: () => setHtml(''),
+      selection: () => {
+        const s = window.getSelection?.();
+        return s && page && s.rangeCount && page.contains(s.anchorNode) ? s.toString() : '';
+      },
       serialize: async (format) => {
         const blocks = readModel();
         const title = shell.state.name.replace(/\.[^.]+$/, '');
