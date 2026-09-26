@@ -25,7 +25,6 @@
 .math-search-input,
 .msg-search-input,
 .tool-search-input,
-.wk-input,
 #cd-search,
 #an-filter,
 #pt-search,
@@ -51,7 +50,6 @@
 .math-search-input:focus,
 .msg-search-input:focus,
 .tool-search-input:focus,
-.wk-input:focus,
 #cd-search:focus,
 #an-filter:focus,
 #pt-search:focus,
@@ -1167,6 +1165,9 @@ input[type="password"] {
     order: 2;
   }
   .t3d-stage { order: 1; }
+  /* Anatomy runs edge to edge; its controls still need the page gutter. */
+  body[data-tool-id="anatomy-explorer"] .t3d-panel { padding: 0 var(--space-4) var(--space-4); }
+  body[data-tool-id="anatomy-explorer"] .t3d-stage > :not(.t3d-canvas) { margin-left: var(--space-4); margin-right: var(--space-4); }
   .t3d-canvas { height: 58vh; min-height: 320px; }
   .t3d-list { max-height: 220px; }
 }
@@ -1348,11 +1349,13 @@ input[type="password"] {
 .biz-suffix {
   position: absolute;
   right: 12px;
-  top: 50%;
-  /* Removed generic animation/transform */
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
   font-family: var(--mono);
-  font-size: 0.74rem;
-  color: var(--g400);
+  font-size: 0.78rem;
+  color: var(--g500);
   pointer-events: none;
 }
 .biz-seg-field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
@@ -2864,11 +2867,15 @@ input[type="date"] {
   transition: border-color 150ms;
 }
 .wk-input-wrap:focus-within { border-color: var(--black); }
+/* In a column (Dictionary) flex:1 would size the height, not the width. */
+.dct > .wk-input-wrap { flex: none; }
 .wk-input-wrap svg { color: var(--g400); flex-shrink: 0; }
-.wk-input {
-  flex: 1; min-width: 0; border: none; outline: none; background: none;
+.wk-input-wrap .wk-input {
+  flex: 1; min-width: 0; height: 100%; padding: 0; border: none; border-radius: 0;
+  outline: none; background: none; box-shadow: none;
   font: inherit; font-size: 0.95rem; color: var(--black);
 }
+.wk-input-wrap .wk-input:focus { border: none; background: none; box-shadow: none; }
 .wk-input::placeholder { color: var(--g400); }
 .wk-loading { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 46px 20px; color: var(--g500); }
 .wk-loading p { font-size: 0.85rem; }
@@ -2902,6 +2909,10 @@ input[type="date"] {
 .wk { display: flex; flex-direction: column; gap: 16px; }
 .wk-searchbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .wk-lang { width: 130px; height: 46px; flex-shrink: 0; }
+@media (max-width: 560px) {
+  .wk-searchbar .wk-input-wrap { flex-basis: 100%; }
+  .wk-searchbar .wk-lang { flex: 1; width: auto; }
+}
 .wk-count { font-family: var(--mono); font-size: 0.7rem; color: var(--g500); }
 .wk-results { display: flex; flex-direction: column; gap: 8px; }
 .wk-card {
@@ -5790,6 +5801,8 @@ body[data-tool-id="mail"] #viewport-content {
     height: auto !important;
     overflow: visible !important;
     flex: none !important;
+    /* The viewport drops its gutter for this full-height tool; keep one here. */
+    padding: 0 var(--space-4) var(--space-4) !important;
   }
   /* --- Tabs: horizontal scroll row, no wrapping --- */
   body[data-tool-id="container-planner"] .cq-tabs {

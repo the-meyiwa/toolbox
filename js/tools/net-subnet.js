@@ -3,9 +3,9 @@ export default {
     container.innerHTML = `
       <div class="tool-content">
         <div class="tool-section">
-          <div style="display:flex; gap:12px; margin-bottom:12px;">
-            <input type="text" id="sn-ip" class="tool-input" placeholder="IP Address (e.g. 192.168.1.1)" style="flex:2;">
-            <input type="number" id="sn-cidr" class="tool-input" placeholder="CIDR (e.g. 24)" min="0" max="32" style="flex:1;">
+          <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
+            <input type="text" id="sn-ip" class="tool-input" placeholder="IP Address (e.g. 192.168.1.1)" style="flex:2 1 240px; min-width:0;">
+            <input type="number" id="sn-cidr" class="tool-input" placeholder="CIDR (e.g. 24)" min="0" max="32" style="flex:1 1 110px; min-width:0;">
           </div>
           <button id="sn-btn" class="btn btn-primary" style="width:100%;">Calculate</button>
           <pre id="sn-res" class="tool-output" style="margin-top:16px; display:none;"></pre>

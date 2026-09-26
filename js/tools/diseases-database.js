@@ -33,7 +33,7 @@ export default {
             type="search"
             id="dis-search-input"
             class="tool-input"
-            placeholder="Search by disease name, symptom (e.g. 'chest pain', 'hay fever', 'cephalitis'), or ICD-11 code..."
+            placeholder="Search conditions, symptoms or ICD-11 codes"
             style="width:100%; height:46px; border-radius:9999px; padding:0 20px; font-size:0.92rem; border:1.5px solid var(--g300, #cbd5e1); outline:none; box-sizing:border-box;"
           />
         </div>
@@ -56,7 +56,7 @@ export default {
       </div>
 
       <!-- Results Count Bar -->
-      <div id="dis-status-bar" class="dis-status-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; font-size:0.82rem; color:var(--g600, var(--text-2)); font-weight:600;">
+      <div id="dis-status-bar" class="dis-status-bar" style="display:flex; flex-wrap:wrap; gap:4px 12px; justify-content:space-between; align-items:center; margin-bottom:14px; font-size:0.82rem; color:var(--g600, var(--text-2)); font-weight:600;">
         <span id="dis-count-label">Showing high-commodity conditions</span>
         <span>WHO ICD-11 & Orphanet Engine</span>
       </div>

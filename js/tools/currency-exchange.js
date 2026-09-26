@@ -46,7 +46,7 @@ export default {
           
           <div class="tool-stat" style="background:var(--black); color:var(--white); padding:24px; text-align:center;">
             <div class="tool-stat-label" style="color:var(--g400); margin-bottom:8px;">Converted amount</div>
-            <div class="tool-stat-value" id="ex-result" style="font-family:var(--pixel); font-size:3rem; word-break:break-all;">Loading…</div>
+            <div class="tool-stat-value" id="ex-result" style="font-family:var(--pixel); font-size:clamp(2rem, 9vw, 3rem); overflow-wrap:anywhere;">Loading…</div>
             <div style="margin-top:12px; font-size:0.85rem; color:var(--g500);" id="ex-rate-info"></div>
           </div>
         </div>
@@ -63,6 +63,11 @@ export default {
     let rates = null;
     let base = 'USD';
 
+    // Status messages are words, not an amount: show them at reading size so
+    // they never break mid-word on a phone.
+    const showStatus = (text) => { resultDiv.textContent = text; resultDiv.style.fontSize = '1.25rem'; };
+    const showAmount = (text) => { resultDiv.textContent = text; resultDiv.style.fontSize = 'clamp(2rem, 9vw, 3rem)'; };
+
     async function fetchRates() {
       try {
         const res = await fetch('https://open.er-api.com/v6/latest/USD');
@@ -73,7 +78,7 @@ export default {
           calculate();
         }
       } catch (e) {
-        resultDiv.textContent = 'Rates unavailable';
+        showStatus('Rates unavailable');
       }
     }
 
@@ -113,7 +118,7 @@ export default {
       const toRate = rates[to];
 
       if (!fromRate || !toRate) {
-        resultDiv.textContent = 'Rate unavailable';
+        showStatus('Rate unavailable');
         return;
       }
 
@@ -123,7 +128,7 @@ export default {
 
       const format = (num, curr) => new Intl.NumberFormat(undefined, { style: 'currency', currency: curr, maximumFractionDigits: 4 }).format(num);
 
-      resultDiv.textContent = format(finalAmount, to);
+      showAmount(format(finalAmount, to));
       
       const singleRate = (1 / fromRate) * toRate;
       rateInfoDiv.textContent = `1 ${from} = ${singleRate.toFixed(4)} ${to}`;

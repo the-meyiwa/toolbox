@@ -117,3 +117,12 @@ test('Chemistry: every field has curated compounds', () => {
     assert.ok(COMPOUNDS_DATA.filter(c => c.fields.includes(f)).length >= 50, `Too few compounds in ${f}`);
   }
 });
+
+test('Chemistry: balanced string keeps its arrow and re-balances an already-balanced equation', () => {
+  const fresh = balanceChemicalEquation('C3H8 + O2 -> CO2 + H2O');
+  assert.equal(fresh.balancedString, 'C3H8 + 5 O2 → 3 CO2 + 4 H2O');
+  // Pasting that result (or a hand-balanced equation) back in must not read "5 O2" as a formula.
+  const again = balanceChemicalEquation(fresh.balancedString);
+  assert.equal(again.balancedString, fresh.balancedString);
+  assert.deepEqual(again.reactants.map(r => r.formula), ['C3H8', 'O2']);
+});
