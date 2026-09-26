@@ -17,6 +17,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { Document, NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { simplify, weld, dedup, prune, draco } from '@gltf-transform/functions';
@@ -32,13 +33,14 @@ const OUT_DIR = path.join('public', 'anatomy');
    need very different treatment.
 
    With the full ~930-structure dataset (skeletal 268, muscular 428):
-   - TARGET_TRIS 8000 keeps major organs (liver, cerebrum, heart) visually
-     detailed while the adaptive ratio still aggressively decimates small
-     repetitive structures (toe phalanges, sesamoids).
+   - TARGET_TRIS 2500 averages ~2.5k triangles per structure. At 8000 the
+     full body was 7.3M triangles and 19 MB, too heavy to orbit smoothly
+     on ordinary laptops; at 2500 it is ~2.5M triangles and ~9 MB with no
+     visible loss at normal zoom.
    - MIN_RATIO 0.04 allows the large systems to compress far enough that
-     skeletal.glb and muscular.glb each land below ~3 MB shipped.
+     skeletal.glb and muscular.glb each land below ~3.5 MB shipped.
    - SIMPLIFY_ERROR 0.003 produces smoother results at lower ratios. */
-const TARGET_TRIS    = 8000;
+const TARGET_TRIS    = 2500;
 const MIN_RATIO      = 0.04;
 const SIMPLIFY_ERROR = 0.003;
 
@@ -293,6 +295,9 @@ index.attribution = {
 index.generated = new Date().toISOString();
 
 fs.writeFileSync(path.join(OUT_DIR, 'index.json'), JSON.stringify(index));
+
+// Tag each structure with its body region from the geometry just written.
+execFileSync(process.execPath, [path.join('scripts', 'anatomy-regions.mjs')], { stdio: 'inherit' });
 
 console.log(`\ntotal ${(grandBytes / 1048576).toFixed(1)} MB across ${Object.keys(index.systems).length} systems, ` +
             `${index.structures.length} structures (${Math.round(grandTris / 1000)}k source triangles), ${grandSkipped} skipped`);

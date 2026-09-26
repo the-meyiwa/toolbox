@@ -1041,7 +1041,7 @@ export const TOOLS = [
   {
     id: 'anatomy-explorer',
     name: 'Anatomy Explorer',
-    description: '517 real anatomical structures in 3D — isolate systems, click to identify, slice through planes',
+    description: '927 real anatomical structures in 3D — isolate systems, click to identify, slice through planes',
     category: 'modeling',
     keywords: ['anatomy', 'human body', 'body', 'medical', 'med school', 'medicine', 'skeleton', 'bones', 'organs', 'muscles', 'circulatory', 'nervous', 'respiratory', 'digestive', 'anatomical', '3d', 'model', 'modeler', 'physiology', 'biology', 'study', 'heart', 'lungs', 'brain', 'liver', 'kidney', 'ribcage', 'spine', 'skull', 'bodyparts3d', 'atlas', 'dissection', 'terminologia', 'fma', 'z-anatomy', 'cadaver', 'vertebra', 'femur', 'cerebellum', 'anatomy explorer'],
     synonyms: ['human body', 'anatomy atlas', '3d anatomy', 'body systems'],

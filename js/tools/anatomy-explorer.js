@@ -117,10 +117,14 @@ function buildSearchIndex(structures) {
     return {
       ...s,
       _idx: `${s.name} ${detail.commonName || ''}`.toLowerCase(),
-      _region: detail.region,
+      // index.json carries a region measured from the geometry; the
+      // name-based guess is only a fallback for older catalogs.
+      _region: s.region || detail.region,
     };
   });
 }
+
+const regionLabel = id => ANATOMICAL_REGIONS.find(r => r.id === id)?.label ?? id;
 
 /* ── main export ───────────────────────────────────────────── */
 
@@ -163,7 +167,9 @@ export default {
     // Populated lazily when a system is loaded; avoids cloning materials
     // per mesh which explodes WebGL draw calls with 900+ structures.
     const systemMats   = {};   // key → THREE.MeshStandardMaterial (base)
+    const hoverMat     = {};   // key → THREE.MeshStandardMaterial (under the pointer)
     const highlightMat = {};   // key → THREE.MeshStandardMaterial (selected)
+    const allMats = () => [systemMats, hoverMat, highlightMat].flatMap(Object.values);
 
     /* ── layout ──────────────────────────────────────────────────── */
 
@@ -286,28 +292,16 @@ export default {
     let selectedRegion = 'all';
     this._loaded = loaded;
 
-    /* ── raycast suppression during camera drag ──────────────────── */
-    // OrbitControls sets .state to -1 when idle, anything else while dragging.
-    // Skipping raycasting during drag keeps frame rate smooth on large scenes.
-    let _isDragging = false;
-    mount.addEventListener('pointerdown', () => { _isDragging = true; },  { passive: true });
-    window.addEventListener('pointerup',  () => { _isDragging = false; }, { passive: true });
-
-    // Monkey-patch the viewer's internal tick so raycasting is suppressed.
-    // This is safe because Viewer3D calls a registered onPick callback that we
-    // can simply not fire — the geometry still renders at full FPS.
-    const _origTick = viewer._tick?.bind(viewer);
-    if (_origTick) {
-      viewer._tick = function () {
-        if (_isDragging) {
-          // Still call controls.update() + renderer.render(); skip raycast only.
-          this.controls.update();
-          this.renderer.render(this.scene, this.camera);
-          return;
-        }
-        _origTick();
-      };
-    }
+    /* ── hover / selection highlight ─────────────────────────────── */
+    // Materials are shared per system, so the viewer's default highlight
+    // (editing the material's emissive) would light up the whole system.
+    // Swap the structure's meshes to the system's hover/selected material.
+    viewer.setEmphasisHandler((obj, { hovered, selected }) => {
+      const key = obj.userData.structure?.system;
+      if (!systemMats[key]) return;
+      const mat = selected ? highlightMat[key] : hovered ? hoverMat[key] : systemMats[key];
+      obj.traverse(n => { if (n.isMesh) n.material = mat; });
+    });
 
     /* ── loading ─────────────────────────────────────────────────── */
 
@@ -329,13 +323,14 @@ export default {
           metalness: 0.02,
           side: THREE.DoubleSide,
         });
-        highlightMat[key] = new THREE.MeshStandardMaterial({
-          color: new THREE.Color(...meta.color).multiplyScalar(1.5),
-          roughness: 0.5,
-          metalness: 0.05,
-          side: THREE.DoubleSide,
-          emissive: new THREE.Color(...meta.color).multiplyScalar(0.2),
-        });
+        hoverMat[key] = systemMats[key].clone();
+        hoverMat[key].emissive = new THREE.Color(0x404040);
+        highlightMat[key] = systemMats[key].clone();
+        highlightMat[key].emissive = new THREE.Color(0x0ea5e9);
+        for (const m of [systemMats[key], hoverMat[key], highlightMat[key]]) {
+          m.clippingPlanes = viewer.clipPlanes?.length ? viewer.clipPlanes : null;
+          setOpacity(m);
+        }
       }
 
       const gltf = await new Promise((resolve, reject) => {
@@ -371,49 +366,29 @@ export default {
 
     /* ── appearance ──────────────────────────────────────────────── */
 
-    let prevOpacity = 1;
-    let prevSelId   = null;
+    let appliedOpacity = 1;
+
+    function setOpacity(m) {
+      m.transparent = opacity < 1;
+      m.depthWrite  = opacity > 0.85;
+      m.opacity     = opacity;
+      m.needsUpdate = true;
+    }
 
     function applyAppearance() {
       const selId = viewer.selected?.userData.structure?.id ?? null;
-      const selSystem = viewer.selected?.userData.structure?.system ?? null;
-      const isTransparent  = opacity < 1;
-      const opacityChanged = prevOpacity !== opacity;
-      const selChanged     = prevSelId !== selId;
-      prevOpacity = opacity;
-      prevSelId   = selId;
+
+      if (appliedOpacity !== opacity) {
+        appliedOpacity = opacity;
+        for (const m of allMats()) setOpacity(m);
+      }
 
       for (const [key, group] of loaded) {
         group.visible = visible[key];
         if (!visible[key]) continue;
-
-        const baseMat = systemMats[key];
-        const hlMat   = highlightMat[key];
-
         for (const child of group.children) {
           const id = child.userData.structure?.id;
-          const shouldBeVisible = !hidden.has(id) && (!isolate || !selId || id === selId);
-          if (child.visible !== shouldBeVisible) child.visible = shouldBeVisible;
-
-          if (opacityChanged) {
-            baseMat.transparent  = isTransparent;
-            baseMat.depthWrite   = opacity > 0.85;
-            baseMat.opacity      = opacity;
-            baseMat.needsUpdate  = true;
-            if (hlMat) {
-              hlMat.transparent = isTransparent;
-              hlMat.opacity     = opacity;
-              hlMat.needsUpdate = true;
-            }
-          }
-
-          // Swap to highlight material for selected object; restore others.
-          if (selChanged && hlMat) {
-            child.traverse(n => {
-              if (!n.isMesh) return;
-              n.material = (id === selId && key === selSystem) ? hlMat : baseMat;
-            });
-          }
+          child.visible = !hidden.has(id) && (!isolate || !selId || id === selId);
         }
       }
     }
@@ -486,9 +461,14 @@ export default {
     const flipInput = container.querySelector('#an-flip');
 
     const applyPlane = () => {
-      if (!planeAxis) { viewer.setClipPlane(null); return; }
-      const [lo, hi] = RANGE[planeAxis];
-      viewer.setClipPlane(planeAxis, lo + (hi - lo) * (Number(planePos.value) / 100), flipInput.checked);
+      if (!planeAxis) viewer.setClipPlane(null);
+      else {
+        const [lo, hi] = RANGE[planeAxis];
+        viewer.setClipPlane(planeAxis, lo + (hi - lo) * (Number(planePos.value) / 100), flipInput.checked);
+      }
+      // The viewer only clips materials currently on a mesh; the hover and
+      // selected variants are swapped in later, so clip them too.
+      for (const m of allMats()) { m.clippingPlanes = viewer.clipPlanes; m.needsUpdate = true; }
     };
 
     container.querySelector('#an-plane').addEventListener('click', e => {
@@ -611,6 +591,7 @@ export default {
           <span>Left-drag to rotate · scroll to zoom · right-drag to pan</span></div>`;
       } else {
         const detail = anatomyService.getDetail(s.name, s.system);
+        const region = regionLabel(s.region || detail.region);
         const sys    = index.systems[s.system] || { label: s.system, color: [0.5, 0.5, 0.5] };
         const fmaUrl = (s.fma || detail.fma)
           ? `https://bioportal.bioontology.org/ontologies/FMA?p=classes&conceptid=http%3A%2F%2Fpurl.org%2Fsig%2Font%2Ffma%2Ffma${s.fma || detail.fma}`
@@ -624,12 +605,12 @@ export default {
               <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                 <span class="t3d-dot" style="background:${hex(sys.color)}; width:8px; height:8px; border-radius:50%; display:inline-block;"></span>
                 <span style="font-size:0.75rem; font-weight:700; color:var(--text);">${sys.label}</span>
-                <span style="font-size:0.68rem; padding:1px 6px; border-radius:999px; background:var(--bg-subtle); color:var(--text-secondary); border:1px solid var(--border); font-family:var(--mono);">${detail.region.toUpperCase()}</span>
+                <span style="font-size:0.68rem; padding:1px 6px; border-radius:999px; background:var(--bg-subtle); color:var(--text-secondary); border:1px solid var(--border); font-family:var(--mono);">${region}</span>
               </div>
               <button type="button" class="btn btn-secondary btn-circle" id="an-badge-close" title="Close" aria-label="Close" style="--circle-size:22px; flex-shrink:0; font-size:12px; line-height:1;">&times;</button>
             </div>
             <h4 style="margin:6px 0 2px; font-size:0.96rem; font-weight:700; color:var(--text); line-height:1.2;">${s.name}</h4>
-            ${detail.commonName && detail.commonName !== s.name ? `<div style="font-size:0.76rem; color:var(--text-secondary); margin-bottom:4px;">Common: ${detail.commonName}</div>` : ''}
+            ${detail.commonName && detail.commonName.toLowerCase() !== s.name.toLowerCase() ? `<div style="font-size:0.76rem; color:var(--text-secondary); margin-bottom:4px;">Common: ${detail.commonName}</div>` : ''}
             <p style="margin:2px 0 6px; font-size:0.78rem; line-height:1.4; color:var(--text-secondary); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${detail.functionDesc || detail.clinicalNotes || 'Anatomical structure'}</p>
             <div style="display:flex; justify-content:flex-end; align-items:center; width:100%; border-top:1px solid var(--border); padding-top:6px; margin-top:4px;">
               <button type="button" id="an-badge-show-more" class="btn btn-primary btn-sm" style="font-size:0.72rem; padding:3px 10px; border-radius:9999px;">
@@ -653,11 +634,11 @@ export default {
               <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px; flex-wrap:wrap;">
                 <span class="t3d-dot" style="background:${hex(sys.color)}"></span>
                 <span class="t3d-info-system" style="margin:0;">${sys.label}</span>
-                <span style="font-size:0.72rem; padding:1px 6px; border-radius:999px; background:var(--g150); color:var(--g700);">${detail.region.toUpperCase()}</span>
+                <span style="font-size:0.72rem; padding:1px 6px; border-radius:999px; background:var(--g150); color:var(--g700);">${region}</span>
                 ${fmaUrl ? `<a class="an-fma" href="${fmaUrl}" target="_blank" rel="noopener" style="font-size:0.72rem;">FMA ${s.fma || detail.fma}</a>` : ''}
               </div>
               <h3 style="margin:0; font-size:1.15rem; color:var(--black);">${s.name}</h3>
-              ${detail.commonName && detail.commonName !== s.name ? `<div style="font-size:0.8rem; color:var(--g600); margin-top:2px;">Common: ${detail.commonName}</div>` : ''}
+              ${detail.commonName && detail.commonName.toLowerCase() !== s.name.toLowerCase() ? `<div style="font-size:0.8rem; color:var(--g600); margin-top:2px;">Common: ${detail.commonName}</div>` : ''}
             </div>
           </div>
 
