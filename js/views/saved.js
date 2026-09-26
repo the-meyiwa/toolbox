@@ -1,34 +1,34 @@
-import { tbConfirm, tbPrompt, tbAlert } from '../lib/dialog.js';
-import { removeMenu } from '../lib/menu-motion.js';
-import { openContextMenu as showFinderMenu, closeContextMenu } from '../lib/context-menu.js';
 /* ============================================================
-   TOOLBOX — Files & Saved Work (Browser File Explorer)
-   Lightweight, hierarchical browser-based file explorer with
-   nested folders, dual Offline / Online storage views, breadcrumb
-   navigation, rich file inspectors (Formatted, Table, Raw, Image),
-   PKZIP compression / decompression, tag management, Mac Finder-style
-   context menu on right-click / touch hold, and OS icon grid view.
+   TOOLBOX — Files (Browser File Explorer)
+   One window, three views (preview, icons, list) over the in-browser
+   filesystem. The interaction model follows the desktop file managers
+   people already know:
+
+   - click selects, Ctrl/Cmd-click toggles, Shift-click selects a range
+   - double-click (or Enter) opens: folders navigate, files open in
+     their best tool; on touch a tap opens
+   - Space previews (Quick Look), F2 renames, Delete deletes,
+     Backspace / Alt+Up goes to the enclosing folder, arrows move
+   - right-click or long-press opens the context menu
+
+   Markup lives here; every style lives in css/files.css.
    Strictly zero emojis.
    ============================================================ */
 
+import { tbConfirm, tbPrompt } from '../lib/dialog.js';
+import { openContextMenu, closeContextMenu } from '../lib/context-menu.js';
 import { fs, normalizePath, getParentPath, getBaseName } from '../lib/filesystem.js';
 import { createZip } from '../lib/archive-engine.js';
 import * as store from '../lib/artifacts.js';
-import { kindLabel, kindFromFilename } from '../registry/kinds.js';
+import { kindFromFilename } from '../registry/kinds.js';
 import { BY_ID, toolsAccepting } from '../registry/index.js';
 import { getFileTypeIcon, detectFileCategory } from '../lib/file-icons.js';
 import { getCurrentUser } from '../lib/supabase.js';
 import { attachSegmentedSlider } from '../lib/segmented-slider.js';
 import { openAccountModal } from './account-modal.js';
 
-const escapeHtml = (s) => String(s || '').replace(/[&<>"']/g, (c) =>
+const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-
-const when = (ts) => new Date(ts).toLocaleDateString(undefined, {
-  day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-});
-
-const size = (bytes) => (bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} kB`);
 
 export const TAG_COLORS = {
   red: '#ef4444',
@@ -39,114 +39,317 @@ export const TAG_COLORS = {
   purple: '#a855f7'
 };
 
-// Minimal vector SVG icons (strictly no emojis)
+const svg = (body, size = 16) =>
+  `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+
 const ICONS = {
-  file: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
-  folder: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
-  folderPlus: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>',
-  split: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>',
-  grid: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
-  list: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
-  download: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
-  delete: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
-  upload: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',
-  search: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
-  table: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/></svg>',
-  code: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
-  raw: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/></svg>',
-  zip: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>',
-  chevronRight: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
-  arrowUp: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>',
-  plus: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
-  copy: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
-  scissors: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>',
-  paste: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>',
-  info: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
-  eye: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
-  checkAll: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
-  x: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+  file: svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'),
+  filePlus: svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/>'),
+  folder: svg('<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'),
+  folderOpen: svg('<path d="M6 14l1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/>'),
+  folderPlus: svg('<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/>'),
+  split: svg('<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/>'),
+  grid: svg('<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>'),
+  list: svg('<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>'),
+  download: svg('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>'),
+  delete: svg('<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>'),
+  upload: svg('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>'),
+  search: svg('<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'),
+  table: svg('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/>'),
+  code: svg('<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>'),
+  zip: svg('<polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>'),
+  chevronRight: svg('<polyline points="9 18 15 12 9 6"/>', 14),
+  chevronLeft: svg('<polyline points="15 18 9 12 15 6"/>', 14),
+  chevronDown: svg('<polyline points="6 9 12 15 18 9"/>', 14),
+  arrowUp: svg('<line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>'),
+  sort: svg('<path d="M3 6h13"/><path d="M3 12h9"/><path d="M3 18h5"/><path d="M18 8v12"/><polyline points="15 17 18 20 21 17"/>'),
+  plus: svg('<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>'),
+  copy: svg('<rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'),
+  scissors: svg('<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/>'),
+  paste: svg('<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>'),
+  info: svg('<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>'),
+  eye: svg('<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'),
+  expand: svg('<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>'),
+  external: svg('<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>'),
+  pencil: svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>'),
+  checkAll: svg('<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'),
+  x: svg('<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'),
+  lock: svg('<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>', 12),
 };
 
-// UI state preserved across refreshes in current session & stored preferences
+/* ---------------- Session state ----------------
+   Kept at module level so leaving Files and coming back lands the person
+   where they were. */
+
 const STORAGE_FILES_VIEW_MODE = 'toolbox_files_view_mode';
+const STORAGE_FILES_SORT = 'toolbox_files_sort';
+const readPref = (key) => { try { return localStorage.getItem(key); } catch { return null; } };
+const writePref = (key, value) => { try { localStorage.setItem(key, value); } catch {} };
+
+const SORTS = [
+  { value: 'name:asc', label: 'Name, A to Z' },
+  { value: 'name:desc', label: 'Name, Z to A' },
+  { value: 'modified:desc', label: 'Newest first' },
+  { value: 'modified:asc', label: 'Oldest first' },
+  { value: 'size:desc', label: 'Largest first' },
+  { value: 'size:asc', label: 'Smallest first' },
+  { value: 'kind:asc', label: 'Kind' },
+];
+
 let currentLayout = (() => {
-  try {
-    const saved = localStorage.getItem(STORAGE_FILES_VIEW_MODE);
-    if (saved === 'split' || saved === 'grid' || saved === 'list') return saved;
-  } catch {}
-  return 'split';
+  const saved = readPref(STORAGE_FILES_VIEW_MODE);
+  return saved === 'split' || saved === 'grid' || saved === 'list' ? saved : 'split';
+})();
+let currentSort = (() => {
+  const saved = readPref(STORAGE_FILES_SORT);
+  return SORTS.some(s => s.value === saved) ? saved : 'name:asc';
 })();
 let currentContentView = 'formatted'; // 'formatted' | 'table' | 'raw'
 let currentSearch = '';
-let currentPath = '/Home'; // Hierarchical directory pointer
+let currentPath = '/Home';
 let currentStorage = 'offline'; // 'offline' | 'online'
-let currentTagFilter = null; // null | 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple'
-let selectedPaths = new Set(); // Multi-selection paths
+let currentTagFilter = null;
+let selectedPaths = new Set();
+let selectionAnchor = null; // Shift-click / Shift-arrow range origin
+let cursorPath = null; // Item the keyboard is on
+let autoSelectedFor = null; // Folder whose first file was selected for the preview
+let lastClick = { path: null, at: 0 }; // Double-click detection across re-renders
 let fileClipboard = { op: null, paths: [] }; // { op: 'copy'|'cut'|null, paths: string[] }
 
-function renderTagDots(tags = []) {
-  if (!tags || !tags.length) return '';
-  return `
-    <div class="sv-tags-dots" style="display:flex; align-items:center; justify-content:center; gap:3px; margin-top:3px;">
-      ${tags.map(t => `<span style="width:6px; height:6px; border-radius:50%; background:${TAG_COLORS[t] || 'var(--text-3)'}; display:inline-block;" title="${escapeHtml(t)}"></span>`).join('')}
-    </div>
-  `;
+// Bodies and object URLs, keyed by path and invalidated when the file changes.
+const textCache = new Map();
+const blobUrlCache = new Map();
+
+/* ---------------- Formatting helpers ---------------- */
+
+const size = (bytes = 0) => {
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ['KB', 'MB', 'GB'];
+  let value = bytes / 1024;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++; }
+  return `${value < 10 ? value.toFixed(1) : Math.round(value)} ${units[unit]}`;
+};
+
+function when(ts, { long = false } = {}) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const now = new Date();
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  const dayMs = 86400000;
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  if (ts >= startOfToday) return `Today, ${time}`;
+  if (ts >= startOfToday - dayMs) return `Yesterday, ${time}`;
+  const date = d.toLocaleDateString(undefined, {
+    day: 'numeric', month: 'short', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric'
+  });
+  return long ? `${date}, ${time}` : date;
 }
+
+const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+const extOf = (name = '') => {
+  const i = name.lastIndexOf('.');
+  return i > 0 ? name.slice(i + 1).toLowerCase() : '';
+};
+const stampOf = (item) => `${item?.updatedAt || 0}:${item?.size ?? item?.bytes ?? 0}`;
+const isMac = () => typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || '');
+const modKey = () => (isMac() ? '⌘' : 'Ctrl+');
+const matches = (query) => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia(query).matches;
+const isNarrow = () => matches('(max-width: 720px)');
+const isTouchOnly = () => matches('(hover: none) and (pointer: coarse)');
+
+const KIND_LABELS = {
+  folder: 'Folder', pdf: 'PDF document', spreadsheet: 'Spreadsheet', document: 'Document',
+  presentation: 'Presentation', image: 'Image', json: 'JSON', code: 'Source code', audio: 'Audio',
+  video: 'Video', archive: 'Archive', markdown: 'Markdown', text: 'Plain text', generic: 'File'
+};
+
+function kindOf(item) {
+  if (!item) return '';
+  if (item.isDirectory) return 'Folder';
+  const category = detectFileCategory(item.name, item.kind);
+  const ext = extOf(item.name);
+  if (category === 'code' && ext) return `${ext.toUpperCase()} source`;
+  if (category === 'image' && ext) return `${ext.toUpperCase()} image`;
+  if (category === 'archive' && ext) return `${ext.toUpperCase()} archive`;
+  return KIND_LABELS[category] || 'File';
+}
+
+/** How the preview pane can show a file. */
+function previewTypeOf(file) {
+  const ext = extOf(file?.name || '');
+  const kind = file?.kind;
+  if (['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'bmp', 'avif', 'ico'].includes(ext) || kind === 'image') return 'image';
+  if (ext === 'html' || ext === 'htm') return 'html';
+  if (ext === 'md' || ext === 'markdown' || kind === 'markdown') return 'markdown';
+  if (ext === 'csv' || ext === 'tsv' || kind === 'csv') return 'csv';
+  if (ext === 'json' || kind === 'json') return 'json';
+  if (ext === 'pdf' || kind === 'pdf') return 'pdf';
+  if (['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac'].includes(ext)) return 'audio';
+  if (['mp4', 'webm', 'mov', 'm4v'].includes(ext)) return 'video';
+  if (['zip', 'gz', 'tar', 'bz2', '7z', 'rar', 'docx', 'xlsx', 'pptx', 'doc', 'xls', 'ppt', 'odt', 'woff', 'woff2', 'ttf', 'otf', 'exe', 'bin', 'dmg'].includes(ext) || kind === 'archive') return 'binary';
+  return 'text';
+}
+
+const CONTENT_VIEWS = {
+  html: [['formatted', 'Preview', ICONS.eye], ['raw', 'Source', ICONS.code]],
+  markdown: [['formatted', 'Preview', ICONS.eye], ['raw', 'Source', ICONS.code]],
+  json: [['formatted', 'Preview', ICONS.eye], ['raw', 'Source', ICONS.code]],
+  csv: [['table', 'Table', ICONS.table], ['raw', 'Source', ICONS.code]],
+};
+
+function effectiveView(type) {
+  const options = CONTENT_VIEWS[type];
+  if (!options) return 'raw';
+  return options.some(([key]) => key === currentContentView) ? currentContentView : options[0][0];
+}
+
+const sanitizeName = (name) => String(name ?? '').trim().replace(/[/\\?%*:|"<>]/g, '-');
+
+/** "report.txt" -> "report 2.txt" until nothing in the folder has that name. */
+function uniquePath(dir, name) {
+  const taken = new Set(listDir(dir).map(i => i.name.toLowerCase()));
+  if (!taken.has(name.toLowerCase())) return normalizePath(`${dir}/${name}`);
+  const dot = name.lastIndexOf('.');
+  const stem = dot > 0 ? name.slice(0, dot) : name;
+  const ext = dot > 0 ? name.slice(dot) : '';
+  for (let n = 2; n < 1000; n++) {
+    const candidate = `${stem} ${n}${ext}`;
+    if (!taken.has(candidate.toLowerCase())) return normalizePath(`${dir}/${candidate}`);
+  }
+  return normalizePath(`${dir}/${stem} ${Date.now()}${ext}`);
+}
+
+/* ---------------- Reading the filesystem ---------------- */
+
+function listDir(path) {
+  try { return fs.listSync(path, { storage: currentStorage }); } catch { return []; }
+}
+
+/** Every item under root (not root itself), depth first. */
+function walk(root) {
+  const out = [];
+  const seen = new Set([root]);
+  const stack = [root];
+  while (stack.length) {
+    const dir = stack.pop();
+    for (const item of listDir(dir)) {
+      if (seen.has(item.path)) continue;
+      seen.add(item.path);
+      out.push(item);
+      if (item.isDirectory) stack.push(item.path);
+    }
+  }
+  return out;
+}
+
+function sortItems(items) {
+  const [key, dir] = currentSort.split(':');
+  const sign = dir === 'desc' ? -1 : 1;
+  const byName = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+  const compare = {
+    name: byName,
+    modified: (a, b) => (a.updatedAt || 0) - (b.updatedAt || 0),
+    size: (a, b) => (a.size || 0) - (b.size || 0),
+    kind: (a, b) => kindOf(a).localeCompare(kindOf(b)),
+  }[key] || byName;
+  return [...items].sort((a, b) => {
+    if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
+    return (compare(a, b) * sign) || byName(a, b);
+  });
+}
+
+/** A record with its body attached when the body is already in memory. */
+function withBody(item) {
+  if (!item || item.isDirectory) return item;
+  if (item.text != null) return item;
+  const cached = textCache.get(item.path);
+  if (cached && cached.stamp === stampOf(item)) return { ...item, text: cached.text };
+  const art = item.id ? store.get(item.id) : null;
+  if (art?.text != null) return { ...item, text: art.text };
+  return item;
+}
+
+function folderLabel(path) {
+  if (path === '/') return 'Files';
+  return getBaseName(path) || 'Files';
+}
+
+/* ============================================================
+   Mount
+   ============================================================ */
 
 /**
  * @param {HTMLElement} host
- * @param {string|null} selectedId
+ * @param {string|null} selectedId  a path or artifact id to reveal and select
  * @returns {() => void} teardown
  */
 export function renderSaved(host, selectedId = null) {
   let teardown = () => {};
-
-  // If a specific file or artifact was requested, initialize selection
-  if (selectedId && selectedId !== false && selectedId !== 'none') {
-    selectedPaths.clear();
-    selectedPaths.add(selectedId);
-  } else if (selectedId === false) {
-    selectedPaths.clear();
-  }
-
-  // Verify authentication if online requested
-  const user = getCurrentUser();
-  if (currentStorage === 'online' && !user) {
-    currentStorage = 'offline';
-  }
-
   let unmounted = false;
+  const state = { reveal: selectedId && selectedId !== 'none' ? selectedId : null };
+  autoSelectedFor = null;
 
-  const refresh = (nextId = null) => {
+  if (selectedId === false || selectedId === 'none') selectedPaths.clear();
+
+  if (currentStorage === 'online' && !getCurrentUser()) currentStorage = 'offline';
+
+  const ui = { focusItem: false, keepSearchFocus: null };
+
+  const refresh = (selectPath = null) => {
     if (unmounted) return;
+    if (selectPath) {
+      selectedPaths = new Set([selectPath]);
+      selectionAnchor = selectPath;
+      cursorPath = selectPath;
+    }
+
+    // Keep what the person was doing across the re-render: scroll offsets,
+    // focus in the search box, keyboard focus on an item.
+    const scrolls = {};
+    host.querySelectorAll('[data-scroll-key]').forEach(el => { scrolls[el.dataset.scrollKey] = el.scrollTop; });
+    const active = typeof document !== 'undefined' ? document.activeElement : null;
+    const search = host.querySelector('#sv-search-box');
+    if (search && active === search) {
+      ui.keepSearchFocus = [search.selectionStart ?? search.value.length, search.selectionEnd ?? search.value.length];
+    }
+    if (active && host.contains?.(active) && active.matches?.('[data-context-target]')) ui.focusItem = true;
+
     teardown();
-    teardown = paint(host, nextId, refresh);
+    teardown = paint(host, state, refresh, ui);
+
+    host.querySelectorAll('[data-scroll-key]').forEach(el => {
+      if (scrolls[el.dataset.scrollKey] != null) el.scrollTop = scrolls[el.dataset.scrollKey];
+    });
+    if (ui.keepSearchFocus) {
+      const box = host.querySelector('#sv-search-box');
+      if (box) {
+        box.focus();
+        try { box.setSelectionRange(...ui.keepSearchFocus); } catch {}
+      }
+      ui.keepSearchFocus = null;
+    } else if (ui.focusItem && cursorPath) {
+      const el = [...host.querySelectorAll('[data-context-target]')].find(n => n.dataset.path === cursorPath);
+      if (el) {
+        el.focus?.({ preventScroll: true });
+        el.scrollIntoView?.({ block: 'nearest' });
+      }
+    }
+    ui.focusItem = false;
   };
 
-  // Listen to auth state changes to update Online storage tab
   const authHandler = () => {
     if (unmounted) return;
-    const u = getCurrentUser();
-    if (!u && currentStorage === 'online') {
-      currentStorage = 'offline';
-    }
-    refresh(selectedId);
+    if (!getCurrentUser() && currentStorage === 'online') currentStorage = 'offline';
+    refresh();
   };
   window.addEventListener('toolbox:authchange', authHandler);
 
-  // Listen to filesystem changes
-  const unFs = fs.onChange(() => {
-    if (unmounted) return;
-    refresh(selectedId);
-  });
+  const unFs = fs.onChange(() => { if (!unmounted) refresh(); });
 
-  refresh(selectedId);
+  refresh();
 
-  // Background full initialization & hydration
-  fs.init().then(() => {
-    if (unmounted) return;
-    refresh(selectedId);
-  }).catch(() => {});
+  fs.init().then(() => { if (!unmounted) refresh(); }).catch(() => {});
 
   return () => {
     unmounted = true;
@@ -154,334 +357,272 @@ export function renderSaved(host, selectedId = null) {
     unFs();
     window.removeEventListener('toolbox:authchange', authHandler);
     selectedPaths.clear();
+    for (const { url } of blobUrlCache.values()) { try { URL.revokeObjectURL(url); } catch {} }
+    blobUrlCache.clear();
+    document.getElementById('sv-toast')?.remove();
+    document.getElementById('sv-quicklook-modal')?.remove();
+    document.getElementById('sv-properties-modal')?.remove();
+    if (document.getElementById('toolbox-context-menu')) closeContextMenu();
   };
 }
 
-function paint(host, selectedId, refresh) {
+function paint(host, state, refresh, ui) {
   const user = getCurrentUser();
+  if (currentStorage === 'online' && !user) currentStorage = 'offline';
 
-  if (currentStorage === 'online' && !user) {
-    currentStorage = 'offline';
-  }
-
-  // Load files in current directory synchronously
-  let itemsInDir = [];
-  try {
-    itemsInDir = fs.listSync(currentPath, { storage: currentStorage });
-  } catch (err) {
-    itemsInDir = [];
-  }
-
-  // Apply search filter if query is present
-  let items = itemsInDir;
-  if (currentSearch) {
-    const q = currentSearch.toLowerCase();
-    items = itemsInDir.filter(f => f.name.toLowerCase().includes(q));
-  }
-
-  // Apply tag filter if active
-  if (currentTagFilter) {
-    items = items.filter(f => f.tags && f.tags.includes(currentTagFilter));
-  }
-
-  // Find selected item synchronously
-  let selected = null;
-  if (selectedPaths.size === 1) {
-    const targetP = [...selectedPaths][0];
-    const rec = fs.statSync(targetP);
-    if (rec && !rec.isDirectory) {
-      const art = store.get(rec.id || targetP);
-      selected = { ...rec, text: art?.text || '', id: rec.id || rec.path };
-    } else {
-      const art = store.get(targetP);
-      if (art) selected = art;
-    }
-  } else if (selectedPaths.size === 0 && selectedId && selectedId !== false && selectedId !== 'none') {
-    const rec = fs.statSync(selectedId);
-    if (rec && !rec.isDirectory) {
-      const art = store.get(rec.id || selectedId);
-      selected = { ...rec, text: art?.text || '', id: rec.id || rec.path };
-      selectedPaths.add(rec.path);
-    } else {
-      const art = store.get(selectedId);
-      if (art) {
-        selected = art;
-        if (art.path) selectedPaths.add(art.path);
-      }
+  // A deep link (#files/<path or id>) opens the item's folder and selects it.
+  const reveal = state.reveal;
+  if (reveal) {
+    const here = listDir(currentPath).find(i => i.path === reveal || i.id === reveal);
+    const hit = here || fs.statSync(reveal);
+    if (hit) {
+      state.reveal = null;
+      if (!here) currentPath = hit.isDirectory ? getParentPath(hit.path) : (hit.parentPath || getParentPath(hit.path));
+      selectedPaths = new Set([hit.path]);
+      selectionAnchor = cursorPath = hit.path;
     }
   }
 
-  // Default selection on initial load if not explicitly deselected
-  if (!selected && items.length > 0 && selectedPaths.size === 0 && selectedId !== false && selectedId !== 'none') {
-    const firstFile = items.find(f => !f.isDirectory);
-    if (firstFile) {
-      const art = store.get(firstFile.id || firstFile.path);
-      selected = { ...firstFile, text: art?.text || '', id: firstFile.id || firstFile.path };
-      if (firstFile.path) selectedPaths.add(firstFile.path);
-      else if (firstFile.id) selectedPaths.add(firstFile.id);
+  const inDir = listDir(currentPath);
+  const q = currentSearch.toLowerCase();
+  let items = q ? walk(currentPath).filter(i => i.name.toLowerCase().includes(q)) : inDir;
+  if (currentTagFilter) items = items.filter(i => i.tags?.includes(currentTagFilter));
+  items = sortItems(items);
+
+  const byPath = new Map(items.map(i => [i.path, i]));
+
+  // Selection only ever refers to things on screen.
+  selectedPaths = new Set([...selectedPaths].filter(p => byPath.has(p)));
+
+  // In the preview view the pane is the point, so land on the first file.
+  // Only once per folder visit, so clearing the selection sticks.
+  if (!selectedPaths.size && currentLayout === 'split' && !isNarrow() && autoSelectedFor !== currentPath) {
+    const first = items.find(i => !i.isDirectory);
+    autoSelectedFor = currentPath;
+    if (first) {
+      selectedPaths.add(first.path);
+      selectionAnchor = cursorPath = first.path;
     }
   }
 
-  const isAtRoot = currentPath === '/Home' || currentPath === '/';
-  const allArtifacts = store.list();
-  const allFiles = fs.listSync('/', { recursive: true }).filter(f => !f.isDirectory);
-  const customFolders = fs.listSync('/').filter(f => f.isDirectory && !['/Home', '/Projects', '/Documents', '/Images', '/Downloads'].includes(f.path));
+  const selItems = items.filter(i => selectedPaths.has(i.path));
+  const single = selItems.length === 1 ? withBody(selItems[0]) : null;
 
-  if (isAtRoot && allArtifacts.length === 0 && allFiles.length === 0 && customFolders.length === 0 && !currentSearch && !currentTagFilter) {
-    host.innerHTML = empty();
-    return wire(host, null, refresh);
-  }
-
-  host.innerHTML = full(user, itemsInDir, items, selected);
-  return wire(host, selected, refresh, itemsInDir);
+  const ctx = { user, items, inDir, byPath, selItems, single };
+  host.innerHTML = full(ctx);
+  return wire(host, ctx, refresh, ui);
 }
 
-function empty() {
-  return `
-    <div class="sv-empty" style="max-width:680px; margin:40px auto; padding:36px 24px; text-align:center; background:var(--bg-card); border:1px solid var(--border); border-radius:18px;">
-      <div style="width:48px; height:48px; border-radius:12px; background:var(--bg-subtle); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; margin:0 auto 16px; color:var(--text);">
-        ${ICONS.file}
-      </div>
-      <h1 class="sv-title" style="font-size:1.4rem; font-weight:700; color:var(--text); margin-bottom:10px;">Files & Saved Work</h1>
-      <p class="sv-lede" style="color:var(--text-secondary); line-height:1.6; font-size:0.92rem; margin-bottom:24px;">
-        Nothing saved yet. Tools that generate content—such as tidied documents, converted data, diagrams, or code—include a Save action. Items you save persist offline in this browser and appear here.
-      </p>
-      <div class="sv-empty-actions" style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
-        <button type="button" class="btn btn-primary btn-circle" data-act="new-file" title="New File" aria-label="New File" style="--circle-size:38px;">
-          ${ICONS.plus}
-        </button>
-        <button type="button" class="btn btn-secondary btn-circle" data-act="new-folder" title="New Folder" aria-label="New Folder" style="--circle-size:38px;">
-          ${ICONS.folderPlus}
-        </button>
-        <button type="button" class="btn btn-secondary btn-circle" data-act="upload" title="Upload" aria-label="Upload" style="--circle-size:38px;">
-          ${ICONS.upload}
-        </button>
-        <a class="btn btn-secondary btn-circle" href="#tools" title="Browse tools" aria-label="Browse tools" style="--circle-size:38px;">
-          ${ICONS.grid}
-        </a>
-      </div>
-      <div style="margin-top:24px; text-align:left;">
-        ${storageNote()}
-      </div>
-    </div>`;
-}
+/* ============================================================
+   Markup
+   ============================================================ */
 
-function full(user, allItems, filteredItems, selected) {
-  const use = store.usage();
+function full(ctx) {
+  const { user, items, selItems } = ctx;
   const isOnline = currentStorage === 'online';
-  const pathSegments = currentPath.split('/').filter(Boolean);
+  const everything = walk('/');
+  const totalBytes = everything.reduce((sum, i) => sum + (i.isDirectory ? 0 : (i.size || 0)), 0);
+  const driveIsEmpty = !everything.some(i => !i.isDirectory) && !store.list().length;
 
   return `
-    <div class="sv" style="max-width:940px; width:100%; margin:18px auto 0; display:flex; flex-direction:column; gap:10px; padding:0 16px; height:100%; box-sizing:border-box; overflow:hidden;">
-      
-      <!-- TOOLBAR & HEADER -->
-      <header class="sv-head" style="background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:0 4px 16px rgba(0,0,0,0.03);">
-        
-        <!-- Left: Storage Tabs & Folder Info -->
-        <div class="sv-head-left" style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
-          <div>
-            <div style="display:flex; align-items:center; gap:8px;">
-              <h1 class="sv-title" style="margin:0; font-size:1.35rem; font-weight:700; color:var(--text);">Files</h1>
-              
-              <!-- Storage Mode Pill Switcher (Offline / Online) -->
-              <div class="sv-storage-switch" style="display:inline-flex; background:var(--bg-subtle); padding:2px; border-radius:9999px; border:1px solid var(--border); position:relative;">
-                <button type="button" class="sv-storage-btn ${!isOnline ? 'active' : ''}" data-storage="offline" style="padding:2px 10px; border:1px solid transparent; border-radius:9999px; font-size:0.72rem; font-weight:${!isOnline ? '700' : '500'}; cursor:pointer; background:transparent !important; color:${!isOnline ? 'var(--text)' : 'var(--text-secondary)'}; position:relative; z-index:1; transition:color 0.18s ease; box-shadow:none !important;">
-                  Offline
-                </button>
-                <button type="button" class="sv-storage-btn ${isOnline ? 'active' : ''}" data-storage="online" title="${user ? 'Online cloud storage' : 'Sign in to access online files'}" style="padding:2px 10px; border:1px solid transparent; border-radius:9999px; font-size:0.72rem; font-weight:${isOnline ? '700' : '500'}; cursor:pointer; background:transparent !important; color:${isOnline ? 'var(--text)' : 'var(--text-secondary)'}; position:relative; z-index:1; transition:color 0.18s ease; box-shadow:none !important;">
-                  Online
-                </button>
-              </div>
-            </div>
-            
-            <p class="sv-lede" style="margin:4px 0 0; font-size:0.78rem; color:var(--text-secondary);">
-              ${isOnline ? "these files aren't going anywhere" : `${size(use.used)} stored offline in this browser`}
-            </p>
-          </div>
+    <div class="sv" data-layout="${currentLayout}">
+      <header class="sv-top">
+        <div class="sv-top-text">
+          <h1 class="sv-title">Files</h1>
+          <p class="sv-lede">${isOnline ? 'Synced to your account' : `${size(totalBytes)} stored in this browser`}</p>
         </div>
-
-        <!-- Right: Search, Views and File Operations -->
-        <div class="sv-head-right" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <!-- Search input -->
-          <div class="sv-search-wrap" style="position:relative; width:170px;">
-            <input type="text" id="sv-search-box" class="tool-input" placeholder="Search files…" value="${escapeHtml(currentSearch)}" style="width:100%; height:28px; font-size:0.78rem; padding:0 8px 0 26px; border-radius:9999px;">
-            <div style="position:absolute; left:8px; top:6px; color:var(--text-muted); pointer-events:none; display:flex; align-items:center;">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
-            </div>
-          </div>
-
-          <!-- Multiple Layout Views Switcher -->
-          <div class="sv-view-switcher" style="display:inline-flex; background:var(--bg-subtle); padding:2px; border-radius:9999px; border:1px solid var(--border); position:relative;">
-            <button type="button" class="sv-layout-btn ${currentLayout === 'split' ? 'active' : ''}" data-layout="split" title="Split Master/Detail View" style="padding:3px 7px; background:transparent !important; border:1px solid transparent; cursor:pointer; color:var(--text); border-radius:9999px; position:relative; z-index:1; box-shadow:none !important;">
-              ${ICONS.split}
-            </button>
-            <button type="button" class="sv-layout-btn ${currentLayout === 'grid' ? 'active' : ''}" data-layout="grid" title="OS Icon Grid View" style="padding:3px 7px; background:transparent !important; border:1px solid transparent; cursor:pointer; color:var(--text); border-radius:9999px; position:relative; z-index:1; box-shadow:none !important;">
-              ${ICONS.grid}
-            </button>
-            <button type="button" class="sv-layout-btn ${currentLayout === 'list' ? 'active' : ''}" data-layout="list" title="Tabular List View" style="padding:3px 7px; background:transparent !important; border:1px solid transparent; cursor:pointer; color:var(--text); border-radius:9999px; position:relative; z-index:1; box-shadow:none !important;">
-              ${ICONS.list}
-            </button>
-          </div>
-
-          <!-- File Operations (Cut, Copy, Paste, Delete) — STANDALONE CIRCULAR BUTTONS -->
-          <div class="sv-op-btn-group" style="display:inline-flex; align-items:center; gap:6px;">
-            <button type="button" class="btn btn-secondary sv-tb-btn btn-circle" data-act="cut" title="Cut selected (Ctrl+X)" aria-label="Cut selected" style="${selectedPaths.size === 0 && !selected ? 'opacity:0.4; pointer-events:none;' : ''}">
-              ${ICONS.scissors}
-            </button>
-            <button type="button" class="btn btn-secondary sv-tb-btn btn-circle" data-act="copy" title="Copy selected (Ctrl+C)" aria-label="Copy selected" style="${selectedPaths.size === 0 && !selected ? 'opacity:0.4; pointer-events:none;' : ''}">
-              ${ICONS.copy}
-            </button>
-            <button type="button" class="btn btn-secondary sv-tb-btn btn-circle" data-act="paste" title="Paste into folder (Ctrl+V)${fileClipboard.paths.length > 0 ? ` (${fileClipboard.paths.length})` : ''}" aria-label="Paste into folder" style="${fileClipboard.paths.length === 0 ? 'opacity:0.4; pointer-events:none;' : ''}">
-              ${ICONS.paste}
-            </button>
-            <button type="button" class="btn btn-secondary sv-tb-btn btn-circle btn-danger" data-act="delete-selected" title="Delete selected (Delete)" aria-label="Delete selected" style="${selectedPaths.size === 0 && !selected ? 'opacity:0.4; pointer-events:none;' : ''}">
-              ${ICONS.delete}
-            </button>
-          </div>
-
-          <!-- Primary Actions — STANDALONE CIRCULAR BUTTONS -->
-          <div class="sv-primary-actions" style="display:inline-flex; align-items:center; gap:6px;">
-            <button type="button" class="btn btn-secondary btn-circle" data-act="new-folder" title="Create New Folder" aria-label="Create New Folder">
-              ${ICONS.folderPlus}
-            </button>
-            <button type="button" class="btn btn-secondary btn-circle" data-act="new-file" title="Create New File" aria-label="Create New File">
-              ${ICONS.plus}
-            </button>
-            <button type="button" class="btn btn-primary btn-circle" data-act="upload" title="Upload Files" aria-label="Upload Files">
-              ${ICONS.upload}
-            </button>
-          </div>
+        <div class="sv-top-actions">
+          ${renderStorageSwitch(user)}
+          <button type="button" class="btn btn-secondary btn-sm sv-top-btn" data-act="new-folder" title="New folder" aria-label="New folder">${ICONS.folderPlus}<span class="sv-btn-label">New folder</span></button>
+          <button type="button" class="btn btn-secondary btn-sm sv-top-btn" data-act="new-file" title="New file" aria-label="New file">${ICONS.filePlus}<span class="sv-btn-label">New file</span></button>
+          <button type="button" class="btn btn-primary btn-sm sv-top-btn" data-act="upload" title="Upload files" aria-label="Upload files">${ICONS.upload}<span class="sv-btn-label">Upload</span></button>
         </div>
       </header>
 
-      <!-- BREADCRUMB NAVIGATION & FOLDER ACTIONS -->
-      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-        <!-- Breadcrumb Links -->
-        <div class="sv-breadcrumbs" style="display:flex; align-items:center; gap:6px; font-size:0.85rem;">
-          <button type="button" class="sv-crumb-btn" data-nav-path="/" style="background:none; border:none; color:var(--text); font-weight:700; cursor:pointer; padding:2px 4px; border-radius:4px;">
-            Root
-          </button>
-          ${pathSegments.map((seg, idx) => {
-            const subPath = '/' + pathSegments.slice(0, idx + 1).join('/');
-            const isLast = idx === pathSegments.length - 1;
-            return `
-              <span style="color:var(--text-muted);">${ICONS.chevronRight}</span>
-              <button type="button" class="sv-crumb-btn" data-nav-path="${subPath}" style="background:none; border:none; color:${isLast ? 'var(--text)' : 'var(--text-secondary)'}; font-weight:${isLast ? '700' : '500'}; cursor:pointer; padding:2px 4px; border-radius:4px;">
-                ${escapeHtml(seg)}
-              </button>
-            `;
+      <section class="sv-window" aria-label="File browser">
+        ${renderToolbar()}
+        ${renderSubbar(items, selItems)}
+        ${renderExplorerBody(ctx, driveIsEmpty)}
+        ${renderStatus(items, selItems)}
+      </section>
+      ${storageNote()}
+    </div>
+  `;
+}
+
+function renderStorageSwitch(user) {
+  const isOnline = currentStorage === 'online';
+  return `
+    <div class="sv-storage-switch" role="group" aria-label="Storage">
+      <button type="button" class="sv-storage-btn ${!isOnline ? 'active' : ''}" data-storage="offline" aria-pressed="${!isOnline}" title="Files kept in this browser">Offline</button>
+      <button type="button" class="sv-storage-btn ${isOnline ? 'active' : ''}" data-storage="online" aria-pressed="${isOnline}" title="${user ? 'Files synced to your account' : 'Sign in to use online storage'}">${user ? '' : `<span class="sv-lock">${ICONS.lock}</span>`}Online</button>
+    </div>
+  `;
+}
+
+function renderToolbar() {
+  const segments = currentPath.split('/').filter(Boolean);
+  const atRoot = currentPath === '/';
+  const crumbs = [{ path: '/', label: 'Files' }].concat(
+    segments.map((seg, i) => ({ path: '/' + segments.slice(0, i + 1).join('/'), label: seg }))
+  );
+
+  return `
+    <div class="sv-head">
+      <div class="sv-nav">
+        <button type="button" class="sv-icon-btn" data-act="nav-up" title="Enclosing folder (Backspace)" aria-label="Go to enclosing folder" ${atRoot ? 'disabled' : ''}>${ICONS.arrowUp}</button>
+        <nav class="sv-breadcrumbs" aria-label="Folder path">
+          ${crumbs.map((c, i) => {
+            const last = i === crumbs.length - 1;
+            return `${i ? `<span class="sv-crumb-sep" aria-hidden="true">${ICONS.chevronRight}</span>` : ''}<button type="button" class="sv-crumb-btn ${last ? 'is-current' : ''}" data-nav-path="${escapeHtml(c.path)}" ${last ? 'aria-current="page"' : ''}>${escapeHtml(c.label)}</button>`;
           }).join('')}
-        </div>
-
-        <!-- Folder Actions (Select All, Properties, Up) — STANDALONE CIRCULAR BUTTONS -->
-        <div style="display:flex; align-items:center; gap:6px;">
-          <button type="button" class="btn btn-secondary btn-circle" data-act="select-all" title="Select All (Ctrl+A)" aria-label="Select All">
-            ${ICONS.checkAll}
-          </button>
-          <button type="button" class="btn btn-secondary btn-circle" data-act="folder-properties" title="Folder Properties" aria-label="Folder Properties">
-            ${ICONS.info}
-          </button>
-          ${currentPath !== '/' && currentPath !== '/Home' ? `
-            <button type="button" class="btn btn-secondary btn-circle" data-act="nav-up" title="Go up one folder" aria-label="Go up one folder">
-              ${ICONS.arrowUp}
-            </button>
-          ` : ''}
-        </div>
+        </nav>
       </div>
-
-      <!-- TAGS FILTER BAR (COLOR-ONLY INDICATORS) -->
-      <div class="sv-tags-bar">
-        <span class="sv-tags-label">Tags:</span>
-        <button type="button" class="sv-tag-pill sv-tag-all ${!currentTagFilter ? 'active' : ''}" data-filter-tag="all" title="Show all files" aria-label="Show all files">All</button>
-        ${Object.entries(TAG_COLORS).map(([tagKey, color]) => `
-          <button type="button" class="sv-tag-chip ${currentTagFilter === tagKey ? 'active' : ''}" data-filter-tag="${tagKey}" title="Filter by ${tagKey}" aria-label="${tagKey} tag">
-            <span class="sv-tag-chip-dot" style="background:${color};"></span>
-          </button>
-        `).join('')}
-      </div>
-
-      <!-- MAIN EXPLORER AREA (Split, Grid, or List) -->
-      ${renderExplorerBody(filteredItems, selected)}
-
-      <!-- MOBILE CONTEXTUAL ACTION BAR (For Multi-Selection on Mobile) -->
-      ${selectedPaths.size > 1 ? `
-        <div class="mobile-action-bar" id="sv-mobile-action-bar">
-          <div style="font-size:0.84rem; font-weight:700; color:var(--text); white-space:nowrap;">
-            ${selectedPaths.size} selected
-          </div>
-          <div style="display:flex; gap:8px; align-items:center; overflow-x:auto; scrollbar-width:none;">
-            <button type="button" class="btn btn-secondary btn-circle" data-act="cut" title="Cut" aria-label="Cut">
-              ${ICONS.scissors}
-            </button>
-            <button type="button" class="btn btn-secondary btn-circle" data-act="copy" title="Copy" aria-label="Copy">
-              ${ICONS.copy}
-            </button>
-            <button type="button" class="btn btn-secondary btn-circle" data-act="multi-properties" title="Properties" aria-label="Properties">
-              ${ICONS.info}
-            </button>
-            <button type="button" class="btn btn-secondary btn-circle" data-act="multi-download" title="Download ZIP" aria-label="Download ZIP">
-              ${ICONS.download}
-            </button>
-            <button type="button" class="btn btn-secondary btn-circle btn-danger" data-act="delete-selected" title="Delete" aria-label="Delete">
-              ${ICONS.delete}
-            </button>
-            <button type="button" class="btn btn-secondary btn-circle" data-act="clear-selection" title="Clear selection" aria-label="Clear selection">
-              ${ICONS.x}
-            </button>
-          </div>
+      <div class="sv-head-right">
+        <div class="sv-search-wrap">
+          <span class="sv-search-icon">${ICONS.search}</span>
+          <input type="search" id="sv-search-box" class="sv-search-input" placeholder="Search ${escapeHtml(folderLabel(currentPath))}" aria-label="Search this folder and its subfolders" value="${escapeHtml(currentSearch)}" autocomplete="off" spellcheck="false">
+          ${currentSearch ? `<button type="button" class="sv-search-clear" data-act="clear-search" title="Clear search" aria-label="Clear search">${ICONS.x}</button>` : ''}
         </div>
-      ` : ''}
-
-      <!-- STORAGE FOOTER NOTE -->
-      <div style="flex-shrink:0; margin-top:2px;">
-        ${storageNote()}
+        <label class="sv-sort" title="Sort">
+          ${ICONS.sort}
+          <span class="visually-hidden">Sort by</span>
+          <select id="sv-sort-select" aria-label="Sort by">
+            ${SORTS.map(s => `<option value="${s.value}" ${s.value === currentSort ? 'selected' : ''}>${s.label}</option>`).join('')}
+          </select>
+        </label>
+        <div class="sv-view-switcher" role="group" aria-label="View">
+          ${[['split', 'Preview view', ICONS.split], ['grid', 'Icon view', ICONS.grid], ['list', 'List view', ICONS.list]].map(([key, label, icon]) => `
+            <button type="button" class="sv-layout-btn ${currentLayout === key ? 'active' : ''}" data-layout="${key}" aria-pressed="${currentLayout === key}" title="${label}" aria-label="${label}">${icon}</button>
+          `).join('')}
+        </div>
       </div>
     </div>
   `;
 }
 
-function renderExplorerBody(items, selected) {
-  if (items.length === 0) {
-    if (currentSearch) {
-      return `
-        <div class="sv-fade-wrapper" style="text-align:center; padding:50px 20px; background:var(--bg-card); border:1px solid var(--border); border-radius:14px; flex:1; min-height:0; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-          <div style="color:var(--text-muted); margin-bottom:10px;">
-            ${ICONS.search}
-          </div>
-          <h3 style="margin:0 0 6px; font-size:1rem; color:var(--text);">No files match "${escapeHtml(currentSearch)}"</h3>
-          <p style="margin:0 0 16px; font-size:0.84rem; color:var(--text-secondary);">Check your spelling or clear the search filter.</p>
-          <button type="button" class="btn btn-secondary btn-circle" id="sv-clear-search" title="Clear search" aria-label="Clear search" style="--circle-size:32px;">
-            ${ICONS.x}
-          </button>
-        </div>
-      `;
-    }
+function renderSubbar(items, selItems) {
+  const n = selItems.length;
+  const none = n === 0;
+  const clip = fileClipboard.paths.length;
+  const label = none
+    ? (currentSearch ? plural(items.length, 'result') : plural(items.length, 'item'))
+    : `${n} of ${items.length} selected`;
 
+  return `
+    <div class="sv-subbar">
+      <div class="sv-tags-bar" role="group" aria-label="Filter by tag">
+        <button type="button" class="sv-tag-pill sv-tag-all ${!currentTagFilter ? 'active' : ''}" data-filter-tag="all" aria-pressed="${!currentTagFilter}" title="Show all files">All</button>
+        ${Object.entries(TAG_COLORS).map(([tag, color]) => `
+          <button type="button" class="sv-tag-chip ${currentTagFilter === tag ? 'active' : ''}" data-filter-tag="${tag}" aria-pressed="${currentTagFilter === tag}" title="Only ${tag} tags" aria-label="Only files tagged ${tag}">
+            <span class="sv-tag-chip-dot" style="background:${color};"></span>
+          </button>
+        `).join('')}
+      </div>
+      <div class="sv-selection">
+        <span class="sv-sel-label" aria-live="polite">${label}</span>
+        <div class="sv-sel-actions" role="toolbar" aria-label="Selection actions">
+          <button type="button" class="sv-icon-btn sv-tb-btn" data-act="cut" title="Cut (${modKey()}X)" aria-label="Cut" ${none ? 'disabled' : ''}>${ICONS.scissors}</button>
+          <button type="button" class="sv-icon-btn sv-tb-btn" data-act="copy" title="Copy (${modKey()}C)" aria-label="Copy" ${none ? 'disabled' : ''}>${ICONS.copy}</button>
+          <button type="button" class="sv-icon-btn sv-tb-btn" data-act="paste" title="${clip ? `Paste ${plural(clip, 'item')} here (${modKey()}V)` : 'Nothing to paste'}" aria-label="Paste" ${clip ? '' : 'disabled'}>${ICONS.paste}${clip ? `<span class="sv-badge">${clip}</span>` : ''}</button>
+          <button type="button" class="sv-icon-btn sv-tb-btn" data-act="multi-download" title="Download" aria-label="Download" ${none ? 'disabled' : ''}>${ICONS.download}</button>
+          <button type="button" class="sv-icon-btn sv-tb-btn is-danger" data-act="delete-selected" title="Delete (Del)" aria-label="Delete" ${none ? 'disabled' : ''}>${ICONS.delete}</button>
+          <span class="sv-divider" aria-hidden="true"></span>
+          <button type="button" class="sv-icon-btn sv-tb-btn" data-act="select-all" title="Select all (${modKey()}A)" aria-label="Select all">${ICONS.checkAll}</button>
+          <button type="button" class="sv-icon-btn sv-tb-btn" data-act="folder-properties" title="Folder info" aria-label="Folder info">${ICONS.info}</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderStatus(items, selItems) {
+  const clip = fileClipboard.paths.length;
+  const folders = items.filter(i => i.isDirectory).length;
+  const files = items.length - folders;
+  const bytes = (selItems.length ? selItems : items).reduce((s, i) => s + (i.isDirectory ? 0 : (i.size || 0)), 0);
+  const counts = [folders ? plural(folders, 'folder') : '', files ? plural(files, 'file') : ''].filter(Boolean).join(', ') || 'Empty';
+  const hint = isTouchOnly()
+    ? 'Tap to open, hold for more'
+    : 'Double-click to open, Space to preview, right-click for more';
+
+  return `
+    <footer class="sv-status">
+      <span class="sv-status-count">${counts}${bytes ? ` <span class="sv-status-dim">· ${size(bytes)}${selItems.length ? ' selected' : ''}</span>` : ''}</span>
+      ${clip ? `
+        <span class="sv-status-clip">
+          ${plural(clip, 'item')} ${fileClipboard.op === 'cut' ? 'ready to move' : 'copied'}
+          <button type="button" class="sv-link-btn" data-act="paste">Paste here</button>
+          <button type="button" class="sv-link-btn is-quiet" data-act="clear-clipboard">Cancel</button>
+        </span>
+      ` : `<span class="sv-status-hint">${hint}</span>`}
+    </footer>
+  `;
+}
+
+function renderEmptyBody(ctx, driveIsEmpty) {
+  if (currentSearch) {
     return `
-      <div class="sv-fade-wrapper" data-canvas="true" style="text-align:center; padding:50px 20px; background:var(--bg-card); border:1px solid var(--border); border-radius:14px; flex:1; min-height:0; display:flex; flex-direction:column; justify-content:center; align-items:center; cursor:context-menu;">
-        <div style="color:var(--text-muted); margin-bottom:10px; pointer-events:none;">
-          ${ICONS.folder}
-        </div>
-        <h3 style="margin:0 0 6px; font-size:1rem; color:var(--text); pointer-events:none;">This folder is empty</h3>
-        <p style="margin:0 0 16px; font-size:0.84rem; color:var(--text-secondary); pointer-events:none;">Right-click or hold to access options, or paste files here.</p>
-        <div style="display:flex; justify-content:center; gap:10px;">
-          <button type="button" class="btn btn-secondary btn-circle" data-act="new-file" title="New File" aria-label="New File" style="--circle-size:32px;">
-            ${ICONS.plus}
-          </button>
-          <button type="button" class="btn btn-secondary btn-circle" data-act="new-folder" title="New Folder" aria-label="New Folder" style="--circle-size:32px;">
-            ${ICONS.folderPlus}
-          </button>
-        </div>
+      <div class="sv-body-empty" data-canvas="true">
+        <div class="sv-empty-icon">${ICONS.search}</div>
+        <h3>No results for "${escapeHtml(currentSearch)}"</h3>
+        <p>Nothing in ${escapeHtml(folderLabel(currentPath))} or its subfolders matches${currentTagFilter ? ` with the ${escapeHtml(currentTagFilter)} tag` : ''}.</p>
+        <button type="button" class="btn btn-secondary btn-sm" id="sv-clear-search">Clear search</button>
       </div>
     `;
   }
+  if (currentTagFilter) {
+    return `
+      <div class="sv-body-empty" data-canvas="true">
+        <div class="sv-empty-icon"><span class="sv-tag-chip-dot is-large" style="background:${TAG_COLORS[currentTagFilter]};"></span></div>
+        <h3>Nothing tagged ${escapeHtml(currentTagFilter)} here</h3>
+        <p>Right-click a file to tag it, or show everything in this folder.</p>
+        <button type="button" class="btn btn-secondary btn-sm" data-filter-tag="all">Show all</button>
+      </div>
+    `;
+  }
+  const actions = `
+    <div class="sv-empty-actions">
+      <button type="button" class="btn btn-primary btn-sm" data-act="upload">${ICONS.upload}<span>Upload files</span></button>
+      <button type="button" class="btn btn-secondary btn-sm" data-act="new-file">${ICONS.filePlus}<span>New file</span></button>
+      <button type="button" class="btn btn-secondary btn-sm" data-act="new-folder">${ICONS.folderPlus}<span>New folder</span></button>
+    </div>
+  `;
+  if (driveIsEmpty) {
+    return `
+      <div class="sv-body-empty sv-empty" data-canvas="true">
+        <div class="sv-empty-icon">${ICONS.file}</div>
+        <h3>Nothing saved yet</h3>
+        <p>Tools that produce something, like a tidied document, converted data or a diagram, have a Save action. What you save lands here and stays in this browser. You can also drop files anywhere on this window.</p>
+        ${actions}
+        <a class="sv-link-btn" href="#tools">Browse tools</a>
+      </div>
+    `;
+  }
+  return `
+    <div class="sv-body-empty" data-canvas="true">
+      <div class="sv-empty-icon">${ICONS.folderOpen}</div>
+      <h3>${escapeHtml(folderLabel(currentPath))} is empty</h3>
+      <p>Drop files here, or create something new.</p>
+      ${actions}
+    </div>
+  `;
+}
+
+function renderExplorerBody(ctx, driveIsEmpty) {
+  const { items } = ctx;
+  if (!items.length) {
+    return `<div class="sv-body sv-body--empty">${renderEmptyBody(ctx, driveIsEmpty)}</div>`;
+  }
+
+  const listLabel = `Contents of ${escapeHtml(folderLabel(currentPath))}`;
 
   if (currentLayout === 'grid') {
     return `
-      <div class="sv-fade-wrapper sv-grid-wrap-container" style="flex:1; min-height:0; height:100%; display:flex; flex-direction:column; position:relative; overflow:hidden; background:var(--bg-card); border:1px solid var(--border); border-radius:14px;">
-        <div class="sv-fade-scroll sv-grid-scroll" data-canvas="true" style="flex:1; min-height:0; overflow-y:auto; padding:16px;">
-          <div class="sv-grid-view" data-canvas="true" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:16px 12px; justify-items:center; align-items:start;">
-            ${items.map(item => renderGridIcon(item, selected)).join('')}
+      <div class="sv-body sv-fade-wrapper">
+        <div class="sv-fade-scroll sv-grid-scroll" data-canvas="true" data-scroll-key="grid">
+          <div class="sv-grid-view" data-canvas="true" role="listbox" aria-multiselectable="true" aria-label="${listLabel}">
+            ${items.map(renderGridIcon).join('')}
           </div>
         </div>
         <div class="sv-fade-bottom"></div>
@@ -490,64 +631,38 @@ function renderExplorerBody(items, selected) {
   }
 
   if (currentLayout === 'list') {
+    const [key, dir] = currentSort.split(':');
+    const col = (k, label, cls) => `
+      <button type="button" class="sv-col ${cls} ${key === k ? 'is-sorted' : ''}" data-sort="${k}" aria-label="Sort by ${label.toLowerCase()}">
+        <span>${label}</span>${key === k ? `<span class="sv-sort-arrow ${dir}">${ICONS.chevronDown}</span>` : ''}
+      </button>`;
     return `
-      <div class="sv-fade-wrapper sv-list-wrap-container" style="flex:1; min-height:0; height:100%; display:flex; flex-direction:column; position:relative; overflow:hidden; background:var(--bg-card); border:1px solid var(--border); border-radius:14px;">
-        <div style="padding:10px 16px; background:var(--bg-subtle); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em; flex-shrink:0;">
-          <span style="flex:2;">Name</span>
-          <span style="width:100px;">Size</span>
-          <span style="width:140px;">Modified</span>
-          <span style="width:90px; text-align:right;">Tags</span>
+      <div class="sv-body sv-fade-wrapper sv-list-pane">
+        <div class="sv-list-head">
+          ${col('name', 'Name', 'sv-col-name')}
+          ${col('modified', 'Modified', 'sv-col-date')}
+          ${col('size', 'Size', 'sv-col-size')}
+          ${col('kind', 'Kind', 'sv-col-kind')}
         </div>
-        <div class="sv-fade-scroll sv-list-scroll sv-list-view" data-canvas="true" style="flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column;">
-          <div data-canvas="true" style="display:flex; flex-direction:column;">
-            ${items.map(item => renderListRow(item, selected)).join('')}
-          </div>
+        <div class="sv-fade-scroll sv-list-scroll sv-list-view" data-canvas="true" data-scroll-key="list" role="listbox" aria-multiselectable="true" aria-label="${listLabel}">
+          ${items.map(renderListRow).join('')}
         </div>
         <div class="sv-fade-bottom"></div>
       </div>
     `;
   }
 
-  // Default: Split Master/Detail View
   return `
-    <div class="sv-split-view" data-canvas="true" style="display:grid; grid-template-columns:340px 1fr; gap:14px; flex:1; min-height:0; height:100%; align-items:stretch; overflow:hidden;">
-      <!-- Master: Files List -->
-      <div class="sv-fade-wrapper sv-split-master-wrap" style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; overflow:hidden; height:100%; display:flex; flex-direction:column; position:relative;">
-        <div style="padding:10px 14px; background:var(--bg-subtle); border-bottom:1px solid var(--border); font-size:0.75rem; font-weight:700; color:var(--text-secondary); flex-shrink:0;">
-          ITEMS IN ${escapeHtml(currentPath.toUpperCase())} (${items.length})
-        </div>
-        <div class="sv-fade-scroll sv-split-master" data-canvas="true" style="flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column;">
-          <div data-canvas="true" style="display:flex; flex-direction:column; min-height:100%;">
-            ${items.map(item => renderSplitItem(item, selected)).join('')}
-          </div>
+    <div class="sv-body sv-split-view">
+      <div class="sv-fade-wrapper sv-split-master-wrap">
+        <div class="sv-fade-scroll sv-split-master" data-canvas="true" data-scroll-key="master" role="listbox" aria-multiselectable="true" aria-label="${listLabel}">
+          ${items.map(renderSplitItem).join('')}
         </div>
         <div class="sv-fade-bottom"></div>
       </div>
-
-      <!-- Detail: File Inspector / Content Preview Pane -->
-      <div class="sv-fade-wrapper sv-detail-pane" style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; overflow:hidden; height:100%; display:flex; flex-direction:column; position:relative;">
-        <div class="sv-fade-scroll sv-detail-scroll" style="flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column;">
-          ${selectedPaths.size > 1 ? `
-            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; padding:40px 20px; text-align:center; gap:14px;">
-              <div style="color:var(--text); width:48px; height:48px; border-radius:12px; background:var(--bg-subtle); display:flex; align-items:center; justify-content:center;">
-                ${ICONS.checkAll}
-              </div>
-              <h3 style="margin:0; font-size:1.05rem; color:var(--text); font-weight:700;">${selectedPaths.size} items selected</h3>
-              <p style="margin:0; font-size:0.82rem; color:var(--text-secondary); max-width:300px;">Perform operations using the toolbar buttons or shortcuts (Ctrl+C, Ctrl+X, Delete).</p>
-              <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap; justify-content:center;">
-                <button type="button" class="btn btn-secondary btn-circle" data-act="cut" title="Cut" aria-label="Cut" style="--circle-size:32px;">${ICONS.scissors}</button>
-                <button type="button" class="btn btn-secondary btn-circle" data-act="copy" title="Copy" aria-label="Copy" style="--circle-size:32px;">${ICONS.copy}</button>
-                <button type="button" class="btn btn-secondary btn-circle" data-act="multi-properties" title="Properties" aria-label="Properties" style="--circle-size:32px;">${ICONS.info}</button>
-                <button type="button" class="btn btn-secondary btn-circle" data-act="multi-download" title="Download ZIP" aria-label="Download ZIP" style="--circle-size:32px;">${ICONS.download}</button>
-                <button type="button" class="btn btn-secondary btn-circle btn-danger" data-act="delete-selected" title="Delete" aria-label="Delete" style="--circle-size:32px;">${ICONS.delete}</button>
-                <button type="button" class="btn btn-secondary btn-circle" data-act="clear-selection" title="Clear selection" aria-label="Clear selection" style="--circle-size:32px;">${ICONS.x}</button>
-              </div>
-            </div>
-          ` : (selected ? renderDetailPane(selected) : `
-            <div style="display:flex; align-items:center; justify-content:center; flex:1; color:var(--text-muted); font-size:0.88rem; padding:40px;">
-              Select a file to view and inspect its contents. Right-click or hold for options.
-            </div>
-          `)}
+      <div class="sv-fade-wrapper sv-detail-pane">
+        <div class="sv-fade-scroll sv-detail-scroll" data-scroll-key="detail">
+          ${renderDetail(ctx)}
         </div>
         <div class="sv-fade-bottom"></div>
       </div>
@@ -555,110 +670,79 @@ function renderExplorerBody(items, selected) {
   `;
 }
 
-/* OS-Style Vertical Icon Grid Item (Mac Finder / Windows Explorer) */
-function renderGridIcon(item, selected) {
-  const isSelected = selectedPaths.has(item.path) || (selected && (selected.path === item.path || selected.id === item.id));
-  const clickAction = item.isDirectory ? `data-nav-path="${escapeHtml(item.path)}"` : `data-pick="${escapeHtml(item.id || item.path)}"`;
+function itemAttrs(item) {
+  const selected = selectedPaths.has(item.path);
+  const isCut = fileClipboard.op === 'cut' && fileClipboard.paths.includes(item.path);
+  return `class="__CLS__ sv-item ${selected ? 'is-selected' : ''} ${isCut ? 'is-cut' : ''}"
+    data-context-target="true" data-path="${escapeHtml(item.path)}" data-is-dir="${item.isDirectory ? 'true' : 'false'}"
+    draggable="true" role="option" aria-selected="${selected}" tabindex="${item.path === cursorPath ? '0' : '-1'}"`;
+}
 
-  // Image thumbnail support
-  const isImg = !item.isDirectory && /\.(png|jpe?g|webp|gif|svg)$/i.test(item.name);
-  let iconHtml;
-  if (isImg && (item.dataUrl || item.thumbnail || (typeof item.content === 'string' && item.content.startsWith('data:image')))) {
-    const src = item.thumbnail || item.dataUrl || item.content;
-    iconHtml = `<img src="${escapeHtml(src)}" alt="${escapeHtml(item.name)}" style="width:36px; height:36px; object-fit:contain; border-radius:4px; box-shadow:0 1px 4px rgba(0,0,0,0.12);" />`;
-  } else {
-    // Uniform vector icons with stroke=currentColor (automatically dark on light themes, light on dark themes)
-    iconHtml = getFileTypeIcon(item.name, item.isDirectory ? 'folder' : item.kind, 32);
-  }
+function renderTagDots(tags = []) {
+  if (!tags?.length) return '';
+  return `<span class="sv-tags-dots" aria-label="Tags: ${escapeHtml(tags.join(', '))}">${tags.map(t => `<span class="sv-tag-dot" style="background:${TAG_COLORS[t] || 'var(--text-3)'};" title="${escapeHtml(t)}"></span>`).join('')}</span>`;
+}
 
+function itemMeta(item) {
+  if (item.isDirectory) return plural(listDir(item.path).length, 'item');
+  return size(item.size || 0);
+}
+
+function locationOf(item) {
+  const parent = item.parentPath || getParentPath(item.path);
+  if (parent === currentPath) return '';
+  const rel = parent.startsWith(currentPath + '/') ? parent.slice(currentPath.length + 1) : parent.replace(/^\//, '');
+  return rel.split('/').join(' / ');
+}
+
+function isImageName(name) { return /\.(png|jpe?g|webp|gif|svg|bmp|avif)$/i.test(name || ''); }
+
+function renderGridIcon(item) {
+  const loc = currentSearch ? locationOf(item) : '';
+  const thumb = !item.isDirectory && isImageName(item.name)
+    ? `<img class="sv-thumb-img" alt="" data-thumb-path="${escapeHtml(item.path)}" hidden>`
+    : '';
   return `
-    <div class="sv-grid-icon ${isSelected ? 'is-selected' : ''}" 
-         data-context-target="true" 
-         data-path="${escapeHtml(item.path)}" 
-         data-is-dir="${item.isDirectory ? 'true' : 'false'}"
-         draggable="true"
-         ${clickAction}
-         style="display:flex; flex-direction:column; align-items:center; text-align:center; width:110px; height:124px; max-height:124px; padding:10px 8px; border-radius:10px; cursor:pointer; user-select:none; transition:all 0.15s ease; position:relative; overflow:hidden; box-sizing:border-box; align-self:start; background:${isSelected ? 'rgba(59,130,246,0.12)' : 'transparent'}; border:1px solid ${isSelected ? 'rgba(59,130,246,0.4)' : 'transparent'};">
-      
-      <!-- Icon / Thumbnail Container (Consistent 44x44 Box) -->
-      <div style="width:44px; height:44px; display:flex; align-items:center; justify-content:center; color:var(--text); margin-bottom:8px; flex-shrink:0;">
-        ${iconHtml}
-      </div>
-
-      <!-- Centered Filename underneath -->
-      <div style="font-size:0.78rem; font-weight:500; color:var(--text); width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:1.3; margin-bottom:2px;" title="${escapeHtml(item.name)}">
-        ${escapeHtml(item.name)}
-      </div>
-
-      <!-- Centered Metadata underneath (Size or Folder) -->
-      <div style="font-size:0.68rem; color:var(--text-muted); font-family:var(--mono); width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-        ${item.isDirectory ? 'Folder' : size(item.size || 0)}
-      </div>
-
-      <!-- Tags indicator -->
+    <div ${itemAttrs(item).replace('__CLS__', 'sv-grid-icon')} title="${escapeHtml(item.name)}">
+      <div class="sv-grid-thumb">${thumb}<span class="sv-grid-glyph">${getFileTypeIcon(item.name, item.isDirectory ? 'folder' : item.kind, 36)}</span></div>
+      <div class="sv-grid-name">${escapeHtml(item.name)}</div>
+      <div class="sv-grid-meta">${loc ? escapeHtml(loc) : itemMeta(item)}</div>
       ${renderTagDots(item.tags)}
     </div>
   `;
 }
 
-function renderListRow(item, selected) {
-  const isSelected = selectedPaths.has(item.path) || (selected && (selected.path === item.path || selected.id === item.id));
-  const icon = item.isDirectory ? ICONS.folder : getFileTypeIcon(item.name, item.kind, 16);
-  const clickAction = item.isDirectory ? `data-nav-path="${escapeHtml(item.path)}"` : `data-pick="${escapeHtml(item.id || item.path)}"`;
-
+function renderListRow(item) {
+  const loc = currentSearch ? locationOf(item) : '';
   return `
-    <div class="sv-row ${isSelected ? 'is-selected' : ''}" 
-         data-context-target="true"
-         data-path="${escapeHtml(item.path)}"
-         data-is-dir="${item.isDirectory ? 'true' : 'false'}"
-         draggable="true"
-         ${clickAction} 
-         style="padding:10px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; cursor:pointer; background:${isSelected ? 'var(--bg-subtle)' : 'transparent'};">
-      <div style="flex:2; display:flex; align-items:center; gap:10px; overflow:hidden; padding-right:12px;">
-        <span style="color:var(--text); flex-shrink:0;">${icon}</span>
-        <span style="font-weight:600; font-size:0.86rem; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-          ${escapeHtml(item.name)}
+    <div ${itemAttrs(item).replace('__CLS__', 'sv-row')}>
+      <div class="sv-cell sv-col-name">
+        <span class="sv-item-icon">${getFileTypeIcon(item.name, item.isDirectory ? 'folder' : item.kind, 18)}</span>
+        <span class="sv-item-text">
+          <span class="sv-item-name">${escapeHtml(item.name)}</span>
+          ${loc ? `<span class="sv-item-loc">in ${escapeHtml(loc)}</span>` : ''}
         </span>
-      </div>
-      <div style="width:100px; font-size:0.78rem; color:var(--text-secondary); font-family:var(--mono);">
-        ${item.isDirectory ? 'Folder' : size(item.size || 0)}
-      </div>
-      <div style="width:140px; font-size:0.75rem; color:var(--text-muted);">
-        ${item.updatedAt ? when(item.updatedAt) : ''}
-      </div>
-      <div style="width:90px; text-align:right; display:flex; justify-content:flex-end; align-items:center; gap:4px;">
         ${renderTagDots(item.tags)}
       </div>
+      <div class="sv-cell sv-col-date">${item.updatedAt ? when(item.updatedAt) : ''}</div>
+      <div class="sv-cell sv-col-size">${item.isDirectory ? itemMeta(item) : size(item.size || 0)}</div>
+      <div class="sv-cell sv-col-kind">${kindOf(item)}</div>
     </div>
   `;
 }
 
-function renderSplitItem(item, selected) {
-  const isSelected = selectedPaths.has(item.path) || (selected && (selected.path === item.path || selected.id === item.id));
-  const icon = item.isDirectory ? ICONS.folder : getFileTypeIcon(item.name, item.kind, 16);
-  const clickAction = item.isDirectory ? `data-nav-path="${escapeHtml(item.path)}"` : `data-pick="${escapeHtml(item.id || item.path)}"`;
-
+function renderSplitItem(item) {
+  const loc = currentSearch ? locationOf(item) : '';
+  const meta = [loc ? `in ${loc}` : itemMeta(item), !item.isDirectory && item.updatedAt ? when(item.updatedAt) : ''].filter(Boolean).join(' · ');
   return `
-    <div class="sv-split-item ${isSelected ? 'is-selected' : ''}" 
-         data-context-target="true"
-         data-path="${escapeHtml(item.path)}"
-         data-is-dir="${item.isDirectory ? 'true' : 'false'}"
-         draggable="true"
-         ${clickAction} 
-         style="padding:10px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; cursor:pointer; background:${isSelected ? 'var(--bg-subtle)' : 'transparent'};">
-      <div style="display:flex; align-items:center; gap:8px; overflow:hidden;">
-        <span style="color:var(--text); flex-shrink:0;">${icon}</span>
-        <div style="overflow:hidden;">
-          <div style="font-weight:600; font-size:0.84rem; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-            ${escapeHtml(item.name)}
-          </div>
-          <div style="font-size:0.7rem; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
-            <span>${item.isDirectory ? 'Folder' : size(item.size || 0)}</span>
-            ${renderTagDots(item.tags)}
-          </div>
-        </div>
-      </div>
-      ${item.isDirectory ? `<span style="color:var(--text-muted);">${ICONS.chevronRight}</span>` : ''}
+    <div ${itemAttrs(item).replace('__CLS__', 'sv-split-item')}>
+      <span class="sv-item-icon">${getFileTypeIcon(item.name, item.isDirectory ? 'folder' : item.kind, 18)}</span>
+      <span class="sv-item-text">
+        <span class="sv-item-name">${escapeHtml(item.name)}</span>
+        <span class="sv-item-meta">${escapeHtml(meta)}</span>
+      </span>
+      ${renderTagDots(item.tags)}
+      ${item.isDirectory ? `<button type="button" class="sv-row-open" data-act="open-folder" data-path="${escapeHtml(item.path)}" title="Open folder" aria-label="Open ${escapeHtml(item.name)}">${ICONS.chevronRight}</button>` : ''}
     </div>
   `;
 }
@@ -724,210 +808,285 @@ export function getToolsForFile(file) {
   return result;
 }
 
-function renderDetailPane(selected) {
-  const isCsv = selected.name.endsWith('.csv') || selected.kind === 'csv';
-  const isHtml = /\.(html|htm)$/i.test(selected.name);
-  const isImage = /\.(png|jpe?g|webp|gif|svg)$/i.test(selected.name);
-  const isZip = selected.name.endsWith('.zip') || selected.kind === 'archive';
-  const tools = getToolsForFile(selected);
+function renderDetail(ctx) {
+  const { selItems, single } = ctx;
+
+  if (selItems.length > 1) {
+    const bytes = selItems.reduce((s, i) => s + (i.isDirectory ? 0 : (i.size || 0)), 0);
+    return `
+      <div class="sv-detail-empty">
+        <div class="sv-stack" aria-hidden="true">${selItems.slice(0, 3).map(i => `<span>${getFileTypeIcon(i.name, i.isDirectory ? 'folder' : i.kind, 28)}</span>`).join('')}</div>
+        <h3>${selItems.length} items selected</h3>
+        <p>${size(bytes)} in total</p>
+        <div class="sv-detail-empty-actions">
+          <button type="button" class="btn btn-secondary btn-sm" data-act="multi-download">${ICONS.download}<span>Download ZIP</span></button>
+          <button type="button" class="btn btn-secondary btn-sm" data-act="multi-properties">${ICONS.info}<span>Get info</span></button>
+          <button type="button" class="btn btn-ghost btn-sm" data-act="clear-selection">Clear selection</button>
+        </div>
+      </div>
+    `;
+  }
+
+  if (single?.isDirectory) {
+    return `
+      <div class="sv-detail-empty">
+        <div class="sv-empty-icon is-large">${getFileTypeIcon(single.name, 'folder', 36)}</div>
+        <h3>${escapeHtml(single.name)}</h3>
+        <p>${itemMeta(single)}${single.updatedAt ? ` · Modified ${when(single.updatedAt)}` : ''}</p>
+        <div class="sv-detail-empty-actions">
+          <button type="button" class="btn btn-primary btn-sm" data-act="open-folder" data-path="${escapeHtml(single.path)}">${ICONS.folderOpen}<span>Open folder</span></button>
+          <button type="button" class="btn btn-secondary btn-sm" data-act="multi-properties">${ICONS.info}<span>Get info</span></button>
+        </div>
+      </div>
+    `;
+  }
+
+  if (single) return renderDetailPane(single);
 
   return `
-    <div style="display:flex; flex-direction:column; height:100%;">
-      
-      <!-- Detail Header -->
-      <div style="padding:14px 18px; border-bottom:1px solid var(--border); background:var(--bg-subtle); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-        <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
-          <div style="color:var(--text); flex-shrink:0;">
-            ${getFileTypeIcon(selected.name, selected.kind, 22)}
-          </div>
-          <div style="overflow:hidden;">
-            <input type="text" class="sv-rename" value="${escapeHtml(selected.name)}" data-path="${escapeHtml(selected.path || '')}" style="font-weight:700; font-size:0.96rem; color:var(--text); background:transparent; border:none; border-bottom:1px dashed var(--border); outline:none; padding:2px 4px; max-width:280px;">
-            <div style="font-size:0.74rem; color:var(--text-muted); margin-top:2px; display:flex; align-items:center; gap:8px;">
-              <span>${size(selected.size || selected.bytes || 0)} · ${selected.updatedAt ? when(selected.updatedAt) : ''}</span>
-              ${renderTagDots(selected.tags)}
-            </div>
-          </div>
+    <div class="sv-detail-empty">
+      <div class="sv-empty-icon">${ICONS.eye}</div>
+      <h3>Nothing selected</h3>
+      <p>Select a file to preview it here.</p>
+    </div>
+  `;
+}
+
+function renderDetailPane(selected) {
+  const type = previewTypeOf(selected);
+  const views = CONTENT_VIEWS[type];
+  const view = effectiveView(type);
+  const tools = getToolsForFile(selected);
+  const top = tools[0];
+  const isZip = extOf(selected.name) === 'zip' || selected.kind === 'archive';
+  const meta = [kindOf(selected), size(selected.size ?? selected.bytes ?? 0), selected.updatedAt ? `Modified ${when(selected.updatedAt, { long: true })}` : ''].filter(Boolean);
+
+  return `
+    <div class="sv-detail">
+      <div class="sv-detail-head">
+        <div class="sv-detail-icon">${getFileTypeIcon(selected.name, selected.kind, 28)}</div>
+        <div class="sv-detail-title">
+          <input type="text" class="sv-rename" value="${escapeHtml(selected.name)}" data-path="${escapeHtml(selected.path || '')}" aria-label="File name" title="Click to rename" spellcheck="false" autocomplete="off">
+          <div class="sv-detail-meta">${meta.map(escapeHtml).join('<span aria-hidden="true"> · </span>')}${renderTagDots(selected.tags)}</div>
         </div>
+      </div>
 
-        <!-- Content View Switcher & Action Buttons -->
-        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          ${isHtml ? `
-            <div class="sv-content-view-switcher" style="display:flex; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:2px;">
-              <button type="button" class="sv-cview-btn ${currentContentView !== 'raw' ? 'active' : ''}" data-cview="browser" title="Browser View" aria-label="Browser View" style="padding:4px 8px; border:none; background:none; cursor:pointer; font-size:0.75rem; border-radius:5px; color:var(--text); display:inline-flex; align-items:center; justify-content:center;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"></path></svg>
-              </button>
-              <button type="button" class="sv-cview-btn ${currentContentView === 'raw' ? 'active' : ''}" data-cview="raw" title="HTML Source Code" aria-label="HTML Source Code" style="padding:4px 8px; border:none; background:none; cursor:pointer; font-size:0.75rem; border-radius:5px; color:var(--text); display:inline-flex; align-items:center; justify-content:center;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-              </button>
-            </div>
-          ` : (!isImage ? `
-            <div class="sv-content-view-switcher" style="display:flex; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:2px;">
-              <button type="button" class="sv-cview-btn ${currentContentView === 'formatted' ? 'active' : ''}" data-cview="formatted" title="Formatted Render" aria-label="Formatted Render" style="padding:4px 7px; border:none; background:none; cursor:pointer; border-radius:5px; color:var(--text); display:inline-flex; align-items:center; justify-content:center;">
-                ${ICONS.eye}
-              </button>
-              ${isCsv ? `
-                <button type="button" class="sv-cview-btn ${currentContentView === 'table' ? 'active' : ''}" data-cview="table" title="Data Table" aria-label="Data Table" style="padding:4px 7px; border:none; background:none; cursor:pointer; border-radius:5px; color:var(--text); display:inline-flex; align-items:center; justify-content:center;">
-                  ${ICONS.table}
-                </button>
-              ` : ''}
-              <button type="button" class="sv-cview-btn ${currentContentView === 'raw' ? 'active' : ''}" data-cview="raw" title="Raw Text" aria-label="Raw Text" style="padding:4px 7px; border:none; background:none; cursor:pointer; border-radius:5px; color:var(--text); display:inline-flex; align-items:center; justify-content:center;">
-                ${ICONS.raw}
-              </button>
-            </div>
-          ` : '')}
-
-          <!-- Quick Look Preview Button -->
-          <button type="button" class="btn btn-secondary btn-circle" data-act="quicklook" title="Quick Look preview (Space)" aria-label="Quick Look preview">
-            ${ICONS.eye}
-          </button>
-
-          <!-- Open in Tool Pop-up Menu -->
-          ${tools.length > 0 ? `
-            <div class="sv-open-dropdown-wrap" style="position:relative;">
-              <button type="button" class="btn btn-secondary btn-circle sv-open-dropdown-toggle" id="sv-open-dropdown-toggle" aria-haspopup="true" aria-expanded="false" title="Open this file in a tool" aria-label="Open in tool">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-              </button>
-              <div id="sv-open-dropdown-menu" class="sv-open-dropdown-menu" hidden style="position:absolute; right:0; top:calc(100% + 5px); z-index:1000; min-width:230px; max-width:300px; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:6px; box-shadow:0 12px 28px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.1); font-family:var(--sans);">
-                <div style="padding:4px 8px 6px; font-size:0.7rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; border-bottom:1px solid var(--border); margin-bottom:4px;">
-                  Open with tool (${tools.length})
-                </div>
-                <div style="max-height:260px; overflow-y:auto; display:flex; flex-direction:column; gap:2px;">
-                  ${tools.map(t => `
-                    <button type="button" class="sv-open-btn sv-open-menu-item" data-open="${escapeHtml(t.id)}" title="${escapeHtml(t.description || t.name)}" style="width:100%; border:none; background:transparent; display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:6px; cursor:pointer; text-align:left; color:var(--text); transition:background 0.12s ease;">
-                      <span style="flex-shrink:0; color:var(--text); display:inline-flex; align-items:center; width:18px; height:18px;">${t.icon || ICONS.file}</span>
-                      <span style="display:flex; flex-direction:column; overflow:hidden;">
-                        <strong style="font-size:0.82rem; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(t.name)}</strong>
-                        <span style="font-size:0.7rem; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(t.description || '')}</span>
-                      </span>
-                    </button>
-                  `).join('')}
+      <div class="sv-detail-bar">
+        ${views ? `
+          <div class="sv-content-view-switcher" role="group" aria-label="Show as">
+            ${views.map(([key, label, icon]) => `<button type="button" class="sv-cview-btn ${view === key ? 'active' : ''}" data-cview="${key}" aria-pressed="${view === key}" title="${label}">${icon}<span>${label}</span></button>`).join('')}
+          </div>
+        ` : '<span></span>'}
+        <div class="sv-detail-actions">
+          <button type="button" class="sv-icon-btn" data-act="quicklook" title="Quick Look (Space)" aria-label="Quick Look preview">${ICONS.expand}</button>
+          ${isZip ? `<button type="button" class="sv-icon-btn" data-act="extract-archive" data-file-path="${escapeHtml(selected.path)}" title="Extract here" aria-label="Extract archive">${ICONS.zip}</button>` : ''}
+          ${top ? `
+            <div class="sv-open-split">
+              <button type="button" class="sv-open-primary sv-open-btn" data-open="${escapeHtml(top.id)}" title="Open in ${escapeHtml(top.name)} (Enter)">${ICONS.external}<span>Open in ${escapeHtml(top.name)}</span></button>
+              <div class="sv-open-dropdown-wrap">
+                <button type="button" class="sv-open-dropdown-toggle" id="sv-open-dropdown-toggle" aria-haspopup="true" aria-expanded="false" title="Open with another tool" aria-label="Open with another tool">${ICONS.chevronDown}</button>
+                <div id="sv-open-dropdown-menu" class="sv-open-dropdown-menu" role="menu" hidden>
+                  <div class="sv-open-menu-title">Open with</div>
+                  <div class="sv-open-menu-list">
+                    ${tools.map(t => `
+                      <button type="button" class="sv-open-btn sv-open-menu-item" role="menuitem" data-open="${escapeHtml(t.id)}" title="${escapeHtml(t.description || t.name)}">
+                        <span class="sv-open-menu-icon">${t.icon || ICONS.file}</span>
+                        <span class="sv-open-menu-text">
+                          <strong>${escapeHtml(t.name)}</strong>
+                          <span>${escapeHtml(t.description || '')}</span>
+                        </span>
+                      </button>
+                    `).join('')}
+                  </div>
                 </div>
               </div>
             </div>
           ` : ''}
-
-          ${isZip ? `
-            <button type="button" class="btn btn-secondary btn-circle" data-act="extract-archive" data-file-path="${escapeHtml(selected.path)}" title="Extract archive" aria-label="Extract archive">
-              ${ICONS.zip}
-            </button>
-          ` : ''}
         </div>
       </div>
 
-      <!-- Preview Body -->
-      <div class="sv-preview" style="flex:1; height:100%; overflow:auto; padding:18px;">
-        ${renderContentBody(selected)}
+      <div class="sv-preview" data-preview-type="${type}">
+        ${renderContentBody(selected, type, view)}
       </div>
     </div>
   `;
 }
 
-function renderContentBody(file) {
-  if (/\.(png|jpe?g|webp|gif|svg)$/i.test(file.name)) {
+function renderContentBody(file, type = previewTypeOf(file), view = effectiveView(type)) {
+  const text = typeof file.text === 'string' ? file.text : (typeof file.content === 'string' && !file.content.startsWith('data:') ? file.content : null);
+  const src = blobUrlCache.get(file.path)?.url || (typeof file.content === 'string' && file.content.startsWith('data:') ? file.content : file.dataUrl || '');
+
+  if (type === 'image') {
+    return `<div class="sv-media">${src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(file.name)}">` : '<span class="sv-loading">Loading preview</span>'}</div>`;
+  }
+  if (type === 'pdf') {
+    return src
+      ? `<iframe class="sv-frame sv-pdf-frame" src="${escapeHtml(src)}" title="${escapeHtml(file.name)}"></iframe>`
+      : '<div class="sv-media"><span class="sv-loading">Loading preview</span></div>';
+  }
+  if (type === 'audio' || type === 'video') {
+    if (!src) return '<div class="sv-media"><span class="sv-loading">Loading preview</span></div>';
+    return `<div class="sv-media">${type === 'audio' ? `<audio controls src="${escapeHtml(src)}"></audio>` : `<video controls src="${escapeHtml(src)}"></video>`}</div>`;
+  }
+  if (type === 'binary') {
     return `
-      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:300px; background:var(--bg-subtle); border-radius:10px; padding:20px;">
-        <img src="${escapeHtml(file.content || file.dataUrl || '')}" alt="${escapeHtml(file.name)}" style="max-width:100%; max-height:420px; object-fit:contain; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.1);">
+      <div class="sv-no-preview">
+        ${getFileTypeIcon(file.name, file.kind, 40)}
+        <p>There's no preview for ${escapeHtml(kindOf(file).toLowerCase())} files.</p>
+        <span>Open it in a tool, or download it.</span>
       </div>
     `;
   }
 
-  const text = file.text || file.content || '';
+  if (text == null) return '<div class="sv-media"><span class="sv-loading">Loading preview</span></div>';
+  if (!text.length) return '<div class="sv-no-preview"><p>This file is empty.</p></div>';
 
-  if (currentContentView === 'table' && (file.name.endsWith('.csv') || file.kind === 'csv')) {
-    return renderCsvTable(text);
+  if (view === 'raw') return `<pre class="sv-code">${escapeHtml(text)}</pre>`;
+  if (type === 'csv') return renderCsvTable(text, extOf(file.name) === 'tsv' ? '\t' : ',');
+  if (type === 'html') {
+    // Scripts may run, but never with this page's origin.
+    return `<iframe class="sv-frame" srcdoc="${escapeHtml(text)}" sandbox="allow-scripts" title="${escapeHtml(file.name)}"></iframe>`;
   }
-
-  if (/\.(html|htm)$/i.test(file.name)) {
-    if (currentContentView === 'raw') {
-      return `
-        <pre style="margin:0; font-family:var(--mono); font-size:0.82rem; line-height:1.5; color:var(--text); white-space:pre-wrap; word-break:break-all; min-height:100%; box-sizing:border-box;">${escapeHtml(text)}</pre>
-      `;
-    }
-    return `
-      <div style="width:100%; height:100%; min-height:500px; display:flex; flex-direction:column; background:var(--surface); border-radius:8px; overflow:hidden; border:1px solid var(--border);">
-        <iframe srcdoc="${escapeHtml(text)}" sandbox="allow-scripts allow-same-origin" style="width:100%; height:100%; flex:1; min-height:500px; border:none; background:var(--surface);"></iframe>
-      </div>
-    `;
+  if (type === 'markdown') return `<div class="sv-md">${renderMarkdown(text)}</div>`;
+  if (type === 'json') {
+    try { return `<pre class="sv-code">${escapeHtml(JSON.stringify(JSON.parse(text), null, 2))}</pre>`; } catch {}
   }
-
-  if (currentContentView === 'raw') {
-    return `
-      <pre style="margin:0; font-family:var(--mono); font-size:0.82rem; line-height:1.5; color:var(--text); white-space:pre-wrap; word-break:break-all; min-height:100%; box-sizing:border-box;">${escapeHtml(text)}</pre>
-    `;
-  }
-
-  // Formatted view
-  if (file.name.endsWith('.md') || file.kind === 'markdown') {
-    return `<div class="sv-md" style="font-size:0.88rem; line-height:1.6; color:var(--text); min-height:100%;">${renderMarkdown(text)}</div>`;
-  }
-
-  return `
-    <pre style="margin:0; font-family:var(--mono); font-size:0.82rem; line-height:1.5; color:var(--text); white-space:pre-wrap; word-break:break-all; min-height:100%; box-sizing:border-box;">${escapeHtml(text)}</pre>
-  `;
+  return `<pre class="sv-code">${escapeHtml(text)}</pre>`;
 }
 
-function renderCsvTable(csvText) {
-  const lines = String(csvText || '').trim().split('\n').map(l => l.split(','));
-  if (!lines.length || !lines[0].length) {
-    return '<p style="color:var(--text-muted);">Empty table.</p>';
+/** Minimal RFC 4180 parse: quoted fields, escaped quotes, embedded newlines. */
+function parseDelimited(text, sep = ',') {
+  const rows = [];
+  let row = [];
+  let field = '';
+  let quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+      else if (c === '"') quoted = false;
+      else field += c;
+    } else if (c === '"' && field === '') quoted = true;
+    else if (c === sep) { row.push(field); field = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); rows.push(row); row = []; field = '';
+    } else field += c;
   }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(cell => cell.trim() !== ''));
+}
+
+function renderCsvTable(csvText, sep = ',') {
+  const lines = parseDelimited(String(csvText || ''), sep);
+  if (!lines.length) return '<div class="sv-no-preview"><p>This table is empty.</p></div>';
   const headers = lines[0];
   const totalRows = lines.length - 1;
   const rowLimit = 500;
   const rows = lines.slice(1, 1 + rowLimit);
-  const truncated = totalRows > rowLimit;
+  const numeric = headers.map((_, c) => rows.length > 0 && rows.every(r => r[c] == null || r[c].trim() === '' || !isNaN(Number(r[c].replace(/[,$%]/g, '')))));
 
   return `
-    <div style="overflow-x:auto; border:1px solid var(--border); border-radius:8px;">
-      <table style="width:100%; border-collapse:collapse; font-size:0.8rem; text-align:left; font-family:var(--sans);">
-        <thead>
-          <tr style="background:var(--bg-subtle); border-bottom:1px solid var(--border);">
-            ${headers.map(h => `<th style="padding:8px 12px; font-weight:700; color:var(--text);">${escapeHtml(h.trim())}</th>`).join('')}
-          </tr>
-        </thead>
+    <div class="sv-table-wrap">
+      <table class="sv-table">
+        <thead><tr>${headers.map((h, c) => `<th class="${numeric[c] ? 'is-num' : ''}">${escapeHtml(h.trim())}</th>`).join('')}</tr></thead>
         <tbody>
-          ${rows.map(r => `
-            <tr style="border-bottom:1px solid var(--border);">
-              ${r.map(cell => `<td style="padding:6px 12px; color:var(--text); font-family:var(--mono);">${escapeHtml(cell.trim())}</td>`).join('')}
-            </tr>
-          `).join('')}
+          ${rows.map(r => `<tr>${headers.map((_, c) => `<td class="${numeric[c] ? 'is-num' : ''}">${escapeHtml((r[c] ?? '').trim())}</td>`).join('')}</tr>`).join('')}
         </tbody>
       </table>
     </div>
-    ${truncated ? `<p style="margin-top:6px; font-size:0.75rem; color:var(--text-muted);">Showing ${rowLimit} of ${totalRows} rows.</p>` : ''}
+    <p class="sv-table-note">${totalRows > rowLimit ? `Showing ${rowLimit} of ${totalRows} rows` : plural(totalRows, 'row')}, ${plural(headers.length, 'column')}</p>
   `;
 }
 
+/** Small, safe Markdown: input is escaped first, then block and inline rules. */
 function renderMarkdown(md) {
-  let html = escapeHtml(md);
-  html = html.replace(/^### (.*$)/gim, '<h3 style="font-size:1rem; font-weight:700; margin:14px 0 6px; color:var(--text);">$1</h3>');
-  html = html.replace(/^## (.*$)/gim, '<h2 style="font-size:1.15rem; font-weight:700; margin:16px 0 8px; color:var(--text);">$1</h2>');
-  html = html.replace(/^# (.*$)/gim, '<h1 style="font-size:1.35rem; font-weight:800; margin:20px 0 10px; color:var(--text);">$1</h1>');
-  html = html.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>');
-  html = html.replace(/\*(.*?)\*/gim, '<em>$1</em>');
-  html = html.replace(/```([\s\S]*?)```/gim, '<pre style="background:var(--bg-card); padding:10px; border-radius:6px; border:1px solid var(--border); font-family:var(--mono); font-size:0.8rem; overflow-x:auto;">$1</pre>');
-  html = html.replace(/`([^`]+)`/gim, '<code style="background:var(--bg-card); padding:2px 5px; border-radius:4px; font-family:var(--mono); font-size:0.82rem; border:1px solid var(--border);">$1</code>');
-  html = html.replace(/^\- (.*$)/gim, '<li style="margin-left:18px; margin-bottom:4px;">$1</li>');
-  html = html.replace(/\n\n/gim, '<br><br>');
-  return html;
+  const inline = (s) => s
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+
+  const lines = escapeHtml(String(md).replace(/\r\n?/g, '\n')).split('\n');
+  const out = [];
+  let para = [];
+  let list = null;
+  const flushPara = () => { if (para.length) { out.push(`<p>${inline(para.join(' '))}</p>`); para = []; } };
+  const flushList = () => { if (list) { out.push(`<${list.tag}>${list.items.map(i => `<li>${inline(i)}</li>`).join('')}</${list.tag}>`); list = null; } };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^```/.test(line)) {
+      flushPara(); flushList();
+      const body = [];
+      while (++i < lines.length && !/^```/.test(lines[i])) body.push(lines[i]);
+      out.push(`<pre><code>${body.join('\n')}</code></pre>`);
+      continue;
+    }
+    const heading = line.match(/^(#{1,6})\s+(.*)$/);
+    if (heading) { flushPara(); flushList(); out.push(`<h${heading[1].length}>${inline(heading[2])}</h${heading[1].length}>`); continue; }
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { flushPara(); flushList(); out.push('<hr>'); continue; }
+    const quote = line.match(/^&gt;\s?(.*)$/);
+    if (quote) { flushPara(); flushList(); out.push(`<blockquote>${inline(quote[1])}</blockquote>`); continue; }
+    const bullet = line.match(/^\s*[-*+]\s+(.*)$/);
+    const numbered = line.match(/^\s*\d+[.)]\s+(.*)$/);
+    if (bullet || numbered) {
+      flushPara();
+      const tag = bullet ? 'ul' : 'ol';
+      if (list && list.tag !== tag) flushList();
+      if (!list) list = { tag, items: [] };
+      list.items.push((bullet || numbered)[1]);
+      continue;
+    }
+    if (!line.trim()) { flushPara(); flushList(); continue; }
+    flushList();
+    para.push(line.trim());
+  }
+  flushPara(); flushList();
+  return out.join('\n');
 }
 
 function storageNote() {
   return store.persistent
     ? ''
-    : `<p class="sv-note is-warn" style="margin-top:16px; font-size:0.75rem; color:var(--warning); line-height:1.5;">Private browsing mode detected. Files persist during this session. Download files to keep them permanently.</p>`;
+    : `<p class="sv-note is-warn">Private browsing is on, so files only last for this session. Download anything you want to keep.</p>`;
 }
 
-/* ---------------- Event Wiring ---------------- */
+/* ============================================================
+   Toast
+   ============================================================ */
 
-function wire(host, selected, refresh, itemsInDir = []) {
-  let current = selected;
+let toastTimer = null;
+function toast(message, tone = 'good') {
+  let el = document.getElementById('sv-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'sv-toast';
+    el.className = 'sv-flash sv-toast';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    document.body.appendChild(el);
+  }
+  el.textContent = message;
+  el.dataset.tone = tone;
+  el.classList.add('is-visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('is-visible'), 3200);
+}
 
-  const importer = document.createElement('input');
-  importer.type = 'file';
-  importer.accept = 'application/json,.json';
-  importer.hidden = true;
-  host.appendChild(importer);
+/* ============================================================
+   Event wiring
+   ============================================================ */
+
+function wire(host, ctx, refresh, ui) {
+  const { items, byPath, single } = ctx;
+  const current = single && !single.isDirectory ? single : null;
+  const flash = toast;
+  const cleanups = [];
+  const on = (target, type, fn, opts) => {
+    target.addEventListener(type, fn, opts);
+    cleanups.push(() => target.removeEventListener(type, fn, opts));
+  };
 
   const uploader = document.createElement('input');
   uploader.type = 'file';
@@ -935,903 +1094,622 @@ function wire(host, selected, refresh, itemsInDir = []) {
   uploader.hidden = true;
   host.appendChild(uploader);
 
-  const flash = (message, tone = 'good') => {
-    let el = host.querySelector('.sv-flash');
-    if (!el) {
-      el = document.createElement('p');
-      el.className = 'sv-flash';
-      el.style.cssText = 'padding:10px 14px; border-radius:8px; font-size:0.84rem; margin-bottom:12px; font-weight:600;';
-      host.prepend(el);
-    }
-    el.textContent = message;
-    el.style.background = tone === 'bad' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)';
-    el.style.color = tone === 'bad' ? '#ef4444' : '#10b981';
-    el.style.border = `1px solid ${tone === 'bad' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`;
-    setTimeout(() => { if (el && el.parentNode) el.remove(); }, 3500);
+  const lookup = (path) => byPath.get(path) || fs.statSync(path);
+  const selection = () => [...selectedPaths];
+  const itemEls = () => [...host.querySelectorAll('[data-context-target]')];
+
+  /* ---------- Loading bodies and object URLs for the preview ---------- */
+
+  const loadBlobUrl = async (item) => {
+    const cached = blobUrlCache.get(item.path);
+    if (cached && cached.stamp === stampOf(item)) return cached.url;
+    const blob = await fs.readFile(item.path, { encoding: 'blob', storage: currentStorage });
+    if (!blob) return null;
+    if (cached) { try { URL.revokeObjectURL(cached.url); } catch {} }
+    const url = URL.createObjectURL(blob);
+    blobUrlCache.set(item.path, { stamp: stampOf(item), url });
+    return url;
   };
 
-  const searchBox = host.querySelector('#sv-search-box');
-  if (searchBox) {
-    searchBox.addEventListener('input', () => {
-      currentSearch = searchBox.value.trim();
-      refresh(current?.id || null);
-    });
+  const loadText = async (item) => {
+    const cached = textCache.get(item.path);
+    if (cached && cached.stamp === stampOf(item)) return cached.text;
+    let text = null;
+    try { text = fs.readFileSync?.(item.path, { encoding: 'utf8' }); } catch {}
+    if (text == null) {
+      try { text = await fs.readFile(item.path, { encoding: 'utf8', storage: currentStorage }); } catch {}
+    }
+    if (text == null && item.id) text = store.get(item.id)?.text ?? null;
+    if (text != null) textCache.set(item.path, { stamp: stampOf(item), text });
+    return text;
+  };
+
+  if (current?.path) {
+    const type = previewTypeOf(current);
+    const paintPreview = (patch) => {
+      const pane = host.querySelector('.sv-preview');
+      if (pane && pane.isConnected !== false) {
+        Object.assign(current, patch);
+        pane.innerHTML = renderContentBody(current, type, effectiveView(type));
+      }
+    };
+    if (['image', 'pdf', 'audio', 'video'].includes(type)) {
+      if (!blobUrlCache.get(current.path) || blobUrlCache.get(current.path).stamp !== stampOf(current)) {
+        loadBlobUrl(current).then(url => url && paintPreview({})).catch(() => {});
+      }
+    } else if (type !== 'binary' && current.text == null) {
+      loadText(current).then(text => paintPreview({ text: text ?? '' })).catch(() => paintPreview({ text: '' }));
+    }
   }
 
-  // ---------------- Operations & Modals ----------------
+  // Thumbnails in the icon view.
+  host.querySelectorAll('img[data-thumb-path]').forEach((img, i) => {
+    if (i > 80) return;
+    const item = byPath.get(img.dataset.thumbPath);
+    if (!item) return;
+    loadBlobUrl(item).then(url => {
+      if (!url || !img.isConnected) return;
+      img.onload = () => { img.hidden = false; img.closest('.sv-grid-thumb')?.classList.add('has-thumb'); };
+      img.src = url;
+    }).catch(() => {});
+  });
+
+  /* ---------- Operations ---------- */
+
   function openFileInTool(fileOrPath, toolId) {
     if (!fileOrPath || !toolId) return;
-    let fileObj = typeof fileOrPath === 'string' ? (itemsInDir.find(f => f.path === fileOrPath || f.id === fileOrPath) || fs.statSync(fileOrPath)) : fileOrPath;
+    let fileObj = typeof fileOrPath === 'string' ? lookup(fileOrPath) : fileOrPath;
     if (!fileObj && typeof fileOrPath === 'string') {
-      const art = store.get(fileOrPath);
-      if (art) fileObj = art;
-      else fileObj = { path: fileOrPath, name: getBaseName(fileOrPath) };
+      fileObj = store.get(fileOrPath) || { path: fileOrPath, name: getBaseName(fileOrPath) };
     }
-    if (!fileObj) return;
+    fileObj = withBody(fileObj);
 
     const path = fileObj.path;
     const name = fileObj.name || getBaseName(path);
-    let text = fileObj.text || fileObj.content || '';
-    let blob = fileObj.blob || null;
-
-    store.handOff({
+    const text = typeof fileObj.text === 'string' ? fileObj.text : (typeof fileObj.content === 'string' ? fileObj.content : '');
+    const handoff = {
       id: fileObj.id || path,
       name,
       path,
       kind: fileObj.kind || kindFromFilename(name),
-      text: typeof text === 'string' ? text : '',
-      content: typeof text === 'string' ? text : blob,
-      blob,
+      text,
+      content: text || fileObj.blob || null,
+      blob: fileObj.blob || null,
       from: 'files'
-    });
+    };
+    store.handOff(handoff);
 
-    if (window.location.hash === `#${toolId}`) {
-      window.dispatchEvent(new HashChangeEvent('hashchange'));
-    } else {
-      window.location.hash = `#${toolId}`;
+    // Fill in the body if it wasn't in memory; the tool reads the hand-off
+    // object, which is the same reference.
+    if (path && !text && !handoff.blob) {
+      const binary = ['image', 'pdf', 'binary', 'audio', 'video'].includes(previewTypeOf(fileObj));
+      fs.readFile(path, { encoding: binary ? 'blob' : 'utf8', storage: currentStorage }).then(body => {
+        if (!body) return;
+        if (binary) { handoff.blob = body; handoff.content = body; }
+        else { handoff.text = body; handoff.content = body; }
+      }).catch(() => {});
     }
 
-    if (path && !text && !blob) {
-      const isBinary = /\.(png|jpe?g|webp|gif|svg|pdf|zip|docx|xlsx|pptx)$/i.test(name);
-      if (isBinary) {
-        fs.readFile(path, { encoding: 'blob', storage: currentStorage }).then(b => {
-          if (b) {
-            fileObj.blob = b;
-            fileObj.content = b;
-          }
-        }).catch(() => {});
-      } else {
-        fs.readFile(path, { encoding: 'utf8', storage: currentStorage }).then(t => {
-          if (t) {
-            fileObj.text = t;
-            fileObj.content = t;
-          }
-        }).catch(() => {});
-      }
-    }
+    if (window.location.hash === `#${toolId}`) window.dispatchEvent(new HashChangeEvent('hashchange'));
+    else window.location.hash = `#${toolId}`;
+  }
+
+  function openItem(path) {
+    const item = lookup(path);
+    if (!item) return;
+    if (item.isDirectory) return navigate(item.path);
+    const top = getToolsForFile(item)[0];
+    if (top) openFileInTool(item, top.id);
+    else openQuickLook(item.path);
+  }
+
+  function navigate(path) {
+    currentPath = path || '/Home';
+    currentSearch = '';
+    selectedPaths.clear();
+    selectionAnchor = cursorPath = null;
+    autoSelectedFor = null;
+    if (/^#(files|saved)\//.test(window.location.hash || '')) history.replaceState(null, '', '#files');
+    refresh();
+  }
+
+  function setClipboard(op) {
+    const paths = selection();
+    if (!paths.length) return;
+    fileClipboard = { op, paths };
+    flash(`${op === 'cut' ? 'Cut' : 'Copied'} ${plural(paths.length, 'item')}. Open a folder and paste.`);
+    refresh();
   }
 
   async function executePaste(targetDir) {
     if (!fileClipboard.paths.length || !fileClipboard.op) return;
     const isCut = fileClipboard.op === 'cut';
-    let successCount = 0;
+    const pasted = [];
+    let skipped = 0;
     for (const src of fileClipboard.paths) {
       try {
-        const fileName = getBaseName(src);
-        let dest = normalizePath(`${targetDir}/${fileName}`);
-        if (src === dest) {
-          if (isCut) continue;
-          const ext = fileName.includes('.') ? '.' + fileName.split('.').pop() : '';
-          const nameWithoutExt = fileName.replace(new RegExp(`${ext}$`), '');
-          dest = normalizePath(`${targetDir}/${nameWithoutExt}-copy${ext}`);
+        if (targetDir === src || targetDir.startsWith(src + '/')) { skipped++; continue; }
+        const name = getBaseName(src);
+        if (isCut && getParentPath(src) === targetDir) continue;
+        let dest = uniquePath(targetDir, name);
+        if (!isCut && getParentPath(src) === targetDir) {
+          const dot = name.lastIndexOf('.');
+          dest = uniquePath(targetDir, dot > 0 ? `${name.slice(0, dot)} copy${name.slice(dot)}` : `${name} copy`);
         }
-        if (isCut) {
-          await fs.rename(src, dest);
-        } else {
-          await fs.copy(src, dest);
-        }
-        successCount++;
+        if (isCut) await fs.rename(src, dest);
+        else await fs.copy(src, dest);
+        pasted.push(dest);
       } catch (err) {
         console.warn('Paste error:', err);
+        skipped++;
       }
     }
-    if (isCut) {
-      fileClipboard = { op: null, paths: [] };
-    }
-    flash(`Pasted ${successCount} item(s).`);
-    refresh(null);
+    if (isCut) fileClipboard = { op: null, paths: [] };
+    selectedPaths = new Set(pasted);
+    cursorPath = pasted[0] || null;
+    flash(pasted.length
+      ? `${isCut ? 'Moved' : 'Pasted'} ${plural(pasted.length, 'item')}${skipped ? `, skipped ${skipped}` : ''}.`
+      : 'Nothing was pasted. A folder can\'t go inside itself.', pasted.length ? 'good' : 'bad');
+    refresh();
+  }
+
+  async function removePath(path) {
+    const item = lookup(path);
+    const removed = await fs.delete(path);
+    if (!removed && item?.id && store.get(item.id)) store.remove(item.id);
   }
 
   async function executeDelete(paths) {
-    if (!paths || !paths.length) return;
-    const count = paths.length;
-    const msg = count === 1
-      ? `Are you sure you want to permanently delete "${getBaseName(paths[0])}"?`
-      : `Are you sure you want to permanently delete ${count} selected items?`;
-    if (await tbConfirm(msg, { destructive: true })) {
-      let deletedCount = 0;
-      for (const p of paths) {
-        try {
-          await fs.delete(p);
-          deletedCount++;
-          selectedPaths.delete(p);
-        } catch (err) {
-          console.warn('Delete error:', err);
-        }
-      }
-      flash(`Deleted ${deletedCount} item(s).`);
-      refresh(null);
-    }
-  }
-
-  function openDirectoryProperties(dirPath) {
-    const existing = document.getElementById('sv-properties-modal');
-    if (existing) existing.remove();
-
-    const dirName = getBaseName(dirPath) || 'Root';
-    let fileCount = 0;
-    let folderCount = 0;
-    let totalBytes = 0;
-
-    function walk(p) {
-      const children = fs.listSync(p);
-      for (const c of children) {
-        if (c.isDirectory) {
-          folderCount++;
-          walk(c.path);
-        } else {
-          fileCount++;
-          totalBytes += (c.size || c.bytes || 0);
-        }
-      }
-    }
-    walk(dirPath);
-
-    const modal = document.createElement('div');
-    modal.id = 'sv-properties-modal';
-    modal.style.cssText = `
-      position: fixed;
-      inset: 0;
-      z-index: 10001;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0,0,0,0.5);
-      backdrop-filter: blur(6px);
-      padding: 20px;
-    `;
-
-    modal.innerHTML = `
-      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:16px; width:100%; max-width:400px; box-shadow:0 24px 48px rgba(0,0,0,0.3); overflow:hidden; font-family:var(--sans);">
-        <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span style="color:var(--text);">${ICONS.folder}</span>
-            <strong style="font-size:0.95rem; color:var(--text);">${escapeHtml(dirName)} Properties</strong>
-          </div>
-          <button type="button" id="sv-prop-close" class="btn-circle btn-secondary" style="--circle-size:28px; color:var(--text-muted); cursor:pointer;" title="Close" aria-label="Close">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-        <div style="padding:20px; display:flex; flex-direction:column; gap:12px; font-size:0.84rem;">
-          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:8px;">
-            <span style="color:var(--text-secondary);">Location</span>
-            <span style="color:var(--text); font-family:var(--mono); font-size:0.8rem;">${escapeHtml(dirPath)}</span>
-          </div>
-          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:8px;">
-            <span style="color:var(--text-secondary);">Contains</span>
-            <span style="color:var(--text); font-weight:600;">${fileCount} file(s), ${folderCount} folder(s)</span>
-          </div>
-          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:8px;">
-            <span style="color:var(--text-secondary);">Total Size</span>
-            <span style="color:var(--text); font-family:var(--mono); font-weight:600;">${size(totalBytes)}</span>
-          </div>
-          <div style="display:flex; justify-content:space-between; padding-bottom:4px;">
-            <span style="color:var(--text-secondary);">Storage</span>
-            <span style="color:var(--text);">${currentStorage === 'online' ? 'Online' : 'Local Browser'}</span>
-          </div>
-        </div>
-        <div style="padding:12px 20px; background:var(--bg-subtle); border-top:1px solid var(--border); display:flex; justify-content:flex-end;">
-          <button type="button" class="btn btn-secondary btn-sm" id="sv-prop-ok" style="padding:5px 16px;">Close</button>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    const closeModal = () => modal.remove();
-    modal.querySelector('#sv-prop-close')?.addEventListener('click', closeModal);
-    modal.querySelector('#sv-prop-ok')?.addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeModal();
-    });
-  }
-
-  function openMultiProperties(paths) {
-    if (!paths || !paths.length) return;
-    const existing = document.getElementById('sv-properties-modal');
-    if (existing) existing.remove();
-
-    let fileCount = 0;
-    let folderCount = 0;
-    let totalBytes = 0;
-
-    function walk(p) {
-      const children = fs.listSync(p);
-      for (const c of children) {
-        if (c.isDirectory) {
-          folderCount++;
-          walk(c.path);
-        } else {
-          fileCount++;
-          totalBytes += (c.size || c.bytes || 0);
-        }
-      }
-    }
-
+    if (!paths?.length) return;
+    const first = lookup(paths[0]);
+    const name = `"${getBaseName(paths[0])}"`;
+    const msg = paths.length > 1
+      ? `Delete ${paths.length} items? This can't be undone.`
+      : (first?.isDirectory ? `Delete the folder ${name} and everything in it? This can't be undone.` : `Delete ${name}? This can't be undone.`);
+    if (!(await tbConfirm(msg, { title: paths.length === 1 ? 'Delete item' : 'Delete items', destructive: true, confirmText: 'Delete' }))) return;
+    let deleted = 0;
     for (const p of paths) {
-      const stat = fs.statSync(p);
-      if (stat?.isDirectory) {
-        folderCount++;
-        walk(p);
-      } else {
-        fileCount++;
-        totalBytes += (stat?.size || stat?.bytes || 0);
+      try {
+        await removePath(p);
+        deleted++;
+        selectedPaths.delete(p);
+        textCache.delete(p);
+      } catch (err) {
+        flash(err.message, 'bad');
       }
     }
-
-    const modal = document.createElement('div');
-    modal.id = 'sv-properties-modal';
-    modal.style.cssText = `
-      position: fixed;
-      inset: 0;
-      z-index: 10001;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0,0,0,0.5);
-      backdrop-filter: blur(6px);
-      padding: 20px;
-    `;
-
-    modal.innerHTML = `
-      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:16px; width:100%; max-width:420px; box-shadow:0 24px 48px rgba(0,0,0,0.3); overflow:hidden; font-family:var(--sans);">
-        <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span style="color:var(--text);">${ICONS.checkAll}</span>
-            <strong style="font-size:0.95rem; color:var(--text);">${paths.length} Items Selected</strong>
-          </div>
-          <button type="button" id="sv-prop-close" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:4px; border-radius:6px; display:inline-flex;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-        <div style="padding:20px; display:flex; flex-direction:column; gap:12px; font-size:0.84rem;">
-          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:8px;">
-            <span style="color:var(--text-secondary);">Location</span>
-            <span style="color:var(--text); font-family:var(--mono); font-size:0.8rem;">${escapeHtml(currentPath || '/')}</span>
-          </div>
-          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:8px;">
-            <span style="color:var(--text-secondary);">Contains</span>
-            <span style="color:var(--text); font-weight:600;">${fileCount} file(s), ${folderCount} folder(s)</span>
-          </div>
-          <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:8px;">
-            <span style="color:var(--text-secondary);">Total Size</span>
-            <span style="color:var(--text); font-family:var(--mono); font-weight:600;">${size(totalBytes)}</span>
-          </div>
-          <div style="display:flex; justify-content:space-between; padding-bottom:4px;">
-            <span style="color:var(--text-secondary);">Storage</span>
-            <span style="color:var(--text);">${currentStorage === 'online' ? 'Online' : 'Local Browser'}</span>
-          </div>
-        </div>
-        <div style="padding:12px 20px; background:var(--bg-subtle); border-top:1px solid var(--border); display:flex; justify-content:flex-end;">
-          <button type="button" class="btn btn-secondary btn-sm" id="sv-prop-ok" style="padding:5px 16px;">Close</button>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    const closeModal = () => modal.remove();
-    modal.querySelector('#sv-prop-close')?.addEventListener('click', closeModal);
-    modal.querySelector('#sv-prop-ok')?.addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeModal();
-    });
+    if (deleted) flash(`Deleted ${plural(deleted, 'item')}.`);
+    if (/^#(files|saved)\//.test(window.location.hash || '')) history.replaceState(null, '', '#files');
+    refresh();
   }
 
-  async function downloadPathsAsZip(paths) {
-    if (!paths || !paths.length) return;
+  async function renamePath(path, rawName) {
+    const item = lookup(path);
+    const clean = sanitizeName(rawName);
+    if (!item || !clean || clean === item.name) return false;
+    const dest = normalizePath(`${getParentPath(path)}/${clean}`);
+    const clash = listDir(getParentPath(path)).find(i => i.name.toLowerCase() === clean.toLowerCase() && i.path !== path);
+    if (clash) {
+      flash(`There's already an item named "${clean}" in this folder.`, 'bad');
+      return false;
+    }
     try {
-      const zipEntries = [];
-      async function addDirEntries(dirP, prefix = '') {
-        const children = fs.listSync(dirP);
-        for (const c of children) {
-          if (c.isDirectory) {
-            await addDirEntries(c.path, `${prefix}${c.name}/`);
-          } else {
-            const data = await fs.readFile(c.path, { encoding: 'binary' });
-            zipEntries.push({ path: `${prefix}${c.name}`, data });
-          }
-        }
+      if (fs.statSync(path)?.path === path) await fs.rename(path, dest);
+      else if (item.id && store.get(item.id)) store.rename(item.id, clean);
+      textCache.delete(path);
+      flash(`Renamed to "${clean}".`);
+      if (/^#(files|saved)\//.test(window.location.hash || '')) history.replaceState(null, '', `#files/${encodeURIComponent(dest)}`);
+      refresh(item.id && !fs.statSync(dest) ? null : dest);
+      return true;
+    } catch (err) {
+      flash(err.message, 'bad');
+      return false;
+    }
+  }
+
+  async function startRename(path) {
+    const inline = host.querySelector('.sv-rename');
+    if (inline && inline.dataset.path === path) {
+      inline.focus();
+      selectStem(inline);
+      return;
+    }
+    const name = getBaseName(path);
+    const next = await tbPrompt('New name', name, { title: 'Rename', confirmText: 'Rename' });
+    if (next != null) await renamePath(path, next);
+  }
+
+  function selectStem(input) {
+    const dot = input.value.lastIndexOf('.');
+    try { input.setSelectionRange(0, dot > 0 ? dot : input.value.length); } catch {}
+  }
+
+  async function createFolder() {
+    const name = await tbPrompt('Folder name', 'Untitled folder', { title: 'New folder', confirmText: 'Create' });
+    const clean = sanitizeName(name);
+    if (!clean) return;
+    const target = uniquePath(currentPath, clean);
+    try {
+      await fs.mkdir(target, { storage: currentStorage });
+      flash(`Created "${getBaseName(target)}".`);
+      refresh(target);
+    } catch (err) {
+      flash(err.message, 'bad');
+    }
+  }
+
+  async function createFile() {
+    const name = await tbPrompt('File name, with an extension such as .txt or .md', 'Untitled.txt', { title: 'New file', confirmText: 'Create' });
+    let clean = sanitizeName(name);
+    if (!clean) return;
+    if (!clean.includes('.')) clean += '.txt';
+    const target = uniquePath(currentPath, clean);
+    try {
+      await fs.writeFile(target, '', { storage: currentStorage });
+      flash(`Created "${getBaseName(target)}".`);
+      refresh(target);
+    } catch (err) {
+      flash(err.message, 'bad');
+    }
+  }
+
+  async function saveUploads(files, destDir = currentPath) {
+    const added = [];
+    for (const f of files) {
+      try {
+        const dest = uniquePath(destDir, f.name);
+        await fs.writeFile(dest, f, { mimeType: f.type || 'application/octet-stream', storage: currentStorage });
+        added.push(dest);
+      } catch (err) {
+        console.warn(`Failed to save ${f.name}:`, err);
       }
-      for (const p of paths) {
-        const stat = fs.statSync(p);
-        const bName = getBaseName(p);
-        if (stat?.isDirectory) {
-          await addDirEntries(p, `${bName}/`);
-        } else {
-          const data = await fs.readFile(p, { encoding: 'binary' });
-          zipEntries.push({ path: bName, data });
-        }
+    }
+    if (added.length) {
+      const failed = files.length - added.length;
+      flash(`Added ${plural(added.length, 'file')} to ${folderLabel(destDir)}${failed ? `, ${failed} failed` : ''}.`, failed ? 'bad' : 'good');
+      if (destDir === currentPath) {
+        selectedPaths = new Set(added);
+        cursorPath = added[0];
       }
-      if (!zipEntries.length) {
-        flash('Selected items are empty.', 'warn');
+      refresh();
+    } else if (files.length) {
+      flash('Those files could not be added.', 'bad');
+    }
+  }
+
+  async function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function downloadPaths(paths) {
+    if (!paths?.length) return;
+    try {
+      if (paths.length === 1 && !lookup(paths[0])?.isDirectory) {
+        const item = lookup(paths[0]);
+        let blob;
+        try { blob = await fs.readFile(paths[0], { encoding: 'blob', storage: currentStorage }); }
+        catch {
+          const text = withBody(item)?.text;
+          if (text == null) throw new Error('File not found');
+          blob = new Blob([text], { type: 'text/plain' });
+        }
+        await downloadBlob(blob, getBaseName(paths[0]));
+        flash(`Downloaded "${getBaseName(paths[0])}".`);
         return;
       }
-      const zipBlob = await createZip(zipEntries);
-      const url = URL.createObjectURL(zipBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `archive-${paths.length}-items.zip`;
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      flash(`Downloaded ${paths.length} item(s) as ZIP.`);
+      const entries = [];
+      const addDir = async (dir, prefix) => {
+        for (const c of listDir(dir)) {
+          if (c.isDirectory) await addDir(c.path, `${prefix}${c.name}/`);
+          else entries.push({ path: `${prefix}${c.name}`, data: await fs.readFile(c.path, { encoding: 'binary' }) });
+        }
+      };
+      for (const p of paths) {
+        const item = lookup(p);
+        if (item?.isDirectory) await addDir(p, `${item.name}/`);
+        else entries.push({ path: getBaseName(p), data: await fs.readFile(p, { encoding: 'binary' }) });
+      }
+      if (!entries.length) {
+        flash('There\'s nothing inside to download.', 'bad');
+        return;
+      }
+      const zipName = paths.length === 1 ? `${getBaseName(paths[0])}.zip` : `${folderLabel(currentPath)} (${paths.length} items).zip`;
+      await downloadBlob(await createZip(entries), zipName);
+      flash(`Downloaded "${zipName}".`);
     } catch (err) {
       flash(`Download failed: ${err.message}`, 'bad');
     }
   }
 
-  function openQuickLook(fileOrPath) {
-    const existing = document.getElementById('sv-quicklook-modal');
-    if (existing) {
-      existing.remove();
-      return;
+  async function toggleTag(paths, tag) {
+    const allHave = paths.every(p => lookup(p)?.tags?.includes(tag));
+    for (const p of paths) {
+      const tags = await fs.getTags(p);
+      const next = allHave ? tags.filter(t => t !== tag) : [...new Set([...tags, tag])];
+      await fs.setTags(p, next);
     }
+    flash(`${allHave ? 'Removed' : 'Added'} the ${tag} tag${paths.length > 1 ? ` on ${plural(paths.length, 'item')}` : ''}.`);
+    refresh();
+  }
 
-    let fileObj = typeof fileOrPath === 'string' ? fs.statSync(fileOrPath) : fileOrPath;
-    if (!fileObj && typeof fileOrPath === 'string') {
-      fileObj = { path: fileOrPath, name: getBaseName(fileOrPath) };
-    }
-    if (!fileObj) return;
+  function selectAll() {
+    selectedPaths = new Set(items.map(i => i.path));
+    selectionAnchor = items[0]?.path || null;
+    refresh();
+  }
 
-    const path = fileObj.path;
-    const name = fileObj.name || getBaseName(path);
-    const isImg = /\.(png|jpe?g|webp|gif|svg)$/i.test(name);
-    const tools = getToolsForFile(fileObj);
-    const topTool = tools[0];
+  // Going up lands on the folder you came out of, like desktop file managers.
+  function goUp() {
+    if (currentPath === '/') return;
+    const from = currentPath;
+    currentPath = getParentPath(from);
+    currentSearch = '';
+    selectedPaths = new Set([from]);
+    selectionAnchor = cursorPath = from;
+    autoSelectedFor = currentPath;
+    ui.focusItem = true;
+    if (/^#(files|saved)\//.test(window.location.hash || '')) history.replaceState(null, '', '#files');
+    refresh();
+  }
 
-    let content = fileObj.content || fileObj.text || '';
-    if (!content && path && typeof fs.readFileSync === 'function') {
-      content = fs.readFileSync(path, { encoding: 'utf8' }) || '';
-    }
-    let imgSrc = fileObj.dataUrl || (typeof content === 'string' && content.startsWith('data:image') ? content : null);
+  /* ---------- Modals ---------- */
 
+  function openModal(id, html, { onKey } = {}) {
+    document.getElementById(id)?.remove();
+    const returnFocus = document.activeElement;
     const modal = document.createElement('div');
-    modal.id = 'sv-quicklook-modal';
-    modal.style.cssText = `
-      position: fixed;
-      inset: 0;
-      z-index: 10002;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0,0,0,0.55);
-      backdrop-filter: blur(8px);
-      padding: 20px;
-      font-family: var(--sans);
-    `;
-
-    modal.innerHTML = `
-      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:18px; width:100%; max-width:620px; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 28px 60px rgba(0,0,0,0.35); overflow:hidden;">
-        
-        <!-- Quick Look Header -->
-        <div style="padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--bg-subtle);">
-          <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
-            <span style="color:var(--text); flex-shrink:0;">${getFileTypeIcon(name, fileObj.kind, 22)}</span>
-            <div style="overflow:hidden;">
-              <div style="font-weight:700; font-size:0.92rem; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                ${escapeHtml(name)}
-              </div>
-              <div style="font-size:0.72rem; color:var(--text-muted); font-family:var(--mono);">
-                ${size(fileObj.size || fileObj.bytes || 0)} · ${fileObj.updatedAt ? when(fileObj.updatedAt) : 'Ready'}
-              </div>
-            </div>
-          </div>
-          <button type="button" id="sv-ql-close" class="btn-circle btn-secondary" style="--circle-size:28px; color:var(--text-muted); cursor:pointer;" title="Close" aria-label="Close">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-
-        <!-- Quick Look Preview Body -->
-        <div style="padding:18px; flex:1; overflow-y:auto; max-height:55vh;">
-          ${isImg ? `
-            <div id="sv-ql-img-area" style="display:flex; align-items:center; justify-content:center; background:var(--bg-subtle); border-radius:10px; padding:16px; min-height:240px;">
-              ${imgSrc ? `<img id="sv-ql-img" src="${escapeHtml(imgSrc)}" alt="${escapeHtml(name)}" style="max-width:100%; max-height:360px; object-fit:contain; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.1);" />` : '<span style="color:var(--text-muted);">Loading preview…</span>'}
-            </div>
-          ` : `
-            <pre id="sv-ql-pre" style="margin:0; padding:14px; background:var(--bg-subtle); border:1px solid var(--border); border-radius:10px; font-family:var(--mono); font-size:0.8rem; line-height:1.5; color:var(--text); overflow-x:auto; white-space:pre-wrap; word-break:break-word; max-height:360px;">${escapeHtml(typeof content === 'string' ? content : JSON.stringify(content, null, 2))}</pre>
-          `}
-        </div>
-
-        <!-- Quick Look Footer -->
-        <div style="padding:12px 18px; border-top:1px solid var(--border); background:var(--bg-subtle); display:flex; align-items:center; justify-content:space-between; gap:10px;">
-          <span style="font-size:0.75rem; color:var(--text-muted);">
-            Press <kbd style="background:var(--bg-card); border:1px solid var(--border); padding:2px 5px; border-radius:4px; font-family:var(--mono); font-size:0.7rem;">Space</kbd> or <kbd style="background:var(--bg-card); border:1px solid var(--border); padding:2px 5px; border-radius:4px; font-family:var(--mono); font-size:0.7rem;">Esc</kbd> to close
-          </span>
-          <div style="display:flex; gap:8px;">
-            ${topTool ? `
-              <button type="button" class="btn btn-primary btn-sm" id="sv-ql-open-tool" style="display:inline-flex; align-items:center; gap:5px; font-size:0.8rem;">
-                <span>Open in ${escapeHtml(topTool.name)}</span>
-              </button>
-            ` : ''}
-            <button type="button" class="btn btn-secondary btn-sm" id="sv-ql-close-btn">Close</button>
-          </div>
-        </div>
-
-      </div>
-    `;
-
+    modal.id = id;
+    modal.className = 'sv-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.innerHTML = html;
     document.body.appendChild(modal);
-
-    // Hydrate async blob or text if not loaded synchronously
-    if (isImg && !imgSrc && path) {
-      fs.readFile(path, { encoding: 'blob', storage: currentStorage }).then(blob => {
-        if (blob) {
-          imgSrc = URL.createObjectURL(blob);
-          const area = modal.querySelector('#sv-ql-img-area');
-          if (area) {
-            area.innerHTML = `<img id="sv-ql-img" src="${escapeHtml(imgSrc)}" alt="${escapeHtml(name)}" style="max-width:100%; max-height:360px; object-fit:contain; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.1);" />`;
-          }
-        }
-      }).catch(() => {});
-    } else if (!isImg && !content && path) {
-      fs.readFile(path, { encoding: 'utf8', storage: currentStorage }).then(txt => {
-        if (txt !== undefined) {
-          const pre = modal.querySelector('#sv-ql-pre');
-          if (pre) pre.textContent = txt;
-        }
-      }).catch(() => {});
-    }
-
-    const closeQL = () => {
-      if (imgSrc && imgSrc.startsWith('blob:')) {
-        try { URL.revokeObjectURL(imgSrc); } catch {}
-      }
+    const close = () => {
       modal.remove();
+      modal.dispatchEvent?.(new Event('sv-close'));
+      document.removeEventListener('keydown', keyHandler, true);
+      if (returnFocus && returnFocus.isConnected) returnFocus.focus?.({ preventScroll: true });
+    };
+    const keyHandler = (e) => {
+      if (!modal.isConnected) return document.removeEventListener('keydown', keyHandler, true);
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); return; }
+      onKey?.(e, close);
+    };
+    document.addEventListener('keydown', keyHandler, true);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal || e.target.closest('[data-modal-close]')) close();
+    });
+    // Focus the dialog itself so keys work at once without a ring on Close.
+    const card = modal.querySelector('.sv-modal-card');
+    card?.setAttribute('tabindex', '-1');
+    card?.focus?.({ preventScroll: true });
+    return { modal, close };
+  }
+
+  function propertiesFor(paths) {
+    let fileCount = 0;
+    let folderCount = 0;
+    let totalBytes = 0;
+    const count = (item) => {
+      if (item.isDirectory) {
+        for (const child of walk(item.path)) {
+          if (child.isDirectory) folderCount++;
+          else { fileCount++; totalBytes += child.size || 0; }
+        }
+      } else {
+        totalBytes += item.size || item.bytes || 0;
+      }
+    };
+    for (const p of paths) {
+      const item = p === currentPath ? { path: p, isDirectory: true } : lookup(p);
+      if (item) count(item);
+    }
+    return { fileCount, folderCount, totalBytes };
+  }
+
+  function openProperties(paths, { folder = false } = {}) {
+    const isFolderView = folder || (paths.length === 1 && (paths[0] === currentPath || lookup(paths[0])?.isDirectory));
+    const item = paths.length === 1 && paths[0] !== currentPath ? lookup(paths[0]) : null;
+    const { fileCount, folderCount, totalBytes } = propertiesFor(paths);
+    const title = paths.length > 1 ? `${paths.length} items` : (paths[0] === currentPath ? folderLabel(currentPath) : (item?.name || getBaseName(paths[0])));
+    const location = paths.length > 1 || paths[0] === currentPath ? currentPath : (item?.parentPath || getParentPath(paths[0]));
+
+    const rows = [];
+    if (item && !item.isDirectory) {
+      rows.push(['Kind', kindOf(item)], ['Size', size(item.size || 0)], ['Location', location]);
+      if (item.createdAt) rows.push(['Created', when(item.createdAt, { long: true })]);
+      if (item.updatedAt) rows.push(['Modified', when(item.updatedAt, { long: true })]);
+    } else {
+      rows.push(['Location', location], ['Contains', `${plural(fileCount, 'file')}, ${plural(folderCount, 'folder')}`], ['Total Size', size(totalBytes)]);
+    }
+    rows.push(['Storage', currentStorage === 'online' ? 'Online' : 'This browser']);
+    if (item?.tags?.length) rows.push(['Tags', item.tags.join(', ')]);
+
+    openModal('sv-properties-modal', `
+      <div class="sv-modal-card sv-props" aria-labelledby="sv-prop-title">
+        <div class="sv-modal-head">
+          <span class="sv-modal-icon">${paths.length > 1 ? ICONS.checkAll : getFileTypeIcon(title, isFolderView ? 'folder' : item?.kind, 22)}</span>
+          <strong id="sv-prop-title">${escapeHtml(title)} Properties</strong>
+          <button type="button" id="sv-prop-close" class="sv-icon-btn" data-modal-close title="Close" aria-label="Close">${ICONS.x}</button>
+        </div>
+        <dl class="sv-props-list">
+          ${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${escapeHtml(v)}</dd></div>`).join('')}
+        </dl>
+      </div>
+    `, { onKey: (e, close) => { if (e.code === 'Space' && !e.target.closest?.('input, textarea, button')) { e.preventDefault(); e.stopPropagation(); close(); } } });
+  }
+
+  function openQuickLook(pathOrItem) {
+    const files = items.filter(i => !i.isDirectory);
+    let item = typeof pathOrItem === 'string' ? lookup(pathOrItem) : pathOrItem;
+    if (!item) item = typeof pathOrItem === 'string' ? { path: pathOrItem, name: getBaseName(pathOrItem) } : null;
+    if (!item || item.isDirectory) return;
+    item = withBody(item);
+
+    const index = files.findIndex(f => f.path === item.path);
+    const type = previewTypeOf(item);
+    const tools = getToolsForFile(item);
+    const top = tools[0];
+
+    const body = () => {
+      if (type === 'text' || type === 'json' || type === 'markdown' || type === 'csv' || type === 'html') {
+        const text = item.text;
+        if (text == null) return '<pre id="sv-ql-pre" class="sv-code"></pre>';
+        if (type === 'markdown') return `<div class="sv-md">${renderMarkdown(text)}</div>`;
+        if (type === 'csv') return renderCsvTable(text, extOf(item.name) === 'tsv' ? '\t' : ',');
+        return `<pre id="sv-ql-pre" class="sv-code">${escapeHtml(text || '')}</pre>`;
+      }
+      return renderContentBody(item, type, effectiveView(type));
     };
 
-    modal.querySelector('#sv-ql-close')?.addEventListener('click', closeQL);
-    modal.querySelector('#sv-ql-close-btn')?.addEventListener('click', closeQL);
-    modal.querySelector('#sv-ql-open-tool')?.addEventListener('click', () => {
-      closeQL();
-      openFileInTool(fileObj, topTool.id);
+    const { modal, close } = openModal('sv-quicklook-modal', `
+      <div class="sv-modal-card sv-ql" aria-labelledby="sv-ql-title">
+        <div class="sv-modal-head">
+          <span class="sv-modal-icon">${getFileTypeIcon(item.name, item.kind, 22)}</span>
+          <div class="sv-ql-title">
+            <strong id="sv-ql-title">${escapeHtml(item.name)}</strong>
+            <span>${[kindOf(item), size(item.size ?? item.bytes ?? 0), item.updatedAt ? when(item.updatedAt) : ''].filter(Boolean).join(' · ')}</span>
+          </div>
+          ${files.length > 1 && index >= 0 ? `
+            <span class="sv-ql-nav">
+              <button type="button" class="sv-icon-btn" data-ql-step="-1" title="Previous file (Left arrow)" aria-label="Previous file" ${index === 0 ? 'disabled' : ''}>${ICONS.chevronLeft}</button>
+              <span class="sv-ql-pos">${index + 1} of ${files.length}</span>
+              <button type="button" class="sv-icon-btn" data-ql-step="1" title="Next file (Right arrow)" aria-label="Next file" ${index === files.length - 1 ? 'disabled' : ''}>${ICONS.chevronRight}</button>
+            </span>
+          ` : ''}
+          <button type="button" id="sv-ql-close" class="sv-icon-btn" data-modal-close title="Close (Esc)" aria-label="Close">${ICONS.x}</button>
+        </div>
+        <div class="sv-ql-body sv-preview" data-preview-type="${type}">${body()}</div>
+        <div class="sv-modal-foot">
+          <span class="sv-kbd-hint"><kbd>Space</kbd> or <kbd>Esc</kbd> to close</span>
+          ${top ? `<button type="button" class="btn btn-primary btn-sm" id="sv-ql-open-tool">${ICONS.external}<span>Open in ${escapeHtml(top.name)}</span></button>` : ''}
+        </div>
+      </div>
+    `, {
+      onKey: (e, closeFn) => {
+        if (e.code === 'Space' && !e.target.closest?.('input, textarea, button, a')) { e.preventDefault(); e.stopPropagation(); closeFn(); }
+        else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); e.stopPropagation(); step(e.key === 'ArrowRight' ? 1 : -1); }
+      }
     });
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeQL();
+
+    const step = (delta) => {
+      const next = files[index + delta];
+      if (!next) return;
+      selectedPaths = new Set([next.path]);
+      selectionAnchor = cursorPath = next.path;
+      close();
+      refresh();
+      // The refresh rebuilt `items`; reopen through the fresh wiring.
+      host.dispatchEvent(new CustomEvent('sv-quicklook', { detail: next.path }));
+    };
+    modal.querySelectorAll('[data-ql-step]').forEach(btn => btn.addEventListener('click', () => step(Number(btn.dataset.qlStep))));
+    modal.querySelector('#sv-ql-open-tool')?.addEventListener('click', () => { close(); openFileInTool(item, top.id); });
+
+    const update = (html) => { const el = modal.querySelector('.sv-ql-body'); if (el && modal.isConnected) el.innerHTML = html; };
+    if (['image', 'pdf', 'audio', 'video'].includes(type) && !blobUrlCache.get(item.path)) {
+      loadBlobUrl(item).then(() => update(renderContentBody(item, type, effectiveView(type)))).catch(() => {});
+    } else if (item.text == null && !['image', 'pdf', 'audio', 'video', 'binary'].includes(type)) {
+      loadText(item).then(text => { item = { ...item, text: text ?? '' }; update(body()); }).catch(() => {});
+    }
+  }
+
+  on(host, 'sv-quicklook', (e) => openQuickLook(e.detail));
+
+  /* ---------- Context menus (shared engine) ---------- */
+
+  const tagRow = (tags = [], label = 'Tags') => ({
+    customHtml: `
+      <div class="finder-menu-tags" role="group" aria-label="${label}">
+        <span>${label}</span>
+        <span class="finder-menu-tag-dots">
+          ${Object.entries(TAG_COLORS).map(([t, color]) => `<button type="button" class="finder-tag-dot ${tags.includes(t) ? 'is-on' : ''}" data-set-tag="${t}" style="background:${color};" title="${t}" aria-label="${t} tag" aria-pressed="${tags.includes(t)}"></button>`).join('')}
+        </span>
+      </div>`
+  });
+
+  const bindTagClicks = (paths) => {
+    const menu = document.getElementById('toolbox-context-menu');
+    menu?.addEventListener('click', (e) => {
+      const dot = e.target.closest('[data-set-tag]');
+      if (!dot) return;
+      closeContextMenu();
+      toggleTag(paths, dot.dataset.setTag);
     });
+  };
+
+  function openItemMenu(x, y, path) {
+    const item = lookup(path);
+    if (!item) return;
+    const paths = selectedPaths.has(path) && selectedPaths.size > 1 ? selection() : [path];
+    const multi = paths.length > 1;
+    const isDir = !multi && item.isDirectory;
+    const top = !multi && !isDir ? getToolsForFile(item)[0] : null;
+    const clip = fileClipboard.paths.length;
+    const commonTags = Object.keys(TAG_COLORS).filter(t => paths.every(p => lookup(p)?.tags?.includes(t)));
+
+    const menuItems = multi ? [
+      { label: `Download ${paths.length} items as ZIP`, icon: ICONS.download, action: () => downloadPaths(paths) },
+      { label: 'Get info', icon: ICONS.info, action: () => openProperties(paths) },
+      { separator: true },
+      { label: 'Cut', icon: ICONS.scissors, shortcut: `${modKey()}X`, action: () => setClipboard('cut') },
+      { label: 'Copy', icon: ICONS.copy, shortcut: `${modKey()}C`, action: () => setClipboard('copy') },
+      { separator: true },
+      tagRow(commonTags, 'Tag all'),
+      { separator: true },
+      { label: `Delete ${paths.length} items`, icon: ICONS.delete, shortcut: 'Del', destructive: true, action: () => executeDelete(paths) },
+    ] : [
+      isDir
+        ? { label: 'Open', icon: ICONS.folderOpen, shortcut: 'Enter', action: () => navigate(path) }
+        : { label: 'Quick Look', icon: ICONS.eye, shortcut: 'Space', action: () => openQuickLook(path) },
+      ...(top ? [{ label: `Open in ${top.name}`, icon: ICONS.external, shortcut: 'Enter', action: () => openFileInTool(item, top.id) }] : []),
+      { separator: true },
+      { label: 'Rename', icon: ICONS.pencil, shortcut: 'F2', action: () => startRename(path) },
+      { label: 'Cut', icon: ICONS.scissors, shortcut: `${modKey()}X`, action: () => setClipboard('cut') },
+      { label: 'Copy', icon: ICONS.copy, shortcut: `${modKey()}C`, action: () => setClipboard('copy') },
+      ...(isDir && clip ? [{ label: `Paste ${plural(clip, 'item')} into folder`, icon: ICONS.paste, action: () => executePaste(path) }] : []),
+      { label: isDir ? 'Download as ZIP' : 'Download', icon: ICONS.download, action: () => downloadPaths([path]) },
+      { label: 'Get info', icon: ICONS.info, action: () => openProperties([path]) },
+      { separator: true },
+      tagRow(item.tags || []),
+      { separator: true },
+      { label: `Delete ${isDir ? 'folder' : 'file'}`, icon: ICONS.delete, shortcut: 'Del', destructive: true, action: () => executeDelete([path]) },
+    ];
+
+    openContextMenu({ x, y, title: multi ? `${paths.length} items selected` : item.name, items: menuItems, label: 'Item actions' });
+    bindTagClicks(paths);
   }
 
   function openCanvasContextMenu(x, y) {
-    const existing = document.getElementById('sv-finder-menu');
-    if (existing) existing.remove();
-
-    const menu = document.createElement('div');
-    menu.id = 'sv-finder-menu';
-    menu.className = 'finder-context-menu';
-    menu.style.cssText = `
-      position: fixed;
-      z-index: 10000;
-      min-width: 210px;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 6px;
-      box-shadow: 0 16px 36px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.12);
-      backdrop-filter: blur(16px);
-      font-family: var(--sans);
-      font-size: 0.84rem;
-    `;
-
-    const folderTitle = getBaseName(currentPath) || 'Files';
-
-    menu.innerHTML = `
-      <div style="padding: 4px 10px 8px; font-size: 0.72rem; color: var(--text-muted); font-weight: 700; border-bottom: 1px solid var(--border); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-        ${escapeHtml(folderTitle)}
-      </div>
-
-      <div class="finder-menu-item" data-canvas-act="select-all" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
-        <div style="display:flex; align-items:center; gap:8px;">
-          ${ICONS.checkAll}
-          <span>Select All</span>
-        </div>
-        <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Ctrl+A</span>
-      </div>
-
-      <div class="finder-menu-item" data-canvas-act="properties" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-        ${ICONS.info}
-        <span>Properties</span>
-      </div>
-
-      <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
-
-      <div class="finder-menu-item" data-canvas-act="new-folder" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-        ${ICONS.folderPlus}
-        <span>New Folder</span>
-      </div>
-
-      <div class="finder-menu-item" data-canvas-act="new-file" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-        ${ICONS.plus}
-        <span>New File</span>
-      </div>
-
-      <div class="finder-menu-item" data-canvas-act="upload" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-        ${ICONS.upload}
-        <span>Upload Files</span>
-      </div>
-
-      ${fileClipboard.paths.length > 0 ? `
-        <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
-        <div class="finder-menu-item" data-canvas-act="paste" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            ${ICONS.paste}
-            <span>Paste (${fileClipboard.paths.length})</span>
-          </div>
-          <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Ctrl+V</span>
-        </div>
-      ` : ''}
-    `;
-
-    document.body.appendChild(menu);
-
-    const rect = menu.getBoundingClientRect();
-    let left = x;
-    let top = y;
-    if (left + rect.width > window.innerWidth - 10) left = window.innerWidth - rect.width - 10;
-    if (top + rect.height > window.innerHeight - 10) top = window.innerHeight - rect.height - 10;
-    menu.style.left = `${Math.max(10, left)}px`;
-    menu.style.top = `${Math.max(10, top)}px`;
-
-    menu.addEventListener('click', async (me) => {
-      const itemTarget = me.target.closest('[data-canvas-act]');
-      if (!itemTarget) return;
-      const act = itemTarget.dataset.canvasAct;
-      removeMenu(menu);
-
-      if (act === 'select-all') {
-        const items = fs.listSync(currentPath);
-        selectedPaths = new Set(items.map(i => i.path));
-        refresh(items[0]?.path || null);
-      } else if (act === 'properties') {
-        openDirectoryProperties(currentPath);
-      } else if (act === 'new-folder') {
-        const name = await tbPrompt('Enter Folder Name:', '', { title: 'New Folder' });
-        if (name && name.trim()) {
-          const clean = name.trim().replace(/[/\\?%*:|"<>]/g, '-');
-          const target = normalizePath(`${currentPath}/${clean}`);
-          try {
-            await fs.mkdir(target, { storage: currentStorage });
-            flash(`Folder "${clean}" created.`);
-            refresh(null);
-          } catch (err) {
-            flash(err.message, 'bad');
-          }
-        }
-      } else if (act === 'new-file') {
-        const name = await tbPrompt('Enter File Name (with extension, e.g. document.txt):', '', { title: 'New File' });
-        if (name && name.trim()) {
-          const clean = name.trim().replace(/[/\\?%*:|"<>]/g, '-');
-          const target = normalizePath(`${currentPath}/${clean}`);
-          try {
-            await fs.writeFile(target, '', { storage: currentStorage });
-            flash(`File "${clean}" created.`);
-            refresh(target);
-          } catch (err) {
-            flash(err.message, 'bad');
-          }
-        }
-      } else if (act === 'upload') {
-        uploader.click();
-      } else if (act === 'paste') {
-        await executePaste(currentPath);
-      }
+    const clip = fileClipboard.paths.length;
+    openContextMenu({
+      x, y,
+      title: folderLabel(currentPath),
+      label: 'Folder actions',
+      items: [
+        { label: 'New folder', icon: ICONS.folderPlus, action: createFolder },
+        { label: 'New file', icon: ICONS.filePlus, action: createFile },
+        { label: 'Upload files', icon: ICONS.upload, action: () => uploader.click() },
+        ...(clip ? [{ separator: true }, { label: `Paste ${plural(clip, 'item')}`, icon: ICONS.paste, shortcut: `${modKey()}V`, action: () => executePaste(currentPath) }] : []),
+        { separator: true },
+        { label: 'Select all', icon: ICONS.checkAll, shortcut: `${modKey()}A`, action: selectAll },
+        { label: 'Folder info', icon: ICONS.info, action: () => openProperties([currentPath], { folder: true }) },
+      ]
     });
   }
 
-  // Context Menu: Mac Finder style popup for items
-  function openContextMenu(x, y, targetPath, isDir) {
-    const existing = document.getElementById('sv-finder-menu');
-    if (existing) existing.remove();
+  /* ---------- Drag and drop ---------- */
 
-    const isMulti = selectedPaths.has(targetPath) && selectedPaths.size > 1;
-    const multiCount = selectedPaths.size;
-    const baseName = getBaseName(targetPath);
-    const itemRecord = fs.statSync(targetPath) || {};
-    const tags = itemRecord.tags || [];
-    const targetTools = (isDir || isMulti) ? [] : getToolsForFile({ name: baseName, path: targetPath, kind: itemRecord.kind });
-    const topTool = targetTools[0];
-
-    const menu = document.createElement('div');
-    menu.id = 'sv-finder-menu';
-    menu.className = 'finder-context-menu';
-    menu.style.cssText = `
-      position: fixed;
-      z-index: 10000;
-      min-width: 210px;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 6px;
-      box-shadow: 0 16px 36px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.12);
-      backdrop-filter: blur(16px);
-      font-family: var(--sans);
-      font-size: 0.84rem;
-    `;
-
-    if (isMulti) {
-      menu.innerHTML = `
-        <div style="padding: 4px 10px 8px; font-size: 0.72rem; color: var(--text-muted); font-weight: 700; border-bottom: 1px solid var(--border); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          ${multiCount} items selected
-        </div>
-
-        <div class="finder-menu-item" data-cmenu="cut" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            ${ICONS.scissors}
-            <span>Cut (${multiCount})</span>
-          </div>
-          <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Ctrl+X</span>
-        </div>
-
-        <div class="finder-menu-item" data-cmenu="copy" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            ${ICONS.copy}
-            <span>Copy (${multiCount})</span>
-          </div>
-          <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Ctrl+C</span>
-        </div>
-
-        <div class="finder-menu-item" data-cmenu="properties" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-          ${ICONS.info}
-          <span>Properties (${multiCount} items)</span>
-        </div>
-
-        <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
-
-        <!-- Tags Row (Batch Tagging) -->
-        <div style="padding: 6px 10px; display: flex; align-items: center; justify-content: space-between;">
-          <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Tag Selected</span>
-          <div style="display: flex; gap: 6px;">
-            ${Object.entries(TAG_COLORS).map(([tKey, color]) => `
-              <span class="finder-tag-dot" data-set-tag="${tKey}" title="Tag ${tKey}" style="width: 14px; height: 14px; border-radius: 50%; background: ${color}; cursor: pointer;"></span>
-            `).join('')}
-          </div>
-        </div>
-
-        <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
-
-        <div class="finder-menu-item" data-cmenu="download" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          <span>Download as ZIP (${multiCount})</span>
-        </div>
-
-        <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
-
-        <div class="finder-menu-item" data-cmenu="delete" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: var(--danger);">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-          <span>Delete ${multiCount} Items</span>
-        </div>
-      `;
-    } else {
-      menu.innerHTML = `
-        <div style="padding: 4px 10px 8px; font-size: 0.72rem; color: var(--text-muted); font-weight: 700; border-bottom: 1px solid var(--border); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          ${escapeHtml(baseName)}
-        </div>
-        
-        <div class="finder-menu-item" data-cmenu="open" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/></svg>
-            <span>${isDir ? 'Open Folder' : 'Preview'}</span>
-          </div>
-          ${!isDir ? '<span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Space</span>' : ''}
-        </div>
-
-        ${topTool ? `
-          <div class="finder-menu-item sv-open-btn" data-cmenu="open-tool" data-open="${escapeHtml(topTool.id)}" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            <span>Open in ${escapeHtml(topTool.name)}</span>
-          </div>
-        ` : ''}
-
-        <div class="finder-menu-item" data-cmenu="cut" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            ${ICONS.scissors}
-            <span>Cut</span>
-          </div>
-          <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Ctrl+X</span>
-        </div>
-
-        <div class="finder-menu-item" data-cmenu="copy" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            ${ICONS.copy}
-            <span>Copy</span>
-          </div>
-          <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Ctrl+C</span>
-        </div>
-
-        ${isDir && fileClipboard.paths.length > 0 ? `
-          <div class="finder-menu-item" data-cmenu="paste-into" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              ${ICONS.paste}
-              <span>Paste into Folder (${fileClipboard.paths.length})</span>
-            </div>
-            <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--mono);">Ctrl+V</span>
-          </div>
-        ` : ''}
-
-        <div class="finder-menu-item" data-cmenu="rename" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          <span>Rename</span>
-        </div>
-
-        <div class="finder-menu-item" data-cmenu="properties" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-          ${ICONS.info}
-          <span>Properties</span>
-        </div>
-
-        <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
-
-        <!-- Tags Row -->
-        <div style="padding: 6px 10px; display: flex; align-items: center; justify-content: space-between;">
-          <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Tags</span>
-          <div style="display: flex; gap: 6px;">
-            ${Object.entries(TAG_COLORS).map(([tKey, color]) => `
-              <span class="finder-tag-dot" data-set-tag="${tKey}" title="Tag ${tKey}" style="width: 14px; height: 14px; border-radius: 50%; background: ${color}; cursor: pointer; box-shadow: ${tags.includes(tKey) ? '0 0 0 2px var(--text)' : 'none'};"></span>
-            `).join('')}
-          </div>
-        </div>
-
-        <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
-
-        <div class="finder-menu-item" data-cmenu="download" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          <span>${isDir ? 'Download as ZIP' : 'Download'}</span>
-        </div>
-
-        <div style="margin: 4px 0; border-top: 1px solid var(--border);"></div>
-
-        <div class="finder-menu-item" data-cmenu="delete" style="padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: var(--danger);">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-          <span>Delete ${isDir ? 'Folder' : 'File'}</span>
-        </div>
-      `;
-    }
-
-    document.body.appendChild(menu);
-
-    // Position clamping
-    const rect = menu.getBoundingClientRect();
-    let left = x;
-    let top = y;
-    if (left + rect.width > window.innerWidth - 10) left = window.innerWidth - rect.width - 10;
-    if (top + rect.height > window.innerHeight - 10) top = window.innerHeight - rect.height - 10;
-    menu.style.left = `${Math.max(10, left)}px`;
-    menu.style.top = `${Math.max(10, top)}px`;
-
-    menu.addEventListener('click', async (me) => {
-      const tagTarget = me.target.closest('[data-set-tag]');
-      if (tagTarget) {
-        const clickedTag = tagTarget.dataset.setTag;
-        const paths = isMulti ? [...selectedPaths] : [targetPath];
-        for (const p of paths) {
-          const currentTags = await fs.getTags(p);
-          const nextTags = currentTags.includes(clickedTag)
-            ? currentTags.filter(t => t !== clickedTag)
-            : [...currentTags, clickedTag];
-          await fs.setTags(p, nextTags);
-        }
-        flash(`Updated tags for ${paths.length} item(s).`);
-        removeMenu(menu);
-        refresh(null);
-        return;
-      }
-
-      const itemTarget = me.target.closest('[data-cmenu]');
-      if (!itemTarget) return;
-      const act = itemTarget.dataset.cmenu;
-      removeMenu(menu);
-
-      if (act === 'open') {
-        if (isDir) {
-          currentPath = targetPath;
-          refresh(null);
-        } else {
-          openQuickLook(targetPath);
-        }
-      } else if (act === 'open-tool') {
-        const toolId = itemTarget.dataset.open || topTool?.id;
-        if (toolId) {
-          await openFileInTool(targetPath, toolId);
-          return;
-        }
-      } else if (act === 'cut') {
-        const paths = isMulti ? [...selectedPaths] : [targetPath];
-        fileClipboard = { op: 'cut', paths };
-        flash(`Cut ${paths.length} item(s).`);
-        refresh(current?.id || null);
-      } else if (act === 'copy') {
-        const paths = isMulti ? [...selectedPaths] : [targetPath];
-        fileClipboard = { op: 'copy', paths };
-        flash(`Copied ${paths.length} item(s).`);
-        refresh(current?.id || null);
-      } else if (act === 'paste-into') {
-        await executePaste(targetPath);
-      } else if (act === 'properties') {
-        if (isMulti) openMultiProperties([...selectedPaths]);
-        else if (isDir) openDirectoryProperties(targetPath);
-        else openQuickLook(targetPath);
-      } else if (act === 'rename') {
-        const nextName = await tbPrompt('Enter new name:', baseName, { title: 'Rename Item' });
-        if (nextName && nextName.trim() && nextName.trim() !== baseName) {
-          try {
-            await fs.rename(targetPath, nextName.trim());
-            flash(`Renamed to "${nextName.trim()}".`);
-            refresh(null);
-          } catch (err) {
-            flash(err.message, 'bad');
-          }
-        }
-      } else if (act === 'download') {
-        try {
-          if (isMulti) {
-            await downloadPathsAsZip([...selectedPaths]);
-          } else if (isDir) {
-            const destZip = normalizePath(`${targetPath}.zip`);
-            await fs.compressDirectory(targetPath, destZip);
-            const blob = await fs.readFile(destZip, { encoding: 'blob' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = getBaseName(destZip);
-            a.click();
-            a.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-            flash(`Downloaded "${getBaseName(destZip)}".`);
-          } else {
-            const blob = await fs.readFile(targetPath, { encoding: 'blob' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = baseName;
-            a.click();
-            a.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-            flash(`Downloaded "${baseName}".`);
-          }
-        } catch (err) {
-          flash(`Download failed: ${err.message}`, 'bad');
-        }
-      } else if (act === 'delete') {
-        if (isMulti) {
-          await executeDelete([...selectedPaths]);
-        } else {
-          const itemType = isDir ? 'folder' : 'file';
-          if (await tbConfirm(`Are you sure you want to permanently delete ${itemType} "${baseName}"${isDir ? ' and all its contents' : ''}?`, { title: 'Delete Item', destructive: true })) {
-            try {
-              await fs.delete(targetPath);
-              flash(`Deleted ${itemType} "${baseName}".`);
-              refresh(null);
-            } catch (err) {
-              flash(err.message, 'bad');
-            }
-          }
-        }
-      }
-    });
-  }
-
-  // ---------------- Drag & Drop in Files ----------------
   let dragCounter = 0;
   let dragHoldTimer = null;
   let dragDesk = null;
+  let draggingPath = null;
 
   const closeDragDesk = () => {
     clearTimeout(dragHoldTimer);
@@ -1842,876 +1720,555 @@ function wire(host, selected, refresh, itemsInDir = []) {
 
   const openDragDesk = (sourcePath) => {
     if (dragDesk || !sourcePath) return;
-    const folders = fs.listSync('/', { recursive: true, storage: currentStorage })
-      .filter(item => item.isDirectory && item.path !== sourcePath && !item.path.startsWith(`${sourcePath}/`))
+    const folders = walk('/')
+      .filter(i => i.isDirectory && i.path !== sourcePath && !i.path.startsWith(`${sourcePath}/`) && i.path !== getParentPath(sourcePath))
       .sort((a, b) => a.path.localeCompare(b.path));
     dragDesk = document.createElement('aside');
     dragDesk.className = 'sv-drag-desk';
-    dragDesk.setAttribute('aria-label', 'Temporary file desk');
+    dragDesk.setAttribute('aria-label', 'Move to folder');
     dragDesk.innerHTML = `
-      <div class="sv-drag-desk-head">
-        <div><strong>Temporary desk</strong><span>Drop ${escapeHtml(getBaseName(sourcePath))} into a folder</span></div>
-      </div>
+      <div class="sv-drag-desk-head"><strong>Move to</strong><span>Drop "${escapeHtml(getBaseName(sourcePath))}" on a folder</span></div>
       <div class="sv-drag-desk-folders">
-        <button type="button" data-nav-path="/" class="sv-drag-desk-folder">${ICONS.folder}<span>Files</span></button>
-        ${folders.map(folder => `<button type="button" data-nav-path="${escapeHtml(folder.path)}" class="sv-drag-desk-folder">${ICONS.folder}<span>${escapeHtml(folder.path.replace(/^\//, ''))}</span></button>`).join('')}
+        ${folders.map(f => `<button type="button" data-nav-path="${escapeHtml(f.path)}" class="sv-drag-desk-folder">${ICONS.folder}<span>${escapeHtml(f.path.replace(/^\//, '').split('/').join(' / '))}</span></button>`).join('')}
       </div>`;
     host.appendChild(dragDesk);
     requestAnimationFrame(() => dragDesk?.classList.add('is-open'));
   };
 
-  const onDragEnter = (e) => {
+  const dropTargetOf = (el) => el?.closest?.('.sv-drag-desk-folder, [data-is-dir="true"], .sv-crumb-btn');
+  const dirOf = (el) => el?.dataset.path || el?.dataset.navPath || null;
+  const clearHover = () => host.querySelectorAll('.sv-folder-drop-hover').forEach(el => el.classList.remove('sv-folder-drop-hover'));
+
+  on(host, 'dragenter', (e) => {
     e.preventDefault();
     dragCounter++;
-    host.classList.add('sv-drag-active');
-  };
-
-  const onDragOver = (e) => {
+    if (!draggingPath) host.classList.add('sv-drag-active');
+  });
+  on(host, 'dragover', (e) => {
     e.preventDefault();
-    const folderTarget = e.target.closest('[data-is-dir="true"]');
-    if (folderTarget) {
-      folderTarget.classList.add('sv-folder-drop-hover');
-      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
-    } else {
-      host.querySelectorAll('.sv-folder-drop-hover').forEach(el => el.classList.remove('sv-folder-drop-hover'));
-      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
-    }
-  };
-
-  const onDragLeave = (e) => {
-    dragCounter--;
-    if (dragCounter <= 0) {
-      dragCounter = 0;
-      host.classList.remove('sv-drag-active');
-    }
-    const folderTarget = e.target.closest('[data-is-dir="true"]');
-    if (folderTarget) {
-      folderTarget.classList.remove('sv-folder-drop-hover');
-    }
-  };
-
-  const onDrop = async (e) => {
+    const target = dropTargetOf(e.target);
+    clearHover();
+    const dir = dirOf(target);
+    const valid = target && dir && dir !== draggingPath && !(draggingPath && dir.startsWith(draggingPath + '/'));
+    if (valid) target.classList.add('sv-folder-drop-hover');
+    if (e.dataTransfer) e.dataTransfer.dropEffect = draggingPath ? (valid ? 'move' : 'none') : 'copy';
+  });
+  on(host, 'dragleave', () => {
+    dragCounter = Math.max(0, dragCounter - 1);
+    if (!dragCounter) { host.classList.remove('sv-drag-active'); clearHover(); }
+  });
+  on(host, 'drop', async (e) => {
     e.preventDefault();
     dragCounter = 0;
     host.classList.remove('sv-drag-active');
-    host.querySelectorAll('.sv-folder-drop-hover').forEach(el => el.classList.remove('sv-folder-drop-hover'));
-    const deskTarget = e.target.closest('.sv-drag-desk-folder');
+    clearHover();
+    const target = dropTargetOf(e.target);
+    const targetDir = dirOf(target);
+    const source = e.dataTransfer ? (e.dataTransfer.getData('application/toolbox-path') || '') : '';
 
-    // 1. Check if internal item was dropped onto a folder
-    const internalSource = e.dataTransfer ? (e.dataTransfer.getData('application/toolbox-path') || e.dataTransfer.getData('text/plain')) : null;
-    const folderTarget = deskTarget || e.target.closest('[data-is-dir="true"]') || e.target.closest('[data-nav-path]');
-
-    if (internalSource && folderTarget) {
-      const targetDir = folderTarget.dataset.path || folderTarget.dataset.navPath;
-      if (targetDir && targetDir !== internalSource && targetDir !== getParentPath(internalSource)) {
-        try {
-          const dest = normalizePath(`${targetDir}/${getBaseName(internalSource)}`);
-          await fs.rename(internalSource, dest);
-          flash(`Moved "${getBaseName(internalSource)}" to "${getBaseName(targetDir) || 'Root'}".`);
-          closeDragDesk();
-          refresh(null);
-          return;
-        } catch (err) {
-          flash(`Move failed: ${err.message}`, 'bad');
-          return;
-        }
+    if (source) {
+      closeDragDesk();
+      if (!targetDir || targetDir === source || targetDir === getParentPath(source) || targetDir.startsWith(source + '/')) return;
+      const moving = selectedPaths.has(source) ? selection() : [source];
+      let moved = 0;
+      for (const p of moving) {
+        if (targetDir === p || targetDir.startsWith(p + '/') || getParentPath(p) === targetDir) continue;
+        try { await fs.rename(p, uniquePath(targetDir, getBaseName(p))); moved++; }
+        catch (err) { flash(`Move failed: ${err.message}`, 'bad'); }
       }
+      if (moved) flash(`Moved ${moved === 1 ? `"${getBaseName(source)}"` : plural(moved, 'item')} to ${folderLabel(targetDir)}.`);
+      refresh();
+      return;
     }
 
-    // 2. Check if desktop/OS files were dropped
-    const droppedFiles = Array.from(e.dataTransfer?.files || []);
-    if (droppedFiles.length > 0) {
-      const destDir = (folderTarget && folderTarget.dataset.isDir === 'true') ? folderTarget.dataset.path : currentPath;
-      let successCount = 0;
-      for (const f of droppedFiles) {
-        try {
-          const dest = normalizePath(`${destDir}/${f.name}`);
-          await fs.writeFile(dest, f, {
-            mimeType: f.type || 'application/octet-stream',
-            storage: currentStorage
-          });
-          successCount++;
-        } catch (err) {
-          console.warn(`Failed to save dropped file ${f.name}:`, err);
-        }
-      }
-      if (successCount > 0) {
-        flash(`Added ${successCount} file${successCount === 1 ? '' : 's'} to ${escapeHtml(getBaseName(destDir) || 'Files')}.`);
-        refresh(null);
-      }
-    }
-  };
-
-  const onDragStart = (e) => {
-    const itemEl = e.target.closest('[data-path]');
-    if (!itemEl) return;
-    const itemPath = itemEl.dataset.path;
-    if (itemPath && e.dataTransfer) {
-      e.dataTransfer.setData('application/toolbox-path', itemPath);
-      e.dataTransfer.setData('text/plain', itemPath);
-      e.dataTransfer.effectAllowed = 'move';
-      itemEl.classList.add('is-dragging');
-      dragHoldTimer = setTimeout(() => openDragDesk(itemPath), 650);
-    }
-  };
-
-  const onDragEnd = (e) => {
-    const itemEl = e.target.closest('[data-path]');
-    if (itemEl) itemEl.classList.remove('is-dragging');
-    host.querySelectorAll('.sv-folder-drop-hover').forEach(el => el.classList.remove('sv-folder-drop-hover'));
+    const dropped = Array.from(e.dataTransfer?.files || []);
+    if (dropped.length) await saveUploads(dropped, target?.dataset.isDir === 'true' ? targetDir : currentPath);
+  });
+  on(host, 'dragstart', (e) => {
+    const itemEl = e.target.closest?.('[data-context-target]');
+    if (!itemEl || !e.dataTransfer) return;
+    draggingPath = itemEl.dataset.path;
+    e.dataTransfer.setData('application/toolbox-path', draggingPath);
+    e.dataTransfer.setData('text/plain', itemEl.querySelector('.sv-item-name, .sv-grid-name')?.textContent || draggingPath);
+    e.dataTransfer.effectAllowed = 'move';
+    itemEl.classList.add('is-dragging');
+    dragHoldTimer = setTimeout(() => openDragDesk(draggingPath), 650);
+  });
+  on(host, 'dragend', (e) => {
+    e.target.closest?.('[data-context-target]')?.classList.remove('is-dragging');
+    draggingPath = null;
+    clearHover();
     closeDragDesk();
+  });
+
+  /* ---------- Right-click and long-press ---------- */
+
+  const selectForMenu = (path) => {
+    if (!selectedPaths.has(path)) {
+      selectedPaths = new Set([path]);
+      selectionAnchor = cursorPath = path;
+      refresh();
+    }
   };
 
-  host.addEventListener('dragenter', onDragEnter);
-  host.addEventListener('dragover', onDragOver);
-  host.addEventListener('dragleave', onDragLeave);
-  host.addEventListener('drop', onDrop);
-  host.addEventListener('dragstart', onDragStart);
-  host.addEventListener('dragend', onDragEnd);
-
-  // Right-click contextmenu event (items or blank canvas)
-  const onContextMenu = (e) => {
+  on(host, 'contextmenu', (e) => {
     const target = e.target.closest('[data-context-target]');
     if (target) {
       e.preventDefault();
-      const p = target.dataset.path;
-      const isDir = target.dataset.isDir === 'true';
-      if (!selectedPaths.has(p)) {
-        selectedPaths.clear();
-        selectedPaths.add(p);
-        refresh(p);
-      }
-      openContextMenu(e.clientX, e.clientY, p, isDir);
+      const path = target.dataset.path;
+      selectForMenu(path);
+      openItemMenu(e.clientX, e.clientY, path);
       return;
     }
-
     const canvas = e.target.closest('[data-canvas="true"]');
-    if (canvas && !e.target.closest('button, input, a, .sv-tag-pill, .btn')) {
+    if (canvas && !e.target.closest('button, input, a, select')) {
       e.preventDefault();
       openCanvasContextMenu(e.clientX, e.clientY);
     }
-  };
-  host.addEventListener('contextmenu', onContextMenu);
+  });
 
-  // Touchscreen long-press (450ms) with jitter threshold & haptic feedback
   let touchTimer = null;
-  let touchMoved = false;
-  let touchStartX = 0;
-  let touchStartY = 0;
-  let activeTouchItem = null;
-  let isLongPressTriggered = false;
-
-  const onTouchStart = (e) => {
-    const itemTarget = e.target.closest('[data-context-target]');
-    const canvasTarget = !itemTarget ? e.target.closest('[data-canvas="true"]') : null;
-    if (!itemTarget && !canvasTarget) return;
-
-    touchMoved = false;
-    isLongPressTriggered = false;
-    const touch = e.touches[0];
-    touchStartX = touch.clientX;
-    touchStartY = touch.clientY;
-    const cx = touch.clientX;
-    const cy = touch.clientY;
-
-    if (itemTarget) {
-      activeTouchItem = itemTarget;
-      itemTarget.classList.add('sv-touch-active');
-    }
-
+  let touchStart = null;
+  let longPressed = false;
+  on(host, 'touchstart', (e) => {
+    const itemEl = e.target.closest('[data-context-target]');
+    const canvas = !itemEl ? e.target.closest('[data-canvas="true"]') : null;
+    if (!itemEl && !canvas) return;
+    longPressed = false;
+    const t = e.touches[0];
+    touchStart = { x: t.clientX, y: t.clientY };
+    itemEl?.classList.add('sv-touch-active');
     touchTimer = setTimeout(() => {
-      if (!touchMoved) {
-        isLongPressTriggered = true;
-        try { navigator.vibrate?.(25); } catch {}
-        if (activeTouchItem) {
-          activeTouchItem.classList.remove('sv-touch-active');
-          activeTouchItem = null;
-        }
-        if (itemTarget) {
-          const p = itemTarget.dataset.path;
-          const isDir = itemTarget.dataset.isDir === 'true';
-          if (!selectedPaths.has(p)) {
-            selectedPaths.clear();
-            selectedPaths.add(p);
-            refresh(p);
-          }
-          openContextMenu(cx, cy, p, isDir);
-        } else if (canvasTarget) {
-          openCanvasContextMenu(cx, cy);
-        }
+      longPressed = true;
+      itemEl?.classList.remove('sv-touch-active');
+      try { navigator.vibrate?.(20); } catch {}
+      if (itemEl) {
+        selectForMenu(itemEl.dataset.path);
+        openItemMenu(touchStart.x, touchStart.y, itemEl.dataset.path);
+      } else {
+        openCanvasContextMenu(touchStart.x, touchStart.y);
       }
     }, 450);
-  };
-
-  const onTouchMove = (e) => {
-    if (touchMoved) return;
-    if (e.touches && e.touches[0]) {
-      const dist = Math.hypot(e.touches[0].clientX - touchStartX, e.touches[0].clientY - touchStartY);
-      if (dist > 8) {
-        touchMoved = true;
-        if (touchTimer) clearTimeout(touchTimer);
-        if (activeTouchItem) {
-          activeTouchItem.classList.remove('sv-touch-active');
-          activeTouchItem = null;
-        }
-      }
+  }, { passive: true });
+  on(host, 'touchmove', (e) => {
+    if (!touchStart || !e.touches?.[0]) return;
+    if (Math.hypot(e.touches[0].clientX - touchStart.x, e.touches[0].clientY - touchStart.y) > 8) {
+      clearTimeout(touchTimer);
+      host.querySelectorAll('.sv-touch-active').forEach(el => el.classList.remove('sv-touch-active'));
     }
-  };
+  }, { passive: true });
+  on(host, 'touchend', (e) => {
+    clearTimeout(touchTimer);
+    host.querySelectorAll('.sv-touch-active').forEach(el => el.classList.remove('sv-touch-active'));
+    if (longPressed && e.cancelable) e.preventDefault();
+  }, { passive: false });
 
-  const onTouchEnd = (e) => {
-    if (touchTimer) clearTimeout(touchTimer);
-    if (activeTouchItem) {
-      activeTouchItem.classList.remove('sv-touch-active');
-      activeTouchItem = null;
-    }
-    if (isLongPressTriggered && e && e.cancelable) {
+  /* ---------- Open-with dropdown ---------- */
+
+  const openMenu = host.querySelector('#sv-open-dropdown-menu');
+  const openToggleBtn = host.querySelector('#sv-open-dropdown-toggle');
+  const setOpenMenu = (open) => {
+    if (!openMenu || !openToggleBtn) return;
+    openMenu.hidden = !open;
+    openToggleBtn.setAttribute('aria-expanded', String(open));
+    if (open) openMenu.querySelector('.sv-open-menu-item')?.focus?.({ preventScroll: true });
+  };
+  on(window, 'click', (e) => {
+    if (openMenu && !openMenu.hidden && !e.target?.closest?.('.sv-open-dropdown-wrap')) setOpenMenu(false);
+  });
+  openMenu && on(openMenu, 'keydown', (e) => {
+    const entries = [...openMenu.querySelectorAll('.sv-open-menu-item')];
+    const i = entries.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
+      entries[(i + (e.key === 'ArrowDown' ? 1 : -1) + entries.length) % entries.length]?.focus();
+    } else if (e.key === 'Escape') {
+      e.stopPropagation();
+      setOpenMenu(false);
+      openToggleBtn.focus();
     }
-  };
+  });
 
-  host.addEventListener('touchstart', onTouchStart, { passive: true });
-  host.addEventListener('touchmove', onTouchMove, { passive: true });
-  host.addEventListener('touchend', onTouchEnd, { passive: false });
+  /* ---------- Clicks ---------- */
 
-  // Dismiss finder context menu and open-in dropdown menu on outside click or scroll
-  const dismissMenu = (me) => {
-    const menu = document.getElementById('sv-finder-menu');
-    if (menu && (menu.contains ? !menu.contains(me.target) : !me.target?.closest?.('#sv-finder-menu'))) {
-      removeMenu(menu);
-    }
-    const openMenu = host.querySelector('#sv-open-dropdown-menu');
-    const isInsideOpen = me.target?.closest?.('.sv-open-dropdown-wrap');
-    if (openMenu && !openMenu.hidden && !isInsideOpen) {
-      openMenu.hidden = true;
-      const btn = host.querySelector('#sv-open-dropdown-toggle');
-      if (btn) btn.setAttribute('aria-expanded', 'false');
-    }
-  };
-  window.addEventListener('click', dismissMenu);
-  window.addEventListener('scroll', dismissMenu, { passive: true });
+  const isTouchEvent = (e) => e.pointerType === 'touch' || (e.pointerType == null && isTouchOnly());
 
-  // Async preview loading if file content is not yet in memory
-  if (current && current.path && !current.text && !current.content) {
-    const isImg = /\.(png|jpe?g|webp|gif|svg)$/i.test(current.name);
-    if (isImg) {
-      fs.readFile(current.path, { encoding: 'blob', storage: currentStorage })
-        .then(blob => {
-          const url = URL.createObjectURL(blob);
-          current.dataUrl = url;
-          const imgEl = host.querySelector('.sv-preview img');
-          if (imgEl) imgEl.src = url;
-        }).catch(() => {});
-    } else {
-      fs.readFile(current.path, { encoding: 'utf8', storage: currentStorage })
-        .then(text => {
-          current.text = text;
-          current.content = text;
-          const previewEl = host.querySelector('.sv-preview');
-          if (previewEl && currentContentView !== 'table') {
-            previewEl.innerHTML = renderContentBody(current);
-          }
-        }).catch(() => {});
-    }
-  }
-
-  const onClick = async (e) => {
-    // Tag filter pill click
-    const tagFilterBtn = e.target.closest('[data-filter-tag]');
-    if (tagFilterBtn) {
-      const tag = tagFilterBtn.dataset.filterTag;
-      currentTagFilter = tag === 'all' ? null : tag;
-      refresh(current?.id || null);
+  on(host, 'click', async (e) => {
+    const tagBtn = e.target.closest('[data-filter-tag]');
+    if (tagBtn) {
+      const tag = tagBtn.dataset.filterTag;
+      currentTagFilter = tag === 'all' || tag === currentTagFilter ? null : tag;
+      refresh();
       return;
     }
 
-    // Storage Switcher (Offline / Online)
     const storageBtn = e.target.closest('.sv-storage-btn');
     if (storageBtn) {
-      currentStorage = storageBtn.dataset.storage || 'offline';
+      const wanted = storageBtn.dataset.storage || 'offline';
+      if (wanted === currentStorage) return;
+      if (wanted === 'online' && !getCurrentUser()) {
+        flash('Sign in to keep files in your account.');
+        try { openAccountModal(false); } catch {}
+        return;
+      }
+      currentStorage = wanted;
       currentPath = currentStorage === 'online' ? '/Online' : '/Home';
       selectedPaths.clear();
-      refresh(null);
+      refresh();
       return;
     }
 
-    // Breadcrumb navigation
-    const navPathBtn = e.target.closest('[data-nav-path]');
-    if (navPathBtn && !navPathBtn.closest('[data-context-target]')) {
-      currentPath = navPathBtn.dataset.navPath || '/Home';
-      selectedPaths.clear();
-      refresh(null);
+    const crumb = e.target.closest('[data-nav-path]');
+    if (crumb && !crumb.closest('[data-context-target]')) {
+      navigate(crumb.dataset.navPath || '/Home');
       return;
     }
 
-    // Layout switcher
     const layoutBtn = e.target.closest('.sv-layout-btn');
     if (layoutBtn) {
-      currentLayout = layoutBtn.dataset.layout || 'grid';
-      try { localStorage.setItem(STORAGE_FILES_VIEW_MODE, currentLayout); } catch {}
-      refresh(current?.id || null);
+      currentLayout = layoutBtn.dataset.layout || 'split';
+      writePref(STORAGE_FILES_VIEW_MODE, currentLayout);
+      refresh();
       return;
     }
 
-    // Content view switcher
+    const sortBtn = e.target.closest('[data-sort]');
+    if (sortBtn) {
+      const [key, dir] = currentSort.split(':');
+      const k = sortBtn.dataset.sort;
+      const nextDir = key === k ? (dir === 'asc' ? 'desc' : 'asc') : (k === 'modified' || k === 'size' ? 'desc' : 'asc');
+      currentSort = SORTS.some(s => s.value === `${k}:${nextDir}`) ? `${k}:${nextDir}` : `${k}:asc`;
+      writePref(STORAGE_FILES_SORT, currentSort);
+      refresh();
+      return;
+    }
+
     const cviewBtn = e.target.closest('.sv-cview-btn');
     if (cviewBtn) {
       currentContentView = cviewBtn.dataset.cview || 'formatted';
-      refresh(current?.id || null);
+      refresh();
       return;
     }
 
-    // Clear search button in empty state
     if (e.target.closest('#sv-clear-search')) {
       e.stopPropagation?.();
       currentSearch = '';
-      const box = host.querySelector('#sv-search-box');
-      if (box) box.value = '';
-      refresh(current?.id || null);
+      refresh();
       return;
     }
 
-    // Open in Tool dropdown toggle
     const openToggle = e.target.closest('#sv-open-dropdown-toggle');
     if (openToggle) {
       e.stopPropagation?.();
-      const menu = host.querySelector('#sv-open-dropdown-menu');
-      if (menu) {
-        const willBeOpen = menu.hidden;
-        menu.hidden = !willBeOpen;
-        openToggle.setAttribute('aria-expanded', String(willBeOpen));
-      }
+      setOpenMenu(openMenu?.hidden ?? false);
       return;
     }
 
-    // Open in other tool (from detail pane dropdown or button)
-    const openInBtn = e.target.closest('[data-open]');
-    if (openInBtn) {
-      const openIn = openInBtn.dataset.open;
-      const targetObj = current || (selectedPaths.size > 0 ? itemsInDir.find(f => selectedPaths.has(f.path)) : null);
-      if (openIn && targetObj) {
-        await openFileInTool(targetObj, openIn);
-        return;
-      }
+    const openIn = e.target.closest('[data-open]');
+    if (openIn) {
+      setOpenMenu(false);
+      const target = current || lookup(selection()[0]);
+      if (target && openIn.dataset.open) openFileInTool(target, openIn.dataset.open);
+      return;
     }
 
-    // Item selection with Ctrl/Cmd or normal click
     const itemEl = e.target.closest('[data-context-target]');
-    if (itemEl && !e.target.closest('.sv-rename, button, input')) {
-      if (isLongPressTriggered) {
-        isLongPressTriggered = false;
+    if (itemEl && !e.target.closest('button, input, a, select')) {
+      if (longPressed) { longPressed = false; return; }
+      const path = itemEl.dataset.path;
+      const isDir = itemEl.dataset.isDir === 'true';
+
+      // A click re-renders the list, so the browser's own dblclick can land
+      // on a replaced node and never fire. Detect the second click here.
+      const now = Date.now();
+      const repeat = lastClick.path === path && now - lastClick.at < 450;
+      lastClick = { path, at: now };
+      if ((e.detail >= 2 || repeat) && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        lastClick = { path: null, at: 0 };
+        openItem(path);
         return;
       }
-      const itemPath = itemEl.dataset.path;
-      const isDir = itemEl.dataset.isDir === 'true';
+
+      if (e.shiftKey && selectionAnchor) {
+        const order = items.map(i => i.path);
+        const a = order.indexOf(selectionAnchor);
+        const b = order.indexOf(path);
+        if (a >= 0 && b >= 0) {
+          const [from, to] = a < b ? [a, b] : [b, a];
+          selectedPaths = new Set(order.slice(from, to + 1));
+          cursorPath = path;
+          refresh();
+          return;
+        }
+      }
 
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
-        if (selectedPaths.has(itemPath)) {
-          selectedPaths.delete(itemPath);
-        } else {
-          selectedPaths.add(itemPath);
-        }
-        refresh(selectedPaths.size === 1 ? [...selectedPaths][0] : null);
+        if (selectedPaths.has(path)) selectedPaths.delete(path);
+        else selectedPaths.add(path);
+        selectionAnchor = cursorPath = path;
+        refresh();
         return;
       }
 
-      // Normal click
-      selectedPaths.clear();
-      selectedPaths.add(itemPath);
-      if (isDir && currentLayout !== 'split') {
-        currentPath = itemPath;
-        selectedPaths.clear();
-        refresh(null);
-      } else if (!isDir && currentLayout !== 'split') {
-        openQuickLook(itemsInDir.find(file => file.path === itemPath) || itemPath);
-      } else if (!isDir) {
-        history.replaceState(null, '', `#files/${encodeURIComponent(itemPath)}`);
-        refresh(itemPath);
-      } else {
-        refresh(null);
+      // On touch there's no double-click: a tap opens.
+      if (isTouchEvent(e)) {
+        if (isDir) { navigate(path); return; }
+        if (currentLayout !== 'split' || isNarrow()) {
+          selectedPaths = new Set([path]);
+          selectionAnchor = cursorPath = path;
+          refresh();
+          openQuickLook(path);
+          return;
+        }
       }
-      return;
-    }
 
-    // Clicking blank canvas deselects items
-    const canvasEl = e.target.closest('[data-canvas="true"]');
-    if (canvasEl && !itemEl && !e.target.closest('button, input, a, .sv-tag-pill, .btn')) {
-      if (selectedPaths.size > 0 || current) {
-        selectedPaths.clear();
-        refresh(null);
-      }
+      selectedPaths = new Set([path]);
+      selectionAnchor = cursorPath = path;
+      ui.focusItem = true;
+      if (!isDir && currentLayout === 'split') history.replaceState(null, '', `#files/${encodeURIComponent(path)}`);
+      refresh();
       return;
     }
 
     const actBtn = e.target.closest('[data-act]');
     const act = actBtn?.dataset.act;
 
-    if (act === 'cut') {
-      const paths = selectedPaths.size > 0 ? [...selectedPaths] : (current?.path ? [current.path] : []);
-      if (paths.length > 0) {
-        fileClipboard = { op: 'cut', paths };
-        flash(`Cut ${paths.length} item(s).`);
-        refresh(current?.id || null);
-      }
-      return;
-    }
-
-    if (act === 'copy') {
-      const paths = selectedPaths.size > 0 ? [...selectedPaths] : (current?.path ? [current.path] : []);
-      if (paths.length > 0) {
-        fileClipboard = { op: 'copy', paths };
-        flash(`Copied ${paths.length} item(s).`);
-        refresh(current?.id || null);
-      }
-      return;
-    }
-
-    if (act === 'paste') {
-      await executePaste(currentPath);
-      return;
-    }
-
-    if (act === 'delete-selected') {
-      const paths = selectedPaths.size > 0 ? [...selectedPaths] : (current?.path ? [current.path] : []);
-      if (paths.length > 0) {
-        await executeDelete(paths);
-      }
-      return;
-    }
-
-    if (act === 'select-all') {
-      selectedPaths = new Set(itemsInDir.map(i => i.path));
-      refresh(itemsInDir[0]?.path || null);
-      return;
-    }
-
-    if (act === 'folder-properties') {
-      openDirectoryProperties(currentPath);
-      return;
-    }
-
-    if (act === 'multi-properties') {
-      const paths = selectedPaths.size > 0 ? [...selectedPaths] : (current?.path ? [current.path] : []);
-      if (paths.length > 1) {
-        openMultiProperties(paths);
-      } else if (paths.length === 1) {
-        const stat = fs.statSync(paths[0]);
-        if (stat?.isDirectory) openDirectoryProperties(paths[0]);
-        else openQuickLook(paths[0]);
-      }
-      return;
-    }
-
-    if (act === 'multi-download') {
-      const paths = selectedPaths.size > 0 ? [...selectedPaths] : (current?.path ? [current.path] : []);
-      if (paths.length > 0) {
-        await downloadPathsAsZip(paths);
-      }
-      return;
-    }
-
-    if (act === 'clear-selection') {
-      selectedPaths.clear();
-      refresh(null);
-      return;
-    }
-
-    if (act === 'quicklook') {
-      const targetP = current?.path || (selectedPaths.size > 0 ? [...selectedPaths][0] : null);
-      if (targetP) {
-        openQuickLook(targetP);
-      }
-      return;
-    }
-
-    if (act === 'nav-up') {
-      currentPath = getParentPath(currentPath);
-      selectedPaths.clear();
-      refresh(null);
-      return;
-    }
-
-    if (act === 'new-folder') {
-      const name = await tbPrompt('Folder Name:', '', { title: 'New Folder' });
-      if (name && name.trim()) {
-        const clean = name.trim().replace(/[/\\?%*:|"<>]/g, '-');
-        const target = normalizePath(`${currentPath}/${clean}`);
-        try {
-          await fs.mkdir(target, { storage: currentStorage });
-          flash(`Folder "${clean}" created.`);
-          refresh(null);
-        } catch (err) {
-          flash(err.message, 'bad');
-        }
-      }
-      return;
-    }
-
-    if (act === 'new-file') {
-      const name = await tbPrompt('File Name (with extension, e.g. document.txt):', '', { title: 'New File' });
-      if (name && name.trim()) {
-        const clean = name.trim().replace(/[/\\?%*:|"<>]/g, '-');
-        const target = normalizePath(`${currentPath}/${clean}`);
-        try {
-          await fs.writeFile(target, '', { storage: currentStorage });
-          flash(`File "${clean}" created.`);
-          refresh(target);
-        } catch (err) {
-          flash(err.message, 'bad');
-        }
-      }
-      return;
-    }
-
-    if (act === 'upload') {
-      uploader.click();
-      return;
-    }
-
-    if (act === 'compress-current') {
-      const folderName = getBaseName(currentPath) || 'archive';
-      const destZip = normalizePath(`${currentPath}/${folderName}.zip`);
-      try {
-        await fs.compressDirectory(currentPath, destZip);
-        flash(`Folder compressed to ${folderName}.zip.`);
-        refresh(destZip);
-      } catch (err) {
-        flash(err.message, 'bad');
-      }
-      return;
-    }
-
-    if (act === 'extract-archive') {
-      const filePath = actBtn.dataset.filePath || current?.path;
-      if (filePath) {
-        try {
-          const targetDir = currentPath;
-          const extracted = await fs.extractArchive(filePath, targetDir);
-          flash(`Extracted ${extracted.length} file(s) into current directory.`);
-          refresh(null);
-        } catch (err) {
-          flash(err.message, 'bad');
-        }
-      }
-      return;
-    }
-
-    if (act === 'import') { importer.click(); return; }
-
-    if (act === 'export-all') {
-      const n = store.exportAll();
-      flash(`Downloaded ${n} item${n === 1 ? '' : 's'}.`);
-      return;
-    }
-
-    if (act === 'export-one' || act === 'download-file') {
-      const filePath = actBtn.dataset.filePath || current?.path;
-      if (filePath) {
-        try {
-          const blob = await fs.readFile(filePath, { encoding: 'blob', storage: currentStorage });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = getBaseName(filePath);
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          setTimeout(() => URL.revokeObjectURL(url), 1000);
-          flash(`Downloaded ${getBaseName(filePath)}.`);
-        } catch (err) {
-          flash(`Download failed: ${err.message}`, 'bad');
-        }
-      } else if (current) {
-        store.exportOne(current);
-        flash(`Downloaded ${current.name}.`);
-      }
-      return;
-    }
-
-    if (act === 'delete') {
-      const filePath = actBtn.dataset.filePath || current?.path;
-      const targetName = filePath ? getBaseName(filePath) : (current?.name || 'file');
-
-      if (await tbConfirm(`Are you sure you want to permanently delete "${targetName}"?`, { title: 'Delete Item', destructive: true })) {
-        try {
-          if (filePath) {
-            await fs.delete(filePath);
-            selectedPaths.delete(filePath);
-          } else if (current?.id) {
-            store.remove(current.id);
-            if (current.path) selectedPaths.delete(current.path);
-          }
-          flash(`Deleted "${targetName}".`);
-          history.replaceState(null, '', '#files');
-          refresh(null);
-        } catch (err) {
-          flash(err.message, 'bad');
-        }
-      }
-    }
-  };
-
-  const onRename = async (e) => {
-    if (!e.target.classList.contains('sv-rename') || !current) return;
-    const newName = e.target.value.trim();
-    if (!newName || newName === current.name) return;
-
-    try {
-      if (current.path) {
-        await fs.rename(current.path, newName);
-      } else if (current.id) {
-        store.rename(current.id, newName);
-      }
-      flash(`Renamed to "${newName}".`);
-      refresh(null);
-    } catch (err) {
-      flash(err.message, 'bad');
-    }
-  };
-
-  const onUpload = async (e) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-
-    let successCount = 0;
-    for (const f of files) {
-      try {
-        const dest = normalizePath(`${currentPath}/${f.name}`);
-        await fs.writeFile(dest, f, {
-          mimeType: f.type || 'application/octet-stream',
-          storage: currentStorage
-        });
-        successCount++;
-      } catch (err) {
-        console.warn(`Failed to upload ${f.name}:`, err);
-      }
-    }
-    flash(`Uploaded ${successCount} file(s).`);
-    e.target.value = '';
-    refresh(null);
-  };
-
-  const onImport = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const res = store.importBundle(text);
-      const n = res?.imported || 0;
-      flash(`Imported ${n} artifact${n === 1 ? '' : 's'}.`);
-      e.target.value = '';
-      refresh(null);
-    } catch (err) {
-      flash(`Import failed: ${err.message}`, 'bad');
-    }
-  };
-
-  // Double click: open folder or launch file into top tool
-  const onDblClick = async (e) => {
-    if (currentLayout !== 'split') return;
-    const folderEl = e.target.closest('[data-is-dir="true"]');
-    if (folderEl) {
-      const path = folderEl.dataset.path || folderEl.dataset.navPath;
-      if (path) {
-        currentPath = path;
+    if (!actBtn) {
+      const canvasEl = e.target.closest('[data-canvas="true"]');
+      if (canvasEl && !e.target.closest('button, input, a, select') && selectedPaths.size) {
         selectedPaths.clear();
-        refresh(null);
-        return;
+        refresh();
       }
+      return;
     }
 
-    const fileEl = e.target.closest('[data-context-target]:not([data-is-dir="true"])');
-    if (fileEl) {
-      const p = fileEl.dataset.path;
-      const targetFile = itemsInDir.find(f => f.path === p || f.id === p) || current;
-      if (targetFile) {
-        const tools = getToolsForFile(targetFile);
-        if (tools.length > 0) {
-          await openFileInTool(targetFile, tools[0].id);
+    switch (act) {
+      case 'cut': setClipboard('cut'); return;
+      case 'copy': setClipboard('copy'); return;
+      case 'paste': await executePaste(currentPath); return;
+      case 'clear-clipboard': fileClipboard = { op: null, paths: [] }; refresh(); return;
+      case 'delete-selected': await executeDelete(selection().length ? selection() : (current ? [current.path] : [])); return;
+      case 'select-all': selectAll(); return;
+      case 'clear-selection': selectedPaths.clear(); refresh(); return;
+      case 'folder-properties': openProperties([currentPath], { folder: true }); return;
+      case 'multi-properties': openProperties(selection().length ? selection() : [currentPath]); return;
+      case 'multi-download': await downloadPaths(selection()); return;
+      case 'quicklook': {
+        const target = current?.path || selection().find(p => !lookup(p)?.isDirectory);
+        if (target) openQuickLook(target);
+        return;
+      }
+      case 'open-folder': navigate(actBtn.dataset.path); return;
+      case 'nav-up': goUp(); return;
+      case 'clear-search': currentSearch = ''; ui.keepSearchFocus = [0, 0]; refresh(); return;
+      case 'new-folder': await createFolder(); return;
+      case 'new-file': await createFile(); return;
+      case 'upload': uploader.click(); return;
+      case 'extract-archive': {
+        const filePath = actBtn.dataset.filePath || current?.path;
+        if (!filePath) return;
+        try {
+          const extracted = await fs.extractArchive(filePath, currentPath);
+          flash(`Extracted ${plural(extracted.length, 'file')} into ${folderLabel(currentPath)}.`);
+          refresh();
+        } catch (err) {
+          flash(err.message, 'bad');
         }
+        return;
       }
+      default:
     }
-  };
+  });
 
-  // Enter key commits inline rename
-  const onKeyDown = (e) => {
-    if (e.target.classList.contains('sv-rename') && e.key === 'Enter') {
+  /* ---------- Search, sort, rename, upload ---------- */
+
+  const searchBox = host.querySelector('#sv-search-box');
+  searchBox && on(searchBox, 'input', () => {
+    currentSearch = searchBox.value.trim();
+    ui.keepSearchFocus = [searchBox.selectionStart ?? searchBox.value.length, searchBox.selectionEnd ?? searchBox.value.length];
+    selectedPaths.clear();
+    refresh();
+  });
+  searchBox && on(searchBox, 'keydown', (e) => {
+    if (e.key === 'Escape' && searchBox.value) {
       e.preventDefault();
-      e.target.blur();
+      e.stopPropagation();
+      currentSearch = '';
+      ui.keepSearchFocus = [0, 0];
+      refresh();
+    } else if (e.key === 'ArrowDown' || e.key === 'Enter') {
+      const first = itemEls()[0];
+      if (!first) return;
+      e.preventDefault();
+      selectedPaths = new Set([first.dataset.path]);
+      selectionAnchor = cursorPath = first.dataset.path;
+      ui.focusItem = true;
+      refresh();
+      host.querySelector(`[data-context-target][tabindex="0"]`)?.focus?.();
     }
+  });
+
+  const sortSelect = host.querySelector('#sv-sort-select');
+  sortSelect && on(sortSelect, 'change', () => {
+    currentSort = sortSelect.value;
+    writePref(STORAGE_FILES_SORT, currentSort);
+    refresh();
+  });
+
+  const renameInput = host.querySelector('.sv-rename');
+  if (renameInput) {
+    on(renameInput, 'focus', () => selectStem(renameInput));
+    on(renameInput, 'keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); renameInput.blur(); }
+      else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); renameInput.value = current?.name || renameInput.value; renameInput.blur(); }
+    });
+    on(renameInput, 'change', async () => {
+      const ok = await renamePath(renameInput.dataset.path, renameInput.value);
+      if (!ok && current) renameInput.value = current.name;
+    });
+  }
+
+  on(uploader, 'change', async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (files.length) await saveUploads(files);
+  });
+
+  /* ---------- Keyboard ---------- */
+
+  const columnsInGrid = () => {
+    const els = itemEls();
+    if (currentLayout !== 'grid' || els.length < 2) return 1;
+    const top = els[0].offsetTop;
+    const n = els.findIndex(el => el.offsetTop !== top);
+    return n > 0 ? n : els.length;
   };
 
-  // Window-level keyboard shortcuts: Space (QuickLook), Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+A, Delete, Esc
-  const onWindowKeyDown = (e) => {
-    const tag = e.target.tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) {
+  const moveCursor = (delta, extend) => {
+    const order = items.map(i => i.path);
+    if (!order.length) return;
+    const from = order.indexOf(cursorPath);
+    const next = from < 0 ? (delta > 0 ? 0 : order.length - 1) : Math.max(0, Math.min(order.length - 1, from + delta));
+    const path = order[next];
+    if (extend && selectionAnchor && order.includes(selectionAnchor)) {
+      const a = order.indexOf(selectionAnchor);
+      const [lo, hi] = a < next ? [a, next] : [next, a];
+      selectedPaths = new Set(order.slice(lo, hi + 1));
+    } else {
+      selectedPaths = new Set([path]);
+      selectionAnchor = path;
+    }
+    cursorPath = path;
+    ui.focusItem = true;
+    refresh();
+  };
+
+  on(window, 'keydown', (e) => {
+    const t = e.target;
+    if (t?.tagName === 'INPUT' || t?.tagName === 'TEXTAREA' || t?.tagName === 'SELECT' || t?.isContentEditable) return;
+    if (document.querySelector('.custom-dialog-backdrop, #sv-quicklook-modal, #sv-properties-modal, #toolbox-context-menu')) return;
+    if (openMenu && !openMenu.hidden) return;
+
+    const mod = isMac() ? e.metaKey : e.ctrlKey;
+    const onControl = t?.closest?.('button, a, select, [role="menuitem"]');
+    const paths = selection();
+
+    if (e.code === 'Space' && !mod && !e.altKey) {
+      if (onControl) return;
+      e.preventDefault();
+      if (paths.length > 1) { openProperties(paths); return; }
+      const target = current?.path || paths.find(p => !lookup(p)?.isDirectory);
+      if (target) openQuickLook(target);
+      else if (paths.length === 1) openProperties(paths);
       return;
     }
 
-    const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform);
-    const mod = isMac ? e.metaKey : e.ctrlKey;
-
-    // QuickLook / Properties toggle: Spacebar
-    if (e.code === 'Space' && !mod && !e.shiftKey && !e.altKey) {
+    if (e.key === 'Enter' && !mod) {
+      if (onControl || paths.length !== 1) return;
       e.preventDefault();
-      const qlModal = document.getElementById('sv-quicklook-modal');
-      if (qlModal) {
-        qlModal.remove();
-        return;
-      }
-      const propModal = document.getElementById('sv-properties-modal');
-      if (propModal) {
-        propModal.remove();
-        return;
-      }
-      if (selectedPaths.size > 1) {
-        openMultiProperties([...selectedPaths]);
-        return;
-      }
-      const targetP = current?.path || (selectedPaths.size > 0 ? [...selectedPaths][0] : null);
-      if (targetP) {
-        openQuickLook(targetP);
-      }
+      openItem(paths[0]);
       return;
     }
 
-    // Escape closes quicklook or properties
+    if (['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].includes(e.key) && !mod) {
+      if (e.altKey && e.key === 'ArrowUp') { e.preventDefault(); goUp(); return; }
+      if (e.altKey && e.key === 'ArrowDown') { if (paths.length === 1) { e.preventDefault(); openItem(paths[0]); } return; }
+      if (onControl && !t.closest('[data-context-target]')) return;
+      const cols = columnsInGrid();
+      const horizontal = e.key === 'ArrowLeft' || e.key === 'ArrowRight';
+      if (horizontal && currentLayout !== 'grid') return;
+      e.preventDefault();
+      const delta = horizontal ? (e.key === 'ArrowRight' ? 1 : -1) : (e.key === 'ArrowDown' ? cols : -cols);
+      moveCursor(delta, e.shiftKey);
+      return;
+    }
+
+    if (e.key === 'Home' || e.key === 'End') {
+      if (onControl && !t.closest('[data-context-target]')) return;
+      e.preventDefault();
+      moveCursor(e.key === 'Home' ? -Infinity : Infinity, e.shiftKey);
+      return;
+    }
+
+    if (e.key === 'Backspace' && !mod) {
+      e.preventDefault();
+      goUp();
+      return;
+    }
+
+    if (e.key === 'F2' && paths.length === 1) {
+      e.preventDefault();
+      startRename(paths[0]);
+      return;
+    }
+
     if (e.key === 'Escape') {
-      const qlModal = document.getElementById('sv-quicklook-modal');
-      if (qlModal) { qlModal.remove(); return; }
-      const propModal = document.getElementById('sv-properties-modal');
-      if (propModal) { propModal.remove(); return; }
-      const fMenu = document.getElementById('sv-finder-menu');
-      if (fMenu) { removeMenu(fMenu); return; }
+      if (selectedPaths.size) { selectedPaths.clear(); refresh(); }
+      else if (currentSearch) { currentSearch = ''; refresh(); }
+      return;
     }
 
-    // Ctrl+A / Cmd+A: Select All
-    if (mod && (e.key === 'a' || e.key === 'A')) {
+    if (mod && (e.key === 'a' || e.key === 'A')) { e.preventDefault(); selectAll(); return; }
+    if (mod && (e.key === 'c' || e.key === 'C') && paths.length) { e.preventDefault(); setClipboard('copy'); return; }
+    if (mod && (e.key === 'x' || e.key === 'X') && paths.length) { e.preventDefault(); setClipboard('cut'); return; }
+    if (mod && (e.key === 'v' || e.key === 'V') && fileClipboard.paths.length) { e.preventDefault(); executePaste(currentPath); return; }
+
+    if ((e.key === 'Delete' || (e.key === 'Backspace' && mod)) && paths.length) {
       e.preventDefault();
-      selectedPaths = new Set(itemsInDir.map(i => i.path));
-      refresh(itemsInDir[0]?.path || null);
-      return;
+      executeDelete(paths);
     }
+  });
 
-    // Ctrl+C / Cmd+C: Copy
-    if (mod && (e.key === 'c' || e.key === 'C')) {
-      const paths = selectedPaths.size > 0 ? [...selectedPaths] : (current?.path ? [current.path] : []);
-      if (paths.length > 0) {
-        e.preventDefault();
-        fileClipboard = { op: 'copy', paths };
-        flash(`Copied ${paths.length} item(s).`);
-        refresh(current?.id || null);
-      }
-      return;
-    }
+  /* ---------- Segmented controls and scroll fades ---------- */
 
-    // Ctrl+X / Cmd+X: Cut
-    if (mod && (e.key === 'x' || e.key === 'X')) {
-      const paths = selectedPaths.size > 0 ? [...selectedPaths] : (current?.path ? [current.path] : []);
-      if (paths.length > 0) {
-        e.preventDefault();
-        fileClipboard = { op: 'cut', paths };
-        flash(`Cut ${paths.length} item(s).`);
-        refresh(current?.id || null);
-      }
-      return;
-    }
-
-    // Ctrl+V / Cmd+V: Paste
-    if (mod && (e.key === 'v' || e.key === 'V')) {
-      if (fileClipboard.paths.length > 0) {
-        e.preventDefault();
-        executePaste(currentPath);
-      }
-      return;
-    }
-
-    // Delete or Cmd+Backspace
-    if (e.key === 'Delete' || (e.key === 'Backspace' && mod)) {
-      const paths = selectedPaths.size > 0 ? [...selectedPaths] : (current?.path ? [current.path] : []);
-      if (paths.length > 0) {
-        e.preventDefault();
-        executeDelete(paths);
-      }
-      return;
-    }
-  };
-
-  host.addEventListener('click', onClick);
-  host.addEventListener('change', onRename);
-  host.addEventListener('dblclick', onDblClick);
-  host.addEventListener('keydown', onKeyDown);
-  uploader.addEventListener('change', onUpload);
-  importer.addEventListener('change', onImport);
-  window.addEventListener('keydown', onWindowKeyDown);
-
-  // Segmented switcher slider animations
   const storageSwitch = host.querySelector('.sv-storage-switch');
   if (storageSwitch) attachSegmentedSlider(storageSwitch, '.sv-storage-btn');
-
   const viewSwitcher = host.querySelector('.sv-view-switcher');
   if (viewSwitcher) attachSegmentedSlider(viewSwitcher, '.sv-layout-btn');
-
   const cviewSwitcher = host.querySelector('.sv-content-view-switcher');
   if (cviewSwitcher) attachSegmentedSlider(cviewSwitcher, '.sv-cview-btn');
 
-  // Initialize and observe bottom fade borders for overflowing lists
   const fadeWrappers = host.querySelectorAll('.sv-fade-wrapper');
-  const fadeCleanups = [];
-
-  const updateAllFades = () => {
-    fadeWrappers.forEach(wrapper => {
-      const scrollEl = wrapper.querySelector('.sv-fade-scroll');
-      if (!scrollEl) return;
-      const hasOverflow = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight > 4;
-      wrapper.classList.toggle('has-overflow-bottom', hasOverflow);
-    });
-  };
-
-  fadeWrappers.forEach(wrapper => {
+  const updateFade = (wrapper) => {
     const scrollEl = wrapper.querySelector('.sv-fade-scroll');
     if (!scrollEl) return;
-    const onScroll = () => {
-      const hasOverflow = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight > 4;
-      wrapper.classList.toggle('has-overflow-bottom', hasOverflow);
-    };
-    scrollEl.addEventListener('scroll', onScroll, { passive: true });
-    fadeCleanups.push(() => scrollEl.removeEventListener('scroll', onScroll));
+    wrapper.classList.toggle('has-overflow-bottom', scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight > 4);
+  };
+  const updateAllFades = () => fadeWrappers.forEach(updateFade);
+  fadeWrappers.forEach(wrapper => {
+    const scrollEl = wrapper.querySelector('.sv-fade-scroll');
+    if (scrollEl) on(scrollEl, 'scroll', () => updateFade(wrapper), { passive: true });
   });
-
   requestAnimationFrame(updateAllFades);
-  setTimeout(updateAllFades, 80);
-
-  const onWindowResize = () => updateAllFades();
-  window.addEventListener('resize', onWindowResize, { passive: true });
+  const fadeTimer = setTimeout(updateAllFades, 80);
+  on(window, 'resize', updateAllFades, { passive: true });
 
   return () => {
-    fadeCleanups.forEach(fn => fn());
-    window.removeEventListener('resize', onWindowResize);
-    host.removeEventListener('click', onClick);
-    host.removeEventListener('change', onRename);
-    host.removeEventListener('dblclick', onDblClick);
-    host.removeEventListener('keydown', onKeyDown);
-    host.removeEventListener('dragenter', onDragEnter);
-    host.removeEventListener('dragover', onDragOver);
-    host.removeEventListener('dragleave', onDragLeave);
-    host.removeEventListener('drop', onDrop);
-    host.removeEventListener('dragstart', onDragStart);
-    host.removeEventListener('dragend', onDragEnd);
-    host.removeEventListener('contextmenu', onContextMenu);
-    host.removeEventListener('touchstart', onTouchStart);
-    host.removeEventListener('touchmove', onTouchMove);
-    host.removeEventListener('touchend', onTouchEnd);
-    window.removeEventListener('click', dismissMenu);
-    window.removeEventListener('scroll', dismissMenu);
-    window.removeEventListener('keydown', onWindowKeyDown);
-    const m = document.getElementById('sv-finder-menu');
-    if (m) m.remove();
-    const ql = document.getElementById('sv-quicklook-modal');
-    if (ql) ql.remove();
-    const pr = document.getElementById('sv-properties-modal');
-    if (pr) pr.remove();
+    clearTimeout(fadeTimer);
+    clearTimeout(touchTimer);
+    closeDragDesk();
+    cleanups.forEach(fn => fn());
     host.innerHTML = '';
   };
 }

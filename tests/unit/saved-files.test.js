@@ -31,9 +31,9 @@ test('Files View: renders multiple viewing options (split, grid, list switcher)'
 
   // Check content view switcher exists in detail pane
   assert.ok(host.querySelector('.sv-content-view-switcher'), 'Content view switcher must exist');
-  assert.ok(host.querySelector('[data-cview="formatted"]'), 'Formatted content view option must exist');
   assert.ok(host.querySelector('[data-cview="table"]'), 'Table content view option must exist for CSV data');
   assert.ok(host.querySelector('[data-cview="raw"]'), 'Raw content view option must exist');
+  assert.ok(host.querySelector('.sv-table'), 'CSV previews as a table by default');
 
   // Strict check: Verify zero emojis in rendered HTML
   const emojiRegex = /[\u{1F300}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F1E0}-\u{1F1FF}]/u;

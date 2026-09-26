@@ -858,6 +858,11 @@ export class ToolboxFilesystem {
       const targets = all.filter(m => m.path === norm || m.path.startsWith(norm + '/'));
       for (const t of targets) {
         await dbDriver.delete(t.path);
+        // Text files are mirrored into the artifact store; drop the mirror
+        // too, or the file resurfaces in Home after its folder is gone.
+        if (!t.isDirectory && t.id) {
+          try { legacyArtifacts.remove(t.id); } catch {}
+        }
       }
     } else {
       await dbDriver.delete(norm);

@@ -76,8 +76,8 @@ test('Files View: container is offset from navbar and switcher reads "Online"', 
 
   const sv = host.querySelector('.sv');
   assert.ok(sv, 'Files container .sv must exist');
-  const styleStr = sv.getAttribute?.('style') || sv.style?.margin || '';
-  assert.ok(styleStr.includes('18px') || styleStr.includes('20px') || parseInt(sv.style?.marginTop || '0') >= 16, 'Files container must be offset from top navbar');
+  const filesCss = (await import('node:fs')).readFileSync(new URL('../../css/files.css', import.meta.url), 'utf8');
+  assert.ok(/\n\.sv \{[^}]*margin:\s*20px auto 0/.test(filesCss), 'Files container must be offset from top navbar');
 
   // Verify Online label doesn't contain "(Cloud)"
   const storageSwitch = host.querySelector('.sv-storage-switch');

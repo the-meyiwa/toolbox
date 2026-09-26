@@ -170,26 +170,14 @@ test('Modern UI/UX Standards: in-tool search boxes stay compact (36px)', () => {
   );
 });
 
-test('Modern UI/UX Standards: Files View buttons have compact desktop height (26px - 28px)', () => {
+test('Modern UI/UX Standards: Files View controls use the compact control size', () => {
   const css = readStylesheet();
   const savedJs = fs.readFileSync(path.resolve('js/views/saved.js'), 'utf-8');
 
-  assert.ok(
-    css.includes('.sv-head .btn') && css.includes('height: 28px !important;'),
-    '.sv-head .btn must have 28px height on desktop'
-  );
-  assert.ok(
-    css.includes('.sv-head .sv-tb-btn') && css.includes('height: 26px !important;'),
-    '.sv-head .sv-tb-btn must have 26px height on desktop'
-  );
-  assert.ok(
-    css.includes('.sv-head #sv-search-box') && css.includes('height: 28px !important;'),
-    '.sv-head #sv-search-box must have 28px height on desktop'
-  );
-  assert.ok(
-    savedJs.includes('height:28px') || savedJs.includes('height: 28px'),
-    'saved.js must render buttons with compact 28px dimensions'
-  );
+  assert.ok(/\.sv-icon-btn\s*\{[^}]*height:\s*var\(--control-sm\)/.test(css), 'Files toolbar icon buttons use --control-sm (32px) on desktop');
+  assert.ok(/\.sv \.sv-search-input\s*\{[^}]*height:\s*var\(--control-sm\)/.test(css), 'Files search box uses --control-sm (32px) on desktop');
+  assert.ok(/@media \(max-width: 720px\)[\s\S]*\.sv-icon-btn[^{]*\{[^}]*height:\s*var\(--control-md\)/.test(css), 'Files controls grow to a 40px touch target on phones');
+  assert.equal(/style="[^"]*height:\s*\d+px/.test(savedJs), false, 'saved.js must not size controls with inline styles');
 });
 
 test('Mobile-Adapted Tool Behaviors: Progressive disclosure switchers linearize desktop-heavy multi-pane layouts', () => {
