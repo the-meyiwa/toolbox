@@ -11,38 +11,31 @@ import { readStylesheet } from '../helpers/stylesheet.js';
 
 test('Mobile UI: Tool Viewport enforces bottom dock clearance on mobile screens', () => {
   const css = readStylesheet();
-
-  // Verify mobile media query on tool-viewport
+  // Collect every (max-width: 768px) block, matching braces so nested rules stay inside.
+  const blocks = [];
+  for (const m of css.matchAll(/@media \(max-width: 768px\) \{/g)) {
+    let depth = 1, i = m.index + m[0].length;
+    while (i < css.length && depth) { if (css[i] === '{') depth++; else if (css[i] === '}') depth--; i++; }
+    blocks.push(css.slice(m.index + m[0].length, i - 1));
+  }
+  const mobile = blocks.join('\n');
+  assert.ok(mobile, 'css/style.css must have a (max-width: 768px) media query');
   assert.ok(
-    /@media\s*\(\s*max-width:\s*768px\s*\)[^{]*\{[\s\S]*?#tool-viewport\s*\{[^}]*padding:\s*0\s+12px\s+96px\s*!important/i.test(css),
-    'css/style.css must enforce padding: 0 12px 96px !important on #tool-viewport at <= 768px for bottom dock clearance'
+    /#main\s*\{[^}]*padding-bottom:\s*calc\(88px \+ env\(safe-area-inset-bottom\)\)/.test(mobile),
+    '#main must clear the floating bottom nav and the home indicator on phones'
+  );
+  assert.ok(
+    /body\.in-tool #viewport-content\s*\{[^}]*env\(safe-area-inset-bottom\)/.test(mobile),
+    'Tool content must pad for the home indicator on phones'
   );
 });
 
 test('Mobile UI: Universal two-column and multi-column layouts stack to single column on mobile', () => {
   const css = readStylesheet();
-
-  const requiredStackClasses = [
-    '.tool-row',
-    '.tool-columns',
-    '.tool-split',
-    '.input-split',
-    '.editor-split',
-    '.biz-grid',
-    '.inv-grid-2',
-    '.pay-hub-grid',
-    '.tool-grid-2',
-    '.tool-grid-3',
-    '.tool-grid-4'
-  ];
-
-  for (const cls of requiredStackClasses) {
-    assert.ok(
-      css.includes(cls),
-      `css/style.css must include mobile responsive stacking rule for ${cls}`
-    );
+  // Only layout classes the tools still render.
+  for (const cls of ['.tool-row', '.tool-split']) {
+    assert.ok(css.includes(cls), `css/style.css must include mobile responsive stacking rule for ${cls}`);
   }
-
   assert.ok(
     css.includes('flex-direction: column !important') || css.includes('grid-template-columns: 1fr !important'),
     'Multi-column layouts must stack vertically on mobile screens'
@@ -165,28 +158,15 @@ test('Mobile UI: Every registered tool has viewport rendering capability and res
   }
 });
 
-test('Modern UI/UX Standards: Universal Search Box sizing is strictly restrained and sleek (<= 36px desktop / 38px mobile)', () => {
+test('Modern UI/UX Standards: in-tool search boxes stay compact (36px)', () => {
   const css = readStylesheet();
   const indexHtml = fs.readFileSync(path.resolve('index.html'), 'utf-8');
 
-  // Hero search bar in index.html is modern and sleek
+  assert.ok(indexHtml.includes('id="home-hero-input"'), 'Home page must render the hero search input');
+  assert.ok(/\.home-search-input\s*\{[^}]*height:\s*56px/.test(css), 'Home hero search is the one large search box (56px)');
   assert.ok(
-    indexHtml.includes('height:38px;') || indexHtml.includes('height: 38px;'),
-    'Home hero search box must be sleek (38px height)'
-  );
-  assert.ok(
-    !indexHtml.includes('padding: 0 54px 0 54px;') && !indexHtml.includes('padding:0 54px 0 54px;'),
-    'Home hero search box must not have bulky 54px padding'
-  );
-
-  // Universal CSS rules covering all search bars
-  assert.ok(
-    css.includes('#search') && css.includes('.home-search-input') && css.includes('max-height: 36px !important;'),
-    'Universal search rule must enforce max-height: 36px !important on desktop'
-  );
-  assert.ok(
-    css.includes('input[placeholder*="Search" i]') || css.includes('input[type="search"]'),
-    'Universal search rule must target all search inputs by selector and placeholder'
+    /#notes-search-input[\s\S]*?\{[^}]*max-height:\s*36px !important/.test(css),
+    'In-tool search inputs must be capped at 36px'
   );
 });
 

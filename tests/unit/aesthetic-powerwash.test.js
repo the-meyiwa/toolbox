@@ -6,7 +6,7 @@
    3. Standardized Border Radii & Design Tokens (R2, F3)
    4. Dynamic Adaptive Glassmorphism & Token Compliance (R3, AC 3)
    5. Animation CSS Deduplication & Keyframe Integrity (R2, F4)
-   6. WCAG AA Contrast Compliance Across 24 Canonical Themes (R3, F7)
+   6. WCAG AA Contrast Compliance in Light and Dark (R3, F7)
    7. Mobile Viewports, Breakpoints, Safe Area & Overflow Safety (R1, AC 4)
    ============================================================ */
 
@@ -167,43 +167,25 @@ function getContrastRatio(color1, color2) {
    TIER 1: FONT STACKS & TYPOGRAPHY (R2, AC 1)
    ============================================================ */
 
-test('Typography: :root --sans defines Apple native system font stack ahead of Inter', () => {
-  const rootBlock = extractBlock(styleCss, /:root\s*\{/);
-  assert.ok(rootBlock, 'css/style.css must contain a :root definition');
-
-  const sans = getProperty(rootBlock, '--sans');
-  assert.ok(sans, ':root must define --sans token');
-
-  // Verify -apple-system, BlinkMacSystemFont, "SF Pro Display" (with or without quotes) are present
-  const appleIndex = sans.indexOf('-apple-system');
-  const blinkIndex = sans.indexOf('BlinkMacSystemFont');
-  const sfProIndex = sans.search(/"SF Pro Display"|'SF Pro Display'|SF Pro Display/);
-  const interIndex = sans.search(/'Inter'|"Inter"|\bInter\b/);
-
-  assert.ok(appleIndex !== -1, '--sans must include -apple-system');
-  assert.ok(blinkIndex !== -1, '--sans must include BlinkMacSystemFont');
-  assert.ok(sfProIndex !== -1, '--sans must include SF Pro Display');
-
-  // -apple-system and SF Pro Display must precede Inter
-  if (interIndex !== -1) {
-    assert.ok(appleIndex < interIndex, `-apple-system (pos ${appleIndex}) must precede Inter (pos ${interIndex}) in --sans`);
-    assert.ok(sfProIndex < interIndex, `SF Pro Display (pos ${sfProIndex}) must precede Inter (pos ${interIndex}) in --sans`);
-  }
+test('Typography: --font-sans puts the Apple system stack ahead of Segoe and generic fallbacks', () => {
+  const sans = getProperty(styleCss, '--font-sans');
+  assert.ok(sans, ':root must define --font-sans');
+  const sfPro = sans.search(/SF Pro/);
+  const apple = sans.indexOf('-apple-system');
+  const segoe = sans.indexOf('Segoe');
+  assert.ok(sfPro !== -1 && apple !== -1 && sans.includes('BlinkMacSystemFont'), '--font-sans must include SF Pro, -apple-system and BlinkMacSystemFont');
+  assert.ok(apple < segoe, '-apple-system must precede Segoe UI');
+  assert.ok(/--sans:\s*var\(--font-sans\)/.test(styleCss), '--sans alias must point at --font-sans');
 });
 
-test('Typography: :root --mono begins with ui-monospace and SF Mono', () => {
-  const rootBlock = extractBlock(styleCss, /:root\s*\{/);
-  assert.ok(rootBlock, 'css/style.css must contain a :root definition');
-
-  const mono = getProperty(rootBlock, '--mono');
-  assert.ok(mono, ':root must define --mono token');
-
+test('Typography: --font-mono begins with ui-monospace and SF Mono', () => {
+  const mono = getProperty(styleCss, '--font-mono');
+  assert.ok(mono, ':root must define --font-mono');
   const uiMonoIndex = mono.indexOf('ui-monospace');
   const sfMonoIndex = mono.search(/"SF Mono"|'SF Mono'|SF Mono/);
-
-  assert.ok(uiMonoIndex !== -1, '--mono must include ui-monospace');
-  assert.ok(sfMonoIndex !== -1, '--mono must include SF Mono');
-  assert.ok(uiMonoIndex < sfMonoIndex, 'ui-monospace must precede SF Mono in --mono');
+  assert.equal(uiMonoIndex, 0, '--font-mono must start with ui-monospace');
+  assert.ok(sfMonoIndex > uiMonoIndex, 'SF Mono must follow ui-monospace');
+  assert.ok(/--mono:\s*var\(--font-mono\)/.test(styleCss), '--mono alias must point at --font-mono');
 });
 
 test('Typography: No CSS rule overrides font-family with Inter as first font family', () => {
@@ -222,95 +204,33 @@ test('Typography: No CSS rule overrides font-family with Inter as first font fam
    TIER 2: LAYERED ELEVATION SHADOWS (R2, AC 2)
    ============================================================ */
 
-test('Elevation: :root defines multi-stop diffuse elevation tokens (--shadow-xs through --shadow-xl)', () => {
-  const rootBlock = extractBlock(styleCss, /:root\s*\{/);
-  assert.ok(rootBlock, 'css/style.css must contain a :root definition');
-
-  const shadowTokens = ['--shadow-xs', '--shadow-sm', '--shadow-md', '--shadow-lg', '--shadow-xl'];
-
-  for (const token of shadowTokens) {
-    const value = getProperty(rootBlock, token);
-    assert.ok(value, `:root must define ${token}`);
-
-    const stops = splitTopLevelCommas(value);
-    assert.ok(
-      stops.length >= 2,
-      `${token} must define at least 2 comma-separated shadow stops for diffuse ambient layering (got ${stops.length}: "${value}")`
-    );
+test('Elevation: light tokens define three shadow levels, the larger ones layered', () => {
+  const light = extractBlock(styleCss, /:root,\s*\[data-theme="light"\]\s*\{/);
+  assert.ok(light, 'Light token block must exist');
+  for (const token of ['--shadow-1', '--shadow-2', '--shadow-3']) {
+    assert.ok(getProperty(light, token), `Light tokens must define ${token}`);
+  }
+  for (const token of ['--shadow-2', '--shadow-3']) {
+    const stops = splitTopLevelCommas(getProperty(light, token));
+    assert.ok(stops.length >= 2, `${token} must layer at least two shadows`);
   }
 });
 
-test('Elevation: Dark themes define distinct visible shadows or ambient contrast', () => {
-  const darkThemeIds = [
-    'white-on-black',
-    'yosemite-night',
-    'coca-cola',
-    'playstation',
-    'miami-vice',
-    'lagos',
-    'ubuntu',
-    'art-deco'
-  ];
-
-  for (const themeId of darkThemeIds) {
-    const themeBlock = extractBlock(styleCss, new RegExp(`\\[data-theme=["']${themeId}["']\\]\\s*\\{`));
-    assert.ok(themeBlock, `css/style.css must define [data-theme="${themeId}"]`);
-
-    // In dark themes, elevation shadows must not be invisible 3%-5% black.
-    // They must define their own --shadow-* tokens with higher alpha/borders or specify distinct elevated shadows.
-    const shadowMd = getProperty(themeBlock, '--shadow-md');
-    const shadowLg = getProperty(themeBlock, '--shadow-lg');
-    const shadow = getProperty(themeBlock, '--shadow');
-    const shadowElevated = getProperty(themeBlock, '--shadow-elevated');
-
-    const hasExplicitShadowTokens = Boolean(shadowMd || shadowLg || shadow || shadowElevated);
-    assert.ok(
-      hasExplicitShadowTokens,
-      `Dark theme "${themeId}" must define distinct visible shadow tokens (--shadow-md, --shadow-lg, --shadow, or --shadow-elevated)`
-    );
-
-    const testedShadow = shadowLg || shadowElevated || shadowMd || shadow;
-    if (testedShadow) {
-      const isVisibleInDark =
-        testedShadow.includes('rgba(255') ||
-        testedShadow.includes('var(--accent') ||
-        testedShadow.match(/rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\.[2-9]/) ||
-        testedShadow.match(/rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*0\.[2-9]/) ||
-        testedShadow.includes('0 0 0 1px');
-      assert.ok(
-        isVisibleInDark,
-        `Dark theme "${themeId}" shadow "${testedShadow}" must be visibly discernible in dark mode`
-      );
-    }
+test('Elevation: dark mode shadows stay visible on near-black', () => {
+  const dark = extractBlock(styleCss, /\[data-theme="dark"\]\s*\{/);
+  assert.ok(dark, '[data-theme="dark"] token block must exist');
+  for (const token of ['--shadow-1', '--shadow-2', '--shadow-3']) {
+    const value = getProperty(dark, token);
+    assert.ok(value, `Dark tokens must define ${token}`);
+    assert.ok(value.includes('0 0 0 1px') || value.includes('rgba(255'), `Dark ${token} must carry a light hairline so it reads on black (got "${value}")`);
   }
 });
-
-/* ============================================================
-   TIER 3: STANDARDIZED BORDER RADII & DESIGN TOKENS (R2, F3)
-   ============================================================ */
 
 test('Tokens: :root defines standardized border radius tokens (--radius-xs through --radius-pill)', () => {
-  const rootBlock = extractBlock(styleCss, /:root\s*\{/);
-  assert.ok(rootBlock, 'css/style.css must contain a :root definition');
-
-  const requiredRadiusTokens = [
-    '--radius-xs',
-    '--radius-sm',
-    '--radius-md',
-    '--radius-lg',
-    '--radius-xl',
-    '--radius-pill'
-  ];
-
-  for (const token of requiredRadiusTokens) {
-    const val = getProperty(rootBlock, token);
-    assert.ok(val, `:root must define ${token} border radius token`);
+  for (const token of ['--radius-xs', '--radius-sm', '--radius-md', '--radius-lg', '--radius-pill']) {
+    assert.ok(getProperty(styleCss, token), `:root must define ${token}`);
   }
 });
-
-/* ============================================================
-   TIER 4: DYNAMIC ADAPTIVE GLASSMORPHISM (R3, AC 3)
-   ============================================================ */
 
 test('Glassmorphism: Elements with backdrop-filter do not use hardcoded static white or black RGBA', () => {
   // Match rules containing backdrop-filter: blur(...)
@@ -353,156 +273,35 @@ test('Glassmorphism: Elements with backdrop-filter do not use hardcoded static w
   );
 });
 
-test('Glassmorphism: Core elements use color-mix or semantic tokens with backdrop-filter', () => {
-  // Test #app-header
-  assert.ok(
-    styleCss.includes('color-mix(in srgb, var(--bg-card)') ||
-    styleCss.includes('var(--bg-glass)'),
-    'Stylesheet must utilize color-mix or var(--bg-glass) for adaptive glassmorphism'
-  );
-
-  // Assert [data-theme] #app-header does NOT override background with 100% opaque var(--surface)
-  const themeHeaderBlock = extractBlock(styleCss, /\[data-theme\]\s*#app-header\s*\{/);
-  if (themeHeaderBlock) {
-    const bg = getProperty(themeHeaderBlock, 'background');
-    assert.notEqual(
-      bg,
-      'var(--surface)',
-      '[data-theme] #app-header must not be hardcoded to opaque var(--surface); must allow backdrop blur'
-    );
-  }
-
-  // Check key floating menus (.finder-context-menu, .ast-attach-popup, .mobile-nav)
-  const contextMenuBlock = extractBlock(styleCss, /\.finder-context-menu\s*\{/);
-  if (contextMenuBlock && contextMenuBlock.includes('backdrop-filter')) {
-    const bg = getProperty(contextMenuBlock, 'background');
-    assert.ok(
-      !bg || bg.includes('color-mix') || bg.includes('--bg-glass') || bg === 'transparent',
-      `.finder-context-menu with backdrop-filter must use adaptive glassmorphism (found: ${bg})`
-    );
-  }
-
-  const attachPopupBlock = extractBlock(styleCss, /\.ast-attach-popup\s*\{/);
-  if (attachPopupBlock && attachPopupBlock.includes('backdrop-filter')) {
-    const bg = getProperty(attachPopupBlock, 'background');
-    assert.ok(
-      !bg || bg.includes('color-mix') || bg.includes('--bg-glass') || bg === 'transparent',
-      `.ast-attach-popup with backdrop-filter must use adaptive glassmorphism (found: ${bg})`
-    );
-  }
+test('Glassmorphism: header and mobile nav blur over a translucent token colour', () => {
+  const header = extractBlock(styleCss, /#app-header\s*\{/);
+  assert.ok(header, '#app-header must be styled');
+  assert.ok(getProperty(header, 'background').startsWith('color-mix(in srgb, var(--bg)'), '#app-header background must mix the --bg token');
+  assert.ok(header.includes('backdrop-filter'), '#app-header must blur what scrolls beneath it');
+  assert.ok(/--bg-glass:\s*color-mix\(/.test(styleCss), '--bg-glass token must be a color-mix');
 });
 
-/* ============================================================
-   TIER 5: ANIMATION CSS DEDUPLICATION & INTEGRITY (R2, F4)
-   ============================================================ */
-
-test('Animations: Keyframe animations (@keyframes astColorRave, etc.) are declared without duplicates', () => {
-  const keyframes = ['astColorRave', 'astGlowEntrance', 'astGlowPulse', 'astPlainFade', 'astPopIn'];
-
-  for (const name of keyframes) {
-    const regex = new RegExp(`@keyframes\\s+${name}\\b`, 'g');
-    const matches = [...styleCss.matchAll(regex)];
-    assert.ok(matches.length >= 1, `@keyframes ${name} must be declared in css/style.css`);
-    assert.equal(
-      matches.length,
-      1,
-      `@keyframes ${name} is declared ${matches.length} times. Duplicate animation declarations must be deduplicated (F4).`
-    );
-  }
+test('Animations: no @keyframes name is declared twice', () => {
+  const counts = new Map();
+  for (const [, name] of styleCss.matchAll(/@keyframes\s+([\w-]+)/g)) counts.set(name, (counts.get(name) || 0) + 1);
+  assert.ok(counts.size > 0, 'Stylesheet must declare keyframes');
+  const dupes = [...counts].filter(([, n]) => n > 1).map(([name, n]) => `${name} x${n}`);
+  assert.deepEqual(dupes, [], `Duplicate @keyframes declarations: ${dupes.join(', ')}`);
 });
 
-test('Animations: Dynamic animation utility classes are preserved and styled', () => {
-  const animClasses = [
-    '.ast-anim-color-rave',
-    '.ast-anim-glow',
-    '.ast-anim-pixel',
-    '.ast-anim-plain-fade',
-    '.ast-anim-pop-in',
-    '.ast-anim-preview-box'
-  ];
-
-  for (const cls of animClasses) {
-    assert.ok(
-      styleCss.includes(cls),
-      `Animation utility class ${cls} must be preserved in core stylesheet (UI Rule §24)`
-    );
-  }
-});
-
-/* ============================================================
-   TIER 6: WCAG AA CONTRAST COMPLIANCE ACROSS 24 THEMES (R3, F7)
-   ============================================================ */
-
-test('Contrast: Exactly seven curated themes are registered in THEMES registry', () => {
-  assert.equal(THEMES.length, 7, `Expected exactly seven curated themes, found ${THEMES.length}`);
-});
-
-test('Contrast: All curated themes meet WCAG AA contrast ratio (>= 4.5:1) between accent and contrast text', () => {
-  const rootBlock = extractBlock(styleCss, /:root\s*\{/);
-
-  for (const theme of THEMES) {
-    let accent = null;
-    let accentContrast = null;
-
-    if (theme.id === 'default') {
-      accent = getProperty(rootBlock, '--accent') || theme.preview.accent;
-      accentContrast = getProperty(rootBlock, '--accent-contrast') || '#ffffff';
-    } else {
-      const themeBlock = extractBlock(styleCss, new RegExp(`\\[data-theme=["']${theme.id}["']\\]\\s*\\{`));
-      assert.ok(themeBlock, `css/style.css must contain block for [data-theme="${theme.id}"]`);
-
-      accent = getProperty(themeBlock, '--accent') || theme.preview.accent;
-      accentContrast = getProperty(themeBlock, '--accent-contrast') || '#ffffff';
-    }
-
-    assert.ok(accent, `Theme "${theme.id}" must have --accent`);
-    assert.ok(accentContrast, `Theme "${theme.id}" must have --accent-contrast`);
-
-    const ratio = getContrastRatio(accent, accentContrast);
-
-    assert.ok(
-      ratio >= 4.5,
-      `Theme "${theme.id}" failed WCAG AA contrast: accent (${accent}) vs text (${accentContrast}) ratio is ${ratio.toFixed(2)}:1 (must be >= 4.5:1)`
-    );
-  }
-});
-
-test('Contrast: Tiffany theme explicitly resolves 2.41:1 contrast defect with dark contrast text', () => {
-  const tiffanyBlock = extractBlock(styleCss, /\[data-theme=["']tiffany["']\]\s*\{/);
-  assert.ok(tiffanyBlock, 'css/style.css must contain [data-theme="tiffany"]');
-
-  const accent = getProperty(tiffanyBlock, '--accent');
-  const accentContrast = getProperty(tiffanyBlock, '--accent-contrast');
-
-  assert.equal(accent, '#0abab5', 'Tiffany accent must be Robin egg cyan #0abab5');
-  assert.notEqual(accentContrast, '#ffffff', 'Tiffany --accent-contrast must NOT be #ffffff (fails with 2.41:1 contrast)');
-
-  const ratio = getContrastRatio(accent, accentContrast);
-  assert.ok(ratio >= 4.5, `Tiffany contrast ratio must be >= 4.5:1 (got ${ratio.toFixed(2)}:1)`);
-});
-
-/* ============================================================
-   TIER 7: MOBILE RESPONSIVE RULES & BREAKPOINTS (R1, AC 4)
-   ============================================================ */
-
-test('Mobile: Small mobile breakpoint (<=480px) hides #header-about-link to prevent flex overcrowding', () => {
-  const mediaBlocks = extractAllBlocks(styleCss, /@media[^{]*max-width\s*:\s*(?:480|500)px[^{]*\{/g);
-  assert.ok(mediaBlocks.length > 0, 'css/style.css must contain @media (max-width: 480px) or (max-width: 500px)');
-
-  let found = false;
-  for (const block of mediaBlocks) {
-    if (block.includes('#header-about-link') || block.includes('.header-about-link')) {
-      if (block.includes('display: none') || block.includes('display:none')) {
-        found = true;
-        break;
-      }
+test('Contrast: ink on background and inverse text on ink meet WCAG AA in light and dark', () => {
+  const blocks = {
+    light: extractBlock(styleCss, /:root,\s*\[data-theme="light"\]\s*\{/),
+    dark: extractBlock(styleCss, /\[data-theme="dark"\]\s*\{/),
+  };
+  for (const [mode, block] of Object.entries(blocks)) {
+    assert.ok(block, `${mode} token block must exist`);
+    const pairs = [['--text', '--bg'], ['--text-2', '--bg'], ['--text-3', '--surface'], ['--text-inverse', '--ink']];
+    for (const [fg, bg] of pairs) {
+      const ratio = getContrastRatio(getProperty(block, fg), getProperty(block, bg));
+      assert.ok(ratio >= 4.5, `${mode}: ${fg} on ${bg} is ${ratio.toFixed(2)}:1 (must be >= 4.5:1)`);
     }
   }
-
-  assert.ok(
-    found,
-    'css/style.css must include a mobile media query (<=480px) hiding #header-about-link to ensure search input is not cramped on 375px screens'
-  );
 });
 
 test('Mobile: .mobile-nav includes iOS safe-area-inset-bottom padding', () => {

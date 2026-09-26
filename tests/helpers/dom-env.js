@@ -182,6 +182,176 @@ class MockClassList {
   }
 }
 
+/* ---------- Minimal CSS selector engine ----------
+   Supports selector lists, descendant/child/sibling combinators, and
+   compound selectors made of tag, #id, .class, [attr], [attr=v], [attr^=v],
+   [attr$=v], [attr*=v], [attr~=v], and the pseudo-classes :not(), :scope,
+   :first-child, :last-child, :only-child, :nth-child(n), :checked,
+   :disabled, :enabled. Unknown pseudo-classes match nothing. */
+const selectorCache = new Map();
+
+function splitTopLevel(str, sep) {
+  const out = [];
+  let depth = 0, quote = null, cur = '';
+  for (const ch of str) {
+    if (quote) { if (ch === quote) quote = null; cur += ch; continue; }
+    if (ch === '"' || ch === "'") { quote = ch; cur += ch; continue; }
+    if (ch === '(' || ch === '[') depth++;
+    else if (ch === ')' || ch === ']') depth--;
+    if (ch === sep && depth === 0) { out.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  out.push(cur);
+  return out.map(s => s.trim()).filter(Boolean);
+}
+
+function parseCompound(src) {
+  const c = { tag: null, id: null, classes: [], attrs: [], pseudos: [] };
+  let i = 0;
+  const ident = () => {
+    const m = /^(?:\\.|[\w\- -￿])+/.exec(src.slice(i));
+    if (!m) return '';
+    i += m[0].length;
+    return m[0].replace(/\\(.)/g, '$1');
+  };
+  if (src[i] === '*') i++;
+  else if (/[\w-]/.test(src[i] || '')) c.tag = ident().toLowerCase();
+  while (i < src.length) {
+    const ch = src[i];
+    if (ch === '#') { i++; c.id = ident(); }
+    else if (ch === '.') { i++; c.classes.push(ident()); }
+    else if (ch === '[') {
+      let depth = 0, j = i, quote = null;
+      for (; j < src.length; j++) {
+        const cj = src[j];
+        if (quote) { if (cj === quote) quote = null; continue; }
+        if (cj === '"' || cj === "'") quote = cj;
+        else if (cj === '[') depth++;
+        else if (cj === ']' && --depth === 0) break;
+      }
+      const inner = src.slice(i + 1, j);
+      i = j + 1;
+      const m = /^\s*([^\s~|^$*=]+)\s*(?:([~|^$*]?=)\s*("([^"]*)"|'([^']*)'|([^\s\]]*))\s*(i)?)?\s*$/.exec(inner);
+      if (m) c.attrs.push({ name: m[1], op: m[2] || null, value: m[4] ?? m[5] ?? m[6] ?? '', ci: !!m[7] });
+    } else if (ch === ':') {
+      i++;
+      if (src[i] === ':') { i++; ident(); c.pseudos.push({ name: '__never' }); continue; }
+      const name = ident().toLowerCase();
+      let arg = null;
+      if (src[i] === '(') {
+        let depth = 0, j = i;
+        for (; j < src.length; j++) {
+          if (src[j] === '(') depth++;
+          else if (src[j] === ')' && --depth === 0) break;
+        }
+        arg = src.slice(i + 1, j);
+        i = j + 1;
+      }
+      c.pseudos.push({ name, arg, list: name === 'not' || name === 'is' || name === 'where' ? parseSelectorList(arg) : null });
+    } else {
+      break;
+    }
+  }
+  return c;
+}
+
+function parseSelectorList(sel) {
+  let parsed = selectorCache.get(sel);
+  if (parsed) return parsed;
+  parsed = splitTopLevel(sel, ',').map(complex => {
+    // Tokenise into [compound, combinator, compound, ...]
+    const parts = [];
+    let cur = '', depth = 0, quote = null;
+    const flush = () => { if (cur.trim()) parts.push({ compound: parseCompound(cur.trim()) }); cur = ''; };
+    for (let k = 0; k < complex.length; k++) {
+      const ch = complex[k];
+      if (quote) { if (ch === quote) quote = null; cur += ch; continue; }
+      if (ch === '"' || ch === "'") { quote = ch; cur += ch; continue; }
+      if (ch === '(' || ch === '[') depth++;
+      else if (ch === ')' || ch === ']') depth--;
+      if (depth === 0 && (ch === '>' || ch === '+' || ch === '~' || /\s/.test(ch))) {
+        flush();
+        if (!/\s/.test(ch)) parts.push({ comb: ch });
+        else if (parts.length && !parts[parts.length - 1].comb) parts.push({ comb: ' ' });
+        continue;
+      }
+      cur += ch;
+    }
+    flush();
+    // Collapse "a ' ' '>' b" into "a > b".
+    const seq = [];
+    for (const p of parts) {
+      if (p.comb && seq.length && seq[seq.length - 1].comb) { if (p.comb !== ' ') seq[seq.length - 1] = p; continue; }
+      seq.push(p);
+    }
+    while (seq.length && seq[seq.length - 1].comb) seq.pop();
+    // Store as compounds with the combinator that links each to the one before it.
+    const out = [];
+    let comb = null;
+    for (const p of seq) {
+      if (p.comb) { comb = p.comb; continue; }
+      out.push({ ...p.compound, comb });
+      comb = null;
+    }
+    return out;
+  });
+  selectorCache.set(sel, parsed);
+  return parsed;
+}
+
+function elementIndex(el) {
+  const sibs = el.parentElement ? el.parentElement.children : [el];
+  return sibs.indexOf(el);
+}
+
+function matchCompound(el, c) {
+  if (!(el instanceof MockElement)) return false;
+  if (c.tag && el.tagName.toLowerCase() !== c.tag) return false;
+  if (c.id !== null && el.id !== c.id) return false;
+  for (const cls of c.classes) if (!el.classList.contains(cls)) return false;
+  for (const a of c.attrs) {
+    if (!el.hasAttribute(a.name)) return false;
+    if (!a.op) continue;
+    let v = String(el.getAttribute(a.name) ?? '');
+    let want = a.value;
+    if (a.ci) { v = v.toLowerCase(); want = want.toLowerCase(); }
+    if (a.op === '=' && v !== want) return false;
+    if (a.op === '^=' && !(want && v.startsWith(want))) return false;
+    if (a.op === '$=' && !(want && v.endsWith(want))) return false;
+    if (a.op === '*=' && !(want && v.includes(want))) return false;
+    if (a.op === '~=' && !v.split(/\s+/).includes(want)) return false;
+    if (a.op === '|=' && !(v === want || v.startsWith(want + '-'))) return false;
+  }
+  for (const p of c.pseudos) {
+    switch (p.name) {
+      case 'not': if (p.list.some(cx => matchComplex(el, cx, cx.length - 1))) return false; break;
+      case 'is': case 'where': if (!p.list.some(cx => matchComplex(el, cx, cx.length - 1))) return false; break;
+      case 'scope': break;
+      case 'first-child': if (elementIndex(el) !== 0) return false; break;
+      case 'last-child': { const sibs = el.parentElement ? el.parentElement.children : [el]; if (sibs[sibs.length - 1] !== el) return false; break; }
+      case 'only-child': if (el.parentElement && el.parentElement.children.length !== 1) return false; break;
+      case 'nth-child': if (String(elementIndex(el) + 1) !== String(p.arg).trim()) return false; break;
+      case 'checked': if (!el.checked && !el.selected) return false; break;
+      case 'disabled': if (!(el.disabled || el._disabled || el.hasAttribute('disabled'))) return false; break;
+      case 'enabled': if (el.disabled || el._disabled || el.hasAttribute('disabled')) return false; break;
+      default: return false;
+    }
+  }
+  return true;
+}
+
+function matchComplex(el, complex, idx) {
+  const c = complex[idx];
+  if (!matchCompound(el, c)) return false;
+  if (idx === 0) return true;
+  switch (c.comb) {
+    case '>': return !!el.parentElement && matchComplex(el.parentElement, complex, idx - 1);
+    case '+': { const prev = el.previousElementSibling; return !!prev && matchComplex(prev, complex, idx - 1); }
+    case '~': { let prev = el.previousElementSibling; while (prev) { if (matchComplex(prev, complex, idx - 1)) return true; prev = prev.previousElementSibling; } return false; }
+    default: { let anc = el.parentElement; while (anc) { if (matchComplex(anc, complex, idx - 1)) return true; anc = anc.parentElement; } return false; }
+  }
+}
+
 class MockNode {
   constructor() {
     this.childNodes = [];
@@ -194,6 +364,9 @@ class MockNode {
   get firstChild() { return this.childNodes[0] || null; }
   get lastChild() { return this.childNodes[this.childNodes.length - 1] || null; }
   get children() { return this.childNodes.filter(n => n instanceof MockElement); }
+  get firstElementChild() { return this.children[0] || null; }
+  get lastElementChild() { const c = this.children; return c[c.length - 1] || null; }
+  get childElementCount() { return this.children.length; }
 
   get nextElementSibling() {
     if (!this.parentElement) return null;
@@ -599,30 +772,7 @@ class MockElement extends MockNode {
 
   _matchesSelector(sel) {
     if (!sel) return false;
-    sel = sel.trim();
-    if (sel.includes(',')) {
-      return sel.split(',').some(part => this._matchesSelector(part.trim()));
-    }
-    if (sel === '*') return true;
-    const tagMatch = sel.match(/^([a-zA-Z0-9\-]+)/);
-    if (tagMatch) {
-      if (this.tagName.toLowerCase() !== tagMatch[1].toLowerCase()) return false;
-      sel = sel.slice(tagMatch[1].length).trim();
-      if (!sel) return true;
-    }
-    if (sel.startsWith('#')) return this.id === sel.slice(1);
-    if (sel.startsWith('.')) {
-      const parts = sel.split('.').filter(Boolean);
-      return parts.every(c => this.classList.contains(c));
-    }
-    if (sel.startsWith('[') && sel.endsWith(']')) {
-      const inner = sel.slice(1, -1);
-      const [attr, val] = inner.split('=');
-      if (!val) return this.hasAttribute(attr);
-      const cleanVal = val.replace(/^["']|["']$/g, '');
-      return this.getAttribute(attr) === cleanVal;
-    }
-    return this.tagName.toLowerCase() === sel.toLowerCase();
+    return parseSelectorList(sel).some(complex => matchComplex(this, complex, complex.length - 1));
   }
 
   _renderHTML() {

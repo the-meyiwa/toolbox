@@ -56,14 +56,14 @@ test('Messaging Features: notifications open conversations and support direct re
 
 test('Mail Tool: Theme tokens in CSS have zero dark slate or inverted text bugs', () => {
   const mailJs = fs.readFileSync(path.resolve('js/tools/mail.js'), 'utf8');
+  const mailCss = fs.readFileSync(path.resolve('css/mail.css'), 'utf8');
 
-  // Ensure no hardcoded dark slate background
-  assert.ok(!mailJs.includes('#0f172a'), 'Must not contain hardcoded dark slate #0f172a');
-  assert.ok(!mailJs.includes('background-color: var(--surface));'), 'Must not contain double parenthesis syntax error');
-
-  // Ensure unread sender text is adaptive var(--text) rather than hardcoded pure white
-  assert.ok(!mailJs.includes('.mail-item.unread .mail-item-sender {\n          font-weight: 700;\n          color: #ffffff;\n        }'), 'Must not hardcode pure white text on unread mail items');
-  assert.ok(mailJs.includes('color: var(--text);'), 'Must use canonical var(--text) token');
+  for (const [name, src] of [['mail.js', mailJs], ['mail.css', mailCss]]) {
+    assert.ok(!src.includes('#0f172a'), `${name} must not contain hardcoded dark slate #0f172a`);
+    assert.ok(!src.includes('var(--surface));'), `${name} must not contain double parenthesis syntax error`);
+  }
+  assert.ok(!/\.mail-item\.unread[^{]*\{[^}]*color:\s*#fff(?:fff)?\b/i.test(mailCss), 'Must not hardcode pure white text on unread mail items');
+  assert.ok(mailCss.includes('color: var(--text)'), 'Mail styles must use the canonical var(--text) token');
 });
 
 test('App: Related tools are removed from general tools and preserved on file upload tools', () => {

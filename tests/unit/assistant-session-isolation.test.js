@@ -100,11 +100,13 @@ test('Assistant Error Handling: prevents [object Object] across structured error
 
   assistantTool.render(container, { tool: { id: 'assistant', name: 'Assistant' } });
 
-  // Simulate an error history item with object error payload
-  const messagesEl = container.querySelector('#ast-messages');
-  assert.ok(messagesEl, 'Messages container must exist');
+  const thread = container.querySelector('.ast-thread');
+  assert.ok(thread, 'Message thread must exist');
 
-  // Verify that any error text rendered in DOM is not "[object Object]"
+  // Nothing the assistant renders on mount may stringify an object.
+  assert.ok(!container.textContent.includes('[object Object]'), 'DOM must never contain [object Object]');
+
+  // Error bodies appended to the thread keep their readable message.
   const errDiv = document.createElement('div');
   errDiv.className = 'ast-msg ast-msg-assistant';
   errDiv.innerHTML = `
@@ -112,12 +114,13 @@ test('Assistant Error Handling: prevents [object Object] across structured error
       <div style="color:#ef4444;">Assistant authentication check failed.</div>
     </div>
   `;
-  messagesEl.appendChild(errDiv);
+  thread.appendChild(errDiv);
 
-  const text = messagesEl.querySelector('.ast-text-body').textContent;
+  const text = thread.querySelector('.ast-text-body').textContent;
   assert.ok(!text.includes('[object Object]'), 'DOM must never contain [object Object]');
   assert.ok(text.includes('Assistant authentication check failed.'), 'Proper error message must be shown');
 
+  assistantTool.destroy();
   container.remove();
 });
 
