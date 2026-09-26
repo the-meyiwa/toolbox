@@ -3899,7 +3899,7 @@ export class CalendarCardRenderer extends ResultRenderer {
             <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-subtle); padding:8px 12px; border-radius:8px; border:1px solid var(--border-subtle);">
               <div style="display:flex; align-items:center; gap:10px;">
                 <span style="font-size:0.75rem; font-family:var(--mono); color:var(--text-muted);">${e.date}</span>
-                <span style="font-weight:600; font-size:0.86rem; color:var(--text);">${String(e.title || '')}</span>
+                <span style="font-weight:600; font-size:0.86rem; color:var(--text);">${escapeHtml(String(e.title || ''))}</span>
                 <span style="font-size:0.75rem; color:var(--text-secondary);">${e.isAllDay ? '(All day)' : `${e.startTime} – ${e.endTime}`}</span>
               </div>
               <span style="font-size:0.68rem; font-weight:700; text-transform:uppercase; padding:2px 7px; border-radius:999px; background:rgba(59,130,246,0.12); color:var(--text);">${e.category || 'event'}</span>
@@ -3910,6 +3910,7 @@ export class CalendarCardRenderer extends ResultRenderer {
     } else {
       const evt = data.event || result.event || {};
       const isCancelled = (data.action || result.action) === 'cancelled';
+      const isUpdated = (data.action || result.action) === 'updated';
       card.innerHTML = `
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
           <div style="display:flex; align-items:center; gap:8px;">
@@ -3917,12 +3918,12 @@ export class CalendarCardRenderer extends ResultRenderer {
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </div>
             <div>
-              <div style="font-weight:700; font-size:0.95rem; color:var(--text);">${String(evt.title || data.message || result.message || 'Calendar Event')}</div>
-              <div style="font-size:0.75rem; color:var(--text-secondary);">${isCancelled ? 'Event cancelled from schedule' : 'Event confirmed & scheduled'}</div>
+              <div style="font-weight:700; font-size:0.95rem; color:var(--text);">${escapeHtml(String(evt.title || data.message || result.message || 'Calendar Event'))}</div>
+              <div style="font-size:0.75rem; color:var(--text-secondary);">${isCancelled ? 'Event cancelled from schedule' : isUpdated ? 'Event updated' : 'Event confirmed & scheduled'}</div>
             </div>
           </div>
           <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; padding:3px 9px; border-radius:999px; background:${isCancelled ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)'}; color:${isCancelled ? 'var(--danger)' : 'var(--success)'};">
-            ${isCancelled ? 'Cancelled' : 'Scheduled'}
+            ${isCancelled ? 'Cancelled' : isUpdated ? 'Updated' : 'Scheduled'}
           </span>
         </div>
         ${!isCancelled ? `
@@ -3930,9 +3931,9 @@ export class CalendarCardRenderer extends ResultRenderer {
             <div><span style="color:var(--text-muted); display:block; font-size:0.7rem; text-transform:uppercase;">Date</span><strong style="color:var(--text);">${evt.date || 'Today'}</strong></div>
             <div><span style="color:var(--text-muted); display:block; font-size:0.7rem; text-transform:uppercase;">Time</span><strong style="color:var(--text);">${evt.isAllDay ? 'All-day' : `${evt.startTime} – ${evt.endTime}`}</strong></div>
             <div><span style="color:var(--text-muted); display:block; font-size:0.7rem; text-transform:uppercase;">Category</span><strong style="color:var(--text); text-transform:capitalize;">${evt.category || 'Personal'}</strong></div>
-            ${evt.location ? `<div><span style="color:var(--text-muted); display:block; font-size:0.7rem; text-transform:uppercase;">Location</span><strong style="color:var(--text);">${String(evt.location)}</strong></div>` : ''}
+            ${evt.location ? `<div><span style="color:var(--text-muted); display:block; font-size:0.7rem; text-transform:uppercase;">Location</span><strong style="color:var(--text);">${escapeHtml(String(evt.location))}</strong></div>` : ''}
           </div>
-          ${evt.description ? `<div style="font-size:0.78rem; color:var(--text-secondary); margin-top:10px; padding:0 2px;">${String(evt.description)}</div>` : ''}
+          ${evt.description ? `<div style="font-size:0.78rem; color:var(--text-secondary); margin-top:10px; padding:0 2px;">${escapeHtml(String(evt.description))}</div>` : ''}
         ` : ''}
         <div style="display:flex; justify-content:flex-end; margin-top:12px;">
           <a href="#calendar" class="btn btn-secondary btn-sm" style="font-size:0.76rem; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">

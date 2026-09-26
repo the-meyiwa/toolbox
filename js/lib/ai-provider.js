@@ -19,6 +19,9 @@ import { ASSISTANT_TOOL_DECLARATIONS, executeAssistantTool } from './assistant-t
 import { EXTRA_TOOL_DECLARATIONS, EXTRA_TOOL_NAMES, executeExtraTool } from './assistant/extra-tools.js';
 import { KNOWLEDGE_TOOL_DECLARATIONS, KNOWLEDGE_TOOL_NAMES, executeKnowledgeTool, entityHints } from './assistant/knowledge-tools.js';
 import { CORE_TOOLS, TOOL_GROUPS, LOAD_TOOLS_DECLARATION, selectGroups, groupOfTool } from './assistant/tool-groups.js';
+import { packDeclarations, packVersion, isPackTool, executePackTool } from './assistant/tool-packs.js';
+import './assistant/life-tools.js';
+import { gatherLifeContext, contextBlock, rememberPlace, INTRO_PATTERN, INTRO_VOICE } from './assistant/life-context.js';
 import { QuotaManager } from './quota-manager.js';
 import { tbConfirm } from './dialog.js';
 import { getCurrentUser, refreshUserSession } from './supabase.js';
@@ -106,7 +109,7 @@ export function setPreferredProvider(id) {
 // Short facts the person asked the Assistant to keep (company name, usual rates, preferences…).
 // Stored on this device; included in every conversation; editable with the remember/forget tool.
 export const STORAGE_AI_MEMORY = 'toolbox_assistant_memory_v1';
-const MEMORY_LIMIT = 60;
+const MEMORY_LIMIT = 100;
 
 export function getAssistantMemory() {
   try { const v = JSON.parse(localStorage.getItem(STORAGE_AI_MEMORY) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; }
@@ -119,7 +122,7 @@ export function clearAssistantMemory() { saveAssistantMemory([]); }
 
 const MEMORY_DECLARATION = {
   name: 'update_memory',
-  description: 'Keeps or removes a lasting fact about the person or their business so future conversations can use it (e.g. company name, usual VAT treatment, preferred currency, clients, rates, how they like answers). Use when they ask you to remember or forget something, or state a lasting preference. Never store passwords, card or account numbers, or ID numbers.',
+  description: 'Keeps or removes a lasting fact about the person, their life or their business so future conversations can use it (e.g. "My car is a 2014 Toyota Corolla", "Allergic to penicillin", "Lives in Ketu, Lagos", "Has two kids in primary school", company name, usual rates, how they like answers). Use it when they ask you to remember or forget something, and when they mention a lasting personal fact in passing. Write each fact as a short sentence that makes sense on its own. Never store passwords, card or account numbers, or ID numbers.',
   parameters: {
     type: 'object',
     properties: {
@@ -225,15 +228,19 @@ function buildToolList(declarations) {
 }
 
 let defaultTools = null;
+let defaultToolsVersion = -1;
 /** Core tools + the capability pack. Per-tool navigation declarations are replaced by find/run/open_toolbox_tool. */
 function defaultToolList() {
-  if (defaultTools) return defaultTools;
+  if (defaultTools && defaultToolsVersion === packVersion()) return defaultTools;
   // ASSISTANT_TOOL_DECLARATIONS mixes hand-written tools (Gemini-style 'OBJECT' schemas) with one
   // generated "open this tool" declaration per registry tool (lowercase 'object'). Several share a
   // name (unit_converter, weather_forecast, regex_tester…), so keep the hand-written one by shape,
   // not by name; the generated ones are covered by find/run/open_toolbox_tool.
   const handWritten = ASSISTANT_TOOL_DECLARATIONS.filter(d => d?.name && String(d.parameters?.type || '').toUpperCase() === 'OBJECT' && d.parameters?.type !== 'object' && !EXTRA_TOOL_NAMES.has(d.name) && !KNOWLEDGE_TOOL_NAMES.has(d.name));
-  defaultTools = buildToolList([LOAD_TOOLS_DECLARATION, MEMORY_DECLARATION, ...KNOWLEDGE_TOOL_DECLARATIONS, ...EXTRA_TOOL_DECLARATIONS, ...handWritten]).slice(0, 128);
+  // Tool packs come first so a pack's tool wins over an older one with the same name.
+  // Each request only carries the core set plus the loaded groups (capped in toolsForStep).
+  defaultTools = buildToolList([LOAD_TOOLS_DECLARATION, MEMORY_DECLARATION, ...packDeclarations(), ...KNOWLEDGE_TOOL_DECLARATIONS, ...EXTRA_TOOL_DECLARATIONS, ...handWritten]);
+  defaultToolsVersion = packVersion();
   return defaultTools;
 }
 
@@ -730,7 +737,8 @@ How you work
 - Web: browse_web / browser_navigate / browser_scrape / browser_crawl read live pages; search_images finds pictures. Cite the pages you used.
 - Visuals: draw_illustration draws SVG illustrations and diagrams; csv_analyze_and_chart and the chart tools make charts; render_map shows places.
 - Container buildings: design_container designs and previews container/portacabin offices, shops, cafés, homes, site offices and stacked or joined structures from a brief or exact specs (3D preview, floor plan, NGN estimate); revise the same design with revise + changes when the person asks for edits.
-- Notes and files: create_note, update_note, list_notes, get_note; create_file, save_file and the artifact tools keep work in Files.
+- Notes and files: create_note, update_note, list_notes, get_note; search_files finds their documents by name or contents and read_document reads one (Word and PDF too) so you can summarise it or pull out dates; create_file, save_file, generate_document and the artifact tools keep work in Files.
+- Their day: calendar_get_events, calendar_add_event, calendar_update_event (move or edit) and calendar_cancel_event run the Calendar; set_reminder puts a reminder in their notification bell, tied to an event ("the day before") or at a time.
 - Scripture: the Bible and Quran tools read verses and passages; quote them exactly as returned.
 - Building apps: write complete working code and put it in the Code Playground (or run it with the code tools), then report what you built.
 
@@ -751,7 +759,7 @@ const LEGACY_RULES = `- Currency: default to Nigerian Naira (₦, NGN) for price
 - Architecture (buildings, container structures, software and system design): architecture_advisor for reference notes, design reviews and sizing rules; say where an engineer or local code must decide.
 - Documents: when the person wants a document, report, letter, spreadsheet or presentation as a file, write the full content and call generate_document once with the right format (docx, xlsx, pptx, and others). Write plain professional prose without emojis or decorative symbols.
 - Web: never guess URLs; pass the question as query unless the person gave a site. Read what the pages say and answer from it with sources; follow links to subpages when the answer is not on the homepage. Never invent prices; mark unknowns as N/A. For "what does X look like", use search_images.
-- Notes, files, calendar: create_note, save_file/create_file, calendar_add_event/calendar_get_events as asked.
+- Notes, files, calendar: act on their things instead of explaining how. "Move X to Friday" means calendar_update_event; "remind me" means set_reminder (with the event when there is one); "find/summarise the lease I uploaded" means search_files, then read_document, then answer from what it says.
 - Files the person has not attached: ask them to attach or drop the file.
 - Formatting: real symbols (→ ° ± × ≤ ≠ π) or LaTeX, never HTML entities or escape codes. Structured Markdown, no emojis, a polished professional tone. Complete, runnable code in fenced blocks.
 - The current date and time are in the Current environment section below.`;
@@ -802,8 +810,13 @@ export async function streamChatCompletion({
     try { entities = await entityHints(lastUserText); } catch { entities = null; }
   }
   const hintBlock = entities?.hint ? `\n${entities.hint}\n` : '';
+  // A greeting or "what can you do" gets a snapshot of their things, so the answer is about them.
+  let lifeBlock = '';
+  if (scope === 'global' && typeof lastUserText === 'string' && INTRO_PATTERN.test(lastUserText)) {
+    try { lifeBlock = `\n${contextBlock(await gatherLifeContext())}\n${INTRO_VOICE}\n`; } catch { lifeBlock = ''; }
+  }
   const system = scope === 'global'
-    ? `${CAPABILITIES}\nHouse rules\n${LEGACY_RULES}\n${environment}${memoryBlock}${guidance}${hintBlock}${systemInstruction ? `\n${systemInstruction}` : ''}`
+    ? `${CAPABILITIES}\nHouse rules\n${LEGACY_RULES}\n${environment}${memoryBlock}${lifeBlock}${guidance}${hintBlock}${systemInstruction ? `\n${systemInstruction}` : ''}`
     : `${systemInstruction || ''}\n${environment}`;
 
   // Tools: a caller-supplied list as is; otherwise the core set plus the groups this conversation needs.
@@ -815,7 +828,8 @@ export async function streamChatCompletion({
     if (!activeGroups) return fullList;
     const names = new Set(CORE_TOOLS);
     for (const g of activeGroups) for (const t of TOOL_GROUPS[g]?.tools || []) names.add(t);
-    return [...names].map(n => byName.get(n)).filter(Boolean);
+    // Providers accept at most 128 tools per request.
+    return [...names].map(n => byName.get(n)).filter(Boolean).slice(0, 128);
   };
   // Read attached PDFs (last two user messages) before building the request.
   const recentFiles = [currentFile, ...history.filter(m => m.role === 'user').slice(-2).map(m => m.fileData)].filter(Boolean);
@@ -864,6 +878,7 @@ export async function streamChatCompletion({
     let result;
     try {
       if (toolExecutor) result = await toolExecutor(name, args);
+      if (result === undefined && isPackTool(name)) result = await executePackTool(name, args, { currentFile, taskState });
       if (result === undefined && KNOWLEDGE_TOOL_NAMES.has(name)) result = await executeKnowledgeTool(name, args);
       if (result === undefined && EXTRA_TOOL_NAMES.has(name)) result = await executeExtraTool(name, args);
       if (result === undefined) result = await executeAssistantTool(name, args, { currentFile, taskState });
@@ -872,6 +887,7 @@ export async function streamChatCompletion({
       result = { status: 'error', success: false, error: err?.message || 'The tool failed.', message: `That did not work: ${err?.message || 'unknown error'}` };
     }
     if (!result.toolName) result.toolName = name;
+    if ((name === 'get_current_location' || name === 'request_user_location') && result.status !== 'error') rememberPlace(result.area || taskState?.userLocation?.area);
     cache.set(key, result);
     executed.push(result);
     onToolCallResult(name, result, id);

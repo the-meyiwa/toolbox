@@ -133,13 +133,31 @@ const GROUP_OF = new Map();
 for (const [id, g] of Object.entries(TOOL_GROUPS)) for (const t of g.tools) if (!GROUP_OF.has(t)) GROUP_OF.set(t, id);
 export const groupOfTool = (name) => GROUP_OF.get(name) || null;
 
+/** Adds a group, or extends an existing one with more tools (used by tool packs). */
+export function addToolGroup(id, { label, tools = [], match } = {}) {
+  const g = TOOL_GROUPS[id];
+  if (g) {
+    for (const t of tools) if (!g.tools.includes(t)) g.tools.push(t);
+    if (label) g.label = label;
+    if (match) g.match = match;
+  } else {
+    TOOL_GROUPS[id] = { label: label || id, tools: [...tools], match: match || /(?!)/ };
+  }
+  for (const t of tools) if (!GROUP_OF.has(t)) GROUP_OF.set(t, id);
+}
+
+// Built on read, so groups that tool packs add are listed too.
 export const LOAD_TOOLS_DECLARATION = {
   name: 'load_tools',
-  description: `Loads more tools for this conversation. Only a core set is loaded by default; call this with the groups you need before using a tool you do not have. Groups: ${Object.entries(TOOL_GROUPS).map(([id, g]) => `${id} (${g.label})`).join('; ')}.`,
-  parameters: {
-    type: 'object',
-    properties: { groups: { type: 'array', items: { type: 'string', enum: Object.keys(TOOL_GROUPS) }, description: 'Group names to load.' } },
-    required: ['groups'],
+  get description() {
+    return `Loads more tools for this conversation. Only a core set is loaded by default; call this with the groups you need before using a tool you do not have. Groups: ${Object.entries(TOOL_GROUPS).map(([id, g]) => `${id} (${g.label})`).join('; ')}.`;
+  },
+  get parameters() {
+    return {
+      type: 'object',
+      properties: { groups: { type: 'array', items: { type: 'string', enum: Object.keys(TOOL_GROUPS) }, description: 'Group names to load.' } },
+      required: ['groups'],
+    };
   },
 };
 

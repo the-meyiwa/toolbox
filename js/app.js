@@ -33,6 +33,7 @@ import { listJoinedSpaces } from './lib/space-engine.js';
 import { openContextMenu } from './lib/context-menu.js';
 import { initMessageNotifications } from './lib/message-notifications.js';
 import { installSessionKeeper } from './lib/session-keeper.js';
+import { startReminderClock } from './lib/reminders.js';
 
 installSessionKeeper();
 
@@ -1129,6 +1130,7 @@ installSettingsUI();
 initSupporterProfile();
 installHeaderMenu();
 initMessageNotifications();
+startReminderClock();
   initWorkspace(openTool);
   initScrollNarrative();
   initHomeScrollNarrative();
