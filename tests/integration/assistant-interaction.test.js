@@ -1,198 +1,51 @@
 /* ============================================================
    Assistant Real DOM Interaction Test
-   Validates full user interaction lifecycle:
-   - Tool render in DOM
-   - Typing input into textarea
-   - Clicking Send button
-   - Streaming tokens into DOM bubble
-   - Verifying assistant response message
+   Assistant runs on Toolbox's servers and needs an account, so a
+   signed-out visitor must get the full chat shell with a sign-in
+   prompt and a composer that cannot send.
    ============================================================ */
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import assistantTool from '../../js/tools/assistant.js';
+import { setupDOMEnvironment } from '../helpers/dom-env.js';
 
-// Setup browser DOM globals for Node test runner
-if (typeof globalThis.localStorage === 'undefined') {
-  const store = new Map();
-  globalThis.localStorage = {
-    getItem: (k) => store.get(k) || null,
-    setItem: (k, v) => store.set(k, String(v)),
-    removeItem: (k) => store.delete(k),
-    clear: () => store.clear()
-  };
-}
+setupDOMEnvironment();
+const { default: assistantTool } = await import('../../js/tools/assistant.js');
 
-if (typeof globalThis.sessionStorage === 'undefined') {
-  const sStore = new Map();
-  globalThis.sessionStorage = {
-    getItem: (k) => sStore.get(k) || null,
-    setItem: (k, v) => sStore.set(k, String(v)),
-    removeItem: (k) => sStore.delete(k),
-    clear: () => sStore.clear()
-  };
-}
-
-if (typeof globalThis.window === 'undefined') {
-  globalThis.window = {
-    dispatchEvent: () => true,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    CustomEvent: class CustomEvent { constructor(type, detail) { this.type = type; this.detail = detail; } }
-  };
-}
-
-// Minimal DOM Element Mock for live user interaction testing
-class MockElement {
-  constructor(tag = 'div') {
-    this.tagName = tag.toUpperCase();
-    this.id = '';
-    this.className = '';
-    this.style = {};
-    this.children = [];
-    this._innerHTML = '';
-    this.value = '';
-    this.disabled = false;
-    this.listeners = new Map();
-    this.scrollTop = 0;
-    this.scrollHeight = 100;
-  }
-
-  get innerHTML() {
-    return this._innerHTML;
-  }
-
-  set innerHTML(val) {
-    this._innerHTML = String(val);
-    this.children = [];
-    const tagRegex = /<([a-z0-9-]+)([^>]*)>/gi;
-    let match;
-    while ((match = tagRegex.exec(this._innerHTML)) !== null) {
-      const attrs = match[2];
-      const idMatch = attrs.match(/id=["']([^"']+)["']/i);
-      const classMatch = attrs.match(/class=["']([^"']+)["']/i);
-      if (idMatch || classMatch) {
-        const el = new MockElement(match[1]);
-        if (idMatch) el.id = idMatch[1];
-        if (classMatch) el.className = classMatch[1];
-        this.children.push(el);
-      }
-    }
-  }
-
-  get textContent() {
-    return this._innerHTML.replace(/<[^>]*>/g, '');
-  }
-
-  set textContent(val) {
-    this._innerHTML = String(val);
-  }
-
-  appendChild(child) {
-    this.children.push(child);
-    return child;
-  }
-
-  querySelector(sel) {
-    if (sel.startsWith('#')) {
-      const id = sel.slice(1);
-      if (this.id === id) return this;
-      for (const c of this.children) {
-        const found = c.querySelector?.(sel);
-        if (found) return found;
-      }
-    }
-    if (sel.startsWith('.')) {
-      const cls = sel.slice(1);
-      if (this.className.includes(cls)) return this;
-      for (const c of this.children) {
-        const found = c.querySelector?.(sel);
-        if (found) return found;
-      }
-    }
-    return null;
-  }
-
-  querySelectorAll(sel) {
-    const res = [];
-    if (sel.startsWith('.')) {
-      const cls = sel.slice(1);
-      if (this.className.includes(cls)) res.push(this);
-    }
-    for (const c of this.children) {
-      if (c.querySelectorAll) res.push(...c.querySelectorAll(sel));
-    }
-    return res;
-  }
-
-  addEventListener(evt, fn) {
-    if (!this.listeners.has(evt)) this.listeners.set(evt, []);
-    this.listeners.get(evt).push(fn);
-  }
-
-  dispatchEvent(event) {
-    const handlers = this.listeners.get(event.type || event) || [];
-    for (const h of handlers) h(event);
-  }
-}
-
-if (typeof globalThis.document === 'undefined') {
-  globalThis.document = {
-    createElement: (tag) => new MockElement(tag),
-    body: new MockElement('body'),
-    addEventListener: () => {}
-  };
-}
-
-test('Assistant Interaction: renders interface and receives AI responses on prompt send', async () => {
-  const container = new MockElement('div');
+function mount() {
+  const container = document.createElement('div');
   container.id = 'viewport-content';
-
+  document.body.appendChild(container);
   assistantTool.render(container, { tool: { id: 'assistant', name: 'Assistant' } });
+  return container;
+}
 
-  const userInput = container.querySelector('#ast-user-input');
-  const sendBtn = container.querySelector('#ast-send-btn');
-  const messagesEl = container.querySelector('#ast-messages');
+test('Assistant Interaction: renders the chat shell with thread, composer and send button', (t) => {
+  const container = mount();
+  t.after(() => { assistantTool.destroy(); container.remove(); });
 
-  assert.ok(userInput, 'Textarea input element exists');
-  assert.ok(sendBtn, 'Send button exists');
-  assert.ok(messagesEl, 'Messages stream container exists');
-
-  // Send prompt: "Hello, what can you do?"
-  userInput.value = 'Hello, what can you do?';
-  
-  // Trigger Send click
-  const clickHandlers = sendBtn.listeners.get('click') || [];
-  assert.ok(clickHandlers.length > 0, 'Send button has click listener attached');
-  
-  await clickHandlers[0]();
-
-  // Wait for streaming tokens to complete
-  await new Promise(r => setTimeout(r, 600));
-
-  assert.ok(messagesEl.children.length >= 2, 'Expected at least 2 message bubbles (user and assistant)');
-  const assistantMsg = messagesEl.children[messagesEl.children.length - 1];
-  assert.ok(assistantMsg, 'Assistant message element created');
-  const textBody = assistantMsg.querySelector('.ast-text-body');
-  assert.ok(textBody, 'Assistant text body rendered');
-  assert.ok(textBody.innerHTML.length > 0, 'Assistant returned response text');
+  assert.ok(container.querySelector('.ast .ast-side .ast-convs'), 'Chat history sidebar exists');
+  assert.ok(container.querySelector('.ast-scroll .ast-thread[role="log"]'), 'Message thread exists and is a live log');
+  assert.ok(container.querySelector('form.ast-composer textarea.ast-input'), 'Composer textarea exists');
+  assert.ok(container.querySelector('.ast-composer .ast-send'), 'Send button exists');
 });
 
-test('Assistant Interaction: solves calculation prompt and renders math result', async () => {
-  const container = new MockElement('div');
-  assistantTool.render(container, { tool: { id: 'assistant', name: 'Assistant' } });
+test('Assistant Interaction: signed-out visitors see a sign-in prompt and cannot send', async (t) => {
+  const container = mount();
+  t.after(() => { assistantTool.destroy(); container.remove(); });
 
-  const userInput = container.querySelector('#ast-user-input');
-  const sendBtn = container.querySelector('#ast-send-btn');
-  const messagesEl = container.querySelector('#ast-messages');
+  // The thread fills in once the conversation store has loaded.
+  let signIn = null;
+  for (let i = 0; i < 50 && !signIn; i++) {
+    await new Promise((r) => setTimeout(r, 10));
+    signIn = container.querySelector('.ast-thread .ast-signin');
+  }
+  assert.ok(signIn, 'Sign-in prompt is shown in the thread');
+  assert.ok(signIn.querySelector('[data-act="sign-in"]'), 'Sign-in prompt has a sign-in button');
+  assert.match(signIn.textContent, /Sign in to use Assistant/);
 
-  userInput.value = 'calculate 15 * 80 + 35';
-  const clickHandlers = sendBtn.listeners.get('click') || [];
-  await clickHandlers[0]();
-
-  await new Promise(r => setTimeout(r, 400));
-
-  const assistantMsg = messagesEl.children[messagesEl.children.length - 1];
-  const textBody = assistantMsg.querySelector('.ast-text-body');
-  assert.ok(textBody.innerHTML.length > 0, 'Expected response rendered in DOM');
+  const input = container.querySelector('.ast-input');
+  const send = container.querySelector('.ast-send');
+  assert.equal(input.disabled, true, 'Composer is disabled while signed out');
+  assert.equal(send.disabled, true, 'Send is disabled while signed out');
 });

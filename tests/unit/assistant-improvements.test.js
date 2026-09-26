@@ -3,8 +3,6 @@ import assert from 'node:assert/strict';
 import { fs, ToolboxFilesystem } from '../../js/lib/filesystem.js';
 import { executeAssistantTool, ASSISTANT_TOOL_DECLARATIONS } from '../../js/lib/assistant-tools.js';
 import { FileDeletionConfirmationRenderer, selectRenderer } from '../../js/lib/assistant-result-renderer.js';
-import { updateSettings, resetSettings } from '../../js/lib/settings.js';
-import { getAssistantAnimationClass } from '../../js/tools/assistant.js';
 
 test('Assistant File Deletion: request_file_deletion requires explicit user confirmation', async () => {
   // Setup files in filesystem
@@ -72,8 +70,3 @@ test('Assistant File Deletion: executes multiple deletions when confirmed', asyn
   assert.equal(statB, null, 'fileB.txt must be deleted');
 });
 
-test('Assistant Response Text Animations: remain disabled for a stable reading surface', () => {
-  resetSettings();
-  updateSettings({ assistantResponseAnimation: true, assistantAnimationStyle: 'color rave' });
-  assert.equal(getAssistantAnimationClass(), '');
-});

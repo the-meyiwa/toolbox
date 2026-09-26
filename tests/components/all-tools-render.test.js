@@ -21,7 +21,20 @@ const mockAnalytics = {
   viewed: () => {},
 };
 
+// The DOM mock has no Worker, which lets tools with a main-thread fallback use it
+// elsewhere. Here we only check that each tool mounts, so give tools that spawn a
+// worker on render (Chess) an inert one that never replies.
+class InertWorker {
+  postMessage() {}
+  terminate() {}
+  addEventListener() {}
+  removeEventListener() {}
+}
+
 test('All Tools: every tool in registry has a valid module and clean lifecycle', { timeout: 60000 }, async (t) => {
+  const hadWorker = 'Worker' in globalThis;
+  if (!hadWorker) globalThis.Worker = InertWorker;
+  t.after(() => { if (!hadWorker) delete globalThis.Worker; });
   for (const tool of TOOLS) {
     await t.test(`Tool [${tool.id}] ("${tool.name}")`, async () => {
       // 1. Import module

@@ -138,7 +138,19 @@ test('Assistant Tool save_file: saves directly to ToolboxFilesystem and verifies
   assert.ok(stat.size > 0);
 });
 
-test('Assistant Tool browse_web: respects explicit domain containerbrick.com without Wikipedia diversion', async () => {
+test('Assistant Tool browse_web: respects explicit domain containerbrick.com without Wikipedia diversion', async (t) => {
+  // Serve a canned page instead of the live site so the test is offline and deterministic.
+  const originalFetch = globalThis.fetch;
+  t.after(() => { globalThis.fetch = originalFetch; });
+  const requested = [];
+  globalThis.fetch = async (url) => {
+    requested.push(String(url));
+    return new Response('<html><head><title>ContainerBrick</title></head><body><h1>Container homes</h1><p>Build with shipping containers.</p></body></html>', {
+      status: 200,
+      headers: { 'Content-Type': 'text/html' }
+    });
+  };
+
   const result = await executeAssistantTool('browse_web', {
     url: 'containerbrick.com'
   });
@@ -148,6 +160,7 @@ test('Assistant Tool browse_web: respects explicit domain containerbrick.com wit
   // Must preserve containerbrick.com in target URL, never wikipedia
   assert.ok(result.url.includes('containerbrick.com'), `Expected containerbrick.com in URL, got: ${result.url}`);
   assert.ok(!result.url.includes('wikipedia.org'), 'Must not divert to wikipedia.org when explicit domain is given');
+  assert.ok(requested.length > 0 && requested.every((u) => !u.includes('wikipedia.org')), 'Must never request wikipedia.org');
 });
 
 test('Assistant IDE Agent: create, write, preview, and package project workflow', async () => {

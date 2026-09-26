@@ -13,8 +13,9 @@ test('Notifications: index.html has notification button and badge', () => {
 
 test('Notifications: css/style.css defines notification button and badge styles', () => {
   const css = readStylesheet();
-  assert.ok(css.includes('.header-notif-btn'), 'css/style.css must define .header-notif-btn');
-  assert.ok(css.includes('.header-notif-badge'), 'css/style.css must define .header-notif-badge');
+  // The bell reuses the circular header button; only the badge needs its own rules.
+  assert.ok(/\.header-avatar-btn\s*\{/.test(css), 'css/style.css must style .header-avatar-btn, which the bell uses');
+  assert.ok(/\.header-notif-badge\s*\{[^}]*position:\s*absolute/.test(css), '.header-notif-badge must be positioned over the bell');
 });
 
 test('Notifications: NotificationEngine full lifecycle in node environment', async () => {

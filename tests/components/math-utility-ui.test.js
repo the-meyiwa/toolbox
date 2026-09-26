@@ -56,9 +56,11 @@ test('Math Utility UI: Comprehensive Component & Interaction Suite', async (t) =
   });
 
   // Test 1: DOM Elements Rendered
-  await t.test('1. Structure: tabs, controls bar, and card grid render correctly', () => {
-    const tabs = container.querySelectorAll('.math-tab-btn');
-    assert.equal(tabs.length, 4, 'Should render 4 navigation tabs');
+  await t.test('1. Structure: mode tabs, reference tabs, controls bar, and card grid render correctly', () => {
+    const modes = container.querySelectorAll('.mx-mode');
+    assert.equal(modes.length, 9, 'Should render 9 workbench modes');
+    assert.equal(container.querySelectorAll('.mx-subtab').length, 3, 'Reference should have 3 sections');
+    assert.ok(container.querySelector('#mx-input'), 'Command input exists');
 
     const controlsBar = container.querySelector('.math-controls-bar');
     assert.ok(controlsBar, '.math-controls-bar exists');
@@ -170,44 +172,25 @@ test('Math Utility UI: Comprehensive Component & Interaction Suite', async (t) =
     assert.equal(match, null, `Emoji detected in Math Utility HTML: ${match?.[0]}`);
   });
 
-  // Test 7: Solver & Computation Lab
-  await t.test('7. Solver Tab: executes deterministic quadratic equation solving with verified residual', () => {
-    const tabs = container.querySelectorAll('.math-tab-btn');
-    const solverTabBtn = Array.from(tabs).find(b => b.dataset.tab === 'solver');
-    assert.ok(solverTabBtn, 'Solver tab button exists');
-    solverTabBtn.click();
+  // Test 7: Workbench command line
+  await t.test('7. Workbench: solves a quadratic and shows a verified result', () => {
+    const input = container.querySelector('#mx-input');
+    const form = container.querySelector('.mx-bar');
+    input.value = 'solve x^2-5x+6=0';
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
-    const paneSolver = container.querySelector('#pane-solver');
-    assert.equal(paneSolver.style.display, 'flex', 'Solver pane is active');
-
-    const opSelect = container.querySelector('#math-solver-op');
-    opSelect.value = 'solve_quadratic';
-    opSelect.dispatchEvent(new Event('change', { bubbles: true }));
-
-    // Input coefficients for x^2 - 5x + 6 = 0
-    const aInput = container.querySelector('#solver-a');
-    const bInput = container.querySelector('#solver-b');
-    const cInput = container.querySelector('#solver-c');
-    assert.ok(aInput && bInput && cInput, 'Quadratic inputs exist');
-
-    aInput.value = '1';
-    bInput.value = '-5';
-    cInput.value = '6';
-
-    const execBtn = container.querySelector('#math-solver-exec-btn');
-    execBtn.click();
-
-    const output = container.querySelector('#math-solver-result-container');
-    assert.ok(output.textContent.includes('Roots'), 'Output displays roots');
-    assert.ok(output.textContent.includes('2') && output.textContent.includes('3'), 'Roots 2 and 3 found');
-    assert.ok(output.textContent.includes('Residual') || output.textContent.includes('Verification'), 'Output displays verification residual');
+    const card = container.querySelector('.mx-feed .mx-result');
+    assert.ok(card, 'A result card is added to the feed');
+    assert.ok(!card.classList.contains('mx-error'), `Command must evaluate: ${card.textContent}`);
+    const html = card.innerHTML;
+    assert.ok(/x\s*=\s*2|\b2\b/.test(html) && /\b3\b/.test(html), 'Roots 2 and 3 found');
+    assert.ok(card.querySelector('.mx-verify.ok'), 'Result carries a passing verification line');
   });
 
   // Test 8: Collatz & Sequences
   await t.test('8. Collatz Tab: calculates sequence for 12 with unproven conjecture status', () => {
-    const tabs = container.querySelectorAll('.math-tab-btn');
-    const collatzTabBtn = Array.from(tabs).find(b => b.dataset.tab === 'collatz');
-    assert.ok(collatzTabBtn, 'Collatz tab button exists');
+    const collatzTabBtn = container.querySelector('.mx-subtab[data-ref="collatz"]');
+    assert.ok(collatzTabBtn, 'Collatz reference tab exists');
     collatzTabBtn.click();
 
     const paneCollatz = container.querySelector('#pane-collatz');
