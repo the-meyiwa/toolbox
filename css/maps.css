@@ -1,0 +1,395 @@
+/* ==========================================================================
+   Maps — the Maps app (js/tools/interactive-map.js), the map cards in the
+   Assistant (js/lib/maps/map-card.js) and the shared markers
+   (js/lib/maps/map-view.js). Soft Monochrome: the map itself is the only
+   colour; the route is drawn in ink.
+     .mp    app window        data-panel  browse | place | directions
+     .mpc   chat card         data-busy   true | false
+     .mpv-  markers
+   ========================================================================== */
+
+/* ---------- markers ---------- */
+
+.mpv-marker { font: 700 11px/1 var(--font-sans); color: var(--text-inverse); }
+.mpv-shape { display: grid; place-items: center; box-sizing: border-box; }
+.mpv-marker--place .mpv-shape,
+.mpv-marker--end .mpv-shape {
+  width: 26px;
+  height: 26px;
+  margin-bottom: 4px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: var(--ink);
+  border: 2px solid var(--surface);
+  box-shadow: var(--shadow-2);
+}
+.mpv-marker--end .mpv-shape { width: 24px; height: 24px; border-width: 3px; }
+.mpv-shape > span { transform: rotate(45deg); }
+.mpv-marker--start .mpv-shape {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 4px solid var(--ink);
+  box-shadow: var(--shadow-1);
+}
+.mpv-marker--here .mpv-shape {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #2563eb;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.2);
+}
+
+/* ---------- chat card ---------- */
+
+.mpc {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  overflow: hidden;
+  color: var(--text);
+  font: 400 13px/1.45 var(--font-sans);
+}
+.mpc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+}
+.mpc-titles { display: flex; flex-direction: column; min-width: 0; }
+.mpc-title { font-size: 14px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mpc-sub, .mpc-dim { color: var(--text-3); font-size: 12px; }
+.mpc-open {
+  flex-shrink: 0;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font: 600 12px/1 var(--font-sans);
+  cursor: pointer;
+}
+.mpc-open:hover { background: var(--surface-2); }
+.mpc-map {
+  position: relative;
+  height: 260px;
+  background: var(--surface-2);
+  border-block: 1px solid var(--line);
+}
+.mpc-map.is-failed { display: grid; place-items: center; padding: 16px; color: var(--text-3); text-align: center; }
+.mpc-steps { padding: 8px 14px; border-bottom: 1px solid var(--line); }
+.mpc-steps summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+.mpc-steps ol, .mpc-places { margin: 0; padding: 0; list-style: none; }
+.mpc-steps li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+  cursor: pointer;
+}
+.mpc-places li { padding: 9px 14px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.mpc-places li:hover, .mpc-steps li:hover { background: var(--tint); }
+.mpc-row { display: flex; align-items: center; gap: 8px; }
+.mpc-row strong { flex: 1; min-width: 0; font-weight: 600; }
+.mpc-rank {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--text-inverse);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.mpc-info { margin: 2px 0 0 28px; color: var(--text-2); font-size: 12px; }
+.mpc-foot { padding: 6px 14px; color: var(--text-3); font-size: 11px; }
+
+/* ---------- app window ---------- */
+
+.mp {
+  position: relative;
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  flex: 1 1 0;
+  min-height: 560px;
+  height: calc(100dvh - var(--header-h) - 150px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+  color: var(--text);
+  font: 400 13px/1.45 var(--font-sans);
+  isolation: isolate;
+}
+body.in-tool.tool-fit-screen .mp { height: auto; }
+.mp svg { width: 16px; height: 16px; flex-shrink: 0; }
+.mp[data-busy="true"] .mp-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--ink), transparent);
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  animation: mpBusy 1.1s linear infinite;
+  z-index: 3;
+}
+@keyframes mpBusy { from { background-position: -40% 0; } to { background-position: 140% 0; } }
+
+.mp-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+}
+.mp-panel > section { display: flex; flex-direction: column; gap: 12px; padding: 14px; }
+.mp-panel > section[hidden] { display: none; }
+
+.mp-search { position: relative; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-pill); background: var(--surface-2); }
+.mp-search:focus-within { border-color: var(--focus); background: var(--surface); }
+.mp-search > svg { color: var(--text-3); }
+.mp-search input, .mp-end input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  outline: 0;
+  appearance: none;
+  text-align: left;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+.mp kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  color: var(--text-3);
+  font: 500 11px/1 var(--font-mono);
+}
+.mp-search:focus-within kbd { display: none; }
+
+.mp-suggest {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--overlay);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-3);
+}
+.mp-suggest li { display: flex; gap: 10px; align-items: flex-start; padding: 8px; border-radius: var(--radius-xs); cursor: pointer; }
+.mp-suggest li > svg { margin-top: 2px; color: var(--text-3); }
+.mp-suggest li span { display: flex; flex-direction: column; min-width: 0; }
+.mp-suggest li small { color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mp-suggest li:hover, .mp-suggest li.is-active { background: var(--tint); }
+
+.mp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font: 600 13px/1 var(--font-sans);
+  cursor: pointer;
+}
+.mp-btn:hover { background: var(--surface-2); }
+.mp-btn--ink { background: var(--ink); border-color: var(--ink); color: var(--text-inverse); }
+.mp-btn--ink:hover { background: var(--ink-hover); }
+.mp-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.mp-icon:hover { background: var(--tint); color: var(--text); }
+.mp-link { border: 0; background: none; padding: 0; color: var(--text); font: inherit; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+
+.mp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.mp-chip {
+  height: 28px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-2);
+  font: 500 12px/1 var(--font-sans);
+  cursor: pointer;
+}
+.mp-chip:hover { border-color: var(--line-strong); color: var(--text); }
+
+.mp-list h3, .mp-dir-body h4 { margin: 4px 0 6px; font-size: 12px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .04em; }
+.mp-list ol, .mp-segs, .mp-marks, .mp-steps ol { margin: 0; padding: 0; list-style: none; }
+.mp-list li button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 6px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.mp-list li button:hover { background: var(--tint); }
+.mp-rank {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--text-inverse);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.mp-li-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.mp-li-main small { color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mp-dim { color: var(--text-3); font-size: 12px; white-space: nowrap; }
+.mp-empty { color: var(--text-3); margin: 8px 0; }
+
+.mp-place-head { display: flex; gap: 6px; align-items: flex-start; }
+.mp-place-head h2 { margin: 3px 0 0; font-size: 18px; font-weight: 650; line-height: 1.25; }
+.mp-place-head p { margin: 2px 0 0; }
+.mp-addr { margin: 0; color: var(--text-2); }
+.mp-facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; }
+.mp-facts dt { color: var(--text-3); }
+.mp-facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.mp-facts a { color: var(--text); }
+.mp-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.mp-dir-head { display: flex; align-items: center; gap: 6px; }
+.mp-seg { display: flex; flex: 1; padding: 3px; gap: 2px; border-radius: var(--radius-pill); background: var(--surface-2); }
+.mp-seg button {
+  flex: 1;
+  height: 28px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--text-2);
+  font: 600 12px/1 var(--font-sans);
+  cursor: pointer;
+}
+.mp-seg button[aria-checked="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-1); }
+.mp-ends { position: relative; display: flex; flex-direction: column; gap: 6px; padding-right: 38px; }
+.mp-end { position: relative; display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface-2); }
+.mp-end:focus-within { border-color: var(--focus); background: var(--surface); }
+.mp-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.mp-dot--start { border: 3px solid var(--ink); }
+.mp-dot--end { background: var(--ink); }
+.mp-swap { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
+
+.mp-sum { display: flex; align-items: baseline; gap: 10px; }
+.mp-sum strong { font-size: 22px; font-weight: 700; }
+.mp-sum span { color: var(--text-2); }
+.mp-note { margin: 0; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text-2); }
+.mp-dir-body { display: flex; flex-direction: column; gap: 10px; }
+.mp-segs li { display: flex; flex-direction: column; padding: 8px 0 8px 14px; border-left: 2px solid var(--ink); margin-left: 4px; }
+.mp-segs li + li { border-top: 1px dashed var(--line); }
+.mp-segs small { color: var(--text-2); }
+.mp-marks li { padding: 4px 0; }
+.mp-steps summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+.mp-steps li button {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 4px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.mp-steps li button:hover { background: var(--tint); }
+
+.mp-stage { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+/* MapLibre makes its container position: relative, so the map fills by flex, not inset. */
+.mp-map { flex: 1 1 auto; min-height: 0; background: var(--surface-2); }
+.mp-fail { display: grid; place-items: center; height: 100%; padding: 24px; color: var(--text-3); text-align: center; }
+.mp-fab {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-2);
+  cursor: pointer;
+}
+.mp-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 4;
+  max-width: min(90%, 420px);
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-3);
+}
+
+/* MapLibre controls in the monochrome palette */
+.mp .maplibregl-ctrl-group, .mpc .maplibregl-ctrl-group { background: var(--surface); border-radius: var(--radius-sm); box-shadow: var(--shadow-2); }
+[data-theme="dark"] .maplibregl-ctrl-group button .maplibregl-ctrl-icon { filter: invert(1); }
+[data-theme="dark"] .maplibregl-ctrl-attrib { background: rgba(20, 20, 20, 0.7); color: var(--text-2); }
+[data-theme="dark"] .maplibregl-ctrl-attrib a { color: var(--text-2); }
+
+@media (max-width: 760px) {
+  .mp {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(260px, 45%) minmax(0, 1fr);
+    height: calc(100dvh - var(--header-h) - 110px);
+  }
+  .mp-stage { grid-row: 1; }
+  .mp-panel { grid-row: 2; border-right: 0; border-top: 1px solid var(--line); }
+  .mpc-map { height: 220px; }
+}

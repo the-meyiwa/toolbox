@@ -11,7 +11,8 @@ import { handleSupporterRequest } from './server-supporters.js';
 import { handleDeviceRequest } from './server-device-specs.js';
 import { handleAssistantGateway } from './server-assistant.js';
 import { handleMail } from './server-mail.js';
-import { isBlockedHost, parseWebPage, haversineDistanceKm } from './js/lib/web-scraper-engine.js';
+import { handleMaps, searchNearby, searchPlaces } from './server-maps.js';
+import { isBlockedHost, parseWebPage } from './js/lib/web-scraper-engine.js';
 import {
   getWorkspaceDir,
   listWorkspaceFiles,
@@ -548,6 +549,7 @@ export async function handleApiRequest(request, response) {
 
   // --- Toolbox Mail Client API (server-mail.js) ---
   if (url.pathname.startsWith('/api/mail/')) return handleMail(request, response, url);
+  if (url.pathname.startsWith('/api/maps/')) return handleMaps(request, response, url);
 
   // --- Assistant Binary Proxy ---
   if (url.pathname === '/api/assistant/browser/fetch-binary' && request.method === 'GET') {
@@ -696,8 +698,8 @@ export async function handleApiRequest(request, response) {
     if (url.pathname === '/api/assistant/search' && (request.method === 'GET' || request.method === 'POST')) {
       const q = (url.searchParams.get('q') || url.searchParams.get('query') || '').trim();
       const searchType = (url.searchParams.get('type') || 'places').toLowerCase();
-      const lat = parseFloat(url.searchParams.get('lat') || '6.5700');
-      const lng = parseFloat(url.searchParams.get('lng') || '3.3900');
+      const lat = parseFloat(url.searchParams.get('lat'));
+      const lng = parseFloat(url.searchParams.get('lng'));
 
       if (!q) {
         response.writeHead(400, { 'Content-Type': 'application/json' });
@@ -836,173 +838,25 @@ export async function handleApiRequest(request, response) {
         return true;
       }
 
-      // Places / Location Search
-      const lowerQ = q.toLowerCase();
-      const isDriving = lowerQ.includes('driving school') ||
-        lowerQ.includes('driving academy') ||
-        lowerQ.includes('lasdri') ||
-        lowerQ.includes('vio') ||
-        (lowerQ.includes('driv') && (lowerQ.includes('school') || lowerQ.includes('lesson') || lowerQ.includes('license') || lowerQ.includes('test')));
-
-      let places = [];
-
-      if (isDriving) {
-        places = [
-          {
-            name: 'A1 Driving School (Ogudu / Kosofe)',
-            address: '14 Ogudu Road, Ojota / Kosofe LGA, Lagos',
-            lat: 6.5812,
-            lng: 3.3885,
-            category: 'Driving School',
-            certified: 'FRSC & LASDRI Certified Grade A',
-            phone: '+234 803 300 1245'
-          },
-          {
-            name: 'AA Driving Academy (Ikosi-Ketu / Kosofe)',
-            address: '28 Ikosi Road, Ketu / Kosofe, Lagos',
-            lat: 6.5985,
-            lng: 3.3820,
-            category: 'Driving School',
-            certified: 'FRSC Approved Driving School',
-            phone: '+234 802 876 5432'
-          },
-          {
-            name: 'Western Driving School (Ojota / Kosofe)',
-            address: '4 Kudirat Abiola Way, Ojota, Kosofe, Lagos',
-            lat: 6.5875,
-            lng: 3.3762,
-            category: 'Driving School',
-            certified: 'LASDRI & FRSC Accredited',
-            phone: '+234 818 901 2345'
-          }
-        ];
-      } else {
-        // Query Nominatim reverse/search with geographic viewbox prioritization
-        try {
-          const hasCoords = lat && lng && !isNaN(lat) && !isNaN(lng);
-          const viewboxParam = hasCoords
-            ? `&viewbox=${lng - 0.5},${lat + 0.5},${lng + 0.5},${lat - 0.5}&bounded=1`
-            : '';
-
-          let nomUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}${viewboxParam}&limit=20`;
-          const u = new URL(nomUrl);
-          let data = [];
-          if (!isBlockedHost(u.hostname)) {
-            const nomRes = await fetch(nomUrl, { headers: { 'User-Agent': 'ToolboxAssistant/2.0' } });
-            if (nomRes.ok) {
-              data = await nomRes.json();
-            }
-          }
-
-          // If 0 results and query had location suffix (e.g. "Shoprite Kosofe, Lagos"), search the primary entity in bounded viewbox
-          const firstTerm = q.split(/[,–-]|(\s+in\s+)/)[0].trim();
-          if ((!Array.isArray(data) || data.length === 0) && hasCoords && firstTerm && firstTerm.toLowerCase() !== q.toLowerCase()) {
-            const fallbackUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(firstTerm)}${viewboxParam}&limit=20`;
-            const fbU = new URL(fallbackUrl);
-            if (!isBlockedHost(fbU.hostname)) {
-              const fbRes = await fetch(fallbackUrl, { headers: { 'User-Agent': 'ToolboxAssistant/2.0' } });
-              if (fbRes.ok) {
-                data = await fbRes.json();
-              }
-            }
-          }
-
-          if (Array.isArray(data) && data.length > 0) {
-            const isRoadOrAddressLabel = (str) => {
-              if (!str) return true;
-              const s = str.trim().toLowerCase();
-              return /\b(road|rd|street|st|way|avenue|ave|expressway|exp|close|cl|drive|dr|crescent|cres|lane|ln|boulevard|blvd|highway|hwy)\b/i.test(s) &&
-                !/\b(mall|plaza|centre|center|supermarket|mart|shop|store|station|hub|pharmacy|chemist|clinic|hospital|bank|fuel|gas|petrol|oil|eatery|restaurant)\b/i.test(s);
-            };
-
-            const isNonEstablishment = (item) => {
-              const cls = (item.class || '').toLowerCase();
-              const typ = (item.type || '').toLowerCase();
-              if (['highway', 'boundary', 'waterway', 'natural', 'landuse'].includes(cls)) return true;
-              if (cls === 'place' && ['suburb', 'city', 'town', 'village', 'hamlet', 'country', 'state', 'county', 'island', 'locality', 'neighbourhood', 'region'].includes(typ)) return true;
-              // If candidate name itself is purely a road or street without business keywords, it is a road, not a verified establishment
-              const candidateName = (item.name || '').trim();
-              if (candidateName && isRoadOrAddressLabel(candidateName)) return true;
-              // If candidate has no business name and its label is merely a road/street, it is an address point, not a verified establishment
-              if (!candidateName) {
-                const firstPart = (item.display_name || '').split(',')[0].trim();
-                if (isRoadOrAddressLabel(firstPart)) return true;
-              }
-              return false;
-            };
-
-            const formatCandidateName = (item) => {
-              if (item.name && item.name.trim() && item.name.trim().toLowerCase() !== (item.type || '').toLowerCase()) {
-                return item.name.trim();
-              }
-              const firstPart = (item.display_name || '').split(',')[0].trim();
-              if (firstPart && !isRoadOrAddressLabel(firstPart)) {
-                return firstPart;
-              }
-              const typeLabel = item.type ? (item.type.charAt(0).toUpperCase() + item.type.slice(1).replace(/_/g, ' ')) : 'Place';
-              return item.name && item.name.trim() ? item.name.trim() : (firstPart ? `${typeLabel} on ${firstPart}` : typeLabel);
-            };
-
-            const validItems = data.filter(item => !isNonEstablishment(item));
-            const namedItems = validItems.filter(item => Boolean(item.name && item.name.trim() && item.name.trim().toLowerCase() !== (item.type || '').toLowerCase()));
-            const itemsToUse = namedItems.length >= 3 ? namedItems : (validItems.length > 0 ? validItems : data);
-
-            places = itemsToUse.map(item => {
-              const name = formatCandidateName(item);
-              let addr = (item.display_name || '').trim();
-              if (addr.toLowerCase().startsWith(name.toLowerCase() + ',')) {
-                addr = addr.slice(name.length + 1).trim();
-              } else if (item.name && addr.toLowerCase().startsWith(item.name.toLowerCase() + ',')) {
-                addr = addr.slice(item.name.length + 1).trim();
-              }
-              return {
-                name,
-                address: addr || item.display_name || '',
-                lat: parseFloat(item.lat),
-                lng: parseFloat(item.lon),
-                category: item.type ? (item.type.charAt(0).toUpperCase() + item.type.slice(1).replace(/_/g, ' ')) : (item.class || 'Place'),
-                osmClass: item.class,
-                osmType: item.type,
-                description: ''
-              };
-            });
-          }
-        } catch (nomErr) {
-          console.warn('[Assistant Search] Nominatim search failed:', nomErr);
-        }
-
-        if (places.length === 0) {
-          const cleanName = q.split(',')[0].trim();
-          places = [
-            {
-              name: cleanName,
-              address: `Location for "${cleanName}" near your coordinates.`,
-              lat: lat + 0.005,
-              lng: lng + 0.004,
-              category: 'Place',
-              description: ''
-            }
-          ];
-        }
+      // Places: live OpenStreetMap search around the given point (see server-maps.js).
+      const near = Number.isFinite(lat) && Number.isFinite(lng) ? [lng, lat] : null;
+      try {
+        const { places, radius } = near
+          ? await searchNearby({ q, near, limit: 20 })
+          : { places: (await searchPlaces(q, { limit: 10 })).map(p => ({ ...p })), radius: null };
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({
+          success: true,
+          query: q,
+          type: 'places',
+          radius,
+          places: places.map(p => ({ ...p, distanceKm: Number.isFinite(p.distanceM) ? Math.round(p.distanceM / 100) / 10 : undefined })),
+          count: places.length,
+        }));
+      } catch (err) {
+        response.writeHead(502, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, query: q, type: 'places', places: [], error: err?.message || 'Place search failed' }));
       }
-
-      // Calculate accurate Haversine distance and sort nearest first
-      places = places.map(p => {
-        const dist = haversineDistanceKm(lat, lng, p.lat, p.lng);
-        return {
-          ...p,
-          distanceKm: dist !== null ? dist : (p.distanceKm || 0)
-        };
-      }).sort((a, b) => (a.distanceKm || 0) - (b.distanceKm || 0));
-
-      response.writeHead(200, { 'Content-Type': 'application/json' });
-      response.end(JSON.stringify({
-        success: true,
-        query: q,
-        type: 'places',
-        places,
-        count: places.length
-      }));
       return true;
     }
 

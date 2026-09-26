@@ -78,9 +78,9 @@ export const TOOL_GROUPS = {
     match: /\b(calendar|schedule|meeting|appointment|remind|reminder|event|tomorrow|next week|on (mon|tues|wednes|thurs|fri|satur|sun)day|agenda)\b/i,
   },
   places: {
-    label: 'Places: maps, nearby places, location, weather',
-    tools: ['render_map', 'search_places_nearby', 'get_current_location', 'weather_forecast'],
-    match: /\b(map|near(est|by)?|where is|directions|route|location|address|restaurant|hotel|pharmacy|hospital|bank|supermarket|station|weather|rain|temperature|forecast|lagos|abuja|lekki|ikeja)\b/i,
+    label: 'Places: maps, directions (car, foot, bike, local transport), nearby places, location, weather',
+    tools: ['get_directions', 'search_places_nearby', 'find_place', 'render_map', 'get_current_location', 'weather_forecast'],
+    match: /\b(maps?|near(est|by)?|where is|directions?|route|how (do|can|would) i (get|go)|get to|go to|drive to|walk to|commute|transport|bus|buses|brt|taxi|cab|keke|danfo|okada|tricycle|train|ferry|location|address|restaurant|hotel|pharmacy|hospital|bank|supermarket|station|gas station|fuel|petrol|atm|weather|rain|temperature|forecast|lagos|abuja|lekki|ikeja)\b/i,
   },
   media: {
     label: 'Audio: play songs and sounds, metronome, tuner',

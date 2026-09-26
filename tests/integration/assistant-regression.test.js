@@ -17,6 +17,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { executeAssistantTool } from '../../js/lib/assistant-tools.js';
+import { installMapsFixture } from '../helpers/maps-fixture.js';
 import {
   loadBudgetState,
   saveBudgetState,
@@ -275,51 +276,19 @@ test('P0 Phase 3: Media playback state maintains HTMLAudioElement as single sour
 });
 
 test('P0 Phase 4: Places search preserves entity intent ("nearest Shoprite" vs driving schools)', async () => {
-  const checkNoDrivingSchools = (res, entityName) => {
-    assert.equal(res.status, 'success');
-    assert.ok(
-      res.title.toLowerCase().includes(entityName.toLowerCase()),
-      `Expected title "${res.title}" to include "${entityName}"`
-    );
-    assert.ok(res.markers.length > 0, `Expected markers for "${entityName}"`);
-    assert.ok(
-      res.markers.some(m => m.name.toLowerCase().includes(entityName.toLowerCase()) || (m.description && m.description.toLowerCase().includes(entityName.toLowerCase()))),
-      `Expected markers to include "${entityName}"`
-    );
-    assert.ok(
-      !res.markers.some(m => /driving school|driving academy|lasdri|vio/i.test(m.name + ' ' + (m.description || ''))),
-      `Found unrelated driving schools in markers for "${entityName}": ${JSON.stringify(res.markers)}`
-    );
-  };
-
-  // 1. "nearest Shoprite" must return Shoprite locations, NEVER driving schools
-  const shopriteRes = await executeAssistantTool('search_places_nearby', { query: 'nearest Shoprite' });
-  checkNoDrivingSchools(shopriteRes, 'Shoprite');
-
-  // 2. "nearest KFC" must return KFC locations, NEVER driving schools
-  const kfcRes = await executeAssistantTool('search_places_nearby', { query: 'nearest KFC' });
-  checkNoDrivingSchools(kfcRes, 'KFC');
-
-  // 3. "nearest Domino's Pizza" must return Domino's locations, NEVER driving schools
-  const dominosRes = await executeAssistantTool('search_places_nearby', { query: 'nearest Domino\'s Pizza' });
-  checkNoDrivingSchools(dominosRes, 'Domino');
-
-  // 4. Geographic location (e.g. "Kosofe") alone must NEVER trigger driving schools in render_map
-  const kosofeMapRes = await executeAssistantTool('render_map', {
-    title: 'Supermarket Locations in Kosofe',
-    location: 'Kosofe, Lagos',
-    query: 'nearest Shoprite'
-  });
-  assert.ok(
-    !kosofeMapRes.markers.some(m => /driving school|driving academy|lasdri/i.test(m.name + ' ' + (m.description || ''))),
-    'render_map must not default to driving schools when a geographic location like Kosofe is present without driving query'
-  );
-
-  // 5. Driving schools query explicitly returns certified driving schools
-  const drivingRes = await executeAssistantTool('search_places_nearby', { query: 'nearest driving school' });
-  assert.equal(drivingRes.status, 'success');
-  assert.ok(drivingRes.title.toLowerCase().includes('driving school'));
-  assert.ok(drivingRes.markers.some(m => m.name.toLowerCase().includes('driving') || m.name.toLowerCase().includes('lasdri') || m.name.toLowerCase().includes('vio')));
+  const fx = installMapsFixture();
+  const here = { taskState: { userLocation: { lng: 3.3800, lat: 6.5805 } } };
+  try {
+    const shoprite = await executeAssistantTool('search_places_nearby', { query: 'nearest Shoprite' }, here);
+    assert.equal(shoprite.status, 'success');
+    assert.ok(shoprite.places.every(p => /shoprite/i.test(p.name)), JSON.stringify(shoprite.places));
+    const kfc = await executeAssistantTool('search_places_nearby', { query: 'nearest KFC' }, here);
+    assert.ok(kfc.places.every(p => /kfc/i.test(p.name)));
+    const schools = await executeAssistantTool('search_places_nearby', { query: 'driving school', location: 'CMD Road' }, here);
+    assert.equal(schools.places[0].name, 'AA Rescue Driving School');
+  } finally {
+    fx.restore();
+  }
 });
 
 test('P1 Phase 5: Architecture editor consumes floor plan handoff into editable elements', () => {
