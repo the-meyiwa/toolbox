@@ -56,12 +56,39 @@ function cleanFileDropRooms() {
   }
 }
 
+// Cross-origin callers allowed to read API responses. The app itself calls
+// same-origin /api/... (through the Cloudflare Worker), which needs no CORS
+// header at all. Extra origins come from TOOLBOX_ALLOWED_ORIGINS
+// (comma-separated, e.g. "https://toolbox.example.com").
+const LOCAL_ORIGIN_RE = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
+
+function isAllowedOrigin(origin, request) {
+  if (!origin) return false;
+  if (LOCAL_ORIGIN_RE.test(origin)) return true;
+  const allowed = (process.env.TOOLBOX_ALLOWED_ORIGINS || '')
+    .split(',').map(o => o.trim().replace(/\/$/, '')).filter(Boolean);
+  if (allowed.includes(origin)) return true;
+  // Same public host the visitor used (set by the Worker or a proxy).
+  const host = request.headers['x-forwarded-host'] || request.headers.host || '';
+  try { return Boolean(host) && new URL(origin).host === host; } catch { return false; }
+}
+
+function safeEqualHex(a, b) {
+  const x = Buffer.from(String(a || ''), 'utf8');
+  const y = Buffer.from(String(b || ''), 'utf8');
+  return x.length === y.length && crypto.timingSafeEqual(x, y);
+}
+
 export async function handleApiRequest(request, response) {
   const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
 
-  // CORS headers
-  response.setHeader('Access-Control-Allow-Origin', '*');
-  response.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  // CORS headers: only echo back origins we trust, never '*'.
+  const origin = request.headers.origin || '';
+  if (isAllowedOrigin(origin, request)) {
+    response.setHeader('Access-Control-Allow-Origin', origin);
+    response.setHeader('Vary', 'Origin');
+  }
+  response.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Toolbox-Signature, X-Idempotency-Key, X-Turn-Id');
 
   if (request.method === 'OPTIONS') {
@@ -81,12 +108,14 @@ export async function handleApiRequest(request, response) {
     // loopback connection, no proxy in between, and a localhost Origin
     // (blocks drive-by requests from other websites). Deployed servers
     // behind Vercel/Render always get 403.
+    // In production the whole API is off unless TOOLBOX_IDE_HOST_EXEC=1.
     const remote = request.socket?.remoteAddress || '';
     const loopback = /^(::1|127\.|::ffff:127\.)/.test(remote);
-    const origin = request.headers.origin || '';
-    const sameMachineOrigin = !origin || /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i.test(origin);
-    const proxied = Boolean(request.headers['x-forwarded-for'] || request.headers['x-real-ip'] || request.headers['x-vercel-id']);
-    if (process.env.TOOLBOX_IDE_HOST_EXEC === '0' || !loopback || proxied || !sameMachineOrigin) {
+    const sameMachineOrigin = !origin || LOCAL_ORIGIN_RE.test(origin);
+    const proxied = Boolean(request.headers['x-forwarded-for'] || request.headers['x-real-ip'] || request.headers['x-vercel-id'] || request.headers['x-forwarded-host'] || request.headers['cf-connecting-ip']);
+    const disabled = process.env.TOOLBOX_IDE_HOST_EXEC === '0'
+      || (process.env.NODE_ENV === 'production' && process.env.TOOLBOX_IDE_HOST_EXEC !== '1');
+    if (disabled || !loopback || proxied || !sameMachineOrigin) {
       response.writeHead(403, { 'Content-Type': 'application/json' });
       response.end(JSON.stringify({ success: false, error: 'Host command execution is only available on a local development server.' }));
       return true;
@@ -394,10 +423,13 @@ export async function handleApiRequest(request, response) {
 
   // --- Toolbox Payment REST API ---
   if (url.pathname.startsWith('/api/payment/')) {
+    // No payment provider is wired to these routes (real contributions go
+    // through /api/supporters/verify, which checks with Flutterwave), so never
+    // claim a payment was verified.
     if (url.pathname === '/api/payment/verify' && request.method === 'GET') {
       const ref = url.searchParams.get('reference');
-      response.writeHead(200, { 'Content-Type': 'application/json' });
-      response.end(JSON.stringify({ status: 'success', reference: ref, verified: true, timestamp: Date.now() }));
+      response.writeHead(501, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify({ status: 'unavailable', reference: ref, verified: false, error: 'Payment verification is not configured on this server.' }));
       return true;
     }
 
@@ -405,13 +437,17 @@ export async function handleApiRequest(request, response) {
       let body = '';
       request.on('data', chunk => { body += chunk; });
       request.on('end', () => {
+        const secret = process.env.TOOLBOX_WEBHOOK_SECRET || '';
+        if (!secret) {
+          response.writeHead(503, { 'Content-Type': 'application/json' });
+          response.end(JSON.stringify({ received: false, verified: false, error: 'Webhook secret is not configured.' }));
+          return;
+        }
         const signature = request.headers['x-toolbox-signature'] || request.headers['x-paystack-signature'] || '';
-        const secret = process.env.TOOLBOX_WEBHOOK_SECRET || 'toolbox_dev_secret_key';
         const expected = crypto.createHmac('sha256', secret).update(body).digest('hex');
-
-        const isValid = signature === expected || process.env.NODE_ENV !== 'production';
-        response.writeHead(200, { 'Content-Type': 'application/json' });
-        response.end(JSON.stringify({ received: true, verified: isValid }));
+        const isValid = safeEqualHex(signature, expected);
+        response.writeHead(isValid ? 200 : 401, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ received: isValid, verified: isValid }));
       });
       return true;
     }
