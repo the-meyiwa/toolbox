@@ -588,11 +588,14 @@ export default {
         lamaSessionPromise = (async () => {
           // Keep the large runtime out of the tool's initial module so a stale
           // Vite dependency cache cannot stop the editor from opening.
-          const ort = await import('onnxruntime-web');
+          // Only the wasm execution provider is used, so import the wasm-only
+          // build. The default entry references the 27 MB WebGPU/JSEP binary,
+          // which Vite copies into dist and which is over Cloudflare's 25 MiB
+          // per-file limit, failing the Workers build. This one is 13 MB.
+          const ort = await import('onnxruntime-web/wasm');
           // Single-threaded WASM works without cross-origin-isolation headers.
           ort.env.wasm.numThreads = 1;
-          // The runtime's WebAssembly (~27 MB) is over Cloudflare's 25 MiB per-file
-          // limit, so it is fetched from the npm CDN rather than shipped in dist.
+          // Fetch the runtime's WebAssembly from the npm CDN at runtime.
           ort.env.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ort.env.versions?.web || '1.27.0'}/dist/`;
           const session = await ort.InferenceSession.create(LAMA_MODEL_URL, {
             executionProviders: ['wasm'],
