@@ -47,6 +47,13 @@ const server = http.createServer(async (request, response) => {
   const handled = await handleApiRequest(request, response);
   if (handled) return;
 
+  // An API path nothing handled is an error, not the status page below.
+  if (urlPath.startsWith('/api/')) {
+    response.writeHead(404, { 'Content-Type': 'application/json' });
+    response.end(JSON.stringify({ success: false, error: `Unknown API endpoint: ${urlPath}` }));
+    return;
+  }
+
   response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
   response.end(`
     <!DOCTYPE html>

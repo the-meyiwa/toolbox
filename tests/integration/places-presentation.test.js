@@ -82,6 +82,17 @@ test('service down or no location: an honest error, no made-up places', async ()
   } finally { fx.restore(); }
 });
 
+test('a server without the maps API is an error, not an empty result', async () => {
+  const real = globalThis.fetch;
+  // An older API build answers unknown paths with an HTML status page.
+  globalThis.fetch = async () => new Response('<!DOCTYPE html><h1>Operational</h1>', { status: 200, headers: { 'Content-Type': 'text/html' } });
+  try {
+    const res = await executeAssistantTool('search_places_nearby', { category: 'fuel' }, at(HOME));
+    assert.equal(res.success, false);
+    assert.match(res.message, /not available on the server/);
+  } finally { globalThis.fetch = real; }
+});
+
 test('local transport: Laniyan Estate to AA Rescue driving school at CMD Road', async () => {
   const fx = installMapsFixture();
   try {
