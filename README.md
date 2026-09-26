@@ -55,6 +55,7 @@ The app runs without any keys. Individual features light up as you add them:
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Accounts, cloud sync, messaging |
 | `GEMINI_API_KEY` | The Assistant and AI-powered tools |
 | `GOOGLE_CLIENT_*`, `MICROSOFT_CLIENT_*`, `MAIL_OAUTH_STATE_SECRET` | Mail |
+| `TOMTOM_API_KEY`, `FOURSQUARE_API_KEY` | Optional extra place data for Maps and the Assistant ([setup](docs/maps-providers.md)) |
 | `ICECAT_USERNAME`, `ICECAT_API_TOKEN` | Device comparisons ([setup](docs/device-comparisons.md)) |
 | `SUPABASE_SERVICE_ROLE_KEY`, `FLUTTERWAVE_*` | Contributions and supporter perks ([setup](docs/supporter-setup.md)) |
 

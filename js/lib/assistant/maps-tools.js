@@ -173,11 +173,14 @@ async function searchNearby(args, ctx) {
     phone: p.phone,
     website: p.website,
     openingHours: p.openingHours,
+    // Listed by more than one map provider: very likely real and still there.
+    confirmedBy: p.sources?.length > 1 ? p.sources : undefined,
   }));
   const label = query || category;
+  const searched = (res.searched || ['OpenStreetMap']).join(', ');
   const title = `${label.replace(/^(nearest|closest)\s+/i, '').replace(/^\w/, c => c.toUpperCase())} near ${where || 'you'}`;
   if (!places.length) {
-    return { status: 'not_found', success: false, title, searchedKm: km(res.radius), message: `No "${label}" is mapped within ${km(res.radius)} km on OpenStreetMap. Say so plainly; do not invent places.` };
+    return { status: 'not_found', success: false, title, searchedKm: km(res.radius), message: `No "${label}" is mapped within ${km(res.radius)} km (searched ${searched}). Say so plainly; do not invent places.` };
   }
   return {
     status: 'success',

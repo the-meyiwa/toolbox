@@ -16,6 +16,7 @@
    directions from that; nothing about a place is written here.
    ============================================================ */
 
+import { activeProviders, searchProviders, mergePlaces } from './server-place-providers.js';
 import {
   distanceM, bearing, compass, projectOnLine, simplify, lineLength, pointAlong, isLngLat, parseLatLng,
 } from './js/lib/maps/geo.js';
@@ -310,16 +311,52 @@ async function photonNearby(text, near, radius, limit) {
     .slice(0, limit);
 }
 
-/** Places matching a name, brand or category around a point, nearest first. */
-export async function searchNearby({ q = '', category = '', near, radius, limit = 10 }) {
-  if (!isLngLat(near)) throw new Error('A location is needed to search nearby');
+function nearbyTerms(q, category) {
   const text = String(q || '').trim();
-  const filter = tagFilterFor(category) || tagFilterFor(text);
   const words = text.toLowerCase().replace(/\b(nearest|closest|nearby|near me|around me|the|a|an)\b/g, ' ').trim().split(/\s+/).filter(w => w.length > 1).slice(0, 4);
   // Words that name a business ("Ebeano" in "Ebeano supermarket") must match a name; a pure
   // category ("pharmacy") searches by tag instead.
   const generic = (w) => tagFilterFor(w) || /^(shop|store|station|stop|place|centre|center|outlet|branch)s?$/.test(w);
-  const nameWords = words.filter(w => !generic(w));
+  return { text, words, nameWords: words.filter(w => !generic(w)) };
+}
+
+/**
+ * Places matching a name, brand or category around a point. OpenStreetMap and every extra
+ * provider with a key (server-place-providers.js) are asked at once; the answers are merged
+ * so each place appears once, with `sources` naming who knows it.
+ */
+export async function searchNearby({ q = '', category = '', near, radius, limit = 10 }) {
+  if (!isLngLat(near)) throw new Error('A location is needed to search nearby');
+  const { words, nameWords } = nearbyTerms(q, category);
+  const reach = radius || 15000;
+  const searched = ['OpenStreetMap', ...activeProviders().map(p => p.name)];
+  const [osm, extra] = await Promise.all([
+    osmNearby({ q, category, near, radius, limit }).then(r => ({ ok: r }), err => ({ err })),
+    activeProviders().length
+      ? searchProviders({ text: words.join(' ') || String(category || '').trim(), near, radius: reach, limit })
+      : { lists: [], errors: [] },
+  ]);
+  // A business name must appear in what a provider returns; their fuzzy matching would
+  // otherwise answer "Ebeano" with the nearest supermarket of any name.
+  const named = (p) => nameWords.every(w => `${p.name} ${p.brand || ''}`.toLowerCase().includes(w));
+  const lists = extra.lists.map(l => ({ ...l, places: l.places.filter(named) })).filter(l => l.places.length);
+  if (!lists.length) {
+    if (osm.err) throw osm.err;
+    return { ...osm.ok, searched, ...(extra.errors.length ? { providerErrors: extra.errors } : {}) };
+  }
+  const osmPlaces = osm.ok?.places || [];
+  const places = mergePlaces([{ source: 'OpenStreetMap', places: osmPlaces }, ...lists], limit);
+  return {
+    places,
+    searched,
+    radius: Math.max(osm.ok?.radius || 0, reach),
+    ...(extra.errors.length || osm.err ? { providerErrors: [...extra.errors, ...(osm.err ? [`OpenStreetMap: ${osm.err.message}`] : [])] } : {}),
+  };
+}
+
+async function osmNearby({ q = '', category = '', near, radius, limit = 10 }) {
+  const { text, words, nameWords } = nearbyTerms(q, category);
+  const filter = tagFilterFor(category) || tagFilterFor(text);
   const nameRe = nameWords.map(escapeRe).join('.*');
   const run = async (r) => {
     const around = `(around:${r},${near[1]},${near[0]})`;
@@ -355,7 +392,7 @@ export async function searchNearby({ q = '', category = '', near, radius, limit 
     if (!found.length) {
       const places = await photonNearby(text || category, near, 15000, limit).catch(() => null);
       if (!places?.length) throw err;
-      return { places, radius: 15000, source: 'photon' };
+      return { places: places.map(p => ({ ...p, sources: ['OpenStreetMap'] })), radius: 15000, source: 'photon' };
     }
   }
   const seen = new Set();
@@ -368,7 +405,7 @@ export async function searchNearby({ q = '', category = '', near, radius, limit 
     })
     .sort((a, b) => a.distanceM - b.distanceM)
     .slice(0, limit);
-  return { places, radius: used };
+  return { places: places.map(p => ({ ...p, sources: ['OpenStreetMap'] })), radius: used };
 }
 
 /* ---------------- routing ---------------- */

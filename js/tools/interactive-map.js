@@ -269,6 +269,7 @@ export default {
           ${p.phone ? `<dt>Phone</dt><dd><a href="tel:${esc(p.phone)}">${esc(p.phone)}</a></dd>` : ''}
           ${p.openingHours ? `<dt>Hours</dt><dd>${esc(p.openingHours)}</dd>` : ''}
           ${p.website ? `<dt>Website</dt><dd><a href="${esc(/^https?:/i.test(p.website) ? p.website : `https://${p.website}`)}" target="_blank" rel="noopener">${esc(p.website.replace(/^https?:\/\//, ''))}</a></dd>` : ''}
+          ${p.sources?.length ? `<dt>Listed by</dt><dd>${esc(p.sources.join(', '))}</dd>` : ''}
           <dt>Coordinates</dt><dd><button type="button" class="mp-link" data-act="copy">${fmtCoord(pt)} ${ICON.copy}</button></dd>
         </dl>
         <div class="mp-actions">
