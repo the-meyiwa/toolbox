@@ -24,6 +24,7 @@ import { ToolboxFilesystem, fs } from '../lib/filesystem.js';
 import { renderMarkdown, patchHtml, handleMarkdownClick, cleanReplyText } from '../lib/assistant/markdown.js';
 import { ConversationStore, newId } from '../lib/assistant/conversations.js';
 import '../lib/assistant/renderers.js';
+import { gatherLifeContext, introText, lifeSuggestions } from '../lib/assistant/life-context.js';
 
 /* Files from Toolbox Files arrive as raw bytes. */
 function bytesToBase64(bytes) {
@@ -585,19 +586,31 @@ function mountAssistant(container, state) {
     return name ? `${part}, ${name.charAt(0).toUpperCase()}${name.slice(1)}` : part;
   }
 
+  // Starter chips: the person's own things first (from the live snapshot), then a few general ones.
+  let chips = SUGGESTIONS.slice(0, 6);
+
   function emptyView() {
     const el = document.createElement('div');
     el.className = 'ast-empty';
-    el.innerHTML = `
+    const paint = (intro) => {
+      el.innerHTML = `
       <div class="ast-empty-mark" aria-hidden="true">${icon('spark', 22, 1.6)}</div>
       <h2 class="ast-empty-title">${esc(greeting())}</h2>
-      <p class="ast-empty-sub">What should we work on? I can use 100+ Toolbox tools, browse the web and run code.</p>
+      <p class="ast-empty-sub">${esc(intro)}</p>
       <div class="ast-sugs">
-        ${SUGGESTIONS.map((s, i) => `<button type="button" class="ast-sug" data-sug="${i}" style="--i:${i}">
+        ${chips.map((s, i) => `<button type="button" class="ast-sug" data-sug="${i}" style="--i:${i}">
           <span class="ast-sug-icon">${icon(s.icon, 17)}</span>
           <span class="ast-sug-text"><strong>${esc(s.title)}</strong><small>${esc(s.sub)}</small></span>
         </button>`).join('')}
       </div>`;
+    };
+    paint('Give me a second to look around…');
+    gatherLifeContext().then((ctx) => {
+      if (!el.isConnected) return;
+      const own = lifeSuggestions(ctx);
+      chips = [...own, ...SUGGESTIONS.filter(s => !own.some(o => o.icon === s.icon))].slice(0, 6);
+      paint(introText(ctx));
+    }).catch(() => paint("I could read your documents, run your calendar, do some math or find places near you. Tokens cost money, so just let me know exactly what you want to do."));
     return el;
   }
 
@@ -1338,7 +1351,8 @@ function mountAssistant(container, state) {
     if (t.dataset.remove) { attachments = attachments.filter(a => a.id !== t.dataset.remove); renderFiles(); return; }
     if (t.dataset.mode) { mode = t.dataset.mode; setActiveAiMode(mode); renderModeButton(); closePops(); input.focus(); return; }
     if (t.dataset.sug != null) {
-      const s = SUGGESTIONS[Number(t.dataset.sug)];
+      const s = chips[Number(t.dataset.sug)];
+      if (!s) return;
       input.value = s.prompt;
       grow();
       updateComposerState();
