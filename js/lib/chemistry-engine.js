@@ -149,10 +149,12 @@ class Fraction {
  * @returns {{ balancedString: string, reactants: Array<{ formula: string, coeff: number }>, products: Array<{ formula: string, coeff: number }>, steps: string[] }}
  */
 export function balanceChemicalEquation(equation) {
-  const parts = equation.split(/->|=/);
+  const parts = equation.split(/->|→|=/);
   if (parts.length !== 2) throw new Error('Equation must contain a reaction arrow "->" or "=" separator.');
 
-  const parseSpecies = (sideStr) => sideStr.split('+').map(s => s.trim()).filter(Boolean);
+  // A leading number is a coefficient from an already-balanced equation
+  // ("5 O2"), not part of the formula; the balancer works its own out.
+  const parseSpecies = (sideStr) => sideStr.split('+').map(s => s.trim().replace(/^\d+\s*(?=[A-Z(\[])/, '')).filter(Boolean);
   const reactantFormulas = parseSpecies(parts[0]);
   const productFormulas = parseSpecies(parts[1]);
 
@@ -261,7 +263,7 @@ export function balanceChemicalEquation(equation) {
   const products = productFormulas.map((f, idx) => ({ formula: f, coeff: finalCoeffs[numReactants + idx] }));
 
   const formatSide = (arr) => arr.map(item => `${item.coeff === 1 ? '' : item.coeff + ' '}${item.formula}`).join(' + ');
-  const balancedString = `${formatSide(reactants)}  ${formatSide(products)}`;
+  const balancedString = `${formatSide(reactants)} → ${formatSide(products)}`;
 
   return {
     balancedString,

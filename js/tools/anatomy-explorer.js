@@ -11,6 +11,10 @@
 
 import { anatomyService, ANATOMICAL_REGIONS, stemWord } from '../lib/anatomy-data.js';
 
+const VIEW_HINT = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
+  ? 'Drag to rotate · pinch to zoom · two-finger drag to pan'
+  : 'Left-drag to rotate · scroll to zoom · right-drag to pan';
+
 const ROOT  = import.meta.env?.BASE_URL ?? '/';
 const BASE  = `${ROOT}anatomy/`.replace(/\/{2,}/g, '/');
 const DRACO = `${ROOT}draco/`.replace(/\/{2,}/g, '/');
@@ -253,7 +257,7 @@ export default {
           <div class="t3d-info" id="an-info" style="max-height:38vh; overflow-y:auto;">
             <div class="t3d-info-empty">
               <strong>Click any anatomical structure in 3D to explore</strong>
-              <span>Left-drag to rotate · scroll to zoom · right-drag to pan</span>
+              <span>${VIEW_HINT}</span>
             </div>
           </div>
 
@@ -590,7 +594,7 @@ export default {
         if (badgeEl) badgeEl.style.display = 'none';
         infoEl.innerHTML = `<div class="t3d-info-empty">
           <strong>Click any anatomical structure in 3D to explore</strong>
-          <span>Left-drag to rotate · scroll to zoom · right-drag to pan</span></div>`;
+          <span>${VIEW_HINT}</span></div>`;
       } else {
         const detail = anatomyService.getDetail(s.name, s.system);
         const region = regionLabel(s.region || detail.region);

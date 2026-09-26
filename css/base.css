@@ -20,6 +20,8 @@ body {
 input, button, textarea, select { font: inherit; color: inherit; }
 button { background: none; border: 0; cursor: pointer; }
 a { color: inherit; }
+/* Headings inherit the body's fixed 24px line; let large ones grow with their size so a wrapped title never overlaps itself. */
+:where(h1, h2, h3, h4) { line-height: max(24px, 1.2em); }
 svg { flex-shrink: 0; }
 ::selection { background: var(--ink); color: var(--text-inverse); }
 

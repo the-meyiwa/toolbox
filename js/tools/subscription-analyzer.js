@@ -2,7 +2,7 @@ export default {
   render(container) {
     container.innerHTML = `
       <div class="tool-section" style="text-align:center; max-width:600px; margin:0 auto 32px;">
-        <h2 style="font-size:2rem; font-weight:600; margin-bottom:8px; letter-spacing:-0.03em;">The “it is only a coffee” problem</h2>
+        <h2 style="font-size:clamp(1.5rem, 6.5vw, 2rem); line-height:1.15; font-weight:600; margin-bottom:8px; letter-spacing:-0.03em;">The “it is only a coffee” problem</h2>
         <p style="color:var(--g500); font-size:0.9rem;">See what a small, regular expense really costs once it has had a few years to run.</p>
       </div>
 

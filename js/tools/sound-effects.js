@@ -39,7 +39,7 @@ export default {
         <!-- Search & Filter Bar -->
         <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:16px;">
           <form id="sfx-search-form" style="display:flex; gap:10px;">
-            <input type="text" id="sfx-search" class="tool-input" placeholder="Search (e.g. laser, explosion, applause)..." style="flex:1; font-size:0.88rem; padding:8px 14px;">
+            <input type="text" id="sfx-search" class="tool-input" placeholder="Search sounds, e.g. laser" style="flex:1; min-width:0; font-size:0.88rem; padding:8px 14px;">
             <button type="submit" class="btn btn-primary btn-sm">Search</button>
             <button type="button" class="btn btn-secondary btn-sm" id="sfx-fav-filter">Favorites (<span id="sfx-fav-count">0</span>)</button>
           </form>

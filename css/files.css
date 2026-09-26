@@ -349,6 +349,10 @@
   transition: background-color var(--dur-1) ease;
 }
 .sv-tag-chip:hover { background: var(--tint); }
+@media (pointer: coarse) {
+  .sv-tag-pill { height: 32px; }
+  .sv-tag-chip { width: 32px; height: 32px; }
+}
 .sv-tag-chip-dot {
   display: block;
   width: 10px;
@@ -748,6 +752,10 @@
   flex-wrap: wrap;
   margin-top: 14px;
 }
+/* A short window (phone, small laptop) scrolls the empty state instead of clipping it. */
+.sv-body--empty { overflow-y: auto; }
+.sv-body-empty { justify-content: safe center; }
+@media (max-width: 768px) { .sv-body-empty { padding: 28px 16px; } }
 .sv-body-empty .sv-link-btn { margin-top: 10px; color: var(--text-2); font-size: 13px; }
 .sv-body-empty > .btn { margin-top: 12px; }
 .sv-stack { display: flex; margin-bottom: 4px; }

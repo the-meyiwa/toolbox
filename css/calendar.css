@@ -821,3 +821,9 @@ body.in-tool.tool-fit-screen .cal { height: auto; }
 @media (prefers-reduced-motion: reduce) {
   .cal *, .cal-anim-slide-left, .cal-anim-slide-right { animation: none !important; transition: none !important; }
 }
+
+/* Touch screens: controls a fingertip can hit reliably. */
+@media (pointer: coarse) {
+  .cal-view-btn { height: 32px; }
+  .cal-icon-btn, .cal-mini-head .cal-icon-btn { width: 36px; height: 36px; }
+}

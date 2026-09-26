@@ -579,3 +579,11 @@ html.theme-transition, html.theme-transition *, html.theme-transition *::before,
 .uo-footer { margin-top: var(--space-5); }
 .uo-footer .btn { min-width: 140px; }
 @media (max-width: 480px) { .uo-footer .btn { width: 100%; } }
+
+/* Small phones (360px and under): five header controls must fit beside the wordmark. */
+@media (max-width: 380px) {
+  #app-header { padding: 0 var(--space-3); }
+  .header-actions { gap: 0; }
+  #header-about-link { padding-left: var(--space-2); padding-right: var(--space-2); }
+  #header-search-btn, #theme-toggle, #header-notif-btn, #header-menu-btn { width: 36px; min-width: 36px; }
+}

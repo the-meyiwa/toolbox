@@ -5,9 +5,9 @@ export default {
         <label class="tool-label">Pattern</label>
         <div class="tool-row" style="gap:8px;">
           <span style="font-family:var(--mono); font-size:0.9rem; color:var(--g400);">/</span>
-          <input type="text" class="tool-input" id="rx-pattern" placeholder="[a-z]+" style="flex:1;">
+          <input type="text" class="tool-input" id="rx-pattern" placeholder="[a-z]+" style="flex:1 1 0; min-width:0;">
           <span style="font-family:var(--mono); font-size:0.9rem; color:var(--g400);">/</span>
-          <input type="text" class="tool-input" id="rx-flags" value="g" placeholder="flags" style="width:60px; text-align:center;">
+          <input type="text" class="tool-input" id="rx-flags" value="g" placeholder="flags" style="flex:0 0 64px; width:64px; text-align:center;">
         </div>
       </div>
       <div class="tool-section">

@@ -55,7 +55,7 @@ export default {
           <!-- Balanced Equation Banner -->
           <div style="background:var(--g50); border:2px solid var(--black); border-radius:10px; padding:18px; text-align:center; margin-bottom:16px;">
             <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--g600); letter-spacing:0.04em;">Balanced Stoichiometric Equation</span>
-            <div id="eq-balanced-str" style="font-family:var(--mono); font-size:1.4rem; font-weight:900; color:var(--black); margin:8px 0;"></div>
+            <div id="eq-balanced-str" style="font-family:var(--mono); font-size:clamp(1.05rem, 4.6vw, 1.4rem); overflow-wrap:anywhere; font-weight:900; color:var(--black); margin:8px 0;"></div>
             <div style="display:flex; justify-content:center; gap:8px; margin-top:10px;">
               <button class="btn btn-secondary btn-sm" id="eq-copy-btn">Copy Equation</button>
               <button class="btn btn-secondary btn-sm" id="eq-stoich-btn">Open in Stoichiometry Calculator </button>
