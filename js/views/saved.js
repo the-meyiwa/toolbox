@@ -21,6 +21,7 @@ import { fs, normalizePath, getParentPath, getBaseName } from '../lib/filesystem
 import { createZip } from '../lib/archive-engine.js';
 import * as store from '../lib/artifacts.js';
 import { kindFromFilename } from '../registry/kinds.js';
+import { hasRichPreview, editorFor, docFamily } from '../lib/docs/formats.js';
 import { BY_ID, toolsAccepting } from '../registry/index.js';
 import { getFileTypeIcon, detectFileCategory } from '../lib/file-icons.js';
 import { getCurrentUser } from '../lib/supabase.js';
@@ -119,6 +120,7 @@ let fileClipboard = { op: null, paths: [] }; // { op: 'copy'|'cut'|null, paths: 
 // Bodies and object URLs, keyed by path and invalidated when the file changes.
 const textCache = new Map();
 const blobUrlCache = new Map();
+const docPreviewCache = new Map(); // path → { stamp, html } for documents rendered by lib/docs
 
 /* ---------------- Formatting helpers ---------------- */
 
@@ -185,6 +187,7 @@ function previewTypeOf(file) {
   if (ext === 'csv' || ext === 'tsv' || kind === 'csv') return 'csv';
   if (ext === 'json' || kind === 'json') return 'json';
   if (ext === 'pdf' || kind === 'pdf') return 'pdf';
+  if (hasRichPreview(file?.name)) return 'document';
   if (['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac'].includes(ext)) return 'audio';
   if (['mp4', 'webm', 'mov', 'm4v'].includes(ext)) return 'video';
   if (['zip', 'gz', 'tar', 'bz2', '7z', 'rar', 'docx', 'xlsx', 'pptx', 'doc', 'xls', 'ppt', 'odt', 'woff', 'woff2', 'ttf', 'otf', 'exe', 'bin', 'dmg'].includes(ext) || kind === 'archive') return 'binary';
@@ -359,6 +362,7 @@ export function renderSaved(host, selectedId = null) {
     selectedPaths.clear();
     for (const { url } of blobUrlCache.values()) { try { URL.revokeObjectURL(url); } catch {} }
     blobUrlCache.clear();
+    docPreviewCache.clear();
     document.getElementById('sv-toast')?.remove();
     document.getElementById('sv-quicklook-modal')?.remove();
     document.getElementById('sv-properties-modal')?.remove();
@@ -775,6 +779,11 @@ export function getToolsForFile(file) {
     }
   };
 
+  // 0. The document editor for this format leads, except for markdown and
+  //    plain text, where the text tools people already use stay first.
+  const editor = editorFor(fileName);
+  if (editor && editor !== 'pdf-editor' && !['md', 'markdown', 'txt'].includes(ext)) add(editor);
+
   // 1. Domain-specific prioritization based on file extension and detected kind
   if (['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'bmp', 'avif'].includes(ext) || kind === 'image') {
     ['image-compressor', 'image-converter', 'image-resizer', 'image-cropper', 'image-metadata', 'image-to-pdf'].forEach(add);
@@ -794,6 +803,7 @@ export function getToolsForFile(file) {
   } else if (['txt', 'rtf', 'log'].includes(ext) || kind === 'text') {
     ['find-replace', 'text-cleaner', 'word-counter', 'document-analyzer'].forEach(add);
   }
+  if (editor && editor !== 'pdf-editor') add(editor);
 
   // 2. Include all registry tools that accept this kind
   for (const t of toolsAccepting(kind)) {
@@ -927,6 +937,12 @@ function renderContentBody(file, type = previewTypeOf(file), view = effectiveVie
   if (type === 'audio' || type === 'video') {
     if (!src) return '<div class="sv-media"><span class="sv-loading">Loading preview</span></div>';
     return `<div class="sv-media">${type === 'audio' ? `<audio controls src="${escapeHtml(src)}"></audio>` : `<video controls src="${escapeHtml(src)}"></video>`}</div>`;
+  }
+  if (type === 'document') {
+    const cached = docPreviewCache.get(file.path);
+    if (!cached || cached.stamp !== stampOf(file)) return '<div class="sv-media"><span class="sv-loading">Loading preview</span></div>';
+    // No scripts, no same-origin, and the page itself forbids network access.
+    return `<iframe class="sv-frame sv-doc-frame" sandbox="" referrerpolicy="no-referrer" srcdoc="${escapeHtml(cached.html)}" title="${escapeHtml(file.name)}"></iframe>`;
   }
   if (type === 'binary') {
     return `
@@ -1124,6 +1140,24 @@ function wire(host, ctx, refresh, ui) {
     return text;
   };
 
+  const loadDocPreview = async (item) => {
+    const cached = docPreviewCache.get(item.path);
+    if (cached && cached.stamp === stampOf(item)) return cached.html;
+    const { renderPreview, errorPage } = await import('../lib/docs/preview.js');
+    let html;
+    try {
+      const blob = await fs.readFile(item.path, { encoding: 'blob', storage: currentStorage });
+      if (!blob) throw new Error('empty');
+      html = await renderPreview(blob, item.name);
+    } catch (err) {
+      console.warn('Document preview failed', err);
+      html = errorPage("This file couldn't be read. It may be damaged, password-protected, or not really the format its name says.");
+    }
+    if (docPreviewCache.size > 24) docPreviewCache.delete(docPreviewCache.keys().next().value);
+    docPreviewCache.set(item.path, { stamp: stampOf(item), html });
+    return html;
+  };
+
   if (current?.path) {
     const type = previewTypeOf(current);
     const paintPreview = (patch) => {
@@ -1137,6 +1171,9 @@ function wire(host, ctx, refresh, ui) {
       if (!blobUrlCache.get(current.path) || blobUrlCache.get(current.path).stamp !== stampOf(current)) {
         loadBlobUrl(current).then(url => url && paintPreview({})).catch(() => {});
       }
+    } else if (type === 'document') {
+      const cached = docPreviewCache.get(current.path);
+      if (!cached || cached.stamp !== stampOf(current)) loadDocPreview(current).then(() => paintPreview({})).catch(() => {});
     } else if (type !== 'binary' && current.text == null) {
       loadText(current).then(text => paintPreview({ text: text ?? '' })).catch(() => paintPreview({ text: '' }));
     }
@@ -1175,6 +1212,7 @@ function wire(host, ctx, refresh, ui) {
       text,
       content: text || fileObj.blob || null,
       blob: fileObj.blob || null,
+      storage: currentStorage,
       from: 'files'
     };
     store.handOff(handoff);
@@ -1182,7 +1220,8 @@ function wire(host, ctx, refresh, ui) {
     // Fill in the body if it wasn't in memory; the tool reads the hand-off
     // object, which is the same reference.
     if (path && !text && !handoff.blob) {
-      const binary = ['image', 'pdf', 'binary', 'audio', 'video'].includes(previewTypeOf(fileObj));
+      // Editors read documents as bytes, including the text-based ones they parse.
+      const binary = ['image', 'pdf', 'binary', 'audio', 'video', 'document'].includes(previewTypeOf(fileObj)) || (docFamily(name) && ['scribe', 'ledger', 'podium'].includes(toolId));
       fs.readFile(path, { encoding: binary ? 'blob' : 'utf8', storage: currentStorage }).then(body => {
         if (!body) return;
         if (binary) { handoff.blob = body; handoff.content = body; }
@@ -1615,7 +1654,9 @@ function wire(host, ctx, refresh, ui) {
     const update = (html) => { const el = modal.querySelector('.sv-ql-body'); if (el && modal.isConnected) el.innerHTML = html; };
     if (['image', 'pdf', 'audio', 'video'].includes(type) && !blobUrlCache.get(item.path)) {
       loadBlobUrl(item).then(() => update(renderContentBody(item, type, effectiveView(type)))).catch(() => {});
-    } else if (item.text == null && !['image', 'pdf', 'audio', 'video', 'binary'].includes(type)) {
+    } else if (type === 'document') {
+      loadDocPreview(item).then(() => update(renderContentBody(item, type, effectiveView(type)))).catch(() => {});
+    } else if (item.text == null && !['image', 'pdf', 'audio', 'video', 'binary', 'document'].includes(type)) {
       loadText(item).then(text => { item = { ...item, text: text ?? '' }; update(body()); }).catch(() => {});
     }
   }

@@ -22,12 +22,12 @@ export function detectFileCategory(filename = '', kind = '') {
   if (ext === 'pdf' || k === 'pdf') return 'pdf';
 
   // Spreadsheets & CSV
-  if (ext === 'csv' || ext === 'tsv' || ext === 'xlsx' || ext === 'xls' || k === 'csv' || k === 'spreadsheet') {
+  if (ext === 'csv' || ext === 'tsv' || ext === 'xlsx' || ext === 'xlsm' || ext === 'xls' || ext === 'ods' || k === 'csv' || k === 'spreadsheet') {
     return 'spreadsheet';
   }
 
   // Word & Rich Documents
-  if (ext === 'doc' || ext === 'docx' || ext === 'rtf' || ext === 'odt' || k === 'document') {
+  if (ext === 'doc' || ext === 'docx' || ext === 'rtf' || ext === 'odt' || ext === 'epub' || k === 'document') {
     return 'document';
   }
 
