@@ -17,6 +17,7 @@
 
 import { ASSISTANT_TOOL_DECLARATIONS, executeAssistantTool } from './assistant-tools.js';
 import { EXTRA_TOOL_DECLARATIONS, EXTRA_TOOL_NAMES, executeExtraTool } from './assistant/extra-tools.js';
+import { KNOWLEDGE_TOOL_DECLARATIONS, KNOWLEDGE_TOOL_NAMES, executeKnowledgeTool, entityHints } from './assistant/knowledge-tools.js';
 import { CORE_TOOLS, TOOL_GROUPS, LOAD_TOOLS_DECLARATION, selectGroups, groupOfTool } from './assistant/tool-groups.js';
 import { QuotaManager } from './quota-manager.js';
 import { tbConfirm } from './dialog.js';
@@ -231,8 +232,8 @@ function defaultToolList() {
   // generated "open this tool" declaration per registry tool (lowercase 'object'). Several share a
   // name (unit_converter, weather_forecast, regex_tester…), so keep the hand-written one by shape,
   // not by name; the generated ones are covered by find/run/open_toolbox_tool.
-  const handWritten = ASSISTANT_TOOL_DECLARATIONS.filter(d => d?.name && String(d.parameters?.type || '').toUpperCase() === 'OBJECT' && d.parameters?.type !== 'object' && !EXTRA_TOOL_NAMES.has(d.name));
-  defaultTools = buildToolList([LOAD_TOOLS_DECLARATION, MEMORY_DECLARATION, ...EXTRA_TOOL_DECLARATIONS, ...handWritten]).slice(0, 128);
+  const handWritten = ASSISTANT_TOOL_DECLARATIONS.filter(d => d?.name && String(d.parameters?.type || '').toUpperCase() === 'OBJECT' && d.parameters?.type !== 'object' && !EXTRA_TOOL_NAMES.has(d.name) && !KNOWLEDGE_TOOL_NAMES.has(d.name));
+  defaultTools = buildToolList([LOAD_TOOLS_DECLARATION, MEMORY_DECLARATION, ...KNOWLEDGE_TOOL_DECLARATIONS, ...EXTRA_TOOL_DECLARATIONS, ...handWritten]).slice(0, 128);
   return defaultTools;
 }
 
@@ -741,11 +742,14 @@ How you answer
 `;
 
 const LEGACY_RULES = `- Currency: default to Nigerian Naira (₦, NGN) for prices, invoices and quotes unless the person asks for another currency. Nigerian VAT is 7.5%.
-- Use a tool only when it fits the request. Medical conditions and symptoms: search_diseases. Chemical compositions of foods or plants: answer in text or use calculate_chemistry; never the disease or anatomy tools.
+- Use a tool only when it fits the request. Medical conditions and symptoms: search_diseases. Drugs, medicines, chemicals and compounds: lookup_compound. Elements: lookup_element. Never send a substance to the disease database, and always answer about exactly the substance or element named: if a lookup finds nothing, say so and answer from general knowledge marked as such, never about a different substance.
 - Places: for "nearest", named businesses or directions, use search_places_nearby and keep the exact business name in query (e.g. "Shoprite"), separate from category and location. Lead with the nearest result and its distance. The map card already lists the places, so do not repeat them as a list, and do not call render_map after search_places_nearby.
 - Audio: "play …" requests use play_sound.
 - Maths: every computation goes through calculate_math (never compute in your head); references and theorems through query_math_knowledge. Never present conjectures (Collatz, Goldbach, Riemann) as proven. Show the equation, the result, the key steps and a check.
-- Anatomy: explore_anatomy with the exact structure name.
+- Anatomy: anatomy_lookup for facts (nerve and blood supply, relations, system overviews); explore_anatomy with the exact structure name when seeing it in 3D helps.
+- Car problems: diagnose_vehicle first, then walk the person through the checks in order, cheapest and most likely first, with safety notes. vehicle_lookup is for specifications.
+- Architecture (buildings, container structures, software and system design): architecture_advisor for reference notes, design reviews and sizing rules; say where an engineer or local code must decide.
+- Documents: when the person wants a document, report, letter, spreadsheet or presentation as a file, write the full content and call generate_document once with the right format (docx, xlsx, pptx, and others). Write plain professional prose without emojis or decorative symbols.
 - Web: never guess URLs; pass the question as query unless the person gave a site. Read what the pages say and answer from it with sources; follow links to subpages when the answer is not on the homepage. Never invent prices; mark unknowns as N/A. For "what does X look like", use search_images.
 - Notes, files, calendar: create_note, save_file/create_file, calendar_add_event/calendar_get_events as asked.
 - Files the person has not attached: ask them to attach or drop the file.
@@ -791,14 +795,22 @@ export async function streamChatCompletion({
   const memory = getAssistantMemory();
   const memoryBlock = memory.length ? `\nWhat you know about this person (they asked you to keep this; use it where it helps, don't recite it):\n${memory.map(f => `- ${f.text}`).join('\n')}\n` : '';
   const guidance = MODE_GUIDANCE[selectedMode] ? `\nMode: ${AI_MODES[selectedMode].name}. ${MODE_GUIDANCE[selectedMode]}\n` : '';
+  // Name the compounds and elements in the message up front, so the model looks them up instead of guessing a tool.
+  const lastUserText = [...history].reverse().find(m => m.role === 'user')?.content;
+  let entities = null;
+  if (scope === 'global' && typeof lastUserText === 'string') {
+    try { entities = await entityHints(lastUserText); } catch { entities = null; }
+  }
+  const hintBlock = entities?.hint ? `\n${entities.hint}\n` : '';
   const system = scope === 'global'
-    ? `${CAPABILITIES}\nHouse rules\n${LEGACY_RULES}\n${environment}${memoryBlock}${guidance}${systemInstruction ? `\n${systemInstruction}` : ''}`
+    ? `${CAPABILITIES}\nHouse rules\n${LEGACY_RULES}\n${environment}${memoryBlock}${guidance}${hintBlock}${systemInstruction ? `\n${systemInstruction}` : ''}`
     : `${systemInstruction || ''}\n${environment}`;
 
   // Tools: a caller-supplied list as is; otherwise the core set plus the groups this conversation needs.
   const fullList = toolDeclarations ? buildToolList(toolDeclarations) : defaultToolList();
   const byName = new Map(fullList.map(t => [t.function.name, t]));
   const activeGroups = toolDeclarations ? null : selectGroups({ history, hasFile: Boolean(currentFile?.base64 || history.at(-1)?.fileData?.base64), fileType: currentFile?.type || history.at(-1)?.fileData?.type || '' });
+  if (entities?.hint) activeGroups?.add('science');
   const toolsForStep = () => {
     if (!activeGroups) return fullList;
     const names = new Set(CORE_TOOLS);
@@ -852,6 +864,7 @@ export async function streamChatCompletion({
     let result;
     try {
       if (toolExecutor) result = await toolExecutor(name, args);
+      if (result === undefined && KNOWLEDGE_TOOL_NAMES.has(name)) result = await executeKnowledgeTool(name, args);
       if (result === undefined && EXTRA_TOOL_NAMES.has(name)) result = await executeExtraTool(name, args);
       if (result === undefined) result = await executeAssistantTool(name, args, { currentFile, taskState });
       if (result == null || typeof result !== 'object') result = { status: 'success', message: String(result ?? 'Done.') };
