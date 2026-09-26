@@ -1089,3 +1089,7 @@
   .sv-kbd-hint { display: none; }
   .sv-toast { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* Documents rendered by lib/docs sit on their own paper-grey page. */
+.sv-doc-frame { background: #ecebe8; min-height: 480px; }
+.sv-ql-body .sv-doc-frame { min-height: 70vh; }

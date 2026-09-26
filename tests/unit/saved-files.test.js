@@ -243,3 +243,23 @@ test('Files View: layout preference is saved to localStorage and bottom fade bor
   unmount();
 });
 
+
+test('Files View: documents open in their editor first, and preview as documents', async () => {
+  const { getToolsForFile } = await import('../../js/views/saved.js');
+  const first = (name) => getToolsForFile({ name })[0]?.id;
+  assert.equal(first('Report.docx'), 'scribe');
+  assert.equal(first('letter.odt'), 'scribe');
+  assert.equal(first('old.doc'), 'scribe');
+  assert.equal(first('notes.rtf'), 'scribe');
+  assert.equal(first('budget.xlsx'), 'ledger');
+  assert.equal(first('legacy.xls'), 'ledger');
+  assert.equal(first('sheet.ods'), 'ledger');
+  assert.equal(first('sales.csv'), 'ledger');
+  assert.equal(first('pitch.pptx'), 'podium');
+  assert.equal(first('talk.odp'), 'podium');
+  assert.equal(first('scan.pdf'), 'pdf-editor');
+  // Markdown and plain text keep their text tools first, with Scribe on offer.
+  assert.equal(first('readme.md'), 'markdown-preview');
+  assert.ok(getToolsForFile({ name: 'readme.md' }).some(t => t.id === 'scribe'));
+  assert.ok(getToolsForFile({ name: 'todo.txt' }).some(t => t.id === 'scribe'));
+});
