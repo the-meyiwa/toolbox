@@ -15,13 +15,14 @@
    Strictly zero emojis.
    ============================================================ */
 
-import { tbConfirm, tbPrompt } from '../lib/dialog.js';
+import { tbConfirm, tbPrompt, tbAlert } from '../lib/dialog.js';
 import { openContextMenu, closeContextMenu } from '../lib/context-menu.js';
 import { fs, normalizePath, getParentPath, getBaseName } from '../lib/filesystem.js';
 import { createZip } from '../lib/archive-engine.js';
 import * as store from '../lib/artifacts.js';
 import { kindFromFilename } from '../registry/kinds.js';
-import { hasRichPreview, editorFor, docFamily } from '../lib/docs/formats.js';
+import { hasRichPreview, editorFor, docFamily, mimeFor } from '../lib/docs/formats.js';
+import { askAssistant, ASK_ICON } from '../lib/ask-assistant.js';
 import { BY_ID, toolsAccepting } from '../registry/index.js';
 import { getFileTypeIcon, detectFileCategory } from '../lib/file-icons.js';
 import { getCurrentUser } from '../lib/supabase.js';
@@ -889,6 +890,7 @@ function renderDetailPane(selected) {
         ` : '<span></span>'}
         <div class="sv-detail-actions">
           <button type="button" class="sv-icon-btn" data-act="quicklook" title="Quick Look (Space)" aria-label="Quick Look preview">${ICONS.expand}</button>
+          <button type="button" class="sv-icon-btn" data-act="ask-assistant" data-file-path="${escapeHtml(selected.path || '')}" title="Ask Assistant about this file" aria-label="Ask Assistant about this file">${ASK_ICON}</button>
           ${isZip ? `<button type="button" class="sv-icon-btn" data-act="extract-archive" data-file-path="${escapeHtml(selected.path)}" title="Extract here" aria-label="Extract archive">${ICONS.zip}</button>` : ''}
           ${top ? `
             <div class="sv-open-split">
@@ -1231,6 +1233,17 @@ function wire(host, ctx, refresh, ui) {
 
     if (window.location.hash === `#${toolId}`) window.dispatchEvent(new HashChangeEvent('hashchange'));
     else window.location.hash = `#${toolId}`;
+  }
+
+  async function askAboutFile(path) {
+    const item = path && lookup(path);
+    if (!item || item.isDirectory) return;
+    try {
+      const blob = item.blob || await fs.readFile(item.path, { encoding: 'blob', storage: currentStorage });
+      askAssistant({ name: item.name, blob, type: blob?.type || mimeFor(item.name) });
+    } catch (err) {
+      tbAlert(err?.message || 'Could not read that file.', 'Ask Assistant');
+    }
   }
 
   function openItem(path) {
@@ -1710,6 +1723,7 @@ function wire(host, ctx, refresh, ui) {
         ? { label: 'Open', icon: ICONS.folderOpen, shortcut: 'Enter', action: () => navigate(path) }
         : { label: 'Quick Look', icon: ICONS.eye, shortcut: 'Space', action: () => openQuickLook(path) },
       ...(top ? [{ label: `Open in ${top.name}`, icon: ICONS.external, shortcut: 'Enter', action: () => openFileInTool(item, top.id) }] : []),
+      ...(isDir ? [] : [{ label: 'Ask Assistant', icon: ASK_ICON, action: () => askAboutFile(path) }]),
       { separator: true },
       { label: 'Rename', icon: ICONS.pencil, shortcut: 'F2', action: () => startRename(path) },
       { label: 'Cut', icon: ICONS.scissors, shortcut: `${modKey()}X`, action: () => setClipboard('cut') },
@@ -2095,6 +2109,7 @@ function wire(host, ctx, refresh, ui) {
       case 'folder-properties': openProperties([currentPath], { folder: true }); return;
       case 'multi-properties': openProperties(selection().length ? selection() : [currentPath]); return;
       case 'multi-download': await downloadPaths(selection()); return;
+      case 'ask-assistant': askAboutFile(actBtn.dataset.filePath); return;
       case 'quicklook': {
         const target = current?.path || selection().find(p => !lookup(p)?.isDirectory);
         if (target) openQuickLook(target);

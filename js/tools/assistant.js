@@ -1438,6 +1438,13 @@ function mountAssistant(container, state) {
 
   renderModeButton();
   renderFiles();
+  // A file sent here by "Ask Assistant" in Files or an editor.
+  if (state.artifact?.from === 'ask-assistant' && state.artifact.file) {
+    addFiles([state.artifact.file]).then(() => {
+      if (dead) return;
+      if (state.artifact.prompt) { input.value = state.artifact.prompt; input.dispatchEvent(new Event('input')); }
+    });
+  }
   (async () => {
     await store.load();
     if (dead) return;

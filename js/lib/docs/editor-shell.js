@@ -11,6 +11,7 @@
 
 import { extOf, stemOf, saveFormatFor, SAVE_FORMATS, DOC_FORMATS, mimeFor } from './formats.js';
 import { toBytes } from './xml.js';
+import { askAssistant, ASK_ICON } from '../ask-assistant.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -49,7 +50,8 @@ function download(blob, name) {
  * @param {{ tool: 'scribe'|'ledger'|'podium', defaultName: string, accept: string,
  *           toolbar: string, body: string, footer?: string,
  *           load: (bytes: Uint8Array, name: string) => Promise<void>|void,
- *           blank: () => void, serialize: (format: string) => Promise<Blob> }} opts
+ *           blank: () => void, serialize: (format: string) => Promise<Blob>,
+ *           selection?: () => string }} opts
  */
 export function mountShell(container, opts) {
   const formats = SAVE_FORMATS[opts.tool];
@@ -63,6 +65,8 @@ export function mountShell(container, opts) {
           <span class="dx-status" aria-live="polite"></span>
         </div>
         <div class="dx-actions">
+          <button type="button" class="btn btn-ghost btn-sm dx-ask" data-dx="ask" title="Ask Assistant about this file or your selection">${ASK_ICON}<span>Ask Assistant</span></button>
+          <span class="dx-sep" aria-hidden="true"></span>
           <button type="button" class="btn btn-ghost btn-sm" data-dx="new" title="New">${icon(ICONS.new)}<span>New</span></button>
           <label class="btn btn-ghost btn-sm dx-open" title="Open a file from this device">${icon(ICONS.open)}<span>Open</span><input type="file" accept="${esc(opts.accept)}" hidden></label>
           <select class="dx-format" aria-label="Save as format" title="Format to save in">
@@ -179,6 +183,21 @@ export function mountShell(container, opts) {
     }
   }
 
+  async function ask() {
+    if (state.busy) return;
+    const picked = String(opts.selection?.() || '').trim().slice(0, 4000);
+    state.busy = 'Preparing…'; paint();
+    try {
+      const { blob, name } = await serializeCurrent();
+      askAssistant({ name, blob, type: mimeFor(name), prompt: picked ? `About this part of ${name}:\n\n"${picked}"\n\n` : '' });
+    } catch (err) {
+      console.error(err);
+      toast(`Couldn't send to Assistant: ${err.message || err}`, 'error');
+    } finally {
+      state.busy = false; if (root.isConnected) paint();
+    }
+  }
+
   async function openBytes(bytes, name, { path = null, storage = 'offline' } = {}) {
     state.busy = 'Opening…'; paint();
     try {
@@ -208,6 +227,7 @@ export function mountShell(container, opts) {
     const act = e.target.closest('[data-dx]')?.dataset.dx;
     if (act === 'save') save();
     else if (act === 'download') doDownload();
+    else if (act === 'ask') ask();
     else if (act === 'new') {
       if (state.dirty && typeof confirm === 'function' && !confirm('Discard unsaved changes and start a new file?')) return;
       opts.blank();

@@ -154,6 +154,7 @@ export function readParagraphs(textEl, deck) {
 }
 
 export default {
+  ownFileChrome: true,
   render(container, { artifact } = {}) {
     injectDeckCss();
     let deck = newDeck();
@@ -179,6 +180,7 @@ export default {
         deck = next; current = 0; selected = -1; undo = []; redo = [];
         renderAll();
       },
+      selection: () => container.querySelector('.dk-el.is-selected')?.innerText || '',
       blank: () => { deck = newDeck(); current = 0; selected = -1; undo = []; redo = []; renderAll(); },
       serialize: async (format) => {
         finishText();

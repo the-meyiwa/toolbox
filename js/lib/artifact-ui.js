@@ -27,6 +27,8 @@ const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
  */
 export function mountArtifactStrip(host, { tool, instance, incoming }) {
   if (typeof instance?.getArtifact !== 'function') return () => {};
+  // Editors with their own name, Save and Download (Scribe, Ledger, Podium).
+  if (instance.ownFileChrome) return () => {};
 
   const produces = tool.produces ?? [];
   if (!produces.length) return () => {};

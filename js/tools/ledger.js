@@ -90,6 +90,7 @@ export function formatValue(v, z) {
 /* ---------------- the tool ---------------- */
 
 export default {
+  ownFileChrome: true,
   render(container, { artifact } = {}) {
     let book = { sheets: [emptySheet('Sheet1')] };
     let active = 0;
@@ -118,6 +119,10 @@ export default {
         book = { sheets: [emptySheet('Sheet1')] };
         active = 0; sel = { r: 0, c: 0, r2: 0, c2: 0 }; undo = []; redo = [];
         invalidate(); renderTabs(); layout(); paint(); syncBar();
+      },
+      selection: () => {
+        const { r0, r1, c0, c1 } = range();
+        return r0 === r1 && c0 === c1 && !sheet().cells.get(cellKey(r0, c0)) ? '' : selectionTsv();
       },
       serialize: async (format) => {
         commitEdit();
