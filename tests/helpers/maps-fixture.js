@@ -139,6 +139,45 @@ function osrm(url) {
   };
 }
 
+// Extra providers see the same neighbourhood with small differences: positions a few metres
+// off, names written their own way, and a place or two OpenStreetMap does not have.
+const PROVIDER_EXTRA = [
+  { name: 'Shoprite Maryland Mall', at: [3.3700, 6.5720], kind: 'supermarket', brand: 'Shoprite' },
+  { name: 'Spar Ketu', at: [3.3830, 6.5990], kind: 'supermarket' },
+];
+function providerPlaces(q, [lon, lat], radius) {
+  const qw = words(q);
+  const base = POIS.map(p => ({ name: p.tags.name, at: [p.lon + 0.0001, p.lat - 0.0001], kind: p.tags.amenity || p.tags.shop, brand: p.tags.brand, phone: p.tags.phone }));
+  // Like the real services, a match on the kind of place counts too (fuzzy search).
+  return [...base, ...PROVIDER_EXTRA]
+    .filter(p => qw.some(w => `${p.name} ${p.brand || ''} ${p.kind}`.toLowerCase().includes(w)))
+    .filter(p => dist(p.at, [lon, lat]) <= radius);
+}
+function tomtom(url) {
+  const q = decodeURIComponent(url.pathname.split('/').pop().replace(/\.json$/, ''));
+  const pts = providerPlaces(q, [Number(url.searchParams.get('lon')), Number(url.searchParams.get('lat'))], Number(url.searchParams.get('radius')));
+  return { results: pts.map(p => ({ type: 'POI', poi: { name: p.name.replace('Shoprite', 'ShopRite'), categories: [p.kind], brands: p.brand ? [{ name: p.brand }] : [], phone: p.phone }, address: { freeformAddress: 'Lagos' }, position: { lat: p.at[1], lon: p.at[0] } })) };
+}
+function foursquare(url) {
+  const [lat, lon] = url.searchParams.get('ll').split(',').map(Number);
+  const pts = providerPlaces(url.searchParams.get('query'), [lon, lat], Number(url.searchParams.get('radius')));
+  return { results: pts.map(p => ({ fsq_place_id: p.name, name: p.name, latitude: p.at[1] + 0.0002, longitude: p.at[0], location: { formatted_address: 'Lagos, Nigeria' }, categories: [{ name: titleCaseFx(p.kind) }], website: 'https://example.com' })) };
+}
+function hereDiscover(url) {
+  const [lat, lon, r] = url.searchParams.get('in').replace('circle:', '').split(/[,;]r=|,/).map(Number);
+  return { items: providerPlaces(url.searchParams.get('q'), [lon, lat], r).map(p => ({ title: p.name, resultType: 'place', position: { lat: p.at[1], lng: p.at[0] + 0.0002 }, address: { label: 'Lagos, Nigeria' }, categories: [{ name: p.kind }] })) };
+}
+function mapboxForward(url) {
+  const [lon, lat] = url.searchParams.get('proximity').split(',').map(Number);
+  return { features: providerPlaces(url.searchParams.get('q'), [lon, lat], 20000).slice(0, 10).map(p => ({ geometry: { coordinates: p.at }, properties: { name: p.name, full_address: 'Lagos', poi_category: [p.kind] } })) };
+}
+function googleText(body) {
+  const b = JSON.parse(body);
+  const c = b.locationBias.circle.center;
+  return { places: providerPlaces(b.textQuery, [c.longitude, c.latitude], 50000).map(p => ({ displayName: { text: p.name }, formattedAddress: 'Lagos, Nigeria', location: { latitude: p.at[1] - 0.0002, longitude: p.at[0] }, primaryTypeDisplayName: { text: titleCaseFx(p.kind) } })) };
+}
+const titleCaseFx = (s) => String(s || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
 async function callHandler(url, init = {}) {
   const request = {
     method: init.method || 'GET',
@@ -154,7 +193,7 @@ async function callHandler(url, init = {}) {
 }
 
 /** Replaces fetch with the fixture. Returns a restore function and the list of upstream calls. */
-export function installMapsFixture({ down = false } = {}) {
+export function installMapsFixture({ down = false, overpassDown = [], providerStatus = {} } = {}) {
   const real = globalThis.fetch;
   const calls = [];
   globalThis.fetch = async (input, init = {}) => {
@@ -166,6 +205,22 @@ export function installMapsFixture({ down = false } = {}) {
     const json = (o) => new Response(JSON.stringify(o), { status: 200, headers: { 'Content-Type': 'application/json' } });
     if (url.hostname === 'photon.komoot.io') return json(url.pathname.startsWith('/reverse') ? { features: [] } : photon(url));
     if (url.hostname === 'nominatim.openstreetmap.org') return json(url.pathname.startsWith('/reverse') ? reverse(url) : []);
+    if (providerStatus[url.hostname]) return new Response('{}', { status: providerStatus[url.hostname] });
+    if (url.hostname === 'api.tomtom.com') return json(tomtom(url));
+    if (url.hostname === 'discover.search.hereapi.com') return json(hereDiscover(url));
+    if (url.hostname === 'api.mapbox.com') return json(mapboxForward(url));
+    if (url.hostname === 'places.googleapis.com') {
+      if (!init.headers?.['X-Goog-Api-Key'] || /Phone|website|Hours/i.test(init.headers?.['X-Goog-FieldMask'] || '')) return new Response('{}', { status: 400 });
+      return json(googleText(init.body));
+    }
+    if (url.hostname === 'places-api.foursquare.com') {
+      if (!/^Bearer \S+/.test(init.headers?.Authorization || '') || !init.headers?.['X-Places-Api-Version']) return new Response('{}', { status: 401 });
+      return json(foursquare(url));
+    }
+    if (url.pathname.endsWith('/api/interpreter') && (overpassDown === 'all' || overpassDown.includes(url.hostname))) {
+      // A busy mirror that never answers until the caller gives up.
+      return new Promise((_, reject) => init.signal?.addEventListener('abort', () => reject(init.signal.reason), { once: true }));
+    }
     if (url.pathname.endsWith('/api/interpreter')) return json(overpass(decodeURIComponent(String(init.body || '').replace(/^data=/, ''))));
     if (url.pathname.includes('/route/v1/')) return json(osrm(url));
     throw new TypeError(`fixture has no answer for ${url.href}`);

@@ -4,13 +4,25 @@
    device location. Every function throws a readable Error.
    ============================================================ */
 
+// The server gives up on slow map services well before this. The margin covers the API
+// waking from sleep on its host; past it the request is treated as lost, so nothing spins
+// forever.
+const CLIENT_TIMEOUT_MS = 60_000;
+
 async function call(path, { method = 'GET', body, signal } = {}) {
-  const res = await fetch(path, {
-    method,
-    signal,
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const limit = AbortSignal.timeout(CLIENT_TIMEOUT_MS);
+  let res;
+  try {
+    res = await fetch(path, {
+      method,
+      signal: signal ? AbortSignal.any([signal, limit]) : limit,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (err) {
+    if (limit.aborted && !signal?.aborted) throw new Error('The map service took too long to answer. Try again in a moment.');
+    throw err;
+  }
   let json = null;
   try { json = await res.json(); } catch { /* not JSON */ }
   // Anything but JSON means the request never reached the maps API (for example a server
@@ -58,7 +70,16 @@ export async function deviceLocation({ timeout = 8000, maxAge = 120_000 } = {}) 
   if (lastFix && Date.now() - lastFix.at < maxAge) return lastFix.pos;
   if (typeof navigator === 'undefined' || !navigator.geolocation) return null;
   try {
-    const p = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout, maximumAge: maxAge }));
+    // The browser's own timeout does not run while its permission prompt is open, so an
+    // unanswered prompt would otherwise leave the caller waiting forever.
+    const p = await new Promise((resolve, reject) => {
+      const guard = setTimeout(() => reject(new Error('Location timed out')), timeout + 7000);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => { clearTimeout(guard); resolve(pos); },
+        (err) => { clearTimeout(guard); reject(err); },
+        { enableHighAccuracy: true, timeout, maximumAge: maxAge },
+      );
+    });
     const pos = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: Math.round(p.coords.accuracy || 0) };
     lastFix = { at: Date.now(), pos };
     return pos;

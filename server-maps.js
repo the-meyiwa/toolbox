@@ -16,6 +16,7 @@
    directions from that; nothing about a place is written here.
    ============================================================ */
 
+import { activeProviders, searchProviders, mergePlaces } from './server-place-providers.js';
 import {
   distanceM, bearing, compass, projectOnLine, simplify, lineLength, pointAlong, isLngLat, parseLatLng,
 } from './js/lib/maps/geo.js';
@@ -93,9 +94,57 @@ async function firstOk(tasks) {
   throw lastErr || new Error('No service answered');
 }
 
-export async function overpass(query, timeout = 25_000) {
+// Public Overpass servers are often busy. Ask one, bring in the next mirror when it fails or
+// has not answered within a few seconds, and take the first good answer, so a slow mirror
+// costs seconds, not the whole request. A mirror that lost the race sits out for a while.
+const overpassSlowUntil = new Map();
+
+export async function overpass(query, timeout = 10_000, stagger = 3_000) {
   const body = `data=${encodeURIComponent(query)}`;
-  return firstOk(OVERPASS.map(url => () => getJson(url, { method: 'POST', body, timeout })));
+  const hit = cacheGet(`overpass ${body}`);
+  if (hit !== undefined) return hit;
+  const now = Date.now();
+  const mirrors = [...OVERPASS].sort((x, y) => ((overpassSlowUntil.get(x) || 0) > now) - ((overpassSlowUntil.get(y) || 0) > now));
+  const ctrl = new AbortController();
+  const reasons = [];
+  let winner = -1;
+  const ask = async (url) => {
+    const res = await fetch(url, {
+      method: 'POST',
+      body,
+      headers: { 'User-Agent': UA, Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+      signal: AbortSignal.any([ctrl.signal, AbortSignal.timeout(timeout)]),
+    });
+    if (!res.ok) throw new Error(`${new URL(url).hostname} answered ${res.status}`);
+    const json = await res.json();
+    // Overpass reports its own timeouts inside a 200 answer.
+    if (json.remark && /runtime error|timed out|out of memory/i.test(json.remark) && !json.elements?.length) throw new Error('the map server timed out');
+    return json;
+  };
+  const json = await new Promise((resolve) => {
+    let started = 0;
+    let settled = 0;
+    let timer = 0;
+    const next = () => {
+      clearTimeout(timer);
+      if (winner >= 0 || started >= mirrors.length) return;
+      const i = started++;
+      ask(mirrors[i]).then((j) => {
+        if (winner < 0) { winner = i; resolve(j); }
+      }, (err) => {
+        if (winner < 0) reasons.push(err.name === 'TimeoutError' ? 'timed out' : err.message);
+        if (++settled === mirrors.length && winner < 0) resolve(null);
+        else next();
+      });
+      if (started < mirrors.length) timer = setTimeout(next, stagger);
+    };
+    next();
+  });
+  ctrl.abort();
+  if (!json) throw new Error(`The map data servers are busy (${[...new Set(reasons)].join('; ') || 'no answer'})`);
+  for (let i = 0; i < winner; i++) overpassSlowUntil.set(mirrors[i], Date.now() + 5 * 60_000);
+  cacheSet(`overpass ${body}`, json, 10 * 60_000);
+  return json;
 }
 
 /* ---------------- places ---------------- */
@@ -250,16 +299,64 @@ function fromElement(el, origin) {
   };
 }
 
-/** Places matching a name, brand or category around a point, nearest first. */
-export async function searchNearby({ q = '', category = '', near, radius, limit = 10 }) {
-  if (!isLngLat(near)) throw new Error('A location is needed to search nearby');
+async function photonNearby(text, near, radius, limit) {
+  const q = String(text || '').trim();
+  if (!q) return [];
+  const j = await getJson(`${PHOTON}/api/?q=${encodeURIComponent(q)}&limit=20&lang=en&lat=${near[1]}&lon=${near[0]}&location_bias_scale=0.1&zoom=14`, { ttl: 3600_000, timeout: 8_000 });
+  return (j.features || []).map(fromPhoton)
+    .filter(p => isLngLat([p.lng, p.lat]))
+    .map(p => ({ ...p, distanceM: Math.round(distanceM(near, [p.lng, p.lat])) }))
+    .filter(p => p.distanceM <= Math.max(radius, 15000))
+    .sort((a, b) => a.distanceM - b.distanceM)
+    .slice(0, limit);
+}
+
+function nearbyTerms(q, category) {
   const text = String(q || '').trim();
-  const filter = tagFilterFor(category) || tagFilterFor(text);
   const words = text.toLowerCase().replace(/\b(nearest|closest|nearby|near me|around me|the|a|an)\b/g, ' ').trim().split(/\s+/).filter(w => w.length > 1).slice(0, 4);
   // Words that name a business ("Ebeano" in "Ebeano supermarket") must match a name; a pure
   // category ("pharmacy") searches by tag instead.
   const generic = (w) => tagFilterFor(w) || /^(shop|store|station|stop|place|centre|center|outlet|branch)s?$/.test(w);
-  const nameWords = words.filter(w => !generic(w));
+  return { text, words, nameWords: words.filter(w => !generic(w)) };
+}
+
+/**
+ * Places matching a name, brand or category around a point. OpenStreetMap and every extra
+ * provider with a key (server-place-providers.js) are asked at once; the answers are merged
+ * so each place appears once, with `sources` naming who knows it.
+ */
+export async function searchNearby({ q = '', category = '', near, radius, limit = 10 }) {
+  if (!isLngLat(near)) throw new Error('A location is needed to search nearby');
+  const { words, nameWords } = nearbyTerms(q, category);
+  const reach = radius || 15000;
+  const searched = ['OpenStreetMap', ...activeProviders().map(p => p.name)];
+  const [osm, extra] = await Promise.all([
+    osmNearby({ q, category, near, radius, limit }).then(r => ({ ok: r }), err => ({ err })),
+    activeProviders().length
+      ? searchProviders({ text: words.join(' ') || String(category || '').trim(), near, radius: reach, limit })
+      : { lists: [], errors: [] },
+  ]);
+  // A business name must appear in what a provider returns; their fuzzy matching would
+  // otherwise answer "Ebeano" with the nearest supermarket of any name.
+  const named = (p) => nameWords.every(w => `${p.name} ${p.brand || ''}`.toLowerCase().includes(w));
+  const lists = extra.lists.map(l => ({ ...l, places: l.places.filter(named) })).filter(l => l.places.length);
+  if (!lists.length) {
+    if (osm.err) throw osm.err;
+    return { ...osm.ok, searched, ...(extra.errors.length ? { providerErrors: extra.errors } : {}) };
+  }
+  const osmPlaces = osm.ok?.places || [];
+  const places = mergePlaces([{ source: 'OpenStreetMap', places: osmPlaces }, ...lists], limit);
+  return {
+    places,
+    searched,
+    radius: Math.max(osm.ok?.radius || 0, reach),
+    ...(extra.errors.length || osm.err ? { providerErrors: [...extra.errors, ...(osm.err ? [`OpenStreetMap: ${osm.err.message}`] : [])] } : {}),
+  };
+}
+
+async function osmNearby({ q = '', category = '', near, radius, limit = 10 }) {
+  const { text, words, nameWords } = nearbyTerms(q, category);
+  const filter = tagFilterFor(category) || tagFilterFor(text);
   const nameRe = nameWords.map(escapeRe).join('.*');
   const run = async (r) => {
     const around = `(around:${r},${near[1]},${near[0]})`;
@@ -273,15 +370,30 @@ export async function searchNearby({ q = '', category = '', near, radius, limit 
       parts.push(`nwr${around}[~"^(amenity|shop|tourism|leisure|office|craft|healthcare)$"~"^${words.map(escapeRe).join('_')}$",i];`);
     }
     if (!parts.length) return [];
-    const j = await overpass(`[out:json][timeout:20];(${parts.join('')});out center tags 120;`);
+    const j = await overpass(`[out:json][timeout:10];(${parts.join('')});out center tags 120;`);
     return (j.elements || []).filter(el => el.tags && elementPoint(el));
   };
   let found = [];
   let used = radius || 0;
-  for (const r of radius ? [radius] : [2500, 10000, 30000]) {
-    used = r;
-    found = await run(r);
-    if (found.length >= Math.min(3, limit)) break;
+  const started = Date.now();
+  try {
+    for (const r of radius ? [radius] : [3000, 15000]) {
+      // Widen only while there is time left, so one search never runs past about half a minute.
+      if (found.length && Date.now() - started > 10_000) break;
+      const more = await run(r);
+      used = r;
+      found = more;
+      if (found.length >= Math.min(3, limit)) break;
+    }
+  } catch (err) {
+    // Keep what a smaller radius already found; otherwise try Photon's text search around
+    // the same point. Photon finding nothing is not proof there is nothing, so the
+    // Overpass error stands in that case.
+    if (!found.length) {
+      const places = await photonNearby(text || category, near, 15000, limit).catch(() => null);
+      if (!places?.length) throw err;
+      return { places: places.map(p => ({ ...p, sources: ['OpenStreetMap'] })), radius: 15000, source: 'photon' };
+    }
   }
   const seen = new Set();
   const places = found.map(el => fromElement(el, near))
@@ -293,7 +405,7 @@ export async function searchNearby({ q = '', category = '', near, radius, limit 
     })
     .sort((a, b) => a.distanceM - b.distanceM)
     .slice(0, limit);
-  return { places, radius: used };
+  return { places: places.map(p => ({ ...p, sources: ['OpenStreetMap'] })), radius: used };
 }
 
 /* ---------------- routing ---------------- */
@@ -336,7 +448,7 @@ export async function route(points, mode = 'driving') {
   if (pts.length < 2) throw new Error('A route needs a start and an end');
   const coords = pts.map(p => `${p[0].toFixed(6)},${p[1].toFixed(6)}`).join(';');
   const bases = OSRM[mode] || OSRM.driving;
-  const j = await firstOk(bases.map(b => () => getJson(`${b}/route/v1/driving/${coords}?overview=full&geometries=geojson&steps=true&alternatives=false`, { timeout: 15_000 })));
+  const j = await firstOk(bases.map(b => () => getJson(`${b}/route/v1/driving/${coords}?overview=full&geometries=geojson&steps=true&alternatives=false`, { timeout: 12_000 })));
   const r = j.routes?.[0];
   if (!r) throw new Error(j.message || 'No route was found between those places');
   let along = 0;
@@ -397,7 +509,7 @@ export async function analyseCorridor({ geometry, steps, origin, destination }) 
   const d = `${destination[1]},${destination[0]}`;
   const o = `${origin[1]},${origin[0]}`;
   const ROUTE_TYPES = '^(bus|minibus|share_taxi|trolleybus|tram|train|light_rail|subway|monorail|ferry)$';
-  const q = `[out:json][timeout:25];
+  const q = `[out:json][timeout:15];
 (
   node(around:60,${poly})[highway=bus_stop];
   nwr(around:60,${poly})[public_transport~"^(platform|station)$"];
@@ -419,7 +531,7 @@ make section name="destination_lines";out;
 nwr(around:600,${d})[~"^(highway|public_transport)$"~"^(bus_stop|platform|stop_position)$"]->.ds;
 (rel(bn.ds)[type=route][route~"${ROUTE_TYPES}"];rel(bw.ds)[type=route][route~"${ROUTE_TYPES}"];);
 out tags 40;`;
-  const j = await overpass(q, 30_000);
+  const j = await overpass(q, 15_000, 3_000);
   const sections = { corridor: [], destination: [], origin_lines: [], destination_lines: [] };
   let cur = 'corridor';
   for (const el of j.elements || []) {
