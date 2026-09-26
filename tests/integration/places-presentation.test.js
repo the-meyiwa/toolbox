@@ -82,6 +82,31 @@ test('service down or no location: an honest error, no made-up places', async ()
   } finally { fx.restore(); }
 });
 
+test('a hung map-data server does not stall the search: the next mirror answers', async () => {
+  const fx = installMapsFixture({ overpassDown: ['overpass-api.de'] });
+  try {
+    const t0 = Date.now();
+    const res = await executeAssistantTool('search_places_nearby', { query: 'Total fuel near me' }, at(HOME));
+    assert.equal(res.status, 'success');
+    assert.equal(res.places[0].name, 'Total Ojota');
+    assert.ok(Date.now() - t0 < 8000, `took ${Date.now() - t0} ms`);
+    assert.ok(fx.calls.includes('overpass.private.coffee'));
+  } finally { fx.restore(); }
+});
+
+test('every map-data server hung: falls back to place search, in bounded time', async () => {
+  const fx = installMapsFixture({ overpassDown: 'all' });
+  // Abort timers do not hold Node's event loop open; a real server's socket does.
+  const keepAlive = setInterval(() => {}, 1000);
+  try {
+    const t0 = Date.now();
+    const res = await executeAssistantTool('search_places_nearby', { query: 'Ketu', location: 'Ojota' }, at(HOME));
+    assert.equal(res.status, 'success');
+    assert.equal(res.places[0].name, 'Ketu');
+    assert.ok(Date.now() - t0 < 20_000, `took ${Date.now() - t0} ms`);
+  } finally { clearInterval(keepAlive); fx.restore(); }
+});
+
 test('a server without the maps API is an error, not an empty result', async () => {
   const real = globalThis.fetch;
   // An older API build answers unknown paths with an HTML status page.

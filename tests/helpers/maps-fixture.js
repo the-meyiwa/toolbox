@@ -154,7 +154,7 @@ async function callHandler(url, init = {}) {
 }
 
 /** Replaces fetch with the fixture. Returns a restore function and the list of upstream calls. */
-export function installMapsFixture({ down = false } = {}) {
+export function installMapsFixture({ down = false, overpassDown = [] } = {}) {
   const real = globalThis.fetch;
   const calls = [];
   globalThis.fetch = async (input, init = {}) => {
@@ -166,6 +166,10 @@ export function installMapsFixture({ down = false } = {}) {
     const json = (o) => new Response(JSON.stringify(o), { status: 200, headers: { 'Content-Type': 'application/json' } });
     if (url.hostname === 'photon.komoot.io') return json(url.pathname.startsWith('/reverse') ? { features: [] } : photon(url));
     if (url.hostname === 'nominatim.openstreetmap.org') return json(url.pathname.startsWith('/reverse') ? reverse(url) : []);
+    if (url.pathname.endsWith('/api/interpreter') && (overpassDown === 'all' || overpassDown.includes(url.hostname))) {
+      // A busy mirror that never answers until the caller gives up.
+      return new Promise((_, reject) => init.signal?.addEventListener('abort', () => reject(init.signal.reason), { once: true }));
+    }
     if (url.pathname.endsWith('/api/interpreter')) return json(overpass(decodeURIComponent(String(init.body || '').replace(/^data=/, ''))));
     if (url.pathname.includes('/route/v1/')) return json(osrm(url));
     throw new TypeError(`fixture has no answer for ${url.href}`);
