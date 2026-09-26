@@ -1,7 +1,0 @@
-
-@media (max-width: 768px) {
-  .mobile-nav, #mobile-nav {
-    padding-bottom: max(env(safe-area-inset-bottom), 12px) !important;
-  }
-}
-
