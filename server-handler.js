@@ -650,51 +650,6 @@ export async function handleApiRequest(request, response) {
       return true;
     }
 
-    // Code Playground agent: Gemini function calling with the server's key.
-    // Signed-in Toolbox users only, so the deployment's key isn't an open proxy.
-    if (url.pathname === '/api/assistant/agent' && request.method === 'POST') {
-      const send = (status, data) => {
-        response.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-        response.end(JSON.stringify(data));
-      };
-      try {
-        const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) { send(503, { error: 'The Assistant provider is not configured on this deployment.' }); return true; }
-        const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
-        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-        if (supabaseUrl && supabaseKey) {
-          const authorization = request.headers.authorization || '';
-          if (!/^Bearer [\w.-]+$/.test(authorization)) { send(401, { error: 'Sign in to Toolbox to use the Code Playground agent.' }); return true; }
-          const who = await fetch(`${supabaseUrl}/auth/v1/user`, { headers: { apikey: supabaseKey, Authorization: authorization }, signal: AbortSignal.timeout(15000) });
-          if (!who.ok) { send(401, { error: 'Your Toolbox session has expired. Sign in again.' }); return true; }
-        }
-        let raw = '';
-        for await (const chunk of request) {
-          raw += chunk;
-          if (raw.length > 4_000_000) { send(413, { error: 'Request too large.' }); return true; }
-        }
-        const body = raw ? JSON.parse(raw) : {};
-        const model = /^gemini-[\w.-]+$/.test(body.model || '') ? body.model : 'gemini-2.5-flash';
-        const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            systemInstruction: body.systemInstruction,
-            contents: body.contents,
-            tools: body.tools,
-            toolConfig: body.toolConfig,
-            generationConfig: body.generationConfig,
-          }),
-          signal: AbortSignal.timeout(120000),
-        });
-        const data = await upstream.json().catch(() => ({}));
-        send(upstream.status, data);
-      } catch (error) {
-        send(500, { error: error.message });
-      }
-      return true;
-    }
-
     if (url.pathname === '/api/assistant/search' && (request.method === 'GET' || request.method === 'POST')) {
       const q = (url.searchParams.get('q') || url.searchParams.get('query') || '').trim();
       const searchType = (url.searchParams.get('type') || 'places').toLowerCase();

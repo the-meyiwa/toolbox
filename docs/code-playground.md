@@ -55,7 +55,7 @@ Signed-in users get an agent (Agent / Ask modes) that can:
 - open the preview and click or type in it.
 
 Every change is checkpointed, so you can review diffs, revert a single file, or undo all of a request's changes.
-Requests go to `/api/assistant/agent` (server key, Supabase-authenticated), or straight to Gemini with the user's own key.
+Requests go straight to Gemini when the user has saved their own key. Otherwise, or as soon as that key runs out of quota, is rate limited or stops responding, they go to the multi-provider gateway at `/api/assistant/v2/chat` (Supabase-authenticated) in `code` mode. It tries Gemini, then OpenRouter, OpenAI, Groq and DeepSeek, using whichever of those the server has keys for. A step that fails partway is retried, and the chat notes which model took over.
 
 ## Testing
 
@@ -64,4 +64,4 @@ Requests go to `/api/assistant/agent` (server key, Supabase-authenticated), or s
   `http://127.0.0.1:4173/tests/browser/playground.html`.
   - Optional environment variables `PG_PYODIDE_DIR` and `PG_SQLJS_DIR` serve local runtime copies,
     which the page uses when you add `?cdn=pyodide=/cdn/pyodide/&cdn=sqljs=/cdn/sqljs/`.
-  - `POST /__mock/agent` queues scripted Gemini responses for testing the agent offline.
+  - `POST /__mock/agent` queues scripted Gemini-style responses. The harness serves them as the gateway's streamed replies, so the agent can be tested offline.

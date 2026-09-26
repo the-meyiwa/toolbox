@@ -9,9 +9,11 @@
    request starts from a checkpoint, so all of its edits can be reviewed
    file by file and undone in one click.
 
-   Model access: Google Gemini with function calling — the student's own
-   API key when one is saved in Toolbox Preferences, otherwise the
-   Toolbox server's key through /api/assistant/agent.
+   Model access: the student's own Gemini key when one is saved in
+   Toolbox Preferences; otherwise, or as soon as that key runs out of
+   quota or stops responding, the Toolbox server's multi-provider
+   gateway (Gemini, OpenRouter, Groq, OpenAI, DeepSeek), which fails
+   over between whichever providers the deployment has keys for.
    ============================================================ */
 
 import { unifiedDiff } from './commands-core.js';
@@ -101,7 +103,36 @@ const READ_ONLY_TOOLS = new Set(['update_plan', 'list_files', 'read_file', 'sear
 
 /* ---------------- model access ---------------- */
 
-async function generate({ system, contents, tools, signal, token }) {
+// How long one model gets to answer a step before it counts as stopped.
+const STEP_TIMEOUT_MS = 120_000;
+// After the student's own Gemini key runs out, go straight to the gateway for a while.
+const KEY_COOLDOWN_MS = 10 * 60_000;
+let keyCooldownUntil = 0;
+
+/** A failure that another model could get past (quota, rate limit, outage, silence). */
+function isSwitchable(status, message) {
+  return status === 408 || status === 429 || status >= 500 || status === 0 ||
+    /quota|rate.?limit|resource.?exhausted|too many requests|overloaded|unavailable|timed? ?out|deadline|billing|exceeded|stopped responding/i.test(message || '');
+}
+
+/** The caller's signal plus a per-step timeout; `timedOut()` tells the two apart. */
+function stepSignal(signal) {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => { timedOut = true; controller.abort(); }, STEP_TIMEOUT_MS);
+  const onAbort = () => controller.abort();
+  if (signal) { if (signal.aborted) controller.abort(); else signal.addEventListener('abort', onAbort, { once: true }); }
+  return {
+    signal: controller.signal,
+    timedOut: () => timedOut,
+    done: () => { clearTimeout(timer); signal?.removeEventListener('abort', onAbort); },
+  };
+}
+
+const aborted = () => Object.assign(new Error('Stopped'), { name: 'AbortError' });
+
+/** Gemini directly, with the student's own key. Tries each Gemini model before giving up. */
+async function generateWithGemini({ key, system, contents, tools, signal }) {
   const body = {
     systemInstruction: { parts: [{ text: system }] },
     contents,
@@ -109,40 +140,128 @@ async function generate({ system, contents, tools, signal, token }) {
     toolConfig: tools.length ? { functionCallingConfig: { mode: 'AUTO' } } : undefined,
     generationConfig: { temperature: 0.2, maxOutputTokens: 16384 },
   };
-  const key = userApiKey();
   let lastErr = null;
   for (const model of MODELS) {
-    let res;
+    const step = stepSignal(signal);
+    let res, data;
     try {
-      if (key) {
-        res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal,
-        });
-      } else {
-        res = await fetch('/api/assistant/agent', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-          body: JSON.stringify({ ...body, model }),
-          signal,
-        });
-      }
+      res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: step.signal,
+      });
+      data = await res.json().catch(() => ({}));
     } catch (err) {
-      if (err.name === 'AbortError') throw err;
-      lastErr = new Error('Could not reach the AI service. Check your internet connection.');
-      break;
+      if (signal?.aborted) throw aborted();
+      lastErr = Object.assign(new Error(step.timedOut() ? `${model} stopped responding` : 'Could not reach Gemini'), { status: 0 });
+      continue;
+    } finally {
+      step.done();
     }
-    const data = await res.json().catch(() => ({}));
     if (res.ok && data.candidates) return { data, model };
     const message = data.error?.message || data.error || `HTTP ${res.status}`;
     lastErr = new Error(typeof message === 'string' ? message : JSON.stringify(message));
     lastErr.status = res.status;
-    // Try the next model only when this one isn't available.
-    if (!(res.status === 404 || /not found|not supported|unknown model|is not available/i.test(lastErr.message))) break;
+    // Another Gemini model may still have quota or exist; anything else (a bad request) will fail everywhere.
+    if (!(res.status === 404 || /not found|not supported|unknown model|is not available/i.test(lastErr.message) || isSwitchable(res.status, lastErr.message))) break;
   }
-  if (lastErr?.status === 503 && /not configured/i.test(lastErr.message)) {
+  throw lastErr || new Error('Gemini returned no answer.');
+}
+
+/* Gemini-format history ⇄ OpenAI chat format, for the multi-provider gateway. */
+
+export function toChatMessages(system, contents) {
+  const messages = [{ role: 'system', content: system }];
+  let ids = [];
+  contents.forEach((c, i) => {
+    const parts = c.parts || [];
+    if (c.role === 'model') {
+      const text = parts.filter((p) => p.text && !p.thought).map((p) => p.text).join('');
+      const calls = parts.filter((p) => p.functionCall);
+      ids = calls.map((_, k) => `call_${i}_${k}`);
+      const msg = { role: 'assistant', content: text || null };
+      if (calls.length) {
+        msg.tool_calls = calls.map((p, k) => {
+          const extra = p.extraContent || (p.thoughtSignature ? { google: { thought_signature: p.thoughtSignature } } : null);
+          return { id: ids[k], type: 'function', function: { name: p.functionCall.name, arguments: JSON.stringify(p.functionCall.args || {}) }, ...(extra ? { extra_content: extra } : {}) };
+        });
+      }
+      if (msg.content || msg.tool_calls) messages.push(msg);
+      return;
+    }
+    parts.filter((p) => p.functionResponse).forEach((p, k) => {
+      messages.push({ role: 'tool', tool_call_id: ids[k] || `call_${i}_${k}`, content: JSON.stringify(p.functionResponse.response ?? {}) });
+    });
+    const text = parts.filter((p) => p.text).map((p) => p.text).join('\n');
+    if (text) messages.push({ role: 'user', content: text });
+  });
+  return messages;
+}
+
+export function fromChatTurn(turn) {
+  const parts = [];
+  if (turn.text) parts.push({ text: turn.text });
+  for (const call of turn.toolCalls || []) {
+    let args = {};
+    try { args = JSON.parse(call.function.arguments || '{}'); } catch {
+      const m = String(call.function.arguments || '').match(/\{[\s\S]*\}/);
+      try { args = m ? JSON.parse(m[0]) : {}; } catch { args = {}; }
+    }
+    parts.push({ functionCall: { name: call.function.name, args }, ...(call.extra_content ? { extraContent: call.extra_content } : {}) });
+  }
+  return { candidates: [{ content: { role: 'model', parts }, finishReason: turn.finish || undefined }] };
+}
+
+/**
+ * The Toolbox server's gateway: whichever configured provider (Gemini, OpenRouter,
+ * Groq, OpenAI, DeepSeek) answers, failing over when one is out of quota or silent.
+ * A step that breaks mid-answer is retried; the server skips the model that failed.
+ */
+async function generateWithGateway({ system, contents, tools, signal }) {
+  const { gatewayTurn } = await import('../model-gateway.js');
+  const messages = toChatMessages(system, contents);
+  const chatTools = tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } }));
+  let lastErr = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const step = stepSignal(signal);
+    try {
+      const turn = await gatewayTurn({ messages, tools: chatTools.length ? chatTools : undefined, mode: 'code', signal: step.signal });
+      if (step.timedOut()) throw Object.assign(new Error('The model stopped responding'), { status: 0 });
+      const who = turn.provider || {};
+      return { data: fromChatTurn(turn), model: who.label ? `${who.label}${who.model ? ` · ${who.model}` : ''}` : 'Toolbox models' };
+    } catch (err) {
+      if (signal?.aborted) throw aborted();
+      lastErr = step.timedOut() ? Object.assign(new Error('The model stopped responding'), { status: 0 }) : err;
+      // The server already tried every provider it has; asking again at once will not help.
+      if (!isSwitchable(lastErr.status ?? 0, lastErr.message) || /no model provider could answer/i.test(lastErr.message)) break;
+    } finally {
+      step.done();
+    }
+  }
+  if (lastErr?.status === 401) lastErr.message = 'Sign in to Toolbox to use the agent, or add a Gemini API key in Toolbox → Preferences → Assistant.';
+  if (lastErr?.status === 503 && /no .*provider is configured/i.test(lastErr.message)) {
     lastErr.message = 'No AI provider is connected. Add a Gemini API key in Toolbox → Preferences → Assistant to use the agent.';
   }
   throw lastErr || new Error('The AI service returned no answer.');
+}
+
+/**
+ * One agent step. Uses the student's own Gemini key when there is one; when it runs out
+ * or stops responding, switches to the server's gateway and stays there for the run.
+ * `run` carries per-run state: { useGateway, onSwitch(from, reason) }.
+ */
+export async function generate({ system, contents, tools, signal, run }) {
+  const key = userApiKey();
+  if (key && !run.useGateway && Date.now() >= keyCooldownUntil) {
+    try {
+      return await generateWithGemini({ key, system, contents, tools, signal });
+    } catch (err) {
+      if (err.name === 'AbortError') throw err;
+      if (!isSwitchable(err.status ?? 0, err.message)) throw err;
+      if (err.status === 429 || /quota|exhausted|exceeded|billing/i.test(err.message)) keyCooldownUntil = Date.now() + KEY_COOLDOWN_MS;
+      run.useGateway = true;
+      run.onSwitch?.('Gemini', err.message);
+    }
+  }
+  return generateWithGateway({ system, contents, tools, signal });
 }
 
 /* ---------------- the agent ---------------- */
@@ -227,11 +346,17 @@ RULES
     this.contents.push({ role: 'user', parts: [{ text: `${this.contextBlock()}\n\n---\nRequest: ${prompt}` }] });
     this.onEvent({ type: 'start', checkpoint: checkpoint.id });
     let steps = 0;
+    const run = {
+      useGateway: false,
+      model: null,
+      onSwitch: (from, reason) => this.onEvent({ type: 'model-switch', from, reason: String(reason || '').slice(0, 160) }),
+    };
     try {
       while (steps++ < MAX_STEPS) {
         if (signal.aborted) throw Object.assign(new Error('Stopped'), { name: 'AbortError' });
         this.onEvent({ type: 'thinking', step: steps });
-        const { data } = await generate({ system: this.systemPrompt(mode), contents: this.trimmedContents(), tools, signal, token: this.ide.token?.() });
+        const { data, model } = await generate({ system: this.systemPrompt(mode), contents: this.trimmedContents(), tools, signal, run });
+        if (model && model !== run.model) { run.model = model; this.onEvent({ type: 'model', model }); }
         const cand = data.candidates?.[0];
         const content = cand?.content || { role: 'model', parts: [] };
         if (!content.parts?.length) {

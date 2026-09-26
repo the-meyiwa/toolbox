@@ -1437,6 +1437,8 @@ input[type="password"] {
 /* --- Tables --- */
 .biz-table-wrap { margin-top: 18px; overflow-x: auto; border-radius: 10px; border: 1px solid var(--g150); }
 .biz-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+/* A figure and its unit stay together ("3,000.0 ms"); the wrapper scrolls sideways on a phone instead. */
+.biz-table td:not(:first-child), .biz-table th:not(:first-child) { white-space: nowrap; }
 .biz-table caption {
   caption-side: top;
   text-align: left;

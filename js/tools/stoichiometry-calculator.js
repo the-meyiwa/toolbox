@@ -79,7 +79,7 @@ export default {
         balancedData = balanceChemicalEquation(raw);
 
         inputsWrap.innerHTML = balancedData.reactants.map((r, i) => `
-          <div style="display:grid; grid-template-columns:120px 1fr 100px; gap:8px; align-items:center;">
+          <div style="display:grid; grid-template-columns:minmax(64px, auto) minmax(0, 1fr) auto; gap:8px; align-items:center;">
             <span style="font-family:var(--mono); font-weight:700; font-size:0.95rem;">${r.coeff > 1 ? r.coeff + ' ' : ''}${r.formula}</span>
             <input type="number" class="tool-input st-amt-input" data-formula="${r.formula}" value="${i === 0 ? '44.1' : '160.0'}" min="0" step="any" placeholder="Amount">
             <select class="tool-select st-unit-select" data-formula="${r.formula}">
@@ -115,7 +115,7 @@ export default {
         limitingBadge.textContent = `${stoich.limitingReactant} (Completely Consumed)`;
 
         productsTable.innerHTML = `
-          <table style="width:100%; border-collapse:collapse; font-size:0.82rem;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.82rem; white-space:nowrap;">
             <thead>
               <tr style="border-bottom:1px solid var(--g200); text-align:left; color:var(--g600);">
                 <th style="padding:6px 8px;">Product</th>
@@ -140,7 +140,7 @@ export default {
         `;
 
         excessTable.innerHTML = `
-          <table style="width:100%; border-collapse:collapse; font-size:0.82rem;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.82rem; white-space:nowrap;">
             <thead>
               <tr style="border-bottom:1px solid var(--g200); text-align:left; color:var(--g600);">
                 <th style="padding:6px 8px;">Reactant</th>

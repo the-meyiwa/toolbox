@@ -46,6 +46,8 @@ export default {
         .sheet-table {
           border-collapse: collapse;
           width: 100%;
+          /* Row header plus ten readable columns; narrower screens scroll the sheet sideways. */
+          min-width: ${40 + COLS * 84}px;
           table-layout: fixed;
           background: var(--white);
         }

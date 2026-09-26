@@ -137,6 +137,21 @@ export class AssistantPanel {
     if (!t) return;
     switch (e.type) {
       case 'thinking': this.status(e.step > 1 ? `Working… (step ${e.step})` : 'Thinking…'); break;
+      case 'model-switch': {
+        this.switchedFrom = e.from;
+        this.status(`${e.from} stopped responding. Switching models…`);
+        break;
+      }
+      case 'model': {
+        // Only worth a line when the run moved off the model it started on.
+        if (!this.switchedFrom) break;
+        const div = document.createElement('div');
+        div.className = 'cpg-dim cpg-ast-switch';
+        div.textContent = `${this.switchedFrom} could not continue, so this task carries on with ${e.model}.`;
+        t.insertBefore(div, t.querySelector('.cpg-ast-status'));
+        this.switchedFrom = null;
+        break;
+      }
       case 'text': {
         const div = document.createElement('div');
         div.className = 'cpg-ast-text cpg-md';

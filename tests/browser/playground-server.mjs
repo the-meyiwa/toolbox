@@ -3,7 +3,7 @@
 // Serves public/ at the site root (like Vite), the repository files,
 // node_modules, optional local copies of the language runtimes
 // (PG_PYODIDE_DIR, PG_SQLJS_DIR, PG_WASMOON_FILE) and a scripted mock
-// of /api/assistant/agent so the coding agent can be tested offline.
+// of the model gateway (/api/assistant/v2/chat) so the coding agent can be tested offline.
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -64,13 +64,23 @@ const server = http.createServer(async (req, res) => {
     return;
   }
   if (p === '/__mock/agent/requests') { send(res, 200, JSON.stringify(agentRequests), 'application/json'); return; }
-  if (p === '/api/assistant/agent' && req.method === 'POST') {
+  // The agent reaches models through the multi-provider gateway: answer in its
+  // streamed OpenAI format, built from the queued Gemini-style responses.
+  if (p === '/api/assistant/v2/chat' && req.method === 'POST') {
     const body = JSON.parse(await readBody(req) || '{}');
     agentRequests.push(body);
-    const next = agentQueue.shift();
-    if (!next) { send(res, 200, JSON.stringify({ candidates: [{ content: { role: 'model', parts: [{ text: 'Done.' }] } }] }), 'application/json'); return; }
+    const next = agentQueue.shift() || { candidates: [{ content: { role: 'model', parts: [{ text: 'Done.' }] } }] };
     if (next.status) { send(res, next.status, JSON.stringify(next.body || { error: 'mock error' }), 'application/json'); return; }
-    send(res, 200, JSON.stringify(next), 'application/json');
+    const parts = next.candidates?.[0]?.content?.parts || [];
+    const delta = {};
+    const text = parts.filter((x) => x.text).map((x) => x.text).join('');
+    if (text) delta.content = text;
+    const calls = parts.filter((x) => x.functionCall);
+    if (calls.length) delta.tool_calls = calls.map((x, i) => ({ index: i, id: `mock_${i}`, type: 'function', function: { name: x.functionCall.name, arguments: JSON.stringify(x.functionCall.args || {}) } }));
+    res.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.write(`event: provider\ndata: ${JSON.stringify({ provider: 'mock', label: 'Mock', model: 'mock-model' })}\n\n`);
+    res.write(`data: ${JSON.stringify({ choices: [{ index: 0, delta, finish_reason: calls.length ? 'tool_calls' : 'stop' }] })}\n\n`);
+    res.end('data: [DONE]\n\n');
     return;
   }
 

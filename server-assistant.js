@@ -81,11 +81,13 @@ const ORDER = {
   fast: ['groq', 'gemini', 'openrouter', 'openai', 'deepseek'],
   auto: ['groq', 'gemini', 'openrouter', 'openai', 'deepseek'],
   reasoning: ['gemini', 'groq', 'openai', 'deepseek', 'openrouter'],
+  // Code Playground agent: long tool-calling runs; OpenRouter is the first fallback when Gemini runs out.
+  code: ['gemini', 'openrouter', 'openai', 'groq', 'deepseek'],
 };
 // How long the first model gets to start answering before a second one is started alongside it.
-const HEDGE_MS = { fast: 3500, auto: 5000, reasoning: 9000 };
+const HEDGE_MS = { fast: 3500, auto: 5000, reasoning: 9000, code: 8000 };
 // How long any one model gets to start answering at all.
-const FIRST_TOKEN_TIMEOUT_MS = { fast: 25_000, auto: 40_000, reasoning: 90_000 };
+const FIRST_TOKEN_TIMEOUT_MS = { fast: 25_000, auto: 40_000, reasoning: 90_000, code: 90_000 };
 
 const MAX_BODY = 12_000_000;           // images arrive as data URLs
 const authCache = new Map();           // token → expiry, so each turn does not re-hit Supabase
