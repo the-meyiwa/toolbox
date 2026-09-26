@@ -805,47 +805,6 @@ mark.regex-match {
     width: 100% !important;
     justify-content: center !important;
   }
-  /* Calendar Tool on Mobile */
-  .calendar-app-wrapper {
-    padding: 0 4px !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-  }
-  .calendar-header-card { padding: 14px !important; min-width: 0 !important; }
-  .calendar-header-card > div { min-width: 0 !important; }
-  #cal-month-title { min-width: 0 !important; flex: 1 1 auto; font-size: 1.2rem !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .cal-header-bar {
-    padding: 14px !important;
-  }
-  .cal-header-bar > div:first-child {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 10px !important;
-  }
-  .cal-view-strip {
-    width: 100% !important;
-    justify-content: space-between !important;
-  }
-  .cal-day-cell {
-    min-height: 52px !important;
-    padding: 3px !important;
-  }
-  .cal-event-pill {
-    font-size: 0.65rem !important;
-    padding: 1px 3px !important;
-  }
-  .cal-event-time {
-    display: none !important;
-  }
-  .cal-today-banner {
-    padding: 10px 14px !important;
-  }
-  .cal-category-pills {
-    overflow-x: auto !important;
-    padding-bottom: 4px !important;
-    width: 100% !important;
-  }
   /* Browser Tool on Mobile */
   .browser-app-wrapper {
     border-radius: 12px !important;
@@ -5685,35 +5644,6 @@ body.standalone-mode .notes-app-wrapper {
   margin-top: auto;
 }
 /* ============================================================
-   CALENDAR MONTH SWITCHER ANIMATION
-   ============================================================ */
-@keyframes calFadeSlideLeft {
-  0% {
-    opacity: 0;
-    transform: translateX(18px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-@keyframes calFadeSlideRight {
-  0% {
-    opacity: 0;
-    transform: translateX(-18px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-.cal-anim-slide-left {
-  animation: calFadeSlideLeft 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-.cal-anim-slide-right {
-  animation: calFadeSlideRight 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-/* ============================================================
    CONTAINER QUOTE BUILDER FULL-HEIGHT TREATMENTS
    ============================================================ */
 body[data-tool-id="container-planner"] #tool-related {
@@ -6011,8 +5941,6 @@ body[data-tool-id="mail"] #viewport-content {
    SEGMENTED SWITCHERS & ANIMATED SLIDER PILLS
    (Offline-Online, Calendar Views, Mode Switchers, etc.)
    ============================================================ */
-.cal-view-switcher,
-.cal-day-switcher,
 .calc-mode-bar,
 #calc-mode-bar {
   position: relative;
@@ -6025,8 +5953,6 @@ body[data-tool-id="mail"] #viewport-content {
   gap: 2px;
   box-sizing: border-box;
 }
-.cal-view-btn,
-.cal-day-switcher-btn,
 .calc-mode-btn {
   position: relative;
   z-index: 1;
@@ -6041,11 +5967,9 @@ body[data-tool-id="mail"] #viewport-content {
   user-select: none;
   white-space: nowrap;
 }
-.cal-view-btn:hover,
 .calc-mode-btn:hover {
   color: var(--text);
 }
-.cal-view-btn.active,
 .calc-mode-btn.active {
   color: var(--text) !important;
   font-weight: 700;
@@ -7762,57 +7686,6 @@ body[data-tool-id="mail"] #viewport-content {
     width: 16px !important;
   }
 }
-/* === Calendar Day Switcher === */
-.cal-day-switcher {
-  display: flex;
-  align-items: center;
-  background: var(--bg-subtle);
-  border: 1px solid var(--border);
-  border-radius: 9999px;
-  padding: 2px;
-  position: relative;
-  gap: 0;
-  overflow: hidden;
-}
-.cal-day-switcher-btn {
-  flex: 1;
-  padding: 4px 8px;
-  background: transparent;
-  border: none;
-  border-radius: 9999px;
-  cursor: pointer;
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  position: relative;
-  z-index: 1;
-  transition: color 0.18s ease;
-  white-space: nowrap;
-}
-.cal-day-switcher-btn .dsw-day {
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  font-weight: 600;
-}
-.cal-day-switcher-btn .dsw-num {
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-.cal-day-switcher-btn.active,
-.cal-day-switcher-btn:hover {
-  color: var(--text);
-}
-@media (max-width: 500px) {
-  .cal-day-switcher-btn {
-    padding: 4px 4px;
-    font-size: 0.65rem;
-  }
-}
 /* === Notes Tool Mobile Navigation & Drawer === */
 .notes-btn-to-folders,
 .notes-btn-sidebar-toggle,
@@ -8070,7 +7943,6 @@ body[data-tool-id="automobile-guide"] #viewport-content {
    ============================================================ */
 @media (min-width: 769px) {
   body[data-tool-id="messaging"] #viewport-content,
-body[data-tool-id="calendar"] #viewport-content,
 body[data-tool-id="calculator"] #viewport-content,
 body[data-tool-id="notes"] #viewport-content,
 body[data-tool-id="timer"] #viewport-content {
@@ -8116,79 +7988,6 @@ body[data-tool-id="timer"] #viewport-content {
   body[data-tool-id="messaging"] .msg-chat-header,
 body[data-tool-id="messaging"] .msg-composer-wrap {
     flex-shrink: 0 !important;
-  }
-  /* Calendar: Fit month grid & controls to screen */
-  body[data-tool-id="calendar"] #viewport-content {
-    overflow: hidden !important;
-  }
-  body[data-tool-id="calendar"] .calendar-app-wrapper {
-    height: 100% !important;
-    max-height: 100% !important;
-    min-height: 0 !important;
-    flex: 1 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 8px !important;
-    overflow: hidden !important;
-  }
-  body[data-tool-id="calendar"] .calendar-header-card {
-    padding: 10px 18px !important;
-    gap: 8px !important;
-    flex-shrink: 0 !important;
-    border-radius: 14px !important;
-  }
-  body[data-tool-id="calendar"] .cal-day-switcher-strip {
-    padding-top: 6px !important;
-    flex-shrink: 0 !important;
-  }
-  body[data-tool-id="calendar"] .cal-today-banner {
-    padding: 6px 14px !important;
-    flex-shrink: 0 !important;
-    border-radius: 12px !important;
-  }
-  body[data-tool-id="calendar"] #cal-view-container {
-    flex: 1 !important;
-    min-height: 0 !important;
-    height: 100% !important;
-    overflow-y: auto !important;
-    display: flex !important;
-    flex-direction: column !important;
-  }
-  body[data-tool-id="calendar"] .cal-month-table {
-    flex: 1 !important;
-    height: 100% !important;
-    min-height: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    border-radius: 14px !important;
-  }
-  body[data-tool-id="calendar"] .cal-weekday-header {
-    flex-shrink: 0 !important;
-  }
-  body[data-tool-id="calendar"] .cal-weekday-header > div {
-    padding: 6px 4px !important;
-    font-size: 0.72rem !important;
-  }
-  body[data-tool-id="calendar"] .cal-days-grid {
-    flex: 1 !important;
-    min-height: 0 !important;
-    height: 100% !important;
-    grid-auto-rows: 1fr !important;
-    display: grid !important;
-  }
-  body[data-tool-id="calendar"] .cal-day-cell {
-    min-height: 0 !important;
-    height: 100% !important;
-    padding: 4px 6px !important;
-    overflow: hidden !important;
-  }
-  body[data-tool-id="calendar"] .cal-week-view,
-body[data-tool-id="calendar"] .cal-day-view,
-body[data-tool-id="calendar"] .cal-agenda-view {
-    flex: 1 !important;
-    min-height: 0 !important;
-    height: 100% !important;
-    overflow-y: auto !important;
   }
   /* Calculator: Fit keypad and screen to screen */
   body[data-tool-id="calculator"] #viewport-content {
