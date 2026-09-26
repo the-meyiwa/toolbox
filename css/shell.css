@@ -184,8 +184,8 @@ body.is-scrolled #app-header, body.in-tool #app-header { border-bottom-color: va
 .hero-dd-icon svg { width: 16px; height: 16px; }
 .hero-dd-ai .hero-dd-icon { background: var(--ink); color: var(--text-inverse); }
 .hero-dd-text { flex: 1; min-width: 0; }
-.hero-dd-name { font-size: 14px; line-height: 20px; font-weight: 500; }
-.hero-dd-desc { font-size: 12px; line-height: 16px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hero-dd-name { display: block; font-size: 14px; line-height: 20px; font-weight: 500; }
+.hero-dd-desc { display: block; font-size: 12px; line-height: 16px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hero-dd-empty { padding: var(--space-3); font-size: 13px; color: var(--text-2); text-align: center; }
 
 .home-quick { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); margin-top: var(--space-5); animation: tb-rise var(--dur-4) var(--ease-out) 240ms both; }
