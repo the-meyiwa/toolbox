@@ -18,9 +18,12 @@ import { installMapsFixture } from '../helpers/maps-fixture.js';
 const HOME = [3.3800, 6.5805];
 const at = (p) => ({ taskState: { userLocation: { lng: p[0], lat: p[1] } } });
 
+const ALL_KEYS = ['TOMTOM_API_KEY', 'FOURSQUARE_API_KEY', 'HERE_API_KEY', 'MAPBOX_ACCESS_TOKEN', 'GOOGLE_PLACES_API_KEY'];
+
 function withKeys(keys, fn) {
   return async () => {
-    const saved = { TOMTOM_API_KEY: process.env.TOMTOM_API_KEY, FOURSQUARE_API_KEY: process.env.FOURSQUARE_API_KEY };
+    const saved = Object.fromEntries(ALL_KEYS.map(k => [k, process.env[k]]));
+    for (const k of ALL_KEYS) delete process.env[k];
     Object.assign(process.env, keys);
     try { await fn(); } finally {
       for (const [k, v] of Object.entries(saved)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
@@ -28,16 +31,26 @@ function withKeys(keys, fn) {
   };
 }
 
-test('no keys: only OpenStreetMap is asked', async () => {
-  delete process.env.TOMTOM_API_KEY;
-  delete process.env.FOURSQUARE_API_KEY;
+test('no keys: only OpenStreetMap is asked', withKeys({}, async () => {
   const fx = installMapsFixture();
   try {
     const res = await searchNearby({ q: 'pharmacy', near: HOME, limit: 5 });
     assert.deepEqual(res.searched, ['OpenStreetMap']);
-    assert.ok(!fx.calls.some(h => /tomtom|foursquare/.test(h)));
+    assert.ok(!fx.calls.some(h => /tomtom|foursquare|here|mapbox|google/.test(h)));
   } finally { fx.restore(); }
-});
+}));
+
+test('every provider key set: five providers, still one entry per place', withKeys({ TOMTOM_API_KEY: 'a', FOURSQUARE_API_KEY: 'b', HERE_API_KEY: 'c', MAPBOX_ACCESS_TOKEN: 'd', GOOGLE_PLACES_API_KEY: 'e' }, async () => {
+  const fx = installMapsFixture();
+  try {
+    const res = await searchNearby({ q: 'nearest pharmacy', near: HOME, limit: 10 });
+    assert.deepEqual(res.searched, ['OpenStreetMap', 'TomTom', 'Foursquare', 'HERE', 'Mapbox', 'Google']);
+    assert.equal(res.providerErrors, undefined, 'every provider answered');
+    assert.deepEqual(res.places.map(p => p.name), ['Estate Pharmacy', 'HealthPlus']);
+    assert.equal(res.places[0].sources.length, 6);
+    assert.equal(res.places[0].phone, '+234 800 000 0000');
+  } finally { fx.restore(); }
+}));
 
 test('all providers: one entry per place, agreement recorded, extra places added', withKeys({ TOMTOM_API_KEY: 't', FOURSQUARE_API_KEY: 'f' }, async () => {
   const fx = installMapsFixture();

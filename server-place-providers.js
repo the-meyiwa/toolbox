@@ -1,9 +1,9 @@
 /* ============================================================
    TOOLBOX — Extra place providers for nearby search
-   TomTom and Foursquare, used beside OpenStreetMap when their
-   keys are set (TOMTOM_API_KEY, FOURSQUARE_API_KEY). Each one
-   is optional: no key, a spent quota or an outage just leaves
-   it out. mergePlaces() folds the answers from every provider
+   TomTom, Foursquare, HERE, Mapbox and Google Places, used
+   beside OpenStreetMap when their keys are set (see PROVIDERS).
+   Each one is optional: no key, a spent quota or an outage just
+   leaves it out. mergePlaces() folds the answers from every provider
    into one list, one entry per real place.
    ============================================================ */
 
@@ -17,10 +17,16 @@ const restingUntil = new Map();
 
 const titleCase = (s) => String(s || '').replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).trim();
 
-async function fetchJson(provider, url, headers = {}) {
-  const hit = cache.get(url);
+async function fetchJson(provider, url, headers = {}, body) {
+  const key = body ? `${url} ${body}` : url;
+  const hit = cache.get(key);
   if (hit && hit.until > Date.now()) return hit.value;
-  const res = await fetch(url, { headers: { Accept: 'application/json', ...headers }, signal: AbortSignal.timeout(TIMEOUT_MS) });
+  const res = await fetch(url, {
+    method: body ? 'POST' : 'GET',
+    body,
+    headers: { Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}), ...headers },
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
   if (res.status === 429 || res.status === 401 || res.status === 403) {
     // Quota or key trouble does not clear in seconds; try again in an hour.
     restingUntil.set(provider, Date.now() + 60 * 60_000);
@@ -28,7 +34,7 @@ async function fetchJson(provider, url, headers = {}) {
   }
   if (!res.ok) throw new Error(`${provider} answered ${res.status}`);
   const value = await res.json();
-  cache.set(url, { value, until: Date.now() + CACHE_MS });
+  cache.set(key, { value, until: Date.now() + CACHE_MS });
   if (cache.size > 300) cache.delete(cache.keys().next().value);
   return value;
 }
@@ -69,9 +75,73 @@ async function foursquare({ text, near, radius, limit }) {
   }).filter(p => p.name && Number.isFinite(p.lat) && Number.isFinite(p.lng));
 }
 
+async function here({ text, near, radius, limit }) {
+  const key = process.env.HERE_API_KEY;
+  const url = `https://discover.search.hereapi.com/v1/discover?q=${encodeURIComponent(text)}`
+    + `&in=circle:${near[1]},${near[0]};r=${Math.min(Math.round(radius), 250_000)}&limit=${Math.min(limit, 100)}&lang=en&apiKey=${encodeURIComponent(key)}`;
+  const j = await fetchJson('HERE', url);
+  return (j.items || []).filter(r => r.position && r.resultType === 'place').map(r => ({
+    name: r.title,
+    address: r.address?.label || '',
+    lat: r.position.lat,
+    lng: r.position.lng,
+    kind: r.categories?.[0]?.name || 'Place',
+    phone: r.contacts?.[0]?.phone?.[0]?.value,
+    website: r.contacts?.[0]?.www?.[0]?.value,
+  }));
+}
+
+async function mapbox({ text, near, limit }) {
+  const key = process.env.MAPBOX_ACCESS_TOKEN;
+  const url = `https://api.mapbox.com/search/searchbox/v1/forward?q=${encodeURIComponent(text)}`
+    + `&proximity=${near[0]},${near[1]}&types=poi&limit=${Math.min(limit, 10)}&language=en&access_token=${encodeURIComponent(key)}`;
+  const j = await fetchJson('Mapbox', url);
+  return (j.features || []).map(f => {
+    const p = f.properties || {};
+    const [lng, lat] = f.geometry?.coordinates || [p.coordinates?.longitude, p.coordinates?.latitude];
+    return {
+      name: p.name,
+      address: p.full_address || p.place_formatted || '',
+      lat, lng,
+      kind: titleCase(p.poi_category?.[0] || 'Place'),
+      brand: p.brand?.[0],
+      phone: p.metadata?.phone,
+      website: p.metadata?.website,
+    };
+  }).filter(p => p.name && Number.isFinite(p.lat) && Number.isFinite(p.lng));
+}
+
+// Google bills by the fields asked for. These are all in its lower-priced tier; phone numbers,
+// websites and hours would move every call to the dearest one.
+const GOOGLE_FIELDS = 'places.displayName,places.formattedAddress,places.location,places.primaryTypeDisplayName,places.types';
+
+async function google({ text, near, radius, limit }) {
+  const body = JSON.stringify({
+    textQuery: text,
+    pageSize: Math.min(limit, 20),
+    languageCode: 'en',
+    locationBias: { circle: { center: { latitude: near[1], longitude: near[0] }, radius: Math.min(radius, 50_000) } },
+  });
+  const j = await fetchJson('Google', 'https://places.googleapis.com/v1/places:searchText', {
+    'X-Goog-Api-Key': process.env.GOOGLE_PLACES_API_KEY,
+    'X-Goog-FieldMask': GOOGLE_FIELDS,
+  }, body);
+  return (j.places || []).filter(p => p.location).map(p => ({
+    name: p.displayName?.text,
+    address: p.formattedAddress || '',
+    lat: p.location.latitude,
+    lng: p.location.longitude,
+    kind: p.primaryTypeDisplayName?.text || titleCase(p.types?.[0] || 'Place'),
+  })).filter(p => p.name);
+}
+
+// Each provider is used only when its variable is set on the API server.
 const PROVIDERS = [
   { name: 'TomTom', env: 'TOMTOM_API_KEY', search: tomtom },
   { name: 'Foursquare', env: 'FOURSQUARE_API_KEY', search: foursquare },
+  { name: 'HERE', env: 'HERE_API_KEY', search: here },
+  { name: 'Mapbox', env: 'MAPBOX_ACCESS_TOKEN', search: mapbox },
+  { name: 'Google', env: 'GOOGLE_PLACES_API_KEY', search: google },
 ];
 
 /** Providers with a key set and not resting after a quota or key error. */

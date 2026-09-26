@@ -163,6 +163,19 @@ function foursquare(url) {
   const pts = providerPlaces(url.searchParams.get('query'), [lon, lat], Number(url.searchParams.get('radius')));
   return { results: pts.map(p => ({ fsq_place_id: p.name, name: p.name, latitude: p.at[1] + 0.0002, longitude: p.at[0], location: { formatted_address: 'Lagos, Nigeria' }, categories: [{ name: titleCaseFx(p.kind) }], website: 'https://example.com' })) };
 }
+function hereDiscover(url) {
+  const [lat, lon, r] = url.searchParams.get('in').replace('circle:', '').split(/[,;]r=|,/).map(Number);
+  return { items: providerPlaces(url.searchParams.get('q'), [lon, lat], r).map(p => ({ title: p.name, resultType: 'place', position: { lat: p.at[1], lng: p.at[0] + 0.0002 }, address: { label: 'Lagos, Nigeria' }, categories: [{ name: p.kind }] })) };
+}
+function mapboxForward(url) {
+  const [lon, lat] = url.searchParams.get('proximity').split(',').map(Number);
+  return { features: providerPlaces(url.searchParams.get('q'), [lon, lat], 20000).slice(0, 10).map(p => ({ geometry: { coordinates: p.at }, properties: { name: p.name, full_address: 'Lagos', poi_category: [p.kind] } })) };
+}
+function googleText(body) {
+  const b = JSON.parse(body);
+  const c = b.locationBias.circle.center;
+  return { places: providerPlaces(b.textQuery, [c.longitude, c.latitude], 50000).map(p => ({ displayName: { text: p.name }, formattedAddress: 'Lagos, Nigeria', location: { latitude: p.at[1] - 0.0002, longitude: p.at[0] }, primaryTypeDisplayName: { text: titleCaseFx(p.kind) } })) };
+}
 const titleCaseFx = (s) => String(s || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
 async function callHandler(url, init = {}) {
@@ -194,6 +207,12 @@ export function installMapsFixture({ down = false, overpassDown = [], providerSt
     if (url.hostname === 'nominatim.openstreetmap.org') return json(url.pathname.startsWith('/reverse') ? reverse(url) : []);
     if (providerStatus[url.hostname]) return new Response('{}', { status: providerStatus[url.hostname] });
     if (url.hostname === 'api.tomtom.com') return json(tomtom(url));
+    if (url.hostname === 'discover.search.hereapi.com') return json(hereDiscover(url));
+    if (url.hostname === 'api.mapbox.com') return json(mapboxForward(url));
+    if (url.hostname === 'places.googleapis.com') {
+      if (!init.headers?.['X-Goog-Api-Key'] || /Phone|website|Hours/i.test(init.headers?.['X-Goog-FieldMask'] || '')) return new Response('{}', { status: 400 });
+      return json(googleText(init.body));
+    }
     if (url.hostname === 'places-api.foursquare.com') {
       if (!/^Bearer \S+/.test(init.headers?.Authorization || '') || !init.headers?.['X-Places-Api-Version']) return new Response('{}', { status: 401 });
       return json(foursquare(url));
