@@ -33,6 +33,8 @@ const BENCH_KEYS = ['gb6s', 'gb6m', 'antutu', 'cb24s', 'cb24m', 'timespy', 'stee
 const RANK_PAGE = 40;
 const VIEW_ORDER = ['compare', 'rank', 'sheets'];
 /* lower-case a label but keep acronyms such as TVs */
+const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const FLAT_CATS = CATEGORY_GROUPS.flatMap(g => g.cats);
 const lc = (t) => String(t).split(' ').map(w => (/^[A-Z]{2,}/.test(w) ? w : w.toLowerCase())).join(' ');
 
 /* Category glyphs, drawn at 48×48. */
@@ -66,6 +68,8 @@ const ic = {
   check: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   cross: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   search: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
+  chevronR: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+  chevronL: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>',
   chevron: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
   tag: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/></svg>',
   bolt: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg>',
@@ -105,6 +109,7 @@ export default {
 
   destroy() {
     this.off?.();
+    this.ro?.disconnect();
     this.sheets?.destroy?.();
     document.removeEventListener('pointerdown', this.onOutside, true);
     this.container = null;
@@ -125,44 +130,146 @@ export default {
     this.container.innerHTML = `
       <div class="dv">
         <div class="dv-top">
-          <div class="dv-groups" role="tablist" aria-label="Device group"></div>
-          <div class="dv-cats" role="tablist" aria-label="Device category"></div>
-          <div class="dv-toprow">
-            <div class="dv-views" role="tablist" aria-label="View">
-              <button type="button" role="tab" data-view="compare">Compare</button>
-              <button type="button" role="tab" data-view="rank">Rankings</button>
-              <button type="button" role="tab" data-view="sheets">Spec sheet lookup</button>
+          <div class="dv-bar" data-pane="groups">
+            <button type="button" class="dv-cc" aria-expanded="false" aria-controls="dv-nav" aria-label="Comparison category">
+              <span class="dv-cc-icon" aria-hidden="true"></span>
+              <span class="dv-cc-text"><small>Comparison category</small><span class="dv-cc-cur"></span></span>
+              <span class="dv-cc-chev" aria-hidden="true">${ic.chevronR}</span>
+            </button>
+            <div class="dv-stage">
+              <div class="dv-tools">
+                <div class="dv-views" role="tablist" aria-label="View">
+                  <span class="dv-views-ind" aria-hidden="true"></span>
+                  <button type="button" role="tab" data-view="compare">Compare</button>
+                  <button type="button" role="tab" data-view="rank">Rankings</button>
+                  <button type="button" role="tab" data-view="sheets">Spec sheet lookup</button>
+                </div>
+                <button type="button" class="btn btn-ghost btn-sm dv-prefs" data-act="prefs">${ic.sliders}<span>Comparison preferences</span></button>
+              </div>
+              <div class="dv-nav" id="dv-nav" role="group" aria-label="Choose a comparison category">
+                <div class="dv-pane dv-pane-groups" role="list"></div>
+                <div class="dv-pane dv-pane-cats" role="list"></div>
+              </div>
             </div>
-            <button type="button" class="btn btn-ghost btn-sm dv-prefs" data-act="prefs">${ic.sliders}<span>Comparison preferences</span></button>
           </div>
         </div>
         <div class="dv-body"></div>
       </div>`;
-    this.el = { groups: this.container.querySelector('.dv-groups'), cats: this.container.querySelector('.dv-cats'), body: this.container.querySelector('.dv-body'), views: this.container.querySelector('.dv-views') };
+    const q = (sel) => this.container.querySelector(sel);
+    this.el = {
+      bar: q('.dv-bar'), cc: q('.dv-cc'), ccIcon: q('.dv-cc-icon'), ccCur: q('.dv-cc-cur'),
+      groupsPane: q('.dv-pane-groups'), catsPane: q('.dv-pane-cats'),
+      body: q('.dv-body'), views: q('.dv-views'), ind: q('.dv-views-ind'),
+    };
+    this.navGroup = null;
     this.container.addEventListener('click', (e) => this.onClick(e));
     this.container.addEventListener('input', (e) => this.onInput(e));
     this.container.addEventListener('change', (e) => this.onChange(e));
     this.container.addEventListener('keydown', (e) => this.onKeydown(e));
-    this.onOutside = (e) => { if (!e.target.closest?.('.dv-picker')) this.closePickers(); };
+    this.onOutside = (e) => {
+      if (!e.target.closest?.('.dv-picker')) this.closePickers();
+      if (this.navOpen() && !e.target.closest?.('.dv-bar')) this.closeNav();
+    };
     document.addEventListener('pointerdown', this.onOutside, true);
+    if (typeof ResizeObserver === 'function') {
+      this.ro = new ResizeObserver(() => this.placeViewIndicator(false));
+      this.ro.observe(this.el.views);
+    }
     this.renderCats();
   },
 
+  groupOf(cat) { return CATEGORY_GROUPS.find(g => g.cats.includes(cat)) || CATEGORY_GROUPS[0]; },
+
   renderCats() {
     if (!this.el) return;
-    const group = CATEGORY_GROUPS.find(g => g.cats.includes(this.state.cat)) || CATEGORY_GROUPS[0];
-    this.el.groups.innerHTML = CATEGORY_GROUPS.map(g => `<button type="button" role="tab" class="dv-group" data-group="${g.id}" aria-selected="${g === group}">${esc(g.label)}</button>`).join('');
-    this.el.groups.hidden = this.state.view === 'sheets';
-    // keep the selected group visible when the row scrolls sideways (phones)
-    const sel = this.el.groups.querySelector('[aria-selected="true"]');
-    if (sel && this.el.groups.scrollWidth > this.el.groups.clientWidth) {
-      const g = this.el.groups, left = sel.offsetLeft - g.offsetLeft;
-      if (left < g.scrollLeft || left + sel.offsetWidth > g.scrollLeft + g.clientWidth) g.scrollLeft = Math.max(0, left - 12);
+    const cat = this.state.cat, group = this.groupOf(cat), def = CATEGORIES[cat];
+    const cur = this.el.ccCur;
+    if (cur.dataset.cat !== cat) {
+      const animate = !!cur.dataset.cat && !reducedMotion();
+      cur.dataset.cat = cat;
+      cur.innerHTML = `<b>${esc(def.label)}</b><span>${esc(group.label)}</span>`;
+      this.el.ccIcon.innerHTML = glyph(cat, 22);
+      if (animate) {
+        for (const n of [cur, this.el.ccIcon]) { n.classList.remove('is-swapping'); void n.offsetWidth; n.classList.add('is-swapping'); }
+      }
     }
-    this.el.cats.innerHTML = group.cats.map(c => `<button type="button" role="tab" class="dv-cat" data-cat="${c}" aria-selected="${c === this.state.cat}">
-      <span class="dv-cat-icon">${glyph(c, 20)}</span><span>${esc(CATEGORIES[c].label)}</span>${this.counts[c] ? `<small>${this.counts[c]}</small>` : ''}</button>`).join('');
+    this.el.bar.classList.toggle('is-sheets', this.state.view === 'sheets');
+    if (this.state.view === 'sheets' && this.navOpen()) this.closeNav();
+    if (!this.navOpen()) this.renderPanes();
     this.el.views.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === this.state.view)));
-    this.el.cats.hidden = this.state.view === 'sheets';
+    this.placeViewIndicator(true);
+  },
+
+  renderPanes() {
+    const curGroup = this.groupOf(this.state.cat);
+    const browse = CATEGORY_GROUPS.find(g => g.id === this.navGroup) || curGroup;
+    const count = (g) => g.cats.reduce((n, c) => n + (this.counts[c] || 0), 0);
+    this.el.groupsPane.innerHTML = CATEGORY_GROUPS.map((g, i) => `
+      <button type="button" role="listitem" class="dv-chip dv-chip-group" data-group="${g.id}" style="--i:${i}" aria-current="${g === curGroup}">
+        <span class="dv-chip-glyphs" aria-hidden="true">${g.cats.slice(0, 3).map(c => glyph(c, 16)).join('')}</span>
+        <span>${esc(g.label)}</span>${count(g) ? `<small>${count(g)}</small>` : ''}
+        <span class="dv-chip-go" aria-hidden="true">${ic.chevronR}</span>
+      </button>`).join('');
+    this.el.catsPane.innerHTML = `
+      <button type="button" class="dv-chip dv-chip-back" data-nav-back style="--i:0" aria-label="Back to all comparison groups">${ic.chevronL}<span>${esc(browse.label)}</span></button>
+      ${browse.cats.map((c, i) => `<button type="button" role="listitem" class="dv-chip dv-chip-cat" data-cat="${c}" style="--i:${i + 1}" aria-current="${c === this.state.cat}">
+        <span class="dv-cat-icon">${glyph(c, 18)}</span><span>${esc(CATEGORIES[c].label)}</span>${this.counts[c] ? `<small>${this.counts[c]}</small>` : ''}</button>`).join('')}`;
+  },
+
+  navOpen() { return !!this.el?.bar.classList.contains('is-open'); },
+
+  openNav() {
+    if (!this.el || this.state.view === 'sheets') return;
+    this.navGroup = null;
+    this.el.bar.dataset.pane = 'groups';
+    this.renderPanes();
+    this.el.bar.classList.add('is-open');
+    this.el.cc.setAttribute('aria-expanded', 'true');
+    const cur = this.el.groupsPane.querySelector('[aria-current="true"]');
+    requestAnimationFrame(() => {
+      (cur || this.el.groupsPane.querySelector('.dv-chip'))?.focus({ preventScroll: true });
+      if (cur) this.scrollChipIntoView(cur);
+    });
+  },
+
+  closeNav({ focus = false } = {}) {
+    if (!this.navOpen()) return;
+    this.el.bar.classList.remove('is-open');
+    this.el.cc.setAttribute('aria-expanded', 'false');
+    if (focus) this.el.cc.focus({ preventScroll: true });
+  },
+
+  showPane(pane, groupId) {
+    const bar = this.el.bar;
+    if (groupId) { this.navGroup = groupId; this.renderPanes(); }
+    // restart the stagger for the pane coming in
+    const incoming = pane === 'cats' ? this.el.catsPane : this.el.groupsPane;
+    incoming.classList.add('is-restaging');
+    void incoming.offsetWidth;
+    bar.dataset.pane = pane;
+    incoming.classList.remove('is-restaging');
+    incoming.scrollLeft = 0;
+    const target = incoming.querySelector(pane === 'cats' ? '[data-cat][aria-current="true"], [data-cat]' : `[data-group="${this.navGroup || this.groupOf(this.state.cat).id}"]`);
+    requestAnimationFrame(() => target?.focus({ preventScroll: true }));
+  },
+
+  scrollChipIntoView(chip) {
+    const pane = chip.parentElement;
+    if (pane.scrollWidth <= pane.clientWidth) return;
+    const left = chip.offsetLeft - pane.offsetLeft;
+    if (left < pane.scrollLeft || left + chip.offsetWidth > pane.scrollLeft + pane.clientWidth) pane.scrollLeft = Math.max(0, left - 24);
+  },
+
+  /** Slides the pill behind Compare / Rankings / Spec sheet lookup to the selected tab. */
+  placeViewIndicator(animate) {
+    const sel = this.el?.views.querySelector('[aria-selected="true"]');
+    const ind = this.el?.ind;
+    if (!sel || !ind || !sel.offsetWidth) return;
+    if (!animate || !ind.dataset.ready) ind.style.transition = 'none';
+    ind.style.width = `${sel.offsetWidth}px`;
+    ind.style.transform = `translateX(${sel.offsetLeft - 3}px)`;
+    if (!ind.dataset.ready || !animate) { void ind.offsetWidth; ind.style.transition = ''; }
+    ind.dataset.ready = '1';
   },
 
   /** Index of `from`/`to` in `list`: 1 moving forward, -1 back, 0 if either is missing or unchanged. */
@@ -178,8 +285,7 @@ export default {
       right), -1 = an earlier one, 0 = no animation (first paint, same tab). */
   animateBody(dir, fn) {
     const body = this.el?.body;
-    const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!body || !dir || reduced || !body.firstChild) { fn(); return; }
+    if (!body || !dir || reducedMotion() || !body.firstChild) { fn(); return; }
     let settled = false;
     const enter = () => {
       if (settled) return;
@@ -554,21 +660,14 @@ export default {
   /* ---------------- events ---------------- */
   onClick(e) {
     const t = e.target;
+    if (t.closest('.dv-cc')) { this.navOpen() ? this.closeNav() : this.openNav(); return; }
+    if (t.closest('[data-nav-back]')) { this.showPane('groups'); return; }
+    const grp = t.closest('[data-group]');
+    if (grp) { this.showPane('cats', grp.dataset.group); return; }
     const cat = t.closest('[data-cat]');
     if (cat) {
-      if (cat.dataset.cat !== this.state.cat) {
-        const group = CATEGORY_GROUPS.find(g => g.cats.includes(this.state.cat)) || CATEGORY_GROUPS[0];
-        this.showCategory(cat.dataset.cat, this.dirOf(group.cats, this.state.cat, cat.dataset.cat));
-      }
-      return;
-    }
-    const grp = t.closest('[data-group]');
-    if (grp) {
-      const g = CATEGORY_GROUPS.find(x => x.id === grp.dataset.group);
-      if (g && !g.cats.includes(this.state.cat)) {
-        const curGroup = CATEGORY_GROUPS.find(x => x.cats.includes(this.state.cat)) || CATEGORY_GROUPS[0];
-        this.showCategory(g.cats[0], this.dirOf(CATEGORY_GROUPS, curGroup, g));
-      }
+      this.closeNav({ focus: true });
+      if (cat.dataset.cat !== this.state.cat) this.showCategory(cat.dataset.cat, this.dirOf(FLAT_CATS, this.state.cat, cat.dataset.cat));
       return;
     }
     const view = t.closest('[data-view]');
@@ -635,6 +734,20 @@ export default {
     if (t.dataset.rank && t.dataset.rank !== 'q') { this.state.rank[t.dataset.rank] = t.value; this.state.rank.shown = RANK_PAGE; this.renderRank(); }
   },
   onKeydown(e) {
+    if (this.navOpen() && e.target.closest?.('.dv-bar')) {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); this.closeNav({ focus: true }); return; }
+      const pane = e.target.closest('.dv-pane');
+      if (pane && (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Home' || e.key === 'End')) {
+        const chips = [...pane.querySelectorAll('.dv-chip')];
+        const i = chips.indexOf(e.target.closest('.dv-chip'));
+        const j = e.key === 'Home' ? 0 : e.key === 'End' ? chips.length - 1 : Math.max(0, Math.min(chips.length - 1, i + (e.key === 'ArrowRight' ? 1 : -1)));
+        e.preventDefault();
+        chips[j]?.focus({ preventScroll: true });
+        if (chips[j]) this.scrollChipIntoView(chips[j]);
+        return;
+      }
+      if (pane?.classList.contains('dv-pane-cats') && e.key === 'Backspace') { e.preventDefault(); this.showPane('groups'); return; }
+    }
     const pop = e.target.closest?.('.dv-pop');
     if (!pop) return;
     const items = [...pop.querySelectorAll('[data-pick]')];

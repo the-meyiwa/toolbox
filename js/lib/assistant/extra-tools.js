@@ -13,6 +13,7 @@
    ============================================================ */
 
 import { GENERATORS as STRUCTURE_GENERATORS } from '../structure-model.js';
+import { LAB3D_TOOL_DECLARATIONS, create3dObject, search3dModels } from '../lab3d/assistant-tools.js';
 import { TOOLS } from '../../registry/index.js';
 import * as CE from '../construction/estimate.js';
 import { DOMAIN_TOOL_DECLARATIONS, executeDomainTool } from './domain-tools.js';
@@ -1135,7 +1136,7 @@ async function caseDigestTool(args) {
   };
 }
 
-EXTRA_TOOL_DECLARATIONS.push(...DOMAIN_TOOL_DECLARATIONS);
+EXTRA_TOOL_DECLARATIONS.push(...DOMAIN_TOOL_DECLARATIONS, ...LAB3D_TOOL_DECLARATIONS);
 export const EXTRA_TOOL_NAMES = new Set(EXTRA_TOOL_DECLARATIONS.map(d => d.name));
 
 export async function executeExtraTool(name, args = {}) {
@@ -1164,6 +1165,8 @@ export async function executeExtraTool(name, args = {}) {
     }
     case 'design_container': return designContainerTool(args);
     case 'model_3d': return model3dTool(args);
+    case 'create_3d_object': return create3dObject(args);
+    case 'search_3d_models': return search3dModels(args);
     case 'create_invoice': return createInvoiceTool(args);
     case 'list_invoices': return listInvoicesTool(args);
     case 'find_toolbox_tools': return findTools(args.query || '');

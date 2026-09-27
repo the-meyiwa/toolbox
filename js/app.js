@@ -12,7 +12,7 @@ import { track, toolSession } from './lib/analytics.js';
 import * as artifacts from './lib/artifacts.js';
 import { mountArtifactStrip, incomingBanner } from './lib/artifact-ui.js';
 import { installPalette, openPalette, openSearch, detectAiIntent } from './lib/palette.js';
-import { openAssistant } from './lib/assistant-popup.js';
+import { openAssistant, openAssistantTab } from './lib/assistant-popup.js';
 import { quickDeviceLookup, openQuickResult, quickResultHint, quickResultTitle } from './lib/devices/quick-search.js';
 import { renderSaved } from './views/saved.js';
 import { kindLabel } from './registry/kinds.js';
@@ -113,7 +113,7 @@ export const LONG_CONTENT_TOOL_IDS = new Set([
 /* Tools that bring their own full-screen chrome: no panel around them. */
 const BARE_TOOL_IDS = new Set([
   'assistant', 'code-playground', 'container-planner', 'mail', 'messaging', 'calendar',
-  'notes', 'browser', 'automobile-guide', 'anatomy-explorer', 'interactive-map', 'spotify',
+  'notes', 'browser', 'automobile-guide', 'anatomy-explorer', 'interactive-map', 'spotify', '3d-lab',
 ]);
 /* Tools that need the whole width of the window. */
 const WIDE_TOOL_IDS = new Set([
@@ -128,7 +128,7 @@ const WIDE_TOOL_IDS = new Set([
 const FILL_TOOL_IDS = new Set([
   'flowchart', 'architecture-editor', 'uml-diagram', 'logic-lab', 'algorithm-lab', 'pdf-editor',
   'watermark-remover', 'data-bot', 'video-player', 'calculator', 'timer',
-  'assistant', 'container-planner', 'scribe', 'ledger', 'podium',
+  'assistant', 'container-planner', 'scribe', 'ledger', 'podium', '3d-lab',
 ]);
 
 export function isFitScreenTool(id) {
@@ -570,6 +570,7 @@ async function openTool(id, routeState = {}) {
   }
 }
 
+let lastRoutedHash = null;
 function handleHash() {
   // Check for auth recovery, email confirmation, or redirect parameters
   const redirect = parseAuthRedirect();
@@ -630,6 +631,15 @@ function handleHash() {
   }
 
   const raw = decodeURIComponent(window.location.hash.slice(1) || 'home');
+  const cameFrom = lastRoutedHash;
+  lastRoutedHash = window.location.hash || '#home';
+
+  // The Assistant always gets its own tab. A tab opened straight onto #assistant keeps it.
+  if (raw === 'assistant' && cameFrom !== null && cameFrom !== '#assistant' && getCurrentUser() && openAssistantTab()) {
+    lastRoutedHash = cameFrom;
+    try { window.history.replaceState(null, '', cameFrom); } catch { /* ignore */ }
+    return;
+  }
 
   if (raw === '' || raw === 'home') return showPage('home');
   if (raw === 'tools') { showPage('tools'); return; }
@@ -818,6 +828,15 @@ logo.addEventListener('click', (e) => { e.preventDefault(); window.location.hash
 // a hover ripple doesn't replay the entrance (shell.css .logo.is-entering).
 setTimeout(() => logo.classList.remove('is-entering'), 1100);
 window.addEventListener('hashchange', handleHash);
+// Plain clicks on Assistant links open it in a new tab straight from the click,
+// so popup blockers see a user gesture. Signed out, the normal route shows sign-in.
+document.addEventListener('click', (e) => {
+  if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  const a = e.target.closest?.('a[href="#assistant"]');
+  if (!a || window.location.hash === '#assistant' || !getCurrentUser()) return;
+  if (!openAssistantTab()) return;
+  e.preventDefault();
+}, true);
 window.addEventListener('pagehide', () => currentSession?.dispose());
 
 // Central Search & AI Prompt Box on Home Page

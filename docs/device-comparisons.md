@@ -27,9 +27,11 @@ The built-in database (`js/lib/devices/`) holds about 2,000 devices in 22 catego
 
 The Assistant's `device_specs` and `device_compare` tools cover every category.
 
-## Switching categories, groups and views
+## Choosing a category and switching views
 
-Picking a different category chip, a different group, or a different view (Compare/Rankings/Spec sheet lookup) slides the body content left or right — the direction follows the item's position in its list, so moving to a later tab slides in from the right and an earlier one from the left (`dirOf` + `animateBody` in `js/tools/tech-device-comparisons.js`). It's skipped for the very first paint, when the tab doesn't actually change, and under `prefers-reduced-motion: reduce`.
+The top of the tool is one **Comparison category** control showing the current category and its group. Clicking it slides a navigator out to the right (the view tabs slide away and blur): first the eight groups, each with its categories' glyphs and device count, then — sliding on — that group's categories, with a back chip. Picking one closes the navigator, swaps the label with a small slide, and loads the category. Escape or a click outside closes it; ← → Home End move between chips, Backspace goes back to the groups. On phones the navigator opens downwards under the control. (`openNav` / `showPane` / `closeNav` in `js/tools/tech-device-comparisons.js`, styles in `css/devices.css`.)
+
+The Compare / Rankings / Spec sheet lookup tabs have a sliding pill behind the selected tab. Changing category or view slides the body content left or right — the direction follows the item's position in its list (`dirOf` + `animateBody`). It is skipped for the first paint, when nothing changes, and under `prefers-reduced-motion: reduce`.
 
 The "X is both the better tech and the better buy" summary line is only shown when the two verdicts actually *disagree* (one device is the better tech, the other the better buy) — when they agree, the device cards' own badges and the two verdict cards already say so, so repeating it a third time was just noise.
 

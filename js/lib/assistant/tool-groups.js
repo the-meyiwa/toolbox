@@ -133,9 +133,9 @@ export const TOOL_GROUPS = {
     match: /\b(colou?r|hex|rgb|hsl|contrast|palette)\b/i,
   },
   modelling: {
-    label: '3D modelling: build realistic 3D models of structures and objects (trusses, frames, towers, bridges, domes, buildings, landmarks)',
-    tools: ['model_3d', 'knowledge_library'],
-    match: /\b(3-?d|model(l?ing)?|render(ing)?|visuali[sz]e|sculpt\w*|truss(es)?|space ?frame|tower|bridge|dome|pavilion|stadium|skyscraper|landmark|monument|cathedral|pagoda|pyramid|structure|mesh|glb)\b/i,
+    label: '3D: create 3D objects (phones, furniture, props, vehicles, shapes) to view, export and open in the 3D Lab; realistic 3D models of structures (trusses, frames, towers, bridges, domes, buildings, landmarks)',
+    tools: ['create_3d_object', 'search_3d_models', 'model_3d', 'knowledge_library'],
+    match: /\b(3-?d|model(l?ing)?|render(ing)?|visuali[sz]e|sculpt\w*|mesh|glb|gltf|stl|obj|usdz|fbx|3d ?print\w*|cad|blender|prop|replica|truss(es)?|space ?frame|tower|bridge|dome|pavilion|stadium|skyscraper|landmark|monument|cathedral|pagoda|pyramid|structure|torus|klein|m(o|ö)bius|menger|fractal|polyhedr\w*)\b/i,
   },
 };
 

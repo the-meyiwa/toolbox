@@ -4,7 +4,7 @@
    Registers renderers for the result types produced by
    js/lib/assistant/extra-tools.js (and the Notes tools):
      task-plan · chess-board · device-list · device-compare ·
-     vehicle · vehicle-controls · vehicle-part · car-injury · svg-illustration · note · container-design · structure-model ·
+     vehicle · vehicle-controls · vehicle-part · car-injury · svg-illustration · note · container-design · structure-model · lab3d-object ·
      invoice-card · invoice-list ·
      construction-estimate
    Each renderer receives the plain result object and returns
@@ -17,6 +17,7 @@ import { pieceSvg } from '../chess/pieces.js';
 import { sanitizeSvg } from './extra-tools.js';
 import { renderContainerDesign } from './container-design-card.js';
 import { renderStructureModel } from './structure-card.js';
+import { renderLab3dObject } from './lab3d-card.js';
 import { CLUSTER as CAR_CLUSTER } from '../automobile/corolla-controls.js';
 import { mountControlPanel } from '../automobile/control-panel.js';
 import { safetyFor, INJURIES, DISCLAIMER } from '../automobile/injury-data.js';
@@ -863,6 +864,7 @@ registerResultRenderer('construction-estimate', renderConstructionEstimate);
 registerResultRenderer('svg-illustration', renderIllustration);
 registerResultRenderer('container-design', renderContainerDesign, { match: d => Boolean(d?.design?.modules && d?.design?.levels) });
 registerResultRenderer('structure-model', renderStructureModel, { match: d => Boolean(d?.spec?.objects) });
+registerResultRenderer('lab3d-object', renderLab3dObject, { match: d => d?.type === 'lab3d-object' && Array.isArray(d?.spec?.items) });
 registerResultRenderer('note', renderNote, { match: d => Boolean(d?.noteId && typeof d?.title === 'string' && d?.status !== 'error') });
 registerResultRenderer('invoice-card', renderInvoiceCard);
 registerResultRenderer('invoice-list', renderInvoiceList);

@@ -49,7 +49,11 @@ function build() {
   panel.addEventListener('click', (e) => {
     const act = e.target.closest('[data-asp]')?.dataset.asp;
     if (act === 'close') closeAssistant();
-    if (act === 'expand') { closeAssistant({ restoreFocus: false }); window.location.hash = '#assistant'; }
+    if (act === 'expand') {
+      // The active chat is saved, so the new tab picks up this same conversation.
+      closeAssistant({ restoreFocus: false });
+      if (!openAssistantTab()) window.location.hash = '#assistant';
+    }
   });
   panel.addEventListener('keydown', (e) => {
     // Escape closes the panel unless a menu or dialog inside it is using it.
@@ -60,6 +64,14 @@ function build() {
   });
   // The full Assistant page takes over the same chat.
   window.addEventListener('hashchange', () => { if (onAssistantPage() && isAssistantOpen()) closeAssistant({ restoreFocus: false }); });
+}
+
+/** Opens the full Assistant in a new browser tab. False if the browser blocked it. */
+export function openAssistantTab() {
+  const w = window.open(`${window.location.pathname}${window.location.search}#assistant`, '_blank');
+  if (!w) return false;
+  try { w.opener = null; } catch { /* cross-origin guard */ }
+  return true;
 }
 
 export const isAssistantOpen = () => !!panel && !panel.hidden;

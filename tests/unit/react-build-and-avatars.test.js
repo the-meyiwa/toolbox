@@ -38,26 +38,25 @@ test('Settings: dedicated avatar subpage renders all 31 cards and supports navig
   openSettings();
   const modal = document.getElementById('settings-modal');
   assert.ok(modal, 'Settings modal must exist');
+  const win = modal.querySelector('.stg');
+  const avatars = modal.querySelector('[data-settings-panel="avatars"]');
+  const profile = modal.querySelector('[data-settings-panel="profile"]');
 
-  // Navigate to avatars dedicated page
+  // Navigate to the avatar page
   showAvatarView();
-  const avatarsView = modal.querySelector('#settings-avatars-view');
-  const mainView = modal.querySelector('#settings-modal-scroll');
-  const backBtn = modal.querySelector('#settings-back-btn');
-  const gallery = modal.querySelector('#settings-avatar-gallery');
+  assert.equal(avatars.hidden, false, 'Avatar page must be showing');
+  assert.equal(profile.hidden, true, 'Other pages must be hidden');
+  assert.equal(win.dataset.sub, 'avatars', 'Back button is shown for the avatar sub-page');
+  assert.equal(modal.querySelector('#stg-title').textContent, 'Choose your avatar');
 
-  assert.equal(avatarsView.style.display, 'flex', 'Avatars view must be active');
-  assert.equal(mainView.style.display, 'none', 'Main settings view must be hidden');
-  assert.equal(backBtn.style.display, 'inline-flex', 'Back button must be visible');
-
-  const cards = gallery.querySelectorAll('.avatar-story-card');
+  const cards = modal.querySelectorAll('#settings-avatar-gallery .avatar-story-card');
   assert.equal(cards.length, 31, 'Must render cards for all 31 character personas');
 
-  // Test back navigation
+  // Back to the main settings
   showMainView();
-  assert.equal(mainView.style.display, 'flex', 'Main settings view must be restored');
-  assert.equal(avatarsView.style.display, 'none', 'Avatars view must be hidden');
-  assert.equal(backBtn.style.display, 'none', 'Back button must be hidden on main view');
+  assert.equal(avatars.hidden, true, 'Avatar page must be hidden again');
+  assert.equal(profile.hidden, false, 'Profile page is shown on wide screens');
+  assert.equal(win.dataset.sub, undefined, 'No sub-page after going back');
 
   closeSettings();
 });

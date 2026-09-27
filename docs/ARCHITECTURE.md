@@ -232,3 +232,10 @@ Toolbox enforces zero regression tolerance across:
 - **Assistant pop-up.** "Ask Assistant", from the home search, Spotlight, Files, editors or the map, opens the Assistant pop-up (`js/lib/assistant-popup.js`) over the current page: a floating panel on desktop and a full-screen sheet on phones. It is the same Assistant, with the same chats, mounted in compact mode. "Open full page" continues the chat in the Assistant tool.
 - **Chat menu.** In the Assistant, right-clicking a chat, long-pressing it on touch screens, or pressing the context-menu key opens its menu: Open, Rename, Pin, Duplicate, Copy as text, Download as Markdown and Delete.
 - **Beta tools.** Tools marked `badge: 'Beta'` in the registry (Assistant, Automobile Guide, Container Builder) show a Beta badge on their cards, their page title and in Spotlight.
+
+## Assistant tabs, Settings and the 3D Lab
+
+- **The Assistant always opens in its own tab.** Plain clicks on `a[href="#assistant"]` open a new tab from the click (so popup blockers allow it); any other navigation to `#assistant` (Spotlight, the home search, sign-in flows) is caught in `handleHash`, opened in a new tab, and the current tab's hash is put back. A tab opened directly on `#assistant` keeps it. The pop-up's "Open full page" also opens a tab, which picks up the same saved conversation. Signed out, the normal sign-in flow runs in the current tab. (`openAssistantTab` in `js/lib/assistant-popup.js`.)
+- **Settings** (`js/lib/settings-ui.js`, `css/settings.css`): on wide screens a sidebar (profile card, search, grouped pages with a sliding indicator) beside the open page; on phones the page list with pages pushed in from the right. Search covers every row on every page and jumps to the setting with a highlight. Changes save immediately; a "Saved" tick confirms them. `/` focuses search, Esc goes back or closes. The window uses its own `stg-*` classes so the account and storage dialogs, which still use `.settings-modal-*`, are unaffected.
+- **3D Lab**: see [3d-lab.md](3d-lab.md).
+

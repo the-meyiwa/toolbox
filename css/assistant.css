@@ -1161,3 +1161,12 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
 .ast-conv.is-menu .ast-conv-open { background: var(--tint); }
 .ast-conv.is-pinned .ast-conv-open span:last-child::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 7px; border-radius: 50%; background: var(--text-3); vertical-align: middle; }
 .ast-conv { -webkit-touch-callout: none; }
+
+/* 3D object card (lab3d-card.js) */
+.astc-btn.astc-btn-primary { background: var(--ink); border-color: var(--ink); color: var(--text-inverse); }
+.astc-btn.astc-btn-primary:hover { background: var(--ink); opacity: .9; }
+.astc-lab-swatches { gap: 6px; padding: 4px 6px; border-radius: 999px; background: color-mix(in srgb, var(--surface) 86%, transparent); backdrop-filter: blur(12px); pointer-events: auto; }
+.astc-lab-swatches[hidden] { display: none; }
+.astc-lab-sw { width: 20px; height: 20px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .15); transition: transform .25s cubic-bezier(.34, 1.4, .64, 1), box-shadow .2s ease; }
+.astc-lab-sw:hover { transform: scale(1.15); }
+.astc-lab-sw[aria-pressed="true"] { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .15), 0 0 0 2px var(--surface), 0 0 0 3.5px var(--ink); }
