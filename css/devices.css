@@ -317,3 +317,18 @@
   .dv-verdict-name { font-size: 18px; }
   .dv-chip { font-size: 12.5px; }
 }
+
+/* Slide transitions when switching category, group or view — the body
+   content slides left/right in the direction of travel through the list. */
+.dv-body { position: relative; }
+.dv-body.dv-out-l { animation: dv-out-l .16s ease both; }
+.dv-body.dv-out-r { animation: dv-out-r .16s ease both; }
+.dv-body.dv-in-l { animation: dv-in-l .22s var(--ease-out, ease-out) both; }
+.dv-body.dv-in-r { animation: dv-in-r .22s var(--ease-out, ease-out) both; }
+@keyframes dv-out-l { to { opacity: 0; transform: translateX(-18px); } }
+@keyframes dv-out-r { to { opacity: 0; transform: translateX(18px); } }
+@keyframes dv-in-l { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: none; } }
+@keyframes dv-in-r { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .dv-body.dv-out-l, .dv-body.dv-out-r, .dv-body.dv-in-l, .dv-body.dv-in-r { animation: none; }
+}

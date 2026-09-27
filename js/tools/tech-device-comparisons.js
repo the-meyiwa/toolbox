@@ -31,6 +31,7 @@ const STORE = 'toolbox_devices_v2';
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const BENCH_KEYS = ['gb6s', 'gb6m', 'antutu', 'cb24s', 'cb24m', 'timespy', 'steelnomad', 'wildlife'];
 const RANK_PAGE = 40;
+const VIEW_ORDER = ['compare', 'rank', 'sheets'];
 /* lower-case a label but keep acronyms such as TVs */
 const lc = (t) => String(t).split(' ').map(w => (/^[A-Z]{2,}/.test(w) ? w : w.toLowerCase())).join(' ');
 
@@ -164,11 +165,42 @@ export default {
     this.el.cats.hidden = this.state.view === 'sheets';
   },
 
-  async showCategory(cat) {
+  /** Index of `from`/`to` in `list`: 1 moving forward, -1 back, 0 if either is missing or unchanged. */
+  dirOf(list, from, to) {
+    const i = list.indexOf(from), j = list.indexOf(to);
+    if (i < 0 || j < 0 || i === j) return 0;
+    return j > i ? 1 : -1;
+  },
+
+  /** Slides the current body content out, runs `fn` to replace it, then slides the
+      result in from the opposite side — the same left/right paging every switcher
+      in the tool uses. `dir`: 1 = moving to a later tab (content enters from the
+      right), -1 = an earlier one, 0 = no animation (first paint, same tab). */
+  animateBody(dir, fn) {
+    const body = this.el?.body;
+    const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!body || !dir || reduced || !body.firstChild) { fn(); return; }
+    let settled = false;
+    const enter = () => {
+      if (settled) return;
+      settled = true;
+      body.classList.remove('dv-out-l', 'dv-out-r');
+      fn();
+      body.classList.add(dir > 0 ? 'dv-in-r' : 'dv-in-l');
+      const clear = () => body.classList.remove('dv-in-l', 'dv-in-r');
+      body.addEventListener('animationend', clear, { once: true });
+      setTimeout(clear, 280);
+    };
+    body.classList.add(dir > 0 ? 'dv-out-l' : 'dv-out-r');
+    body.addEventListener('animationend', enter, { once: true });
+    setTimeout(enter, 200);
+  },
+
+  async showCategory(cat, dir = 0) {
     this.state.cat = cat;
     this.state.rank = { q: '', brand: '', year: '', sort: 'score', shown: RANK_PAGE };
     this.renderCats();
-    if (this.state.view !== 'sheets') this.el.body.innerHTML = `<div class="dv-loading"><span></span><span></span><span></span></div>`;
+    if (this.state.view !== 'sheets') this.animateBody(dir, () => { this.el.body.innerHTML = `<div class="dv-loading"><span></span><span></span><span></span></div>`; });
     this.data = await loadCategory(cat);
     if (!this.container || this.state.cat !== cat) return;
     this.counts[cat] = this.data.devices.length;
@@ -181,13 +213,15 @@ export default {
     this.renderView();
   },
 
-  renderView() {
+  renderView(dir = 0) {
     if (!this.container || !this.data) return;
     this.renderCats();
     if (this.state.view !== 'sheets' && this.sheets) { this.sheets.destroy?.(); this.sheets = null; }
-    if (this.state.view === 'compare') this.renderCompare();
-    else if (this.state.view === 'rank') this.renderRank();
-    else this.renderSheets();
+    this.animateBody(dir, () => {
+      if (this.state.view === 'compare') this.renderCompare();
+      else if (this.state.view === 'rank') this.renderRank();
+      else this.renderSheets();
+    });
   },
 
   /* ---------------- compare ---------------- */
@@ -234,7 +268,7 @@ export default {
       <section class="dv-verdicts" aria-label="Verdict">
         ${vCard('tech', V.tech, 'Better tech', 'Specs only, price ignored')}
         ${this.prefs.showPrices ? vCard('buy', V.buy, 'Better buy', 'Score for the money, at launch price') : ''}
-        ${V.summary && this.prefs.showPrices ? `<p class="dv-verdict-sum${V.same ? ' same' : ''}">${esc(V.summary)}</p>` : ''}
+        ${V.summary && this.prefs.showPrices && !V.same ? `<p class="dv-verdict-sum">${esc(V.summary)}</p>` : ''}
       </section>`;
 
     const subs = this.data.scores.filter(s => A._scores[s.key] != null || B._scores[s.key] != null);
@@ -521,15 +555,28 @@ export default {
   onClick(e) {
     const t = e.target;
     const cat = t.closest('[data-cat]');
-    if (cat) { if (cat.dataset.cat !== this.state.cat) this.showCategory(cat.dataset.cat); return; }
+    if (cat) {
+      if (cat.dataset.cat !== this.state.cat) {
+        const group = CATEGORY_GROUPS.find(g => g.cats.includes(this.state.cat)) || CATEGORY_GROUPS[0];
+        this.showCategory(cat.dataset.cat, this.dirOf(group.cats, this.state.cat, cat.dataset.cat));
+      }
+      return;
+    }
     const grp = t.closest('[data-group]');
     if (grp) {
       const g = CATEGORY_GROUPS.find(x => x.id === grp.dataset.group);
-      if (g && !g.cats.includes(this.state.cat)) this.showCategory(g.cats[0]);
+      if (g && !g.cats.includes(this.state.cat)) {
+        const curGroup = CATEGORY_GROUPS.find(x => x.cats.includes(this.state.cat)) || CATEGORY_GROUPS[0];
+        this.showCategory(g.cats[0], this.dirOf(CATEGORY_GROUPS, curGroup, g));
+      }
       return;
     }
     const view = t.closest('[data-view]');
-    if (view) { this.state.view = view.dataset.view; this.save(); this.renderView(); return; }
+    if (view) {
+      const dir = this.dirOf(VIEW_ORDER, this.state.view, view.dataset.view);
+      this.state.view = view.dataset.view; this.save(); this.renderView(dir);
+      return;
+    }
     const pickBtn = t.closest('.dv-picker-btn');
     if (pickBtn) {
       const slot = pickBtn.closest('.dv-picker');

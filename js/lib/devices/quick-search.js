@@ -1,0 +1,123 @@
+/* ============================================================
+   TOOLBOX — Quick device lookup
+
+   Turns a raw typed query ("18 pro vs s23 plus", "redmi pad se",
+   "m6 max") into a direct answer from the device database: a single
+   device's specs, or a head-to-head comparison — without the person
+   having to open Tech Device Comparisons and pick both devices by
+   hand first. Used by Spotlight and the home page search.
+
+   Resolution is typo-tolerant (js/lib/devices/db.js#deviceNameScore)
+   and runs across every category at once, so "rtx 5090 vs 4090" and
+   "iphone 18 pro vs s23 plus" both just work.
+   ============================================================ */
+
+import { CATEGORY_ORDER, CATEGORIES, loadCategory, deviceNameScore } from './db.js';
+
+const STORE = 'toolbox_devices_v2';
+const MIN_SINGLE = 0.62;   // confidence floor for a bare "show me this device" query
+const MIN_SIDE = 0.55;     // confidence floor for each side of an "A vs B" query
+
+/** Splits "A vs B" / "A versus B" into two trimmed halves, or null. */
+export function splitVsQuery(raw) {
+  const parts = String(raw || '').split(/\s+(?:vs\.?|versus)\s+/i);
+  if (parts.length !== 2) return null;
+  const [a, b] = parts.map(s => s.trim());
+  if (!a || !b || a.length > 60 || b.length > 60) return null;
+  return [a, b];
+}
+
+/** A query only worth treating as a device lookup if it looks device-shaped:
+    a model number, or a recognisable brand/family word. Keeps Spotlight and
+    the home search from firing a device search on ordinary text. */
+const DEVICEY = new RegExp([
+  '\\d', // any digit — model numbers, generations, sizes
+  'iphone', 'ipad', 'macbook', 'imac', 'airpods', 'apple watch', '\\bair\\b',
+  'galaxy', 'pixel', 'oneplus', 'redmi', 'poco', 'realme', 'xiaomi', 'huawei', 'honor', 'oppo', 'vivo',
+  'nothing phone', '\\bmoto\\b', 'nokia', 'tecno', 'infinix', 'itel', 'xperia', 'rog phone', 'zenfone',
+  'thinkpad', 'ideapad', 'chromebook', 'surface', 'yoga', 'zenbook', 'xps', 'spectre', 'pavilion', 'legion',
+  'ryzen', 'core i', 'core ultra', 'threadripper', 'snapdragon', 'dimensity', 'exynos', 'kirin', 'helio', 'tensor',
+  'radeon', 'geforce', '\\brtx\\b', '\\bgtx\\b', 'arc a', 'arc b', 'nvidia', 'apple m\\d', '\\bm\\d\\b',
+  'buds', 'airpods', 'jbl', 'bose', 'sony wh', 'sony wf', 'beats', 'marshall', 'sonos',
+  'epson', 'canon', 'brother', '\\bhp\\b', 'bizhub', 'imagerunner',
+  'deye', 'growatt', 'victron', '\\bapc\\b', 'cyberpower', 'eaton', 'vertiv',
+  'tesla', '\\bbyd\\b', '\\bnio\\b', 'xpeng', 'zeekr', 'ioniq', 'polestar', 'rivian', 'lucid',
+  'fender', 'gibson', 'ibanez', 'yamaha', '\\bcasio\\b', 'roland', 'korg', 'schecter', 'prs\\b',
+  'anker', 'ugreen', 'ecoflow', 'jackery', 'bluetti', 'nespresso', 'keurig', 'breville', 'delonghi',
+].join('|'), 'i');
+
+/** Best-scoring device for `query` in one category, or null. */
+async function bestInCategory(query, cat) {
+  const data = await loadCategory(cat);
+  let best = null;
+  for (const d of data.devices) {
+    const s = deviceNameScore(query, d);
+    if (s > 0 && (!best || s > best.score)) best = { score: s, device: d };
+  }
+  return best ? { category: cat, data, device: best.device, score: best.score } : null;
+}
+
+/** Best-scoring device for `query` across every category, ranked. */
+export async function resolveDevice(query, { limit = 5 } = {}) {
+  const q = String(query || '').trim();
+  if (!q) return [];
+  const hits = (await Promise.all(CATEGORY_ORDER.map(cat => bestInCategory(q, cat)))).filter(Boolean);
+  hits.sort((a, b) => b.score - a.score || (b.device._score || 0) - (a.device._score || 0));
+  return hits.slice(0, limit);
+}
+
+/**
+ * @returns {null | {kind:'compare', category, a, b} | {kind:'device', category, device}}
+ */
+export async function quickDeviceLookup(raw) {
+  const q = String(raw || '').trim();
+  if (q.length < 2) return null;
+
+  const vs = splitVsQuery(q);
+  if (vs) {
+    const [aHits, bHits] = await Promise.all([resolveDevice(vs[0]), resolveDevice(vs[1])]);
+    if (!aHits.length || !bHits.length) return null;
+    for (const am of aHits) {
+      if (am.score < MIN_SIDE) break;
+      const bm = bHits.find(x => x.category === am.category && x.device.id !== am.device.id && x.score >= MIN_SIDE);
+      if (bm) return { kind: 'compare', category: am.category, a: am.device, b: bm.device };
+    }
+    return null;
+  }
+
+  if (!DEVICEY.test(q)) return null;
+  const hits = await resolveDevice(q, { limit: 1 });
+  if (hits.length && hits[0].score >= MIN_SINGLE) {
+    return { kind: 'device', category: hits[0].category, device: hits[0].device };
+  }
+  return null;
+}
+
+function writeHandoff(category, pair) {
+  try {
+    const store = JSON.parse(localStorage.getItem(STORE) || '{}');
+    store.cat = category;
+    store.view = 'compare';
+    store.handoff = { cat: category, pair };
+    localStorage.setItem(STORE, JSON.stringify(store));
+  } catch { /* private mode: the tool just opens on its last state */ }
+}
+
+/** Opens Tech Device Comparisons pre-loaded with this result. */
+export function openQuickResult(hit) {
+  if (hit.kind === 'compare') writeHandoff(hit.category, [hit.a.id, hit.b.id]);
+  else writeHandoff(hit.category, [hit.device.id, null]);
+  window.location.hash = '#tech-device-comparisons';
+}
+
+/** A short line describing the match, for a search-result hint. */
+export function quickResultHint(hit) {
+  const label = CATEGORIES[hit.category]?.label || 'device';
+  return hit.kind === 'compare'
+    ? `${label} · Better tech and better buy`
+    : `${hit.device.brand} · ${label} specs and score`;
+}
+
+export function quickResultTitle(hit) {
+  return hit.kind === 'compare' ? `${hit.a.name} vs ${hit.b.name}` : hit.device.name;
+}

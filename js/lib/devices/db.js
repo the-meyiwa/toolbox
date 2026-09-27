@@ -752,20 +752,110 @@ export function popular(data, n = 8) {
   return out;
 }
 
-/** Search a loaded category. */
+/* ---------- name matching: typo-tolerant, alias-aware ----------
+   A device *name* lookup ("18 pro", "s23 plus", "m6") is a different job
+   from an *attribute* search ("snapdragon 8 elite", "oled", "gaming"):
+   a name lookup must only match the device's own name and brand, or a
+   chip name like "A18 Pro" ends up matching "18 Pro" spuriously. Numbers
+   are matched exactly (a typo'd model number is a different device);
+   words get typo tolerance. */
+
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i];
+    for (let j = 1; j <= b.length; j++) {
+      row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = row;
+  }
+  return prev[b.length];
+}
+
+/** "Galaxy S23+" → ['galaxy','s23','plus']; keeps alnum runs like 's23' whole. */
+export function tokenizeDeviceName(s) {
+  return String(s || '')
+    .toLowerCase()
+    .replace(/\+/g, ' plus ')
+    .replace(/[’']/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean);
+}
+
+/** 0..1 typo tolerance for words; numbers (all-digit tokens) never fuzzy-match each other. */
+function tokenSimilarity(a, b) {
+  if (a === b) return 1;
+  if (/^\d+$/.test(a) || /^\d+$/.test(b)) return 0;
+  if (a.length < 3 || b.length < 3) return 0;
+  if (Math.abs(a.length - b.length) > 2) return 0;
+  return 1 - levenshtein(a, b) / Math.max(a.length, b.length);
+}
+
+/** How well a query token matches a candidate token: exact > prefix > fuzzy. */
+function tokenMatch(qt, ct) {
+  if (qt === ct) return 1;
+  if (ct.length > qt.length && qt.length >= 2 && ct.startsWith(qt)) return 0.92;
+  if (qt.length > ct.length && ct.length >= 2 && qt.startsWith(ct)) return 0.85;
+  return tokenSimilarity(qt, ct);
+}
+
+/**
+ * How well `query` names `device` (0 = not a name match at all). Every query
+ * token must find some token in the device's brand+name (exactly, as a
+ * prefix, or as a plausible typo); anything left over scores 0, so a query
+ * that only half-matches a name falls through to attribute search instead
+ * of a confusing partial hit.
+ */
+export function deviceNameScore(query, device) {
+  const qTokens = tokenizeDeviceName(query);
+  if (!qTokens.length) return 0;
+  const cTokens = device._nameTokens || (device._nameTokens = tokenizeDeviceName(`${device.brand} ${device.name}`));
+  const used = new Set();
+  let covered = 0;
+  let exact = 0;
+  for (const qt of qTokens) {
+    let best = 0, bestI = -1;
+    cTokens.forEach((ct, i) => {
+      if (used.has(i)) return;
+      const s = tokenMatch(qt, ct);
+      if (s > best) { best = s; bestI = i; }
+    });
+    if (best < 0.74) return 0;   // this query word isn't accounted for at all
+    used.add(bestI);
+    covered += best;
+    if (best === 1) exact++;
+  }
+  const extra = cTokens.length - used.size;
+  return (covered / qTokens.length) * 0.72 + (exact / qTokens.length) * 0.28 - extra * 0.05;
+}
+
+/** Search a loaded category: device names/models first (typo-tolerant), then
+    specs/attributes (chip, panel, type…) as a fallback for the rest. */
 export function searchDevices(data, query, limit = 12) {
-  const q = query.trim().toLowerCase();
+  const q = query.trim();
   if (!q) return data.devices.slice().sort((a, b) => (b.released || '').localeCompare(a.released || '') || (b._score || 0) - (a._score || 0)).slice(0, limit);
-  const words = q.split(/\s+/);
+
+  const named = [];
+  for (const d of data.devices) {
+    const s = deviceNameScore(q, d);
+    if (s > 0) named.push([s, d]);
+  }
+  if (named.length) {
+    named.sort((a, b) => b[0] - a[0] || (b[1]._score || 0) - (a[1]._score || 0) || (b[1].released || '').localeCompare(a[1].released || ''));
+    return named.slice(0, limit).map(x => x[1]);
+  }
+
+  const ql = q.toLowerCase();
+  const words = ql.split(/\s+/).filter(Boolean);
   const scored = [];
   for (const d of data.devices) {
     if (!words.every(w => d._search.includes(w))) continue;
-    const name = d.name.toLowerCase();
-    let s = 0;
-    if (name === q) s += 100;
-    if (name.startsWith(q)) s += 40;
-    if (`${d.brand} ${d.name}`.toLowerCase().startsWith(q)) s += 30;
-    s += (d._score || 0) / 10 + Number((d.released || '0').slice(0, 4)) / 1000;
+    const s = (d._score || 0) / 10 + Number((d.released || '0').slice(0, 4)) / 1000;
     scored.push([s, d]);
   }
   return scored.sort((a, b) => b[0] - a[0]).slice(0, limit).map(x => x[1]);

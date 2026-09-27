@@ -12,6 +12,7 @@
 import { TOOLS, CATEGORY_LABELS, BY_ID, popular } from '../registry/index.js';
 import { search } from './search.js';
 import * as store from './artifacts.js';
+import { quickDeviceLookup, openQuickResult, quickResultHint, quickResultTitle } from './devices/quick-search.js';
 import { kindLabel } from '../registry/kinds.js';
 import { getCurrentUser } from './supabase.js';
 import { openAssistant } from './assistant-popup.js';
@@ -152,10 +153,42 @@ function collect(query) {
   return [...savedRows, ...toolRows, ...(aiRow ? [aiRow] : []), ...cmdRows];
 }
 
+/** Device/comparison row for a query that resolves to something in the device
+    database (a specific product, or "A vs B"). Resolved async and spliced
+    into `rows` once ready, without blocking the rest of the results. */
+function deviceRow(hit) {
+  return {
+    group: hit.kind === 'compare' ? 'Compare' : 'Specs',
+    title: quickResultTitle(hit),
+    hint: quickResultHint(hit),
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="7" height="12" rx="1.5"/><rect x="13" y="8" width="7" height="12" rx="1.5"/><path d="M7.5 16v2M16.5 20v2"/></svg>',
+    go: () => openQuickResult(hit),
+  };
+}
+
+let searchGen = 0;
+
 function render() {
+  const gen = ++searchGen;
   rows = collect(input.value);
   cursor = 0;
+  paint();
 
+  const q = input.value.trim();
+  if (q.length >= 3) {
+    setTimeout(() => {
+      if (gen !== searchGen) return;
+      quickDeviceLookup(q).then(hit => {
+        if (gen !== searchGen || !hit) return;
+        rows = [deviceRow(hit), ...rows];
+        if (cursor > 0) cursor += 1;
+        paint();
+      }).catch(() => {});
+    }, 150);
+  }
+}
+
+function paint() {
   if (!rows.length) {
     listEl.innerHTML = `<p class="pal-empty">Nothing matches “${escapeHtml(input.value.trim())}”. Try the job rather than the name — “format json”, “compress photo”.</p>`;
     return;

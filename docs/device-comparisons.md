@@ -27,6 +27,26 @@ The built-in database (`js/lib/devices/`) holds about 2,000 devices in 22 catego
 
 The Assistant's `device_specs` and `device_compare` tools cover every category.
 
+## Switching categories, groups and views
+
+Picking a different category chip, a different group, or a different view (Compare/Rankings/Spec sheet lookup) slides the body content left or right — the direction follows the item's position in its list, so moving to a later tab slides in from the right and an earlier one from the left (`dirOf` + `animateBody` in `js/tools/tech-device-comparisons.js`). It's skipped for the very first paint, when the tab doesn't actually change, and under `prefers-reduced-motion: reduce`.
+
+The "X is both the better tech and the better buy" summary line is only shown when the two verdicts actually *disagree* (one device is the better tech, the other the better buy) — when they agree, the device cards' own badges and the two verdict cards already say so, so repeating it a third time was just noise.
+
+## Name matching (typos, shorthand, "A vs B")
+
+Device search is a separate problem from *tool* search (`js/lib/search.js`): a device lookup ("18 pro", "s23 plus", "m6") must match a product's own name and brand only — matching against a *chip* name too ("A18 Pro") turns "18 Pro" into a false hit on the wrong phone.
+
+- **`js/lib/devices/db.js#deviceNameScore(query, device)`** tokenises the query and the device's brand+name (`tokenizeDeviceName`, e.g. `"Galaxy S23+"` → `['galaxy','s23','plus']`) and requires every query token to match a device token — exactly, as a prefix (so search-as-you-type works), or as a plausible typo (`tokenSimilarity`, Levenshtein-based). **Numbers never fuzzy-match each other** — a mistyped model number is a different device, not a nearby one — only words get typo tolerance. A query that only partly matches a name scores 0 and falls through instead of returning a confusing partial hit.
+- **`searchDevices(data, query, limit)`** tries every device's name score first; if none match, it falls back to the original substring search over `_search` (which also covers chip, panel, type, etc.), so attribute queries like "snapdragon 8 elite" or "oled" still work.
+- **`js/lib/devices/quick-search.js`** turns a raw typed query into a direct answer:
+  - `splitVsQuery("A vs B")` → `["A", "B"]` (also matches "versus"; returns `null` for anything else, including "A vs B vs C").
+  - `resolveDevice(query)` scores the query against every category at once and returns the best matches, ranked.
+  - `quickDeviceLookup(raw)` returns `{ kind: 'compare', category, a, b }` for a two-sided query where both sides resolve confidently in the *same* category, `{ kind: 'device', category, device }` for a single confident match, or `null`. A `DEVICEY` gate (needs a digit or a recognisable brand/family word) keeps it from firing on ordinary text like "compress a photo".
+  - `openQuickResult(hit)` writes the same `toolbox_devices_v2` handoff the Assistant's `device_compare` tool uses and opens Tech Device Comparisons on it.
+- **Wired into search everywhere:** Spotlight (`js/lib/palette.js`) shows a debounced "Compare" / "Specs" row at the top of the results once resolved, opened by Enter or a click. The home page search (`js/app.js`) shows the same row above "Ask Assistant" — Enter opens it when found, Ctrl/Cmd+Enter treats it as the first suggestion, and it otherwise falls back to asking the Assistant.
+- **Tests:** `tests/unit/device-quick-search.test.js` covers the matcher (shorthand, typos, the chip false-positive, numbers never fuzzy-matching) and `quickDeviceLookup` (same-category and cross-category "vs", a single device, and that ordinary text never misfires).
+
 ## Live spec sheets (Icecat)
 
 The tool uses Icecat's JSON product API. Icecat standardizes manufacturer product sheets across IT, consumer electronics, peripherals, accessories and appliances. Availability varies by product, brand authorization and subscription. It is not a guarantee that every gadget has a sheet.

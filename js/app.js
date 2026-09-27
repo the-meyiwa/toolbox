@@ -13,6 +13,7 @@ import * as artifacts from './lib/artifacts.js';
 import { mountArtifactStrip, incomingBanner } from './lib/artifact-ui.js';
 import { installPalette, openPalette, openSearch, detectAiIntent } from './lib/palette.js';
 import { openAssistant } from './lib/assistant-popup.js';
+import { quickDeviceLookup, openQuickResult, quickResultHint, quickResultTitle } from './lib/devices/quick-search.js';
 import { renderSaved } from './views/saved.js';
 import { kindLabel } from './registry/kinds.js';
 import { copyText, showToast } from './utils.js';
@@ -880,21 +881,39 @@ if (homeHeroInput && homeHeroDropdown) {
   const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
   const firstKey = isMac ? '⌘ Enter' : 'Ctrl Enter';
   let heroTools = [];
+  let heroDevice = null;   // quick device/compare match for the current query, once resolved
+  let heroGen = 0;
+
+  function deviceRowHtml(hit) {
+    return `
+      <div class="hero-dd-row hero-dd-device" role="option" tabindex="-1">
+        <span class="hero-dd-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="7" height="12" rx="1.5"/><rect x="13" y="8" width="7" height="12" rx="1.5"/><path d="M7.5 16v2M16.5 20v2"/></svg></span>
+        <span class="hero-dd-text">
+          <span class="hero-dd-name">${escapeHtml(quickResultTitle(hit))}</span>
+          <span class="hero-dd-desc">${escapeHtml(quickResultHint(hit))}</span>
+        </span>
+        <kbd>Enter</kbd>
+      </div>`;
+  }
 
   function renderHomeHeroResults() {
     const q = homeHeroInput.value.trim();
+    const gen = ++heroGen;
     if (!q) {
       homeHeroDropdown.hidden = true;
       heroTools = [];
+      heroDevice = null;
       return;
     }
 
     const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
     const availableTools = getVisibleTools({ isMobile });
     heroTools = search(q, availableTools, { labels: CATEGORY_LABELS }).results.map(r => r.tool).slice(0, 6);
+    heroDevice = null;
 
-    // Enter always asks the Assistant; Ctrl/Cmd+Enter opens the first suggestion.
-    let html = `
+    // Enter opens a confident device/comparison match directly; otherwise it
+    // asks the Assistant. Ctrl/Cmd+Enter opens the first suggestion either way.
+    const aiHtml = `
       <div class="hero-dd-row hero-dd-ai" role="option" tabindex="-1" data-ai-prompt="${escapeHtml(q)}">
         <span class="hero-dd-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 3v4M21 5h-4"/></svg></span>
         <span class="hero-dd-text">
@@ -903,6 +922,7 @@ if (homeHeroInput && homeHeroDropdown) {
         </span>
         <kbd>Enter</kbd>
       </div>`;
+    let html = aiHtml;
     if (heroTools.length) {
       html += `<div class="hero-dd-label">Tools</div>`;
       html += heroTools.map((t, i) => `
@@ -920,6 +940,18 @@ if (homeHeroInput && homeHeroDropdown) {
 
     homeHeroDropdown.innerHTML = html;
     homeHeroDropdown.hidden = false;
+
+    if (q.length >= 3) {
+      setTimeout(() => {
+        if (gen !== heroGen) return;
+        quickDeviceLookup(q).then(hit => {
+          if (gen !== heroGen || !hit) return;
+          heroDevice = hit;
+          // The device match takes Enter; demote the Assistant row's own hint accordingly.
+          homeHeroDropdown.innerHTML = deviceRowHtml(hit) + html.replace(aiHtml, aiHtml.replace('<kbd>Enter</kbd>', ''));
+        }).catch(() => {});
+      }, 150);
+    }
   }
 
   function askFromHome(q) {
@@ -930,8 +962,16 @@ if (homeHeroInput && homeHeroDropdown) {
     openAssistant({ prompt: q });
   }
 
+  function openDevice(hit) {
+    homeHeroDropdown.hidden = true;
+    homeHeroInput.value = '';
+    homeHeroInput.blur();
+    openQuickResult(hit);
+  }
+
   function openFirstSuggestion() {
-    if (!heroTools.length) renderHomeHeroResults();
+    if (!heroTools.length && !heroDevice) renderHomeHeroResults();
+    if (heroDevice) { openDevice(heroDevice); return true; }
     const first = heroTools[0];
     if (!first) return false;
     homeHeroDropdown.hidden = true;
@@ -939,7 +979,10 @@ if (homeHeroInput && homeHeroDropdown) {
     return true;
   }
 
-  function submitHomeHero() { askFromHome(homeHeroInput.value.trim()); }
+  function submitHomeHero() {
+    if (heroDevice) { openDevice(heroDevice); return; }
+    askFromHome(homeHeroInput.value.trim());
+  }
 
   homeHeroInput.addEventListener('input', renderHomeHeroResults);
   homeHeroInput.addEventListener('focus', renderHomeHeroResults);
@@ -963,12 +1006,14 @@ if (homeHeroInput && homeHeroDropdown) {
     const i = rows.indexOf(document.activeElement);
     if (e.key === 'ArrowDown' && i > -1) { e.preventDefault(); rows[Math.min(i + 1, rows.length - 1)].focus(); }
     if (e.key === 'ArrowUp' && i > -1) { e.preventDefault(); (i === 0 ? homeHeroInput : rows[i - 1]).focus(); }
-    if (e.key === 'Enter' && document.activeElement?.classList.contains('hero-dd-ai')) { e.preventDefault(); document.activeElement.click(); }
+    if (e.key === 'Enter' && document.activeElement?.classList.contains('hero-dd-row') && document.activeElement.tagName !== 'A') { e.preventDefault(); document.activeElement.click(); }
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); openFirstSuggestion(); }
     if (e.key === 'Escape') { homeHeroDropdown.hidden = true; homeHeroInput.focus(); }
   });
 
   homeHeroDropdown.addEventListener('click', (e) => {
+    const deviceRow = e.target.closest('.hero-dd-device');
+    if (deviceRow && heroDevice) { openDevice(heroDevice); return; }
     const aiRow = e.target.closest('.hero-dd-ai');
     if (aiRow) askFromHome(aiRow.dataset.aiPrompt || homeHeroInput.value.trim());
   });
