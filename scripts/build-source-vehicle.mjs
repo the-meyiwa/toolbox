@@ -26,6 +26,7 @@ import { buildStructure, buildSuspensionAndSteering, buildPowertrain, buildEngin
 import { describeComponent, specSheet, LAYERS } from './procedural-vehicle/corolla-data.mjs';
 import { segmentCorolla } from './vehicle-sources/corolla-e180.mjs';
 import { updateCatalog } from './vehicle-sources/catalog.mjs';
+import { patchGLB } from './vehicle-sources/corolla-e170-corrections.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = path.resolve(process.argv[2] || path.join(ROOT, 'vehicle-packages/sources/2014_toyota_corolla_e180_eu_with_interior.glb'));
@@ -226,6 +227,8 @@ for (const def of art) for (const t of def.transforms) if (t.node === 'tbx_pivot
 const ids = new Set(A.componentIds());
 for (const def of art) def.components = def.components.filter(c => ids.has(c));
 const glb = writeGLB([A.root], { generator: 'toolbox-source-vehicle@1.0.0' });
+// Photo-checked engine-bay positions (see vehicle-sources/corolla-e170-corrections.mjs).
+glb.bytes = patchGLB(Buffer.from(glb.bytes)).bytes;
 const sha256 = crypto.createHash('sha256').update(glb.bytes).digest('hex');
 const SOURCE_URL = 'https://sketchfab.com/3d-models/2014-toyota-corolla-e180-eu-with-interior-36f95efb0585464cae43a25a3b3392e8';
 const components = [...ids].sort().map(id => {

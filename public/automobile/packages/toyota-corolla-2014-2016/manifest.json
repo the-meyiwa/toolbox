@@ -32,7 +32,7 @@
       "glb": "vehicle.glb",
       "available": true,
       "triangles": 118376,
-      "sha256": "ddbbfafd8567d92d81645c28b7c1fd3cd482ddab14f2533fa50c62c0f25eaad2"
+      "sha256": "22b268fe7f777457f8b0a481b69ee3f82bc52dadb51f3c9dd560156ce277716f"
     }
   ],
   "layerGroups": [
@@ -141,7 +141,7 @@
       "layer": "bay",
       "availability": "available",
       "description": "Clip-closed housing holding the engine air filter element.",
-      "location": "Above the transaxle, driver side.",
+      "location": "Driver side, directly behind the battery and above the transaxle; the brake fluid reservoir is behind it at the firewall.",
       "maintenance": "Release the clips and lift the lid to change the element.",
       "accuracyNote": "Packaging position is approximate. Confirm location on the vehicle or in the owner’s manual before servicing.",
       "sources": [
@@ -158,7 +158,7 @@
       "layer": "bay",
       "availability": "available",
       "description": "Clip-closed housing holding the engine air filter element.",
-      "location": "Above the transaxle, driver side.",
+      "location": "Driver side, directly behind the battery and above the transaxle; the brake fluid reservoir is behind it at the firewall.",
       "maintenance": "Release the clips and lift the lid to change the element.",
       "accuracyNote": "Packaging position is approximate. Confirm location on the vehicle or in the owner’s manual before servicing.",
       "sources": [
@@ -1017,7 +1017,7 @@
       "layer": "bay",
       "availability": "available",
       "description": "Translucent overflow reservoir with FULL and LOW marks; check the level here with the engine cold.",
-      "location": "Front corner of the engine bay.",
+      "location": "Front of the engine bay, just right of centre, inboard of the radiator cap.",
       "specs": {
         "Coolant": "Toyota Super Long Life Coolant (pink, pre-mixed)"
       },
@@ -1040,7 +1040,7 @@
       "layer": "bay",
       "availability": "available",
       "description": "Translucent overflow reservoir with FULL and LOW marks; check the level here with the engine cold.",
-      "location": "Front corner of the engine bay.",
+      "location": "Front of the engine bay, just right of centre, inboard of the radiator cap.",
       "specs": {
         "Coolant": "Toyota Super Long Life Coolant (pink, pre-mixed)"
       },
@@ -2406,7 +2406,7 @@
       "layer": "bay",
       "availability": "available",
       "description": "Main fuses and relays for the engine bay; the lid carries a fuse map.",
-      "location": "Near the battery.",
+      "location": "Driver side, against the inner fender behind the battery, outboard of the air cleaner box.",
       "accuracyNote": "Packaging position is approximate. Confirm location on the vehicle or in the owner’s manual before servicing.",
       "sources": [
         {
@@ -2855,7 +2855,7 @@
       "layer": "engine",
       "availability": "available",
       "description": "Check with the car level and engine off for a few minutes; the level should sit between the two marks.",
-      "location": "Front of the engine (ring handle).",
+      "location": "Front of the engine, right half: the yellow loop in the front hole of the engine cover.",
       "accuracyNote": "Toolbox procedural approximation fitted inside the source body; not scanned geometry.",
       "sources": [
         {
@@ -2921,7 +2921,7 @@
       "layer": "engine",
       "availability": "available",
       "description": "Twist-off cap on the valve cover for topping up oil.",
-      "location": "Top of the valve cover.",
+      "location": "Top of the valve cover, towards the rear on the right (timing-chain) half; it shows through the rear hole in the engine cover.",
       "specs": {
         "Oil": "SAE 0W-20, 4.4 US qt (4.2 L) with filter"
       },
@@ -3099,7 +3099,7 @@
       "layer": "bay",
       "availability": "available",
       "description": "Pressure cap that raises the coolant boiling point.",
-      "location": "Top of the radiator.",
+      "location": "Top of the radiator’s right-hand tank, behind the radiator support.",
       "maintenance": "Only remove with the engine fully cold: pressurised coolant can scald.",
       "accuracyNote": "Packaging position is approximate. Confirm location on the vehicle or in the owner’s manual before servicing.",
       "sources": [

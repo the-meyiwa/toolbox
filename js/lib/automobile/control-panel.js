@@ -10,7 +10,7 @@ import { symbolAt } from './vehicle-symbols.js';
 
 const SIZE = {
   button: [64, 48], round: [52, 52], rocker: [50, 82], knob: [68, 68], dial: [92, 92], lamp: [52, 44],
-  lever: [360, 88], handle: [60, 96], port: [58, 36], screen: [176, 100], tile: [104, 58],
+  pad: [80, 80], lever: [360, 88], handle: [60, 96], port: [58, 36], screen: [176, 100], tile: [104, 58],
 };
 const GAP = 14, PAD = 18, CAP = 30;
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -66,10 +66,15 @@ function drawControl(ctl, x, y, w, h) {
       const marks = (ctl.marks || []).join(' · ');
       return `<rect class="vc-bezel" x="${cx - 18}" y="${y + 18}" width="36" height="${h - 18}" rx="12"/><rect class="vc-key" x="${cx - 12}" y="${y + 24}" width="24" height="${h - 30}" rx="9"/><circle class="vc-key" cx="${cx}" cy="${y + 16}" r="15"/>${sym(ctl.sym, cx, y + 16, 20)}${marks ? `<text class="vc-mark" x="${cx}" y="${y + h - 10}" text-anchor="middle">${esc(marks)}</text>` : ''}`;
     }
+    case 'pad': {
+      // Four-way switch with a centre button (cursor switch).
+      const r = w / 2 - 1, ch = (dx, dy) => `<path class="vc-chev" d="M${cx + dx * r * 0.72 - dy * 5} ${cy + dy * r * 0.72 - dx * 5}L${cx + dx * r * 0.84} ${cy + dy * r * 0.84}L${cx + dx * r * 0.72 + dy * 5} ${cy + dy * r * 0.72 + dx * 5}"/>`;
+      return `<circle class="vc-key" cx="${cx}" cy="${cy}" r="${r}"/><circle class="vc-bezel" cx="${cx}" cy="${cy}" r="${r * 0.42}"/>${ch(0, -1)}${ch(0, 1)}${ch(-1, 0)}${ch(1, 0)}${sym(ctl.sym, cx, cy, 16)}`;
+    }
     case 'port':
       return `<rect class="vc-key" x="${x}" y="${y}" width="${w}" height="${h}" rx="8"/>${sym(ctl.sym, cx, cy, 20)}`;
     case 'screen':
-      return `<rect class="vc-screen" x="${x}" y="${y}" width="${w}" height="${h}" rx="8"/>${sym(ctl.sym, cx, cy - 8, 26)}<text class="vc-mark vc-mark-screen" x="${cx}" y="${cy + 24}" text-anchor="middle">Touchscreen</text>`;
+      return `<rect class="vc-screen" x="${x}" y="${y}" width="${w}" height="${h}" rx="8"/>${sym(ctl.sym, cx, cy - 8, 26)}<text class="vc-mark vc-mark-screen" x="${cx}" y="${cy + 24}" text-anchor="middle">${esc(ctl.screenText ?? 'Touchscreen')}</text>`;
     case 'tile':
       return `<rect class="vc-tile" x="${x}" y="${y}" width="${w}" height="${h}" rx="10"/>${sym(ctl.sym, cx, cy, 26)}`;
     default:

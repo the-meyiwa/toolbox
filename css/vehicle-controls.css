@@ -17,6 +17,7 @@
 .vc-key { fill: var(--vc-key); stroke: var(--vc-key-edge); stroke-width: 1.2; }
 .vc-bezel { fill: var(--vc-bezel); stroke: var(--vc-key-edge); stroke-width: 1; }
 .vc-line, .vc-pointer { stroke: var(--vc-key-edge); stroke-width: 1.5; }
+.vc-chev { fill: none; stroke: var(--vc-ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .vc-pointer { stroke: var(--vc-ink); stroke-width: 2.5; stroke-linecap: round; }
 .vc-tick { fill: var(--vc-cap); }
 .vc-screen { fill: #0d1117; stroke: var(--vc-key-edge); }

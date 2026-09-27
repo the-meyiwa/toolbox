@@ -121,3 +121,18 @@ test('Assistant: vehicle_part returns the part, its figures and a 3D handoff', a
     assert.equal(none.status, 'error');
   } finally { globalThis.fetch = realFetch; }
 });
+
+test('Corolla engine bay: photo-checked corrections are applied once and the package checksum matches', async () => {
+  const { createHash } = await import('node:crypto');
+  const { patchGLB, CORRECTIONS } = await import('../../scripts/vehicle-sources/corolla-e170-corrections.mjs');
+  const glb = readFileSync(new URL(`../../public/automobile/packages/${VEHICLE_ID}/vehicle.glb`, import.meta.url));
+  assert.equal(createHash('sha256').update(glb).digest('hex'), manifest.layers[0].sha256, 'manifest sha256 matches vehicle.glb');
+  const again = patchGLB(glb);
+  assert.equal(again.moved.length, 0, 'the committed model already carries the corrections');
+  const json = JSON.parse(glb.subarray(20, 20 + glb.readUInt32LE(12)).toString('utf8'));
+  const names = new Set(json.nodes.map(n => n.name));
+  for (const fix of CORRECTIONS) for (const n of fix.nodes) assert.ok(names.has(n), n);
+  const loc = (id) => manifest.components.find(c => c.id === id).location;
+  assert.match(loc('air_cleaner_box'), /behind the battery/);
+  assert.match(loc('coolant_reservoir'), /right of centre/);
+});

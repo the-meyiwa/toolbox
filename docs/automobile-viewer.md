@@ -49,6 +49,17 @@ npm run vehicle:source
 
 `scripts/vehicle-sources/corolla-e180.mjs` splits every source mesh into vertex-connected islands and classifies them by node, material and bounds (doors, glass, mirrors, bonnet, seats, visors, glovebox …); the single welded body shell is cut per triangle into bumpers, wings, quarters, rockers and boot lid. Geometry is scaled to the published 4,620 mm length (wheelbase lands at 2,708 mm). Hinge pivots are derived from each part's bounds, and the procedural systems below are fitted to the measured axles, track and cowl.
 
+### Photo-checked engine bay
+
+`scripts/vehicle-sources/corolla-e170-corrections.mjs` moves procedural engine-bay parts to where photos of North American E170 cars show them. Each entry records what the photos show.
+
+- The air cleaner box sits behind the battery, clear of the brake master cylinder.
+- The oil filler cap is at the rear right of the engine cover, with the dipstick in the front hole.
+- The radiator cap is on the right-hand tank.
+- The coolant reservoir is just right of centre.
+
+The build script applies the corrections. Running the script on its own patches the committed GLB once and updates its sha256. The matching locations are in `corolla-data.mjs`, for the E170 only.
+
 ## Procedural packages (Toyota Corolla)
 
 `scripts/build-procedural-vehicle.mjs` generates Toolbox-original packages from code; no third-party geometry is used, so their license is `LicenseRef-Toolbox-Original` and their accuracy is `representative`.
