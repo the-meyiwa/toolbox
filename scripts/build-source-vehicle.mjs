@@ -26,7 +26,7 @@ import { buildStructure, buildSuspensionAndSteering, buildPowertrain, buildEngin
 import { describeComponent, specSheet, LAYERS } from './procedural-vehicle/corolla-data.mjs';
 import { segmentCorolla } from './vehicle-sources/corolla-e180.mjs';
 import { updateCatalog } from './vehicle-sources/catalog.mjs';
-import { patchGLB } from './vehicle-sources/corolla-e170-corrections.mjs';
+import { patchGLB, REASSIGNED_MAPPINGS } from './vehicle-sources/corolla-e170-corrections.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = path.resolve(process.argv[2] || path.join(ROOT, 'vehicle-packages/sources/2014_toyota_corolla_e180_eu_with_interior.glb'));
@@ -248,7 +248,7 @@ const manifest = {
   },
   layers: [{ id: 'complete', label: 'Source body and cabin, procedural mechanical', glb: 'vehicle.glb', available: true, triangles: glb.triangles, sha256 }],
   layerGroups: LAYERS.filter(layer => components.some(c => c.layer === layer.id)),
-  components, meshMappings: A.mappings, articulations: art, specSheet: 'specs.json',
+  components, meshMappings: { ...A.mappings, ...REASSIGNED_MAPPINGS }, articulations: art, specSheet: 'specs.json',
   notes: 'Body, glass, lamps, wheels, brakes and the complete cabin are real geometry of the 2014 Corolla sedan (E180, European market) by Armored Wave. North American 2014–2016 cars share this body and cabin but use different bumpers, grilles and lamps. The engine bay, suspension, steering gear, fuel system and boot floor are Toolbox procedural approximations fitted inside it. Specifications describe the North American 2014–2016 car.',
   ingestion: { tool: 'scripts/build-source-vehicle.mjs', sourceScale: +scale.toFixed(5), outputTriangles: glb.triangles, sourceComponents: G.size }
 };

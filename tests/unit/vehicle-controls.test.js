@@ -132,7 +132,34 @@ test('Corolla engine bay: photo-checked corrections are applied once and the pac
   const json = JSON.parse(glb.subarray(20, 20 + glb.readUInt32LE(12)).toString('utf8'));
   const names = new Set(json.nodes.map(n => n.name));
   for (const fix of CORRECTIONS) for (const n of fix.nodes) assert.ok(names.has(n), n);
+  const { REASSIGN } = await import('../../scripts/vehicle-sources/corolla-e170-corrections.mjs');
+  for (const fix of REASSIGN) {
+    assert.ok(names.has(fix.node), `${fix.node} was split out`);
+    assert.equal(manifest.meshMappings[fix.node], fix.component, `${fix.node} maps to ${fix.component}`);
+  }
   const loc = (id) => manifest.components.find(c => c.id === id).location;
   assert.match(loc('air_cleaner_box'), /behind the battery/);
   assert.match(loc('coolant_reservoir'), /right of centre/);
+});
+
+test('Corolla moving parts carry only their own pieces', async () => {
+  const { readGLB, islands } = await import('../../scripts/vehicle-sources/glb-reader.mjs');
+  const { json, primitives } = readGLB(new URL(`../../public/automobile/packages/${VEHICLE_ID}/vehicle.glb`, import.meta.url).pathname);
+  const moving = new Set();
+  const mark = (i, under) => { const n = json.nodes[i]; const u = under || /^tbx_pivot_/.test(n.name || ''); if (u && n.mesh !== undefined) moving.add(n.name); for (const c of n.children || []) mark(c, u); };
+  for (const r of json.scenes[0].nodes) mark(r, false);
+  const boxes = (p) => islands(p).map(tris => {
+    const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+    for (const t of tris) for (let k = 0; k < 3; k++) { const v = p.indices[t * 3 + k]; for (let a = 0; a < 3; a++) { lo[a] = Math.min(lo[a], p.positions[v * 3 + a]); hi[a] = Math.max(hi[a], p.positions[v * 3 + a]); } }
+    return { n: tris.length, lo, hi };
+  });
+  const inside = (b, R) => b.lo[0] >= R[0] && b.hi[0] <= R[1] && b.lo[1] >= R[2] && b.hi[1] <= R[3] && b.lo[2] >= R[4] && b.hi[2] <= R[5];
+  for (const p of primitives) {
+    // The dashboard's side vents are not part of the doors.
+    if (/door_front_(left|right)_trim_panel/.test(p.node)) for (const b of boxes(p)) assert.ok(!(b.lo[0] >= 0.72 && b.hi[0] <= 0.80 && b.lo[1] >= 0.74 && b.hi[1] <= 0.945), `${p.node} still carries a vent piece`);
+    // The door armrests are not part of the seatbacks.
+    if (/seat_back_front/.test(p.node)) for (const b of boxes(p)) assert.ok(Math.min(Math.abs(b.lo[2]), Math.abs(b.hi[2])) < 0.66, `${p.node} carries a piece inside the door`);
+    // Nothing fixed to the body sits on the boot lid's face.
+    if (!moving.has(p.node) && /tail_lamp|body_shell/.test(p.node)) for (const b of boxes(p)) assert.ok(!inside(b, [-2.25, -2.08, 0.80, 0.98, -0.66, 0.66]), `${p.node} leaves a piece on the boot lid`);
+  }
 });

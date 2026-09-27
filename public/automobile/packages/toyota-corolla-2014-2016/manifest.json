@@ -32,7 +32,7 @@
       "glb": "vehicle.glb",
       "available": true,
       "triangles": 118376,
-      "sha256": "22b268fe7f777457f8b0a481b69ee3f82bc52dadb51f3c9dd560156ce277716f"
+      "sha256": "bd9a2e8b22c2e992e1a87b959d6819c44ae9c5e0fe318a989845fd0f1e88ddb5"
     }
   ],
   "layerGroups": [
@@ -5015,7 +5015,14 @@
     "tbx_fuel_tank_1": "fuel_tank",
     "tbx_fuel_filler_neck_1": "fuel_filler_neck",
     "tbx_fuel_filler_cap_1": "fuel_filler_cap",
-    "tbx_evap_canister_1": "evap_canister"
+    "tbx_evap_canister_1": "evap_canister",
+    "tbx_instrument_panel_upper_vent_left_1": "instrument_panel_upper",
+    "tbx_instrument_panel_upper_vent_right_1": "instrument_panel_upper",
+    "tbx_door_front_left_armrest_1": "door_front_left_trim_panel",
+    "tbx_door_front_right_armrest_1": "door_front_right_trim_panel",
+    "tbx_tail_lamp_left_inner_1": "tail_lamp_left",
+    "tbx_tail_lamp_right_inner_1": "tail_lamp_right",
+    "tbx_trunk_lid_garnish_1": "trunk_lid"
   },
   "articulations": [
     {

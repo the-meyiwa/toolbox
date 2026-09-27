@@ -58,7 +58,22 @@ npm run vehicle:source
 - The radiator cap is on the right-hand tank.
 - The coolant reservoir is just right of centre.
 
-The build script applies the corrections. Running the script on its own patches the committed GLB once and updates its sha256. The matching locations are in `corolla-data.mjs`, for the E170 only.
+The same file also moves pieces that the source mesh welded to the wrong part (`REASSIGN`, version 2):
+
+- **Side air vents:** moved from the front door trims to the dashboard, so they no longer swing out with the doors.
+- **Front door armrests:** moved from the seatbacks onto the doors, so they stay put when a seat reclines and open with the door.
+- **Inner tail lamps, and the garnish across the boot lid's face:** moved from the body onto the boot lid, so they rise with it instead of floating.
+
+Each moved piece gets its own node, with a `meshMappings` entry for its component.
+
+The build script applies both versions. Running the script on its own patches the committed GLB once and updates its sha256 and mappings. The matching locations are in `corolla-data.mjs`, for the E170 only.
+
+`tests/unit/vehicle-controls.test.js` holds the audit as tests:
+- the door trims carry no vent pieces;
+- the seatbacks carry nothing inside the doors;
+- nothing fixed to the body sits on the boot lid.
+
+The glTF packaging itself is also checked.
 
 ## Procedural packages (Toyota Corolla)
 
