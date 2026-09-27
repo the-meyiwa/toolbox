@@ -296,6 +296,41 @@ export function updateUserProfile({ username, displayName, avatarUrl, profilePic
   return updated;
 }
 
+/**
+ * Pulls the signed-in user's saved profile (name and picture) from the cloud
+ * and adopts it locally, so a picture changed on another device shows up
+ * here too. Throttled; safe to call often. Returns the (possibly) updated user.
+ */
+let lastProfileSync = 0;
+export async function syncProfileFromCloud({ force = false } = {}) {
+  const u = getCurrentUser();
+  if (!u?.id || !u.token || String(u.token).startsWith('tok_')) return null;
+  if (!force && Date.now() - lastProfileSync < 30000) return u;
+  lastProfileSync = Date.now();
+  const { url, anonKey } = getSupabaseConfig();
+  if (!url || !anonKey) return u;
+  try {
+    const res = await fetch(`${url}/rest/v1/profiles?id=eq.${encodeURIComponent(u.id)}&select=display_name,avatar_url,profile_picture`, {
+      headers: { apikey: anonKey, Authorization: `Bearer ${u.token}` },
+    });
+    if (!res.ok) return u;
+    const [row] = await res.json();
+    if (!row) return u;
+    const localPreset = u.profilePicture || u.user_metadata?.profile_picture || 'default';
+    const localUrl = u.avatarUrl || u.user_metadata?.avatar_url || '';
+    const patch = {};
+    const cloudPreset = row.profile_picture || 'default';
+    if (cloudPreset !== localPreset && (cloudPreset !== 'default' || row.avatar_url || localPreset !== 'default')) patch.profilePicture = cloudPreset;
+    // A cloud row with no picture at all must not wipe an account photo (Google) kept locally.
+    if (row.avatar_url && row.avatar_url !== localUrl) patch.avatarUrl = row.avatar_url;
+    else if (!row.avatar_url && cloudPreset === 'default' && localPreset !== 'default') patch.avatarUrl = '';
+    if (row.display_name && row.display_name !== u.displayName) patch.displayName = row.display_name;
+    return Object.keys(patch).length ? updateUserProfile(patch, { remote: false }) : u;
+  } catch {
+    return u;
+  }
+}
+
 /** Map profile fields that were supplied to their database columns (undefined = unchanged). */
 function profileColumns({ username, displayName, avatarUrl, profilePicture } = {}) {
   const out = { updated_at: new Date().toISOString() };

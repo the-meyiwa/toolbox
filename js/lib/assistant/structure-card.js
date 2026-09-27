@@ -78,7 +78,7 @@ export function renderStructureModel(data, container) {
     const model = expandStructure(spec);
     const dark = isDark();
     stage.innerHTML = '';
-    viewer = new Viewer3D(stage, { realism: true, environment: model.environment, dark, ground: true, fov: 38 });
+    viewer = new Viewer3D(stage, { realism: true, environment: model.environment, dark, ground: true, fov: 38, renderOnDemand: true });
     viewer.controls.maxPolarAngle = Math.PI / 2 - 0.02;
     const built = buildStructure(model);
     group = built.group;

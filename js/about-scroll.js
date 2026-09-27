@@ -92,50 +92,87 @@ export function initScrollNarrative() {
   buildMarquee(view);
 
   const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const bar = view.querySelector('.about-progress span');
   let frame = 0;
+
+  // Geometry is measured once (and again on resize or when the page is
+  // shown), so scrolling only does arithmetic: no layout reads per frame,
+  // which is what made phones stutter. Custom properties are written only
+  // to chapters near the screen, and only when the value changes.
+  let geo = [];
+  let viewTop = 0, viewH = 1;
+  const measure = () => {
+    const sy = window.scrollY;
+    const vb = view.getBoundingClientRect();
+    viewTop = vb.top + sy; viewH = vb.height;
+    geo = chapters.map((ch) => {
+      const r = ch.getBoundingClientRect();
+      const stage = ch.querySelector('.about-stage');
+      return {
+        ch, top: r.top + sy, h: r.height,
+        stageH: stage ? stage.offsetHeight : window.innerHeight,
+        stick: parseFloat(getComputedStyle(stage || ch).top) || 0,
+        last: -1,
+      };
+    });
+  };
 
   const update = () => {
     frame = 0;
     if (view.classList.contains('hidden')) return;
     const vh = window.innerHeight;
-    const bounds = view.getBoundingClientRect();
-    view.style.setProperty('--story-progress', clamp(-bounds.top / Math.max(1, bounds.height - vh), 0, 1).toFixed(4));
-
-    for (const ch of chapters) {
-      const r = ch.getBoundingClientRect();
-      const stage = ch.querySelector('.about-stage');
-      const stageH = stage ? stage.offsetHeight : vh;
-      const travel = Math.max(1, r.height - stageH);
-      const top = parseFloat(getComputedStyle(stage || ch).top) || 0;
-      const p = motion.matches ? 1 : clamp((top - r.top) / travel, 0, 1);
-      ch.style.setProperty('--p', p.toFixed(4));
-      const onScreen = r.top < vh * 0.75 && r.bottom > vh * 0.2;
-      if (onScreen && !ch.classList.contains('is-in')) {
-        ch.classList.add('is-in');
-        ch.querySelectorAll('[data-count-to]').forEach(animateCount);
+    const y = window.scrollY;
+    if (bar) bar.style.transform = `scaleX(${clamp((y - viewTop) / Math.max(1, viewH - vh), 0, 1).toFixed(4)})`;
+    for (const g of geo) {
+      const top = g.top - y;
+      const bottom = top + g.h;
+      const near = top < vh * 1.5 && bottom > -vh * 0.5;
+      const p = motion.matches ? 1 : clamp((g.stick - top) / Math.max(1, g.h - g.stageH), 0, 1);
+      const q = near ? Math.round(p * 1000) / 1000 : (p > 0.5 ? 1 : 0);
+      if (q !== g.last) { g.ch.style.setProperty('--p', String(q)); g.last = q; }
+      if (top < vh * 0.75 && bottom > vh * 0.2 && !g.ch.classList.contains('is-in')) {
+        g.ch.classList.add('is-in');
+        g.ch.querySelectorAll('[data-count-to]').forEach(animateCount);
       }
     }
   };
 
   const schedule = () => { if (!frame) frame = requestAnimationFrame(update); };
+  const remeasure = () => { measure(); schedule(); };
   window.addEventListener('scroll', schedule, { passive: true });
-  window.addEventListener('resize', schedule, { passive: true });
-  motion.addEventListener?.('change', schedule);
+  window.addEventListener('resize', remeasure, { passive: true });
+  motion.addEventListener?.('change', remeasure);
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(remeasure).observe(view);
 
-  // A soft spotlight follows the pointer.
-  view.addEventListener('pointermove', (e) => {
-    view.style.setProperty('--mx', `${e.clientX}px`);
-    view.style.setProperty('--my', `${e.clientY}px`);
-  }, { passive: true });
+  // A soft spotlight follows a mouse pointer. It is its own composited
+  // layer moved by transform, so it never restyles the page.
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    const spot = document.createElement('div');
+    spot.className = 'about-spot';
+    spot.setAttribute('aria-hidden', 'true');
+    view.prepend(spot);
+    let sx = 0, sy = 0, sf = 0;
+    view.addEventListener('pointermove', (e) => {
+      sx = e.clientX; sy = e.clientY;
+      if (!sf) sf = requestAnimationFrame(() => { sf = 0; spot.style.transform = `translate3d(${sx}px, ${sy}px, 0)`; });
+    }, { passive: true });
+  }
+
+  // The marquee only runs while it is on screen.
+  const marquee = view.querySelector('.about-marquee');
+  if (marquee && typeof IntersectionObserver !== 'undefined') {
+    new IntersectionObserver(([e]) => marquee.classList.toggle('is-running', e.isIntersecting)).observe(marquee);
+  } else marquee?.classList.add('is-running');
 
   // Replay the entrances each time the page is opened.
   new MutationObserver(() => {
     if (view.classList.contains('hidden')) {
       chapters.forEach((ch) => ch.classList.remove('is-in'));
     } else {
-      schedule();
+      requestAnimationFrame(remeasure);
     }
   }).observe(view, { attributes: true, attributeFilter: ['class'] });
 
+  measure();
   update();
 }

@@ -8,8 +8,8 @@ import { openSettings } from './settings-ui.js';
 import { openStorageModal } from './storage-ui.js';
 import { openAccountModal } from '../views/account-modal.js';
 import { getSettings, updateSettings, exportSettings, importSettings } from './settings.js';
-import { getCurrentUser } from './supabase.js';
-import { getProfilePictureSrc } from './profile-pictures.js';
+import { getCurrentUser, syncProfileFromCloud } from './supabase.js';
+import { avatarSrcOf } from './profile-pictures.js';
 import { NotificationEngine, safeNotificationLink, prepareNotificationSound } from './notifications.js';
 import { sendMessage } from './messaging-service.js';
 
@@ -256,6 +256,18 @@ export function installHeaderMenu() {
   updateHeaderAvatar();
   updateNotificationBadge();
   window.addEventListener('toolbox:authchange', updateHeaderAvatar);
+  // Keep the profile picture in step with the cloud: at start, after a sign-in
+  // and whenever the app comes back to the foreground (another device may
+  // have changed it).
+  let syncedFor = getCurrentUser()?.id || null;
+  setTimeout(() => syncProfileFromCloud({ force: true }), 1500);
+  window.addEventListener('toolbox:authchange', (e) => {
+    const id = e.detail?.user?.id || null;
+    if (id && id !== syncedFor) { syncedFor = id; syncProfileFromCloud({ force: true }); }
+    if (!id) syncedFor = null;
+  });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) syncProfileFromCloud(); });
+  window.addEventListener('focus', () => syncProfileFromCloud());
   const refreshNotifications = () => {
     updateNotificationBadge();
     if (notifPanelEl?.classList.contains('is-open')) renderNotificationPanel();
@@ -425,18 +437,14 @@ export function updateHeaderAvatar() {
   const btn = document.getElementById('header-menu-btn');
   if (!btn) return;
   const user = getCurrentUser();
-  const settings = getSettings();
-  const activePic = user?.profilePicture || user?.user_metadata?.profile_picture || settings?.profilePicture;
-
-  if (user && activePic && activePic !== 'default') {
-    const src = getProfilePictureSrc(activePic);
-    if (src) {
-      btn.innerHTML = `<img src="${src}" alt="">`;
-      return;
-    }
+  const src = user ? avatarSrcOf(user) : null;
+  if (src) {
+    // A picture that fails to load falls back to the icon rather than a broken image.
+    btn.innerHTML = `<img src="${src.replace(/"/g, '&quot;')}" alt="" referrerpolicy="no-referrer">`;
+    btn.querySelector('img').addEventListener('error', () => { btn.innerHTML = PERSON_ICON; }, { once: true });
+    return;
   }
 
-  btn.innerHTML = `
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
-  `;
+  btn.innerHTML = PERSON_ICON;
 }
+const PERSON_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>';

@@ -291,7 +291,7 @@ export function webglAvailable() {
  * Returns a controller: update(view), rotate(±1), snapshot() → Promise<Blob>, dispose().
  */
 export function mountDesign3D(mount, design, view, { dark = false } = {}) {
-  const viewer = new Viewer3D(mount, { realism: true, environment: 'outdoor', dark, ground: true, fov: 38 });
+  const viewer = new Viewer3D(mount, { realism: true, environment: 'outdoor', dark, ground: true, fov: 38, renderOnDemand: true });
   viewer.controls.maxPolarAngle = Math.PI / 2 - 0.03;
   let current = null;
   let framed = false;

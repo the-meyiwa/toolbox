@@ -202,30 +202,36 @@ export function getProfilePictureSrc(id) {
   return found?.src || `/profile-pictures/${id}`;
 }
 
+/**
+ * The one rule for which picture a person shows, used everywhere an avatar
+ * appears: a chosen preset first, then an account photo (uploaded or from
+ * Google), else none. Accepts app users, profile rows (snake_case) and
+ * Messages rows (other_*), so every surface resolves the same picture.
+ */
+export function avatarSrcOf(p) {
+  if (!p) return null;
+  if (typeof p === 'string') return getProfilePictureSrc(p);
+  const preset = p.profilePicture || p.profile_picture || p.other_profile_picture || p.user_metadata?.profile_picture;
+  if (preset && preset !== 'default') return getProfilePictureSrc(preset);
+  return p.avatarUrl || p.avatar_url || p.other_avatar_url || p.user_metadata?.avatar_url || p.user_metadata?.picture || null;
+}
+
 export function getUserAvatarHtml(userOrId, size = 32, className = '') {
   const avatar = renderAvatar(userOrId, size, className);
   if (!userOrId?.id || userOrId.id !== getCurrentUser()?.id) return avatar;
   const state = getSupporterState();
   const style = state.supporter && ['etched','halo','orbit'].includes(state.profileStyle) ? state.profileStyle : 'classic';
   const id = String(userOrId.id).replace(/[^a-zA-Z0-9_-]/g, '');
-  return `<span class="supporter-avatar" data-supporter-account="${id}" data-supporter-style="${style}">${avatar}${state.supporter ? '<span class="supporter-avatar-badge" title="Toolbox Supporter" aria-label="Toolbox Supporter">S</span>' : ''}</span>`;
+  return `<span class="supporter-avatar" data-self-avatar="${size}" data-avatar-class="${String(className).replace(/"/g, '')}" data-supporter-account="${id}" data-supporter-style="${style}">${avatar}${state.supporter ? '<span class="supporter-avatar-badge" title="Toolbox Supporter" aria-label="Toolbox Supporter">S</span>' : ''}</span>`;
 }
 
 function renderAvatar(userOrId, size = 32, className = '') {
-  let pictureId = 'default';
-
-  if (typeof userOrId === 'string') {
-    pictureId = userOrId;
-  } else if (userOrId && typeof userOrId === 'object') {
-    pictureId = userOrId.profilePicture || userOrId.user_metadata?.profile_picture || userOrId.avatarUrl || 'default';
-  }
-
-  const src = getProfilePictureSrc(pictureId);
+  const src = avatarSrcOf(userOrId);
   const iconSize = Math.max(14, Math.round(size * 0.55));
 
   if (src) {
     return `
-      <img src="${src}" alt="Profile Picture" class="${className}" style="width:${size}px; height:${size}px; border-radius:50%; object-fit:cover; border:1px solid var(--border); display:inline-block; vertical-align:middle; background:var(--bg-subtle);" onerror="this.style.display='none'; this.nextElementSibling ? this.nextElementSibling.style.display='flex' : null;" />
+      <img src="${String(src).replace(/"/g, '&quot;')}" alt="Profile Picture" referrerpolicy="no-referrer" class="${className}" style="width:${size}px; height:${size}px; border-radius:50%; object-fit:cover; border:1px solid var(--border); display:inline-block; vertical-align:middle; background:var(--bg-subtle);" onerror="this.style.display='none'; this.nextElementSibling ? this.nextElementSibling.style.display='flex' : null;" />
       <div style="display:none; width:${size}px; height:${size}px; border-radius:50%; background:var(--bg-subtle); border:1px solid var(--border); align-items:center; justify-content:center; color:var(--text);">
         <svg viewBox="0 0 24 24" width="${iconSize}" height="${iconSize}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -243,4 +249,19 @@ function renderAvatar(userOrId, size = 32, className = '') {
       </svg>
     </div>
   `;
+}
+
+/* Every avatar of the signed-in user on screen follows profile changes,
+   whichever device or screen made them. */
+if (typeof window !== 'undefined' && !window.__toolboxAvatarSync) {
+  window.__toolboxAvatarSync = true;
+  window.addEventListener('toolbox:authchange', () => {
+    const me = getCurrentUser();
+    for (const el of document.querySelectorAll('[data-self-avatar]')) {
+      if (!me || el.dataset.supporterAccount !== String(me.id).replace(/[^a-zA-Z0-9_-]/g, '')) continue;
+      const badge = el.querySelector('.supporter-avatar-badge');
+      el.innerHTML = renderAvatar(me, Number(el.dataset.selfAvatar) || 32, el.dataset.avatarClass || '');
+      if (badge) el.appendChild(badge);
+    }
+  });
 }

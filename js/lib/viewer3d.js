@@ -33,7 +33,17 @@ const DEFAULTS = {
   dark: false,              // realism: darker studio/dusk palette for dark themes
   grid: undefined,          // realism: draw the faint measuring grid (default off)
   ambientOcclusion: true,   // realism: GTAO when the device can afford it
+  renderOnDemand: false,    // draw only when the camera, input or scene changes (call invalidate() after edits)
 };
+
+/* Phones and tablets: a lighter quality tier. iOS reports neither
+   deviceMemory nor a low core count, so it has to be recognised here. */
+function isMobileTier() {
+  if (typeof window === 'undefined' || !window.matchMedia) return false;
+  const coarse = window.matchMedia('(pointer: coarse)').matches;
+  const short = Math.min(window.screen?.width || 9999, window.screen?.height || 9999) < 900;
+  return coarse && short;
+}
 
 // Backdrop palettes for realism mode: sky zenith, horizon, ground.
 const BACKDROPS = {
@@ -59,9 +69,11 @@ export class Viewer3D {
 
     // --- Renderer ---
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    const modestDevice = (navigator.deviceMemory && navigator.deviceMemory <= 4)
+    const lowMemory = (navigator.deviceMemory && navigator.deviceMemory <= 4)
       || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, modestDevice ? 1.25 : 2));
+    this.mobileTier = isMobileTier();
+    const modestDevice = lowMemory || this.mobileTier;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lowMemory ? 1.25 : this.mobileTier ? 1.5 : 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.localClippingEnabled = true;
@@ -78,6 +90,9 @@ export class Viewer3D {
     this.controls.autoRotate = this.opts.autoRotate;
     this.controls.autoRotateSpeed = 0.9;
     this.controls.minDistance = 1;
+    this._needsRender = true;
+    this._activeUntil = 0;
+    this.controls.addEventListener('change', () => { this._needsRender = true; });
     this.controls.maxDistance = 400;
 
     this.modestDevice = modestDevice;
@@ -317,6 +332,7 @@ export class Viewer3D {
       composer.addPass(gtao);
       composer.addPass(new OutputPass());
       this.composer = composer;
+      this._needsRender = true;
       this.aoPass = gtao;
       this.resize();
     } catch { /* post-processing is an enhancement; plain rendering still works */ }
@@ -362,7 +378,7 @@ export class Viewer3D {
 
     // Distinguish a click from an orbit drag, so rotating the model
     // does not also fire a selection.
-    this._onDown = (e) => { this._downAt = { x: e.clientX, y: e.clientY }; };
+    this._onDown = (e) => { this._downAt = { x: e.clientX, y: e.clientY }; this.invalidate(1200); };
     this._onUp = (e) => {
       if (!this._downAt) return;
       const moved = Math.hypot(e.clientX - this._downAt.x, e.clientY - this._downAt.y);
@@ -446,7 +462,14 @@ export class Viewer3D {
   // mesh using it. Called as fn(root, { hovered, selected }).
   setEmphasisHandler(fn) { this._emphasisHandler = fn; }
 
+  /** Ask for a redraw (render-on-demand); `ms` keeps drawing for that long, for motion that follows. */
+  invalidate(ms = 0) {
+    this._needsRender = true;
+    if (ms) this._activeUntil = Math.max(this._activeUntil, performance.now() + ms);
+  }
+
   _setHovered(obj) {
+    this._needsRender = true;
     if (this.hovered === obj) return;
     if (this.hovered) this._applyEmphasis(this.hovered, false);
     this.hovered = obj;
@@ -456,6 +479,7 @@ export class Viewer3D {
   }
 
   select(obj) {
+    this._needsRender = true;
     if (this.selected === obj) return;
     if (this.selected) this._applyOutline(this.selected, false);
     this.selected = obj;
@@ -560,6 +584,7 @@ export class Viewer3D {
 
   // Fit the camera to a bounding box, keeping the current view direction.
   frame(target = this.scene, padding = 1.35) {
+    this.invalidate(300);
     const box = new THREE.Box3();
     target.updateMatrixWorld(true);
     target.traverse(o => { if (o.isMesh && o.visible && !o.name.startsWith('__')) box.expandByObject(o); });
@@ -613,6 +638,7 @@ export class Viewer3D {
 
   // axis: 'x' | 'y' | 'z' | null. `amount` is a world-space coordinate.
   setClipPlane(axis, amount, flip = false) {
+    this._needsRender = true;
     if (!axis) { this.clipPlanes = []; this._applyClip([]); return; }
     const normals = { x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] };
     const n = new THREE.Vector3(...normals[axis]).multiplyScalar(flip ? -1 : 1);
@@ -632,6 +658,7 @@ export class Viewer3D {
   /* ---------------- loop & teardown ---------------- */
 
   resize() {
+    this._needsRender = true;
     const w = this.mount.clientWidth;
     const h = this.mount.clientHeight;
     if (!w || !h) return;
@@ -643,7 +670,10 @@ export class Viewer3D {
 
   _tick() {
     if (this.disposed) return;
-    this.controls.update();
+    const moved = this.controls.update();
+    if (this.opts.renderOnDemand && !moved && !this._needsRender && !this.controls.autoRotate
+      && !this._pointerMoved && performance.now() > this._activeUntil) return;
+    this._needsRender = false;
     // Skip hover picking while a button is held: that is an orbit or pan
     // drag, and raycasting large scenes every frame makes it stutter.
     if (this._pointerMoved && !this._downAt) {

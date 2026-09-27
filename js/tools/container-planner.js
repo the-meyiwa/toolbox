@@ -471,7 +471,7 @@ export default {
 
     const mount = $('#cb-canvas');
     const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const viewer = new Viewer3D(mount, { realism: true, environment: 'outdoor', dark, ground: true, grid: true, groundSize: 60, fov: 40 });
+    const viewer = new Viewer3D(mount, { realism: true, environment: 'outdoor', dark, ground: true, grid: true, groundSize: 60, fov: 40, renderOnDemand: true });
     this._viewer = viewer;
     viewer.controls.maxPolarAngle = Math.PI / 2 - 0.02;
     const PAD_H = 0.1;
@@ -489,8 +489,19 @@ export default {
     const topLevel = () => Math.max(0, ...state.units.map(u => u.level || 0));
     const specOf = (u) => ({ size: u.preset, len: u.len, wid: u.wid, hgt: u.hgt });
 
+    // Built units are cached by everything that shapes them, so an edit
+    // rebuilds only the unit that changed (the costly part on a phone).
+    let unitCache = new Map();
     function rebuild() {
-      for (let i = scene.children.length - 1; i >= 0; i--) { disposeTree(scene.children[i]); scene.remove(scene.children[i]); }
+      const keep = new Set();
+      // Clear highlights first: cached models are reused and must come back clean.
+      suppressSelect = true; viewer.select(null); viewer._setHovered?.(null); suppressSelect = false;
+      const cachedGroups = new Set([...unitCache.values()].map(v => v.group));
+      for (let i = scene.children.length - 1; i >= 0; i--) {
+        const c = scene.children[i];
+        if (!cachedGroups.has(c)) disposeTree(c);
+        scene.remove(c);
+      }
       viewer.pickables.length = 0;
       viewer._pickRootMap = new WeakMap();
       unitGroups.clear(); objByRef.clear();
@@ -506,8 +517,31 @@ export default {
         const covered = info.covered > 0.5 && state.level === 'all';
         const cutHere = state.level !== 'all' && L === maxL;
         const roofOn = (state.showRoof && !cutHere) || covered;
+        const showRoofItems = !(!state.showRoof || covered || cutHere);
+        const cacheKey = JSON.stringify([u.id, u.preset, u.len, u.wid, u.hgt, u.color, u.items, roofOn, lined, showRoofItems, L === 0]);
+        const cached = unitCache.get(cacheKey);
+        if (cached) {
+          keep.add(cacheKey);
+          const { group } = cached;
+          group.position.set(u.cx, BASE + info.elev, u.cz);
+          group.rotation.y = -(u.rot || 0) * Math.PI / 2;
+          group.userData.ref = { t: 'unit', id: u.id };
+          scene.add(group);
+          unitGroups.set(u.id, group);
+          objByRef.set(refKey(group.userData.ref), group);
+          viewer.registerPickable(group);
+          for (const obj of cached.picks) {
+            obj.userData.ref = { t: 'item', id: u.id, key: obj.userData.ref.key };
+            objByRef.set(refKey(obj.userData.ref), obj);
+            viewer.registerPickable(obj);
+          }
+          continue;
+        }
+        const picks = [];
         const openings = u.items.filter(i => i.kind === 'opening').map(i => ({ ...i, _item: i }));
         const { group, ext } = buildUnit({ size: u.preset, len: u.len, wid: u.wid, hgt: u.hgt, color: hexOf(u.color), openings, roof: roofOn, lined });
+        keep.add(cacheKey);
+        unitCache.set(cacheKey, { group, picks });
         group.position.set(u.cx, BASE + info.elev, u.cz);
         group.rotation.y = -(u.rot || 0) * Math.PI / 2;
         group.userData.ref = { t: 'unit', id: u.id };
@@ -521,16 +555,18 @@ export default {
           child.userData.ref = { t: 'item', id: u.id, key: it.key };
           objByRef.set(refKey(child.userData.ref), child);
           viewer.registerPickable(child);
+          picks.push(child);
         }
         for (const it of u.items) {
           if (it.kind === 'opening') continue;
-          if (it.kind === 'roof' && (!state.showRoof || covered || cutHere)) continue;
+          if (it.kind === 'roof' && !showRoofItems) continue;
           const obj = partModel(it, { unit: u });
           placePart(obj, it, u);
           obj.userData.ref = { t: 'item', id: u.id, key: it.key };
           group.add(obj);
           objByRef.set(refKey(obj.userData.ref), obj);
           viewer.registerPickable(obj);
+          picks.push(obj);
         }
         if (L === 0) {
           const xs = ext.len > 7 ? [-1, 0, 1] : [-1, 1];
@@ -552,8 +588,11 @@ export default {
         objByRef.set(refKey(obj.userData.ref), obj);
         viewer.registerPickable(obj);
       }
+      // Free units that are no longer in the build.
+      for (const [k, v] of unitCache) if (!keep.has(k)) { disposeTree(v.group); unitCache.delete(k); }
       const sel = objByRef.get(refKey(state.sel)) || null;
       viewer.selected = null;
+      viewer.invalidate(200);
       suppressSelect = true; viewer.select(sel); suppressSelect = false;
       renderLevels();
     }
@@ -862,6 +901,7 @@ export default {
 
     function applyDrag(e) {
       const d = dragging;
+      viewer.invalidate(300);
       const p = hitOn(d.plane, e);
       if (!p) return;
       const ref = d.ref;
