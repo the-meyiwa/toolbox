@@ -1,6 +1,9 @@
 /** Automobile Guide: reference data, semantic inspector and interactive technical 3D viewport. */
 
 import { autoClient } from '../lib/automotive-data.js';
+import { CLUSTERS as COROLLA_CONTROLS, CLUSTER as COROLLA_CLUSTER, VEHICLE_ID as COROLLA_ID } from '../lib/automobile/corolla-controls.js';
+import { mountControlPanel } from '../lib/automobile/control-panel.js';
+import { symbolSvg } from '../lib/automobile/vehicle-symbols.js';
 import { AutomobileViewer } from '../lib/automobile/automobile-viewer.js';
 import { openContextMenu, closeContextMenu } from '../lib/context-menu.js';
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -19,7 +22,9 @@ export default {
       activeMobileTab: 'diag', // 'diag' | 'specs' | 'inspector'
       hiddenLayers: new Set(),
       hiddenParts: new Set(),
-      actionsOpen: false
+      actionsOpen: false,
+      space: 'exterior',        // 'exterior' | 'interior' | 'parts'
+      openCluster: null
     };
 
     container.innerHTML = `
@@ -643,6 +648,13 @@ export default {
                 <div style="color:var(--text-muted); font-size:0.9rem;">Loading technical 3D viewer…</div>
               </div>
               <section class="ag-part-card" id="ag-part-card" hidden aria-live="polite" aria-label="Selected part"></section>
+              <div class="ag-space" id="ag-space" role="group" aria-label="What to explore">
+                <button type="button" data-space="exterior" class="is-active" aria-pressed="true">Exterior</button>
+                <button type="button" data-space="interior" aria-pressed="false">Interior</button>
+                <button type="button" data-space="parts" aria-pressed="false">Parts</button>
+              </div>
+              <div class="ag-hotspots" id="ag-hotspots"></div>
+              <section class="ag-controls" id="ag-controls" hidden aria-label="Controls"></section>
             </div>
 
             <div class="ag-view-status" id="ag-view-status">
@@ -697,9 +709,13 @@ export default {
         onSelect:comp=>this.onComponentSelection(comp),
         onStatus:text=>{this.setStatus(text);},
         onContextMenu:event=>this.openPartMenu(event),
-        onArticulation:change=>this.onArticulation(change)
+        onArticulation:change=>this.onArticulation(change),
+        onRender:()=>this.positionHotspots()
       });
-      const initial=(await autoClient.searchVehicles(''))[0];
+      // The Assistant's "Open in Automobile Guide" names the vehicle to start on.
+      const wanted=(()=>{ try{ return JSON.parse(localStorage.getItem('toolbox.automobile.focus')||'null')?.vehicleId; }catch{ return null; } })();
+      const all=await autoClient.searchVehicles('');
+      const initial=all.find(v=>v.id===wanted)||all[0];
       if(!initial)throw new Error('No Toolbox Vehicle Packages are installed.');
       this.container.querySelector('#ag-search-input').value=`${initial.manufacturer} ${initial.model} ${initial.years}`;
       await this.selectVehicle(initial);
@@ -778,6 +794,13 @@ export default {
       if(component)this.viewer?.select(component.dataset.componentId);
       if(target.closest('[data-clear-selection]'))this.viewer?.select(null);
       if(target.closest('[data-ask-component]'))this.askAssistant();
+      const space=target.closest('[data-space]');
+      if(space){ this.setSpace(space.dataset.space); return; }
+      const hotspot=target.closest('[data-hotspot]');
+      if(hotspot){ this.openCluster(hotspot.dataset.hotspot); return; }
+      const go=target.closest('[data-cluster-go]');
+      if(go){ this.openCluster(go.dataset.clusterGo); return; }
+      if(target.closest('[data-controls-close]')){ this.closeCluster(); return; }
     };
     this.container.addEventListener('click',this._onContainerClick);
 
@@ -863,6 +886,7 @@ export default {
     await this.loadVisualization(this.state.selectedVehicle);
     this.clearInspector();
     this.resetTransform();
+    this.setupControls();
   },
 
   renderVehicleInfo(vehicle) {
@@ -1274,7 +1298,134 @@ export default {
   },
 
   zoom(delta) { this.viewer?.zoom(delta); },
-  resetTransform() { this.viewer?.reset(); },
+  resetTransform() {
+    if(this.state?.space==='interior'){ this.viewer?.exitInterior(); this.enterCabin(); return; }
+    this.viewer?.reset();
+  },
+
+  /* ---------------- Exterior / Interior / Parts ---------------- */
+
+  /** The researched control clusters for the loaded vehicle (only the 2014–2016 Corolla has them). */
+  clustersFor(vehicle=this.state.selectedVehicle){
+    return vehicle?.id===COROLLA_ID?COROLLA_CONTROLS:[];
+  },
+
+  setupControls(){
+    this.closeCluster();
+    const focus=(()=>{ try{ const f=JSON.parse(localStorage.getItem('toolbox.automobile.focus')||'null'); localStorage.removeItem('toolbox.automobile.focus'); return f; }catch{ return null; } })();
+    const clusters=this.clustersFor();
+    this.container.querySelector('#ag-space').hidden=!this.viewer?.asset;
+    if(focus&&clusters.length&&COROLLA_CLUSTER[focus.cluster]){
+      const cl=COROLLA_CLUSTER[focus.cluster];
+      this.setSpace(cl.zone==='interior'?'interior':'exterior',{ quiet:true });
+      this.openCluster(cl.id, focus.control);
+      return;
+    }
+    this.setSpace(this.state.space==='interior'?'interior':this.state.space,{ quiet:true });
+  },
+
+  setSpace(space,{ quiet=false }={}){
+    if(!['exterior','interior','parts'].includes(space))return;
+    const was=this.state.space;
+    this.state.space=space;
+    this.container.querySelectorAll('#ag-space [data-space]').forEach(b=>{ const on=b.dataset.space===space; b.classList.toggle('is-active',on); b.setAttribute('aria-pressed',String(on)); });
+    this.container.querySelector('.ag-root')?.setAttribute('data-ag-space',space);
+    if(space==='interior')this.enterCabin();
+    else if(was==='interior')this.viewer?.exitInterior();
+    if(space==='parts'||(this.state.openCluster&&COROLLA_CLUSTER[this.state.openCluster]?.zone!==(space==='interior'?'interior':'exterior')))this.closeCluster();
+    this.renderHotspots();
+    if(!quiet){
+      const n=this.clustersFor().filter(c=>space==='interior'?c.zone==='interior':c.zone!=='interior').length;
+      this.setStatus(space==='parts'?'Parts: select any component, right-click (or tap) for its actions.'
+        :space==='interior'?(n?`Interior: drag to look around the cabin. Tap a marker to see its ${n} groups of switches and lights.`:'Interior: drag to look around the cabin.')
+        :(n?'Exterior: tap a marker to see lights, the fuel door, key and more.':'Exterior: drag to orbit the vehicle.'));
+    }
+  },
+
+  /** Driver's eye: from the driver's head restraint, forward and slightly down towards the instruments. */
+  enterCabin(){
+    const v=this.viewer;
+    if(!v?.asset)return;
+    const head=v.componentPoint('headrest_front_left',[0.5,0.45,0.5])||v.componentPoint('seat_back_front_left',[0.5,1,0.5]);
+    const wheel=v.componentPoint('steering_wheel',[0.5,0.6,0.5]);
+    if(!head){ v.reset(); return; }  // no named driver's seat in this package
+    const eye=head.clone(); eye.x+=0.3; eye.y-=0.02;
+    const look=wheel?wheel.clone():eye.clone().setX(eye.x+1);
+    look.y=Math.max(look.y,eye.y-0.25);
+    v.enterInterior(eye,look);
+  },
+
+  renderHotspots(){
+    const layer=this.container?.querySelector('#ag-hotspots');
+    if(!layer)return;
+    const space=this.state.space;
+    const list=space==='parts'?[]:this.clustersFor().filter(c=>space==='interior'?c.zone==='interior':c.zone!=='interior');
+    this._hotspots=list;
+    layer.innerHTML=list.map((c,i)=>{
+      const sym=c.rows[0][0].sym;
+      return `<button type="button" class="ag-hotspot${this.state.openCluster===c.id?' is-open':''}" data-hotspot="${escape(c.id)}" aria-label="${escape(c.name)}" style="left:-999px;top:-999px">
+        <span class="ag-hotspot-dot">${symbolSvg(sym,14)}</span><span class="ag-hotspot-label">${escape(c.name)}</span></button>`;
+    }).join('');
+    this.positionHotspots();
+  },
+
+  positionHotspots(){
+    const v=this.viewer, layer=this.container?.querySelector('#ag-hotspots');
+    if(!v?.asset||!layer||!this._hotspots?.length)return;
+    const w=layer.clientWidth||v.host.clientWidth, h=layer.clientHeight||v.host.clientHeight;
+    const pts=[];
+    for(const btn of layer.children){
+      const c=COROLLA_CLUSTER[btn.dataset.hotspot];
+      const p=c&&v.componentPoint(c.anchor,c.at);
+      const s=p&&v.project(p);
+      const show=Boolean(s&&s.x>-10&&s.y>-10&&s.x<w+10&&s.y<h+10);
+      btn.style.visibility=show?'visible':'hidden';
+      if(show)pts.push({ btn, x:s.x, y:s.y });
+    }
+    // Neighbouring clusters (door switches, knee-level dash) can land on top of each other: push them apart.
+    const MIN=38;
+    for(let pass=0;pass<4;pass++){
+      for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
+        const a=pts[i], b=pts[j]; let dx=b.x-a.x, dy=b.y-a.y; const d=Math.hypot(dx,dy);
+        if(d>=MIN)continue;
+        if(d<0.01){ dx=1; dy=0; }
+        const k=(MIN-d)/2/(d||1);
+        a.x-=dx*k; a.y-=dy*k; b.x+=dx*k; b.y+=dy*k;
+      }
+    }
+    for(const q of pts){ q.btn.style.left=`${Math.round(q.x)}px`; q.btn.style.top=`${Math.round(q.y)}px`; }
+  },
+
+  openCluster(id, controlId=null){
+    const cl=COROLLA_CLUSTER[id];
+    const panel=this.container?.querySelector('#ag-controls');
+    if(!cl||!panel)return;
+    this.state.openCluster=id;
+    this._panel?.destroy();
+    const same=this.clustersFor().filter(c=>c.zone===cl.zone&&c.id!==id);
+    panel.hidden=false;
+    panel.innerHTML=`
+      <header class="ag-controls-head">
+        <div><span class="ag-controls-kicker">${escape(cl.where)}</span><h3>${escape(cl.name)}</h3></div>
+        <button type="button" class="ag-controls-close" data-controls-close aria-label="Close">×</button>
+      </header>
+      <div class="ag-controls-body"></div>
+      ${same.length?`<nav class="ag-controls-more" aria-label="Other controls">${same.map(c=>`<button type="button" data-cluster-go="${escape(c.id)}">${escape(c.name)}</button>`).join('')}</nav>`:''}`;
+    this._panel=mountControlPanel(panel.querySelector('.ag-controls-body'),cl,{ selected:controlId, hinted:controlId?[controlId]:[] });
+    this.renderHotspots();
+    // Turn towards the cluster so the panel and the part are seen together.
+    const p=this.viewer?.componentPoint(cl.anchor,cl.at);
+    if(p)this.viewer.lookAt(p,cl.zone==='interior'?1.6:4.2);
+    this.setStatus(`${cl.name} — tap a ${cl.zone==='interior'?'switch or light':'part'} to see what it does.`);
+  },
+
+  closeCluster(){
+    this._panel?.destroy(); this._panel=null;
+    if(this.state)this.state.openCluster=null;
+    const panel=this.container?.querySelector('#ag-controls');
+    if(panel){ panel.hidden=true; panel.innerHTML=''; }
+    this.container?.querySelectorAll('.ag-hotspot.is-open').forEach(b=>b.classList.remove('is-open'));
+  },
   destroy() {
     this._version=(this._version||0)+1;
     clearTimeout(this._searchTimer);
@@ -1282,6 +1433,7 @@ export default {
     document.removeEventListener('click',this._onOutsideClick);
     this.container?.removeEventListener('click',this._onContainerClick);
     this.container?.removeEventListener('contextmenu',this._onContainerContextMenu);
+    this._panel?.destroy();this._panel=null;this._hotspots=null;
     this.viewer?.dispose();this.viewer=null;
   }
 };

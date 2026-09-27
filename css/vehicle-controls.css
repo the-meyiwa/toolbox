@@ -1,0 +1,50 @@
+/* ==========================================================================
+   Vehicle control panels (js/lib/automobile/control-panel.js)
+   A cluster of real-looking switches and lamps drawn in SVG, and the
+   explanation of whichever one is chosen. Used by the Automobile Guide and
+   the Assistant's "One of these?" card.
+   ========================================================================== */
+
+.vc {
+  --vc-panel: #26282c; --vc-panel-edge: #3a3d42;
+  --vc-key: #3b3e44; --vc-key-edge: #55595f; --vc-ink: #e9eaec; --vc-cap: #aeb2b8;
+  --vc-bezel: #1c1d20; --vc-accent: #7cc4ff;
+  display: grid; gap: 12px; min-width: 0;
+}
+.vc-stage { flex-shrink: 0; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+.vc-svg { display: block; max-width: 100%; height: auto; margin: 0 auto; font-family: var(--font-sans); }
+.vc-panel { fill: var(--vc-panel); stroke: var(--vc-panel-edge); stroke-width: 1.5; }
+.vc-key { fill: var(--vc-key); stroke: var(--vc-key-edge); stroke-width: 1.2; }
+.vc-bezel { fill: var(--vc-bezel); stroke: var(--vc-key-edge); stroke-width: 1; }
+.vc-line, .vc-pointer { stroke: var(--vc-key-edge); stroke-width: 1.5; }
+.vc-pointer { stroke: var(--vc-ink); stroke-width: 2.5; stroke-linecap: round; }
+.vc-tick { fill: var(--vc-cap); }
+.vc-screen { fill: #0d1117; stroke: var(--vc-key-edge); }
+.vc-tile { fill: none; stroke: var(--vc-key-edge); stroke-dasharray: 4 3; stroke-width: 1.4; }
+.vc-lampbox { fill: #111214; stroke: #2a2c30; }
+.vc-ctl { color: var(--vc-ink); cursor: pointer; outline: none; }
+.vc-ctl g[stroke] { stroke: currentColor; }
+.vc-hit { fill: transparent; stroke: none; }
+.vc-cap { fill: var(--vc-cap); font-size: 10.5px; }
+.vc-mark { fill: var(--vc-cap); font-size: 9.5px; font-weight: 600; letter-spacing: .02em; }
+.vc-mark-in { fill: var(--vc-ink); }
+.vc-mark-screen { fill: #8b949e; }
+.vc-chip rect { fill: var(--vc-bezel); stroke: var(--vc-key-edge); }
+.vc-chip { color: var(--vc-ink); }
+.vc-lamp-red { color: #ff4d4a; } .vc-lamp-amber { color: #ffb01f; } .vc-lamp-green { color: #3ddc84; }
+.vc-lamp-blue { color: #4d8dff; } .vc-lamp-white { color: #f4f4f2; }
+.vc-ctl:hover .vc-hit, .vc-ctl:focus-visible .vc-hit { fill: rgba(255, 255, 255, .06); }
+.vc-ctl:focus-visible .vc-hit { stroke: var(--vc-accent); stroke-width: 1.5; }
+.vc-ctl.is-selected .vc-hit { fill: rgba(124, 196, 255, .14); stroke: var(--vc-accent); stroke-width: 2; }
+.vc-ctl.is-selected .vc-cap { fill: #fff; font-weight: 600; }
+.vc-ctl.is-hinted .vc-hit { stroke: var(--vc-accent); stroke-width: 2; stroke-dasharray: 5 4; animation: vc-pulse 1.6s ease-in-out infinite; }
+@keyframes vc-pulse { 50% { stroke-opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .vc-ctl.is-hinted .vc-hit { animation: none; } }
+
+.vc-detail { min-height: 64px; padding: 12px 14px; border-radius: var(--radius-md, 12px); background: var(--surface-2, #f2f2f0); color: var(--text); font-size: 13.5px; line-height: 1.5; }
+.vc-detail p { margin: 0; }
+.vc-detail p + p { margin-top: 6px; }
+.vc-hint, .vc-note, .vc-d-trim, .vc-d-note { color: var(--text-2); font-size: 12.5px; }
+.vc-d-trim { font-style: italic; }
+.vc-d-title { margin: 0 0 4px; font-size: 14.5px; font-weight: 600; }
+.vc-d-how strong { font-weight: 600; }

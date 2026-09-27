@@ -111,6 +111,18 @@ export const EXTRA_TOOL_DECLARATIONS = [
     },
   },
   {
+    name: 'vehicle_controls',
+    description: `Identify a button, switch, knob, lever, warning light, symbol or exterior part on a car and SHOW the person that part of the car drawn with every switch and symbol, so they can point at the one they mean ("One of these?"). Use it whenever someone asks what a button, light, symbol, lever or fitting is for, e.g. "there's a button on my car door, what is it for?", "orange light that looks like an engine", "lever on the right of the steering wheel", "how do I open the fuel door". Covers the 2014–2016 Toyota Corolla (E170) in detail: door switches, steering-wheel switches, stalks, instrument-cluster warning lamps, centre stack, climate, console, overhead, releases, key fob, front and rear exterior, fuel door, door pillar labels and the engine bay. Other cars share most ISO symbols, so it still helps; say so. After the card is shown, answer in one or two sentences and invite them to tap the one they mean.`,
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'What the person described, in their words (location, shape, colour, symbol).' },
+        vehicle: { type: 'string', description: 'The car, if they said (make, model, year).' },
+      },
+      required: ['query'],
+    },
+  },
+  {
     name: 'vehicle_lookup',
     description: 'Find information about a car or vehicle: decode a VIN (NHTSA), list models for a make/model search with an encyclopedia summary and photo, and any detailed Toolbox vehicle package (3D model and spec sheet) that exists. Use for automotive specifics.',
     parameters: {
@@ -652,6 +664,28 @@ async function deviceCompare({ a, b, category }) {
 
 /* ---------------- vehicles ---------------- */
 
+/* The researched 2014–2016 Corolla controls: find what the person means and show that part of the car. */
+async function vehicleControlsTool({ query = '', vehicle = '' } = {}) {
+  const { findControls, CLUSTER } = await import('../automobile/corolla-controls.js');
+  const hit = findControls(`${query}`);
+  const other = vehicle && !/corolla/i.test(vehicle);
+  if (!hit) {
+    return { status: 'error', message: 'Could not tell which part of the car that is. Ask where it is (door, steering wheel, dashboard, ceiling, outside) and what the symbol looks like.' };
+  }
+  const cl = hit.cluster, ctl = hit.control;
+  return {
+    status: 'success', renderer: 'vehicle-controls', type: 'vehicle-controls',
+    vehicle: 'Toyota Corolla 2014–2016 (E170)',
+    askedAbout: vehicle || '',
+    cluster: cl.id, clusterName: cl.name, where: cl.where,
+    control: ctl?.id || null,
+    alternatives: hit.alternatives.map(id => ({ id, name: CLUSTER[id]?.name })).filter(a => a.name),
+    controls: cl.rows.flat().map(c => ({ id: c.id, label: c.label, what: c.what })),
+    ...(ctl ? { best_match: { label: ctl.label, what: ctl.what, how: ctl.how || '', note: ctl.note || '', trim: ctl.trim || '' } } : {}),
+    message: `Shown to the user as "One of these?": ${cl.name} (${cl.where})${ctl ? `, with "${ctl.label}" highlighted` : ''}. They can tap any control to read what it does.${other ? ` The drawing is the 2014–2016 Corolla; ${vehicle} may lay these out differently, though the symbols are standard.` : ''}`,
+  };
+}
+
 async function vehicleLookup({ query = '', open_guide: openGuide }) {
   const q = String(query).trim();
   const out = { status: 'success', renderer: 'vehicle', type: 'vehicle', query: q };
@@ -1019,6 +1053,7 @@ export async function executeExtraTool(name, args = {}) {
     case 'device_specs': return deviceSpecs(args);
     case 'device_compare': return deviceCompare(args);
     case 'vehicle_lookup': return vehicleLookup(args);
+    case 'vehicle_controls': return vehicleControlsTool(args);
     case 'update_note': return updateNote(args);
     case 'draw_illustration': {
       const svg = sanitizeSvg(args.svg);

@@ -77,6 +77,38 @@ Interaction model:
 - Mobile / touch: tap a part to open a small info panel over the viewer; its toggles (switches) sit right there, and the vehicle is lifted into the space above the panel. **Details** opens the full component sheet.
 - Model layers (body, glass, lighting, trim, structure, interior, airbags, engine, engine-bay systems, chassis, wheels, fuel & exhaust) can be hidden to see inside; quick actions open all doors, lower windows, remove all wheels or reset everything.
 
+## Exterior, Interior and Parts
+
+A switcher at the top of the viewport picks how to explore the car:
+
+- **Exterior** orbits the car. Markers sit on the lamps, key, fuel door, door pillar and engine bay.
+- **Interior** puts the camera at the driver's eye point, taken from the driver's head restraint. Dragging turns your head around the cabin. Markers sit on the door switches, steering-wheel switches, stalks, instrument cluster, centre stack, climate panel, console, overhead console and floor releases.
+- **Parts** is the component explorer described above, with no markers.
+
+Tapping a marker opens that group of controls, drawn as a panel with every switch and symbol. Tapping a control explains what it does, how to use it, and which grades have it. On desktop the panel is a side sheet; on a phone it is a bottom sheet.
+
+The data behind it:
+
+- `js/lib/automobile/corolla-controls.js` holds 19 researched groups for the 2014–2016 Corolla (E170). Each group names the component it is anchored to and where on that component.
+  - Sources: Toyota's 2014 Corolla Quick Reference Guide and Owner's Manual, and Toyota parts listings (for example the mirror switch, 84870-02150).
+  - Features that depend on grade, market or dealer settings are marked as such, not stated as fact.
+- `vehicle-symbols.js` draws about 100 ISO 2575-style symbols.
+- `control-panel.js` lays out and draws a group (`clusterSvg`, `mountControlPanel`). The Guide and the Assistant share it.
+- `findControls(query)` turns a plain description into a group and, when one clearly stands out, a control. It understands descriptions such as "button on the door", "orange light that looks like an engine", "lever on the right" and "knob with L and R".
+
+## Assistant: "One of these?"
+
+When someone asks what a button, light, symbol, lever or exterior part is for, the Assistant calls `vehicle_controls`. The card shows only that part of the car, with every switch and symbol, and highlights the most likely match. It suggests nearby groups in case the first guess is wrong. **Open in Automobile Guide** hands the group and control to the Guide through `localStorage['toolbox.automobile.focus']`, and the Guide opens on it.
+
+For other cars, the card says the drawing is the Corolla's; the symbols are standard.
+
+Harnesses (with `npm run dev`):
+
+- `/tests/browser/vehicle-controls.html?c=driver-door,cluster` draws the groups.
+- `/tests/browser/vehicle-controls-card.html?q=...` runs the Assistant card.
+
+Tests are in `tests/unit/vehicle-controls.test.js`.
+
 ## Verification
 
 Run `npm test`, `npm run build`, `node scripts/build-procedural-vehicle.mjs --check`, and validate all package directories with the command above. The interactive harness at `/tests/browser/automobile-viewer.html` renders the real Guide component; `tests/browser/automobile-viewer.mjs` drives desktop right-click and mobile Toggle flows against it.

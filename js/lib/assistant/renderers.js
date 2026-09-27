@@ -4,7 +4,7 @@
    Registers renderers for the result types produced by
    js/lib/assistant/extra-tools.js (and the Notes tools):
      task-plan · chess-board · device-list · device-compare ·
-     vehicle · svg-illustration · note · container-design · structure-model ·
+     vehicle · vehicle-controls · svg-illustration · note · container-design · structure-model ·
      invoice-card · invoice-list ·
      construction-estimate
    Each renderer receives the plain result object and returns
@@ -17,6 +17,8 @@ import { pieceSvg } from '../chess/pieces.js';
 import { sanitizeSvg } from './extra-tools.js';
 import { renderContainerDesign } from './container-design-card.js';
 import { renderStructureModel } from './structure-card.js';
+import { CLUSTER as CAR_CLUSTER } from '../automobile/corolla-controls.js';
+import { mountControlPanel } from '../automobile/control-panel.js';
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
@@ -402,6 +404,50 @@ function renderVehicle(data, container) {
 }
 
 /* ============================================================
+   Car controls — "One of these?"
+   ============================================================ */
+
+export function renderVehicleControls(data, container) {
+  let clusterId = CAR_CLUSTER[data.cluster] ? data.cluster : null;
+  const el = card('vehicle-controls', {
+    icon: I.car,
+    title: 'One of these?',
+    sub: esc(data.vehicle || 'Toyota Corolla 2014–2016'),
+    actions: btn('Open in Automobile Guide', I.external, 'data-act="guide"'),
+  });
+  const body = el.querySelector('.astc-body');
+  let panel = null, selected = data.control || null;
+  const paint = () => {
+    const cl = CAR_CLUSTER[clusterId];
+    if (!cl) { body.innerHTML = `<p class="astc-muted">${esc(data.message || 'Nothing to show.')}</p>`; return; }
+    const others = (data.alternatives || []).filter(a => CAR_CLUSTER[a.id] && a.id !== clusterId);
+    const back = clusterId !== data.cluster && CAR_CLUSTER[data.cluster] ? [{ id: data.cluster, name: CAR_CLUSTER[data.cluster].name }] : [];
+    body.innerHTML = `
+      <p class="astc-vc-where"><strong>${esc(cl.name)}</strong> · ${esc(cl.where)}</p>
+      ${data.askedAbout && !/corolla/i.test(data.askedAbout) ? `<p class="astc-muted astc-vc-caveat">Drawn from the 2014–2016 Corolla. The symbols are standard, but your ${esc(data.askedAbout)} may lay them out differently.</p>` : ''}
+      <div class="astc-vc-panel"></div>
+      ${[...back, ...others].length ? `<div class="astc-vc-alts"><span>Not it? Try</span>${[...back, ...others].map(a => `<button type="button" data-vc-cluster="${esc(a.id)}">${esc(a.name)}</button>`).join('')}</div>` : ''}`;
+    panel?.destroy();
+    panel = mountControlPanel(body.querySelector('.astc-vc-panel'), cl, {
+      selected: clusterId === data.cluster ? selected : null,
+      hinted: clusterId === data.cluster && data.control ? [data.control] : [],
+      onSelect: (ctl) => { if (clusterId === data.cluster) selected = ctl?.id || null; },
+    });
+  };
+  paint();
+  el.addEventListener('click', (e) => {
+    const alt = e.target.closest('[data-vc-cluster]');
+    if (alt) { clusterId = alt.dataset.vcCluster; paint(); return; }
+    if (e.target.closest('[data-act="guide"]')) {
+      try { localStorage.setItem('toolbox.automobile.focus', JSON.stringify({ vehicleId: 'toyota-corolla-2014-2016', cluster: clusterId, control: clusterId === data.cluster ? selected : null })); } catch { /* storage unavailable: the guide still opens */ }
+      window.location.hash = '#automobile-guide';
+    }
+  });
+  container.appendChild(el);
+  return el;
+}
+
+/* ============================================================
    Illustration
    ============================================================ */
 
@@ -628,6 +674,7 @@ registerResultRenderer('chess-board', renderChess, { match: d => typeof d?.fen =
 registerResultRenderer('device-list', renderDeviceList);
 registerResultRenderer('device-compare', renderDeviceCompare);
 registerResultRenderer('vehicle', renderVehicle);
+registerResultRenderer('vehicle-controls', renderVehicleControls);
 registerResultRenderer('construction-estimate', renderConstructionEstimate);
 registerResultRenderer('svg-illustration', renderIllustration);
 registerResultRenderer('container-design', renderContainerDesign, { match: d => Boolean(d?.design?.modules && d?.design?.levels) });

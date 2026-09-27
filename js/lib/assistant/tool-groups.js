@@ -98,9 +98,9 @@ export const TOOL_GROUPS = {
     match: /\b(phone|iphone|samsung|galaxy|pixel|tecno|infinix|xiaomi|laptop|macbook|tablet|ipad|tv|television|monitor|oled|gpu|rtx|cpu|processor|snapdragon|chip|smartwatch|watch|earbuds|headphones|airpods|console|playstation|ps5|xbox|switch|specs?|versus|vs\.?)\b/i,
   },
   vehicles: {
-    label: 'Vehicles: fault diagnosis (symptoms to causes and fixes), VIN decoding and car specifications',
-    tools: ['diagnose_vehicle', 'vehicle_lookup'],
-    match: /\b(cars?|vehicles?|vin|toyota|honda|lexus|mercedes|bmw|ford|kia|hyundai|nissan|engine|horsepower|torque|sedan|suv|truck|corolla|camry|mechanic\w*|wipers?|windscreen|windshield|brakes?|battery|alternator|starter|radiator|coolant|overheat\w*|gear ?box|transmission|clutch|tyres?|tires?|suspension|steering|exhaust|spark plugs?|fuel pump|check engine|obd|p0\d{3}|headlights?|indicators?|a\/c|aircon|won'?t start)\b/i,
+    label: 'Vehicles: fault diagnosis (symptoms to causes and fixes), VIN decoding, car specifications, and what a button, switch, lever or warning light is for (shown on a drawing of that part of the car)',
+    tools: ['diagnose_vehicle', 'vehicle_lookup', 'vehicle_controls'],
+    match: /\b(cars?|vehicles?|vin|toyota|honda|lexus|mercedes|bmw|ford|kia|hyundai|nissan|engine|horsepower|torque|sedan|suv|truck|corolla|camry|mechanic\w*|wipers?|windscreen|windshield|brakes?|battery|alternator|starter|radiator|coolant|overheat\w*|gear ?box|transmission|clutch|tyres?|tires?|suspension|steering|exhaust|spark plugs?|fuel pump|check engine|obd|p0\d{3}|headlights?|indicators?|a\/c|aircon|won'?t start|dash(board)?|warning lights?|(engine|oil|battery|brake|tyre|tire) light|stalk|hazards?|fuel (door|cap|flap)|boot release|trunk release|hood release|bonnet|key ?fob|demister|defrost(er)?|cruise control|handbrake|parking brake)\b/i,
   },
   building: {
     label: 'Architecture and buildings: architecture advice (structure, climate, software/system design), container and portacabin design, quotes, floor plans, construction cost estimates',

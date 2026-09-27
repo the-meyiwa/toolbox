@@ -7,7 +7,8 @@ import { ArticulationController } from './articulation-controller.js';
 const CAMERA_KEYS = ['+', '=', '-', 'Home', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
 
 export class AutomobileViewer {
-  constructor(host, { onSelect = () => {}, onStatus = () => {}, onContextMenu = null, onArticulation = () => {} } = {}) {
+  constructor(host, { onSelect = () => {}, onStatus = () => {}, onContextMenu = null, onArticulation = () => {}, onRender = null } = {}) {
+    this.onRender = onRender;
     this.host = host;
     this.onSelect = onSelect;
     this.onStatus = onStatus;
@@ -133,7 +134,7 @@ export class AutomobileViewer {
     this.applyViewOffset();
     const distance = this.fittedDistance();
     // Preserve the user's relative zoom and pan when orientation changes.
-    if (this.fitDistance) {
+    if (this.fitDistance && !this.interior) {
       const offset = this.camera.position.clone().sub(this.controls.target);
       offset.multiplyScalar(distance / this.fitDistance);
       this.camera.position.copy(this.controls.target).add(offset);
@@ -157,7 +158,7 @@ export class AutomobileViewer {
       this.scene.add(loaded.root);
       this.articulation = new ArticulationController(loaded.root, descriptor.articulations || [], {
         reducedMotion: this.reducedMotion,
-        onChange: change => { this.onArticulation(change); this.animate(); }
+        onChange: change => { this._boxes = null; this.onArticulation(change); this.animate(); }
       });
       this.reset();
       return loaded;
@@ -255,10 +256,84 @@ export class AutomobileViewer {
   }
 
   reset() {
+    if (this.interior) this.exitInterior();
     this.fitDistance = this.fittedDistance();
     this.controls.maxDistance = Math.max(30, this.fitDistance * 3);
     this.camera.position.set(7, 4.5, 7).setLength(this.fitDistance);
     this.controls.target.set(0, 0, 0);
+    this.controls.update();
+    this.requestRender();
+  }
+
+  /** A point inside a component's current bounds: `at` is 0–1 per axis (x forward, y up, z from the left). */
+  componentPoint(id, at = [0.5, 0.5, 0.5]) {
+    const entry = this.asset?.registry.get(id);
+    if (!entry?.meshes?.length) return null;
+    // Bounds are cached per asset (hotspots ask every frame) and dropped when anything articulates.
+    if (this._boxesFor !== this.asset) { this._boxes = null; this._boxesFor = this.asset; }
+    this._boxes ||= new Map();
+    let box = this._boxes.get(id);
+    if (!box) {
+      box = new Box3();
+      for (const mesh of entry.meshes) box.expandByObject(mesh);
+      this._boxes.set(id, box);
+    }
+    if (box.isEmpty()) return null;
+    return new Vector3(
+      box.min.x + (box.max.x - box.min.x) * at[0],
+      box.min.y + (box.max.y - box.min.y) * at[1],
+      box.min.z + (box.max.z - box.min.z) * at[2],
+    );
+  }
+
+  /** Screen position of a world point in CSS pixels relative to the canvas, or null behind the camera. */
+  project(point) {
+    const v = point.clone().project(this.camera);
+    if (v.z > 1 || v.z < -1) return null;
+    return { x: (v.x + 1) / 2 * this.host.clientWidth, y: (1 - v.y) / 2 * this.host.clientHeight };
+  }
+
+  /**
+   * Sits the camera at the driver's eye point and turns orbiting into looking
+   * around from the seat. `eye` and `look` are world points.
+   */
+  enterInterior(eye, look) {
+    if (!this._exterior) this._exterior = { pos: this.camera.position.clone(), target: this.controls.target.clone(), min: this.controls.minDistance, max: this.controls.maxDistance, fov: this.camera.fov, near: this.camera.near, rotate: this.controls.rotateSpeed };
+    const dir = look.clone().sub(eye).normalize();
+    this.controls.minDistance = 0.001; this.controls.maxDistance = 0.2;
+    this.controls.target.copy(eye).addScaledVector(dir, 0.04);
+    this.camera.position.copy(eye);
+    this.controls.enableZoom = false; this.controls.enablePan = false;
+    this.controls.rotateSpeed = -0.35;           // drag to turn your head, like looking around the cabin
+    this.camera.near = 0.01; this.camera.fov = 68; this.camera.updateProjectionMatrix();
+    this.interior = true;
+    this.controls.update();
+    this.requestRender();
+  }
+
+  exitInterior() {
+    const e = this._exterior;
+    if (!e) return;
+    this._exterior = null;
+    this.interior = false;
+    this.controls.minDistance = e.min; this.controls.maxDistance = e.max; this.controls.rotateSpeed = e.rotate;
+    this.controls.enableZoom = true; this.controls.enablePan = true;
+    this.camera.near = e.near; this.camera.fov = e.fov; this.camera.updateProjectionMatrix();
+    this.camera.position.copy(e.pos); this.controls.target.copy(e.target);
+    this.controls.update();
+    this.requestRender();
+  }
+
+  /** Aim the camera (exterior) at a point from a comfortable distance, keeping the current direction. */
+  lookAt(point, distance = 3.2) {
+    if (this.interior) {
+      const eye = this.camera.position.clone();
+      this.controls.target.copy(eye).addScaledVector(point.clone().sub(eye).normalize(), 0.04);
+    } else {
+      const dir = this.camera.position.clone().sub(this.controls.target).normalize();
+      this.controls.target.copy(point);
+      this.camera.position.copy(point).addScaledVector(dir, distance);
+    }
     this.controls.update();
     this.requestRender();
   }
@@ -272,6 +347,7 @@ export class AutomobileViewer {
         this.pipeline.render(this.scene, this.camera, this.asset.registry, {
           mode: this.mode, selectedId: this.selectedId, hoverId: this.hoverId
         });
+        this.onRender?.();
       } else {
         this.pipeline.renderer.setClearColor(this.pipeline.settings.background);
         this.pipeline.renderer.clear();
