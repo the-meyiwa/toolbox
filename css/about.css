@@ -266,3 +266,63 @@
   .marquee-row { animation: none; }
   .about-spot { display: none; }
 }
+
+/* ---------- Native scroll-driven motion (120 Hz on ProMotion) ----------
+   Where the browser supports scroll timelines, the scenes are driven by
+   CSS scroll-driven animations of transform and opacity instead of by the
+   --p that about-scroll.js writes. Those run with the browser's own scroll,
+   at the display's full refresh rate. Script-written styles are throttled
+   to 60 Hz in Safari on ProMotion iPhones and lag behind the finger.
+   Each chapter's timeline runs from the moment its stage pins (under the
+   header) to the moment it unpins, which is exactly what --p measured. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .about-view { view-timeline: --about block; }
+    .about-chapter { view-timeline: --ch block; view-timeline-inset: var(--header-h) 0; }
+    .about-progress span { animation: ab-bar linear both; animation-timeline: --about; animation-range: contain 0% contain 100%; }
+
+    .about-chapter::before,
+    .about-scroll-cue,
+    .scene-paper .paper-1, .scene-paper .paper-2, .scene-paper .paper-3, .scene-paper .paper-pdf,
+    .paper-stamp, .scene-arrow path, .ring-draw, .intent-core, .intent-rows li, .intent-rows li::after,
+    .burst-tile, .burst-core {
+      animation-timing-function: linear; animation-fill-mode: both;
+      animation-duration: auto; animation-timeline: --ch;
+    }
+    .about-chapter::before { animation-name: ab-numeral; animation-range: contain 0% contain 100%; }
+    .about-ch-4::before { animation: none; }
+    .about-scroll-cue { animation-name: ab-fade-out; animation-range: contain 0% contain 12.5%; }
+
+    .scene-paper .paper-3 { animation-name: ab-paper-3; animation-range: contain 0% contain 100%; }
+    .scene-paper .paper-2 { animation-name: ab-paper-2; animation-range: contain 0% contain 100%; }
+    .scene-paper .paper-1 { animation-name: ab-paper-1; animation-range: contain 0% contain 100%; }
+    .scene-paper .paper-pdf { animation-name: ab-pdf; animation-range: contain 28% contain 73.5%; }
+    .paper-stamp { animation-name: ab-stamp; animation-range: contain 50% contain 75%; }
+    .scene-arrow path { animation-name: ab-draw; animation-range: contain 10% contain 50%; }
+
+    .ring-draw { animation-name: ab-draw; animation-range: contain 0% contain 71.5%; }
+    .intent-core { animation-name: ab-core-in; animation-range: contain 15% contain 48.5%; }
+    .intent-rows li { animation-name: ab-row-in; animation-range: contain calc(25% + var(--k, 0) * 14%) contain calc(45% + var(--k, 0) * 14%); }
+    .intent-rows li::after { animation-name: ab-underline; animation-range: contain calc(25% + var(--k, 0) * 14%) contain calc(45% + var(--k, 0) * 14%); }
+
+    .burst-tile { animation-name: ab-tile; animation-range: contain calc(6% + var(--d, 0) * 12%) contain calc(51.5% + var(--d, 0) * 12%); }
+    .burst-core { animation-name: ab-burst-core; animation-range: contain 45% contain 78.5%; }
+  }
+}
+@keyframes ab-bar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes ab-numeral { from { transform: translateY(0); opacity: .2; } to { transform: translateY(90vh); opacity: 1; } }
+@keyframes ab-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes ab-paper-3 { from { transform: translate(-60px, 20px) rotate(-4deg); } to { transform: translate(-180px, -10px) rotate(-18deg); } }
+@keyframes ab-paper-2 { from { transform: translate(-30px, 10px) rotate(-2deg); } to { transform: translate(-100px, 20px) rotate(-8deg); } }
+@keyframes ab-paper-1 { from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-20px, 30px) rotate(4deg); } }
+@keyframes ab-pdf { from { transform: translate(360px, -10px) rotate(6deg); opacity: 0; } to { transform: translate(100px, -30px) rotate(4deg); opacity: 1; } }
+@keyframes ab-stamp { from { transform: scale(2.2) rotate(-12deg); opacity: 0; } to { transform: scale(1) rotate(-4deg); opacity: 1; } }
+@keyframes ab-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes ab-core-in { from { opacity: 0; transform: scale(.8); } to { opacity: 1; transform: scale(1); } }
+@keyframes ab-row-in { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes ab-underline { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes ab-tile {
+  from { opacity: 0; transform: translate(0, 0) scale(.2) rotate(var(--rot, 90deg)); }
+  to { opacity: 1; transform: translate(var(--tx), var(--ty)) scale(1) rotate(0deg); }
+}
+@keyframes ab-burst-core { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }

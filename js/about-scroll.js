@@ -95,6 +95,29 @@ export function initScrollNarrative() {
   const bar = view.querySelector('.about-progress span');
   let frame = 0;
 
+  // With CSS scroll timelines (about.css) the scenes move with the browser's
+  // own scroll at the display's full rate (120 Hz on ProMotion), so this
+  // script only has to reveal each chapter once. Everything below the early
+  // return is the fallback for browsers without scroll timelines.
+  const nativeMotion = () => !motion.matches && typeof CSS !== 'undefined' && CSS.supports?.('animation-timeline: view()');
+  const reveal = (ch) => {
+    if (ch.classList.contains('is-in')) return;
+    ch.classList.add('is-in');
+    ch.querySelectorAll('[data-count-to]').forEach(animateCount);
+  };
+  if (nativeMotion() && typeof IntersectionObserver !== 'undefined') {
+    // Same trigger as the fallback: the chapter reaches 75% down the screen and still shows in the top 80%.
+    const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) reveal(e.target); }), { rootMargin: '-20% 0px -25% 0px' });
+    chapters.forEach((ch) => io.observe(ch));
+    initExtras(view);
+    // Replay the entrances each time the page is opened.
+    new MutationObserver(() => {
+      if (view.classList.contains('hidden')) chapters.forEach((ch) => ch.classList.remove('is-in'));
+      else chapters.forEach((ch) => { io.unobserve(ch); io.observe(ch); });
+    }).observe(view, { attributes: true, attributeFilter: ['class'] });
+    return;
+  }
+
   // Geometry is measured once (and again on resize or when the page is
   // shown), so scrolling only does arithmetic: no layout reads per frame,
   // which is what made phones stutter. Custom properties are written only
@@ -130,10 +153,7 @@ export function initScrollNarrative() {
       const p = motion.matches ? 1 : clamp((g.stick - top) / Math.max(1, g.h - g.stageH), 0, 1);
       const q = near ? Math.round(p * 1000) / 1000 : (p > 0.5 ? 1 : 0);
       if (q !== g.last) { g.ch.style.setProperty('--p', String(q)); g.last = q; }
-      if (top < vh * 0.75 && bottom > vh * 0.2 && !g.ch.classList.contains('is-in')) {
-        g.ch.classList.add('is-in');
-        g.ch.querySelectorAll('[data-count-to]').forEach(animateCount);
-      }
+      if (top < vh * 0.75 && bottom > vh * 0.2) reveal(g.ch);
     }
   };
 
@@ -144,6 +164,23 @@ export function initScrollNarrative() {
   motion.addEventListener?.('change', remeasure);
   if (typeof ResizeObserver !== 'undefined') new ResizeObserver(remeasure).observe(view);
 
+  initExtras(view);
+
+  // Replay the entrances each time the page is opened.
+  new MutationObserver(() => {
+    if (view.classList.contains('hidden')) {
+      chapters.forEach((ch) => ch.classList.remove('is-in'));
+    } else {
+      requestAnimationFrame(remeasure);
+    }
+  }).observe(view, { attributes: true, attributeFilter: ['class'] });
+
+  measure();
+  update();
+}
+
+/* Pointer spotlight and marquee: shared by both motion paths. */
+function initExtras(view) {
   // A soft spotlight follows a mouse pointer. It is its own composited
   // layer moved by transform, so it never restyles the page.
   if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
@@ -163,16 +200,4 @@ export function initScrollNarrative() {
   if (marquee && typeof IntersectionObserver !== 'undefined') {
     new IntersectionObserver(([e]) => marquee.classList.toggle('is-running', e.isIntersecting)).observe(marquee);
   } else marquee?.classList.add('is-running');
-
-  // Replay the entrances each time the page is opened.
-  new MutationObserver(() => {
-    if (view.classList.contains('hidden')) {
-      chapters.forEach((ch) => ch.classList.remove('is-in'));
-    } else {
-      requestAnimationFrame(remeasure);
-    }
-  }).observe(view, { attributes: true, attributeFilter: ['class'] });
-
-  measure();
-  update();
 }
