@@ -20,6 +20,7 @@ import * as LA from './linalg.js';
 import * as ST from './stats.js';
 import * as OP from './optimize.js';
 import * as NT from './ntheory.js';
+import * as SC from '../structural-calcs.js';
 import { constantDigits, gammaFn } from './special.js';
 
 const L = toLatex;
@@ -1108,6 +1109,103 @@ function hEvaluate(src) {
 function canonNoSimplify(x) { return canon(x); }
 
 /* ============================================================
+   STRUCTURES (engineering formulas from structural-calcs.js)
+   ============================================================ */
+
+/** key=value pairs ("L=6 w=10 P=20 a=2"), plus the free words left over. */
+function kv(s) {
+  const out = {};
+  const rest = String(s).replace(/([a-zA-Z_][\w]*)\s*=\s*(-?[\d.]+(?:e-?\d+)?)/g, (_, k, v) => { out[k.toLowerCase()] = Number(v); return ' '; });
+  return { vals: out, rest: rest.replace(/\s+/g, ' ').trim() };
+}
+const SECTION_RE = /\b((?:UB|UC)\s*\d+\s*[x×]\s*\d+\s*[x×]\s*\d+|(?:RHS|SHS|CHS)\s*[\d.]+(?:\s*[x×]\s*[\d.]+){1,2}|(?:rect|timber)\s*\d+\s*[x×]\s*\d+|(?:circle|rod)\s*\d+)\b/i;
+const secOf = (s) => { const m = String(s).match(SECTION_RE); return m ? m[1].replace(/×/g, 'x').replace(/\s+/g, ' ') : null; };
+const stepsOf = (arr) => (arr || []).map((t) => step(t.text || t));
+
+function hBeam(arg) {
+  const { vals, rest } = kv(arg);
+  const support = /cantilever/i.test(rest) ? 'cantilever' : /fixed|encastre/i.test(rest) ? 'fixed' : 'simple';
+  const section = secOf(rest);
+  const material = /aluminium|aluminum/i.test(rest) ? 'aluminium' : /timber|wood/i.test(rest) ? 'timber' : /s355/i.test(rest) ? 's355' : 'steel';
+  const L = vals.l ?? vals.span ?? 6;
+  const r = SC.beam({ L, w: vals.w ?? vals.udl ?? 0, P: vals.p ?? 0, a: vals.a ?? null, support, section, material });
+  if (!(vals.w || vals.udl || vals.p)) throw new Error('Give a load: w=10 (kN/m) and/or P=20 (kN) with a=2 (m)');
+  const extra = [
+    { label: 'Reactions', text: support === 'cantilever' ? `${r.reactions[0]} kN at the fixed end` : `R₁ = ${r.reactions[0]} kN, R₂ = ${r.reactions[1]} kN` },
+    { label: 'Max shear', text: `${r.Vmax} kN` },
+    { label: 'Max moment at', text: `x = ${r.MmaxAt} m` },
+  ];
+  if (section) extra.push({ label: 'Section', text: r.section }, { label: 'Bending stress', text: `${r.stressMPa} MPa (${Math.round(r.utilisation * 100)}% of fy)` }, { label: 'Deflection', text: `${r.deflectionMm} mm (limit ${r.deflectionLimitMm} mm)` });
+  return R({
+    title: `Beam (${support === 'simple' ? 'simply supported' : support})`, category: 'structures',
+    input: `L = ${L}\\,\\text{m}${r.w ? `,\\; w = ${r.w}\\,\\text{kN/m}` : ''}${r.P ? `,\\; P = ${r.P}\\,\\text{kN at}\\; a = ${r.a}\\,\\text{m}` : ''}`,
+    result: `M_{max} = ${r.Mmax}\\,\\text{kNm}`, plain: `Mmax = ${r.Mmax} kNm`,
+    extra, steps: stepsOf(r.steps),
+    verify: section ? { ok: r.ok, text: r.ok ? 'stress and deflection within limits' : 'over the limit: choose a bigger section' } : null,
+    notes: ['Loads as given (factor them for strength checks). Preliminary: check lateral-torsional buckling, bearing and connections.'],
+    plot: { type: 'fn', v: 'x', x: [0, L], items: [{ f: (x) => r.V(x), label: 'Shear V (kN)', latex: 'V(x)' }, { f: (x) => r.M(x), label: 'Moment M (kNm)', latex: 'M(x)' }] },
+  });
+}
+
+function hSection(arg) {
+  const sec = secOf(arg) || arg.trim();
+  const p = SC.sectionProperties(sec);
+  return R({
+    title: 'Section properties', category: 'structures', input: `\\text{${p.name}}`,
+    result: `I = ${fmtNum(p.I * 1e8, 6)}\\,\\text{cm}^4`, plain: `I = ${fmtNum(p.I * 1e8, 6)} cm^4`,
+    extra: [
+      { label: 'Area A', text: `${fmtNum(p.A * 1e4, 5)} cm²` },
+      { label: 'Elastic modulus W', text: `${fmtNum(p.W * 1e6, 5)} cm³` },
+      { label: 'Least radius of gyration', text: `${fmtNum(p.rMin * 100, 4)} cm` },
+      ...(p.kgm ? [{ label: 'Mass', text: `${fmtNum(p.kgm, 4)} kg/m` }] : []),
+    ],
+    notes: [/^U[BC]/.test(p.name) ? 'Published section-table values.' : 'Calculated from the dimensions (sharp corners).'],
+  });
+}
+
+function hColumn(arg) {
+  const { vals, rest } = kv(arg);
+  const section = secOf(rest) || 'UC 203x203x46';
+  const r = SC.columnBuckling({ section, L: vals.l ?? 3.5, K: vals.k ?? 1, NEd: vals.n ?? vals.ned ?? null, curve: (rest.match(/\bcurve\s*([a-d]0?)\b/i) || [])[1] });
+  return R({
+    title: 'Column buckling (EN 1993-1-1)', category: 'structures', input: `\\text{${r.section}},\\; L_{cr} = ${r.Lcr}\\,\\text{m}`,
+    result: `N_{b,Rd} = ${r.NbRdKn}\\,\\text{kN}`, plain: `Nb,Rd = ${r.NbRdKn} kN`,
+    extra: [{ label: 'Euler load Ncr', text: `${r.NcrKn} kN` }, { label: 'Squash load A·fy', text: `${r.NplKn} kN` }, { label: 'λ̄ · χ', text: `${r.lambdaBar} · ${r.chi}` }, ...(r.utilisation != null ? [{ label: 'Utilisation', text: `${Math.round(r.utilisation * 100)}%` }] : [])],
+    steps: stepsOf(r.steps), verify: r.utilisation != null ? { ok: r.ok, text: r.ok ? 'load within resistance' : 'load exceeds resistance' } : null,
+  });
+}
+
+function hWind(arg) {
+  const { vals } = kv(arg);
+  const r = SC.windLoad({ V: vals.v ?? 38, height: vals.h ?? 3, width: vals.w ?? 6, depth: vals.d ?? 6 });
+  return R({ title: 'Wind load', category: 'structures', input: `V = ${r.windSpeed}\\,\\text{m/s}`, result: `q = ${r.qKnm2}\\,\\text{kN/m}^2`, plain: `q = ${r.qKnm2} kN/m²`, extra: [{ label: 'Wall force', text: `${r.wallForceKn} kN` }, { label: 'Roof uplift', text: `${r.roofUpliftKn} kN` }, { label: 'Overturning', text: `${r.overturningKnm} kNm` }], steps: stepsOf(r.steps) });
+}
+
+function hRcBeam(arg) {
+  const { vals } = kv(arg);
+  const r = SC.rcBeam({ M: vals.m ?? 100, b: vals.b ?? 230, d: vals.d ?? 400, fcu: vals.fcu ?? 25, fy: vals.fy ?? 460 });
+  return R({ title: 'RC beam reinforcement (BS 8110)', category: 'structures', input: `M = ${vals.m ?? 100}\\,\\text{kNm},\\; b = ${vals.b ?? 230},\\; d = ${vals.d ?? 400}\\,\\text{mm}`, result: r.ok ? `A_s = ${r.AsMm2}\\,\\text{mm}^2 \\;(${r.bars})` : '\\text{section too small}', plain: r.ok ? `As = ${r.AsMm2} mm² (${r.bars})` : r.advice, steps: stepsOf(r.steps), notes: r.ok ? ['Check shear links and span/depth for deflection.'] : [r.advice] });
+}
+
+function hUValue(arg) {
+  const layers = splitTop(arg, [',', ';']).map((part) => {
+    const m = part.trim().match(/^(.*?)\s*(\d+(?:\.\d+)?)\s*(?:mm)?$/i);
+    const f = part.trim().match(/^(\d+(?:\.\d+)?)\s*(?:mm)?\s+(.+)$/i);   // "200 mm dense block"
+    if (m && m[1].trim()) return { material: m[1].trim().toLowerCase(), thickness: Number(m[2]) };
+    return f ? { material: f[2].trim().toLowerCase(), thickness: Number(f[1]) } : null;
+  }).filter(Boolean);
+  if (!layers.length) throw new Error('List layers: uvalue render 15, hollow sandcrete 225, render 15');
+  const r = SC.uValue({ layers });
+  return R({ title: 'U-value (ISO 6946)', category: 'structures', input: layers.map((l) => `\\text{${l.material} ${l.thickness} mm}`).join(' + '), result: `U = ${r.U}\\,\\text{W/m}^2\\text{K}`, plain: `U = ${r.U} W/m²K`, extra: [{ label: 'Total resistance', text: `${r.R} m²K/W` }], steps: stepsOf(r.steps), notes: [`Materials known: ${Object.keys(SC.LAMBDA).join(', ')}.`] });
+}
+
+function hLoads(arg) {
+  const { vals, rest } = kv(arg);
+  const r = SC.designLoad({ use: rest || 'office', dead: vals.g ?? vals.dead ?? null });
+  return R({ title: 'Design floor load (EN 1990)', category: 'structures', input: `\\text{${rest || 'office'}}`, result: `1.35 g_k + 1.5 q_k = ${r.ulsKnm2}\\,\\text{kN/m}^2`, plain: `${r.ulsKnm2} kN/m²`, extra: [{ label: 'Dead gk', text: `${r.gk} kN/m²` }, { label: 'Imposed qk', text: `${r.qk} kN/m²` }, { label: 'Service load', text: `${r.slsKnm2} kN/m²` }], steps: stepsOf(r.steps) });
+}
+
+/* ============================================================
    DISPATCH
    ============================================================ */
 
@@ -1119,12 +1217,20 @@ const EXAMPLES = {
   stats: ['stats 12, 15, 14, 10, 18, 22, 19, 15', 'normal cdf 1.96', 't(10) quantile 0.975', 'binomial(10, 0.5) pmf 3', 'ttest2 [5.1,4.9,5.6,5.8] [6.0,6.2,5.9,6.4]', 'regress [1,2,3,4,5] [2.2,3.8,6.1,8.0,9.9]', 'anova [1,2,3] [4,5,6] [7,8,9]'],
   optimize: ['minimize (x-2)^2 + 3', 'minimize (1-x)^2 + 100(y-x^2)^2', 'maximize 3x + 2y subject to x + y <= 4, x + 3y <= 6, x >= 0, y >= 0', 'minimize x^2 + y^2 subject to x + y = 1', 'maximize x e^(-x) on [0, 5]'],
   number: ['factor 2^67 - 1', 'isprime 2^89 - 1', 'crt 2 mod 3, 3 mod 5, 2 mod 7', '2^100 mod 7', 'pell 61', 'cf sqrt(7)', 'diophantine 3x + 5y = 7', '255 to base 16', 'pi to 200 digits'],
+  structures: ['beam L=6 w=10 section UB 305x165x40', 'beam L=3 P=10 cantilever section RHS 150x100x5', 'beam L=8 w=20 fixed', 'column UC 203x203x46 L=3.5 N=800', 'section CHS 114.3x5', 'wind V=40 h=3 w=12 d=6', 'rcbeam M=120 b=230 d=450', 'uvalue render 15, hollow sandcrete 225, render 15', 'loads office'],
   plot: ['plot sin(x), cos(x)', 'plot x^3 - 3x from -3 to 3', 'plot x^2 + y^2 = 4', 'parametric cos(3t), sin(2t)', 'polar 1 + cos(t)', "slope field y' = x - y", 'surface sin(x) cos(y)', 'vector field -y, x'],
 };
 export { EXAMPLES };
 
 const RULES = [
   [/^(?:help|\?)$/i, () => R({ title: 'Command reference', category: 'reference', input: '', result: '', plain: '', table: { head: ['Area', 'Examples'], rows: Object.entries(EXAMPLES).map(([k, v]) => [k, v.join('   ·   ')]) } })],
+  [/^(?:beam|bending)\s+(.+)$/i, (m) => hBeam(m[1])],
+  [/^(?:section|properties|props)\s+(.+)$/i, (m) => hSection(m[1])],
+  [/^(?:column|strut|buckling)\s+(.+)$/i, (m) => hColumn(m[1])],
+  [/^wind\s+(.+)$/i, (m) => hWind(m[1])],
+  [/^(?:rcbeam|rc\s*beam|reinforcement)\s+(.+)$/i, (m) => hRcBeam(m[1])],
+  [/^(?:uvalue|u-value|u\s+value)\s+(.+)$/i, (m) => hUValue(m[1])],
+  [/^(?:loads?|design\s*load)\s+(.+)$/i, (m) => hLoads(m[1])],
   [/^(?:simplify|simp)\s+(.+)$/i, (m) => hSimplify(m[1], 'simplify')],
   [/^expand\s+(.+)$/i, (m) => hSimplify(m[1], 'expand')],
   [/^(?:together|cancel)\s+(.+)$/i, (m) => hSimplify(m[1], 'together')],

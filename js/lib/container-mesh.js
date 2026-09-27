@@ -443,14 +443,16 @@ export function buildUnit(spec) {
 
   /* --- roof --- */
   if (spec.roof !== false) {
-    const roof = corrugatedGeometry({ O: V(railX0, yt - 0.006, zl + TR.d), U: V(1, 0, 0), Vd: V(0, 0, 1), N: V(0, 1, 0), uLen: railX1 - railX0, vLen: ext.wid - 2 * TR.d, profile: SKIN.roof });
+    // The sheet is welded to the 100 mm end headers, not stopped at the corner posts.
+    const rx0 = xb + 0.095, rx1 = xf - 0.095;
+    const roof = corrugatedGeometry({ O: V(rx0, yt - 0.006, zl + TR.d), U: V(1, 0, 0), Vd: V(0, 0, 1), N: V(0, 1, 0), uLen: rx1 - rx0, vLen: ext.wid - 2 * TR.d, profile: SKIN.roof });
     const r = mesh(roof, material('paint', color, { side: 'double', grime: 0, streaks: 0 }));
     r.name = '__roof';
     shell.add(r);
   }
 
   /* --- lining inside (fitted-out units) --- */
-  if (spec.lined) addLining(shell, spec, openings);
+  if (spec.lined) addLining(shell, spec, openings, { backers: true, cargoDoors });
 
   /* --- openings --- */
   for (const o of openings) {
@@ -481,7 +483,7 @@ export function placeOnWall(obj, o, spec, ext = externalDims(spec)) {
 // about 40 mm inside the corrugation valleys (as built, not flush with the steel).
 const LINING_IN = 0.04, LINING_T = 0.012;
 
-function addLining(shell, spec, openings) {
+function addLining(shell, spec, openings, { backers: withBackers = false, cargoDoors = false } = {}) {
   const { len, wid, hgt } = spec;
   const lin = material('render', 0xf1efea, { grime: 0, side: 'double' });
   const t = LINING_T, i = LINING_IN;
@@ -491,11 +493,22 @@ function addLining(shell, spec, openings) {
     { id: 'front', span: wid, place: (r) => boxMM(len / 2 - i, r.y0, -wid / 2 + r.x0, len / 2 - i + t, r.y1, -wid / 2 + r.x1, lin, { cast: false }) },
     { id: 'back', span: wid, place: (r) => boxMM(-len / 2 + i - t, r.y0, wid / 2 - r.x1, -len / 2 + i, r.y1, wid / 2 - r.x0, lin, { cast: false }) },
   ];
+  // A thin backer in the shell colour just inside the corrugation valleys: at
+  // grazing angles a sub-pixel gap can open along a near edge-on flank, and
+  // the pale lining would glint through it. The lining hides the backer inside.
+  const back = material('paint', spec.color ?? 0x3f6b52, { side: 'double' });
+  const b = 0.002;
+  const backers = {
+    left: (r) => boxMM(-len / 2 + r.x0, r.y0, -wid / 2 - b, -len / 2 + r.x1, r.y1, -wid / 2, back, { cast: false }),
+    right: (r) => boxMM(len / 2 - r.x1, r.y0, wid / 2, len / 2 - r.x0, r.y1, wid / 2 + b, back, { cast: false }),
+    front: (r) => boxMM(len / 2, r.y0, -wid / 2 + r.x0, len / 2 + b, r.y1, -wid / 2 + r.x1, back, { cast: false }),
+    back: (r) => boxMM(-len / 2 - b, r.y0, wid / 2 - r.x1, -len / 2, r.y1, wid / 2 - r.x0, back, { cast: false }),
+  };
   for (const s of sides) {
     let rects = [{ x0: 0, x1: s.span, y0: 0, y1: hgt }];
     // Cut back by the 50 mm opening frame, which returns to meet the lining.
     for (const o of openings.filter(o => o.wall === s.id)) rects = subtractRect(rects, { x0: o.along - o.w / 2 - 0.05, x1: o.along + o.w / 2 + 0.05, y0: o.sill - 0.05, y1: o.sill + o.h + 0.05 });
-    for (const r of rects) shell.add(s.place(r));
+    for (const r of rects) { shell.add(s.place(r)); if (withBackers && !(s.id === 'front' && cargoDoors)) shell.add(backers[s.id](r)); }
   }
 }
 
@@ -511,7 +524,8 @@ function cargoDoorEnd({ xf, zl, zr, yb, yt, P, BR, paint, color }) {
   const leafW = (z1 - z0) / 2;
   const doorMat = material('paint', color, { side: 'double' });
   const bar = material('galvanised', 0x9aa1a6);
-  const x = xf - 0.012;
+  // Real door leaves sit recessed in the rear frame so the locking gear stays inside the ISO envelope.
+  const x = xf - 0.06;
   for (let leaf = 0; leaf < 2; leaf++) {
     const lz0 = z0 + leaf * leafW;
     const geo = corrugatedGeometry({ O: V(x, y0 + 0.05, lz0 + 0.05), U: V(0, 0, 1), Vd: V(0, 1, 0), N: V(1, 0, 0), uLen: leafW - 0.1, vLen: y1 - y0 - 0.1, profile: SKIN.door, phase: 0.03 });
@@ -528,7 +542,7 @@ function cargoDoorEnd({ xf, zl, zr, yb, yt, P, BR, paint, color }) {
       g.add(box(0.05, 0.07, 0.07, bar, x + 0.03, y0 + 0.02, bz));
       g.add(box(0.05, 0.07, 0.07, bar, x + 0.03, y1 - 0.02, bz));
       for (const gy of [0.45, 1.6]) g.add(box(0.03, 0.03, 0.06, bar, x + 0.035, y0 + gy, bz));
-      const handle = box(0.025, 0.025, 0.42, bar, x + 0.07, y0 + 1.1, bz + (leaf ? -0.2 : 0.2));
+      const handle = box(0.025, 0.025, 0.42, bar, x + 0.045, y0 + 1.1, bz + (leaf ? -0.2 : 0.2));
       g.add(handle);
     }
     // hinges on the corner-post side

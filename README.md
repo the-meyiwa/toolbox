@@ -27,7 +27,7 @@ Every tool is registered in [`js/registry/tools.js`](js/registry/tools.js), the 
 | Music | 7 | Metronome, Instrument Tuner, Chord & Scale Finder, Spotify Player |
 | Everyday | 10 | Timer & Stopwatch, Weather Forecast, Interactive Map, Calendar |
 
-On top of the tools sit the **Assistant** (Google Gemini, able to run any tool, read PDF/Word/Excel files and chain tasks), **Spaces** (WebRTC rooms for live collaboration), mail, messaging and optional Supabase cloud sync.
+On top of the tools sit the **Assistant** (Google Gemini, able to run any tool, read PDF/Word/Excel files, chain tasks, model 3D structures from a description and learn concepts from the web), **Spaces** (WebRTC rooms for live collaboration), mail, messaging and optional Supabase cloud sync.
 
 ## Tech stack
 
@@ -123,6 +123,7 @@ Add an entry to `js/registry/tools.js` and create `js/tools/<id>.js` exporting `
 - [Implementation and tool reference](docs/IMPLEMENTATION_GUIDE.md)
 - [Platform integration](docs/INTEGRATION_GUIDE.md)
 - [Assistant quick start](docs/ASSISTANT_QUICKSTART.md) and [integration guide](docs/ASSISTANT_INTEGRATION_GUIDE.md)
+- [Architecture, structures and 3D](docs/architecture-and-3d.md)
 - [Code Playground](docs/code-playground.md)
 - [Automobile Guide](docs/automobile-viewer.md)
 - [Device comparisons](docs/device-comparisons.md)

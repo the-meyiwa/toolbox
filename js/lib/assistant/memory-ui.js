@@ -19,6 +19,35 @@ function save(list) {
   window.dispatchEvent(new CustomEvent('toolbox:assistant-memory', { detail: { memory: list } }));
 }
 
+// Concepts the Assistant learned from the web (same storage as assistant/knowledge-library.js).
+const STORAGE_KNOWLEDGE = 'toolbox_knowledge_library_v1';
+function getLearned() {
+  try { const v = JSON.parse(localStorage.getItem(STORAGE_KNOWLEDGE) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; }
+}
+function saveLearned(list) {
+  try { localStorage.setItem(STORAGE_KNOWLEDGE, JSON.stringify(list)); } catch { /* storage blocked */ }
+}
+function learnedHtml() {
+  const list = getLearned();
+  if (!list.length) return '';
+  const link = (src) => (/^https?:\/\//.test(src) ? `<a href="${esc(src)}" target="_blank" rel="noopener noreferrer">${esc(new URL(src).hostname.replace(/^www\./, ''))}</a>` : esc(src));
+  return `
+    <div class="amem-head amem-learned-head">
+      <div>
+        <h3 class="amem-title">What the Assistant has learned</h3>
+        <p class="amem-hint">Concepts it studied on the web, with their sources. It uses them in later answers. ${list.length} saved.</p>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" data-act="clear-learned">Clear all</button>
+    </div>
+    <ul class="amem-list amem-learned">
+      ${list.map((c, i) => ({ c, i })).reverse().slice(0, 60).map(({ c, i }) => `
+        <li class="amem-item amem-concept" data-ci="${i}">
+          <div><strong>${esc(c.term)}</strong>${c.topic ? ` <span class="amem-topic">${esc(c.topic)}</span>` : ''}<p>${esc(c.summary)}</p><small>${link(c.source)} · ${esc(c.learnedAt || '')}</small></div>
+          <button type="button" class="btn btn-ghost btn-sm" data-act="forget-concept" aria-label="Forget this concept">Forget</button>
+        </li>`).join('')}
+    </ul>`;
+}
+
 export function renderAssistantMemory(container) {
   if (!container) return;
   const paint = () => {
@@ -43,12 +72,18 @@ export function renderAssistantMemory(container) {
           <input class="tool-input" name="fact" placeholder="Add a fact, e.g. Quotes include 7.5% VAT" maxlength="240" aria-label="New fact">
           <button type="submit" class="btn btn-primary btn-sm">Add</button>
         </form>
+        ${learnedHtml()}
       </div>`;
   };
   paint();
   container.addEventListener('click', (e) => {
     const act = e.target.closest('[data-act]')?.dataset.act;
     if (act === 'clear') { clearAssistantMemory(); paint(); }
+    if (act === 'forget-concept') {
+      const i = Number(e.target.closest('[data-ci]').dataset.ci);
+      const list = getLearned(); list.splice(i, 1); saveLearned(list); paint();
+    }
+    if (act === 'clear-learned') { saveLearned([]); paint(); }
     if (act === 'del') {
       const i = Number(e.target.closest('[data-i]').dataset.i);
       const list = getAssistantMemory(); list.splice(i, 1); save(list); paint();

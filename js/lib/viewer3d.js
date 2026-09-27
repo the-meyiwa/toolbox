@@ -37,7 +37,7 @@ const DEFAULTS = {
 
 // Backdrop palettes for realism mode: sky zenith, horizon, ground.
 const BACKDROPS = {
-  outdoor: { top: 0x9fbcd6, horizon: 0xe9e6df, ground: 0xc9c2b4, sun: 0xfff1dc, sky: 0xd8e6f2, bounce: 0x8a7f6c },
+  outdoor: { top: 0x7fa6cf, horizon: 0xe1e6e8, ground: 0xcbc4b6, sun: 0xfff1dc, sky: 0xd8e6f2, bounce: 0x8a7f6c },
   studio: { top: 0xdedcd8, horizon: 0xefeeeb, ground: 0xe4e2de, sun: 0xffffff, sky: 0xf2f2f2, bounce: 0xa9a6a0 },
   'outdoor-dark': { top: 0x1b2433, horizon: 0x3a3f47, ground: 0x2c2e31, sun: 0xffe2c0, sky: 0x8aa0bd, bounce: 0x3b3833 },
   'studio-dark': { top: 0x15171a, horizon: 0x24272b, ground: 0x1d1f22, sun: 0xffffff, sky: 0x9aa3ad, bounce: 0x2a2a2a },
@@ -205,7 +205,7 @@ export class Viewer3D {
         uniforms: { top: { value: new THREE.Color(pal.top) }, horizon: { value: new THREE.Color(pal.horizon) }, ground: { value: new THREE.Color(pal.ground) } },
         vertexShader: 'varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
         fragmentShader: `uniform vec3 top; uniform vec3 horizon; uniform vec3 ground; varying vec3 vDir;
-          void main(){ float h = vDir.y; vec3 c = h > 0.0 ? mix(horizon, top, pow(smoothstep(0.0, 0.85, h), 0.7)) : mix(horizon, ground, smoothstep(0.0, 0.08, -h));
+          void main(){ float h = vDir.y; vec3 c = h > 0.0 ? mix(horizon, top, pow(smoothstep(0.0, 0.6, h), 0.55)) : mix(horizon, ground, smoothstep(0.0, 0.08, -h));
           gl_FragColor = vec4(c, 1.0);
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
@@ -340,8 +340,11 @@ export class Viewer3D {
       this.contactShadow.position.set(center.x, box.min.y > 0.5 ? 0.004 : Math.min(0.004, box.min.y + 0.004), center.z);
       this.contactShadow.scale.set(size.x * 1.35 + 0.8, size.z * 1.35 + 0.8, 1);
     }
-    if (this.sky) this.sky.scale.setScalar(Math.max(300, radius * 30));
-    if (this.scene.fog) { this.scene.fog.near = radius * 6; this.scene.fog.far = radius * 26 + 60; }
+    const skyR = Math.max(300, radius * 30);
+    if (this.sky) this.sky.scale.setScalar(skyR);
+    // The ground reaches the sky and the fog closes before its edge, so no rim ever shows.
+    if (this.groundMesh) this.groundMesh.scale.setScalar(skyR * 0.98 / 400);
+    if (this.scene.fog) { this.scene.fog.near = radius * 6; this.scene.fog.far = Math.min(radius * 26 + 60, skyR * 0.85); }
     if (this.aoPass) this.aoPass.updateGtaoMaterial({ radius: Math.min(1.2, Math.max(0.25, radius * 0.06)) });
   }
 

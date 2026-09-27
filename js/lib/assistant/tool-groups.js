@@ -19,7 +19,7 @@ export const CORE_TOOLS = [
 export const TOOL_GROUPS = {
   web: {
     label: 'Web research: read pages, crawl sites, find images',
-    tools: ['browse_web', 'browser_navigate', 'browser_scrape', 'browser_extract_images', 'browser_crawl', 'search_images', 'save_scraped_images'],
+    tools: ['browse_web', 'browser_navigate', 'browser_scrape', 'browser_extract_images', 'browser_crawl', 'search_images', 'save_scraped_images', 'knowledge_library'],
     match: /\b(search|google|look ?up|research|website|web ?site|online|internet|news|latest|today|current|price[sd]?|review|url|https?:|www\.|\.com|\.ng|scrape|crawl|source|cite|article|image[s]? of|picture[s]? of|photo[s]? of|what does .* look like)\b/i,
   },
   math: {
@@ -104,7 +104,7 @@ export const TOOL_GROUPS = {
   },
   building: {
     label: 'Architecture and buildings: architecture advice (structure, climate, software/system design), container and portacabin design, quotes, floor plans, construction cost estimates',
-    tools: ['architecture_advisor', 'design_container', 'plan_container_quote', 'generate_floor_plan', 'estimate_construction'],
+    tools: ['architecture_advisor', 'model_3d', 'design_container', 'plan_container_quote', 'generate_floor_plan', 'estimate_construction', 'knowledge_library'],
     match: /\b(architect\w*|microservices?|monolith|kubernetes|k8s|docker|system design|scalab\w*|beams?|columns?|spans?|stairs?|staircase|ventilation|container|portacabin|porta ?cabin|cabin|20 ?ft|40 ?ft|high cube|site office|shop|kiosk|floor ?plan|office space|build(ing)?|structure|quote|quotation|boq|bill of quantities|building cost|cement|concrete|rebar|iron rods?|sandcrete|blockwork|slab|foundation|footing|roofing|plaster(ing)?|bungalow|duplex|construction)\b/i,
   },
   scripture: {
@@ -126,6 +126,11 @@ export const TOOL_GROUPS = {
     label: 'Colour: convert colours and check contrast',
     tools: ['color_converter_and_contrast'],
     match: /\b(colou?r|hex|rgb|hsl|contrast|palette)\b/i,
+  },
+  modelling: {
+    label: '3D modelling: build realistic 3D models of structures and objects (trusses, frames, towers, bridges, domes, buildings, landmarks)',
+    tools: ['model_3d', 'knowledge_library'],
+    match: /\b(3-?d|model(l?ing)?|render(ing)?|visuali[sz]e|sculpt\w*|truss(es)?|space ?frame|tower|bridge|dome|pavilion|stadium|skyscraper|landmark|monument|cathedral|pagoda|pyramid|structure|mesh|glb)\b/i,
   },
 };
 

@@ -1004,6 +1004,13 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
 .amem-list { list-style: none; margin: var(--space-3) 0; padding: 0; display: grid; gap: var(--space-2); }
 .amem-item { display: flex; gap: var(--space-2); align-items: center; }
 .amem-item .tool-input { flex: 1; min-width: 0; }
+.amem-learned-head { margin-top: var(--space-6); }
+.amem-concept { align-items: flex-start; padding: 10px 0; border-top: 1px solid var(--line); }
+.amem-concept > div { flex: 1; min-width: 0; }
+.amem-concept p { margin: 4px 0; font-size: 13.5px; line-height: 20px; color: var(--text-2); }
+.amem-concept small { font-size: 12px; color: var(--text-3); }
+.amem-concept small a { color: inherit; }
+.amem-topic { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); margin-left: 6px; }
 .amem-empty { color: var(--text-3); font-size: 0.85rem; }
 .amem-add { display: flex; gap: var(--space-2); }
 .amem-add .tool-input { flex: 1; min-width: 0; }
@@ -1110,3 +1117,16 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
 .astc-lg-ol small { display: block; font-size: 12px; color: var(--text-3); }
 .astc-lg-note { margin: 12px 0 0; font-size: 12px; color: var(--text-3); }
 @container (max-width: 420px) { .astc-lg-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---------- 3D structure model card ---------- */
+.astc-sm-stage { position: relative; }
+.astc-sm-canvas { position: relative; height: clamp(320px, 60vw, 540px); overflow: hidden; }
+.astc-sm-canvas canvas { cursor: grab; }
+.astc-sm-canvas canvas:active { cursor: grabbing; }
+.astc-sm-canvas .v3d-label { font-size: 11px; line-height: 14px; padding: 2px 7px; border-radius: 999px; background: color-mix(in srgb, var(--surface) 82%, transparent); color: var(--text); border: 1px solid var(--line); white-space: nowrap; pointer-events: none; }
+.astc-sm-stage > .astc-cd-ctrl { justify-content: space-between; }
+.astc-sm-stage .astc-cd-grp { pointer-events: auto; }
+.astc-sm .astc-cd-stats, .astc-sm .astc-cd-notes { margin: 12px 16px 0; }
+.astc-sm-cut { display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; height: 32px; color: var(--text-2); }
+.astc-sm-cut input { width: 110px; accent-color: var(--ink); }
+.astc-sm-desc { margin: 0; padding: 10px 16px 0; font-size: 13.5px; line-height: 20px; color: var(--text-2); }

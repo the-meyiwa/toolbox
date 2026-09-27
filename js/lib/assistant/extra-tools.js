@@ -12,6 +12,7 @@
    plus plain fields the model reads back.
    ============================================================ */
 
+import { GENERATORS as STRUCTURE_GENERATORS } from '../structure-model.js';
 import { TOOLS } from '../../registry/index.js';
 import * as CE from '../construction/estimate.js';
 
@@ -369,6 +370,27 @@ export const EXTRA_TOOL_DECLARATIONS = [
         forum: { type: 'string', enum: ['SC', 'CA', 'FHC', 'HC', 'FCTHC', 'NIC', 'MC'], description: 'Court to weigh the cited authorities against (default HC).' },
       },
       required: ['text'],
+    },
+  },
+  {
+    name: 'model_3d',
+    description: `Build and show a realistic, interactive 3D model of any structure or object: buildings, frames, trusses, roofs, stairs, towers, bridges, domes, space frames, shells, pavilions, furniture, machines, landmarks, sculptures. The person can orbit it, cut through it and download it (PNG, GLB). Reports back size, member count and a steel takeoff. Use it whenever someone asks to model, render, visualise or design something in 3D (containers use design_container instead). For an unfamiliar structure, look it up first (browse_web / knowledge_library) and model it from real proportions.
+Write \`objects\` as a list of nodes. Units are metres, y is up, the ground is y = 0. Every node takes at [x,y,z], rotate [rx,ry,rz] in degrees, scale, material, color "#rrggbb", name and label (a text tag).
+Materials: paint (painted steel), steel, galvanised, aluminium, chrome, glass, concrete, render, timber, brick, block, asphalt, grass, soil, water, marble, plastic, fabric, rubber, copper, gold, emissive.
+Solids: box {size [w,h,d]} (centred on at), cylinder {radius, radiusTop, height} and cone (centred), sphere {radius, hemisphere}, torus {radius, tube, arc}, extrude {points [[x,z]…] plan outline, height, holes}, lathe {profile [[r,y]…]} (vases, columns, domes), tube {path [[x,y,z]…], radius} (handrails, cables, pipes), mesh {vertices, faces} (any custom shape).
+Structural members: member {from, to, section} — sections like "RHS 100x50x4", "SHS 60x3", "CHS 114.3x5", "UB 406x178x60", "UC 254x254x73", "PFC 200x90", "rod 20", "cable 40", "300x600" (solid mm, e.g. concrete); polyline {points, section, closed}.
+Repetition: group {children}, array {item, count, step [dx,dy,dz], rotateStep}, polar array {item, count, around {center, axis, angle}}, mirror {item, axis}.
+Generators (parametric, preferred for real structures): ${Object.entries(STRUCTURE_GENERATORS).map(([k, v]) => `${k} {${v}}`).join('; ')}.
+Model real proportions and real member sizes, add people (person) or trees for scale and context, and keep it to what was asked. To change a model, call again with the full updated description.`,
+    parameters: {
+      type: 'object',
+      properties: {
+        title: { type: 'string' },
+        description: { type: 'string', description: 'One or two sentences on what the model shows.' },
+        environment: { type: 'string', enum: ['outdoor', 'studio'], description: 'outdoor (sky and ground, default) or studio (neutral backdrop, for objects).' },
+        objects: { type: 'array', description: 'The nodes that make up the model.', items: { type: 'object', properties: { type: { type: 'string' } } } },
+      },
+      required: ['objects'],
     },
   },
 ];
@@ -766,6 +788,28 @@ async function designContainerTool(args) {
   };
 }
 
+/* ---------------- 3D structure models ---------------- */
+
+async function model3dTool(args = {}) {
+  const { expandStructure } = await import('../structure-model.js');
+  const spec = { title: args.title || 'Model', description: args.description || '', environment: args.environment, objects: Array.isArray(args.objects) ? args.objects : [] };
+  const m = expandStructure(spec);
+  if (!m.prims.length && !m.members.length) {
+    return { status: 'error', message: `Nothing to show: ${m.warnings.join(' ') || 'the model had no objects'}. Give objects such as {type: "box", size: [w,h,d], at: [x,y,z]} or a generator like {type: "truss", span: 20, height: 2}.` };
+  }
+  const s = m.bounds.size;
+  const st = m.stats;
+  const top = st.takeoff.slice(0, 5).map(r => `${r.count} × ${r.section} (${r.material}, ${r.lengthM} m, ${Math.round(r.massKg)} kg)`).join('; ');
+  return {
+    status: 'success', renderer: 'structure-model', type: 'structure-model', title: m.title,
+    spec,
+    size_m: { width: s[0], depth: s[2], height: s[1] },
+    stats: { solids: st.solids, members: st.members, nodes: st.nodes, memberLengthM: st.memberLengthM, steelTonnes: st.steelT, byRole: st.roles },
+    warnings: m.warnings,
+    message: `3D model shown to the person: ${s[0]} × ${s[2]} m on plan, ${s[1]} m high; ${st.solids} solid parts, ${st.members} members${st.steelT ? `, about ${st.steelT} t of steel` : ''}.${top ? ` Main members: ${top}.` : ''}${m.warnings.length ? ` Notes: ${m.warnings.join(' ')}` : ''} Describe what you built in a sentence or two; do not repeat these numbers as a list unless asked.`,
+  };
+}
+
 /* ---------------- construction estimate ---------------- */
 
 async function estimateConstruction(args = {}) {
@@ -981,6 +1025,7 @@ export async function executeExtraTool(name, args = {}) {
       return { status: 'success', renderer: 'svg-illustration', type: 'svg-illustration', title: args.title || 'Illustration', caption: args.caption || '', svg, message: 'Illustration shown to the user.' };
     }
     case 'design_container': return designContainerTool(args);
+    case 'model_3d': return model3dTool(args);
     case 'create_invoice': return createInvoiceTool(args);
     case 'list_invoices': return listInvoicesTool(args);
     case 'find_toolbox_tools': return findTools(args.query || '');

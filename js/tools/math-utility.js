@@ -72,6 +72,7 @@ const MODES = [
   { id: 'stats', label: 'Statistics', icon: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>' },
   { id: 'optimize', label: 'Optimisation', icon: '<path d="M3 5c4 0 5 14 9 14s5-14 9-14"/><circle cx="12" cy="19" r="1.4"/>' },
   { id: 'number', label: 'Number theory', icon: '<path d="M9 3 7 21M17 3l-2 18M4 8h17M3 16h17"/>' },
+  { id: 'structures', label: 'Structures', icon: '<path d="M3 20h18"/><path d="M5 20V9l7-5 7 5v11"/><path d="M5 9h14M9 20v-6h6v6"/>' },
   { id: 'plot', label: 'Plot', icon: '<path d="M3 3v18h18"/><path d="M7 15c2-6 4-6 6-2s4 3 6-4"/>' },
   { id: 'reference', label: 'Reference', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>' }
 ];
@@ -84,6 +85,7 @@ const SYNTAX = {
   stats: [['stats 1, 2, 3, …', 'descriptive statistics + CI'], ['normal(μ,σ) cdf x', 'also t(ν) chi2(k) f(a,b) binomial(n,p) poisson(λ) gamma beta'], ['… pdf | cdf | sf | quantile', 'density, CDF, tail, inverse'], ['ttest [..] mu=0 · ttest2 [..] [..]', 't-tests (Welch)'], ['chisq [[..],[..]] · anova [..] [..]', 'χ², one-way ANOVA'], ['regress [x] [y]', 'linear · poly 3 · exp · power'], ['corr [x] [y] · ci [..] 95%', 'Pearson/Spearman, intervals']],
   optimize: [['minimize E [on [a,b]]', '1-D Brent'], ['minimize E(x,y) [from [..]]', 'BFGS + Nelder–Mead'], ['maximize c·x subject to …', 'exact simplex (LP)'], ['minimize E subject to g = 0', 'augmented Lagrangian'], ['catalan / stirling / partitions n', 'combinatorics (BigInt)']],
   number: [['factor n', 'Pollard–Brent ρ, Miller–Rabin'], ['isprime n · nextprime n', 'deterministic < 3.3·10²⁴'], ['gcd a, b · lcm a, b', 'with Bézout'], ['a^b mod m · modinv a mod m', 'modular arithmetic'], ['crt 2 mod 3, 3 mod 5', 'Chinese remainder'], ['cf sqrt(7) · pell 61', 'continued fractions, Pell'], ['255 to base 2 · pi to 500 digits', 'bases, constants']],
+  structures: [['beam L=6 w=10 [P=20 a=2] [cantilever|fixed] [section UB 305x165x40]', 'reactions, shear & moment diagrams, stress, deflection'], ['section RHS 150x100x5', 'A, I, W, r (UB/UC tables, RHS, SHS, CHS, rect, rod)'], ['column UC 203x203x46 L=3.5 [K=0.85] [N=800]', 'EN 1993 flexural buckling'], ['wind V=40 h=3 w=12 d=6', 'pressure, wall force, roof uplift'], ['rcbeam M=120 b=230 d=450', 'BS 8110 reinforcement'], ['uvalue render 15, hollow sandcrete 225, render 15', 'ISO 6946 U-value'], ['loads office', 'dead, imposed and design load']],
   plot: [['plot f, g [from a to b]', 'zoom with wheel / pinch, drag to pan'], ['plot x^2 + y^2 = 4', 'implicit curves'], ['parametric x(t), y(t)', 'parametric'], ['polar r(t)', 'polar'], ["slope field y' = f(x, y)", 'click to trace solutions'], ['vector field P, Q', 'vector fields'], ['surface f(x, y)', '3D, drag to rotate']]
 };
 
@@ -471,7 +473,7 @@ export default {
     });
 
     /* ---------- result cards ---------- */
-    const CAT_LABEL = { algebra: 'Algebra', calculus: 'Calculus', equations: 'Equations', linalg: 'Linear algebra', stats: 'Statistics', optimize: 'Optimisation', number: 'Number theory', plot: 'Plot', reference: 'Reference' };
+    const CAT_LABEL = { algebra: 'Algebra', calculus: 'Calculus', equations: 'Equations', linalg: 'Linear algebra', stats: 'Statistics', optimize: 'Optimisation', number: 'Number theory', structures: 'Structures', plot: 'Plot', reference: 'Reference' };
     const cardHtml = (r, id) => {
       const steps = r.steps || [];
       const hasResult = r.result && r.result.trim();

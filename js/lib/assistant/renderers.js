@@ -4,7 +4,7 @@
    Registers renderers for the result types produced by
    js/lib/assistant/extra-tools.js (and the Notes tools):
      task-plan · chess-board · device-list · device-compare ·
-     vehicle · svg-illustration · note · container-design ·
+     vehicle · svg-illustration · note · container-design · structure-model ·
      invoice-card · invoice-list ·
      construction-estimate
    Each renderer receives the plain result object and returns
@@ -16,6 +16,7 @@ import { registerResultRenderer } from '../assistant-result-renderer.js';
 import { pieceSvg } from '../chess/pieces.js';
 import { sanitizeSvg } from './extra-tools.js';
 import { renderContainerDesign } from './container-design-card.js';
+import { renderStructureModel } from './structure-card.js';
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
@@ -630,6 +631,7 @@ registerResultRenderer('vehicle', renderVehicle);
 registerResultRenderer('construction-estimate', renderConstructionEstimate);
 registerResultRenderer('svg-illustration', renderIllustration);
 registerResultRenderer('container-design', renderContainerDesign, { match: d => Boolean(d?.design?.modules && d?.design?.levels) });
+registerResultRenderer('structure-model', renderStructureModel, { match: d => Boolean(d?.spec?.objects) });
 registerResultRenderer('note', renderNote, { match: d => Boolean(d?.noteId && typeof d?.title === 'string' && d?.status !== 'error') });
 registerResultRenderer('invoice-card', renderInvoiceCard);
 registerResultRenderer('invoice-list', renderInvoiceList);

@@ -155,7 +155,7 @@ export function material(kind = 'paint', color = null, opts = {}) {
   let m;
   switch (kind) {
     case 'paint':
-      m = withSurfaceShading(std({ color: c ?? 0x3f6b52, roughness: 0.62, metalness: 0.22 }),
+      m = withSurfaceShading(std({ color: c ?? 0x6a6f74, roughness: 0.62, metalness: 0.22 }),
         { mottle: 0.07, scale: 1.4, grime: opts.grime ?? 0.28, grimeHeight: 0.7, streaks: opts.streaks ?? 0, rough: 0.12 });
       break;
     case 'steel':

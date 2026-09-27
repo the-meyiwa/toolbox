@@ -19,6 +19,7 @@
    table instead of the model guessing a tool.
    ============================================================ */
 
+import { KNOWLEDGE_LIBRARY_DECLARATION } from './knowledge-library.js';
 import { cleanText } from '../../utils.js';
 
 /* ---------------- text cleaning ---------------- */
@@ -471,7 +472,7 @@ export const KNOWLEDGE_TOOL_DECLARATIONS = [
   },
   {
     name: 'architecture_advisor',
-    description: 'Architecture reference and review for buildings (structure, foundations, spans, climate design, room sizes, stairs, fire escape, shipping-container buildings) and software systems (monolith vs microservices, Docker and Kubernetes, scaling, caching, reliability, security, patterns). mode "topic" returns reference notes; "check" reviews a design description for gaps; "calc" sizes stairs, beam depth, ventilation, pad footings or container stacking loads.',
+    description: 'Architecture and engineering reference, review and calculation for buildings (loads, reinforced concrete, steel, timber, sandcrete blockwork, slabs, foundations, long-span structures, climate design, room sizes, stairs, fire escape, services, U-values, drawings, styles, shipping-container buildings to ISO 668/1496) and software systems. mode "topic" returns reference notes plus concepts learned earlier from the web; "check" reviews a design description for gaps; "calc" computes with the working shown: beam (reactions, moment, shear, stress, deflection for a section), column (EN 1993 buckling), loads (dead/imposed/design load by use), wind (pressure, wall force, roof uplift), rc_beam (reinforcement), span_depth, u_value, gutter, escape, ramp, septic, stairs, footing, ventilation, container_structure (lintels, racking, stacking, anchors, footings for container shells).',
     parameters: {
       type: 'object',
       properties: {
@@ -479,11 +480,16 @@ export const KNOWLEDGE_TOOL_DECLARATIONS = [
         question: { type: 'string', description: 'The question (topic mode).' },
         domain: { type: 'string', enum: ['building', 'software'] },
         design: { type: 'string', description: 'The design to review (check mode).' },
-        calc: { type: 'string', enum: ['stairs', 'beam_depth', 'ventilation', 'footing', 'container_stack'] },
-        params: { type: 'object', description: 'Calc inputs: floorToFloorMm; spanM, material (concrete|steel|timber), continuous; floorAreaM2 or lengthM and widthM; loadKn, bearingKpa; levels, loadedMassKg.', properties: {} },
+        calc: { type: 'string', enum: ['beam', 'column', 'loads', 'wind', 'rc_beam', 'span_depth', 'u_value', 'gutter', 'escape', 'ramp', 'septic', 'stairs', 'footing', 'ventilation', 'container_structure', 'beam_depth', 'container_stack'] },
+        params: {
+          type: 'object',
+          description: 'Calc inputs. beam: spanM, udlKnm, pointKn, pointAtM, support (simple|cantilever|fixed), section ("UB 305x165x40", "RHS 150x100x5", "rect 230x450"), material. column: section, lengthM, K, axialKn. loads: use (residential|office|classroom|shop|assembly|storage|roof…), deadKnm2. wind: windSpeed (m/s), heightM, widthM, depthM. rc_beam: momentKnm, widthMm, effectiveDepthMm, fcu, fy. span_depth: spanM, element (slab|beam|steel|timber|truss), support. u_value: layers [{material, thickness (mm)}]. gutter: roofAreaM2, intensityMmH. escape: occupants, storeys. ramp: riseM. septic: people. stairs: floorToFloorMm. footing: loadKn, bearingKpa, lineLoadKnm. ventilation: floorAreaM2. container_structure: size (20ft|40ft|40hc…), levels, roofDeck, windSpeed, soilBearing, openings [{wall, along_m, width_m, height_m, sill_m, level}].',
+          properties: {},
+        },
       },
     },
   },
+  KNOWLEDGE_LIBRARY_DECLARATION,
   {
     name: 'generate_document',
     description: 'Creates a real document file and saves it to Files: Word (docx), OpenDocument (odt), RTF, Markdown, HTML or plain text from Markdown content; spreadsheets (xlsx, ods, csv) from sheets or a Markdown table; slide decks (pptx, odp) from slides. All text is cleaned of invisible characters, smart quotes and other formatting junk. Write the full content yourself, then call this once.',
@@ -512,6 +518,7 @@ export async function executeKnowledgeTool(name, args = {}, opts = {}) {
     case 'anatomy_lookup': return anatomyLookup(args);
     case 'diagnose_vehicle': return (await import('./mechanics-kb.js')).diagnoseVehicle(args);
     case 'architecture_advisor': return (await import('./architecture-kb.js')).architectureAdvisor(args);
+    case 'knowledge_library': return (await import('./knowledge-library.js')).knowledgeLibraryTool(args);
     case 'generate_document': return generateDocument(args);
     default: return undefined;
   }

@@ -58,7 +58,8 @@ test('Math Utility UI: Comprehensive Component & Interaction Suite', async (t) =
   // Test 1: DOM Elements Rendered
   await t.test('1. Structure: mode tabs, reference tabs, controls bar, and card grid render correctly', () => {
     const modes = container.querySelectorAll('.mx-mode');
-    assert.equal(modes.length, 9, 'Should render 9 workbench modes');
+    assert.equal(modes.length, 10, 'Should render 10 workbench modes');
+    assert.ok(container.querySelector('.mx-mode[data-mode="structures"]'), 'Structures mode is offered');
     assert.equal(container.querySelectorAll('.mx-subtab').length, 3, 'Reference should have 3 sections');
     assert.ok(container.querySelector('#mx-input'), 'Command input exists');
 
