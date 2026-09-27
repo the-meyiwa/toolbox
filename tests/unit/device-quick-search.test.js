@@ -23,7 +23,7 @@ test('deviceNameScore: shorthand and typos resolve, but not a chip false-positiv
 
 test('deviceNameScore: numbers never fuzzy-match (a typo is a different device, not a nearby model)', async () => {
   const cpus = await db.loadCategory('cpus');
-  assert.deepEqual(db.searchDevices(cpus, 'm6', 5).map(d => d.name), []); // no such chip exists
+  assert.deepEqual(db.searchDevices(cpus, 'm6', 5).map(d => d.name), ['Apple M6']); // base-only, ships in the Mac mini
   assert.deepEqual(db.searchDevices(cpus, 'm5 max', 5).map(d => d.name), ['Apple M5 Max']);
 });
 
