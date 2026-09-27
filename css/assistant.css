@@ -910,6 +910,11 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
 .astc-cd-canvas[hidden], .astc-cd-sheet[hidden], .astc-cd-ctrl[hidden] { display: none; }
 .astc-cd-canvas svg { display: block; width: 100%; height: auto; max-height: 560px; }
 .astc-cd-canvas.is-plan { background: #fff; padding: 4px; }
+.astc-cd-canvas.is-webgl { position: relative; display: block; height: clamp(320px, 58vw, 520px); min-height: 0; overflow: hidden; border-radius: inherit; }
+.astc-cd-canvas.is-webgl canvas { cursor: grab; }
+.astc-cd-canvas.is-webgl canvas:active { cursor: grabbing; }
+.astc-cd-loading { display: grid; place-items: center; height: 100%; font-size: 13px; color: var(--text-2); }
+.astc-cd-canvas.is-webgl .v3d-label { font-size: 11px; line-height: 14px; padding: 2px 7px; border-radius: 999px; background: color-mix(in srgb, var(--surface) 82%, transparent); color: var(--text); border: 1px solid var(--line); white-space: nowrap; pointer-events: none; }
 [data-theme="dark"] .astc-cd-canvas.is-plan { background: #171717; }
 .astc-cd-canvas.is-plan svg { max-height: 620px; }
 .astc-cd-ctrl { position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; pointer-events: none; }

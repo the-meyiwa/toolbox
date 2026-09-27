@@ -84,22 +84,6 @@ const SHELL_COLORS = [
   { id: 'white', name: 'White', hex: 0xdedbd4 }, { id: 'sand',  name: 'Sand',  hex: 0xbfa87e },
 ];
 
-/* Subtract a hole from a set of rectangles so a wall can be built as
-   flat panels around its openings without needing CSG. */
-function subtractRect(rects, hole) {
-  const out = [];
-  for (const r of rects) {
-    const overlaps = hole.x0 < r.x1 && hole.x1 > r.x0 && hole.y0 < r.y1 && hole.y1 > r.y0;
-    if (!overlaps) { out.push(r); continue; }
-    if (hole.y0 > r.y0) out.push({ x0: r.x0, x1: r.x1, y0: r.y0, y1: hole.y0 });
-    if (hole.y1 < r.y1) out.push({ x0: r.x0, x1: r.x1, y0: hole.y1, y1: r.y1 });
-    const yLo = Math.max(r.y0, hole.y0), yHi = Math.min(r.y1, hole.y1);
-    if (hole.x0 > r.x0) out.push({ x0: r.x0, x1: hole.x0, y0: yLo, y1: yHi });
-    if (hole.x1 < r.x1) out.push({ x0: hole.x1, x1: r.x1, y0: yLo, y1: yHi });
-  }
-  return out.filter(r => r.x1 - r.x0 > 0.002 && r.y1 - r.y0 > 0.002);
-}
-
 function fmtLen(metres, unit) {
   if (unit === 'm') return `${metres.toFixed(2)} m`;
   const totalIn = metres / M_PER_FT * 12;
@@ -127,9 +111,14 @@ export default {
 
     container.innerHTML = `<div class="t3d-loading"><div class="t3d-spinner"></div><p>Getting the workspace ready…</p></div>`;
 
-    let THREE, Viewer3D;
+    let THREE, Viewer3D, buildUnit, fittingModel, placeOnWall, material, FLOOR_DEPTH, checkStructure;
     try {
-      ({ Viewer3D, THREE } = await import('../lib/viewer3d.js'));
+      [{ Viewer3D, THREE }, { buildUnit, fittingModel, placeOnWall }, { material }, { FLOOR_DEPTH, checkStructure }] = await Promise.all([
+        import('../lib/viewer3d.js'),
+        import('../lib/container-mesh.js'),
+        import('../lib/render-materials.js'),
+        import('../lib/container-structure.js'),
+      ]);
     } catch (err) {
       container.innerHTML = `<div class="no-results"><p class="no-results-title">Could not start the 3D view</p>
         <p class="no-results-text">${err.message}</p></div>`;
@@ -307,6 +296,7 @@ export default {
               </div>
               <div class="cp-summary" id="cp-summary"></div>
               <div class="cp-editor" id="cp-editor" hidden></div>
+              <details class="cp-structure" id="cp-structure"></details>
             </div>
           </div>
         </section>
@@ -452,26 +442,18 @@ export default {
     /* ---------------- 3D scene ---------------- */
 
     const mount  = container.querySelector('#cp-canvas');
-    const viewer = new Viewer3D(mount, { background: 0xeceae6, ground: true, groundSize: 24, fov: 40 });
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const viewer = new Viewer3D(mount, { realism: true, environment: 'outdoor', dark, ground: true, grid: true, groundSize: 24, fov: 40 });
     this._viewer = viewer;
     viewer.controls.maxPolarAngle = Math.PI / 2 - 0.02;
 
+    // The unit stands on concrete pads: its underside sits this far above the ground.
+    const PAD_H = 0.1;
     const shell = new THREE.Group();
+    shell.position.y = FLOOR_DEPTH + PAD_H;
     viewer.scene.add(shell);
 
-    const matCache = new Map();
-    const M = (color, opts = {}) => {
-      const key = `${color}|${JSON.stringify(opts)}`;
-      if (!matCache.has(key)) {
-        matCache.set(key, new THREE.MeshStandardMaterial({
-          color, roughness: opts.rough ?? 0.78, metalness: opts.metal ?? 0.06,
-          transparent: (opts.opacity ?? 1) < 1, opacity: opts.opacity ?? 1, side: THREE.DoubleSide,
-        }));
-      }
-      return matCache.get(key);
-    };
-
-    const WALL_T = 0.06;
+    const wallSpan = (id) => (id === 'front' || id === 'back') ? state.wid : state.len;
 
     function clearGroup(g) {
       for (let i = g.children.length - 1; i >= 0; i--) {
@@ -481,106 +463,56 @@ export default {
       }
     }
 
-    const wallSpan = (id) => (id === 'front' || id === 'back') ? state.wid : state.len;
-
-    const holesFor = (wallId) => state.items
-      .filter(it => it.kind === 'opening' && it.wall === wallId)
-      .map(it => ({ x0: it.along - it.w / 2, x1: it.along + it.w / 2, y0: it.sill, y1: it.sill + it.h }));
-
-    function placePanel(wallId, r, thickness, material) {
-      const { len, wid } = state;
-      const w = r.x1 - r.x0, h = r.y1 - r.y0;
-      const cx = (r.x0 + r.x1) / 2, cy = (r.y0 + r.y1) / 2;
-      let mesh;
-      if (wallId === 'front' || wallId === 'back') {
-        mesh = new THREE.Mesh(new THREE.BoxGeometry(thickness, h, w), material);
-        const sign = wallId === 'front' ? 1 : -1;
-        mesh.position.set(sign * (len / 2 + thickness / 2), cy, sign * (cx - wid / 2));
-      } else {
-        mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, thickness), material);
-        const sign = wallId === 'left' ? -1 : 1;
-        mesh.position.set(-(cx - len / 2) * sign, cy, sign * (wid / 2 + thickness / 2));
-      }
-      mesh.castShadow = true; mesh.receiveShadow = true;
-      return mesh;
-    }
-
     function buildShell() {
       clearGroup(shell);
       viewer.pickables.length = 0;
       const { len, wid, hgt } = state;
       const shellHex = SHELL_COLORS.find(c => c.id === state.color).hex;
+      const openings = state.items.filter(it => it.kind === 'opening').map(it => ({ ...it, _item: it }));
+      const fitted = state.spec.interior && state.spec.interior !== 'none';
+      const { group, ext } = buildUnit({
+        size: state.preset, len, wid, hgt, color: new THREE.Color(shellHex).getHex(),
+        openings, roof: state.showRoof, lined: fitted,
+      });
+      shell.add(group);
 
-      const floor = new THREE.Mesh(new THREE.BoxGeometry(len + WALL_T * 2, 0.08, wid + WALL_T * 2), M(0x8b8378, { rough: 0.95 }));
-      floor.position.y = -0.04; floor.receiveShadow = true; floor.name = '__floor';
-      shell.add(floor);
-
-      const inner = new THREE.Mesh(new THREE.PlaneGeometry(len, wid), M(0xb9ac97, { rough: 1 }));
-      inner.rotation.x = -Math.PI / 2; inner.position.y = 0.002;
-      inner.receiveShadow = true; inner.name = '__floorface';
-      shell.add(inner);
-
-      for (const wall of WALLS) {
-        let rects = [{ x0: 0, x1: wallSpan(wall.id), y0: 0, y1: hgt }];
-        for (const hole of holesFor(wall.id)) rects = subtractRect(rects, hole);
-        for (const r of rects) shell.add(placePanel(wall.id, r, WALL_T, M(shellHex)));
+      // Concrete pads under the corners (and mid-length on long units).
+      const padMat = material('concrete', 0xb3afa6);
+      const xs = ext.len > 7 ? [-1, 0, 1] : [-1, 1];
+      for (const sx of xs) for (const sz of [-1, 1]) {
+        const pad = new THREE.Mesh(new THREE.BoxGeometry(0.6, PAD_H + 0.02, 0.6), padMat);
+        pad.position.set(sx * (ext.len / 2 - 0.2), -FLOOR_DEPTH - (PAD_H + 0.02) / 2 + 0.01, sz * (ext.wid / 2 - 0.2));
+        pad.castShadow = true; pad.receiveShadow = true; pad.name = '__pad';
+        shell.add(pad);
       }
 
-      if (state.showRoof) {
-        const roof = new THREE.Mesh(new THREE.BoxGeometry(len + WALL_T * 2, 0.07, wid + WALL_T * 2), M(shellHex, { rough: 0.7 }));
-        roof.position.y = hgt + 0.035; roof.castShadow = true; roof.name = '__roof';
-        shell.add(roof);
+      // Each opening insert is selectable as its item.
+      for (const child of [...group.children]) {
+        const it = child.userData.opening?._item;
+        if (!it) continue;
+        child.userData.item = it;
+        viewer.registerPickable(child);
       }
-
-      for (const sx of [-1, 1]) for (const sz of [-1, 1]) for (const sy of [0, 1]) {
-        const c = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.16, 0.17), M(0x4a4d50, { metal: 0.4, rough: 0.5 }));
-        c.position.set(sx * (len / 2 + WALL_T - 0.06), sy ? hgt - 0.06 : 0.06, sz * (wid / 2 + WALL_T - 0.06));
-        c.name = '__corner';
-        shell.add(c);
-      }
-
       buildItems();
       updateSummary();
     }
 
     function buildItems() {
       for (const it of state.items) {
-        const group = new THREE.Group();
+        if (it.kind === 'opening') continue;
+        const spec = FITTINGS[it.type];
+        const h = spec.isWall ? Math.min(spec.h, state.hgt) : spec.h;
+        // A partition runs wall to wall, stopping at the lining.
+        const d = spec.isWall ? Math.min(spec.d, state.wid - 0.08) : spec.d;
+        const group = fittingModel(it.type, spec.w, d, h, spec.color);
+        group.position.set(it.x - state.len / 2, 0, it.z - state.wid / 2);
+        group.rotation.y = -(it.rot || 0) * Math.PI / 2;
         group.userData.item = it;
-
-        if (it.kind === 'opening') {
-          const spec = OPENINGS[it.type];
-          const isGlass = it.type.includes('window');
-          const panel = new THREE.Mesh(new THREE.BoxGeometry(0.03, it.h, it.w),
-            M(spec.color, isGlass ? { opacity: 0.42, rough: 0.15, metal: 0.1 } : { rough: 0.6 }));
-          const { len, wid } = state;
-          if (it.wall === 'front' || it.wall === 'back') {
-            const sign = it.wall === 'front' ? 1 : -1;
-            panel.position.set(sign * (len / 2 + WALL_T / 2), it.sill + it.h / 2, sign * (it.along - wid / 2));
-          } else {
-            const sign = it.wall === 'left' ? -1 : 1;
-            panel.geometry.dispose();
-            panel.geometry = new THREE.BoxGeometry(it.w, it.h, 0.03);
-            panel.position.set(-(it.along - len / 2) * sign, it.sill + it.h / 2, sign * (wid / 2 + WALL_T / 2));
-          }
-          panel.castShadow = !isGlass;
-          group.add(panel);
-        } else {
-          const spec = FITTINGS[it.type];
-          const w = it.rot % 2 ? spec.d : spec.w;
-          const d = it.rot % 2 ? spec.w : spec.d;
-          const h = spec.isWall ? Math.min(spec.h, state.hgt) : spec.h;
-          const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), M(spec.color, { rough: 0.85 }));
-          body.position.set(it.x - state.len / 2, h / 2, it.z - state.wid / 2);
-          body.castShadow = true; body.receiveShadow = true;
-          group.add(body);
-        }
-
         shell.add(group);
         viewer.registerPickable(group);
       }
 
-      const sel = state.selected != null ? shell.children.find(c => c.userData.item?.key === state.selected) : null;
+      const sel = state.selected != null ? viewer.pickables.find(c => c.userData.item?.key === state.selected) : null;
       viewer.selected = null;
       viewer.select(sel || null);
     }
@@ -593,7 +525,39 @@ export default {
 
     const itemName = (it) => it.kind === 'opening' ? OPENINGS[it.type].name : FITTINGS[it.type].name;
 
+    const structureEl = container.querySelector('#cp-structure');
+    const structureOpen = () => { try { return localStorage.getItem('toolbox.container.structureOpen') !== '0'; } catch { return true; } };
+
+    // Preliminary structural check of this unit (ISO 1496-1 ratings, wind, footings).
+    function updateStructure() {
+      if (!structureEl) return;
+      const unit = { id: 'm1', name: 'This unit', size: state.preset, len: state.len, wid: state.wid, hgt: state.hgt, x: 0, z: 0, rot: 0, level: 0, items: state.items };
+      const st = checkStructure({ modules: [unit], roofs: [], use: 'office' });
+      const r = st.modules[0];
+      const u = state.unit;
+      const badge = { ok: ['Checks pass', 'is-ok'], close: ['Close to limits', 'is-close'], 'needs-engineer': ['Needs an engineer', 'is-bad'] }[r.status];
+      const pct = (v) => `${Math.round(v * 100)}%`;
+      const rows = [
+        ['Wind racking, across', `${r.racking.transverse.demandKn} of ${r.racking.transverse.capacityKn} kN (${pct(r.racking.transverse.ratio)})`],
+        ['Wind racking, along', `${r.racking.longitudinal.demandKn} of ${r.racking.longitudinal.capacityKn} kN (${pct(r.racking.longitudinal.ratio)})`],
+        ...Object.entries(r.walls).filter(([, w]) => w.openings).map(([k, w]) => [`${WALLS.find(x => x.id === k)?.name || k} cut away`, `${fmtLen(w.removedM, u)} (${w.removedPct}%)`]),
+        ...r.lintels.map(l => [`Lintel over ${l.opening.replace(/-/g, ' ')} (${fmtLen(l.spanM, u)})`, `${l.section}${l.utilisation != null ? ` · ${pct(l.utilisation)}` : ''}`]),
+        r.overturning ? ['Anchorage', r.overturning.safety >= 1 ? 'Self-weight resists overturning' : `Anchor about ${r.overturning.anchorPerCornerKn} kN per windward corner`] : null,
+        r.footings ? ['Footings', `${r.footings.supports} pads, ${fmtLen(r.footings.padSideM, u)} square × ${fmtLen(r.footings.padDepthM, u)} deep`] : null,
+      ].filter(Boolean);
+      const notes = [...st.warnings.map(w => w.text), ...r.notes];
+      structureEl.open = structureOpen();
+      structureEl.innerHTML = `
+        <summary><span class="cp-structure-title">Structure</span><span class="cp-structure-badge ${badge[1]}">${badge[0]}</span></summary>
+        <p class="cp-structure-basis">${r.iso?.code ? `ISO ${r.iso.code}, ` : ''}external ${fmtLen(r.iso.ext.len, u)} × ${fmtLen(r.iso.ext.wid, u)} × ${fmtLen(r.iso.ext.hgt, u)}${r.iso.tareKg ? `, tare about ${r.iso.tareKg.toLocaleString()} kg` : ''}. Wind ${st.basis.windSpeed} m/s, soil ${st.basis.soilBearing} kPa.</p>
+        <dl class="cp-structure-rows">${rows.map(([k, v]) => `<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`).join('')}</dl>
+        ${notes.length ? `<ul class="cp-structure-notes">${notes.map(n => `<li>${escapeHtml(n)}</li>`).join('')}</ul>` : ''}
+        <p class="cp-structure-disclaimer">${escapeHtml(st.disclaimer)}</p>`;
+    }
+    structureEl?.addEventListener('toggle', () => { try { localStorage.setItem('toolbox.container.structureOpen', structureEl.open ? '1' : '0'); } catch { /* storage blocked */ } });
+
     function updateSummary() {
+      updateStructure();
       const u = state.unit;
       const gross = state.len * state.wid;
       const doors   = state.items.filter(i => i.kind === 'opening' && i.type.includes('door')).length;
@@ -870,7 +834,7 @@ export default {
       renderEditor();
 
       if (it.kind === 'fitting') {
-        dragPlane.set(new THREE.Vector3(0, 1, 0), 0);
+        dragPlane.set(new THREE.Vector3(0, 1, 0), -shell.position.y);
       } else if (it.kind === 'opening') {
         const { len, wid } = state;
         if (it.wall === 'front') {
@@ -913,12 +877,8 @@ export default {
         it.x = Math.max(w / 2, Math.min(state.len - w / 2, dragPlaneIntersect.x + state.len / 2));
         it.z = Math.max(d / 2, Math.min(state.wid - d / 2, dragPlaneIntersect.z + state.wid / 2));
 
-        const grp = shell.children.find(c => c.userData.item?.key === it.key);
-        if (grp && grp.children[0]) {
-          const body = grp.children[0];
-          const h = spec.isWall ? Math.min(spec.h, state.hgt) : spec.h;
-          body.position.set(it.x - state.len / 2, h / 2, it.z - state.wid / 2);
-        }
+        const grp = viewer.pickables.find(c => c.userData.item?.key === it.key);
+        if (grp) grp.position.set(it.x - state.len / 2, 0, it.z - state.wid / 2);
 
         const xIn = editorEl.querySelector('[data-prop="x"]');
         const zIn = editorEl.querySelector('[data-prop="z"]');
@@ -933,24 +893,15 @@ export default {
         } else if (it.wall === 'back') {
           along = state.wid / 2 - dragPlaneIntersect.z;
         } else if (it.wall === 'left') {
-          along = -(dragPlaneIntersect.x - state.len / 2);
+          along = dragPlaneIntersect.x + state.len / 2;      // left wall: along runs from the back end
         } else {
-          along = dragPlaneIntersect.x + state.len / 2;
+          along = state.len / 2 - dragPlaneIntersect.x;      // right wall: along runs from the door end
         }
         it.along = Math.max(it.w / 2, Math.min(span - it.w / 2, along));
 
-        const grp = shell.children.find(c => c.userData.item?.key === it.key);
-        if (grp && grp.children[0]) {
-          const panel = grp.children[0];
-          const { len, wid } = state;
-          if (it.wall === 'front' || it.wall === 'back') {
-            const sign = it.wall === 'front' ? 1 : -1;
-            panel.position.set(sign * (len / 2 + WALL_T / 2), it.sill + it.h / 2, sign * (it.along - wid / 2));
-          } else {
-            const sign = it.wall === 'left' ? -1 : 1;
-            panel.position.set(-(it.along - len / 2) * sign, it.sill + it.h / 2, sign * (wid / 2 + WALL_T / 2));
-          }
-        }
+        // Move the insert now; the wall is re-cut around it when the drag ends.
+        const grp = viewer.pickables.find(c => c.userData.item?.key === it.key);
+        if (grp) placeOnWall(grp, it, state);
 
         const alongIn = editorEl.querySelector('[data-prop="along"]');
         if (alongIn) alongIn.value = toDisplay(it.along);

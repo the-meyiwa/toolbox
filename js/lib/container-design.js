@@ -24,6 +24,7 @@
    ============================================================ */
 
 import { buildQuote } from './container-quote.js';
+import { checkStructure, FLOOR_DEPTH, ROOF_DEPTH } from './container-structure.js';
 import { defaultRateBook, COMMERCIAL_DEFAULTS, FITTING_RATES, SERVICES, LOGISTICS } from './container-catalog.js';
 
 export const M_PER_FT = 0.3048;
@@ -470,7 +471,19 @@ export function normalizeSource(args = {}) {
     specLevel: ['economy', 'standard', 'premium'].includes(lower(args.spec_level)) ? lower(args.spec_level) : null,
     clientShell: Boolean(args.client_supplies_container),
     units: lower(args.units) === 'm' ? 'm' : 'ft',
+    site: normSite(args.site),
   };
+}
+
+/** Site conditions for the structural check: wind speed (m/s) and allowable soil bearing (kPa). */
+function normSite(site = {}) {
+  if (!site || typeof site !== 'object') return null;
+  const windSpeed = num(site.wind_speed_ms ?? site.windSpeed ?? site.wind);
+  const soilBearing = num(site.soil_bearing_kpa ?? site.soilBearing ?? site.bearing);
+  const out = {};
+  if (windSpeed) out.windSpeed = clamp(windSpeed, 20, 70);
+  if (soilBearing) out.soilBearing = clamp(soilBearing, 25, 600);
+  return Object.keys(out).length ? out : null;
 }
 
 /* ============================================================
@@ -685,9 +698,10 @@ function computeLevels(mods) {
   const elev = [0];
   for (let L = 1; L <= top + 1; L++) {
     const below = mods.filter(m => m.level === L - 1);
-    elev[L] = elev[L - 1] + (below.length ? Math.max(...below.map(m => m.hgt)) + 0.2 : 2.6);
+    // Stacked boxes sit casting on casting: floor to floor is the external height (ISO: internal + 198 mm).
+    elev[L] = elev[L - 1] + (below.length ? Math.max(...below.map(m => m.hgt)) + FLOOR_DEPTH + ROOF_DEPTH : 2.6);
   }
-  for (const m of mods) { m.elev = r3(elev[m.level]); m.extH = r3(m.hgt + 0.2); }
+  for (const m of mods) { m.elev = r3(elev[m.level]); m.extH = r3(m.hgt + FLOOR_DEPTH + ROOF_DEPTH); }
   return elev;
 }
 
@@ -850,9 +864,13 @@ function layoutRooms(m, warnings) {
 const roomAt = (rooms, x) => rooms.find(r => x >= r.x0 - 0.06 && x <= r.x1 + 0.06) || rooms[0];
 
 /** Intervals (in `along`) on a wall that openings must stay clear of. */
+// Clear distance from a wall's ends: container side walls keep cuts 300 mm off the corner posts and castings.
+const endClear = (m, wall) => (SIZES[m.size]?.container && (wall === 'left' || wall === 'right') ? 0.3 : 0.12);
+
 function wallBlocks(m, wall, openings, parts, skip = null) {
   const span = spanOf(m, wall);
-  const blocks = [[-1, 0.12], [span - 0.12, span + 1]];
+  const e = endClear(m, wall);
+  const blocks = [[-1, e], [span - e, span + 1]];
   for (const o of openings) if (o !== skip && o.wall === wall) blocks.push([o.along - o.w / 2 - 0.12, o.along + o.w / 2 + 0.12]);
   if (wall === 'left' || wall === 'right') {
     for (const p of parts) { const a = alongFromLocal(m, wall, p.x); blocks.push([a - 0.12, a + 0.12]); }
@@ -863,7 +881,8 @@ function fitsAt(blocks, a, w) { return blocks.every(([b0, b1]) => a + w / 2 <= b
 function findSpot(m, wall, w, openings, parts, prefer, range = null, skip = null) {
   const span = spanOf(m, wall);
   const blocks = wallBlocks(m, wall, openings, parts, skip);
-  const lo = Math.max(w / 2 + 0.12, range ? range[0] + w / 2 : 0), hi = Math.min(span - w / 2 - 0.12, range ? range[1] - w / 2 : span);
+  const e = endClear(m, wall);
+  const lo = Math.max(w / 2 + e, range ? range[0] + w / 2 : 0), hi = Math.min(span - w / 2 - e, range ? range[1] - w / 2 : span);
   if (hi < lo - 1e-6) return null;
   const p = clamp(prefer ?? (lo + hi) / 2, lo, hi);
   for (let k = 0; k <= Math.ceil((hi - lo) / 0.05) * 2 + 1; k++) {
@@ -1642,6 +1661,8 @@ export function resolveDesign(sourceIn, { id = null, version = 1, rateBook = nul
   };
   design.site = siteBounds(design);
   validate(design, warnings);
+  design.structure = checkStructure(design, source.site || {});
+  warnings.push(...design.structure.warnings);
   design.quantities = quantities(design);
   design.cost = costDesign(design, source, rateBook, warnings);
   design.rooms = design.modules.flatMap(m => m.rooms.map(r => ({ name: r.name, kind: r.kind, module: m.id, level: m.level, area: r.area })));
@@ -1865,6 +1886,15 @@ function summarize(d) {
   const ex = [d.decks.length && 'deck', d.canopies.length && 'canopy', d.roofs.some(r => r.kind === 'deck') && 'roof deck', d.roofs.some(r => r.kind === 'pitched') && 'pitched roof', d.extras.cladding !== 'none' && `${d.extras.cladding} cladding`].filter(Boolean);
   if (ex.length) lines.push(`Extras: ${ex.join(', ')}.`);
   lines.push(`Estimate (${d.specLevel} spec): ${naira(d.cost.total)} incl. VAT (${naira(d.cost.perM2)}/m²).${d.cost.budget ? ` Budget ${naira(d.cost.budget)}: ${d.cost.withinBudget ? 'within' : 'over'}.` : ''}`);
+  if (d.structure) {
+    const st = d.structure;
+    const bits = st.modules.map(r => [
+      r.lintels.length ? `${r.id}: lintel ${r.lintels.map(l => l.section).join(', ')}` : '',
+      r.footings ? `${r.id}: ${r.footings.supports} pads ${r.footings.padSideM} m square` : '',
+      r.stacking ? `${r.id}: ${r.stacking.superimposedKg} kg stacked on it (${Math.round(r.stacking.utilisation * 100)}% of the ISO rating)` : '',
+    ].filter(Boolean).join('; ')).filter(Boolean);
+    lines.push(`Structure (preliminary, ${st.basis.windSpeed} m/s wind, ${st.basis.soilBearing} kPa soil): ${st.summary.text}${bits.length ? ` ${bits.join('. ')}.` : ''}`);
+  }
   const warn = d.warnings.filter(w => w.level === 'warn');
   if (warn.length) lines.push(`Warnings: ${warn.map(w => w.text).join(' ')}`);
   return lines.join('\n');
@@ -2095,6 +2125,7 @@ export function designContainer(args = {}, { rateBook = null } = {}) {
     if (args.spec_level) source.specLevel = patch.specLevel;
     if (args.title) source.title = args.title;
     if (args.units) source.units = patch.units;
+    if (args.site) source.site = { ...(source.site || {}), ...(patch.site || {}) };
     if (Array.isArray(args.changes) && args.changes.length) {
       const res = applyChanges(source, prev.design, args.changes);
       source = res.source; notes = res.notes;

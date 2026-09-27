@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Container design card harness</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>body { padding: 24px; background: var(--bg); } .card { max-width: 900px; margin: 0 auto 32px; }</style>
+</head>
+<body>
+  <!--
+    Browser harness for the Assistant's container design card.
+    Run the dev server (npm run dev) and open /tests/browser/container-card.html.
+    ?case=office | stacked | cafe | cabin picks one design; no parameter shows all.
+  -->
+  <script type="module">
+    import { designContainer } from '/js/lib/container-design.js';
+    import { renderContainerDesign } from '/js/lib/assistant/container-design-card.js';
+    const cases = {
+      office: { brief: { use: 'office', headcount: 4, size: '20ft', color: 'green' } },
+      stacked: { brief: { use: 'office', containers: 2, levels: 2, arrangement: 'stacked', style: ['roof deck', 'canopy'], color: 'blue' } },
+      cafe: { brief: { use: 'cafe', size: '40ft', style: ['glass front', 'deck', 'canopy'], color: 'red' } },
+      cabin: { brief: { use: 'site office', size: 'pc20' } },
+    };
+    const want = new URLSearchParams(location.search).get('case');
+    for (const [name, args] of Object.entries(cases)) {
+      if (want && want !== name) continue;
+      const box = document.createElement('div');
+      box.className = 'card';
+      box.dataset.case = name;
+      document.body.appendChild(box);
+      renderContainerDesign({ design: designContainer(args) }, box);
+    }
+  </script>
+</body>
+</html>

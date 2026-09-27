@@ -7,10 +7,18 @@
    world positions, cross-section clipping, and teardown.
 
    Tools supply their own geometry and their own UI.
+
+   `realism: true` turns on the architectural look used by the
+   container and structure viewers: filmic tone mapping, an
+   environment map for reflections, a sun with shadows fitted to the
+   model, a sky dome with distance fog, a contact shadow under the
+   model and (on capable devices) screen-space ambient occlusion.
+   `environment: 'outdoor' | 'studio'` picks the backdrop.
    ============================================================ */
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
 const DEFAULTS = {
   background: 0xf7f7f7,
@@ -20,6 +28,19 @@ const DEFAULTS = {
   ground: true,
   groundSize: 40,
   autoRotate: false,
+  realism: false,
+  environment: 'outdoor',   // realism backdrop: 'outdoor' (sky, soil) or 'studio' (neutral sweep)
+  dark: false,              // realism: darker studio/dusk palette for dark themes
+  grid: undefined,          // realism: draw the faint measuring grid (default off)
+  ambientOcclusion: true,   // realism: GTAO when the device can afford it
+};
+
+// Backdrop palettes for realism mode: sky zenith, horizon, ground.
+const BACKDROPS = {
+  outdoor: { top: 0x9fbcd6, horizon: 0xe9e6df, ground: 0xc9c2b4, sun: 0xfff1dc, sky: 0xd8e6f2, bounce: 0x8a7f6c },
+  studio: { top: 0xdedcd8, horizon: 0xefeeeb, ground: 0xe4e2de, sun: 0xffffff, sky: 0xf2f2f2, bounce: 0xa9a6a0 },
+  'outdoor-dark': { top: 0x1b2433, horizon: 0x3a3f47, ground: 0x2c2e31, sun: 0xffe2c0, sky: 0x8aa0bd, bounce: 0x3b3833 },
+  'studio-dark': { top: 0x15171a, horizon: 0x24272b, ground: 0x1d1f22, sun: 0xffffff, sky: 0x9aa3ad, bounce: 0x2a2a2a },
 };
 
 export class Viewer3D {
@@ -42,7 +63,7 @@ export class Viewer3D {
       || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, modestDevice ? 1.25 : 2));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.localClippingEnabled = true;
     this.renderer.domElement.style.display = 'block';
     this.renderer.domElement.style.width = '100%';
@@ -59,8 +80,13 @@ export class Viewer3D {
     this.controls.minDistance = 1;
     this.controls.maxDistance = 400;
 
-    this._buildLights();
-    if (this.opts.ground) this._buildGround();
+    this.modestDevice = modestDevice;
+    if (this.opts.realism) {
+      this._buildRealism();
+    } else {
+      this._buildLights();
+      if (this.opts.ground) this._buildGround();
+    }
 
     // --- Label layer (HTML over canvas) ---
     this.labelLayer = document.createElement('div');
@@ -145,6 +171,178 @@ export class Viewer3D {
     grid.name = '__grid';
     this.scene.add(grid);
     this.grid = grid;
+  }
+
+  /* ---------------- realism ---------------- */
+
+  _buildRealism() {
+    const o = this.opts;
+    const pal = BACKDROPS[`${o.environment}${o.dark ? '-dark' : ''}`] || BACKDROPS.outdoor;
+    this.backdrop = pal;
+    const r = this.renderer;
+    r.toneMapping = THREE.ACESFilmicToneMapping;
+    r.toneMappingExposure = o.dark ? 1.0 : 0.95;
+    r.outputColorSpace = THREE.SRGBColorSpace;
+    r.shadowMap.type = THREE.PCFShadowMap;
+
+    // Soft studio reflections so metal, paint and glass read as materials.
+    // (An enhancement: a limited WebGL implementation just renders without it.)
+    try {
+      const pmrem = new THREE.PMREMGenerator(r);
+      const room = new RoomEnvironment();
+      this._envTarget = pmrem.fromScene(room, 0.04);
+      room.traverse?.(n => { n.geometry?.dispose?.(); n.material?.dispose?.(); });
+      pmrem.dispose();
+      this.scene.environment = this._envTarget.texture;
+      this.scene.environmentIntensity = o.environment === 'studio' ? 0.55 : 0.4;
+    } catch { this._envTarget = null; }
+
+    // Sky dome: zenith to horizon to ground, so the model sits in a place, not a void.
+    const dome = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 32, 16),
+      new THREE.ShaderMaterial({
+        side: THREE.BackSide, depthWrite: false, fog: false,
+        uniforms: { top: { value: new THREE.Color(pal.top) }, horizon: { value: new THREE.Color(pal.horizon) }, ground: { value: new THREE.Color(pal.ground) } },
+        vertexShader: 'varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+        fragmentShader: `uniform vec3 top; uniform vec3 horizon; uniform vec3 ground; varying vec3 vDir;
+          void main(){ float h = vDir.y; vec3 c = h > 0.0 ? mix(horizon, top, pow(smoothstep(0.0, 0.85, h), 0.7)) : mix(horizon, ground, smoothstep(0.0, 0.08, -h));
+          gl_FragColor = vec4(c, 1.0);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+          }`,
+      }),
+    );
+    dome.name = '__sky';
+    dome.frustumCulled = false;
+    dome.renderOrder = -1;
+    this.scene.add(dome);
+    this.sky = dome;
+    this.scene.background = new THREE.Color(pal.horizon);
+    this.scene.fog = new THREE.Fog(pal.horizon, 40, 160);
+
+    // Light: sky/ground bounce plus a warm sun that casts the shadows.
+    const hemi = new THREE.HemisphereLight(pal.sky, pal.bounce, o.dark ? 0.9 : 1.1);
+    this.scene.add(hemi);
+    this.hemiLight = hemi;
+    const sun = new THREE.DirectionalLight(pal.sun, o.dark ? 2.2 : 2.6);
+    sun.position.set(9, 15, 7);
+    sun.castShadow = true;
+    const map = this.modestDevice ? 1024 : 2048;
+    sun.shadow.mapSize.set(map, map);
+    sun.shadow.bias = -0.0012;
+    sun.shadow.normalBias = 0.06;
+    sun.shadow.radius = 3;
+    this.scene.add(sun);
+    this.scene.add(sun.target);
+    this.keyLight = sun;
+    const rim = new THREE.DirectionalLight(pal.sky, 0.35);
+    rim.position.set(-10, 6, -8);
+    this.scene.add(rim);
+
+    if (this.opts.ground) {
+      const groundMat = new THREE.MeshStandardMaterial({ color: pal.ground, roughness: 1, metalness: 0 });
+      groundMat.onBeforeCompile = (shader) => {
+        // Faint large-scale variation so the ground reads as a surface, not a flat fill.
+        shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWorldPos;')
+          .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+        shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `#include <common>
+          varying vec3 vWorldPos;
+          float gHash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+          float gNoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
+            return mix(mix(gHash(i), gHash(i+vec2(1,0)), f.x), mix(gHash(i+vec2(0,1)), gHash(i+vec2(1,1)), f.x), f.y); }`)
+          .replace('#include <color_fragment>', `#include <color_fragment>
+          float gv = gNoise(vWorldPos.xz * 0.35) * 0.6 + gNoise(vWorldPos.xz * 2.1) * 0.4;
+          diffuseColor.rgb *= 0.93 + gv * 0.12;`);
+      };
+      const ground = new THREE.Mesh(new THREE.CircleGeometry(400, 64), groundMat);
+      ground.rotation.x = -Math.PI / 2;
+      ground.receiveShadow = true;
+      ground.name = '__ground';
+      this.scene.add(ground);
+      this.groundMesh = ground;
+
+      // Contact shadow: a soft dark pool under the model that grounds it even where the sun misses.
+      try {
+        const c = document.createElement('canvas');
+        c.width = c.height = 128;
+        const g = c.getContext('2d');
+        const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+        grad.addColorStop(0, 'rgba(0,0,0,0.55)');
+        grad.addColorStop(0.55, 'rgba(0,0,0,0.22)');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = grad;
+        g.fillRect(0, 0, 128, 128);
+        const tex = new THREE.CanvasTexture(c);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        const contact = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, opacity: o.dark ? 0.8 : 0.55, toneMapped: false }));
+        contact.rotation.x = -Math.PI / 2;
+        contact.position.y = 0.004;
+        contact.renderOrder = 1;
+        contact.name = '__contact';
+        this.scene.add(contact);
+        this.contactShadow = contact;
+      } catch { this.contactShadow = null; }
+
+      if (o.grid) {
+        const size = o.groundSize;
+        const grid = new THREE.GridHelper(size * 2, size * 2, 0x9a958c, 0xb9b4aa);
+        grid.material.transparent = true;
+        grid.material.opacity = o.dark ? 0.12 : 0.22;
+        grid.material.depthWrite = false;
+        grid.position.y = 0.002;
+        grid.name = '__grid';
+        this.scene.add(grid);
+        this.grid = grid;
+      }
+    }
+
+    if (o.ambientOcclusion && !this.modestDevice) this._buildComposer();
+  }
+
+  async _buildComposer() {
+    try {
+      const [{ EffectComposer }, { RenderPass }, { GTAOPass }, { OutputPass }] = await Promise.all([
+        import('three/examples/jsm/postprocessing/EffectComposer.js'),
+        import('three/examples/jsm/postprocessing/RenderPass.js'),
+        import('three/examples/jsm/postprocessing/GTAOPass.js'),
+        import('three/examples/jsm/postprocessing/OutputPass.js'),
+      ]);
+      if (this.disposed) return;
+      const composer = new EffectComposer(this.renderer);
+      composer.addPass(new RenderPass(this.scene, this.camera));
+      const gtao = new GTAOPass(this.scene, this.camera, 512, 512);
+      gtao.blendIntensity = 0.75;   // subtle: darkens creases and contact, not everything
+      gtao.updateGtaoMaterial({ radius: 0.45, distanceExponent: 1.4, thickness: 1.2, scale: 1, samples: 12 });
+      gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 12 });
+      composer.addPass(gtao);
+      composer.addPass(new OutputPass());
+      this.composer = composer;
+      this.aoPass = gtao;
+      this.resize();
+    } catch { /* post-processing is an enhancement; plain rendering still works */ }
+  }
+
+  // Fit the sun's shadow box, the contact shadow and the fog to what is on show.
+  _fitEnvironment(box) {
+    if (!this.opts.realism || box.isEmpty()) return;
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const radius = Math.max(size.x, size.y, size.z) * 0.75 + 1;
+    const sun = this.keyLight;
+    const dir = new THREE.Vector3(0.55, 0.9, 0.42).normalize();
+    sun.position.copy(center).add(dir.multiplyScalar(radius * 3));
+    sun.target.position.copy(center);
+    sun.target.updateMatrixWorld();
+    const cam = sun.shadow.camera;
+    Object.assign(cam, { left: -radius, right: radius, top: radius, bottom: -radius, near: 0.5, far: radius * 7 });
+    cam.updateProjectionMatrix();
+    if (this.contactShadow) {
+      this.contactShadow.position.set(center.x, box.min.y > 0.5 ? 0.004 : Math.min(0.004, box.min.y + 0.004), center.z);
+      this.contactShadow.scale.set(size.x * 1.35 + 0.8, size.z * 1.35 + 0.8, 1);
+    }
+    if (this.sky) this.sky.scale.setScalar(Math.max(300, radius * 30));
+    if (this.scene.fog) { this.scene.fog.near = radius * 6; this.scene.fog.far = radius * 26 + 60; }
+    if (this.aoPass) this.aoPass.updateGtaoMaterial({ radius: Math.min(1.2, Math.max(0.25, radius * 0.06)) });
   }
 
   /* ---------------- picking ---------------- */
@@ -360,21 +558,37 @@ export class Viewer3D {
   // Fit the camera to a bounding box, keeping the current view direction.
   frame(target = this.scene, padding = 1.35) {
     const box = new THREE.Box3();
+    target.updateMatrixWorld(true);
     target.traverse(o => { if (o.isMesh && o.visible && !o.name.startsWith('__')) box.expandByObject(o); });
     if (box.isEmpty()) return;
 
     const size   = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
     const maxDim = Math.max(size.x, size.y, size.z);
-    const dist   = (maxDim / 2) / Math.tan((this.camera.fov * Math.PI / 180) / 2) * padding;
-
     const dir = this.camera.position.clone().sub(this.controls.target).normalize();
+
+    // Exact fit: the closest distance at which every corner of the box is
+    // inside the view (both field-of-view axes), times the padding.
+    const tanV = Math.tan((this.camera.fov * Math.PI / 180) / 2) / padding;
+    const tanH = tanV * (this.camera.aspect || 1);
+    const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), dir);
+    if (right.lengthSq() < 1e-6) right.set(1, 0, 0);
+    right.normalize();
+    const up = new THREE.Vector3().crossVectors(dir, right).normalize();
+    let dist = 0;
+    for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) {
+      const p = new THREE.Vector3(x, y, z).sub(center);
+      const depth = p.dot(dir);                 // towards the camera
+      dist = Math.max(dist, depth + Math.abs(p.dot(right)) / tanH, depth + Math.abs(p.dot(up)) / tanV);
+    }
+    if (!Number.isFinite(dist) || dist <= 0) dist = (maxDim / 2) / Math.tan((this.camera.fov * Math.PI / 180) / 2) * padding;
     this.controls.target.copy(center);
     this.camera.position.copy(center).add(dir.multiplyScalar(dist));
     this.camera.near = Math.max(0.05, dist / 200);
-    this.camera.far  = dist * 20;
+    this.camera.far  = Math.max(dist * 20, this.opts.realism ? (this.sky?.scale.x || 300) * 1.5 : 0);
     this.camera.updateProjectionMatrix();
     this.controls.update();
+    this._fitEnvironment(box);
   }
 
   setView(name, target = this.scene) {
@@ -419,6 +633,7 @@ export class Viewer3D {
     const h = this.mount.clientHeight;
     if (!w || !h) return;
     this.renderer.setSize(w, h, false);
+    this.composer?.setSize(w, h);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
   }
@@ -434,7 +649,8 @@ export class Viewer3D {
       this._pointerMoved = false;
     }
     this._updateLabels();
-    this.renderer.render(this.scene, this.camera);
+    if (this.composer) this.composer.render();
+    else this.renderer.render(this.scene, this.camera);
   }
 
   dispose() {
@@ -466,6 +682,9 @@ export class Viewer3D {
     });
     this.clearLabels();
     this.labelLayer.remove();
+    this.composer?.dispose?.();
+    this.aoPass?.dispose?.();
+    this._envTarget?.dispose();
     this.renderer.dispose();
     el.remove();
   }

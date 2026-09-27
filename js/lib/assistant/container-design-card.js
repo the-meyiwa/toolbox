@@ -1,10 +1,11 @@
 /* ============================================================
    TOOLBOX — Container design preview card
 
-   Renders a design from js/lib/container-design.js without three.js:
-   - an isometric 3D view (SVG, painter's algorithm over axis-aligned
-     boxes), with a cut-away / roof toggle, four view angles, levels
-     and an exploded mode,
+   Renders a design from js/lib/container-design.js:
+   - a realistic 3D view (three.js, container-scene3d.js) when WebGL is
+     available, with the isometric SVG view (painter's algorithm over
+     axis-aligned boxes) as the fallback; both have a cut-away / roof
+     toggle, rotation, levels and an exploded mode,
    - a dimensioned floor plan per level,
    - a spec & cost sheet.
    Downloads (PNG of the current view, SVG plan) and a hand-off to
@@ -1022,6 +1023,26 @@ export function renderContainerDesign(data, container) {
     </footer>`;
 
   const pane3d = el.querySelector('[data-pane="3d"]');
+  // Real 3D (three.js) when the browser has WebGL; the isometric SVG otherwise.
+  let use3d = (() => { try { const c = document.createElement('canvas'); return Boolean(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; } })();
+  let ctl = null, loading3d = false, ctlDark = null;
+  const ensure3d = () => {
+    const dark = isDark();
+    if (ctl && ctlDark !== dark) { ctl.dispose(); ctl = null; }
+    if (ctl) { ctl.update(view); return; }
+    if (loading3d) return;
+    loading3d = true;
+    pane3d.classList.add('is-webgl');
+    pane3d.innerHTML = '<div class="astc-cd-loading">Building the 3D model…</div>';
+    import('./container-scene3d.js').then((mod) => {
+      loading3d = false;
+      if (!el.isConnected && !document.body.contains(el)) return;
+      pane3d.innerHTML = '';
+      ctlDark = dark;
+      ctl = mod.mountDesign3D(pane3d, design, view, { dark });
+    }).catch(() => { loading3d = false; use3d = false; pane3d.classList.remove('is-webgl'); paint(); });
+  };
+  const watch = setInterval(() => { if (!el.isConnected) { ctl?.dispose(); ctl = null; clearInterval(watch); } }, 4000);
   const panePlan = el.querySelector('[data-pane="plan"]');
   const paneSpec = el.querySelector('[data-pane="spec"]');
   let lastSvg = '';
@@ -1032,7 +1053,9 @@ export function renderContainerDesign(data, container) {
     el.querySelector('[data-stat="area"]').textContent = fmtArea(q.floorArea, view.unit);
     const shownW = el.querySelector('.astc-cd-stage').clientWidth || 720;
     view.displayWidth = shownW;
-    if (view.tab === '3d') {
+    if (view.tab === '3d' && use3d) {
+      ensure3d();
+    } else if (view.tab === '3d') {
       lastSvg = isoSvg(design, view, pal);
       pane3d.innerHTML = lastSvg;
       pane3d.style.background = `linear-gradient(${pal.bg0}, ${pal.bg1})`;
@@ -1058,12 +1081,13 @@ export function renderContainerDesign(data, container) {
     if (t.dataset.level) { view.level = t.dataset.level === 'all' ? 'all' : Number(t.dataset.level); if (view.level !== 'all') view.planLevel = view.level; paint(); return; }
     if (t.dataset.planLevel) { view.planLevel = Number(t.dataset.planLevel); paint(); return; }
     switch (t.dataset.act) {
-      case 'rotl': view.angle = (view.angle + 3) % 4; paint(); break;
-      case 'rotr': view.angle = (view.angle + 1) % 4; paint(); break;
+      case 'rotl': if (ctl) ctl.rotate(-1); else { view.angle = (view.angle + 3) % 4; paint(); } break;
+      case 'rotr': if (ctl) ctl.rotate(1); else { view.angle = (view.angle + 1) % 4; paint(); } break;
       case 'roof': view.roof = !view.roof; paint(); break;
       case 'explode': view.explode = !view.explode; paint(); break;
       case 'png': {
         const name = `${slug(design.title)}-${view.tab === 'plan' ? 'plan' : 'view'}.png`;
+        if (ctl && view.tab === '3d') { const png = await ctl.snapshot(); if (png) downloadBlob(png, name); break; }
         try { const png = await svgToPng(view.tab === 'plan' ? planSvg(design, view.planLevel, view.unit, palette(false)) : isoSvg(design, { ...view, displayWidth: 1100, maxHeight: 1e9 }, palette(isDark())), 2); if (png) downloadBlob(png, name); } catch { /* ignore */ }
         break;
       }

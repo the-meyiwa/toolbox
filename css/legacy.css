@@ -8545,4 +8545,19 @@ body[data-tool-id="messaging"] #viewport-content {height:100%;min-height:0;overf
 .messages-plus::after {transition:none}
 }
 body[data-tool-id="messaging"] #viewport-content { flex:1!important; height:auto!important; min-height:0!important; }
-body[data-tool-id="messaging"] .messages-v2-chat { position:relative; }
+body[data-tool-id="messaging"] .messages-v2-chat { position:relative; }/* --- Container Quote Builder: structural check --- */
+.cp-structure { margin-top: 14px; border: 1px solid var(--g150); border-radius: 12px; padding: 0 18px; background: var(--white); }
+.cp-structure > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; cursor: pointer; list-style: none; }
+.cp-structure > summary::-webkit-details-marker { display: none; }
+.cp-structure-title { font-weight: 600; font-size: 0.95rem; }
+.cp-structure-badge { font-size: 0.72rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--g100); color: var(--g700); }
+.cp-structure-badge.is-ok { background: color-mix(in srgb, var(--success, #1f8a4c) 14%, transparent); color: var(--success, #1f8a4c); }
+.cp-structure-badge.is-close { background: color-mix(in srgb, #b7791f 16%, transparent); color: #b7791f; }
+.cp-structure-badge.is-bad { background: color-mix(in srgb, var(--danger, #c0392b) 14%, transparent); color: var(--danger, #c0392b); }
+.cp-structure-basis { font-size: 0.8rem; color: var(--g500); margin: 0 0 10px; }
+.cp-structure-rows { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1px; background: var(--g150); border: 1px solid var(--g150); border-radius: 10px; overflow: hidden; margin: 0; }
+.cp-structure-rows > div { background: var(--white); padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.cp-structure-rows dt { font-size: 0.72rem; color: var(--g500); }
+.cp-structure-rows dd { margin: 0; font-family: var(--mono); font-size: 0.82rem; }
+.cp-structure-notes { margin: 12px 0 0; padding-left: 18px; font-size: 0.82rem; color: var(--g700); display: flex; flex-direction: column; gap: 6px; }
+.cp-structure-disclaimer { font-size: 0.72rem; color: var(--g500); margin: 12px 0 16px; }
