@@ -4,7 +4,7 @@
    Registers renderers for the result types produced by
    js/lib/assistant/extra-tools.js (and the Notes tools):
      task-plan · chess-board · device-list · device-compare ·
-     vehicle · vehicle-controls · vehicle-part · svg-illustration · note · container-design · structure-model ·
+     vehicle · vehicle-controls · vehicle-part · car-injury · svg-illustration · note · container-design · structure-model ·
      invoice-card · invoice-list ·
      construction-estimate
    Each renderer receives the plain result object and returns
@@ -19,6 +19,10 @@ import { renderContainerDesign } from './container-design-card.js';
 import { renderStructureModel } from './structure-card.js';
 import { CLUSTER as CAR_CLUSTER } from '../automobile/corolla-controls.js';
 import { mountControlPanel } from '../automobile/control-panel.js';
+import { safetyFor, INJURIES, DISCLAIMER } from '../automobile/injury-data.js';
+import { safetyHtml, injuryHtml, richText, installInjuryLinks } from '../automobile/injury-render.js';
+
+installInjuryLinks();
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
@@ -404,6 +408,27 @@ function renderVehicle(data, container) {
 }
 
 /* ============================================================
+   Car injuries — signs, first aid, treatment, prevention
+   ============================================================ */
+
+export function renderCarInjury(data, container) {
+  const injuries = (data.injuries || []).map(id => INJURIES[id] && { id, ...INJURIES[id] }).filter(Boolean);
+  const el = card('car-injury', {
+    icon: I.car,
+    title: data.part ? `${data.part.label}: injuries and prevention` : 'Car-related injuries',
+    sub: esc(data.query || ''),
+  });
+  el.querySelector('.astc-body').innerHTML = `<section class="inj">
+    ${data.part ? `<p class="inj-hazard">${richText(data.part.hazard)}</p>` : ''}
+    ${injuries.map((inj, i) => injuryHtml(inj, { open: i === 0 })).join('')}
+    ${data.part?.prevention?.length ? `<h5 class="inj-h2">Prevention</h5><ul class="inj-prevent">${data.part.prevention.map(p => `<li>${richText(p)}</li>`).join('')}</ul>` : ''}
+    <p class="inj-disclaimer">${esc(DISCLAIMER)}</p>
+  </section>`;
+  container.appendChild(el);
+  return el;
+}
+
+/* ============================================================
    Car part — where it is, its data, "Show in 3D"
    ============================================================ */
 
@@ -432,7 +457,8 @@ export function renderVehiclePart(data, container) {
     ${data.specRows?.length ? `<section><h5>Spec sheet</h5><dl>${data.specRows.map(([, k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></section>` : ''}</div>
     ${c.accuracyNote ? `<p class="astc-muted astc-vp-note">${esc(c.accuracyNote)}</p>` : ''}
     ${c.sources?.length ? `<p class="astc-muted astc-vp-note">Sources: ${c.sources.map(s => s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.label || s.url)}</a>` : esc(s.label)).join(' · ')}</p>` : ''}
-    ${data.alternatives?.length ? `<div class="astc-vc-alts"><span>Nearby</span>${data.alternatives.map(a => `<button type="button" data-vp-part="${esc(a.id)}">${esc(a.label)}</button>`).join('')}</div>` : ''}`;
+    ${data.alternatives?.length ? `<div class="astc-vc-alts"><span>Nearby</span>${data.alternatives.map(a => `<button type="button" data-vp-part="${esc(a.id)}">${esc(a.label)}</button>`).join('')}</div>` : ''}
+    ${safetyHtml(safetyFor(c.id))}`;
   el.addEventListener('click', (e) => {
     const alt = e.target.closest('[data-vp-part]');
     if (alt) { openGuideOn({ component: alt.dataset.vpPart }); return; }
@@ -707,6 +733,124 @@ function renderConstructionEstimate(data, container) {
   return el;
 }
 
+/* ============================================================
+   Music (music_library · music_theory), Business (business_calc),
+   Networking (network_tool)
+   ============================================================ */
+
+const PLAY_ICON = '<path d="M7 4.5v15l12.5-7.5z"/>';
+const MUSIC_ICON = '<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>';
+const BIZ_ICON = '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>';
+const NET_ICON = '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>';
+
+const openMusic = (focus) => {
+  try { localStorage.setItem('toolbox.music.focus', JSON.stringify(focus)); } catch { /* storage blocked: the library still opens */ }
+  window.location.hash = '#music-theory-library';
+};
+const openTool = (id) => { window.location.hash = `#${id}`; };
+const sheet = (rows) => `<div class="astc-sheet"><section><dl>${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></section></div>`;
+
+export function renderMusicLibrary(data, container) {
+  const isInst = data.kind === 'instrument', isTerm = data.kind === 'term';
+  const el = card('music', {
+    icon: MUSIC_ICON,
+    title: isTerm ? data.term : data.title,
+    sub: esc(isTerm ? 'Glossary · Music Theory Library' : isInst ? `${data.family} · instrument guide` : `${data.section}${data.level ? ` · ${data.level}` : ''}`),
+    actions: btn('Open in library', I.external, 'data-act="open"'),
+  });
+  const chips = (list) => (list?.length ? `<div class="astc-ml-related"><span>Related</span>${list.map(r => `<button type="button" data-ml-go="${esc(r.id)}" data-ml-kind="${esc(r.kind)}">${esc(r.title)}</button>`).join('')}</div>` : '');
+  let body = '';
+  if (isTerm) body = `<p class="astc-ml-lead">${esc(data.def)}</p>`;
+  else if (isInst) {
+    body = `<p class="astc-ml-lead">${esc(data.summary)}</p>
+      ${sheet([['Tuning', data.tuning], ['Range', data.range]].filter(([, v]) => v))}
+      ${data.howToPlay?.length ? `<h5 class="astc-ml-h">How to play</h5><ol class="astc-ml-steps">${data.howToPlay.map(h => `<li><strong>${esc(h.h)}.</strong> ${esc(h.text)}</li>`).join('')}</ol>` : ''}
+      ${data.roadmap?.length ? `<h5 class="astc-ml-h">Roadmap</h5><ol class="astc-ml-road">${data.roadmap.map(r => `<li><span>${esc(r.stage)}</span>${esc(r.goals.join(' · '))}</li>`).join('')}</ol>` : ''}`;
+  } else {
+    body = `<p class="astc-ml-lead">${esc(data.summary)}</p>${data.simple ? `<p class="astc-ml-text">${esc(data.simple.length > 600 ? `${data.simple.slice(0, 600).replace(/\s+\S*$/, '')}…` : data.simple)}</p>` : ''}`;
+  }
+  el.querySelector('.astc-body').innerHTML = `${body}${data.terms?.length && !isTerm ? `<dl class="astc-ml-terms">${data.terms.map(t => `<div><dt>${esc(t.term)}</dt><dd>${esc(t.def)}</dd></div>`).join('')}</dl>` : ''}${chips(data.related)}`;
+  el.addEventListener('click', (e) => {
+    const go = e.target.closest('[data-ml-go]');
+    if (go) { openMusic(go.dataset.mlKind === 'instrument' ? { instrument: go.dataset.mlGo } : { topic: go.dataset.mlGo }); return; }
+    if (e.target.closest('[data-act="open"]')) openMusic(data.open || { query: data.title || data.term });
+  });
+  container.appendChild(el);
+  return el;
+}
+
+export function renderMusicTheory(data, container) {
+  const el = card('music', {
+    icon: MUSIC_ICON,
+    title: data.title,
+    sub: esc(data.formula ? `Formula ${data.formula}` : data.signature || data.intervalName || (data.mode === 'progression' ? 'Progression' : '')),
+    actions: `${btn('Play', PLAY_ICON, 'data-act="play"')}${btn('Open lab', I.external, 'data-act="open"')}`,
+  });
+  const body = el.querySelector('.astc-body');
+  body.innerHTML = '<p class="astc-muted">Drawing…</p>';
+  let W = null, A = null, T = null;
+  (async () => {
+    [W, A, T] = await Promise.all([import('../music/widgets.js'), import('../music/audio.js'), import('../music/theory.js')]);
+    const P = (s) => T.parseNote(s);
+    const piano = (names) => {
+      const ms = names.map(n => T.midi(P(n)));
+      const lo = Math.min(...ms), hi = Math.max(...ms);
+      const from = Math.floor(lo / 12) * 12, to = Math.max(from + 23, Math.ceil((hi + 1) / 12) * 12 - 1);
+      return W.pianoSvg({ from, to, marks: new Map(ms.map((m, i) => [m, { tone: i === 0 ? 'root' : 'on', label: T.noteName(P(names[i])) }])) });
+    };
+    if (data.mode === 'progression' || data.mode === 'key') {
+      const chords = data.chords || [];
+      body.innerHTML = `${data.mode === 'key' ? `<div class="astc-ml-scroll">${W.staffSvg(data.notes, { labels: data.names })}</div>${sheet([['Key signature', data.signature], ['Relative key', data.relative], ['Scale', (data.names || []).join(' ')]])}` : ''}
+        <div class="astc-ml-chords">${chords.map((c, i) => `<button type="button" data-chord="${i}"><b>${esc(c.numeral)}</b><span>${esc(c.symbol)}</span><small>${esc(c.names.join(' '))}</small></button>`).join('')}</div>
+        ${data.mode === 'progression' ? `<div class="astc-ml-scroll">${W.staffSvg(chords.map(c => c.notes))}</div>` : ''}`;
+    } else {
+      body.innerHTML = `<div class="astc-ml-scroll">${W.staffSvg(data.mode === 'chord' ? [data.notes] : data.notes, { labels: data.mode === 'chord' ? [] : data.names })}</div>
+        <div class="astc-ml-scroll">${piano(data.notes)}</div>
+        ${data.candidates?.length > 1 ? `<p class="astc-muted">Also: ${data.candidates.slice(1).map(c => esc(c.symbol)).join(', ')}</p>` : ''}`;
+    }
+  })().catch(() => { body.innerHTML = `<p>${esc((data.names || []).join(' '))}</p>`; });
+  const playChord = (c) => A.playChord(c.notes.map(n => T.midi(T.parseNote(n))));
+  el.addEventListener('click', (e) => {
+    if (e.target.closest('[data-act="open"]')) { openMusic(data.open || { query: data.title }); return; }
+    if (!A) return;
+    const ch = e.target.closest('[data-chord]');
+    if (ch) { playChord(data.chords[+ch.dataset.chord]); return; }
+    const key = e.target.closest('[data-midi]');
+    if (key) { A.playChord([+key.dataset.midi], { dur: 0.9 }); return; }
+    if (e.target.closest('[data-act="play"]')) {
+      A.stopAll();
+      if (data.chords?.length) A.playProgression(data.chords.map(c => c.notes.map(n => T.midi(T.parseNote(n)))), { tempo: 84, beatsEach: 2 });
+      else {
+        const ms = data.notes.map(n => T.midi(T.parseNote(n)));
+        if (data.mode === 'chord') A.playArpeggioChord(ms); else A.playSequence(ms);
+      }
+    }
+  });
+  container.appendChild(el);
+  return el;
+}
+
+export function renderBusinessCalc(data, container) {
+  const el = card('biz', { icon: BIZ_ICON, title: data.title, sub: 'Business &amp; Finance', actions: btn('Open tool', I.external, 'data-act="open"') });
+  el.querySelector('.astc-body').innerHTML = `${sheet(data.rows || [])}${data.note ? `<p class="astc-muted astc-biz-note">${esc(data.note)}</p>` : ''}`;
+  el.addEventListener('click', (e) => { if (e.target.closest('[data-act="open"]')) openTool(data.toolId); });
+  container.appendChild(el);
+  return el;
+}
+
+export function renderNetworkResult(data, container) {
+  const el = card('net', { icon: NET_ICON, title: data.title, sub: 'Networking', actions: btn('Open tool', I.external, 'data-act="open"') });
+  el.querySelector('.astc-body').innerHTML = `${data.rows?.length ? sheet(data.rows) : ''}${data.pre ? `<pre class="astc-net-pre">${esc(data.pre)}</pre>` : ''}`;
+  el.addEventListener('click', (e) => { if (e.target.closest('[data-act="open"]')) openTool(data.toolId); });
+  container.appendChild(el);
+  return el;
+}
+
+registerResultRenderer('music-library', renderMusicLibrary);
+registerResultRenderer('music-theory', renderMusicTheory);
+registerResultRenderer('business-calc', renderBusinessCalc);
+registerResultRenderer('network-result', renderNetworkResult);
+
 registerResultRenderer('task-plan', renderPlan);
 registerResultRenderer('chess-board', renderChess, { match: d => typeof d?.fen === 'string' && Array.isArray(d?.legalMoves) });
 registerResultRenderer('device-list', renderDeviceList);
@@ -714,6 +858,7 @@ registerResultRenderer('device-compare', renderDeviceCompare);
 registerResultRenderer('vehicle', renderVehicle);
 registerResultRenderer('vehicle-controls', renderVehicleControls);
 registerResultRenderer('vehicle-part', renderVehiclePart);
+registerResultRenderer('car-injury', renderCarInjury);
 registerResultRenderer('construction-estimate', renderConstructionEstimate);
 registerResultRenderer('svg-illustration', renderIllustration);
 registerResultRenderer('container-design', renderContainerDesign, { match: d => Boolean(d?.design?.modules && d?.design?.levels) });

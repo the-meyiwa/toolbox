@@ -28,9 +28,9 @@ export const TOOL_GROUPS = {
     match: /\b(calculat|compute|solve|equation|integral|integrate|derivative|differentiat|limit|matrix|eigen|determinant|factor|prime|probability|statistic|mean|median|variance|regression|convert|units?|km|miles|kg|pounds|celsius|fahrenheit|percent|%|sqrt|log|sin|cos|tan|theorem|proof|formula)\b|[\d)]\s*[-+*/^×÷]\s*[\d(]/i,
   },
   finance: {
-    label: 'Money: loans, interest, budgets, debts, bank statements, invoices and quotes',
-    tools: ['calculate_financial', 'analyze_budget_spending', 'manage_debts', 'import_bank_statement', 'generate_invoice', 'create_invoice', 'list_invoices'],
-    match: /\b(loan|mortgage|interest|amorti[sz]|npv|irr|roi|invest|budget|spend|expense|debt|bank statement|invoice|quotation|quote for|owes?|overdue|receivable|wht|withholding|bill|vat|tax|salary|payroll|profit|margin|revenue|cash ?flow|naira|₦|ngn|usd|\$|dollar|currency|exchange rate)\b/i,
+    label: 'Business & Finance: VAT, margin/markup, break-even, loans, compound interest, NPV/IRR, depreciation, cap tables, runway, unit economics, payroll cost, salary conversion, meeting cost, leave, subscriptions, budgets, debts, bank statements, invoices and quotes',
+    tools: ['business_calc', 'calculate_financial', 'analyze_budget_spending', 'manage_debts', 'import_bank_statement', 'generate_invoice', 'create_invoice', 'list_invoices'],
+    match: /\b(loan|mortgage|interest|amorti[sz]|npv|irr|roi|invest|budget|spend|expense|debt|bank statement|invoice|quotation|quote for|owes?|overdue|receivable|wht|withholding|bill|vat|tax|salary|payroll|profit|margin|markup|mark-up|break-?even|depreciat\w*|cap ?table|dilution|equity|valuation|pre-?money|runway|burn rate|churn|ltv|cac|unit economics|pto|annual leave|leave balance|meeting cost|subscription|revenue|cash ?flow|naira|₦|ngn|usd|\$|dollar|currency|exchange rate)\b/i,
   },
   science: {
     label: 'Science: drugs and compounds, elements, chemistry, anatomy, diseases',
@@ -82,6 +82,11 @@ export const TOOL_GROUPS = {
     tools: ['get_directions', 'search_places_nearby', 'find_place', 'render_map', 'get_current_location', 'weather_forecast'],
     match: /\b(maps?|near(est|by)?|where is|directions?|route|how (do|can|would) i (get|go)|get to|go to|drive to|walk to|commute|transport|bus|buses|brt|taxi|cab|keke|danfo|okada|tricycle|train|ferry|location|address|restaurant|hotel|pharmacy|hospital|bank|supermarket|station|gas station|fuel|petrol|atm|weather|rain|temperature|forecast|lagos|abuja|lekki|ikeja)\b/i,
   },
+  music: {
+    label: 'Music theory and instruments: the Music Theory Library (topics, instrument guides and roadmaps, glossary), exact scales, chords, chord naming, progressions, keys, intervals and transposition',
+    tools: ['music_library', 'music_theory'],
+    match: /\b(music theory|scales?|chords?|arpeggio|triad|seventh|progression|cadence|harmony|harmoni[sz]e|melody|counterpoint|voice leading|modes?|dorian|phrygian|lydian|mixolydian|aeolian|locrian|pentatonic|blues scale|key signature|circle of fifths|interval|transpos\w*|time signature|rhythm|syncopation|polyrhythm|clef|staff|sheet music|read music|solf[eè]ge|ear training|notation|how (do i|to) (play|learn) (the )?\w+|instrument|guitar|piano|violin|cello|viola|bass|ukulele|drums?|flute|clarinet|saxophone|trumpet|trombone|horn|tuba|oboe|recorder|harp|kora|harmonica|organ|synth\w*|singing|vocal|jazz|raga|maqam|gamelan|sonata|fugue|twelve-?tone|serial\w*|temperament|harmonic series)\b/i,
+  },
   media: {
     label: 'Audio: play songs and sounds, metronome, tuner',
     tools: ['play_sound', 'control_audio', 'start_metronome', 'tune_instrument'],
@@ -98,9 +103,9 @@ export const TOOL_GROUPS = {
     match: /\b(phone|iphone|samsung|galaxy|pixel|tecno|infinix|xiaomi|laptop|macbook|tablet|ipad|tv|television|monitor|oled|gpu|rtx|cpu|processor|snapdragon|chip|smartwatch|watch|earbuds|headphones|airpods|console|playstation|ps5|xbox|switch|specs?|versus|vs\.?)\b/i,
   },
   vehicles: {
-    label: 'Vehicles: fault diagnosis (symptoms to causes and fixes), VIN decoding, car specifications, what a button, switch, lever or warning light is for (shown on a drawing of that part of the car), and where a part is with its specs (shown in 3D)',
-    tools: ['diagnose_vehicle', 'vehicle_lookup', 'vehicle_controls', 'vehicle_part'],
-    match: /\b(cars?|vehicles?|vin|toyota|honda|lexus|mercedes|bmw|ford|kia|hyundai|nissan|engine|horsepower|torque|sedan|suv|truck|corolla|camry|mechanic\w*|wipers?|windscreen|windshield|brakes?|battery|alternator|starter|radiator|coolant|overheat\w*|gear ?box|transmission|clutch|tyres?|tires?|suspension|steering|exhaust|spark plugs?|fuel pump|check engine|obd|p0\d{3}|headlights?|indicators?|a\/c|aircon|won'?t start|dash(board)?|warning lights?|(engine|oil|battery|brake|tyre|tire) light|stalk|hazards?|fuel (door|cap|flap)|boot release|trunk release|hood release|bonnet|key ?fob|demister|defrost(er)?|cruise control|handbrake|parking brake|oil filter|air filter|drain plug|dipstick|sump|fan belt|serpentine|drive belt|timing chain|thermostat|water pump|catalytic|cv (joint|axle)|driveshaft|struts?|shocks?|control arm|tie rods?|wheel bearing|brake pads?|rotors?|calipers?|fuse ?box|relay|o2 sensor|oxygen sensor|throttle body|ignition coils?|coolant|bonnet|boot lid)\b/i,
+    label: 'Vehicles: fault diagnosis (symptoms to causes and fixes), VIN decoding, car specifications, what a button, switch, lever or warning light is for (shown on a drawing of that part of the car), where a part is with its specs (shown in 3D), and the injuries car parts and crashes cause, with first aid, treatment and prevention',
+    tools: ['diagnose_vehicle', 'vehicle_lookup', 'vehicle_controls', 'vehicle_part', 'car_injury'],
+    match: /\b(cars?|vehicles?|vin|toyota|honda|lexus|mercedes|bmw|ford|kia|hyundai|nissan|engine|horsepower|torque|sedan|suv|truck|corolla|camry|mechanic\w*|wipers?|windscreen|windshield|brakes?|battery|alternator|starter|radiator|coolant|overheat\w*|gear ?box|transmission|clutch|tyres?|tires?|suspension|steering|exhaust|spark plugs?|fuel pump|check engine|obd|p0\d{3}|headlights?|indicators?|a\/c|aircon|won'?t start|dash(board)?|warning lights?|(engine|oil|battery|brake|tyre|tire) light|stalk|hazards?|fuel (door|cap|flap)|boot release|trunk release|hood release|bonnet|key ?fob|demister|defrost(er)?|cruise control|handbrake|parking brake|oil filter|air filter|drain plug|dipstick|sump|fan belt|serpentine|drive belt|timing chain|thermostat|water pump|catalytic|cv (joint|axle)|driveshaft|struts?|shocks?|control arm|tie rods?|wheel bearing|brake pads?|rotors?|calipers?|fuse ?box|relay|o2 sensor|oxygen sensor|throttle body|ignition coils?|coolant|bonnet|boot lid|crash|collision|accident|whiplash|seat ?belt injur\w*|airbag injur\w*|dashboard knee|car (injur\w*|accident|crash))\b/i,
   },
   building: {
     label: 'Architecture and buildings: architecture advice (structure, climate, software/system design), container and portacabin design, quotes, floor plans, construction cost estimates',
@@ -113,9 +118,9 @@ export const TOOL_GROUPS = {
     match: /\b(bible|quran|qur'an|koran|verse|psalm|surah|sura|ayah|genesis|john \d|matthew|al-?fatiha|scripture|chapter \d)\b/i,
   },
   network: {
-    label: 'Network: speed test, DNS',
-    tools: ['run_speed_test', 'dns_lookup'],
-    match: /\b(speed test|internet speed|bandwidth|latency|ping|dns|domain|mx record|nameserver)\b/i,
+    label: 'Networking: subnet/CIDR calculator, URL parser, IP lookup, DNS and reverse DNS, WHOIS, domain availability, SSL certificates, robots.txt/sitemaps, MAC vendor, speed test',
+    tools: ['network_tool', 'run_speed_test', 'dns_lookup'],
+    match: /\b(speed test|internet speed|bandwidth|latency|ping|dns|reverse dns|ptr|domain|mx record|nameserver|subnet|cidr|netmask|subnet mask|ipv4|ipv6|ip address|my ip|whois|registrar|rdap|ssl|tls|certificate|https cert|robots\.txt|sitemap|mac address|oui|url|query string|network)\b|\b\d{1,3}(\.\d{1,3}){3}(\/\d{1,2})?\b/i,
   },
   social: {
     label: 'Toolbox messaging and spaces: conversations, messages, profiles',

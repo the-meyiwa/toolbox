@@ -50,7 +50,7 @@ export const CATEGORIES = /** @type {Category[]} */ ([
   { id: 'text',         label: 'Text',           order: 2, blurb: 'Clean, compare, count and reshape text.' },
   { id: 'developer',    label: 'Developer',      order: 3, blurb: 'Formatters, encoders, decoders and a code runner.' },
   { id: 'numbers',      label: 'Numbers & Calculators', order: 4, blurb: 'Everyday maths, units and dates.' },
-  { id: 'business',     label: 'Business & Finance',    order: 5, blurb: 'Pricing, payroll, projections, money receiving and paperwork.' },
+  { id: 'business',     label: 'Business & Finance',    order: 5, blurb: 'Pricing, payroll, projections and paperwork.' },
   { id: 'law',          label: 'Law & Legal Practice',  order: 6, blurb: 'Analyze judgments, compare precedents, digest case law, and structure legal research.' },
   { id: 'science',      label: 'Science & Chemistry',   order: 7, blurb: 'Explore the periodic table, balance chemical reactions, and compute stoichiometry.' },
   { id: 'design',       label: 'Design',         order: 8, blurb: 'Colour, ratios and codes.' },

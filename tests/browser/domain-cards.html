@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Music, business and network cards harness</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>body { padding: 16px; background: var(--bg); } .card { max-width: 720px; margin: 0 auto 28px; }</style>
+</head>
+<body>
+  <!--
+    Browser harness for the Assistant's music_library, music_theory, business_calc and network_tool cards.
+    Run the dev server (npm run dev) and open /tests/browser/domain-cards.html.
+  -->
+  <script type="module">
+    import { executeExtraTool } from '/js/lib/assistant/extra-tools.js';
+    import { renderMusicLibrary, renderMusicTheory, renderBusinessCalc, renderNetworkResult } from '/js/lib/assistant/renderers.js';
+    const R = { 'music-library': renderMusicLibrary, 'music-theory': renderMusicTheory, 'business-calc': renderBusinessCalc, 'network-result': renderNetworkResult };
+    const calls = [
+      ['music_library', { query: 'Dorian mode' }],
+      ['music_library', { query: 'how to play the kora' }],
+      ['music_theory', { action: 'scale', tonic: 'F#', scale: 'harmonic-minor' }],
+      ['music_theory', { action: 'chord', chord: 'Bbmaj7' }],
+      ['music_theory', { action: 'progression', tonic: 'Eb', numerals: 'ii V I', sevenths: true }],
+      ['music_theory', { action: 'key', tonic: 'D' }],
+      ['business_calc', { calculator: 'loan', inputs: { principal: 5000000, rate_pct: 24, years: 3, extra_monthly: 20000 } }],
+      ['network_tool', { action: 'subnet', target: '192.168.10.34/26' }],
+    ];
+    for (const [tool, args] of calls) {
+      const box = document.createElement('div');
+      box.className = 'card';
+      document.body.appendChild(box);
+      const result = await executeExtraTool(tool, args);
+      if (R[result.renderer]) R[result.renderer](result, box); else box.textContent = result.message;
+    }
+    document.body.dataset.ready = '1';
+  </script>
+</body>
+</html>

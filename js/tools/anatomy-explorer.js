@@ -235,6 +235,7 @@ export default {
             <div class="an-progress" id="an-progress" hidden><span id="an-progress-text"></span></div>
             <!-- In-viewport Clinical HUD Badge -->
             <div class="an-render-badge" id="an-render-badge" style="display:none;"></div>
+            <div class="an-focus" id="an-focus" hidden></div>
           </div>
 
           <div class="t3d-toolbar">
@@ -294,6 +295,11 @@ export default {
     let opacity = 1;
     let isolate = false;
     let selectedRegion = 'all';
+    // Focus mode (opened from a link elsewhere in Toolbox): only these structures,
+    // with a few neighbours drawn faint for orientation.
+    let focus = null;             // { ids:Set, context:Set, marker, label }
+    const contextMat = {};        // key → faint material for context structures
+    let markerObj = null;
     this._loaded = loaded;
 
     /* ── hover / selection highlight ─────────────────────────────── */
@@ -303,7 +309,8 @@ export default {
     viewer.setEmphasisHandler((obj, { hovered, selected }) => {
       const key = obj.userData.structure?.system;
       if (!systemMats[key]) return;
-      const mat = selected ? highlightMat[key] : hovered ? hoverMat[key] : systemMats[key];
+      const faint = focus?.context.has(obj.userData.structure?.id) && !selected && !hovered;
+      const mat = selected ? highlightMat[key] : hovered ? hoverMat[key] : faint ? contextMat[key] : systemMats[key];
       obj.traverse(n => { if (n.isMesh) n.material = mat; });
     });
 
@@ -331,6 +338,10 @@ export default {
         hoverMat[key].emissive = new THREE.Color(0x404040);
         highlightMat[key] = systemMats[key].clone();
         highlightMat[key].emissive = new THREE.Color(0x0ea5e9);
+        contextMat[key] = systemMats[key].clone();
+        contextMat[key].transparent = true;
+        contextMat[key].opacity = 0.16;
+        contextMat[key].depthWrite = false;
         for (const m of [systemMats[key], hoverMat[key], highlightMat[key]]) {
           m.clippingPlanes = viewer.clipPlanes?.length ? viewer.clipPlanes : null;
           setOpacity(m);
@@ -392,7 +403,17 @@ export default {
         if (!visible[key]) continue;
         for (const child of group.children) {
           const id = child.userData.structure?.id;
+          if (focus) {
+            const inFocus = focus.ids.has(id), inContext = focus.context.has(id);
+            child.visible = inFocus || inContext;
+            if (child.visible && child !== viewer.selected) {
+              const mat = inContext ? contextMat[key] : systemMats[key];
+              child.traverse(n => { if (n.isMesh) n.material = mat; });
+            }
+            continue;
+          }
           child.visible = !hidden.has(id) && (!isolate || !selId || id === selId);
+          if (child !== viewer.selected) child.traverse(n => { if (n.isMesh && n.material === contextMat[key]) n.material = systemMats[key]; });
         }
       }
     }
@@ -707,6 +728,7 @@ export default {
     container.querySelector('#an-spin').addEventListener('change', e => { viewer.controls.autoRotate = e.target.checked; });
 
     container.querySelector('#an-reset').addEventListener('click', () => {
+      exitFocus();
       hidden.clear();
       isolate = false;
       container.querySelector('#an-isolate').checked = false;
@@ -724,13 +746,136 @@ export default {
 
     /* ── start ───────────────────────────────────────────────────── */
 
+    /* ── focus mode (links from the Automobile Guide, the Assistant…) ── */
+
+    const focusEl = container.querySelector('#an-focus');
+    const byName = new Map(index.structures.map(s => [s.name.toLowerCase(), s]));
+    const objectFor = id => { for (const g of loaded.values()) { const o = g.children.find(c => c.userData.structure?.id === id); if (o) return o; } return null; };
+
+    /** A red band around part of a bone: from/to are fractions along its long axis. */
+    function buildMarker(obj, from, to) {
+      obj.updateWorldMatrix(true, true);
+      const pts = [];
+      const v = new THREE.Vector3();
+      obj.traverse(n => {
+        if (!n.isMesh) return;
+        const pos = n.geometry.attributes.position;
+        const step = Math.max(1, Math.floor(pos.count / 6000));
+        for (let i = 0; i < pos.count; i += step) pts.push(v.fromBufferAttribute(pos, i).applyMatrix4(n.matrixWorld).clone());
+      });
+      if (!pts.length) return null;
+      const box = new THREE.Box3().setFromPoints(pts);
+      const size = box.getSize(new THREE.Vector3());
+      const axis = size.y >= size.x && size.y >= size.z ? 'y' : size.x >= size.z ? 'x' : 'z';
+      const others = ['x', 'y', 'z'].filter(a => a !== axis);
+      // Measure from the upper end (y), or from the body's midline (x) for the clavicle.
+      const lo = box.min[axis], hi = box.max[axis], len = hi - lo;
+      const fromMidline = axis === 'x' && Math.abs(hi) > Math.abs(lo);
+      const at = f => (axis === 'y' ? hi - f * len : fromMidline ? lo + f * len : hi - f * len);
+      const a = Math.min(at(from), at(to)), b = Math.max(at(from), at(to));
+      const slice = pts.filter(p => p[axis] >= a && p[axis] <= b);
+      if (!slice.length) return null;
+      const c = { [others[0]]: 0, [others[1]]: 0 };
+      for (const p of slice) { c[others[0]] += p[others[0]]; c[others[1]] += p[others[1]]; }
+      c[others[0]] /= slice.length; c[others[1]] /= slice.length;
+      let r = 0;
+      for (const p of slice) r = Math.max(r, Math.hypot(p[others[0]] - c[others[0]], p[others[1]] - c[others[1]]));
+      const group = new THREE.Group();
+      const mat = new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false });
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.25, r * 1.25, b - a, 40, 1, true), mat);
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+      const ring = (y) => { const m = new THREE.Mesh(new THREE.TorusGeometry(r * 1.25, Math.max(r * 0.05, 0.0012), 8, 48), ringMat); m.rotation.x = Math.PI / 2; m.position.y = y; return m; };
+      band.add(ring((b - a) / 2), ring(-(b - a) / 2));
+      group.add(band);
+      const mid = (a + b) / 2;
+      group.position.set(axis === 'x' ? mid : c.x ?? 0, axis === 'y' ? mid : c.y ?? 0, axis === 'z' ? mid : c.z ?? 0);
+      if (axis === 'x') group.rotation.z = Math.PI / 2;
+      if (axis === 'z') group.rotation.x = Math.PI / 2;
+      group.renderOrder = 10;
+      return group;
+    }
+
+    function exitFocus() {
+      if (!focus) return;
+      focus = null;
+      if (markerObj) { root.remove(markerObj); markerObj.traverse(n => { n.geometry?.dispose(); n.material?.dispose?.(); }); markerObj = null; }
+      focusEl.hidden = true;
+      applyAppearance();
+      renderList();
+    }
+
+    const enterFocus = async (req) => {
+      const want = (req.structures || []).map(n => byName.get(String(n).toLowerCase())).filter(Boolean);
+      const ctx = (req.context || []).map(n => byName.get(String(n).toLowerCase())).filter(Boolean);
+      if (!want.length) return false;
+      const systems = [...new Set([...want, ...ctx].map(s => s.system))];
+      for (const key of systems) {
+        const cb = systemsEl.querySelector(`[data-system="${key}"]`);
+        if (!cb) continue;
+        await loadSystem(key);
+        if (!this._alive) return false;
+        visible[key] = true; cb.checked = true;
+      }
+      focus = { ids: new Set(want.map(s => s.id)), context: new Set(ctx.map(s => s.id)), label: req.label || want[0].name };
+      applyAppearance();
+      renderList();
+      const box = new THREE.Box3();
+      for (const s of want) { const o = objectFor(s.id); if (o) box.expandByObject(o); }
+      if (req.marker) {
+        const target = objectFor(byName.get(req.marker.structure.toLowerCase())?.id);
+        if (target) { markerObj = buildMarker(target, req.marker.from, req.marker.to); if (markerObj) root.add(markerObj); }
+      }
+      if (!box.isEmpty()) {
+        // Look from the front, slightly to the side, then fit the focused structures to the canvas.
+        const centre = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3()).length();
+        viewer.controls.target.copy(centre);
+        viewer.camera.position.copy(centre).add(new THREE.Vector3(0.35, 0.18, 1).normalize().multiplyScalar(Math.max(size * 1.7, 0.18)));
+        viewer.controls.update();
+        const marked = req.marker && objectFor(byName.get(req.marker.structure.toLowerCase())?.id);
+        viewer.frame(marked || root, marked ? 1.15 : 1.1);
+      }
+      const first = objectFor((req.marker && byName.get(req.marker.structure.toLowerCase())?.id) || want[0].id);
+      if (first) viewer.select(first);
+      // On phones the floating badge would cover the part; its details are just below the viewer.
+      if (matchMedia('(max-width: 640px)').matches) container.querySelector('#an-render-badge').style.display = 'none';
+      focusEl.hidden = false;
+      focusEl.innerHTML = `
+        <div class="an-focus-text">
+          <span class="an-focus-kicker">${req.from ? `From ${escapeText(req.from)}` : 'Focused view'}</span>
+          <strong>${escapeText(req.title || focus.label)}</strong>
+          ${req.marker ? '<span class="an-focus-note"><i></i> Red band: the region involved</span>' : ''}
+        </div>
+        <div class="an-focus-actions">
+          <button type="button" class="btn btn-sm" data-focus="context">Surrounding anatomy</button>
+          <button type="button" class="btn btn-sm" data-focus="exit">Whole body</button>
+        </div>`;
+      return true;
+    };
+    const escapeText = t => String(t ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+
+    focusEl.addEventListener('click', async e => {
+      const act = e.target.closest('[data-focus]')?.dataset.focus;
+      if (act === 'exit') { exitFocus(); viewer.frame(root, 1.15); }
+      if (act === 'context' && focus) {
+        // Everything in the regions of the focused structures, still faint around the focus.
+        const regions = new Set([...focus.ids].map(id => byId.get(id)?.region).filter(Boolean));
+        for (const s of index.structures) if (regions.has(s.region) && visible[s.system] && !focus.ids.has(s.id)) focus.context.add(s.id);
+        applyAppearance();
+        e.target.closest('[data-focus]').disabled = true;
+      }
+    });
+
     renderList();
-    // Don't auto-load all systems — let the user select.
-    // Auto-load skeletal only as the default starting point.
-    const skeletalCb = systemsEl.querySelector('[data-system="skeletal"]');
-    if (skeletalCb) {
-      skeletalCb.checked = true;
-      skeletalCb.dispatchEvent(new Event('change', { bubbles: true }));
+    let focusRequest = null;
+    try { focusRequest = JSON.parse(localStorage.getItem('toolbox.anatomy.focus') || 'null'); localStorage.removeItem('toolbox.anatomy.focus'); } catch { /* storage unavailable */ }
+    if (!(focusRequest && await enterFocus(focusRequest))) {
+      // Don't auto-load all systems — let the user select.
+      // Auto-load skeletal only as the default starting point.
+      const skeletalCb = systemsEl.querySelector('[data-system="skeletal"]');
+      if (skeletalCb) {
+        skeletalCb.checked = true;
+        skeletalCb.dispatchEvent(new Event('change', { bubbles: true }));
+      }
     }
   },
 

@@ -393,6 +393,17 @@ export default {
     });
 
     renderCompounds(true);
+
+    // Opened from a link elsewhere in Toolbox (a drug in the Automobile Guide or the Assistant).
+    let focus = null;
+    try { focus = JSON.parse(localStorage.getItem('toolbox.compounds.focus') || 'null'); localStorage.removeItem('toolbox.compounds.focus'); } catch { /* storage unavailable */ }
+    if (focus?.name) {
+      searchIn.value = focus.name;
+      renderCompounds(true);
+      const want = String(focus.name).toLowerCase();
+      const record = COMPOUNDS_DATA.find(c => c.name.toLowerCase() === want);
+      if (record) openDetails.call(this, record);
+    }
   },
 
   destroy() {

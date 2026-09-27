@@ -15,6 +15,7 @@
 import { GENERATORS as STRUCTURE_GENERATORS } from '../structure-model.js';
 import { TOOLS } from '../../registry/index.js';
 import * as CE from '../construction/estimate.js';
+import { DOMAIN_TOOL_DECLARATIONS, executeDomainTool } from './domain-tools.js';
 
 const lower = (v) => String(v ?? '').toLowerCase().trim();
 
@@ -108,6 +109,17 @@ export const EXTRA_TOOL_DECLARATIONS = [
         category: { type: 'string', description: 'Optional category if ambiguous.' },
       },
       required: ['a', 'b'],
+    },
+  },
+  {
+    name: 'car_injury',
+    description: `Car-related injuries: what a part or a crash can do to the body, the signs, first aid, likely hospital treatment and how to prevent it. Covers whiplash, head and neck injuries, airbag and seat-belt injuries, fractures (skull, face, collarbone, ribs, spine, pelvis, femur, knee, shin, ankle, wrist) with their fracture types, organ injuries, burns and scalds, battery acid, coolant and carbon monoxide poisoning, crush and finger injuries. The card links each drug to the Compound Database and each injury site to the Anatomy Explorer, showing only that part of the body. Use it for "what injuries can seat belts cause", "how is a broken femur from a crash treated", "dashboard knee injury", "is antifreeze poisonous". For a specific car part, vehicle_part also includes its safety section.`,
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'The injury, body part, crash type or car part, in the person’s words.' },
+      },
+      required: ['query'],
     },
   },
   {
@@ -690,12 +702,15 @@ async function loadCorollaPackage() {
 
 async function vehiclePartTool({ query = '', vehicle = '' } = {}) {
   const { findPart, specRowsFor } = await import('../automobile/part-search.js');
+  const { safetyFor } = await import('../automobile/injury-data.js');
+  const { plainText } = await import('../automobile/injury-render.js');
   let pkg;
   try { pkg = await loadCorollaPackage(); } catch { return { status: 'error', message: 'The Automobile Guide data could not be loaded.' }; }
   const hit = findPart(pkg.manifest.components || [], query);
   if (!hit) return { status: 'error', message: `No part in the 2014–2016 Corolla package matches "${query}". It has 224 components (engine, cooling, fuel, brakes, suspension, steering, electrical, SRS, body, interior); ask what it is called or what it does.` };
   const c = hit.component;
   const specRows = specRowsFor(pkg.specs, c);
+  const safety = safetyFor(c.id);
   const other = vehicle && !/corolla/i.test(vehicle);
   const lines = [
     `${c.label} (${c.category}). Where: ${c.location || 'not recorded'}.`,
@@ -703,6 +718,7 @@ async function vehiclePartTool({ query = '', vehicle = '' } = {}) {
     c.maintenance ? `Maintenance: ${c.maintenance}` : '', c.failures ? `Common failures: ${c.failures}` : '',
     specRows.length ? `Spec sheet: ${specRows.map(([, k, v]) => `${k}: ${v}`).join('; ')}.` : '',
     c.accuracyNote ? `Accuracy: ${c.accuracyNote}` : '',
+    safety ? `Safety: ${plainText(safety.hazard)} Common injuries: ${safety.injuries.map(i => i.name).join('; ')}. Prevention: ${safety.prevention.map(plainText).join(' ')}` : '',
     other ? `This is the 2014–2016 Corolla; ${vehicle} may differ.` : '',
     'Shown to the user as a card with a "Show in 3D" button.',
   ];
@@ -712,7 +728,38 @@ async function vehiclePartTool({ query = '', vehicle = '' } = {}) {
     component: { id: c.id, label: c.label, category: c.category, layer: c.layer, location: c.location || '', description: c.description || '', specs: c.specs || null, maintenance: c.maintenance || '', failures: c.failures || '', accuracyNote: c.accuracyNote || '', sources: (c.sources || []).slice(0, 4) },
     specRows,
     alternatives: hit.alternatives.map(a => ({ id: a.id, label: a.label })),
+    hasSafety: Boolean(safety),
     message: lines.filter(Boolean).join('\n'),
+  };
+}
+
+/* Car injuries: the injury reference behind the Automobile Guide's safety sections. */
+async function carInjuryTool({ query = '' } = {}) {
+  const { findInjuries, safetyFor, DISCLAIMER } = await import('../automobile/injury-data.js');
+  const { plainText } = await import('../automobile/injury-render.js');
+  let injuries = findInjuries(query);
+  let part = null;
+  if (!injuries.length || /\b(belt|airbag|seat|tyre|tire|brake|battery|radiator|coolant|exhaust|door|window|jack|fan|dashboard|steering|head ?rest|bonnet|hood|boot|trunk)\b/i.test(query)) {
+    const { findPart } = await import('../automobile/part-search.js');
+    try {
+      const pkg = await loadCorollaPackage();
+      const hit = findPart(pkg.manifest.components || [], query);
+      const safety = hit && safetyFor(hit.component.id);
+      if (safety) { part = { id: hit.component.id, label: hit.component.label, hazard: safety.hazard, prevention: safety.prevention }; injuries = safety.injuries; }
+    } catch { /* the injury list alone still answers */ }
+  }
+  if (!injuries.length) return { status: 'error', message: `No car-related injury matches "${query}". Try an injury (whiplash, femur fracture, burns), a body part, or a car part (seat belt, airbag, battery).` };
+  injuries = injuries.slice(0, 6);
+  return {
+    status: 'success', renderer: 'car-injury', type: 'car-injury',
+    query, part, injuries: injuries.map(i => i.id),
+    message: [
+      part ? `${part.label}: ${plainText(part.hazard)}` : '',
+      ...injuries.map(i => `${i.name} (${i.severity}): ${plainText(i.what)} First aid: ${plainText(i.firstAid)} Likely treatment: ${(i.treatment || []).map(plainText).join(' ')}`),
+      part ? `Prevention: ${part.prevention.map(plainText).join(' ')}` : '',
+      'Shown as a card; drugs link to the Compound Database and injury sites open in the Anatomy Explorer.',
+      DISCLAIMER,
+    ].filter(Boolean).join('\n'),
   };
 }
 
@@ -1087,6 +1134,7 @@ async function caseDigestTool(args) {
   };
 }
 
+EXTRA_TOOL_DECLARATIONS.push(...DOMAIN_TOOL_DECLARATIONS);
 export const EXTRA_TOOL_NAMES = new Set(EXTRA_TOOL_DECLARATIONS.map(d => d.name));
 
 export async function executeExtraTool(name, args = {}) {
@@ -1107,6 +1155,7 @@ export async function executeExtraTool(name, args = {}) {
     case 'vehicle_lookup': return vehicleLookup(args);
     case 'vehicle_controls': return vehicleControlsTool(args);
     case 'vehicle_part': return vehiclePartTool(args);
+    case 'car_injury': return carInjuryTool(args);
     case 'update_note': return updateNote(args);
     case 'draw_illustration': {
       const svg = sanitizeSvg(args.svg);
@@ -1125,6 +1174,6 @@ export async function executeExtraTool(name, args = {}) {
       window.location.hash = `#${tool.id}`;
       return { status: 'success', openedToolId: tool.id, message: `Opened ${tool.name}.` };
     }
-    default: return undefined;
+    default: return executeDomainTool(name, args);
   }
 }

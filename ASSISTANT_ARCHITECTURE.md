@@ -42,19 +42,19 @@ periodic-table, file-compressor, file-decompressor, video-player, data-bot,
 speaker-cleaner, sound-effects, anatomy-explorer (embedded 3D), container-planner (preview)
 ```
 
-#### CATEGORY C — WORKSPACE-BACKED (15 tools)
+#### CATEGORY C — WORKSPACE-BACKED (14 tools)
 Assistant operates these but does NOT embed entire workspace. Return useful output + "Open in Toolbox".
 
 ```
 code-playground, pdf-editor, invoice-generator, financial-analyzer, flowchart,
-architecture-editor, notes, file-drop, assistant, payment-hub
+architecture-editor, notes, file-drop, assistant
 ```
 
-#### CATEGORY D — FULL-WORKSPACE/PREVIEW (4 tools)
+#### CATEGORY D — FULL-WORKSPACE/PREVIEW (3 tools)
 Too complex to reproduce in chat. Return compact preview + "Open in Toolbox".
 
 ```
-container-planner, architecture-editor, anatomy-explorer, payment-hub
+container-planner, architecture-editor, anatomy-explorer
 ```
 
 ### Development Status

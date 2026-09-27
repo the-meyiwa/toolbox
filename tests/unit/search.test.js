@@ -39,9 +39,6 @@ test('Search: intent search correctly matches tools', () => {
   const r2 = search('balance chemical equation', TOOLS, { labels: CATEGORY_LABELS });
   assert.equal(r2.results[0].tool.id, 'chemical-equation-balancer');
 
-  // "receive money" -> payment-hub
-  const r3 = search('receive money', TOOLS, { labels: CATEGORY_LABELS });
-  assert.equal(r3.results[0].tool.id, 'payment-hub');
 });
 
 test('Search: format conversion query lands on relevant converter', () => {

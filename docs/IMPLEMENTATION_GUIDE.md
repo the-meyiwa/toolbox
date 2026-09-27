@@ -105,6 +105,8 @@ export default {
 40. **`resistor-code`**: Decodes 4, 5, and 6-band color resistor values and tolerances.
 
 ### E. Business & Finance (`category: 'business'`)
+The Assistant runs every calculator here through `business_calc` (`js/lib/business-calc.js`, same formulas as the tools), creates invoices with `create_invoice`, and opens the rest with `open_toolbox_tool`. Every Networking tool is reachable through `network_tool` (`js/lib/network-calc.js`).
+
 41. **`invoice-generator`**: Generates and downloads printable client invoices with itemized totals and tax calculations.
 42. **`margin-markup`**: Calculates cost, selling price, gross margin, markup percentage, and profit.
 43. **`compound-interest`**: Computes investment growth, interest compounding, and periodic contribution projections.
@@ -136,8 +138,8 @@ export default {
 65. **`stoichiometry-calculator`**: Calculates theoretical reaction yields, identifies limiting reagents, analyzes excess reactants, and handles mole/mass/STP volume conversions.
 66. **`compound-database`**: Searchable chemical compound reference with IUPAC nomenclature, formula weights, CAS numbers, physical constants, and GHS safety data.
 
-### H. Business & Payment Hub (`category: 'business'`)
-67. **`payment-hub`**: Multi-rail money-receiving hub supporting Dedicated Virtual Bank Accounts, Cards, and Crypto/Lightning settlements with server-side HMAC verification.
+### H. Business (`category: 'business'`)
+The Payment Hub was removed: receiving money needs a verified merchant integration, and Toolbox does not offer one.
 
 ### I. Design & Modeling (`category: 'design'`, `'modeling'`)
 68. **`color-converter`**: Live HEX, RGB, HSL, HSV, and CMYK color space converter.
@@ -164,6 +166,7 @@ export default {
 82. **`metronome`**: Precise Web Audio metronome with BPM tempo presets and tap tempo.
 83. **`chord-finder`**: Musical chord dictionary with guitar and piano voicing diagrams.
 84. **`tempo-delay`**: Audio delay time and reverb pre-delay calculator synchronized to BPM.
+- **`music-theory-library`**: Music theory from first notes to expert analysis, 25 instrument guides with roadmaps, 15 playable labs and a glossary ([guide](music-theory-library.md)).
 85. **`timer`**: Stopwatch and countdown timer with laps and audio chime.
 86. **`dictionary`**: Word definition, etymology, and synonym lookup.
 87. **`wiki`**: Fast distraction-free encyclopedia search and article viewer.

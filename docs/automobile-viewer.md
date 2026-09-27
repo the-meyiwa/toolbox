@@ -146,6 +146,21 @@ Harnesses (with `npm run dev`):
 
 Tests are in `tests/unit/vehicle-controls.test.js`.
 
+## Injuries, treatment and prevention
+
+Parts that can hurt someone carry a safety section: the hazard, the common injuries, and how to prevent them. This covers the seat belts, airbags, steering wheel, dashboard and knee bolster, glass, doors, battery, cooling system, exhaust, fans and belts, jack, tyres and wheels. The data lives in `js/lib/automobile/injury-data.js` and the rendering in `js/lib/automobile/injury-render.js`.
+
+- Each injury gives what it is, the signs, first aid and likely hospital treatment. It is graded minor, serious or critical.
+- Where the injury can break bones, its fracture types are listed, each with a small diagram (transverse, oblique, spiral, comminuted, open and others).
+- **Drugs** are green links. Each opens that compound in the Compound Database through `localStorage['toolbox.compounds.focus']`. Every drug named is in the curated compound set.
+- **Injury sites** are links, for example "fracture of the mid-shaft of the femur". Each opens the Anatomy Explorer in focus mode through `localStorage['toolbox.anatomy.focus']`, which shows only that structure and its surroundings, faded. Where a site has a marker, a red band shows the exact segment. **Surrounding anatomy** and **Whole body** widen the view.
+- In the Guide, open the Inspector on a part to see its safety section. Part cards show a "Safety" chip.
+- The Assistant's `car_injury` tool answers injury questions, such as "what injuries can seat belts cause". Its card carries the same links. `vehicle_part` appends the safety section to a part card.
+
+Nothing here is a substitute for emergency care. The card says so, and doses are never given.
+
+Tests: `tests/unit/vehicle-injuries.test.js` checks that every drug exists, every site resolves to atlas structures, and every hazardous part has a rule.
+
 ## Verification
 
 Run `npm test`, `npm run build`, `node scripts/build-procedural-vehicle.mjs --check`, and validate all package directories with the command above. The interactive harness at `/tests/browser/automobile-viewer.html` renders the real Guide component; `tests/browser/automobile-viewer.mjs` drives desktop right-click and mobile Toggle flows against it.

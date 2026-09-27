@@ -4,6 +4,8 @@ import { autoClient } from '../lib/automotive-data.js';
 import { CLUSTERS as COROLLA_CONTROLS, CLUSTER as COROLLA_CLUSTER, VEHICLE_ID as COROLLA_ID } from '../lib/automobile/corolla-controls.js';
 import { mountControlPanel } from '../lib/automobile/control-panel.js';
 import { symbolSvg } from '../lib/automobile/vehicle-symbols.js';
+import { safetyFor } from '../lib/automobile/injury-data.js';
+import { safetyHtml, installInjuryLinks } from '../lib/automobile/injury-render.js';
 import { AutomobileViewer } from '../lib/automobile/automobile-viewer.js';
 import { openContextMenu, closeContextMenu } from '../lib/context-menu.js';
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -11,6 +13,7 @@ const COMPACT_QUERY = '(max-width: 900px), (pointer: coarse)';
 
 export default {
   render(container) {
+    installInjuryLinks();
     this.destroy();
     this.container = container;
     this.state = {
@@ -1093,7 +1096,8 @@ export default {
           <button type="button" class="ag-part-card-close" data-clear-selection aria-label="Close">×</button>
         </div>
       </header>
-      ${rows?`<div class="ag-part-card-toggles" role="group" aria-label="Toggles">${rows}</div>`:`<p class="ag-part-card-text">${escape(comp.location||'')} No moving or removable parts here.</p>`}`;
+      ${rows?`<div class="ag-part-card-toggles" role="group" aria-label="Toggles">${rows}</div>`:`<p class="ag-part-card-text">${escape(comp.location||'')} No moving or removable parts here.</p>`}
+      ${(()=>{ const safety=safetyFor(comp.id); return safety?`<button type="button" class="ag-safety-chip" data-open-inspector><span aria-hidden="true">⚠</span> Safety · ${safety.injuries.length} injur${safety.injuries.length===1?'y':'ies'} and how to prevent them</button>`:''; })()}`;
     // Lift the vehicle into the space above the panel.
     const host=this.container.querySelector('#ag-viewer-host');
     this.viewer?.setBottomInset(host ? Math.max(0, host.getBoundingClientRect().bottom - card.getBoundingClientRect().top) : 0);
@@ -1158,6 +1162,7 @@ export default {
       specs+
       block('Maintenance',comp.maintenance)+
       block('Common failure modes',comp.failures,'ag-failure-box')+
+      safetyHtml(safetyFor(comp.id))+
       (comp.accuracyNote?`<p class="ag-asset-note ag-accuracy-note">${escape(comp.accuracyNote)}</p>`:'')+
       sources+
       (!comp.description&&!comp.purpose?'<p class="ag-asset-note">No component description was supplied with this asset.</p>':'')+
