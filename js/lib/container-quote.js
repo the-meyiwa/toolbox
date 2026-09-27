@@ -16,6 +16,7 @@ import {
   defaultRateBook,
   elementsWith,
 } from './container-catalog.js';
+import { PART, UNIT_TYPE, extOf, layoutUnits, adjoiningPairs } from './container-library.js';
 
 const STUD_CENTRES = 0.6;   // metres
 
@@ -23,25 +24,26 @@ const STUD_CENTRES = 0.6;   // metres
    Quantities derived from the modelled unit.
    ------------------------------------------------------------ */
 
-export function deriveQuantities(state) {
+function unitQuantities(state) {
   const { len, wid, hgt } = state;
+  const items = state.items || [];
 
   const floorArea     = len * wid;
   const perimeter     = 2 * (len + wid);
   const grossWallArea = perimeter * hgt;
 
-  const openings    = state.items.filter(i => i.kind === 'opening');
+  const openings    = items.filter(i => i.kind === 'opening');
   const openingArea = openings.reduce((s, o) => s + o.w * o.h, 0);
+  const glazingArea = openings.filter(o => PART[o.type]?.glazed).reduce((s, o) => s + o.w * o.h, 0);
 
   const netWallArea = Math.max(grossWallArea - openingArea, 0);
 
-  // Partitions are lined on both faces.
-  const partitionArea = state.items
+  const partitionArea = items
     .filter(i => i.kind === 'fitting' && i.type === 'partition')
-    .reduce((s, p) => s + 2.35 * Math.min(2.30, hgt) * 2, 0);
+    .reduce((s, p) => s + Math.min(p.d ?? 2.35, wid) * Math.min(2.30, hgt) * 2, 0);
 
-  // Studs at 600 centres around the perimeter, plus head and sole plates.
   const studLength = (perimeter / STUD_CENTRES + 4) * hgt + perimeter * 2;
+  const ext = state.preset ? extOf(state) : { len: len + 0.16, wid: wid + 0.086 };
 
   return {
     floorArea,
@@ -49,6 +51,7 @@ export function deriveQuantities(state) {
     grossWallArea,
     openingArea,
     openingCount: openings.length,
+    glazingArea,
 
     interiorArea: netWallArea + partitionArea,
     exteriorArea: netWallArea,
@@ -59,7 +62,36 @@ export function deriveQuantities(state) {
     studLength,
     partitionArea,
     volume: floorArea * hgt,
+    supports: len > 7 ? 6 : 4,
+    footprintArea: ext.len * ext.wid,
   };
+}
+
+/**
+ * Quantities for the build. A single unit ({len, wid, hgt, items}) or a
+ * Builder layout ({units: [...], site: [...]}), where each unit carries
+ * its own size and items and the totals are summed.
+ */
+export function deriveQuantities(state) {
+  if (!Array.isArray(state.units)) return unitQuantities(state);
+  const units = state.units;
+  const layout = layoutUnits(units);
+  const sum = {};
+  for (const u of units) {
+    const q = unitQuantities(u);
+    for (const [k, v] of Object.entries(q)) sum[k] = (sum[k] || 0) + v;
+    const lv = u.level || 0;
+    if (lv > 0) { sum.supports -= q.supports; sum.footprintArea -= q.footprintArea; }
+    // A roof under another unit needs no waterproofing.
+    sum.roofArea -= Math.min(q.roofArea, layout.get(u.id)?.covered || 0);
+  }
+  sum.units = units.length;
+  sum.stacked = units.filter(u => (u.level || 0) > 0).length;
+  sum.joins = adjoiningPairs(units).length;
+  sum.transfers = units.filter(u => (u.level || 0) > 0 && !layout.get(u.id).aligned).length;
+  sum.overhang = units.reduce((s, u) => s + (layout.get(u.id).overhang >= 0.3 ? layout.get(u.id).overhang : 0), 0);
+  sum.fortyEquivalents = units.reduce((s, u) => s + (extOf(u).len > 7 ? 1 : 0.5), 0);
+  return sum;
 }
 
 /* ------------------------------------------------------------
@@ -137,9 +169,25 @@ export function buildQuote(state, rateBook, opts = {}) {
   };
 
   /* --- specified elements --- */
+  const multi = Array.isArray(state.units);
+  const units = multi ? state.units : [state];
+  const allItems = units.flatMap(u => u.items || []);
+
   for (const el of elements) {
     const chosen = spec[el.id];
     if (!chosen || chosen === 'none') continue;
+    if (multi && el.id === 'shell') {
+      // One shell per unit, of that unit's size; the spec sets used, one-trip or client-supplied.
+      const counts = new Map();
+      for (const u of units) {
+        const base = UNIT_TYPE[u.preset]?.shell || 'fabricate';
+        const opt = chosen === 'client' ? 'client' : base === 'fabricate' ? 'fabricate' : chosen.startsWith('new-') ? base.replace('buy-', 'new-') : base;
+        const qty = opt === 'fabricate' ? u.len * u.wid : 1;
+        counts.set(opt, (counts.get(opt) || 0) + qty);
+      }
+      for (const [opt, qty] of counts) { const key = `shell:${opt}`; push(key, book[key], qty, { group: el.name }); }
+      continue;
+    }
     const key = `${el.id}:${chosen}`;
     const entry = book[key];
     if (!entry) continue;
@@ -154,32 +202,36 @@ export function buildQuote(state, rateBook, opts = {}) {
     push(key, entry, baseQty, { group: el.name });
   }
 
-  /* --- openings, counted from the model --- */
-  const byType = new Map();
-  for (const o of state.items.filter(i => i.kind === 'opening')) {
-    byType.set(o.type, (byType.get(o.type) || 0) + 1);
+  /* --- parts placed in the model: openings, fittings, facade, roof, site --- */
+  const placed = [...allItems, ...(state.site || []).map(i => ({ ...i, kind: 'site' }))];
+  const tally = new Map();
+  const add = (key, qty) => tally.set(key, (tally.get(key) || 0) + qty);
+  let railing = 0;
+  for (const it of placed) {
+    const p = PART[it.type];
+    const key = `${it.kind}:${it.type}`;
+    if (!p || !book[key]) continue;
+    const w = it.w ?? p.w, d = it.d ?? p.d, h = it.h ?? p.h;
+    let qty = 1;
+    if (it.type === 'partition') qty = Math.min(it.d ?? 2.35, 2.35) * Math.min(2.30, h ?? 2.3) * 2;
+    else if (p.unit === 'area') qty = p.isWall ? d * h : (it.kind === 'opening' || it.kind === 'facade') ? w * h : w * d;
+    else if (p.unit === 'length') qty = p.lengthOf === 'd' ? d : w;
+    else if (p.unit === 'panel') qty = Math.max(1, Math.floor(w / p.panel.w)) * Math.max(1, Math.floor(d / p.panel.d));
+    add(key, qty);
+    if (p.railing) railing += Math.max(0, 2 * (w + d) - 1.0);
   }
-  for (const [type, count] of byType) {
-    const key = `opening:${type}`;
-    push(key, book[key], count, { group: 'Doors & windows' });
-  }
-  if (q.openingCount > 0) {
-    push('opening:reinforce', book['opening:reinforce'], q.openingCount, { group: 'Doors & windows' });
-  }
+  for (const [key, qty] of tally) push(key, book[key], qty, { group: book[key].group });
+  const reinforced = allItems.filter(i => i.kind === 'opening' && !PART[i.type]?.open).length;
+  if (reinforced > 0) push('opening:reinforce', book['opening:reinforce'], reinforced, { group: 'Doors & windows' });
 
-  /* --- fittings placed in the model --- */
-  const fittingCounts = new Map();
-  for (const f of state.items.filter(i => i.kind === 'fitting')) {
-    fittingCounts.set(f.type, (fittingCounts.get(f.type) || 0) + 1);
+  /* --- how the units go together --- */
+  if (multi) {
+    push('works:stack', book['works:stack'], q.stacked);
+    push('works:join', book['works:join'], q.joins);
+    push('works:transfer', book['works:transfer'], q.transfers);
+    push('works:cantilever', book['works:cantilever'], q.overhang * 2);
   }
-  for (const [type, count] of fittingCounts) {
-    const key = `fitting:${type}`;
-    const entry = book[key];
-    if (!entry) continue;
-    // Partitions are priced by area, everything else by the item.
-    const qty = type === 'partition' ? q.partitionArea : count;
-    push(key, entry, qty, { group: 'Fittings & furniture' });
-  }
+  push('works:railing', book['works:railing'], railing);
 
   /* --- services --- */
   for (const s of SERVICES) {
@@ -202,7 +254,11 @@ export function buildQuote(state, rateBook, opts = {}) {
     const key = `logistics:${l.id}`;
     const entry = book[key];
     if (!entry) continue;
-    const qty = state.logistics?.[l.id] ?? l.qty;
+    let qty = state.logistics?.[l.id] ?? l.qty;
+    if (multi && state.logistics?.[l.id] === undefined) {
+      if (l.id === 'haulage') qty = Math.ceil(q.fortyEquivalents || 1);
+      if (l.id === 'offload') qty = q.stacked ? 2 : 1;
+    }
     push(key, entry, qty, { group: 'Logistics' });
   }
 

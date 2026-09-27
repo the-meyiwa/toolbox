@@ -3,7 +3,7 @@
 
    Real ISO container data and a preliminary structural check for
    container buildings, shared by the design engine, the Container
-   Quote Builder, the Assistant's container card and its
+   Builder, the Assistant's container card and its
    architecture advisor. Pure: no DOM, no three.js.
 
    Sources for the data:

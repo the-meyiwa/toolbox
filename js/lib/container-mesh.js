@@ -12,7 +12,7 @@
    window, shutter or louvre in it. Portacabins get sandwich-panel
    walls on a steel base frame.
 
-   Frame of reference (same as the Container Planner): origin at the
+   Frame of reference (same as the Container Builder): origin at the
    centre of the internal floor; X along the length (back at −len/2,
    cargo-door end at +len/2), Y up (internal floor at 0), Z across
    (left side at −wid/2). Openings use the design engine's wall/along
@@ -227,6 +227,92 @@ export function openingInsert(type, w, h, depth, { color = 0x3f6b52 } = {}) {
         s.rotation.x = -0.6;
         g.add(s);
       }
+      break;
+    }
+    case 'french-door': doorLeaf(w / 2, h, -w / 2, 1, true); doorLeaf(w / 2, h, 0, -1, true); break;
+    case 'pivot-door': {
+      // Timber-faced leaf on an offset floor pivot, with a long pull handle.
+      const zc = -depth * 0.35;
+      g.add(box(w - 0.01, h - 0.01, 0.06, material('timber', 0x6e4a2f), 0, h / 2, zc));
+      g.add(box(0.03, Math.min(1.6, h * 0.7), 0.04, material('steel', 0x222428), w / 2 - 0.15, h * 0.48, zc + 0.06));
+      break;
+    }
+    case 'sliding-door': {
+      // Two leaves on a bottom track, the outer one overlapping the inner by 50 mm.
+      const lw = w / 2 + 0.025;
+      glazing(lw, h, -w / 2, 0, -depth * 0.45);
+      glazing(lw, h, w / 2 - lw, 0, -depth * 0.3);
+      g.add(box(w, 0.02, 0.1, alu, 0, 0.01, -depth * 0.38));
+      break;
+    }
+    case 'bifold': {
+      // Panels folded slightly so the set reads as bi-fold.
+      const n = Math.max(3, Math.round(w / 0.75));
+      const pw = w / n;
+      for (let i = 0; i < n; i++) {
+        const leaf = new THREE.Group();
+        const f = 0.045;
+        leaf.add(box(pw, f, 0.05, alu, 0, f / 2, 0), box(pw, f, 0.05, alu, 0, h - f / 2, 0), box(f, h, 0.05, alu, -pw / 2 + f / 2, h / 2, 0), box(f, h, 0.05, alu, pw / 2 - f / 2, h / 2, 0));
+        const pane = box(pw - 2 * f, h - 2 * f, 0.012, glass, 0, h / 2, 0, { cast: false }); pane.renderOrder = 2; leaf.add(pane);
+        leaf.position.set(-w / 2 + pw * (i + 0.5), 0, -depth * 0.4 + (i % 2 ? 0.03 : 0));
+        leaf.rotation.y = (i % 2 ? -1 : 1) * 0.06;
+        g.add(leaf);
+      }
+      g.add(box(w, 0.03, 0.12, alu, 0, h - 0.015, -depth * 0.4));
+      break;
+    }
+    case 'garage-door': {
+      const n = Math.max(3, Math.round(h / 0.55));
+      const panel = material('paint', 0x5f6468, { grime: 0.05 });
+      for (let i = 0; i < n; i++) {
+        g.add(box(w - 0.02, h / n - 0.012, 0.045, panel, 0, (i + 0.5) * h / n, -0.03));
+        g.add(box(w - 0.1, 0.01, 0.004, material('paint', 0x4d5256), 0, (i + 0.5) * h / n, -0.005));
+      }
+      break;
+    }
+    case 'fold-down-deck': {
+      // Glazed wall behind; the old wall panel lowered on cables as a deck.
+      glazing(w, h, -w / 2, 0, -depth * 0.5, Math.max(1, Math.round(w / 1.2) - 1));
+      const D = Math.min(h, 2.0);
+      const plate = material('paint', color, { grime: 0.12 });
+      g.add(box(w, 0.08, D, plate, 0, -0.04, D / 2 + 0.02));
+      g.add(box(w - 0.04, 0.02, D - 0.04, material('floor-timber', 0x8a6b4a), 0, 0.01, D / 2 + 0.02));
+      const rail = material('steel', 0x2b2d30);
+      for (const sx of [-1, 1]) {
+        g.add(box(0.03, 1.0, 0.03, rail, sx * (w / 2 - 0.03), 0.5, D));
+        g.add(box(0.03, 0.03, D, rail, sx * (w / 2 - 0.03), 1.0, D / 2 + 0.02));
+        // lifting cable from the top of the opening to the deck's outer corner
+        const len = Math.hypot(D, h);
+        const c = cyl(0.006, len, material('chrome'), sx * (w / 2 - 0.05), h / 2, D / 2);
+        c.rotation.x = -Math.atan2(D, h);
+        g.add(c);
+      }
+      g.add(box(w - 0.06, 0.03, 0.03, rail, 0, 1.0, D));
+      break;
+    }
+    case 'picture-window':
+      glazing(w, h, -w / 2, 0, -depth * 0.4, 0);
+      g.add(box(w + 0.08, 0.03, 0.12, material('aluminium', 0xc8ccd0), 0, -0.015, 0.03));
+      break;
+    case 'box-window': {
+      glazing(w, h, -w / 2, 0, -depth * 0.5, 0);
+      const P = 0.3, plate = material('paint', 0x1f2023, { grime: 0.05 }), T = 0.012;
+      g.add(box(w + 2 * T, T, P, plate, 0, h + T / 2, P / 2));
+      g.add(box(w + 2 * T, T, P, plate, 0, -T / 2, P / 2));
+      g.add(box(T, h, P, plate, -w / 2 - T / 2, h / 2, P / 2));
+      g.add(box(T, h, P, plate, w / 2 + T / 2, h / 2, P / 2));
+      break;
+    }
+    case 'clerestory':
+      glazing(w, h, -w / 2, 0, -depth * 0.4, Math.max(0, Math.ceil(w / 1.2) - 1));
+      break;
+    case 'wall-removal': {
+      // Steel moment frame: HSS posts at the ends of the cut and a UB header.
+      const steel = material('paint', 0x2a2c2f, { grime: 0.05 });
+      const hd = 0.2;
+      g.add(box(w + 0.2, hd, 0.1, steel, 0, h + hd / 2 - 0.05, -depth / 2));
+      for (const sx of [-1, 1]) g.add(box(0.1, h, 0.1, steel, sx * (w / 2 + 0.05), h / 2, -depth / 2));
+      if (w > 4) for (let x = -w / 2 + w / Math.ceil(w / 3.6); x < w / 2 - 0.1; x += w / Math.ceil(w / 3.6)) g.add(box(0.1, h, 0.1, steel, x, h / 2, -depth / 2));
       break;
     }
     default: break;   // 'cutout': an open frame into the next unit
@@ -604,3 +690,6 @@ function buildCabin(spec, { group, shell, ext, xb, xf, zl, zr, yb, yt, paint, un
   }
   return { group, ext, bottomY: yb };
 }
+
+/* Small builders shared with container-parts.js. */
+export { box, boxMM, cyl, mesh, at, V };

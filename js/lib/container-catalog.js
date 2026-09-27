@@ -12,7 +12,9 @@
    because that is the market this was built for.
    ============================================================ */
 
-export const RATES_REVISED = '2026-08-19';
+import { PARTS } from './container-library.js';
+
+export const RATES_REVISED = '2026-09-27';
 
 /* Units and how a quantity is derived.
    'area'      – square metres of the driving surface
@@ -52,6 +54,9 @@ export const ELEMENTS = [
       { id: 'buy-40hc', name: '40 ft high cube (bought used)',    unit: 'each', rate: 4300000, labour: 200000, wastage: 0 },
       { id: 'fabricate', name: 'Fabricated cabin frame (new steel)', unit: 'area', rate: 46000, labour: 18000, wastage: 6,
         driverOverride: 'floorArea' },
+      { id: 'new-20', name: '20 ft one-trip container (near new)', unit: 'each', rate: 3400000, labour: 120000, wastage: 0 },
+      { id: 'new-40', name: '40 ft one-trip container (near new)', unit: 'each', rate: 5600000, labour: 180000, wastage: 0 },
+      { id: 'new-40hc', name: '40 ft high cube one-trip (near new)', unit: 'each', rate: 6200000, labour: 200000, wastage: 0 },
       { id: 'client',  name: 'Client supplies the container',     unit: 'each', rate: 0, labour: 0, wastage: 0 },
     ],
   },
@@ -81,6 +86,13 @@ export const ELEMENTS = [
       { id: 'sand-rw50',  name: 'Sandwich panel 50 mm rockwool core',    unit: 'area',  rate: 20500, labour: 4200, wastage: 8 },
       { id: 'profiled',  name: 'Profiled / corrugated steel sheet',      unit: 'area',  rate: 6800,  labour: 2200, wastage: 10 },
       { id: 'stonecoat', name: 'Stone-coated sheet cladding',            unit: 'area',  rate: 11500, labour: 3400, wastage: 10 },
+      { id: 'timber-slat', name: 'Vertical hardwood slat cladding on battens', unit: 'area', rate: 26000, labour: 8500, wastage: 10 },
+      { id: 'charred',   name: 'Charred timber (shou sugi ban) boards',  unit: 'area',  rate: 32000, labour: 9000, wastage: 10 },
+      { id: 'wpc',       name: 'WPC composite cladding boards',          unit: 'area',  rate: 18500, labour: 6000, wastage: 8 },
+      { id: 'fibre-cement', name: 'Fibre cement boards on rails',       unit: 'area',  rate: 14500, labour: 5200, wastage: 8 },
+      { id: 'standing-seam', name: 'Standing-seam metal cladding',      unit: 'area',  rate: 21000, labour: 7000, wastage: 8 },
+      { id: 'eifs',      name: 'Insulated render (EIFS), 50 mm EPS',     unit: 'area',  rate: 16500, labour: 7500, wastage: 6 },
+      { id: 'corten',    name: 'Raw Corten with clear sealer',           unit: 'area',  rate: 1800,  labour: 1200, wastage: 5 },
       { id: 'paint',     name: 'Epoxy paint only (no cladding)',         unit: 'area',  rate: 2200,  labour: 1500, wastage: 6 },
       { id: 'none',      name: 'Leave as-is',                            unit: 'area',  rate: 0, labour: 0, wastage: 0 },
     ],
@@ -94,6 +106,10 @@ export const ELEMENTS = [
     options: [
       { id: 'pu25',   name: 'Spray PU foam 25 mm',        unit: 'area', rate: 5200, labour: 2200, wastage: 8 },
       { id: 'pu50',   name: 'Spray PU foam 50 mm',        unit: 'area', rate: 8800, labour: 3000, wastage: 8 },
+      { id: 'ccsf75', name: 'Closed-cell spray foam 75 mm (air & vapour tight)', unit: 'area', rate: 12500, labour: 3800, wastage: 8 },
+      { id: 'pir50',  name: 'PIR board 50 mm, foil faced', unit: 'area', rate: 7800, labour: 2200, wastage: 7 },
+      { id: 'pir75',  name: 'PIR board 75 mm, foil faced', unit: 'area', rate: 10200, labour: 2600, wastage: 7 },
+      { id: 'ceramic', name: 'Ceramic thermal coating (external)', unit: 'area', rate: 3800, labour: 1800, wastage: 6 },
       { id: 'eps50',  name: 'EPS board 50 mm',            unit: 'area', rate: 3200,  labour: 1400, wastage: 7 },
       { id: 'rw50',   name: 'Rockwool 50 mm (fire rated)', unit: 'area', rate: 6500,  labour: 2000, wastage: 7 },
       { id: 'glass50', name: 'Fibreglass wool 50 mm',     unit: 'area', rate: 4200,  labour: 1600, wastage: 7 },
@@ -127,6 +143,10 @@ export const ELEMENTS = [
       { id: 'packing', name: 'Packing-case board',              unit: 'area',  rate: 4200,  labour: 1800, wastage: 18 },
       { id: 'pvc',     name: 'PVC wall panel',                  unit: 'area',  rate: 4000,  labour: 1700, wastage: 10 },
       { id: 'gypsum',  name: 'Gypsum board 12 mm',              unit: 'sheet', coverage: SHEET_2400, rate: 9500, labour: 3200, wastage: 12 },
+      { id: 'birch',   name: 'Birch plywood 12 mm, clear lacquer', unit: 'sheet', coverage: SHEET_2440, rate: 36000, labour: 4200, wastage: 12 },
+      { id: 'slat-acoustic', name: 'Timber slat acoustic panels',  unit: 'area',  rate: 42000, labour: 6500, wastage: 8 },
+      { id: 'bamboo',  name: 'Bamboo wall panels',                unit: 'area',  rate: 21000, labour: 4500, wastage: 10 },
+      { id: 'microcement', name: 'Microcement on cement board',   unit: 'area',  rate: 18500, labour: 9500, wastage: 6 },
       { id: 'mdf',     name: 'MDF laminated board',             unit: 'sheet', coverage: SHEET_2440, rate: 22000, labour: 4200, wastage: 12 },
       { id: 'melamine', name: 'Melamine faced panel',           unit: 'sheet', coverage: SHEET_2440, rate: 24000, labour: 4600, wastage: 12 },
       { id: 'none',    name: 'None (bare shell)',               unit: 'area',  rate: 0, labour: 0, wastage: 0 },
@@ -143,6 +163,8 @@ export const ELEMENTS = [
       { id: 'pop',    name: 'POP (plaster of Paris)',   unit: 'area', rate: 5200, labour: 2800, wastage: 8 },
       { id: 'ply',    name: 'Plywood ceiling',          unit: 'area', rate: 4400, labour: 2000, wastage: 12 },
       { id: 'alu',    name: 'Aluminium strip ceiling',  unit: 'area', rate: 8800, labour: 3000, wastage: 10 },
+      { id: 'timber-slat', name: 'Timber slat ceiling on battens', unit: 'area', rate: 16500, labour: 5500, wastage: 10 },
+      { id: 'exposed', name: 'Exposed corrugation, sprayed and painted', unit: 'area', rate: 1800, labour: 1500, wastage: 6 },
       { id: 'none',   name: 'None',                     unit: 'area', rate: 0, labour: 0, wastage: 0 },
     ],
   },
@@ -157,6 +179,10 @@ export const ELEMENTS = [
       { id: 'ceramic',  name: 'Ceramic tiles',            unit: 'area', rate: 6500,  labour: 3000, wastage: 12 },
       { id: 'porcelain', name: 'Porcelain tiles',         unit: 'area', rate: 9800, labour: 3400, wastage: 12 },
       { id: 'laminate', name: 'Laminate flooring',        unit: 'area', rate: 7200, labour: 2200, wastage: 10 },
+      { id: 'spc',      name: 'SPC rigid-core click vinyl', unit: 'area', rate: 9800, labour: 2200, wastage: 8 },
+      { id: 'engineered', name: 'Engineered oak boards',    unit: 'area', rate: 18500, labour: 3800, wastage: 8 },
+      { id: 'bamboo',   name: 'Strand-woven bamboo',        unit: 'area', rate: 14500, labour: 3200, wastage: 8 },
+      { id: 'microcement', name: 'Microcement on cement board', unit: 'area', rate: 16500, labour: 9000, wastage: 6 },
       { id: 'epoxy',    name: 'Epoxy floor coating',      unit: 'area', rate: 5600,  labour: 2600, wastage: 6 },
       { id: 'carpet',   name: 'Carpet tiles',             unit: 'area', rate: 6200,  labour: 1900, wastage: 10 },
       { id: 'ply',      name: 'Plywood deck only',        unit: 'area', rate: 5400,  labour: 1800, wastage: 12 },
@@ -188,6 +214,45 @@ export const ELEMENTS = [
       { id: 'none',     name: 'None',                       unit: 'area', rate: 0, labour: 0, wastage: 0 },
     ],
   },
+
+  {
+    id: 'glazing',
+    name: 'Glass performance',
+    driver: 'glazingArea',
+    help: 'Upgrade for every glazed door and window, priced on the glazed area.',
+    options: [
+      { id: 'standard', name: 'As specified with each door and window', unit: 'area', rate: 0, labour: 0, wastage: 0 },
+      { id: 'lowe',     name: 'Low-E double glazing upgrade',          unit: 'area', rate: 52000, labour: 5000, wastage: 0 },
+      { id: 'solar',    name: 'Solar-control tinted glass upgrade',    unit: 'area', rate: 30000, labour: 4000, wastage: 0 },
+    ],
+  },
+
+  {
+    id: 'roofing',
+    name: 'Roof waterproofing',
+    driver: 'roofArea',
+    help: 'Exposed container roofs pond water between the corrugations. Coat or membrane them.',
+    options: [
+      { id: 'coating',  name: 'Elastomeric cool-roof coating',        unit: 'area', rate: 4500,  labour: 2200, wastage: 6 },
+      { id: 'membrane', name: 'TPO membrane on tapered insulation',   unit: 'area', rate: 16500, labour: 5500, wastage: 8 },
+      { id: 'spray',    name: 'External spray foam roof, 50 mm',      unit: 'area', rate: 14000, labour: 4500, wastage: 8 },
+      { id: 'none',     name: 'None',                                  unit: 'area', rate: 0, labour: 0, wastage: 0 },
+    ],
+  },
+
+  {
+    id: 'foundation',
+    name: 'Foundations',
+    driver: 'supports',
+    help: 'Containers bear on their corner castings: a support under each corner, and mid-length on 40 ft units.',
+    options: [
+      { id: 'pads',  name: 'Concrete pad footings, 600 × 600 mm',      unit: 'each', rate: 38000, labour: 16000, wastage: 0 },
+      { id: 'piers', name: 'Concrete piers, 900 mm deep, cast-in plate', unit: 'each', rate: 72000, labour: 28000, wastage: 0 },
+      { id: 'screw', name: 'Helical screw piles with cap plate',         unit: 'each', rate: 145000, labour: 35000, wastage: 0 },
+      { id: 'slab',  name: 'Reinforced concrete slab, 150 mm',           unit: 'area', rate: 32000, labour: 9000, wastage: 5, driverOverride: 'footprintArea' },
+      { id: 'none',  name: 'Existing base',                              unit: 'each', rate: 0, labour: 0, wastage: 0 },
+    ],
+  },
 ];
 
 /* ------------------------------------------------------------
@@ -195,14 +260,12 @@ export const ELEMENTS = [
    `matches` maps to the planner's opening types.
    ------------------------------------------------------------ */
 
-export const OPENING_RATES = {
-  'personnel-door': { name: 'Steel security door, 900 × 2100',      rate: 185000, labour: 38000, wastage: 0 },
-  'double-door':    { name: 'Double leaf door, 1800 × 2100',        rate: 320000, labour: 56000, wastage: 0 },
-  'roller-door':    { name: 'Roller shutter door',                  rate: 480000, labour: 85000, wastage: 0 },
-  'window':         { name: 'Aluminium sliding window, 1200 × 1000', rate: 95000, labour: 19000, wastage: 0 },
-  'small-window':   { name: 'Aluminium window, 600 × 600',          rate: 48000, labour: 12000, wastage: 0 },
-  'vent':           { name: 'Louvre air vent',                      rate: 12000, labour: 4500,  wastage: 0 },
-};
+const GROUP = { opening: 'Doors & windows', fitting: 'Fittings & furniture', facade: 'Facade', roof: 'Roof', site: 'Outdoor & site' };
+const PART_UNIT = { area: 'area', length: 'length', panel: 'each' };
+const rateOf = (p) => ({ name: p.spec || p.name, unit: PART_UNIT[p.unit] || 'each', rate: p.rate || 0, labour: p.labour || 0, wastage: p.unit === 'area' || p.unit === 'length' ? 5 : 0 });
+
+/* Rates for every part in the Builder's library (container-library.js). */
+export const OPENING_RATES = Object.fromEntries(PARTS.filter(p => p.kind === 'opening').map(p => [p.id, rateOf(p)]));
 
 /* Cutting a hole in a container weakens it — every opening needs a
    welded frame back in. Charged per opening, not per square metre. */
@@ -212,18 +275,16 @@ export const OPENING_REINFORCEMENT = { name: 'Cut opening & weld reinforcing fra
    FITTINGS — furniture and partitions placed in the 3D model.
    ------------------------------------------------------------ */
 
-export const FITTING_RATES = {
-  partition: { name: 'Internal partition wall (framed & lined, both faces)', unit: 'area', rate: 18500, labour: 8500, wastage: 10 },
-  desk:      { name: 'Office desk',                unit: 'each', rate: 145000, labour: 12000, wastage: 0 },
-  chair:     { name: 'Office chair',               unit: 'each', rate: 78000,  labour: 0,     wastage: 0 },
-  bed:       { name: 'Single bed & mattress',      unit: 'each', rate: 165000, labour: 8000,  wastage: 0 },
-  bunk:      { name: 'Bunk beds & mattresses',     unit: 'each', rate: 285000, labour: 15000, wastage: 0 },
-  kitchen:   { name: 'Kitchen unit & worktop',     unit: 'each', rate: 420000, labour: 65000, wastage: 0 },
-  toilet:    { name: 'Toilet cubicle, WC & fittings', unit: 'each', rate: 385000, labour: 95000, wastage: 0 },
-  shower:    { name: 'Shower cubicle & fittings',  unit: 'each', rate: 295000, labour: 78000, wastage: 0 },
-  rack:      { name: 'Storage racking',            unit: 'each', rate: 135000, labour: 15000, wastage: 0 },
-  cabinet:   { name: 'Cabinet / cupboard',         unit: 'each', rate: 118000, labour: 12000, wastage: 0 },
-  table:     { name: 'Table',                      unit: 'each', rate: 125000, labour: 8000,  wastage: 0 },
+export const FITTING_RATES = Object.fromEntries(PARTS.filter(p => p.kind === 'fitting').map(p => [p.id, rateOf(p)]));
+export const PART_RATES = Object.fromEntries(PARTS.map(p => [`${p.kind}:${p.id}`, { ...rateOf(p), group: p.cat === 'cuts' ? 'Structural openings' : GROUP[p.kind] }]));
+
+/* Structural works that come from how units are put together. */
+export const WORKS = {
+  stack: { name: 'Stacking: corner connectors, welding & sealing (per unit stacked)', unit: 'each', rate: 220000, labour: 140000, wastage: 0 },
+  join: { name: 'Join adjoining units: bolted plates, seal & roof flashing', unit: 'each', rate: 70000, labour: 35000, wastage: 0 },
+  transfer: { name: 'Transfer beams where an upper unit misses the corner castings', unit: 'each', rate: 650000, labour: 220000, wastage: 0 },
+  cantilever: { name: 'Cantilever reinforcement: steel I-beams under the overhang', unit: 'length', rate: 145000, labour: 60000, wastage: 5 },
+  railing: { name: 'Roof-deck balustrade, toughened glass, 1.1 m', unit: 'length', rate: 42000, labour: 9000, wastage: 5 },
 };
 
 /* ------------------------------------------------------------
@@ -325,14 +386,9 @@ export function defaultRateBook(custom = []) {
       };
     }
   }
-  for (const [key, o] of Object.entries(OPENING_RATES)) {
-    book[`opening:${key}`] = { name: o.name, unit: 'each', coverage: null, rate: o.rate, labour: o.labour, wastage: o.wastage, group: 'Doors & windows' };
-  }
+  for (const [key, o] of Object.entries(PART_RATES)) book[key] = { ...o, coverage: null };
   book['opening:reinforce'] = { ...OPENING_REINFORCEMENT, unit: 'each', coverage: null, group: 'Doors & windows' };
-
-  for (const [key, o] of Object.entries(FITTING_RATES)) {
-    book[`fitting:${key}`] = { name: o.name, unit: o.unit, coverage: null, rate: o.rate, labour: o.labour, wastage: o.wastage, group: 'Fittings & furniture' };
-  }
+  for (const [key, o] of Object.entries(WORKS)) book[`works:${key}`] = { ...o, coverage: null, group: 'Structure & connections' };
   for (const s of SERVICES) {
     book[`service:${s.id}`] = { name: s.name, unit: s.unit, coverage: null, rate: s.rate, labour: s.labour, wastage: s.wastage, group: 'Services & installations' };
   }

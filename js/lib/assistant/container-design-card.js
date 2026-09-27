@@ -9,7 +9,7 @@
    - a dimensioned floor plan per level,
    - a spec & cost sheet.
    Downloads (PNG of the current view, SVG plan) and a hand-off to
-   the Container Planner live in the footer.
+   the Container Builder live in the footer.
    ============================================================ */
 
 import {
@@ -1016,7 +1016,7 @@ export function renderContainerDesign(data, container) {
         <button type="button" class="astc-btn" data-act="svg">${svgI(I.download, 14)}<span>Plan SVG</span></button>
         <span class="astc-cd-open">
           ${design.modules.length > 1 ? `<select class="astc-cd-select" data-act="module" aria-label="Unit to open">${design.modules.map(m => `<option value="${esc(m.id)}">${esc(m.label)}</option>`).join('')}</select>` : ''}
-          <button type="button" class="astc-btn is-primary" data-act="planner">${svgI(I.external, 14)}<span>Open in Container Planner</span></button>
+          <button type="button" class="astc-btn is-primary" data-act="planner">${svgI(I.external, 14)}<span>Open in Container Builder</span></button>
         </span>
       </div>
       <p class="astc-cd-hint">To change it, just ask — “add a window on the left”, “make it 40 ft”, “paint it blue”. Design <code>${esc(design.id)}</code>.</p>
@@ -1135,7 +1135,7 @@ function specHtml(d, unit) {
         <tr class="is-total"><th scope="row">Estimated total</th><td></td><td></td><td class="u-num">${naira(c.total)}</td></tr>
       </tfoot>
     </table></div>
-    <p class="astc-cd-fine">${esc(c.tier[0].toUpperCase() + c.tier.slice(1))} finish spec · ${naira(c.perM2)} per m² of floor${c.budget ? ` · budget ${naira(c.budget)} (${c.withinBudget ? 'within' : 'over'})` : ''}. Includes overheads, contingency and profit. Rates come from the Container Planner’s rate book, which you can edit.</p>
+    <p class="astc-cd-fine">${esc(c.tier[0].toUpperCase() + c.tier.slice(1))} finish spec · ${naira(c.perM2)} per m² of floor${c.budget ? ` · budget ${naira(c.budget)} (${c.withinBudget ? 'within' : 'over'})` : ''}. Includes overheads, contingency and profit. Rates come from the Container Builder’s rate book, which you can edit.</p>
     <div class="astc-cd-cols">
       <section><h5>Rooms</h5><ul class="astc-cd-rooms">${d.modules.map(m => m.rooms.map(r => `<li><span>${esc(r.name)}<small>${esc(m.label)}</small></span><b class="u-num">${fmtArea(r.area, unit)}</b></li>`).join('')).join('')}</ul></section>
       <section><h5>Bill of main quantities</h5><dl class="astc-cd-boq">

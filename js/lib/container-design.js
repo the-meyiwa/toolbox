@@ -5,11 +5,11 @@
    4 staff with a toilet"), into a validated, fully resolved design:
    modules on a site grid and levels, rooms, partitions, doors and
    windows, furniture, stairs and extras, warnings, and an NGN estimate
-   priced with the same quote engine as the Container Planner.
+   priced with the same quote engine as the Container Builder.
 
    Pure: no DOM, no three.js. Runs in the browser and in node.
 
-   Coordinates (metres) match the Container Planner exactly:
+   Coordinates (metres) match the Container Builder exactly:
    - each module has a local frame: X along its length, 0 = back end,
      len = front (door) end; Z across its width, 0 = left side.
    - openings: `wall` (front/back/left/right) + `along` (centre, metres
@@ -1865,7 +1865,7 @@ function costDesign(d, source, rateBook, warnings) {
     cost.withinBudget = cost.total <= budget;
     if (!cost.withinBudget) warnings.push({ level: 'warn', text: `The estimate is about ₦${Math.round((cost.total - budget) / 1000).toLocaleString('en-NG')}k over the ₦${Math.round(budget).toLocaleString('en-NG')} budget. Options: client-supplied container, fewer rooms or openings, or a smaller unit.` });
   }
-  cost.note = 'Estimate from the Toolbox Container Planner rate book (NGN, incl. overheads, contingency, profit and 7.5% VAT). Rates are editable in the Planner.';
+  cost.note = 'Estimate from the Toolbox Container Builder rate book (NGN, incl. overheads, contingency, profit and 7.5% VAT). Rates are editable in the Builder.';
   return cost;
 }
 
@@ -2142,7 +2142,7 @@ export function designContainer(args = {}, { rateBook = null } = {}) {
 }
 
 /* ============================================================
-   Container Planner hand-off
+   Container Builder hand-off
    ============================================================ */
 
 export const HANDOFF_KEY = 'toolbox.container.handoff';
@@ -2175,11 +2175,55 @@ export function plannerHandoff(design, moduleId) {
   }
   const S = SIZES[m.size];
   return {
+    ...builderLayout(design),
     source: 'assistant', designId: design.id, module: m.id, name: `${design.title} · ${m.label}`,
     preset: S ? m.size : 'custom', len: m.len, wid: m.wid, hgt: m.hgt, color: m.color, items,
-    spec: { ...(SPEC_TIERS[design.specLevel] || SPEC_TIERS.standard), shell: S?.shell || 'fabricate', ...(design.extras.cladding === 'composite' ? { exterior: 'acp4' } : {}) },
+    spec: { ...(SPEC_TIERS[design.specLevel] || SPEC_TIERS.standard), shell: S?.shell || 'fabricate', ...(design.extras.cladding === 'composite' ? { exterior: 'acp4' } : design.extras.cladding === 'timber' ? { exterior: 'timber-slat' } : {}) },
     notes: [...new Set(notes)], createdAt: Date.now(),
   };
+}
+
+/**
+ * The whole design in the Container Builder's own shape: every unit (centre on
+ * site, quarter turns, level) with its items, and stairs, decks, canopies and
+ * roof decks as site or roof parts.
+ */
+const BUILDER_TYPES = new Set(['personnel-door', 'glass-door', 'double-door', 'roller-door', 'window', 'small-window', 'vent', 'serving-hatch', 'glass-wall', 'cutout',
+  'partition', 'desk', 'chair', 'bed', 'bunk', 'kitchen', 'toilet', 'shower', 'rack', 'cabinet', 'table', 'sofa', 'counter', 'reception', 'fridge', 'stool', 'bistro']);
+export function builderLayout(design) {
+  const units = design.modules.map(m => {
+    const turned = m.rot === 90;
+    const L = turned ? m.wid : m.len, W = turned ? m.len : m.wid;
+    const items = [];
+    for (const it of m.items) {
+      if (it.kind === 'opening') {
+        const type = BUILDER_TYPES.has(it.type) ? it.type : OPENINGS[it.type]?.planner;
+        if (type) items.push({ kind: 'opening', type, wall: it.wall, along: it.along, sill: it.sill, w: it.w, h: it.h });
+      } else {
+        const f = FITTINGS[it.type];
+        const type = it.type === 'basin' ? 'vanity' : BUILDER_TYPES.has(it.type) ? it.type : null;
+        if (!type || !f) continue;
+        const rot = type === 'partition' ? (it.r || 0) % 2 : ((it.r || 0) + (f.rotOffset || 0)) % 4;
+        items.push({ kind: 'fitting', type, x: it.x, z: it.z, rot, ...(it.w ? { w: it.w } : {}), ...(type === 'partition' ? { d: it.d ?? f.d } : it.d ? { d: it.d } : {}) });
+      }
+    }
+    for (const rf of (design.roofs || []).filter(r => r.module === m.id)) {
+      items.push(rf.kind === 'deck' ? { kind: 'roof', type: 'roof-deck', x: m.len / 2, z: m.wid / 2, w: m.len + 0.1, d: m.wid + 0.06 } : { kind: 'roof', type: 'pitched-roof', x: m.len / 2, z: m.wid / 2 });
+    }
+    return { preset: SIZES[m.size] ? m.size : 'custom', len: m.len, wid: m.wid, hgt: m.hgt, cx: r3(m.x + L / 2), cz: r3(m.z + W / 2), rot: turned ? 1 : 0, level: m.level || 0, color: m.color, name: m.label, items };
+  });
+  const rectOf = (r) => ({ x: r3((r.x0 + r.x1) / 2), z: r3((r.z0 + r.z1) / 2), dx: r.x1 - r.x0, dz: r.z1 - r.z0 });
+  const site = [];
+  for (const st of design.stairs || []) {
+    const a = st.flight, b = st.landing || st.flight;
+    const box = rectOf({ x0: Math.min(a.x0, b.x0), x1: Math.max(a.x1, b.x1), z0: Math.min(a.z0, b.z0), z1: Math.max(a.z1, b.z1) });
+    const alongX = Math.abs(st.ascent.x) > 0.5;
+    const rot = alongX ? (st.ascent.x > 0 ? 3 : 1) : (st.ascent.z > 0 ? 0 : 2);
+    site.push({ type: 'ext-stair', x: box.x, z: box.z, rot, w: st.width, d: r3(alongX ? box.dx : box.dz), h: r3(st.toY - st.fromY) });
+  }
+  for (const dk of design.decks || []) { const r = rectOf(dk.rect); site.push({ type: 'deck', x: r.x, z: r.z, w: r3(r.dx), d: r3(r.dz), h: 0.26 }); }
+  for (const cn of design.canopies || []) { const r = rectOf(cn.rect); site.push({ type: 'canopy', x: r.x, z: r.z, w: r3(r.dx), d: r3(r.dz), h: r3((cn.y || 2.4) + 0.26) }); }
+  return { units, site };
 }
 
 /* ---------- helpers the preview uses ---------- */

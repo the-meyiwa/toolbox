@@ -256,21 +256,18 @@ test('UI Refinements: Assistant hides related tools', async () => {
   assert.ok(/body\.in-tool[^{]*#tool-related[^{]*\{\s*display:\s*none !important/.test(css), 'In-tool mode must hide #tool-related');
 });
 
-test('UI Refinements: Container Quote Builder full height and mobile scaling', async () => {
+test('UI Refinements: Container Builder is one window that adapts to phones', async () => {
   const fs = await import('fs');
   const path = await import('path');
   const css = readStylesheet();
   const appJs = fs.readFileSync(path.resolve('js/app.js'), 'utf-8');
+  const cb = fs.readFileSync(path.resolve('css/container-builder.css'), 'utf-8');
 
-  assert.ok(css.includes('body[data-tool-id="container-planner"] #tool-related'), 'Container planner must hide related tools');
+  assert.ok(css.includes('body[data-tool-id="container-planner"] #tool-related'), 'Container Builder must hide related tools');
   assert.ok(appJs.includes("tool?.id === 'container-planner'"), 'app.js renderRelated must suppress related tools for container-planner');
-  assert.ok(
-    css.includes('body[data-tool-id="container-planner"] .t3d-canvas') && css.includes('max-height: 300px !important;'),
-    'Container planner canvas must be scaled on mobile to max-height 300px'
-  );
-  assert.ok(
-    css.includes('body[data-tool-id="container-planner"] .cp') && css.includes('flex-direction: column !important;'),
-    'Container planner .cp must adapt to column layout on mobile'
-  );
+  assert.ok(css.includes('.cb-insp-body'), 'The Container Builder stylesheet is loaded');
+  assert.ok(cb.includes('.cb[data-narrow="true"] .cb-side') && cb.includes('translateX(-102%)'), 'Library becomes a drawer on narrow windows');
+  assert.ok(cb.includes('.cb[data-narrow="true"] .cb-insp') && cb.includes('[data-insp="peek"]'), 'Inspector becomes a bottom sheet with a peek state');
+  assert.ok(!css.includes('body[data-tool-id="container-planner"] .cq-tabs'), 'Old tab overrides are gone');
 });
 

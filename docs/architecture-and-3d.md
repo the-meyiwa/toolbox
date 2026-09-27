@@ -48,9 +48,104 @@ Portacabins (`size: 'custom'`) get sandwich-panel walls, an eaves fascia and a g
 - Roof-deck joists and overturning under wind (`q = 0.613 V²`), with the anchor tension.
 - Pad footings for the site's soil bearing.
 
-`designContainer` attaches the result as `design.structure`. It feeds the Container Planner's **Structure** panel and the Assistant's container design card, which now shows a real 3D preview with an SVG fallback. Site values come from `site: { wind_speed_ms, soil_bearing_kpa }`.
+`designContainer` attaches the result as `design.structure`. It feeds the Container Builder's structure section and the Assistant's container design card, which now shows a real 3D preview with an SVG fallback. Site values come from `site: { wind_speed_ms, soil_bearing_kpa }`.
 
 The check is for early design only. Every result carries a disclaimer to have the design verified by a structural engineer.
+
+## Container Builder (`js/tools/container-planner.js`)
+
+The Container Builder (tool id `container-planner`) is one app window, like Files and Calendar:
+
+- a **parts library** on the left, searchable, with 84 parts in 12 groups;
+- the **3D site** in the middle, with level filters, a roof toggle and views;
+- an **inspector** on the right: the selected part's size, price, checks and "How it's built" notes, or a unit's size, level, colour and structural check, or, with nothing selected, the build overview and anything to resolve;
+- a **status bar** with the selection, the floor area and the live quoted price;
+- the Specification, Quote and Rates tabs in the same window.
+
+Styles live in `css/container-builder.css`. On a phone the library becomes a drawer and the inspector a bottom sheet with a peek state.
+
+### Interaction
+
+- **Select and move:** click to select. Dragging a selected part or unit moves it, and units snap to each other's edges and to the unit below.
+- **Menus:** right-click (long-press on touch) opens a menu for what is under the pointer:
+  - a part: duplicate, turn, move to another wall, how it's built, delete;
+  - a unit's wall, floor or roof: add a door, window, fitting or roof part at that exact spot, or "More parts here…";
+  - a unit: stack a unit on top, duplicate it alongside, turn it, remove it;
+  - empty ground: add a unit, deck, pergola or stair there, or start from a design.
+- **Drag and drop:** parts can be dragged from the library onto the model.
+- **Keys:**
+  - Delete removes the selection, R turns it, Ctrl+D duplicates it, arrow keys nudge it;
+  - Ctrl+Z undoes and Ctrl+Shift+Z redoes;
+  - 1 to 4 switch views, F fits the view, / searches the library, Esc cancels.
+- **Autosave:** the build saves itself in the browser.
+
+### Parts and presets (`js/lib/container-library.js`)
+
+Every part carries its default size, pricing unit, rate, construction notes and design checks. The five kinds are:
+
+- **Wall openings:** sliding patio door, bi-fold glass wall, pivot and French doors, fold-down deck wall, box-frame and picture windows, clerestory ribbon, full-height glazing, garage door, serving hatch, and open walls on a steel moment frame.
+- **Inside:** mezzanine or sleeping loft, straight and spiral stairs, ship ladder, kitchen run and island, bath, vanity, wall bed, glass partition, wood stove and more.
+- **Facade:** timber slat screen, steel fins, green wall, awning, window hood.
+- **Roof:** roof deck with glass balustrade, solar array (panels and kWp counted), green roof, skylight, hatch, rooftop pergola, mono-pitch roof over.
+- **Site:** deck, pergola, carport, external and spiral stairs, ramp, link bridge, balustrade, rainwater and septic tanks, steel posts.
+
+The 14 presets use ISO external sizes:
+
+- studio 20 ft;
+- 40 ft high cube with loft;
+- double-wide open plan;
+- L-shape;
+- U-shape courtyard;
+- two-storey stack;
+- cantilever;
+- cross stack on posts;
+- bridge house;
+- staggered with terrace;
+- three-storey tower;
+- four-unit family home;
+- site office;
+- café kiosk.
+
+Each preset carries notes on how it is built.
+
+`layoutUnits` works out, for each unit:
+
+- its elevation;
+- what it bears on;
+- whether it lands corner casting on corner casting;
+- how far it overhangs its outermost supports (a span between two supports counts as a bridge, not a cantilever).
+
+The Builder warns when:
+
+- units overlap;
+- an upper unit has nothing under it;
+- an overhang exceeds the back-span ÷ 1.5 rule of thumb without posts.
+
+The mezzanine check reports the headroom under and over the deck. In a 2.70 m high cube a loft is a sleeping platform, not a full floor.
+
+### Quote
+
+`buildQuote` accepts a Builder layout (`{ units, site }`) as well as a single unit:
+
+- It prices one shell per unit at its size. The shell is used, one-trip or client-supplied; cabins are always fabricated.
+- It sums the measured areas across all units.
+- It prices every part by each, area, length or panel.
+- It adds the structural works: stacking connections, joints between adjoining units, transfer beams, cantilever I-beams and roof-deck balustrades.
+
+New specification elements cover:
+
+- glass performance;
+- roof waterproofing, where roofs covered by another unit are left out;
+- foundations: one support per corner, plus mid-length on 40 ft units.
+
+Modern finishes include:
+
+- **Exterior:** hardwood slats, charred timber, WPC, fibre cement, standing seam and EIFS.
+- **Insulation:** closed-cell spray foam and PIR.
+- **Interior:** birch ply, acoustic slats and microcement.
+- **Floors:** SPC, engineered oak and bamboo.
+
+The Assistant's "Open in Container Builder" hands over the whole design: every unit, its stairs, decks, canopies and roof decks (`builderLayout` in `container-design.js`).
 
 ## Modelling structures from a prompt (`model_3d`)
 
@@ -101,4 +196,4 @@ With `npm run dev` running, open:
 - `/tests/browser/container-card.html?case=office|stacked|cafe|cabin`
 - `/tests/browser/structure-card.html?case=dome|tower|bridge|truss|pavilion|lattice`
 
-The unit tests cover the structural numbers, the model sizes and the parsers: `tests/unit/container-structure.test.js`, `structure-model.test.js`, `structural-calcs.test.js` and `knowledge-library.test.js`.
+The unit tests cover the structural numbers, the model sizes and the parsers: `tests/unit/container-builder.test.js`, `container-structure.test.js`, `structure-model.test.js`, `structural-calcs.test.js` and `knowledge-library.test.js`.

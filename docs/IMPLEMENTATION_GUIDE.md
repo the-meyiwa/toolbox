@@ -144,7 +144,7 @@ export default {
 69. **`color-palette-generator`**: Random harmonic palette generator with lockable color swatches.
 70. **`aspect-ratio`**: Calculates dimensions, scaling, and standard display aspect ratios (16:9, 4:3, 21:9).
 71. **`contrast-checker`**: WCAG 2.1 AAA/AA color contrast compliance analyzer.
-72. **`container-planner`**: Interactive 3D shipping container and portacabin conversion planner with ISO-accurate corrugated models, a preliminary structural check (racking, stacking, lintels, footings) and live BOQ pricing. See [Architecture, structures and 3D](architecture-and-3d.md).
+72. **`container-planner`** (Container Builder): One-window 3D builder for container homes, offices and multi-storey stacks: 84 modern parts, 14 multi-unit presets, right-click and long-press menus, snapping, structural checks and a multi-unit priced quotation. See [Architecture, structures and 3D](architecture-and-3d.md).
 73. **`anatomy-explorer`**: High-performance 3D anatomical atlas with Draco models, fast BVH picking, and structured clinical ontology.
 74. **`architecture-editor`**: Mobile-first floor plan editor with vectorization, background inpainting/reconstruction, and clean element displacement.
 

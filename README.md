@@ -22,7 +22,7 @@ Every tool is registered in [`js/registry/tools.js`](js/registry/tools.js), the 
 | Design | 5 | Color Converter, Color Palette, Contrast Checker, QR Generator |
 | Security & Privacy | 2 | Password Generator, File Checksum |
 | Networking | 11 | Subnet Calculator, IP Lookup, DNS Lookup, WHOIS Lookup |
-| 3D & Modeling | 3 | Anatomy Explorer, Container Quote Builder, Architecture Editor |
+| 3D & Modeling | 3 | Anatomy Explorer, Container Builder, Architecture Editor |
 | Reference | 5 | Automobile Guide, Wiki, Dictionary, Bible, Quran |
 | Music | 7 | Metronome, Instrument Tuner, Chord & Scale Finder, Spotify Player |
 | Everyday | 10 | Timer & Stopwatch, Weather Forecast, Interactive Map, Calendar |
