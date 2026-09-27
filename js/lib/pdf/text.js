@@ -35,6 +35,13 @@ export function itemsToLines(items) {
     let text = '';
     let end = null;
     for (const r of l.runs) {
+      /* pdf.js fills a wide gap with one whitespace item as wide as the gap.
+         Read it as the gap it is, so table columns stay apart. */
+      if (!r.str.trim() && r.w > (l.size || 10) * 2.5) {
+        text = `${text.replace(/\s+$/, '')}    `;
+        end = r.x + r.w;
+        continue;
+      }
       if (end != null && text && !/\s$/.test(text) && !/^\s/.test(r.str)) {
         const gap = r.x - end;
         if (gap > r.size * 0.18) text += gap > r.size * 2.5 ? '    ' : ' ';

@@ -16,6 +16,7 @@ import { quickDeviceLookup, openQuickResult, quickResultHint, quickResultTitle }
 import { kindLabel } from '../registry/kinds.js';
 import { getCurrentUser } from './supabase.js';
 import { openAssistant } from './assistant-popup.js';
+import { detect, looksLikeData } from './smart-detect.js';
 
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -33,6 +34,11 @@ let listEl = null;
 let rows = [];
 let cursor = 0;
 let open = false;
+/* The palette field is one line, so a paste loses its line breaks. The full
+   clipboard text is kept here for detection until the query is edited. */
+let pasted = null;
+let pastedShown = null;   // what the field showed for it
+let pasteNext = false;
 
 function build() {
   root = document.createElement('div');
@@ -55,7 +61,15 @@ function build() {
   input = root.querySelector('#pal-input');
   listEl = root.querySelector('#pal-list');
 
-  input.addEventListener('input', render);
+  input.addEventListener('input', () => {
+    if (pasteNext) { pastedShown = input.value; pasteNext = false; }
+    else if (pasted != null && input.value !== pastedShown) pasted = null;
+    render();
+  });
+  input.addEventListener('paste', (e) => {
+    const t = e.clipboardData?.getData('text');
+    if (t && looksLikeData(t)) { pasted = t; pasteNext = true; }
+  });
   input.addEventListener('keydown', onKeys);
   root.addEventListener('click', (e) => {
     if (e.target.closest('[data-close]')) return close();
@@ -91,6 +105,30 @@ export function detectAiIntent(query) {
 }
 
 /* ---------------- results ---------------- */
+
+const flat = (t) => String(t).replace(/\r?\n/g, ' ').trim();
+
+/** "Open in …" rows for pasted data, one per tool that can take it. */
+function detectedRows(text) {
+  const hits = detect(text);
+  const seen = new Set();
+  const out = [];
+  for (const h of hits) {
+    for (const id of h.tools) {
+      const tool = BY_ID.get(id);
+      if (!tool || tool.hidden || seen.has(id)) continue;
+      seen.add(id);
+      out.push({
+        group: `Looks like ${h.label}`,
+        title: `Open in ${tool.name}`,
+        hint: tool.description,
+        icon: tool.icon,
+        go: () => { store.handOff({ kind: h.kind, text, name: h.label }); window.location.hash = `#${id}`; },
+      });
+    }
+  }
+  return out.slice(0, 5);
+}
 
 function collect(query) {
   const q = query.trim();
@@ -146,6 +184,9 @@ function collect(query) {
     icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>',
     go: () => { openAssistant({ prompt: query.trim() }); },
   } : null;
+
+  const dataRows = q ? detectedRows(pasted ?? q) : [];
+  if (dataRows.length) return [...dataRows, ...toolRows.slice(0, 3), ...(aiRow ? [aiRow] : [])];
 
   if (isAi && aiRow) {
     return [aiRow, ...toolRows, ...savedRows, ...cmdRows];
@@ -236,11 +277,13 @@ function onKeys(e) {
 
 /* ---------------- open / close ---------------- */
 
-export function openPalette(prefill = '') {
+export function openPalette(prefill = '', { data = null } = {}) {
   if (!root) build();
   open = true;
   root.hidden = false;
-  input.value = prefill;
+  pasted = data;
+  input.value = data != null ? flat(data).slice(0, 500) : prefill;
+  pastedShown = input.value;
   render();
   requestAnimationFrame(() => input.focus());
 }
@@ -291,5 +334,18 @@ export function installPalette() {
       e.preventDefault();
       openSearch();
     }
+  });
+
+  /* Smart paste: pasting a token, JSON, a certificate… anywhere outside a
+     tool (or into the home search) offers the tools that can open it. */
+  document.addEventListener('paste', (e) => {
+    if (open || document.body.classList.contains('in-tool')) return;
+    const el = document.activeElement;
+    const inField = /^(INPUT|TEXTAREA|SELECT)$/.test(el?.tagName) || el?.isContentEditable;
+    if (inField && el?.id !== 'home-hero-input') return;
+    const text = e.clipboardData?.getData('text');
+    if (!text || !detect(text).length) return;
+    e.preventDefault();
+    openPalette('', { data: text });
   });
 }

@@ -725,6 +725,8 @@ function runSearch() {
 
 const CATEGORY_TIPS = {
   'images-files': ['Files are processed on your device — nothing is uploaded.', 'Drag a file straight onto the drop zone, or paste from the clipboard.'],
+  'pdf': ['PDFs are processed on your device — nothing is uploaded.', 'Chain several jobs at once with PDF Workflow.'],
+  'media': ['Video and audio are processed on your device.', 'The first job downloads the video engine once; after that it is cached.'],
   'text': ['Type or paste into the main box.', 'Results update as you type; the copy button takes the lot.'],
   'developer': ['Paste your code or data into the input.', 'Output updates live, and everything runs locally.'],
   'numbers': ['Enter a value and the conversions appear immediately.'],

@@ -74,8 +74,8 @@ export const TASKS = [
   {
     id: 'files',
     label: 'Images & files',
-    blurb: 'Shrink a photo, change a format, join PDFs together.',
-    categories: ['images-files'],
+    blurb: 'Shrink a photo, fix a PDF, trim a video, change a format.',
+    categories: ['images-files', 'pdf', 'media'],
   },
   {
     id: 'numbers',

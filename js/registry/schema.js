@@ -12,7 +12,7 @@
    ============================================================ */
 
 /**
- * @typedef {'text'|'developer'|'images-files'|'numbers'|'business'|'design'
+ * @typedef {'text'|'developer'|'images-files'|'pdf'|'media'|'numbers'|'business'|'design'
  *          |'security'|'networking'|'modeling'|'reference'|'music'|'everyday'|'law'|'science'} CategoryId
  *
  * @typedef {import('./kinds.js').ArtifactKind} ArtifactKind
@@ -47,19 +47,21 @@ import { KIND_IDS, TASK_IDS, unmappedCategories } from './kinds.js';
 /** Display order is deliberate: everyday utility first, specialist last. */
 export const CATEGORIES = /** @type {Category[]} */ ([
   { id: 'images-files', label: 'Images & Files', order: 1, blurb: 'Compress, convert, resize and combine — entirely on your device.' },
-  { id: 'text',         label: 'Text',           order: 2, blurb: 'Clean, compare, count and reshape text.' },
-  { id: 'developer',    label: 'Developer',      order: 3, blurb: 'Formatters, encoders, decoders and a code runner.' },
-  { id: 'numbers',      label: 'Numbers & Calculators', order: 4, blurb: 'Everyday maths, units and dates.' },
-  { id: 'business',     label: 'Business & Finance',    order: 5, blurb: 'Pricing, payroll, projections and paperwork.' },
-  { id: 'law',          label: 'Law & Legal Practice',  order: 6, blurb: 'Analyze judgments, compare precedents, digest case law, and structure legal research.' },
-  { id: 'science',      label: 'Science & Chemistry',   order: 7, blurb: 'Explore the periodic table, balance chemical reactions, and compute stoichiometry.' },
-  { id: 'design',       label: 'Design',         order: 8, blurb: 'Colour, ratios and codes.' },
-  { id: 'security',     label: 'Security & Privacy',    order: 9, blurb: 'Generate secrets and strip what you did not mean to share.' },
-  { id: 'networking',   label: 'Networking',     order: 10, blurb: 'Look up what is behind a domain or an address.' },
-  { id: 'modeling',     label: '3D & Modeling',  order: 11, blurb: 'Interactive models you can measure and quote from.' },
-  { id: 'reference',    label: 'Reference',      order: 12, blurb: 'Look something up — words, scripture, and the sum of human knowledge.' },
-  { id: 'music',        label: 'Music',          order: 13, blurb: 'Keep time, find the note, and work out what fits.' },
-  { id: 'everyday',     label: 'Everyday',       order: 14, blurb: 'Small things worth a bookmark.' },
+  { id: 'pdf',          label: 'PDF',            order: 2, blurb: 'Merge, split, edit, convert, secure and repair PDFs, all on your device.' },
+  { id: 'media',        label: 'Video & Audio',  order: 3, blurb: 'Trim, compress, convert and join video and sound, without uploading a thing.' },
+  { id: 'text',         label: 'Text',           order: 4, blurb: 'Clean, compare, count and reshape text.' },
+  { id: 'developer',    label: 'Developer',      order: 5, blurb: 'Formatters, encoders, decoders and a code runner.' },
+  { id: 'numbers',      label: 'Numbers & Calculators', order: 6, blurb: 'Everyday maths, units and dates.' },
+  { id: 'business',     label: 'Business & Finance',    order: 7, blurb: 'Pricing, payroll, projections and paperwork.' },
+  { id: 'law',          label: 'Law & Legal Practice',  order: 8, blurb: 'Analyze judgments, compare precedents, digest case law, and structure legal research.' },
+  { id: 'science',      label: 'Science & Chemistry',   order: 9, blurb: 'Explore the periodic table, balance chemical reactions, and compute stoichiometry.' },
+  { id: 'design',       label: 'Design',         order: 10, blurb: 'Colour, ratios and codes.' },
+  { id: 'security',     label: 'Security & Privacy',    order: 11, blurb: 'Generate secrets and strip what you did not mean to share.' },
+  { id: 'networking',   label: 'Networking',     order: 12, blurb: 'Look up what is behind a domain or an address.' },
+  { id: 'modeling',     label: '3D & Modeling',  order: 13, blurb: 'Interactive models you can measure and quote from.' },
+  { id: 'reference',    label: 'Reference',      order: 14, blurb: 'Look something up — words, scripture, and the sum of human knowledge.' },
+  { id: 'music',        label: 'Music',          order: 15, blurb: 'Keep time, find the note, and work out what fits.' },
+  { id: 'everyday',     label: 'Everyday',       order: 16, blurb: 'Small things worth a bookmark.' },
 ]);
 
 export const CATEGORY_IDS = new Set(CATEGORIES.map(c => c.id));

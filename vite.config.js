@@ -9,6 +9,8 @@ export default defineConfig(({ mode }) => {
 
   return {
     root: '.',
+    // ffmpeg.wasm starts its worker from its own package URL; pre-bundling breaks that.
+    optimizeDeps: { exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'] },
     server: {
       port: 3000,
       open: false,

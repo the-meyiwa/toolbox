@@ -1,6 +1,6 @@
 # Toolbox
 
-**129 everyday and specialist tools in one fast web app, with an AI assistant that can use all of them.**
+**174 everyday and specialist tools in one fast web app, with an AI assistant that can use all of them.**
 
 Compress an image, balance a chemical equation, digest a court judgment, draft an invoice or run some Python, all from one page with no sign-up. Most tools run entirely in your browser, so your files stay on your device. Accounts are optional and only add cloud sync, and live Spaces let you collaborate peer to peer.
 
@@ -12,26 +12,31 @@ Every tool is registered in [`js/registry/tools.js`](js/registry/tools.js), the 
 
 | Category | Tools | Examples |
 | :--- | ---: | :--- |
-| Images & Files | 13 | Image Compressor, Image Converter, Image Resizer, AI Watermark Remover |
-| Text | 12 | Word Counter, Case Converter, Find & Replace, Remove Duplicates |
-| Developer | 18 | JSON Formatter, CSV to JSON, Base64 Codec, JWT Decoder, Code Playground |
-| Numbers & Calculators | 10 | Calculator, Unit Converter, Percentage Calculator, Business Days |
+| Images & Files | 10 | Image Compressor, Image Converter, Image Resizer, AI Watermark Remover |
+| PDF | 16 | PDF Editor, OCR PDF, Compare PDFs, PDF Tables to Excel, PDF Password & Permissions, PDF Workflow, Lossless Archiver |
+| Video & Audio | 10 | Video Compressor, Video Trimmer, Video to GIF, Video Merger, Audio Converter, Audio Trimmer & Editor |
+| Text | 18 | Word Counter, Find & Replace, List Tools, Text Extractor, Hidden Characters & Unicode, Morse Code |
+| Developer | 26 | JSON Formatter, JSON Tools, Data Converter, SQL Formatter, XML Tools, JSONPath Tester, CSV Tools |
+| Numbers & Calculators | 13 | Calculator, Unit Converter, Date Calculator, Number to Words |
 | Business & Finance | 24 | Invoice Generator, VAT & Sales Tax, Break-Even Analysis, Amortization Schedule |
 | Law & Legal Practice | 5 | Case Digest, Case Comparator, Legal Document Analyzer, Legal PDF Bundle |
 | Science & Chemistry | 4 | Periodic Table, Chemical Equation Balancer, Stoichiometry, Compound Database |
-| Design | 5 | Color Converter, Color Palette, Contrast Checker, QR Generator |
-| Security & Privacy | 2 | Password Generator, File Checksum |
+| Design | 6 | Color Converter, Contrast Checker, Colour Blindness Simulator, QR Generator |
+| Security & Privacy | 4 | Password Generator, File Checksum, Certificate Decoder, Bcrypt Hash & Verify |
 | Networking | 11 | Subnet Calculator, IP Lookup, DNS Lookup, WHOIS Lookup |
-| 3D & Modeling | 3 | Anatomy Explorer, Container Builder, Architecture Editor |
+| 3D & Modeling | 4 | Anatomy Explorer, 3D Lab, Container Builder, Architecture Editor |
 | Reference | 5 | Automobile Guide, Wiki, Dictionary, Bible, Quran |
-| Music | 7 | Metronome, Instrument Tuner, Chord & Scale Finder, Spotify Player |
+| Music | 8 | Metronome, Instrument Tuner, Chord & Scale Finder, Spotify Player |
 | Everyday | 10 | Timer & Stopwatch, Weather Forecast, Interactive Map, Calendar |
+
+Paste a token, some JSON, a certificate or a CSV anywhere outside a tool and **smart paste** offers the tools that can open it.
 
 On top of the tools sit the **Assistant** (Google Gemini, able to run any tool, read PDF/Word/Excel files, chain tasks, model 3D structures from a description and learn concepts from the web), **Spaces** (WebRTC rooms for live collaboration), mail, messaging and optional Supabase cloud sync.
 
 ## Tech stack
 
-- **Frontend:** vanilla ES modules and a hash router, bundled with [Vite](https://vitejs.dev). Three.js for 3D, pdf.js and pdf-lib for PDFs, Yjs for collaboration.
+- **Frontend:** vanilla ES modules and a hash router, bundled with [Vite](https://vitejs.dev). Three.js for 3D, pdf.js, pdf-lib and qpdf (WebAssembly) for PDFs, Tesseract.js for OCR, ffmpeg.wasm for video and audio, Yjs for collaboration.
+- **Compression:** the [Korempress](https://github.com/thatcrazydave/Korempress) `kl` codec compiled to WebAssembly with plain clang ([`wasm/korempress`](wasm/korempress)).
 - **API server:** Node (`server.js`), which serves `/api/*` (Assistant, mail, device specs, supporters) and the WebSocket signaling relay for Spaces. In development the same API runs inside the Vite dev server.
 - **Data and auth:** [Supabase](https://supabase.com) (Postgres, auth, row-level security).
 - **Hosting:** static site and edge Worker on Cloudflare, Node API on Render.
