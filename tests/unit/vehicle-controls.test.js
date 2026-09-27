@@ -85,3 +85,39 @@ test('Assistant: vehicle_controls shows "One of these?" for a described button',
   const none = await executeExtraTool('vehicle_controls', { query: 'weather in lagos' });
   assert.equal(none.status, 'error');
 });
+
+test('Car parts: mechanics\' and everyday names find the right component', async () => {
+  const { findPart, specRowsFor } = await import('../../js/lib/automobile/part-search.js');
+  const specs = JSON.parse(readFileSync(new URL(`../../public/automobile/packages/${VEHICLE_ID}/specs.json`, import.meta.url)));
+  const cases = [
+    ['where is the oil filter', /^oil_filter/], ['sump', /^oil_pan$/], ['fan belt', /^drive_belt$/], ['cat', /^catalytic_converter$/],
+    ['front left brake pads', /^brake_pads_front_left$/], ['rear right shock', /^rear_shock_absorber_right$/],
+    ['cv axle on the passenger side', /^driveshaft_right$/], ['bonnet', /^hood$/], ['fuse box', /^fuse_relay_box$/],
+    ['o2 sensor', /^oxygen_sensors$/], ['where is the battery', /^battery_12v$/],
+  ];
+  for (const [q, id] of cases) assert.match(findPart(manifest.components, q)?.component.id || '', id, q);
+  assert.equal(findPart(manifest.components, 'the weather'), null);
+  const oil = specRowsFor(specs, manifest.components.find(c => c.id === 'oil_filter_housing')).map(r => r[1]);
+  assert.deepEqual(oil, ['Engine oil', 'Oil filter']);
+  assert.deepEqual(specRowsFor(specs, manifest.components.find(c => c.id === 'fuse_relay_box')), [], 'the fuse box is not an engine spec');
+});
+
+test('Assistant: vehicle_part returns the part, its figures and a 3D handoff', async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const file = new URL(`../../public${url}`, import.meta.url);
+    return { ok: true, json: async () => JSON.parse(readFileSync(file)) };
+  };
+  try {
+    assert.ok(EXTRA_TOOL_NAMES.has('vehicle_part'));
+    assert.ok(TOOL_GROUPS.vehicles.tools.includes('vehicle_part'));
+    assert.match('where is the oil filter on my car', TOOL_GROUPS.vehicles.match);
+    const r = await executeExtraTool('vehicle_part', { query: 'where is the oil filter' });
+    assert.equal(r.renderer, 'vehicle-part');
+    assert.match(r.component.id, /^oil_filter/);
+    assert.ok(r.specRows.some(([, k, v]) => k === 'Engine oil' && /0W-20/.test(v)));
+    assert.match(r.message, /Where:/);
+    const none = await executeExtraTool('vehicle_part', { query: 'the weather' });
+    assert.equal(none.status, 'error');
+  } finally { globalThis.fetch = realFetch; }
+});

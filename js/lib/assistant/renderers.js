@@ -4,7 +4,7 @@
    Registers renderers for the result types produced by
    js/lib/assistant/extra-tools.js (and the Notes tools):
      task-plan · chess-board · device-list · device-compare ·
-     vehicle · vehicle-controls · svg-illustration · note · container-design · structure-model ·
+     vehicle · vehicle-controls · vehicle-part · svg-illustration · note · container-design · structure-model ·
      invoice-card · invoice-list ·
      construction-estimate
    Each renderer receives the plain result object and returns
@@ -404,6 +404,45 @@ function renderVehicle(data, container) {
 }
 
 /* ============================================================
+   Car part — where it is, its data, "Show in 3D"
+   ============================================================ */
+
+const openGuideOn = (focus) => {
+  try { localStorage.setItem('toolbox.automobile.focus', JSON.stringify({ vehicleId: 'toyota-corolla-2014-2016', ...focus })); } catch { /* storage unavailable: the guide still opens */ }
+  window.location.hash = '#automobile-guide';
+};
+
+export function renderVehiclePart(data, container) {
+  const c = data.component || {};
+  const el = card('vehicle-part', {
+    icon: I.car,
+    title: c.label || 'Part',
+    sub: `${esc(c.category || '')}${c.category ? ' · ' : ''}${esc(data.vehicle || 'Toyota Corolla 2014–2016')}`,
+    actions: btn('Show in 3D', I.external, 'data-act="part3d"'),
+  });
+  const specs = c.specs && typeof c.specs === 'object' ? Object.entries(c.specs) : c.specs ? [['Specification', c.specs]] : [];
+  const rows = [
+    ['Where', c.location], ['What it does', c.description],
+    ...specs.map(([k, v]) => [humanKey(k), typeof v === 'object' ? JSON.stringify(v) : v]),
+    ['Maintenance', c.maintenance], ['Common failures', c.failures],
+  ].filter(([, v]) => v);
+  el.querySelector('.astc-body').innerHTML = `
+    ${data.askedAbout && !/corolla/i.test(data.askedAbout) ? `<p class="astc-muted astc-vc-caveat">From the 2014–2016 Corolla. Your ${esc(data.askedAbout)} may differ.</p>` : ''}
+    <div class="astc-sheet"><section><dl>${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></section>
+    ${data.specRows?.length ? `<section><h5>Spec sheet</h5><dl>${data.specRows.map(([, k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></section>` : ''}</div>
+    ${c.accuracyNote ? `<p class="astc-muted astc-vp-note">${esc(c.accuracyNote)}</p>` : ''}
+    ${c.sources?.length ? `<p class="astc-muted astc-vp-note">Sources: ${c.sources.map(s => s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.label || s.url)}</a>` : esc(s.label)).join(' · ')}</p>` : ''}
+    ${data.alternatives?.length ? `<div class="astc-vc-alts"><span>Nearby</span>${data.alternatives.map(a => `<button type="button" data-vp-part="${esc(a.id)}">${esc(a.label)}</button>`).join('')}</div>` : ''}`;
+  el.addEventListener('click', (e) => {
+    const alt = e.target.closest('[data-vp-part]');
+    if (alt) { openGuideOn({ component: alt.dataset.vpPart }); return; }
+    if (e.target.closest('[data-act="part3d"]')) openGuideOn({ component: c.id });
+  });
+  container.appendChild(el);
+  return el;
+}
+
+/* ============================================================
    Car controls — "One of these?"
    ============================================================ */
 
@@ -439,8 +478,7 @@ export function renderVehicleControls(data, container) {
     const alt = e.target.closest('[data-vc-cluster]');
     if (alt) { clusterId = alt.dataset.vcCluster; paint(); return; }
     if (e.target.closest('[data-act="guide"]')) {
-      try { localStorage.setItem('toolbox.automobile.focus', JSON.stringify({ vehicleId: 'toyota-corolla-2014-2016', cluster: clusterId, control: clusterId === data.cluster ? selected : null })); } catch { /* storage unavailable: the guide still opens */ }
-      window.location.hash = '#automobile-guide';
+      openGuideOn({ cluster: clusterId, control: clusterId === data.cluster ? selected : null });
     }
   });
   container.appendChild(el);
@@ -675,6 +713,7 @@ registerResultRenderer('device-list', renderDeviceList);
 registerResultRenderer('device-compare', renderDeviceCompare);
 registerResultRenderer('vehicle', renderVehicle);
 registerResultRenderer('vehicle-controls', renderVehicleControls);
+registerResultRenderer('vehicle-part', renderVehiclePart);
 registerResultRenderer('construction-estimate', renderConstructionEstimate);
 registerResultRenderer('svg-illustration', renderIllustration);
 registerResultRenderer('container-design', renderContainerDesign, { match: d => Boolean(d?.design?.modules && d?.design?.levels) });

@@ -1321,6 +1321,17 @@ export default {
       this.openCluster(cl.id, focus.control);
       return;
     }
+    const part=focus?.component&&this.viewer?.asset?.registry.get(focus.component);
+    if(part){
+      // The Assistant's "Show in 3D": Parts mode, X-Ray for anything under the skin, the part selected and in view.
+      this.setSpace('parts',{ quiet:true });
+      const meta=this.viewer.asset.registry.metadata(focus.component);
+      if(!['body','glass','lighting','wheels'].includes(meta?.layer))this.setViewMode('xray');
+      this.viewer.select(focus.component);
+      const p=this.viewer.componentPoint(focus.component);
+      if(p)this.viewer.lookAt(p,2.6);
+      return;
+    }
     this.setSpace(this.state.space==='interior'?'interior':this.state.space,{ quiet:true });
   },
 

@@ -2680,8 +2680,8 @@
       "description": "Replaceable paper element inside a screw-on cap.",
       "location": "Front, lower side of the block.",
       "specs": {
-        "Toyota part": "04152-YZZA1 (element)",
-        "Cap torque": "156 in-lb (≈18 N·m)",
+        "Toyota part": "04152-YZZA6 (element)",
+        "Cap torque": "25 N·m (18 lb-ft), cap wrench SST 09228-06501",
         "Oil capacity": "4.4 US qt (4.2 L) with filter",
         "Grade": "SAE 0W-20 (US market)"
       },

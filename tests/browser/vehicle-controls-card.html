@@ -12,18 +12,20 @@
     Browser harness for the Assistant's "One of these?" card (vehicle_controls).
     Run the dev server (npm run dev) and open /tests/browser/vehicle-controls-card.html.
     ?q=your question runs one query; no parameter runs a few examples.
+    Add &part to run vehicle_part ("where is the …") instead.
   -->
   <script type="module">
     import { executeExtraTool } from '/js/lib/assistant/extra-tools.js';
-    import { renderVehicleControls } from '/js/lib/assistant/renderers.js';
+    import { renderVehicleControls, renderVehiclePart } from '/js/lib/assistant/renderers.js';
     const q = new URLSearchParams(location.search).get('q');
     const queries = q ? [q] : ["There's a button on the door of my Toyota, what is it for?", 'orange light that looks like an engine', 'how do I open the fuel door'];
     for (const query of queries) {
       const box = document.createElement('div');
       box.className = 'card';
       document.body.appendChild(box);
-      const result = await executeExtraTool('vehicle_controls', { query });
-      renderVehicleControls(result, box);
+      const part = new URLSearchParams(location.search).has('part');
+      const result = await executeExtraTool(part ? 'vehicle_part' : 'vehicle_controls', { query });
+      (part ? renderVehiclePart : renderVehicleControls)(result, box);
     }
   </script>
 </body>

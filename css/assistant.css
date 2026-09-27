@@ -1134,7 +1134,9 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
 /* Car controls card ("One of these?") */
 .astc-vehicle-controls .astc-vc-where { margin: 0 0 var(--space-2); font-size: 13px; color: var(--text-2); }
 .astc-vehicle-controls .astc-vc-where strong { color: var(--text); }
-.astc-vehicle-controls .astc-vc-caveat { margin: 0 0 var(--space-2); font-size: 12px; }
-.astc-vehicle-controls .astc-vc-alts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: var(--space-3); font-size: 12px; color: var(--text-2); }
-.astc-vehicle-controls .astc-vc-alts button { min-height: 32px; padding: 4px 12px; border-radius: var(--radius-pill); border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
-.astc-vehicle-controls .astc-vc-alts button:hover { background: var(--surface-3, var(--surface-2)); }
+.astc-vehicle-controls .astc-vc-caveat, .astc-vehicle-part .astc-vc-caveat { margin: 0 0 var(--space-2); font-size: 12px; }
+.astc-vehicle-controls .astc-vc-alts, .astc-vehicle-part .astc-vc-alts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: var(--space-3); font-size: 12px; color: var(--text-2); }
+.astc-vehicle-controls .astc-vc-alts button, .astc-vehicle-part .astc-vc-alts button { min-height: 32px; padding: 4px 12px; border-radius: var(--radius-pill); border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.astc-vehicle-controls .astc-vc-alts button:hover, .astc-vehicle-part .astc-vc-alts button:hover { background: var(--surface-3, var(--surface-2)); }
+.astc-vehicle-part .astc-vp-note { margin: var(--space-2) 0 0; font-size: 12px; line-height: 1.45; }
+.astc-vehicle-part .astc-vp-note a { color: inherit; }

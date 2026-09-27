@@ -102,6 +102,17 @@ When someone asks what a button, light, symbol, lever or exterior part is for, t
 
 For other cars, the card says the drawing is the Corolla's; the symbols are standard.
 
+## Assistant: parts
+
+`vehicle_part` answers "where is the …" and "show me the …" from the Guide's own package data (`js/lib/automobile/part-search.js`).
+
+- It understands mechanics' and British/American names: sump, fan belt, cat, CV axle, bonnet, boot, rotor, shock, O2 sensor, fuse box.
+- It understands sides and ends, such as "front left" or "passenger side".
+- The card shows the part's location, job, specs, maintenance, failures and matching spec-sheet rows, with its accuracy note and sources.
+- **Show in 3D** opens the Guide in Parts mode with the part selected. Parts under the skin open in X-Ray.
+
+The Assistant's instructions describe the Guide's three modes. They also tell it to show the part a diagnosis points to, and never to invent figures the data lacks.
+
 Harnesses (with `npm run dev`):
 
 - `/tests/browser/vehicle-controls.html?c=driver-door,cluster` draws the groups.

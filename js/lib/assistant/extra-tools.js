@@ -111,6 +111,18 @@ export const EXTRA_TOOL_DECLARATIONS = [
     },
   },
   {
+    name: 'vehicle_part',
+    description: `Find a part on the car and show it: where it is, what it does, its specifications, maintenance, common failures, and the matching spec-sheet figures (oil grade and capacity, spark plugs, tyres, wheel torque, brakes…), with a "Show in 3D" button that opens the Automobile Guide on that part, in X-Ray if it sits under the skin. Use it for "where is the …", "show me the …", "what does the … do", or when a diagnosis points at a part. Understands mechanics' and British/American names (sump, fan belt, cat, CV axle, bonnet, boot, rotor, shock, O2 sensor) and sides (front left, passenger side). Covers the 2014–2016 Toyota Corolla (E170) package, 224 components. Quote figures as given and pass on the accuracy note: some positions are approximate.`,
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'The part, in the person\'s words, with side or end if they said (e.g. "front left brake pads").' },
+        vehicle: { type: 'string', description: 'The car, if they said.' },
+      },
+      required: ['query'],
+    },
+  },
+  {
     name: 'vehicle_controls',
     description: `Identify a button, switch, knob, lever, warning light, symbol or exterior part on a car and SHOW the person that part of the car drawn with every switch and symbol, so they can point at the one they mean ("One of these?"). Use it whenever someone asks what a button, light, symbol, lever or fitting is for, e.g. "there's a button on my car door, what is it for?", "orange light that looks like an engine", "lever on the right of the steering wheel", "how do I open the fuel door". Covers the 2014–2016 Toyota Corolla (E170) in detail: door switches, steering-wheel switches, stalks, instrument-cluster warning lamps, centre stack, climate, console, overhead, releases, key fob, front and rear exterior, fuel door, door pillar labels and the engine bay. Other cars share most ISO symbols, so it still helps; say so. After the card is shown, answer in one or two sentences and invite them to tap the one they mean.`,
     parameters: {
@@ -664,6 +676,46 @@ async function deviceCompare({ a, b, category }) {
 
 /* ---------------- vehicles ---------------- */
 
+/* A part of the Corolla package: where it is, its data and the spec-sheet rows that go with it. */
+let corollaPackage = null;
+async function loadCorollaPackage() {
+  if (!corollaPackage) {
+    const base = '/automobile/packages/toyota-corolla-2014-2016';
+    corollaPackage = Promise.all([fetch(`${base}/manifest.json`), fetch(`${base}/specs.json`)])
+      .then(async ([m, s]) => ({ manifest: await m.json(), specs: s.ok ? await s.json() : null }))
+      .catch((error) => { corollaPackage = null; throw error; });
+  }
+  return corollaPackage;
+}
+
+async function vehiclePartTool({ query = '', vehicle = '' } = {}) {
+  const { findPart, specRowsFor } = await import('../automobile/part-search.js');
+  let pkg;
+  try { pkg = await loadCorollaPackage(); } catch { return { status: 'error', message: 'The Automobile Guide data could not be loaded.' }; }
+  const hit = findPart(pkg.manifest.components || [], query);
+  if (!hit) return { status: 'error', message: `No part in the 2014–2016 Corolla package matches "${query}". It has 224 components (engine, cooling, fuel, brakes, suspension, steering, electrical, SRS, body, interior); ask what it is called or what it does.` };
+  const c = hit.component;
+  const specRows = specRowsFor(pkg.specs, c);
+  const other = vehicle && !/corolla/i.test(vehicle);
+  const lines = [
+    `${c.label} (${c.category}). Where: ${c.location || 'not recorded'}.`,
+    c.description, c.specs ? `Specs: ${typeof c.specs === 'string' ? c.specs : JSON.stringify(c.specs)}` : '',
+    c.maintenance ? `Maintenance: ${c.maintenance}` : '', c.failures ? `Common failures: ${c.failures}` : '',
+    specRows.length ? `Spec sheet: ${specRows.map(([, k, v]) => `${k}: ${v}`).join('; ')}.` : '',
+    c.accuracyNote ? `Accuracy: ${c.accuracyNote}` : '',
+    other ? `This is the 2014–2016 Corolla; ${vehicle} may differ.` : '',
+    'Shown to the user as a card with a "Show in 3D" button.',
+  ];
+  return {
+    status: 'success', renderer: 'vehicle-part', type: 'vehicle-part',
+    vehicle: 'Toyota Corolla 2014–2016 (E170)', askedAbout: vehicle || '',
+    component: { id: c.id, label: c.label, category: c.category, layer: c.layer, location: c.location || '', description: c.description || '', specs: c.specs || null, maintenance: c.maintenance || '', failures: c.failures || '', accuracyNote: c.accuracyNote || '', sources: (c.sources || []).slice(0, 4) },
+    specRows,
+    alternatives: hit.alternatives.map(a => ({ id: a.id, label: a.label })),
+    message: lines.filter(Boolean).join('\n'),
+  };
+}
+
 /* The researched 2014–2016 Corolla controls: find what the person means and show that part of the car. */
 async function vehicleControlsTool({ query = '', vehicle = '' } = {}) {
   const { findControls, CLUSTER } = await import('../automobile/corolla-controls.js');
@@ -1054,6 +1106,7 @@ export async function executeExtraTool(name, args = {}) {
     case 'device_compare': return deviceCompare(args);
     case 'vehicle_lookup': return vehicleLookup(args);
     case 'vehicle_controls': return vehicleControlsTool(args);
+    case 'vehicle_part': return vehiclePartTool(args);
     case 'update_note': return updateNote(args);
     case 'draw_illustration': {
       const svg = sanitizeSvg(args.svg);

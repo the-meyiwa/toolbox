@@ -145,6 +145,7 @@ const TOOL_META = {
   device_compare: ['device', 'Comparing devices', 'Compared devices'],
   vehicle_lookup: ['car', 'Looking up the vehicle', 'Looked up the vehicle'],
   vehicle_controls: ['car', 'Finding that part of the car', 'Found that part of the car'],
+  vehicle_part: ['car', 'Finding the part', 'Found the part'],
   create_note: ['note', 'Writing a note', 'Saved a note'],
   update_note: ['note', 'Updating a note', 'Updated a note'],
   list_notes: ['note', 'Reading your notes', 'Read your notes'],
