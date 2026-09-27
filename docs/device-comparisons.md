@@ -1,4 +1,33 @@
-# Tech Device Comparisons: Icecat setup
+# Tech Device Comparisons
+
+The built-in database (`js/lib/devices/`) holds about 2,000 devices in 22 categories. They are grouped in the picker as follows:
+
+| Group | Categories |
+| --- | --- |
+| Phones & computers | Phones, tablets, laptops, TVs, monitors, smartwatches, consoles |
+| Chips & graphics | Mobile chips, processors and graphics cards. Processors and graphics cards go back to 2007–2009: Core 2, Sandy Bridge, FX, Ryzen 1000–3000, GTX 480–1080 Ti, Titan, HD 5870, R9 and RX 400–5700 |
+| Audio | Headphones and earbuds, Bluetooth speakers |
+| Charging | Chargers and cables, power banks and portable power stations |
+| Office & home | Printers, photocopiers, coffee makers |
+| Backup power | Solar inverters, UPS units |
+| Music gear | Electric guitars, keyboards and digital pianos |
+| Vehicles | Electric cars from Chinese and global brands |
+
+## How the data is organised
+
+- **Schema.** Each category lists its fields once in `schema.js`. Every field has a unit and a direction, meaning whether higher or lower is better. Some categories also have a `note`, which is shown under comparisons and rankings.
+- **Data files.** The devices live in `data/<category>.js`. Additions to the original categories are kept in separate files, which the loaders in `db.js` merge: `cpus-legacy.js`, `gpus-legacy.js`, `socs-more.js` and `audio-more.js`.
+- **Scoring.** `SCORES` in `db.js` defines each category's sub-scores. The new categories are scored on their features, not on how they feel to use. For example, guitars are judged on versatility, playability and hardware, not tone.
+- **Prices.** They are US list prices. Electric cars not sold in the US use the home-market price, converted to US dollars. Photocopiers have no price, because they are sold through dealers.
+- **Electric-car range.** EPA, WLTP and CLTC figures are not comparable. The range score converts all three to an EPA-like figure: WLTP × 0.88, CLTC × 0.75.
+- **Tests.** `tests/unit/device-database.test.js` checks that:
+  - every value matches its field type;
+  - ids are unique within a category;
+  - every category scores its devices and produces verdicts.
+
+The Assistant's `device_specs` and `device_compare` tools cover every category.
+
+## Live spec sheets (Icecat)
 
 The tool uses Icecat's JSON product API. Icecat standardizes manufacturer product sheets across IT, consumer electronics, peripherals, accessories and appliances. Availability varies by product, brand authorization and subscription. It is not a guarantee that every gadget has a sheet.
 

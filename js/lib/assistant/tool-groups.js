@@ -98,9 +98,9 @@ export const TOOL_GROUPS = {
     match: /\b(chess|fen|pgn|checkmate|opening|gambit|defen[cs]e|sicilian|e4|d4|nf3|knight|bishop|rook|queen|pawn)\b/i,
   },
   devices: {
-    label: 'Devices: specs and comparisons for phones, laptops, tablets, TVs, monitors, chips, GPUs, watches, audio, consoles',
+    label: 'Devices: specs and comparisons for phones, laptops, tablets, TVs, monitors, chips, CPUs, GPUs, watches, earbuds, speakers, consoles, chargers, power banks, printers, photocopiers, coffee makers, inverters, UPS, guitars, keyboards and electric cars',
     tools: ['device_specs', 'device_compare'],
-    match: /\b(phone|iphone|samsung|galaxy|pixel|tecno|infinix|xiaomi|laptop|macbook|tablet|ipad|tv|television|monitor|oled|gpu|rtx|cpu|processor|snapdragon|chip|smartwatch|watch|earbuds|headphones|airpods|console|playstation|ps5|xbox|switch|specs?|versus|vs\.?)\b/i,
+    match: /\b(phone|iphone|samsung|galaxy|pixel|tecno|infinix|xiaomi|laptop|macbook|tablet|ipad|tv|television|monitor|oled|gpu|rtx|cpu|processor|snapdragon|chip|smartwatch|watch|earbuds|headphones|airpods|console|playstation|ps5|xbox|switch|specs?|versus|vs\.?|charger|charging brick|usb-?c cable|cable|power ?bank|power station|ecoflow|jackery|speaker|jbl|bose|printer|ecotank|laserjet|photocopier|copier|bizhub|imagerunner|coffee (maker|machine)|espresso|nespresso|breville|inverter|deye|growatt|victron|ups|electric car|ev|tesla|byd|nio|xpeng|zeekr|model [3sxy]|ioniq|guitar|stratocaster|les paul|keyboard|digital piano|synth\w*|intel|amd|ryzen|core i\d|nvidia|geforce|radeon)\b/i,
   },
   vehicles: {
     label: 'Vehicles: fault diagnosis (symptoms to causes and fixes), VIN decoding, car specifications, what a button, switch, lever or warning light is for (shown on a drawing of that part of the car), where a part is with its specs (shown in 3D), and the injuries car parts and crashes cause, with first aid, treatment and prevention',

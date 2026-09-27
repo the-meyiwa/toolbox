@@ -16,6 +16,7 @@ import { GENERATORS as STRUCTURE_GENERATORS } from '../structure-model.js';
 import { TOOLS } from '../../registry/index.js';
 import * as CE from '../construction/estimate.js';
 import { DOMAIN_TOOL_DECLARATIONS, executeDomainTool } from './domain-tools.js';
+import { CATEGORY_ORDER as DEVICE_CATEGORIES } from '../devices/schema.js';
 
 const lower = (v) => String(v ?? '').toLowerCase().trim();
 
@@ -87,12 +88,12 @@ export const EXTRA_TOOL_DECLARATIONS = [
   },
   {
     name: 'device_specs',
-    description: 'Look up specifications from the Toolbox device database (1,500+ phones, tablets, laptops, TVs, monitors, mobile chips, processors, graphics cards, smartwatches, headphones/earbuds, consoles). Returns specs, benchmark scores and Toolbox scores. Use for any question about a specific device\'s specs or for "best X" rankings.',
+    description: 'Look up specifications from the Toolbox device database (2,000+ phones, tablets, laptops, TVs, monitors, mobile chips, processors and graphics cards back to 2007, smartwatches, headphones/earbuds, Bluetooth speakers, consoles, chargers and cables, power banks and power stations, printers, photocopiers, coffee makers, solar inverters, UPS units, electric guitars, keyboards/digital pianos and electric cars from Chinese and global brands). Returns specs, benchmark scores and Toolbox scores. Use for any question about a specific device\'s specs or for "best X" rankings.',
     parameters: {
       type: 'object',
       properties: {
         query: { type: 'string', description: 'Device name, e.g. "iPhone 17 Pro", "RTX 4070", "Snapdragon 8 Elite".' },
-        category: { type: 'string', enum: ['phones', 'tablets', 'laptops', 'tvs', 'monitors', 'socs', 'cpus', 'gpus', 'watches', 'audio', 'consoles'], description: 'Optional category to search.' },
+        category: { type: 'string', enum: DEVICE_CATEGORIES, description: 'Optional category to search (socs = mobile chips, cpus = processors, gpus = graphics cards, audio = headphones/earbuds, evs = electric cars).' },
         rank_by: { type: 'string', description: 'Optional: return the top devices in the category sorted by this (score, value, price, battery, gb6m, timespy, nits …; value = best score for the money) instead of searching.' },
         limit: { type: 'number', description: 'Max results (default 5, max 15).' },
       },

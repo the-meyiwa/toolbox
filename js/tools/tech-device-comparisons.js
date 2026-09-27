@@ -18,7 +18,7 @@
    ============================================================ */
 
 import {
-  CATEGORIES, CATEGORY_ORDER, loadCategory, reasons, formatValue, winner, searchDevices,
+  CATEGORIES, CATEGORY_ORDER, CATEGORY_GROUPS, loadCategory, reasons, formatValue, winner, searchDevices,
   suggestions, popular, verdicts, fmtDate,
 } from '../lib/devices/db.js';
 import IcecatPanel from '../lib/devices/icecat-panel.js';
@@ -46,6 +46,17 @@ const GLYPH = {
   gpus: '<rect x="5" y="14" width="38" height="18" rx="3"/><circle cx="17" cy="23" r="5"/><circle cx="31" cy="23" r="5"/><path d="M9 32v4M14 32v3M19 32v3M24 32v3"/>',
   watches: '<rect x="13" y="13" width="22" height="22" rx="6"/><path d="M17 13l2-7h10l2 7M17 35l2 7h10l2-7M24 19v5l3 3"/>',
   audio: '<path d="M10 28v-4a14 14 0 0 1 28 0v4"/><rect x="8" y="27" width="7" height="12" rx="3"/><rect x="33" y="27" width="7" height="12" rx="3"/>',
+  speakers: '<rect x="13" y="6" width="22" height="36" rx="6"/><circle cx="24" cy="29" r="7"/><circle cx="24" cy="29" r="2"/><circle cx="24" cy="14" r="2.5"/>',
+  chargers: '<rect x="12" y="14" width="24" height="22" rx="4"/><path d="M19 8v6M29 8v6M20 36v4a4 4 0 0 0 8 0v-4"/><path d="M25 19l-4 6h6l-4 6"/>',
+  powerbanks: '<rect x="9" y="12" width="30" height="24" rx="4"/><path d="M39 20h3v8h-3"/><path d="M15 18h8v12h-8z"/><path d="M27 18h6"/>',
+  printers: '<path d="M14 18V7h20v11"/><rect x="6" y="18" width="36" height="16" rx="3"/><path d="M14 30h20v11H14z"/><circle cx="35" cy="23" r="1.3"/>',
+  copiers: '<rect x="7" y="16" width="34" height="26" rx="3"/><path d="M11 16l3-8h20l3 8"/><path d="M13 24h22M13 30h22M13 36h14"/>',
+  coffee: '<path d="M10 18h24v12a10 10 0 0 1-10 10h-4a10 10 0 0 1-10-10z"/><path d="M34 21h3a4 4 0 0 1 0 8h-3"/><path d="M17 6c-2 3 2 5 0 8M24 6c-2 3 2 5 0 8"/>',
+  inverters: '<rect x="10" y="6" width="28" height="36" rx="3"/><path d="M16 16c2-4 4-4 6 0s4 4 6 0 4-4 4 0"/><path d="M16 28h16M16 34h10"/>',
+  ups: '<rect x="12" y="5" width="24" height="38" rx="3"/><path d="M25 12l-5 8h7l-5 8"/><path d="M18 35h12"/>',
+  guitars: '<path d="M30 6l6 6-9 9"/><path d="M27 21c3 3 3 8-1 10 1 4-2 9-7 9-6 0-11-5-11-11 0-5 5-8 9-7 2-4 7-4 10-1z"/><circle cx="18" cy="31" r="2.5"/><path d="M34 4l4 4"/>',
+  keyboards: '<rect x="4" y="14" width="40" height="22" rx="3"/><path d="M11 14v22M18 14v22M25 14v22M32 14v22M39 14v22"/><path d="M9 14v12M16 14v12M23 14v12M30 14v12M37 14v12" stroke-width="3"/>',
+  evs: '<path d="M8 32v-8l5-9h22l5 9v8"/><path d="M5 24h38v8H5z"/><circle cx="14" cy="33" r="4"/><circle cx="34" cy="33" r="4"/><path d="M25 17l-3 5h4l-3 5"/>',
   consoles: '<path d="M14 16h20a9 9 0 0 1 8.7 11.3l-1.4 5.4a4.5 4.5 0 0 1-7.7 1.9L30 31H18l-3.6 3.6a4.5 4.5 0 0 1-7.7-1.9l-1.4-5.4A9 9 0 0 1 14 16z"/><path d="M15 21v6M12 24h6"/><circle cx="31" cy="22" r="1.3"/><circle cx="34" cy="26" r="1.3"/>',
 };
 const glyph = (cat, size = 48) => `<svg viewBox="0 0 48 48" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${GLYPH[cat]}</svg>`;
@@ -113,6 +124,7 @@ export default {
     this.container.innerHTML = `
       <div class="dv">
         <div class="dv-top">
+          <div class="dv-groups" role="tablist" aria-label="Device group"></div>
           <div class="dv-cats" role="tablist" aria-label="Device category"></div>
           <div class="dv-toprow">
             <div class="dv-views" role="tablist" aria-label="View">
@@ -125,7 +137,7 @@ export default {
         </div>
         <div class="dv-body"></div>
       </div>`;
-    this.el = { cats: this.container.querySelector('.dv-cats'), body: this.container.querySelector('.dv-body'), views: this.container.querySelector('.dv-views') };
+    this.el = { groups: this.container.querySelector('.dv-groups'), cats: this.container.querySelector('.dv-cats'), body: this.container.querySelector('.dv-body'), views: this.container.querySelector('.dv-views') };
     this.container.addEventListener('click', (e) => this.onClick(e));
     this.container.addEventListener('input', (e) => this.onInput(e));
     this.container.addEventListener('change', (e) => this.onChange(e));
@@ -137,7 +149,16 @@ export default {
 
   renderCats() {
     if (!this.el) return;
-    this.el.cats.innerHTML = CATEGORY_ORDER.map(c => `<button type="button" role="tab" class="dv-cat" data-cat="${c}" aria-selected="${c === this.state.cat}">
+    const group = CATEGORY_GROUPS.find(g => g.cats.includes(this.state.cat)) || CATEGORY_GROUPS[0];
+    this.el.groups.innerHTML = CATEGORY_GROUPS.map(g => `<button type="button" role="tab" class="dv-group" data-group="${g.id}" aria-selected="${g === group}">${esc(g.label)}</button>`).join('');
+    this.el.groups.hidden = this.state.view === 'sheets';
+    // keep the selected group visible when the row scrolls sideways (phones)
+    const sel = this.el.groups.querySelector('[aria-selected="true"]');
+    if (sel && this.el.groups.scrollWidth > this.el.groups.clientWidth) {
+      const g = this.el.groups, left = sel.offsetLeft - g.offsetLeft;
+      if (left < g.scrollLeft || left + sel.offsetWidth > g.scrollLeft + g.clientWidth) g.scrollLeft = Math.max(0, left - 12);
+    }
+    this.el.cats.innerHTML = group.cats.map(c => `<button type="button" role="tab" class="dv-cat" data-cat="${c}" aria-selected="${c === this.state.cat}">
       <span class="dv-cat-icon">${glyph(c, 20)}</span><span>${esc(CATEGORIES[c].label)}</span>${this.counts[c] ? `<small>${this.counts[c]}</small>` : ''}</button>`).join('');
     this.el.views.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === this.state.view)));
     this.el.cats.hidden = this.state.view === 'sheets';
@@ -313,6 +334,7 @@ export default {
       ${benchHtml}
       ${specHtml}
       ${relatedHtml}
+      ${def.note ? `<p class="dv-note dv-cat-note">${esc(def.note)}</p>` : ''}
       <p class="dv-note">Scores compare each device with the rest of its category from the listed specs and ignore price; they are not a review. Better buy weighs that score against the US launch price (street prices fall over time, especially for older models). Benchmark figures are typical published results and vary with software and cooling. <sup>*</sup> marks a value taken from the device's chip. Launch prices are US list prices for the base model.</p>`;
     requestAnimationFrame(() => this.el.body.querySelectorAll('.dv-bf-bar i, .dv-bench-bar i, .dv-ring').forEach(n => n.classList.add('in')));
   },
@@ -433,6 +455,10 @@ export default {
       laptops: ['cpu', 'gpu', 'displaySize', 'weight'], socs: ['node', 'cores', 'maxClock', 'gpu'], cpus: ['cores', 'threads', 'boostClock', 'tdp'],
       gpus: ['vram', 'shaders', 'boostClock', 'tdp'], watches: ['displaySize', 'batteryDays', 'gps', 'water'], audio: ['type', 'anc', 'battery', 'codecs'],
       consoles: ['type', 'tflops', 'ram', 'storage'],
+      speakers: ['type', 'outputW', 'battery', 'water'], chargers: ['type', 'maxW', 'ports', 'data'], powerbanks: ['type', 'capacity', 'wh', 'maxOut'],
+      printers: ['type', 'ppmBlack', 'cppBlack', 'duplex'], copiers: ['type', 'ppmBlack', 'paperMax', 'scanIpm'], coffee: ['type', 'grinder', 'milk', 'tank'],
+      inverters: ['type', 'ratedW', 'pvW', 'batteryV'], ups: ['type', 'va', 'watts', 'runtimeHalf'], guitars: ['shape', 'pickups', 'frets', 'madeIn'],
+      keyboards: ['type', 'keys', 'action', 'polyphony'], evs: ['body', 'drive', 'batteryKwh', 'dcKw'],
       tvs: ['panel', 'displaySize', 'nits', 'refresh'], monitors: ['panel', 'displaySize', 'displayRes', 'refresh'],
     }[this.state.cat] || [];
     const units = this.units();
@@ -459,6 +485,7 @@ export default {
           <select class="tool-select" data-rank="sort" aria-label="Sort by">${sortOpts.map(([k, l]) => `<option value="${k}" ${k === r.sort ? 'selected' : ''}>Sort: ${esc(l)}</option>`).join('')}</select>
         </div>
         <p class="dv-muted dv-rank-count">${list.length} ${esc(list.length === 1 ? def.singular : lc(def.label))}</p>
+        ${def.note ? `<p class="dv-note dv-cat-note">${esc(def.note)}</p>` : ''}
         <ol class="dv-rank-list">
           ${shown.map((d, i) => {
             const metric = sortField ? formatValue(sortField, d[r.sort], units) : sub ? this.fmtScore(d._scores[r.sort]) : r.sort === 'value' ? `Value ${this.fmtScore(d._value)}${d.price ? ` · $${Number(d.price).toLocaleString('en-US')}` : ''}` : '';
@@ -495,6 +522,12 @@ export default {
     const t = e.target;
     const cat = t.closest('[data-cat]');
     if (cat) { if (cat.dataset.cat !== this.state.cat) this.showCategory(cat.dataset.cat); return; }
+    const grp = t.closest('[data-group]');
+    if (grp) {
+      const g = CATEGORY_GROUPS.find(x => x.id === grp.dataset.group);
+      if (g && !g.cats.includes(this.state.cat)) this.showCategory(g.cats[0]);
+      return;
+    }
     const view = t.closest('[data-view]');
     if (view) { this.state.view = view.dataset.view; this.save(); this.renderView(); return; }
     const pickBtn = t.closest('.dv-picker-btn');

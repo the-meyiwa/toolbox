@@ -17,6 +17,14 @@
 }
 .dv-cats::-webkit-scrollbar { display: none; }
 .dv-cats[hidden] { display: none; }
+.dv-groups { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; padding: 3px; background: var(--surface-2); border-radius: var(--radius-pill); align-self: flex-start; max-width: 100%; }
+.dv-groups::-webkit-scrollbar { display: none; }
+.dv-groups[hidden] { display: none; }
+.dv-group { flex: none; height: 32px; padding: 0 14px; border-radius: var(--radius-pill); font-size: 13px; font-weight: 500; color: var(--text-2); white-space: nowrap; }
+.dv-group:hover { color: var(--text); }
+.dv-group[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-1); }
+[data-theme="dark"] .dv-group[aria-selected="true"] { background: var(--surface-3); }
+.dv-cat-note { border-left: 3px solid var(--line-strong); padding-left: 10px; }
 .dv-cat {
   display: inline-flex; align-items: center; gap: 8px; flex: none;
   height: 40px; padding: 0 14px 0 10px; border-radius: var(--radius-pill);

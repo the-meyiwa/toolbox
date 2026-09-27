@@ -29,6 +29,7 @@ import { openSettings } from '../lib/settings-ui.js';
 import { PROFILE_PICTURES, getUserAvatarHtml } from '../lib/profile-pictures.js';
 import { updateSettings } from '../lib/settings.js';
 import { showToast } from '../utils.js';
+import { isAssistantOpen } from '../lib/assistant-popup.js';
 import { needsUsernameChoice, openUsernameOnboarding } from './username-onboarding.js';
 
 function escapeHtml(str) {
@@ -1018,7 +1019,7 @@ function renderModalContent() {
           const res = await signInWithEmail(email, pwd);
           if (res.success) {
             closeAccountModal();
-            window.location.hash = '#assistant';
+            if (!isAssistantOpen()) window.location.hash = '#assistant';
           } else {
             authMsg.style.display = 'block';
             authMsg.style.color = '#ef4444';
@@ -1052,7 +1053,7 @@ function renderModalContent() {
         if (res.success) {
           closeAccountModal();
           showToast('Signed in with Passkey.', 'success');
-          window.location.hash = '#assistant';
+          if (!isAssistantOpen()) window.location.hash = '#assistant';
         } else {
           if (authMsg) {
             authMsg.style.display = 'block';

@@ -11,22 +11,33 @@
    - display formatting in metric or imperial units.
    ============================================================ */
 
-import { CATEGORIES, CATEGORY_ORDER } from './schema.js';
+import { CATEGORIES, CATEGORY_ORDER, CATEGORY_GROUPS } from './schema.js';
 
-export { CATEGORIES, CATEGORY_ORDER };
+export { CATEGORIES, CATEGORY_ORDER, CATEGORY_GROUPS };
 
 const LOADERS = {
   phones: () => Promise.all([import('./data/phones-a.js'), import('./data/phones-b.js')]).then(m => m.flatMap(x => x.default)),
   tablets: () => import('./data/tablets.js').then(m => m.default),
   laptops: () => import('./data/laptops.js').then(m => m.default),
-  socs: () => import('./data/socs.js').then(m => m.default),
-  cpus: () => import('./data/cpus.js').then(m => m.default),
-  gpus: () => import('./data/gpus.js').then(m => m.default),
+  socs: () => Promise.all([import('./data/socs.js'), import('./data/socs-more.js')]).then(m => m.flatMap(x => x.default)),
+  cpus: () => Promise.all([import('./data/cpus.js'), import('./data/cpus-legacy.js')]).then(m => m.flatMap(x => x.default)),
+  gpus: () => Promise.all([import('./data/gpus.js'), import('./data/gpus-legacy.js')]).then(m => m.flatMap(x => x.default)),
   watches: () => import('./data/watches.js').then(m => m.default),
-  audio: () => import('./data/audio.js').then(m => m.default),
+  audio: () => Promise.all([import('./data/audio.js'), import('./data/audio-more.js')]).then(m => m.flatMap(x => x.default)),
   consoles: () => import('./data/consoles.js').then(m => m.default),
   tvs: () => import('./data/tvs.js').then(m => m.default),
   monitors: () => import('./data/monitors.js').then(m => m.default),
+  speakers: () => import('./data/speakers.js').then(m => m.default),
+  chargers: () => import('./data/chargers.js').then(m => m.default),
+  powerbanks: () => import('./data/powerbanks.js').then(m => m.default),
+  printers: () => import('./data/printers.js').then(m => m.default),
+  copiers: () => import('./data/copiers.js').then(m => m.default),
+  coffee: () => import('./data/coffee.js').then(m => m.default),
+  inverters: () => import('./data/inverters.js').then(m => m.default),
+  ups: () => import('./data/ups.js').then(m => m.default),
+  guitars: () => import('./data/guitars.js').then(m => m.default),
+  keyboards: () => import('./data/keyboards.js').then(m => m.default),
+  evs: () => import('./data/evs.js').then(m => m.default),
 };
 
 /* Categories whose devices borrow benchmark data from a component category. */
@@ -155,6 +166,42 @@ export const parse = {
     if (/in\/out/.test(s)) v += 0.1;
     return Math.min(1, v);
   },
+  /** Guitar pickup layout versatility, 0..1 (HSS/HSH most flexible). */
+  pickups(t) {
+    if (!t) return null;
+    const s = String(t).toUpperCase();
+    const h = (s.match(/H/g) || []).length, sc = (s.match(/S(?!\w)/g) || s.match(/S/g) || []).length;
+    if (/P90/.test(s)) return 0.6;
+    if (h && sc) return 1;
+    if (h >= 2 || sc >= 3) return 0.75;
+    return 0.5;
+  },
+  keyAction(t) {
+    if (!t) return null;
+    const s = t.toLowerCase();
+    if (/wood|escapement|let-off|triple-sensor|gex|nwx/.test(s)) return 1;
+    if (/hammer|graded|pha|ghs|ghc/.test(s)) return 0.8;
+    if (/semi-weighted|fatar/.test(s)) return 0.55;
+    if (/synth|organ|touch/.test(s)) return 0.35;
+    return 0.25;
+  },
+  heating(t) {
+    if (!t) return null;
+    const s = t.toLowerCase();
+    if (/dual/.test(s)) return 1;
+    if (/thermojet/.test(s)) return 0.8;
+    if (/brass|boiler/.test(s)) return 0.65;
+    if (/thermocoil|thermoblock/.test(s)) return 0.55;
+    return 0.4;
+  },
+  milk(t) { if (!t) return null; const s = t.toLowerCase(); return /^none/.test(s) ? 0 : /automatic|lattego|lattecrema|fine-foam/.test(s) ? 1 : /frother/.test(s) ? 0.4 : 0.6; },
+  pdLevel(t) { if (!t) return null; const s = String(t); return /3\.1|EPR/i.test(s) ? 1 : /3\.0|PD/.test(s) ? 0.7 : 0.2; },
+  sine(t) { if (!t) return null; return /pure/i.test(t) ? 1 : /pwm|simulated|stepped/i.test(t) ? 0.4 : 0.6; },
+  topology(t) { if (!t) return null; return /online/i.test(t) ? 1 : /line/i.test(t) ? 0.6 : 0.25; },
+  managed(t) { if (!t) return 0; return /none/i.test(t) ? 0 : 1; },
+  screenKind(t) { if (!t) return 0; return /touch/i.test(t) ? 1 : /lcd|oled|colour|color/i.test(t) ? 0.6 : /none|button/i.test(t) ? 0.1 : 0.3; },
+  /** EV range on an EPA-like basis: EPA as is, WLTP × 0.88, CLTC × 0.75. */
+  evRange(d) { return d.rangeEpa ?? (d.rangeWltp ? Math.round(d.rangeWltp * 0.88) : d.rangeCltc ? Math.round(d.rangeCltc * 0.75) : null); },
   res(t) { if (!t) return null; const s = t.toUpperCase(); return /8K/.test(s) ? 1 : /4K|2160/.test(s) ? 0.8 : /1440|QHD/.test(s) ? 0.6 : /1080/.test(s) ? 0.45 : 0.3; },
 };
 
@@ -234,6 +281,70 @@ const SCORES = {
     { key: 'display', label: 'Display & output', weight: 0.25, metrics: [M(d => parse.res(d.maxRes), 1, { fixed: true }), M('maxFps', 0.6), M('refresh', 0.4)] },
     { key: 'storage', label: 'Storage', weight: 0.25, metrics: [M('storage', 1, { log: true })] },
   ],
+  speakers: [
+    { key: 'sound', label: 'Sound', weight: 0.4, metrics: [M('outputW', 1.2, { log: true }), M('bassLow', 0.6, { low: true }), M(d => (d.stereo ? 1 : 0), 0.5, { fixed: true }), M(d => parse.codecs(d.codecs), 0.5, { fixed: true })] },
+    { key: 'battery', label: 'Battery', weight: 0.25, metrics: [M('battery', 1, { log: true }), M(d => (d.chargeOut ? 1 : 0), 0.3, { fixed: true })] },
+    { key: 'durability', label: 'Durability', weight: 0.15, metrics: [M(d => parse.ip(d.water), 1, { fixed: true }), M(d => (d.floats ? 1 : 0), 0.3, { fixed: true })] },
+    { key: 'features', label: 'Features', weight: 0.2, metrics: [M('bt', 0.4), M(d => (d.wifi ? 1 : 0), 0.6, { fixed: true }), M(d => (d.mic ? 1 : 0), 0.4, { fixed: true }), M(d => (d.aux ? 1 : 0), 0.3, { fixed: true }), M(d => (d.app ? 1 : 0), 0.3, { fixed: true }), M(d => (d.pairing && !/^none/i.test(d.pairing) ? 1 : 0), 0.3, { fixed: true })] },
+  ],
+  chargers: [
+    { key: 'power', label: 'Power', weight: 0.5, metrics: [M('maxW', 1.4, { log: true }), M('singleW', 1, { log: true }), M('portCount', 0.6)] },
+    { key: 'standards', label: 'Charging standards', weight: 0.2, metrics: [M(d => (d.pps ? 1 : 0), 0.8, { fixed: true }), M(d => parse.pdLevel(d.pd), 0.6, { fixed: true }), M(d => (d.gan ? 1 : 0), 0.5, { fixed: true })] },
+    { key: 'cable', label: 'Cable quality', weight: 0.15, metrics: [M('data', 1, { log: true }), M(d => (d.video ? 1 : 0), 0.5, { fixed: true }), M(d => (d.emarker ? 1 : 0), 0.3, { fixed: true }), M(d => (d.braided ? 1 : 0), 0.3, { fixed: true })] },
+    { key: 'portability', label: 'Size & weight', weight: 0.15, metrics: [M('weight', 1, { low: true, log: true }), M(d => (d.foldingPlug ? 1 : 0), 0.4, { fixed: true })] },
+  ],
+  powerbanks: [
+    { key: 'capacity', label: 'Capacity', weight: 0.35, metrics: [M('wh', 1.4, { log: true }), M('capacity', 0.4, { log: true })] },
+    { key: 'charging', label: 'Charging speed', weight: 0.35, metrics: [M('maxOut', 1, { log: true }), M('singleOut', 0.8, { log: true }), M('input', 0.8, { log: true }), M('rechargeTime', 0.6, { low: true, log: true }), M('acW', 0.5, { log: true })] },
+    { key: 'portability', label: 'Portability', weight: 0.15, metrics: [M('weight', 1, { low: true, log: true }), M(d => (d.wh && d.weight ? d.wh / d.weight * 1000 : null), 0.8)] },
+    { key: 'features', label: 'Features', weight: 0.15, metrics: [M('portCount', 0.6), M(d => (d.passthrough ? 1 : 0), 0.4, { fixed: true }), M(d => (d.pps ? 1 : 0), 0.4, { fixed: true }), M(d => (d.magnetic ? 1 : 0), 0.3, { fixed: true }), M(d => (d.wireless ? 1 : 0), 0.3, { fixed: true })] },
+  ],
+  printers: [
+    { key: 'speed', label: 'Speed', weight: 0.3, metrics: [M('ppmBlack', 1, { log: true }), M('ppmColor', 1, { log: true }), M('firstPage', 0.4, { low: true })] },
+    { key: 'cost', label: 'Running cost', weight: 0.3, metrics: [M('cppBlack', 1, { low: true, log: true }), M('cppColor', 0.8, { low: true, log: true }), M('yieldBlack', 0.5, { log: true })] },
+    { key: 'paper', label: 'Paper handling', weight: 0.2, metrics: [M(d => (d.duplex ? 1 : 0), 0.8, { fixed: true }), M(d => d.adf || 0, 0.5), M('tray', 0.5), M('duty', 0.3, { log: true })] },
+    { key: 'features', label: 'Quality & connectivity', weight: 0.2, metrics: [M('dpi', 0.6, { log: true }), M('colors', 0.6), M(d => (d.wifi ? 1 : 0), 0.5, { fixed: true }), M(d => (d.ethernet ? 1 : 0), 0.5, { fixed: true })] },
+  ],
+  copiers: [
+    { key: 'speed', label: 'Speed', weight: 0.35, metrics: [M('ppmBlack', 1), M('ppmColor', 0.8), M('firstCopy', 0.4, { low: true }), M('warmUp', 0.2, { low: true })] },
+    { key: 'scanning', label: 'Scanning', weight: 0.2, metrics: [M('scanIpm', 1, { log: true }), M('adf', 0.6)] },
+    { key: 'paper', label: 'Paper & volume', weight: 0.25, metrics: [M('paperStd', 0.6, { log: true }), M('paperMax', 0.6, { log: true }), M('volume', 0.8, { log: true })] },
+    { key: 'features', label: 'Controller & options', weight: 0.2, metrics: [M(d => (d.ppmColor ? 1 : 0), 0.5, { fixed: true }), M('memory', 0.5, { log: true }), M('storage', 0.4, { log: true }), M('screen', 0.6), M(d => (d.fax ? 1 : 0), 0.2, { fixed: true })] },
+  ],
+  coffee: [
+    { key: 'brewing', label: 'Brewing', weight: 0.4, metrics: [M(d => (d.pid ? 1 : 0), 0.8, { fixed: true }), M(d => (d.grinder ? 1 : 0), 1, { fixed: true }), M('grindSettings', 0.5, { log: true }), M('heatUp', 0.6, { low: true, log: true }), M(d => parse.heating(d.heating), 0.6, { fixed: true })] },
+    { key: 'milk', label: 'Milk & drinks', weight: 0.3, metrics: [M(d => (d.autoMilk ? 1 : 0), 1, { fixed: true }), M('drinks', 0.8, { log: true }), M(d => parse.milk(d.milk), 0.5, { fixed: true })] },
+    { key: 'convenience', label: 'Convenience', weight: 0.3, metrics: [M(d => (d.programmable ? 1 : 0), 0.5, { fixed: true }), M(d => (d.app ? 1 : 0), 0.4, { fixed: true }), M('tank', 0.8), M('beans', 0.3), M('cups', 0.4)] },
+  ],
+  inverters: [
+    { key: 'output', label: 'Output', weight: 0.35, metrics: [M('ratedW', 1.2, { log: true }), M('surgeW', 0.6, { log: true }), M('efficiency', 0.8), M('transfer', 0.4, { low: true }), M(d => parse.sine(d.waveform), 0.4, { fixed: true })] },
+    { key: 'solar', label: 'Solar', weight: 0.35, metrics: [M('pvW', 1, { log: true }), M('pvVoc', 0.4), M('mppt', 0.5), M(d => (d.gridTie ? 1 : 0), 0.3, { fixed: true })] },
+    { key: 'battery', label: 'Battery', weight: 0.15, metrics: [M('chargeA', 1, { log: true }), M(d => (d.lithium ? 1 : 0), 0.5, { fixed: true })] },
+    { key: 'features', label: 'Features', weight: 0.15, metrics: [M('parallel', 0.6), M(d => (d.generator ? 1 : 0), 0.4, { fixed: true }), M(d => parse.managed(d.monitoring), 0.4, { fixed: true })] },
+  ],
+  ups: [
+    { key: 'power', label: 'Power quality', weight: 0.4, metrics: [M('watts', 1.2, { log: true }), M('va', 0.6, { log: true }), M(d => parse.sine(d.waveform), 0.8, { fixed: true }), M(d => parse.topology(d.type), 0.8, { fixed: true }), M(d => (d.avr ? 1 : 0), 0.4, { fixed: true }), M('transfer', 0.5, { low: true })] },
+    { key: 'battery', label: 'Battery', weight: 0.3, metrics: [M('runtimeHalf', 1, { log: true }), M(d => (d.hotSwap ? 1 : 0), 0.4, { fixed: true }), M(d => (d.extBattery ? 1 : 0), 0.4, { fixed: true })] },
+    { key: 'outlets', label: 'Outlets', weight: 0.15, metrics: [M('outlets', 1)] },
+    { key: 'management', label: 'Management', weight: 0.15, metrics: [M(d => (d.usb ? 1 : 0), 0.4, { fixed: true }), M(d => parse.managed(d.network), 0.6, { fixed: true }), M(d => parse.screenKind(d.display), 0.4, { fixed: true })] },
+  ],
+  guitars: [
+    { key: 'versatility', label: 'Versatility', weight: 0.4, metrics: [M(d => parse.pickups(d.pickups), 1, { fixed: true }), M(d => (d.coilSplit ? 1 : 0), 0.6, { fixed: true }), M(d => (d.tremolo ? 1 : 0), 0.3, { fixed: true }), M(d => (d.strings > 6 ? 1 : 0), 0.2, { fixed: true })] },
+    { key: 'playability', label: 'Playability', weight: 0.3, metrics: [M('frets', 1), M('weight', 1, { low: true })] },
+    { key: 'hardware', label: 'Hardware', weight: 0.3, metrics: [M(d => (d.lockingTuners ? 1 : 0), 0.8, { fixed: true }), M(d => (!d.case ? null : /hardshell/i.test(d.case) ? 1 : /case/i.test(d.case) ? 0.7 : /bag/i.test(d.case) ? 0.4 : 0), 0.6, { fixed: true }), M(d => (/set|through/i.test(d.neckJoint || '') ? 1 : 0.5), 0.4, { fixed: true })] },
+  ],
+  keyboards: [
+    { key: 'keys', label: 'Keys & action', weight: 0.35, metrics: [M('keys', 1), M(d => (d.weighted ? 1 : 0), 0.8, { fixed: true }), M(d => (d.aftertouch ? 1 : 0), 0.4, { fixed: true }), M(d => parse.keyAction(d.action), 0.8, { fixed: true })] },
+    { key: 'sound', label: 'Sound', weight: 0.35, metrics: [M('polyphony', 1, { log: true }), M('voices', 0.8, { log: true }), M('speakers', 0.6, { log: true })] },
+    { key: 'features', label: 'Features', weight: 0.2, metrics: [M('rhythms', 0.4, { log: true }), M(d => (d.bluetooth ? 1 : 0), 0.6, { fixed: true }), M(d => (d.battery ? 1 : 0), 0.3, { fixed: true }), M(d => parse.screenKind(d.display), 0.4, { fixed: true }), M(d => (!d.sequencer || /^none/i.test(d.sequencer) ? 0 : 1), 0.4, { fixed: true })] },
+    { key: 'portability', label: 'Portability', weight: 0.1, metrics: [M('weight', 1, { low: true, log: true })] },
+  ],
+  evs: [
+    { key: 'range', label: 'Range', weight: 0.3, metrics: [M(d => parse.evRange(d), 1.4), M('batteryKwh', 0.4, { log: true })] },
+    { key: 'performance', label: 'Performance', weight: 0.25, metrics: [M('powerKw', 1, { log: true }), M('accel', 1, { low: true, log: true }), M('topSpeed', 0.4)] },
+    { key: 'charging', label: 'Charging', weight: 0.25, metrics: [M('dcKw', 1, { log: true }), M('dc10to80', 0.8, { low: true }), M('voltage', 0.4), M('acKw', 0.3), M(d => (d.v2l ? 1 : 0), 0.3, { fixed: true })] },
+    { key: 'practicality', label: 'Practicality', weight: 0.2, metrics: [M('seats', 0.5), M('cargo', 0.8), M(d => d.frunk || 0, 0.3), M('screen', 0.2)] },
+  ],
 };
 
 /* How much a difference in each field matters when writing reasons (default 1). */
@@ -246,6 +357,12 @@ const IMPORTANCE = {
   anc: 2.6, ois: 1.2, wirelessCharging: 1.4, multipoint: 1.4, ecg: 1.4, spo2: 1.2, lte: 1.2, nfc: 1, esim: 0.8, jack: 1,
   sd: 1, fiveG: 1.4, touch: 1, cellular: 1.2, reverse: 0.7, spatial: 0.9, hires: 1, aod: 1, bt: 0.5, pcie: 1, shaders: 1.3, rtCores: 1, tensor: 0.9,
   zones: 1.4, dciP3: 1.2, inputLag: 1.4, hdmi21: 1.4, audioW: 1, atmos: 0.8, hdmi: 0.5, power: 0.8, response: 1.6, sdrNits: 1, usbPd: 1.3, kvm: 0.9,
+  frets: 0.8, keys: 1.4, polyphony: 1.6, voices: 1, rhythms: 0.7, speakers: 1.2, heatUp: 1.2, grindSettings: 0.9, drinks: 1.2, tank: 1, beans: 0.6, cups: 0.8, pressure: 0.5,
+  maxW: 2.4, singleW: 1.8, portCount: 1.2, data: 1.6, capacity: 2, wh: 2.4, maxOut: 2, singleOut: 1.4, input: 1.4, rechargeTime: 1.2, acW: 1.6,
+  outputW: 2, bassLow: 1.4, ppmBlack: 1.8, ppmColor: 1.6, firstPage: 0.8, dpi: 0.8, colors: 0.8, adf: 1.2, tray: 1, duty: 0.9, yieldBlack: 1.4, yieldColor: 1.2, cppBlack: 2.2, cppColor: 2,
+  firstCopy: 1, warmUp: 0.7, scanIpm: 1.4, paperStd: 1.1, paperMax: 1, volume: 1.4, memory: 0.6, screen: 0.8,
+  ratedW: 2.6, surgeW: 1.4, efficiency: 1.6, transfer: 1.2, chargeA: 1.4, pvW: 2.2, pvVoc: 1, mppt: 1, parallel: 0.8, va: 1.6, watts: 2.2, outlets: 1, runtimeHalf: 2,
+  seats: 1.2, powerKw: 1.8, torque: 1, accel: 2, topSpeed: 1, batteryKwh: 1.8, rangeWltp: 2.6, rangeEpa: 2.6, rangeCltc: 2.2, dcKw: 2, dc10to80: 2, acKw: 0.8, cargo: 1.4, frunk: 0.8, voltage: 1.2,
   camMainAperture: 1, maxClock: 1.1, gpuCores: 1, gpuClock: 0.8, transistors: 0.6, mics: 0.5, charger: 0.8, ramMax: 0.8,
 };
 
@@ -267,6 +384,19 @@ const PHRASE = {
   zones: 'more local dimming zones', dciP3: 'wider colour gamut (DCI-P3)', inputLag: 'lower input lag', hdmi21: 'more HDMI 2.1 ports',
   audioW: 'more powerful speakers', hdmi: 'more HDMI ports', power: 'lower power use', response: 'faster pixel response', sdrNits: 'brighter in SDR',
   usbPd: 'more USB-C charging power',
+  frets: 'more frets', keys: 'more keys', polyphony: 'higher polyphony', voices: 'more voices', rhythms: 'more rhythms and styles', speakers: 'more powerful speakers',
+  heatUp: 'faster heat-up', grindSettings: 'more grind settings', drinks: 'more preset drinks', tank: 'bigger water tank', beans: 'bigger bean hopper', cups: 'bigger carafe', pressure: 'higher pump rating',
+  maxW: 'more total output', singleW: 'more power from one port', portCount: 'more ports', data: 'faster data transfer', capacity: 'more capacity', wh: 'more stored energy',
+  maxOut: 'more output power', singleOut: 'more power from one port', input: 'faster recharging', rechargeTime: 'recharges faster', acW: 'more AC output',
+  outputW: 'more output power', bassLow: 'deeper bass', ppmBlack: 'faster black printing', ppmColor: 'faster colour printing', firstPage: 'faster first page', dpi: 'higher print resolution',
+  colors: 'more inks', adf: 'bigger document feeder', tray: 'more paper input', duty: 'higher duty cycle', yieldBlack: 'more pages per black refill', yieldColor: 'more pages per colour refill',
+  cppBlack: 'cheaper black pages', cppColor: 'cheaper colour pages', firstCopy: 'faster first copy', warmUp: 'faster warm-up', scanIpm: 'faster scanning', paperStd: 'more paper as standard',
+  paperMax: 'more paper with options', volume: 'rated for more pages a month', memory: 'more memory', screen: 'bigger screen',
+  ratedW: 'more rated power', surgeW: 'higher surge capacity', efficiency: 'more efficient', transfer: 'faster switch-over', chargeA: 'faster battery charging', pvW: 'takes more solar',
+  pvVoc: 'higher solar voltage limit', mppt: 'more MPPT trackers', parallel: 'more units in parallel', va: 'more VA capacity', watts: 'more real power (watts)', outlets: 'more battery-backed outlets', runtimeHalf: 'longer runtime at half load',
+  seats: 'more seats', powerKw: 'more power', torque: 'more torque', accel: 'quicker 0–100 km/h', topSpeed: 'higher top speed', batteryKwh: 'bigger battery',
+  rangeWltp: 'longer WLTP range', rangeEpa: 'longer EPA range', rangeCltc: 'longer CLTC range', dcKw: 'faster DC charging', dc10to80: 'faster 10–80% charge', acKw: 'faster AC charging',
+  cargo: 'more boot space', frunk: 'bigger front trunk', voltage: 'higher-voltage architecture',
   ramMax: 'more maximum RAM', charger: 'faster charger', mics: 'more microphones', transistors: 'more transistors',
 };
 const BOOL_PHRASE = {
@@ -274,6 +404,13 @@ const BOOL_PHRASE = {
   sd: 'Has a memory card slot', jack: 'Has a 3.5 mm headphone jack', nfc: 'Has NFC for payments', esim: 'Supports eSIM', fiveG: 'Supports 5G',
   touch: 'Has a touchscreen', cellular: 'Offers a cellular model', anc: 'Has active noise cancelling', spatial: 'Supports spatial audio',
   hires: 'Supports hi-res wireless audio', multipoint: 'Connects to two devices at once (multipoint)', wirelessCharging: 'Case charges wirelessly',
+  coilSplit: 'Has coil splitting for single-coil sounds', lockingTuners: 'Has locking tuners', tremolo: 'Has a tremolo bridge', weighted: 'Has weighted keys', aftertouch: 'Has aftertouch',
+  bluetooth: 'Has Bluetooth', battery: 'Can run on batteries', pid: 'Has PID temperature control', grinder: 'Has a built-in grinder', autoMilk: 'Froths milk automatically',
+  programmable: 'Has a timer / programmable brewing', app: 'Has an app', gan: 'Uses GaN (smaller and cooler)', foldingPlug: 'Has a folding plug', display: 'Shows power on a display',
+  video: 'Carries video (DisplayPort)', emarker: 'Has an e-marker chip', braided: 'Has a braided jacket', magnetic: 'Snaps on magnetically', passthrough: 'Charges devices while it recharges',
+  builtInCable: 'Has a built-in cable', stereo: 'Plays stereo from one speaker', chargeOut: 'Can charge your phone', floats: 'Floats', wifi: 'Has Wi-Fi', mic: 'Has a microphone',
+  aux: 'Has a wired audio input', duplex: 'Prints two-sided automatically', ethernet: 'Has Ethernet', fax: 'Offers fax', lithium: 'Talks to lithium batteries', gridTie: 'Can export to the grid',
+  generator: 'Has a generator input', avr: 'Regulates voltage (AVR)', hotSwap: 'Battery swaps without shutting down', extBattery: 'Takes extra battery packs', usb: 'Has USB monitoring', v2l: 'Can power appliances (V2L)',
   aod: 'Has an always-on display', atmos: 'Decodes Dolby Atmos', kvm: 'Has a built-in KVM switch', speakers: 'Has built-in speakers', ecg: 'Can take an ECG', spo2: 'Measures blood oxygen', lte: 'Available with LTE',
 };
 
@@ -331,8 +468,12 @@ function enrich(cat, d, lookups) {
     const m = /(\d{3,5})\s*[x×]\s*(\d{3,5})/.exec(d.displayRes || '');
     if (m) { d.ppi = Math.round(Math.hypot(Number(m[1]), Number(m[2])) / d.displaySize); derived.ppi = 'calculated from size and resolution'; }
   }
+  if (cat === 'evs' && d.rangeEpa == null && (d.rangeWltp || d.rangeCltc)) {
+    d._rangeEst = parse.evRange(d);
+  }
   d._derived = derived;
-  const extra = cat === 'tvs' || cat === 'monitors' ? ` ${d.panel || ''} ${d.type || ''} ${d.series || ''} ${d.displaySize ? `${d.displaySize}"` : ''} ${/oled/i.test(d.panel || '') ? 'oled' : ''} ${/mini-?led/i.test(d.panel || '') ? 'mini-led miniled' : ''}` : '';
+  const general = ` ${d.type || ''} ${d.series || ''} ${d.segment || ''} ${d.body || ''} ${d.market || ''} ${d.pickups || ''} ${d.maxSize || ''}`;
+  const extra = general + (cat === 'tvs' || cat === 'monitors' ? ` ${d.panel || ''} ${d.type || ''} ${d.series || ''} ${d.displaySize ? `${d.displaySize}"` : ''} ${/oled/i.test(d.panel || '') ? 'oled' : ''} ${/mini-?led/i.test(d.panel || '') ? 'mini-led miniled' : ''}` : '');
   d._search = `${d.name} ${d.brand} ${d.chip || ''} ${d.cpu || ''} ${d.gpu || ''} ${(d.released || '').slice(0, 4)}${extra}`.toLowerCase();
   return d;
 }

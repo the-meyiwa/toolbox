@@ -11,7 +11,8 @@ import { search, relatedTools } from './lib/search.js';
 import { track, toolSession } from './lib/analytics.js';
 import * as artifacts from './lib/artifacts.js';
 import { mountArtifactStrip, incomingBanner } from './lib/artifact-ui.js';
-import { installPalette, openPalette, detectAiIntent } from './lib/palette.js';
+import { installPalette, openPalette, openSearch, detectAiIntent } from './lib/palette.js';
+import { openAssistant } from './lib/assistant-popup.js';
 import { renderSaved } from './views/saved.js';
 import { kindLabel } from './registry/kinds.js';
 import { copyText, showToast } from './utils.js';
@@ -93,7 +94,7 @@ function toolCard(tool, { compact = false, index = 0 } = {}) {
         <div class="tool-card-name">${escapeHtml(tool.name)}</div>
         <div class="tool-card-desc">${escapeHtml(tool.description)}</div>
       </div>
-      ${tool.badge ? `<span class="tool-card-badge">${escapeHtml(tool.badge)}</span>`
+      ${tool.badge === 'Beta' ? '<span class="tool-card-badge beta-badge">Beta</span>' : tool.badge ? `<span class="tool-card-badge">${escapeHtml(tool.badge)}</span>`
         : tool.offline === false ? '<span class="tool-card-flag" title="Needs an internet connection">Online</span>' : ''}
     </a>`;
 }
@@ -474,7 +475,7 @@ async function openTool(id, routeState = {}) {
     if (!v) continue;
     v.classList.add('hidden');
   }
-  viewportTitle.innerHTML = `<span class="viewport-title-icon" aria-hidden="true">${tool.icon}</span><span>${escapeHtml(tool.name)}</span>`;
+  viewportTitle.innerHTML = `<span class="viewport-title-icon" aria-hidden="true">${tool.icon}</span><span>${escapeHtml(tool.name)}</span>${tool.badge === 'Beta' ? '<span class="beta-badge" title="In beta: still being improved, so expect rough edges.">Beta</span>' : ''}`;
   const categoryLink = $('viewport-category');
   if (categoryLink) {
     categoryLink.textContent = CATEGORY_LABELS[tool.category] || 'Tools';
@@ -797,7 +798,7 @@ grid.addEventListener('click', (e) => {
 });
 backBtn.addEventListener('click', () => { window.location.hash = '#tools'; });
 $('back-btn-mobile')?.addEventListener('click', () => { window.location.hash = '#tools'; });
-$('header-search-btn')?.addEventListener('click', () => openPalette());
+$('header-search-btn')?.addEventListener('click', () => openSearch());
 $('viewport-category')?.addEventListener('click', (e) => {
   const cat = e.currentTarget.dataset.cat;
   if (!cat) return;
@@ -826,7 +827,8 @@ const homeHeroSubmitBtn = $('home-hero-submit-btn');
 function updateSearchPlaceholder() {
   if (!homeHeroInput) return;
   const user = getCurrentUser();
-  homeHeroInput.placeholder = user ? 'Search tools or ask the Assistant…' : 'Compress a photo, merge PDFs, format JSON…';
+  homeHeroInput.placeholder = user ? 'Ask anything, or search tools…' : 'Ask anything, or search: compress a photo, merge PDFs…';
+  if (/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '')) document.querySelectorAll('#home-search-keys .k-mod').forEach(k => { k.textContent = '⌘'; });
 }
 
 export function renderHomeAssistantBanner() {
@@ -857,8 +859,7 @@ export function renderHomeAssistantBanner() {
       openAccountModal();
       return;
     }
-    window.location.hash = '#assistant';
-    openTool('assistant');
+    openAssistant();
   });
 }
 
@@ -876,64 +877,69 @@ window.addEventListener('toolbox:authchange', () => {
 });
 
 if (homeHeroInput && homeHeroDropdown) {
+  const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
+  const firstKey = isMac ? '⌘ Enter' : 'Ctrl Enter';
+  let heroTools = [];
+
   function renderHomeHeroResults() {
     const q = homeHeroInput.value.trim();
     if (!q) {
       homeHeroDropdown.hidden = true;
+      heroTools = [];
       return;
     }
 
     const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
     const availableTools = getVisibleTools({ isMobile });
-    const isAi = detectAiIntent(q);
-    const searchRes = search(q, availableTools, { labels: CATEGORY_LABELS }).results.map(r => r.tool).slice(0, 6);
+    heroTools = search(q, availableTools, { labels: CATEGORY_LABELS }).results.map(r => r.tool).slice(0, 6);
 
-    const aiHtml = `
+    // Enter always asks the Assistant; Ctrl/Cmd+Enter opens the first suggestion.
+    let html = `
       <div class="hero-dd-row hero-dd-ai" role="option" tabindex="-1" data-ai-prompt="${escapeHtml(q)}">
         <span class="hero-dd-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 3v4M21 5h-4"/></svg></span>
         <span class="hero-dd-text">
-          <span class="hero-dd-name">Ask the Assistant: “${escapeHtml(q)}”</span>
-          <span class="hero-dd-desc">Let it write code, analyse data or run tools for you</span>
+          <span class="hero-dd-name">Ask Assistant: “${escapeHtml(q)}”</span>
+          <span class="hero-dd-desc">Answers here, over this page</span>
         </span>
         <kbd>Enter</kbd>
       </div>`;
-
-    let html = isAi ? aiHtml : '';
-    if (searchRes.length) {
+    if (heroTools.length) {
       html += `<div class="hero-dd-label">Tools</div>`;
-      html += searchRes.map(t => `
+      html += heroTools.map((t, i) => `
         <a href="#${t.id}" class="hero-dd-row" role="option">
           <span class="hero-dd-icon">${t.icon}</span>
           <span class="hero-dd-text">
             <span class="hero-dd-name">${escapeHtml(t.name)}</span>
             <span class="hero-dd-desc">${escapeHtml(t.description)}</span>
           </span>
+          ${i === 0 && !isMobile ? `<kbd>${firstKey}</kbd>` : ''}
         </a>`).join('');
     } else {
-      html += `<div class="hero-dd-empty">No tool matches yet. Press Enter to ask the Assistant.</div>`;
+      html += `<div class="hero-dd-empty">No tool matches. Press Enter to ask the Assistant.</div>`;
     }
-    if (!isAi) html += aiHtml;
 
     homeHeroDropdown.innerHTML = html;
     homeHeroDropdown.hidden = false;
   }
 
-  function submitHomeHero() {
-    const q = homeHeroInput.value.trim();
+  function askFromHome(q) {
     if (!q) return;
-    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-    const availableTools = getVisibleTools({ isMobile });
-    const isAi = detectAiIntent(q);
-    const searchRes = search(q, availableTools, { labels: CATEGORY_LABELS }).results;
-
-    if (!isAi && searchRes.length && searchRes[0].score >= 60) {
-      window.location.hash = `#${searchRes[0].tool.id}`;
-    } else {
-      sessionStorage.setItem('toolbox_pending_prompt', q);
-      window.location.hash = '#assistant';
-    }
     homeHeroDropdown.hidden = true;
+    homeHeroInput.value = '';
+    homeHeroInput.blur();
+    openAssistant({ prompt: q });
   }
+
+  function openFirstSuggestion() {
+    if (!heroTools.length) renderHomeHeroResults();
+    const first = heroTools[0];
+    if (!first) return false;
+    homeHeroDropdown.hidden = true;
+    window.location.hash = `#${first.id}`;
+    return true;
+  }
+
+  function submitHomeHero() { askFromHome(homeHeroInput.value.trim()); }
 
   homeHeroInput.addEventListener('input', renderHomeHeroResults);
   homeHeroInput.addEventListener('focus', renderHomeHeroResults);
@@ -946,7 +952,8 @@ if (homeHeroInput && homeHeroDropdown) {
     }
     if (e.key === 'Enter') {
       e.preventDefault();
-      submitHomeHero();
+      if (e.ctrlKey || e.metaKey) { if (!openFirstSuggestion()) submitHomeHero(); }
+      else submitHomeHero();
     }
   });
 
@@ -957,17 +964,13 @@ if (homeHeroInput && homeHeroDropdown) {
     if (e.key === 'ArrowDown' && i > -1) { e.preventDefault(); rows[Math.min(i + 1, rows.length - 1)].focus(); }
     if (e.key === 'ArrowUp' && i > -1) { e.preventDefault(); (i === 0 ? homeHeroInput : rows[i - 1]).focus(); }
     if (e.key === 'Enter' && document.activeElement?.classList.contains('hero-dd-ai')) { e.preventDefault(); document.activeElement.click(); }
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); openFirstSuggestion(); }
     if (e.key === 'Escape') { homeHeroDropdown.hidden = true; homeHeroInput.focus(); }
   });
 
   homeHeroDropdown.addEventListener('click', (e) => {
     const aiRow = e.target.closest('.hero-dd-ai');
-    if (aiRow) {
-      const p = aiRow.dataset.aiPrompt || homeHeroInput.value.trim();
-      sessionStorage.setItem('toolbox_pending_prompt', p);
-      window.location.hash = '#assistant';
-      homeHeroDropdown.hidden = true;
-    }
+    if (aiRow) askFromHome(aiRow.dataset.aiPrompt || homeHeroInput.value.trim());
   });
 
   document.addEventListener('click', (e) => {
@@ -1005,7 +1008,7 @@ document.addEventListener('click', (e) => {
 
 // Both the hero eyebrow and the feature tile count come from the registry,
 // so the number on the page can never drift from the number of tools.
-for (const id of ['home-tool-count', 'home-eyebrow-count']) {
+for (const id of ['home-tool-count']) {
   const el = $(id);
   if (el) el.textContent = `${TOOLS.length}`;
 }

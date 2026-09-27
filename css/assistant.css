@@ -130,9 +130,23 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
   .ast[data-side="open"] .ast-scrim { opacity: 1; pointer-events: auto; }
 }
 @media (min-width: 1024px) {
-  .ast[data-side="open"] .ast-side-open,
-  .ast[data-side="open"] .ast-top-new { display: none; }
+  .ast:not(.is-compact)[data-side="open"] .ast-side-open,
+  .ast:not(.is-compact)[data-side="open"] .ast-top-new { display: none; }
 }
+/* Compact (pop-up) Assistant: the chat list is always a drawer. */
+.ast.is-compact { border: 0; border-radius: 0; box-shadow: none; }
+.ast.is-compact .ast-side, .ast.is-compact[data-side="closed"] .ast-side {
+  display: flex; position: absolute; z-index: 40; top: 0; bottom: 0; left: 0;
+  width: min(300px, 86%); background: var(--overlay);
+  transform: translateX(-102%); visibility: hidden;
+  transition: transform var(--dur-3) var(--ease-out), visibility 0s linear var(--dur-3), box-shadow var(--dur-3) ease;
+}
+.ast.is-compact .ast-side .ast-convs-h { background: var(--overlay); }
+.ast.is-compact[data-side="open"] .ast-side { transform: none; visibility: visible; box-shadow: var(--shadow-3); transition: transform var(--dur-3) var(--ease-out), visibility 0s, box-shadow var(--dur-3) ease; }
+.ast.is-compact .ast-scrim { display: block; position: absolute; inset: 0; z-index: 35; background: var(--scrim); opacity: 0; pointer-events: none; transition: opacity var(--dur-3) ease; }
+.ast.is-compact[data-side="open"] .ast-scrim { opacity: 1; pointer-events: auto; }
+.ast.is-compact .ast-top { height: 44px; }
+.ast.is-compact .ast-note { display: none; }
 
 /* ---------- top bar ---------- */
 .ast-top { flex: none; display: flex; align-items: center; gap: var(--space-1); height: 52px; padding: 0 var(--space-2) 0 var(--space-3); }
@@ -1140,3 +1154,10 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
 .astc-vehicle-controls .astc-vc-alts button:hover, .astc-vehicle-part .astc-vc-alts button:hover { background: var(--surface-3, var(--surface-2)); }
 .astc-vehicle-part .astc-vp-note { margin: var(--space-2) 0 0; font-size: 12px; line-height: 1.45; }
 .astc-vehicle-part .astc-vp-note a { color: inherit; }
+
+/* Chat context menu (right-click / long-press on a chat in the sidebar) */
+.ast-pop.ast-ctx { position: fixed; z-index: 1200; right: auto; bottom: auto; min-width: 210px; transform-origin: top left; }
+.ast-pop-sep { border: 0; border-top: 1px solid var(--line); margin: 4px 6px; }
+.ast-conv.is-menu .ast-conv-open { background: var(--tint); }
+.ast-conv.is-pinned .ast-conv-open span:last-child::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 7px; border-radius: 50%; background: var(--text-3); vertical-align: middle; }
+.ast-conv { -webkit-touch-callout: none; }

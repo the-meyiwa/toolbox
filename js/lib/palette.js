@@ -14,6 +14,7 @@ import { search } from './search.js';
 import * as store from './artifacts.js';
 import { kindLabel } from '../registry/kinds.js';
 import { getCurrentUser } from './supabase.js';
+import { openAssistant } from './assistant-popup.js';
 
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -126,6 +127,7 @@ function collect(query) {
   ).slice(0, 8).map(t => ({
     group: q ? 'Tools' : 'Most used',
     title: t.name,
+    badge: t.badge || '',
     hint: t.description,
     icon: t.icon,
     go: () => { window.location.hash = `#${t.id}`; },
@@ -141,10 +143,7 @@ function collect(query) {
     title: `Ask Assistant: “${q}”`,
     hint: 'Let Assistant process files, generate code, or execute tools for you',
     icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>',
-    go: () => {
-      sessionStorage.setItem('toolbox_pending_prompt', query.trim());
-      window.location.hash = '#assistant';
-    }
+    go: () => { openAssistant({ prompt: query.trim() }); },
   } : null;
 
   if (isAi && aiRow) {
@@ -172,7 +171,7 @@ function render() {
     html += `
       <button class="pal-row" data-idx="${i}" role="option">
         <span class="pal-icon">${row.icon}</span>
-        <span class="pal-text"><strong>${escapeHtml(row.title)}</strong><em>${escapeHtml(row.hint)}</em></span>
+        <span class="pal-text"><strong>${escapeHtml(row.title)}${row.badge === 'Beta' ? ' <span class="beta-badge">Beta</span>' : ''}</strong><em>${escapeHtml(row.hint)}</em></span>
       </button>`;
   });
   listEl.innerHTML = html;
@@ -221,6 +220,28 @@ export function close() {
 
 export const isOpen = () => open;
 
+/* The home page has its own search box in plain sight, so Spotlight is not
+   used there: the shortcuts go to that box instead. */
+const onHome = () => {
+  const h = (window.location.hash || '').replace(/^#/, '');
+  return (h === '' || h === 'home' || h.startsWith('home-')) && !!document.getElementById('home-hero-input')?.offsetParent;
+};
+
+export function focusHomeSearch() {
+  const input = document.getElementById('home-hero-input');
+  if (!input) return false;
+  input.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  input.focus({ preventScroll: true });
+  input.select?.();
+  return true;
+}
+
+/** Opens Spotlight, or focuses the home search when on the home page. */
+export function openSearch(prefill = '') {
+  if (onHome() && focusHomeSearch()) return;
+  openPalette(prefill);
+}
+
 /** Bind the global shortcut once. */
 export function installPalette() {
   document.addEventListener('keydown', (e) => {
@@ -229,13 +250,13 @@ export function installPalette() {
 
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
       e.preventDefault();
-      open ? close() : openPalette();
+      if (open) close(); else openSearch();
       return;
     }
     // A bare slash is the quick way in, but only when not already typing.
     if (e.key === '/' && !e.metaKey && !e.ctrlKey && !inField && !open) {
       e.preventDefault();
-      openPalette();
+      openSearch();
     }
   });
 }

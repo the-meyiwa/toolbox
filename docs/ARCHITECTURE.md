@@ -223,3 +223,11 @@ Toolbox enforces zero regression tolerance across:
 - Runtime execution containment.
 - Virtual filesystem operations (stat, list, write, rename, delete).
 - UI component accessibility and emoji prohibition.
+
+## Search, Spotlight and the Assistant pop-up
+
+- **Desktop search.** There is no search box in the header on desktop. Spotlight (`js/lib/palette.js`) opens with `/` or Ctrl/Cmd+K on every page except the home page. On the home page, the same keys focus the main search box. Phones keep the header search button; on the home page it focuses the main search.
+- **Home search.** Enter asks the Assistant. Ctrl/Cmd+Enter opens the first suggested tool.
+- **Assistant pop-up.** "Ask Assistant", from the home search, Spotlight, Files, editors or the map, opens the Assistant pop-up (`js/lib/assistant-popup.js`) over the current page: a floating panel on desktop and a full-screen sheet on phones. It is the same Assistant, with the same chats, mounted in compact mode. "Open full page" continues the chat in the Assistant tool.
+- **Chat menu.** In the Assistant, right-clicking a chat, long-pressing it on touch screens, or pressing the context-menu key opens its menu: Open, Rename, Pin, Duplicate, Copy as text, Download as Markdown and Delete.
+- **Beta tools.** Tools marked `badge: 'Beta'` in the registry (Assistant, Automobile Guide, Container Builder) show a Beta badge on their cards, their page title and in Spotlight.

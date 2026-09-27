@@ -1098,6 +1098,7 @@ export const TOOLS = [
   {
     id: 'container-planner',
     name: 'Container Builder',
+    badge: 'Beta',
     description: 'Design container homes, offices and multi-storey stacks in 3D with modern parts, then price them into a printable quotation',
     category: 'modeling',
     secondary: ['business'],
@@ -1244,6 +1245,7 @@ export const TOOLS = [
   {
     id: 'automobile-guide',
     name: 'Automobile Guide',
+    badge: 'Beta',
     description: 'Interactive visual reference system for exploring vehicle chassis, interior, and mechanical systems',
     category: 'reference',
     keywords: ['car', 'auto', 'vehicle', 'chassis', 'interior', 'engine', 'suspension', 'diagram', 'mechanics', 'automotive'],
@@ -1770,6 +1772,7 @@ export const TOOLS = [
   {
     id: 'assistant',
     name: 'Assistant',
+    badge: 'Beta',
     description: 'Intelligent AI assistant capable of multi-turn conversation, in-chat file processing, and browser tool execution',
     category: 'developer',
     secondary: ['everyday', 'text'],
@@ -1814,10 +1817,10 @@ export const TOOLS = [
   {
     id: 'tech-device-comparisons',
     name: 'Tech Device comparisons',
-    description: 'Compare 1,500+ phones, laptops, tablets, TVs, monitors, chips, graphics cards, watches, headphones and consoles, with separate verdicts for the better tech and the better buy',
+    description: 'Compare 2,000+ devices: phones, laptops, chips and GPUs back to 2007, earbuds, speakers, chargers, power banks, printers, copiers, coffee makers, inverters, UPS, guitars, keyboards and electric cars, with separate verdicts for the better tech and the better buy',
     category: 'everyday',
     secondary: ['developer', 'business', 'reference'],
-    keywords: ['tech device comparisons', 'device comparison', 'versus', 'vs', 'specs', 'spec sheet', 'compare phones', 'compare laptops', 'smartphones', 'laptops', 'tablets', 'ipad', 'iphone', 'galaxy', 'pixel', 'macbook', 'cpu', 'processor', 'gpu', 'graphics card', 'rtx', 'radeon', 'snapdragon', 'dimensity', 'chipset', 'benchmark', 'geekbench', 'antutu', 'smartwatch', 'apple watch', 'earbuds', 'headphones', 'airpods', 'playstation', 'xbox', 'nintendo switch', 'steam deck', 'rankings', 'voltix', 'monitors', 'chargers', 'magsafe', 'keyboards', 'mice', 'tvs', 'appliances', 'gadgets', 'hardware'],
+    keywords: ['tech device comparisons', 'device comparison', 'versus', 'vs', 'specs', 'spec sheet', 'compare phones', 'compare laptops', 'smartphones', 'laptops', 'tablets', 'ipad', 'iphone', 'galaxy', 'pixel', 'macbook', 'cpu', 'processor', 'gpu', 'graphics card', 'rtx', 'radeon', 'snapdragon', 'dimensity', 'chipset', 'benchmark', 'geekbench', 'antutu', 'smartwatch', 'apple watch', 'earbuds', 'headphones', 'airpods', 'playstation', 'xbox', 'nintendo switch', 'steam deck', 'rankings', 'voltix', 'monitors', 'chargers', 'magsafe', 'keyboards', 'mice', 'tvs', 'appliances', 'gadgets', 'hardware', 'bluetooth speakers', 'jbl', 'power banks', 'power station', 'usb-c cable', 'printers', 'photocopiers', 'copier', 'coffee maker', 'espresso machine', 'inverter', 'solar inverter', 'ups', 'electric guitar', 'digital piano', 'synthesizer', 'electric cars', 'ev', 'tesla', 'byd', 'intel', 'amd', 'nvidia', 'old gpus'],
     synonyms: ['device specs', 'spec comparisons', 'phone compare', 'laptop compare', 'tech specs'],
     intents: ['compare devices', 'compare phones', 'tech device comparisons', 'compare laptop specs', 'device specs', 'voltix comparison', 'gadget comparison'],
     related: ['automobile-guide', 'messaging', 'calculator'],

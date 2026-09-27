@@ -13,6 +13,7 @@
    ============================================================ */
 
 import { tbConfirm, tbPrompt, tbAlert } from '../lib/dialog.js';
+import { showToast } from '../utils.js';
 import { streamChatCompletion, getActiveAiMode, setActiveAiMode, AI_MODES } from '../lib/ai-provider.js';
 import { QuotaManager } from '../lib/quota-manager.js';
 import { getCurrentUser } from '../lib/supabase.js';
@@ -374,7 +375,7 @@ function mountAssistant(container, state) {
   let dead = false;
 
   container.innerHTML = `
-    <div class="ast" data-side="${initialSidebar()}">
+    <div class="ast ${state.compact ? 'is-compact' : ''}" data-side="${initialSidebar()}">
       <aside class="ast-side" aria-label="Chats">
         <div class="ast-side-head">
           <button type="button" class="ast-newchat" data-act="new">${icon('compose', 17)}<span>New chat</span></button>
@@ -443,10 +444,10 @@ function mountAssistant(container, state) {
   /* ---------------- sidebar ---------------- */
 
   function initialSidebar() {
-    if (typeof window === 'undefined' || window.innerWidth < 1024) return 'closed';
+    if (state.compact || typeof window === 'undefined' || window.innerWidth < 1024) return 'closed';
     try { return localStorage.getItem('toolbox_assistant_sidebar') === 'closed' ? 'closed' : 'open'; } catch { return 'open'; }
   }
-  const isDrawer = () => window.innerWidth < 1024;
+  const isDrawer = () => !!state.compact || window.innerWidth < 1024;
   function setSidebar(open) {
     root.dataset.side = open ? 'open' : 'closed';
     if (!isDrawer()) { try { localStorage.setItem('toolbox_assistant_sidebar', open ? 'open' : 'closed'); } catch { /* ignore */ } }
@@ -479,12 +480,13 @@ function mountAssistant(container, state) {
       convList.innerHTML = `<p class="ast-convs-empty">${q ? 'No chats match your search.' : 'Your chats will appear here.'}</p>`;
     } else {
       let html = '', group = '';
-      for (const c of list) {
-        const g = dayGroup(c.updatedAt || c.createdAt || Date.now());
+      const ordered = [...list.filter(c => c.pinned), ...list.filter(c => !c.pinned)];
+      for (const c of ordered) {
+        const g = c.pinned ? 'Pinned' : dayGroup(c.updatedAt || c.createdAt || Date.now());
         if (g !== group) { html += `<h3 class="ast-convs-h">${esc(g)}</h3>`; group = g; }
         const isActive = conv && c.id === conv.id;
         const busy = running && running.conv.id === c.id;
-        html += `<div class="ast-conv ${isActive ? 'is-active' : ''}" data-id="${esc(c.id)}">
+        html += `<div class="ast-conv ${isActive ? 'is-active' : ''} ${c.pinned ? 'is-pinned' : ''}" data-id="${esc(c.id)}">
           <button type="button" class="ast-conv-open" data-act="open-conv" ${isActive ? 'aria-current="page"' : ''}>${busy ? '<span class="ast-conv-busy" aria-label="Replying"></span>' : ''}<span>${esc(c.title || 'New chat')}</span></button>
           <button type="button" class="ast-conv-more" data-act="conv-menu" aria-label="Chat options for ${esc(c.title || 'chat')}" aria-haspopup="menu">${icon('more', 16)}</button>
         </div>`;
@@ -498,33 +500,122 @@ function mountAssistant(container, state) {
       <span class="ast-me-meta"><strong>${esc(user.displayName || user.username || 'You')}</strong><small>${esc(sync)}</small></span></div>` : '';
   }
 
+  const CONV_ACTIONS = (c) => [
+    { act: 'open', label: 'Open', icon: 'chev' },
+    { act: 'rename', label: 'Rename', icon: 'edit' },
+    { act: 'pin', label: c.pinned ? 'Unpin' : 'Pin to top', icon: 'pin' },
+    { act: 'duplicate', label: 'Duplicate', icon: 'copy' },
+    { act: 'copy', label: 'Copy as text', icon: 'copy' },
+    { act: 'download', label: 'Download as Markdown', icon: 'file' },
+    { sep: true },
+    { act: 'delete', label: 'Delete', icon: 'trash', danger: true },
+  ];
+
+  function convMenuHtml(c) {
+    return CONV_ACTIONS(c).map(a => (a.sep ? '<hr class="ast-pop-sep">'
+      : `<button type="button" role="menuitem" data-conv-act="${a.act}" ${a.danger ? 'class="is-danger"' : ''}>${icon(a.icon, 16)}<span><strong>${esc(a.label)}</strong></span></button>`)).join('');
+  }
+
+  function convAsMarkdown(c) {
+    const lines = [`# ${c.title || 'Chat'}`, ''];
+    for (const m of c.messages || []) {
+      const text = String(m.displayText ?? m.content ?? '').trim();
+      if (!text && !m.attachments?.length) continue;
+      lines.push(`## ${m.role === 'user' ? 'You' : 'Assistant'}`, '');
+      if (m.attachments?.length) lines.push(`_Attached: ${m.attachments.map(a => a.name).join(', ')}_`, '');
+      if (text) lines.push(text, '');
+    }
+    return lines.join('\n');
+  }
+
+  async function runConvAction(act, id) {
+    const c = store.conversations.find(x => x.id === id);
+    if (!c) return;
+    if (act === 'open') openConversation(id);
+    else if (act === 'rename') {
+      const name = await tbPrompt('Name this chat', c.title || '', { title: 'Rename chat', confirmText: 'Save' });
+      if (name && name.trim()) { store.rename(id, name); if (conv?.id === id) conv.title = c.title; renderTitle(); }
+    } else if (act === 'pin') store.setPinned(id, !c.pinned);
+    else if (act === 'duplicate') { const copy = store.duplicate(id); if (copy) openConversation(copy.id); }
+    else if (act === 'copy') {
+      try { await navigator.clipboard.writeText(convAsMarkdown(c)); showToast('Chat copied'); } catch { showToast('Could not copy the chat'); }
+    } else if (act === 'download') {
+      const blob = new Blob([convAsMarkdown(c)], { type: 'text/markdown' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${(c.title || 'chat').replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 80) || 'chat'}.md`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    } else if (act === 'delete') {
+      const ok = await tbConfirm(`"${c.title || 'This chat'}" will be deleted from this device and your account.`, { title: 'Delete chat?', confirmText: 'Delete', destructive: true });
+      if (!ok) return;
+      if (running?.conv.id === id) running.abort.abort();
+      store.remove(id);
+      if (conv?.id === id) startNewChat();
+    }
+  }
+
+  function wireMenu(menu, id, onClose) {
+    menu.addEventListener('click', (e) => {
+      const act = e.target.closest('[data-conv-act]')?.dataset.convAct;
+      if (!act) return;
+      menu.remove(); onClose?.();
+      runConvAction(act, id);
+    });
+    menu.addEventListener('keydown', (e) => {
+      const items = [...menu.querySelectorAll('[data-conv-act]')];
+      const i = items.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+      else if (e.key === 'Escape' || e.key === 'Tab') { e.preventDefault(); menu.remove(); onClose?.(); }
+    });
+    menu.querySelector('button')?.focus();
+  }
+
   function openConvMenu(button, id) {
     closePops();
+    const c = store.conversations.find(x => x.id === id);
+    if (!c) return;
     const menu = document.createElement('div');
     menu.className = 'ast-pop ast-conv-pop';
     menu.setAttribute('role', 'menu');
-    menu.innerHTML = `
-      <button type="button" role="menuitem" data-act="rename">${icon('edit', 16)}<span><strong>Rename</strong></span></button>
-      <button type="button" role="menuitem" data-act="delete" class="is-danger">${icon('trash', 16)}<span><strong>Delete</strong></span></button>`;
+    menu.innerHTML = convMenuHtml(c);
     button.closest('.ast-conv').appendChild(menu);
     button.setAttribute('aria-expanded', 'true');
-    menu.addEventListener('click', async (e) => {
-      const act = e.target.closest('[data-act]')?.dataset.act;
+    wireMenu(menu, id, () => button.setAttribute('aria-expanded', 'false'));
+  }
+
+  /** Right-click / long-press menu at the pointer. */
+  function openConvContextMenu(id, x, y) {
+    closePops();
+    const c = store.conversations.find(x2 => x2.id === id);
+    if (!c) return;
+    const menu = document.createElement('div');
+    menu.className = 'ast-pop ast-conv-pop ast-ctx';
+    menu.setAttribute('role', 'menu');
+    menu.setAttribute('aria-label', `Options for ${c.title || 'chat'}`);
+    menu.innerHTML = convMenuHtml(c);
+    document.body.appendChild(menu);
+    menu.hidden = false;
+    const r = menu.getBoundingClientRect();
+    menu.style.left = `${Math.max(8, Math.min(x, window.innerWidth - r.width - 8))}px`;
+    menu.style.top = `${Math.max(8, Math.min(y, window.innerHeight - r.height - 8))}px`;
+    convList.querySelector(`.ast-conv[data-id="${CSS.escape(id)}"]`)?.classList.add('is-menu');
+    const close = () => {
       menu.remove();
-      const c = store.conversations.find(x => x.id === id);
-      if (!c) return;
-      if (act === 'rename') {
-        const name = await tbPrompt('Name this chat', c.title || '', { title: 'Rename chat', confirmText: 'Save' });
-        if (name && name.trim()) { store.rename(id, name); if (conv?.id === id) conv.title = c.title; renderTitle(); }
-      } else if (act === 'delete') {
-        const ok = await tbConfirm(`"${c.title || 'This chat'}" will be deleted from this device and your account.`, { title: 'Delete chat?', confirmText: 'Delete', destructive: true });
-        if (!ok) return;
-        if (running?.conv.id === id) running.abort.abort();
-        store.remove(id);
-        if (conv?.id === id) startNewChat();
-      }
-    });
-    menu.querySelector('button')?.focus();
+      convList.querySelectorAll('.is-menu').forEach(n => n.classList.remove('is-menu'));
+      document.removeEventListener('pointerdown', outside, true);
+      window.removeEventListener('blur', close);
+      window.removeEventListener('resize', close);
+    };
+    const outside = (e) => { if (!menu.contains(e.target)) close(); };
+    setTimeout(() => {
+      document.addEventListener('pointerdown', outside, true);
+      window.addEventListener('blur', close);
+      window.addEventListener('resize', close);
+    }, 0);
+    disposers.push(close);
+    wireMenu(menu, id, close);
   }
 
   /* ---------------- conversations ---------------- */
@@ -1220,6 +1311,7 @@ function mountAssistant(container, state) {
   }
 
   function closePops() {
+    document.querySelectorAll('body > .ast-ctx').forEach(m => m.remove());
     root.querySelectorAll('.ast-pop').forEach(p => { if (p.classList.contains('ast-conv-pop')) p.remove(); else p.hidden = true; });
     root.querySelectorAll('[aria-expanded="true"][aria-haspopup]').forEach(b => b.setAttribute('aria-expanded', 'false'));
   }
@@ -1352,6 +1444,41 @@ function mountAssistant(container, state) {
 
   /* ---------------- events ---------------- */
 
+  // Right-click, long-press (touch) and the keyboard context-menu key open the chat menu.
+  on(convList, 'contextmenu', (e) => {
+    const row = e.target.closest('.ast-conv');
+    if (!row) return;
+    e.preventDefault();
+    const r = row.getBoundingClientRect();
+    const fromKeyboard = e.button !== 2 && e.clientX === 0 && e.clientY === 0;
+    openConvContextMenu(row.dataset.id, fromKeyboard ? r.left + 24 : e.clientX, fromKeyboard ? r.bottom : e.clientY);
+  });
+  let pressTimer = null, pressStart = null;
+  on(convList, 'touchstart', (e) => {
+    const row = e.target.closest('.ast-conv');
+    if (!row || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    pressStart = { x: t.clientX, y: t.clientY };
+    pressTimer = setTimeout(() => {
+      pressTimer = null;
+      navigator.vibrate?.(10);
+      row.dataset.longpress = '1';
+      openConvContextMenu(row.dataset.id, pressStart.x, pressStart.y);
+    }, 500);
+  }, { passive: true });
+  const cancelPress = () => { clearTimeout(pressTimer); pressTimer = null; };
+  on(convList, 'touchmove', (e) => {
+    const t = e.touches[0];
+    if (pressStart && t && Math.hypot(t.clientX - pressStart.x, t.clientY - pressStart.y) > 10) cancelPress();
+  }, { passive: true });
+  on(convList, 'touchend', (e) => {
+    cancelPress();
+    // The long-press opened a menu: don't also open the chat.
+    const row = e.target.closest('.ast-conv');
+    if (row?.dataset.longpress) { e.preventDefault(); delete row.dataset.longpress; }
+  });
+  on(convList, 'touchcancel', cancelPress);
+
   on(root, 'click', async (e) => {
     if (handleMarkdownClick(e)) return;
     const t = e.target.closest('[data-act], [data-sug], [data-mode], [data-remove]');
@@ -1463,23 +1590,32 @@ function mountAssistant(container, state) {
 
   renderModeButton();
   renderFiles();
-  // A file sent here by "Ask Assistant" in Files or an editor.
-  if (state.artifact?.from === 'ask-assistant' && state.artifact.file) {
-    addFiles([state.artifact.file]).then(() => {
-      if (dead) return;
-      if (state.artifact.prompt) { input.value = state.artifact.prompt; input.dispatchEvent(new Event('input')); }
-    });
+  /* "Ask Assistant" from anywhere: a question (sent straight away) and/or a file
+     (attached, with the question left in the composer). */
+  async function ask({ prompt = '', artifact = null, send = true } = {}) {
+    if (dead) return;
+    if (messages.length) startNewChat();
+    if (artifact?.file) await addFiles([artifact.file]);
+    const text = prompt || artifact?.prompt || '';
+    if (text) { input.value = text; input.dispatchEvent(new Event('input')); }
+    if (send && text && !artifact?.file && getCurrentUser()) handleSubmit();
+    else input.focus({ preventScroll: true });
   }
+  on(window, 'toolbox:assistant-ask', (e) => { ask(e.detail || {}); });
+  const pendingAsk = state.artifact?.from === 'ask-assistant' && state.artifact.file
+    ? { artifact: state.artifact }
+    : (state.prompt ? { prompt: state.prompt, send: state.send !== false } : null);
   (async () => {
     await store.load();
     if (dead) return;
-    const last = store.active && store.active.messages?.length ? store.active : null;
+    const last = !pendingAsk && store.active && store.active.messages?.length ? store.active : null;
     if (last) { conv = last; messages = last.messages.map(m => ({ ...m })); }
     else { conv = { id: newId(), title: 'New chat', createdAt: Date.now(), updatedAt: Date.now(), messages: [] }; store.activeId = conv.id; }
     renderThread();
     renderConvList();
     renderTitle();
     scrollToBottom(true);
+    if (pendingAsk) ask(pendingAsk);
     const changed = await store.pullCloud().catch(() => false);
     if (dead) return;
     if (changed) {

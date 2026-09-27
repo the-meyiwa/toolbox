@@ -139,6 +139,29 @@ export class ConversationStore {
     this.emit();
   }
 
+  /** Pins a chat to the top of the list (synced like any other change). */
+  setPinned(id, pinned) {
+    const c = this.conversations.find(x => x.id === id);
+    if (!c) return;
+    c.pinned = !!pinned;
+    c.updatedAt = Date.now();
+    this.sort();
+    this.save();
+    this.emit();
+  }
+
+  /** Copies a chat; the copy opens as its own conversation. */
+  duplicate(id) {
+    const c = this.conversations.find(x => x.id === id);
+    if (!c) return null;
+    const copy = { ...c, id: newId(), title: `${c.title || 'Chat'} (copy)`, customTitle: true, pinned: false, createdAt: Date.now(), updatedAt: Date.now(), messages: (c.messages || []).map(m => ({ ...m })) };
+    this.conversations.unshift(copy);
+    this.sort();
+    this.save();
+    this.emit();
+    return copy;
+  }
+
   remove(id) {
     this.conversations = this.conversations.filter(c => c.id !== id);
     if (this.activeId === id) this.activeId = null;

@@ -81,6 +81,9 @@ body.is-scrolled #app-header, body.in-tool #app-header { border-bottom-color: va
 .header-search-btn:hover { background: var(--surface-3); color: var(--text-2); }
 .header-search-btn svg { width: 16px; height: 16px; }
 .header-search-btn span { flex: 1; }
+/* Desktop uses Spotlight (/ or Ctrl/Cmd+K) instead of a header search box;
+   phones keep the search button. */
+@media screen and (min-width: 769px) { .header-search-btn { display: none; } }
 
 .header-avatar-btn { position: relative; overflow: hidden; }
 .header-avatar-btn img { width: 28px !important; height: 28px !important; border-radius: 50%; object-fit: cover; }
