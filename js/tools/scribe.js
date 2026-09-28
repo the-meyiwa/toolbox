@@ -87,7 +87,7 @@ export default {
         else if (ext === 'doc') html = modelToHtml(textToModel(await (await import('../lib/docs/legacy.js')).docToText(bytes)));
         else if (ext === 'md' || ext === 'markdown') {
           const { marked } = await import('marked');
-          html = marked.parse(new TextDecoder().decode(bytes), { gfm: true, breaks: false });
+          html = marked.parse(new TextDecoder().decode(bytes), { gfm: true, breaks: false }); // sanitized by setHtml(await sanitize(html)) below
         } else if (ext === 'html' || ext === 'htm') {
           const text = new TextDecoder().decode(bytes);
           html = /<body[^>]*>([\s\S]*)<\/body>/i.exec(text)?.[1] ?? text;

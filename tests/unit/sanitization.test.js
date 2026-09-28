@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sanitizeUserFacingText, cleanText } from '../../js/utils.js';
+import fs from 'node:fs';
+import path from 'node:path';
 
 test('sanitizeUserFacingText: strips invisible and zero-width characters', () => {
   const dirty = 'Hello\u200B \u200CWorld\uFEFF!\u200D';
@@ -69,3 +71,20 @@ test('sanitizeUserFacingText: decodes space entities (&#x20;, &#32;, &nbsp;) wit
 });
 
 
+
+test('Sanitization: parsed Markdown never reaches the page unsanitised', () => {
+  const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap(e => {
+    const p = path.join(dir, e.name);
+    return e.isDirectory() ? walk(p) : (p.endsWith('.js') ? [p] : []);
+  });
+  const offenders = [];
+  for (const file of walk(path.resolve('js'))) {
+    const src = fs.readFileSync(file, 'utf8');
+    src.split('\n').forEach((line, i) => {
+      if (/marked(\.parse)?\(/.test(line) && !/cleanHtml|safeMarkdown|sanitize|purify/i.test(line) && !/^\s*(\/\/|\*|import)/.test(line)) {
+        offenders.push(`${path.relative(process.cwd(), file)}:${i + 1}`);
+      }
+    });
+  }
+  assert.deepEqual(offenders, [], `marked output used without sanitising:\n${offenders.join('\n')}`);
+});
