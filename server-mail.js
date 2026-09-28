@@ -983,7 +983,8 @@ function oauthInit(request, response, url, user) {
   if (!creds.id || !creds.secret || !stateSecret) {
     return sendJson(response, 400, { success: false, error: provider === 'microsoft' ? 'Microsoft Mail is not configured on this deployment.' : 'Server is missing GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables.' });
   }
-  const requestedOrigin = request.headers.origin || `${String(request.headers['x-forwarded-proto'] || 'http').split(',')[0]}://${String(request.headers['x-forwarded-host'] || request.headers.host || 'localhost:3000').split(',')[0]}`;
+  const claimed = url.searchParams.get('origin') || '';
+  const requestedOrigin = (/^https?:\/\/[\w.-]+(:\d+)?$/i.test(claimed) ? claimed : '') || request.headers.origin || `${String(request.headers['x-forwarded-proto'] || 'http').split(',')[0]}://${String(request.headers['x-forwarded-host'] || request.headers.host || 'localhost:3000').split(',')[0]}`;
   const state = encodeMailState({ userId: user.id, provider, nonce: crypto.randomUUID(), expiresAt: Date.now() + 10 * 60 * 1000, appOrigin: requestedOrigin }, stateSecret);
   const loginHint = url.searchParams.get('hint') ? `&login_hint=${encodeURIComponent(url.searchParams.get('hint'))}` : '';
   if (provider === 'microsoft') {

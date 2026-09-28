@@ -61,7 +61,9 @@ export const mailApi = {
   set activeAccountId(id) { try { id ? localStorage.setItem(ACTIVE_KEY, id) : localStorage.removeItem(ACTIVE_KEY); } catch { /* storage blocked */ } },
 
   status() { return request('status'); },
-  oauthInit(provider, hint = '') { return request('oauth/init', { params: { provider, hint } }); },
+  // The page's own address goes along: browsers leave out the Origin header on same-site GETs,
+  // and without it the server guessed from proxy headers (sometimes localhost).
+  oauthInit(provider, hint = '') { return request('oauth/init', { params: { provider, hint, origin: typeof window !== 'undefined' ? window.location.origin : '' } }); },
   folders(accountId) { return request('folders', { params: { accountId } }); },
 
   /** { accountId, folder, q, pageToken, limit, threads } → { messages, nextPageToken } */

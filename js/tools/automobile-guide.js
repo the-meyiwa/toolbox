@@ -655,6 +655,8 @@ export default {
                 <button type="button" data-space="exterior" class="is-active" aria-pressed="true">Exterior</button>
                 <button type="button" data-space="interior" aria-pressed="false">Interior</button>
                 <button type="button" data-space="parts" aria-pressed="false">Parts</button>
+                <span class="ag-space-sep" aria-hidden="true"></span>
+                <button type="button" class="ag-marker-toggle" data-markers-toggle aria-pressed="true" aria-label="Hide markers" title="Hide markers"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="eye-open" d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle class="eye-open" cx="12" cy="12" r="3"/><path class="eye-off" d="M3 3l18 18M10.6 5.1A10.7 10.7 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.1 3.9M6.6 6.6A17 17 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 4.4-1"/></svg></button>
               </div>
               <div class="ag-hotspots" id="ag-hotspots"></div>
               <section class="ag-controls" id="ag-controls" hidden aria-label="Controls"></section>
@@ -698,6 +700,8 @@ export default {
     `;
 
     this.bindEvents();
+    let hidden=false; try{ hidden=localStorage.getItem('toolbox_vehicle_markers_hidden')==='1'; }catch{ /* storage blocked */ }
+    this.setMarkersHidden(hidden);
     this.initializeViewer();
   },
 
@@ -797,6 +801,7 @@ export default {
       if(component)this.viewer?.select(component.dataset.componentId);
       if(target.closest('[data-clear-selection]'))this.viewer?.select(null);
       if(target.closest('[data-ask-component]'))this.askAssistant();
+      if(target.closest('[data-markers-toggle]')){ this.setMarkersHidden(!this.markersHidden); return; }
       const space=target.closest('[data-space]');
       if(space){ this.setSpace(space.dataset.space); return; }
       const hotspot=target.closest('[data-hotspot]');
@@ -1427,6 +1432,21 @@ export default {
     const look=wheel?wheel.clone():eye.clone().setX(eye.x+1);
     look.y=Math.max(look.y,eye.y-0.25);
     v.enterInterior(eye,look);
+  },
+
+  /* Markers can cover the part being looked at: they can be hidden, and the choice is remembered. */
+  setMarkersHidden(hidden){
+    this.markersHidden=!!hidden;
+    try{ localStorage.setItem('toolbox_vehicle_markers_hidden',hidden?'1':'0'); }catch{ /* storage blocked */ }
+    const layer=this.container?.querySelector('#ag-hotspots');
+    if(layer)layer.hidden=this.markersHidden;
+    const btn=this.container?.querySelector('[data-markers-toggle]');
+    if(btn){
+      btn.setAttribute('aria-pressed',String(!this.markersHidden));
+      btn.classList.toggle('is-off',this.markersHidden);
+      const label=this.markersHidden?'Show markers':'Hide markers';
+      btn.setAttribute('aria-label',label); btn.title=label;
+    }
   },
 
   renderHotspots(){

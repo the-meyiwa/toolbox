@@ -208,6 +208,12 @@ export async function searchPlaces(q, { near, limit = 6 } = {}) {
   return (Array.isArray(j) ? j : []).map(fromNominatim).filter(p => isLngLat([p.lng, p.lat]));
 }
 
+/** The promise's value, or null when it takes longer than ms. */
+function withTimeout(promise, ms) {
+  let t;
+  return Promise.race([promise, new Promise((resolve) => { t = setTimeout(() => resolve(null), ms); })]).finally(() => clearTimeout(t));
+}
+
 export async function reverseGeocode(p) {
   const [lng, lat] = p;
   try {
@@ -733,23 +739,32 @@ export async function resolvePlace(text, near) {
  */
 export async function directions({ from, to, mode = 'driving', near, analyse = false }) {
   const asPoint = (v) => (v && Number.isFinite(Number(v.lat)) && Number.isFinite(Number(v.lng)) ? [Number(v.lng), Number(v.lat)] : null);
+  // A point (usually "your location") is routed from straight away; its name and country come
+  // from a reverse lookup that runs alongside the routing, not before it.
+  const pending = [];
   const resolveEnd = async (v, bias) => {
     const p = asPoint(v);
     if (p) {
-      const r = await reverseGeocode(p).catch(() => null);
-      return { place: { name: v.name || r?.name || 'Start', address: r?.address || '', lng: p[0], lat: p[1], country: r?.country, countryCode: r?.countryCode, area: r?.area }, alternatives: [] };
+      const place = { name: v.name || 'Start', address: '', lng: p[0], lat: p[1] };
+      pending.push(withTimeout(reverseGeocode(p), 2500).then((r) => {
+        if (!r) return;
+        if (!v.name && r.name) place.name = r.name;
+        Object.assign(place, { address: r.address || '', country: r.country, countryCode: r.countryCode, area: r.area });
+      }).catch(() => {}));
+      return { place, alternatives: [] };
     }
     return resolvePlace(v, bias);
   };
-  const a = await resolveEnd(from, near);
+  // Both ends are looked up at the same time (each biased toward the person).
+  const fromPoint = asPoint(from);
+  const [a, b] = await Promise.all([resolveEnd(from, near), resolveEnd(to, fromPoint || near)]);
   if (!a.place) return { status: 'not_found', which: 'from', message: `Could not find "${from}" on the map.` };
-  const aPt = [a.place.lng, a.place.lat];
-  const b = await resolveEnd(to, aPt);
   if (!b.place) return { status: 'not_found', which: 'to', message: `Could not find "${to}" on the map.` };
+  const aPt = [a.place.lng, a.place.lat];
   const bPt = [b.place.lng, b.place.lat];
 
   const routeMode = mode === 'transit' ? 'driving' : mode;
-  const r = await route([aPt, bPt], routeMode);
+  const [r] = await Promise.all([route([aPt, bPt], routeMode), ...pending]);
   const countryCode = a.place.countryCode || b.place.countryCode || '';
   const out = {
     status: 'success',

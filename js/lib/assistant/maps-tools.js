@@ -217,9 +217,12 @@ async function getDirections(args, ctx) {
   const to = String(args.to || '').trim();
   if (!to) return { status: 'error', message: 'to is required' };
   const mode = ['driving', 'walking', 'cycling', 'transit'].includes(args.mode) ? args.mode : 'driving';
-  const here = await userPoint(ctx.taskState).catch(() => null);
   let from = String(args.from || '').trim();
-  if (!from || HERE_RE.test(from)) {
+  const fromHere = !from || HERE_RE.test(from);
+  // With a named start the location only biases the search: give it a moment, never seconds.
+  const locating = userPoint(ctx.taskState).catch(() => null);
+  const here = fromHere ? await locating : await Promise.race([locating, new Promise(r => setTimeout(() => r(null), 400))]);
+  if (fromHere) {
     if (!here) return needLocation('the start of the route is unknown');
     from = { lat: here[1], lng: here[0], name: 'Your location' };
   }

@@ -1168,6 +1168,11 @@ function mountAssistant(container, state) {
     return segs;
   }
 
+  // Heavy card libraries start downloading when the tool starts, not when its result arrives.
+  function prewarmForTool(name) {
+    if (/^(get_directions|search_places_nearby|find_place|render_map|get_current_location)$/.test(name)) import('../lib/maps/map-view.js').then(m => m.loadMapLibre()).catch(() => {});
+  }
+
   function renderMdInto(el, text, streaming) {
     // While streaming, only the unfinished tail is re-rendered each frame (see renderStreamingInto);
     // the final render is a complete one.
@@ -1443,7 +1448,7 @@ function mountAssistant(container, state) {
         signal: abort.signal,
         onToken: (t) => { bump(); view.text(t); },
         onThinking: (t) => { bump(); view.thinking(t); },
-        onToolCallStart: (name, args, id) => { bump(); view.toolStart(name, args, id); },
+        onToolCallStart: (name, args, id) => { bump(); prewarmForTool(name); view.toolStart(name, args, id); },
         onToolCallResult: (name, res, id) => { bump(); view.toolResult(name, res, id); },
         onStatus: (s) => { bump(); if (s?.type === 'continuing') { view.endThinking(); view.setWaiting(true); } },
         onProvider: (p) => { bump(); msg.provider = p?.provider || null; msg.providerLabel = p?.label || p?.provider || null; msg.model = p?.model || null; },
