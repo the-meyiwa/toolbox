@@ -319,3 +319,14 @@ label.stg-row:hover, .stg-row-link:hover { background: color-mix(in srgb, var(--
 @media (prefers-reduced-motion: reduce) {
   .stg, .stg *, .stg *::before, .stg *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+/* Assistant personality picker */
+.stg-persona-card { padding: 12px; }
+.stg-persona-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.stg-persona { display: grid; justify-items: center; gap: 4px; padding: 12px 8px 10px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; cursor: pointer; text-align: center; transition: border-color .15s, background .15s, transform .15s var(--ease-out); min-width: 0; }
+.stg-persona:hover { background: var(--surface-2); }
+.stg-persona:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.stg-persona.is-on { border-color: var(--text); box-shadow: inset 0 0 0 1px var(--text); }
+.stg-persona-img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: var(--surface-2); }
+.stg-persona-std { display: grid; place-items: center; }
+.stg-persona-name { font-size: 13px; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+.stg-persona-tag { font-size: 11.5px; color: var(--text-3); line-height: 1.25; }

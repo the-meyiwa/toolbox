@@ -58,10 +58,14 @@ export async function uploadMessageFile(file) {
   if (!file || file.size > MESSAGE_FILE_LIMIT) throw new Error('Shared files must be 8 MB or smaller.');
   const { user, url, headers } = context();
   const safeName = file.name.replace(/[^a-z0-9._-]/gi, '_');
-  const path = `${user.id}/messages/${crypto.randomUUID()}-${safeName}`;
-  const response = await fetch(`${url}/storage/v1/object/toolbox-files/${path}`, { method: 'POST', headers: { apikey: headers.apikey, Authorization: headers.Authorization, 'Content-Type': file.type || 'application/octet-stream', 'x-upsert': 'false' }, body: file });
+  // Documents, PDFs and text travel packed (lossless, fingerprint-checked); the recipient's
+  // Toolbox unpacks them on download. Photos, video and archives go as they are.
+  const { packForTransfer } = await import('./transfer-pack.js');
+  const pack = await packForTransfer(file);
+  const path = `${user.id}/messages/${crypto.randomUUID()}-${safeName}${pack.packed ? '.kpk' : ''}`;
+  const response = await fetch(`${url}/storage/v1/object/toolbox-files/${path}`, { method: 'POST', headers: { apikey: headers.apikey, Authorization: headers.Authorization, 'Content-Type': pack.packed ? 'application/octet-stream' : (file.type || 'application/octet-stream'), 'x-upsert': 'false' }, body: pack.blob });
   if (!response.ok) throw new Error('The file could not be uploaded.');
-  return { name: file.name, size: file.size, type: file.type, url: `${url}/storage/v1/object/public/toolbox-files/${path}` };
+  return { name: file.name, size: file.size, type: file.type, url: `${url}/storage/v1/object/public/toolbox-files/${path}`, ...(pack.packed ? { packed: true, packedSize: pack.packedSize } : {}) };
 }
 
 export async function listOnlineToolboxFiles() {

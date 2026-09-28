@@ -1106,10 +1106,20 @@ export class ToolboxFilesystem {
     try {
       // 1. Upload to Supabase Storage if binary
       let storageUrl = null;
+      let packed = false;
       if (record.binaryData) {
-        const uploadRes = await uploadToSupabaseStorage('toolbox-files', record.name, new Blob([record.binaryData], { type: record.mimeType }));
+        // Packed losslessly before upload when it shrinks (documents, PDFs, text); see transfer-pack.js.
+        const { packForTransfer } = await import('./transfer-pack.js');
+        const pack = await packForTransfer(new Blob([record.binaryData], { type: record.mimeType }), { name: record.name, type: record.mimeType });
+        packed = pack.packed;
+        const uploadRes = await uploadToSupabaseStorage('toolbox-files', pack.packed ? `${record.name}.kpk` : record.name, pack.blob);
         storageUrl = uploadRes?.url || null;
       }
+      // The bytes live in Storage: the record carries metadata (and text content only for
+      // text files). Before, binaryData was also serialised into this JSON as {"0":..,"1":..},
+      // about seven times the file's size, on every sync.
+      const { binaryData, ...rest } = record;
+      const payloadRecord = binaryData ? (({ content, ...m }) => m)(rest) : rest;
 
       // 2. Sync to saved_artifacts table
       await fetch(`${config.url}/rest/v1/saved_artifacts`, {
@@ -1127,8 +1137,10 @@ export class ToolboxFilesystem {
           kind: record.kind || 'text',
           storage_url: storageUrl,
           payload: {
-            ...record,
-            storageUrl
+            ...payloadRecord,
+            bytes: record.size ?? record.binaryData?.byteLength ?? (typeof record.content === 'string' ? record.content.length : 0),
+            storageUrl,
+            ...(packed ? { packed: true } : {})
           },
           updated_at: new Date().toISOString()
         })

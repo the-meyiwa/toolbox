@@ -84,7 +84,9 @@ export function renderMapCard(result, container) {
         title: data.title, places, mapLayers: data.mapLayers, directions: dir, from: data.from, to: data.to, mode: data.mode, userLocation: data.userLocation,
       }));
     } catch { /* storage full or blocked: the app still opens */ }
-    window.location.hash = '#interactive-map';
+    // Already on Maps (e.g. behind the Assistant pop-up): hand it over in place.
+    if (/^#interactive-map\b/.test(window.location.hash)) window.dispatchEvent(new CustomEvent('toolbox:maps-handoff'));
+    else window.location.hash = '#interactive-map';
   });
   head.appendChild(open);
   card.appendChild(head);

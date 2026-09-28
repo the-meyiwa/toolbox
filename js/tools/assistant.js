@@ -1680,9 +1680,12 @@ function mountAssistant(container, state) {
   }
   on(window, 'toolbox:assistant-ask', (e) => { ask(e.detail || {}); });
   on(window, 'toolbox:assistant-reopened', () => { if (!dead && !running && messages.length && getSetting('assistantOpenTo') !== 'last') startNewChat(); });
+  // "Ask Assistant" with the pop-up turned off queues the question for this page.
+  const queued = window.__toolboxQueuedAsk && Date.now() - window.__toolboxQueuedAsk.at < 60_000 ? window.__toolboxQueuedAsk : null;
+  window.__toolboxQueuedAsk = null;
   const pendingAsk = state.artifact?.from === 'ask-assistant' && state.artifact.file
     ? { artifact: state.artifact }
-    : (state.prompt ? { prompt: state.prompt, send: state.send !== false } : null);
+    : (state.prompt ? { prompt: state.prompt, send: state.send !== false } : (queued && (queued.prompt || queued.artifact) ? { prompt: queued.prompt, artifact: queued.artifact, send: queued.send } : null));
   (async () => {
     await store.load();
     if (dead) return;
@@ -1696,6 +1699,10 @@ function mountAssistant(container, state) {
     renderTitle();
     scrollToBottom(true);
     if (pendingAsk) ask(pendingAsk);
+    else if (!state.compact) {
+      // Opened in a new tab by "Ask Assistant" with the pop-up off: fetch the question.
+      import('../lib/assistant-popup.js').then(m => m.claimHandoff()).then(a => { if (a && !dead) ask(a); }).catch(() => {});
+    }
     const changed = await store.pullCloud().catch(() => false);
     if (dead) return;
     if (changed) {

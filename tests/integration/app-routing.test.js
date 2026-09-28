@@ -5,7 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setupDOMEnvironment } from '../helpers/dom-env.js';
-import { resolveId } from '../../js/registry/index.js';
+import { resolveId, resolveRoute } from '../../js/registry/index.js';
 import { renderSaved } from '../../js/views/saved.js';
 
 const { document } = setupDOMEnvironment();
@@ -22,6 +22,13 @@ test('Routing: resolveId handles canonical IDs, aliases, and bad hashes', () => 
 
   // Unknown
   assert.deepEqual(resolveId('some-random-unknown-tool'), { id: null, redirected: false });
+});
+
+test('Routing: tool links with options after "?" still open the tool', () => {
+  assert.deepEqual(resolveRoute('file-drop?room=AB12CD'), { id: 'file-drop', redirected: false, query: '?room=AB12CD' });
+  assert.deepEqual(resolveRoute('loan-calculator?amount=5'), { id: 'amortization-schedule', redirected: true, query: '?amount=5' });
+  assert.deepEqual(resolveRoute('json-formatter'), { id: 'json-formatter', redirected: false, query: '' });
+  assert.equal(resolveRoute('?room=AB12CD').id, null);
 });
 
 test('Saved View: renders empty state when no artifacts exist', () => {

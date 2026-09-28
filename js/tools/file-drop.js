@@ -8,7 +8,11 @@
 
 import QRCode from 'qrcode';
 import { sendP2PSignal, pollP2PSignals, getCurrentUser } from '../lib/supabase.js';
+import { isCompressible, packForTransfer, unpackTransfer } from '../lib/transfer-pack.js';
 import { fs } from '../lib/filesystem.js';
+
+// Larger files stream as they are: packing holds the whole file in memory on both ends.
+const PACK_LIMIT = 96 * 1024 * 1024;
 
 export default {
   pc: null,
@@ -307,7 +311,7 @@ export default {
           // Binary chunk
           self_.fileChunks.push(e.data);
           self_.receivedBytes += e.data.byteLength;
-          const pct = Math.min(100, Math.round((self_.receivedBytes / (self_.expectedFile?.size || 1)) * 100));
+          const pct = Math.min(100, Math.round((self_.receivedBytes / (self_.expectedFile?.wireSize || self_.expectedFile?.size || 1)) * 100));
           rxBar.style.width = `${pct}%`;
         }
       };
@@ -343,7 +347,11 @@ export default {
         await self_.pc.setLocalDescription(answer);
         await sendSignal('answer', answer);
       } else if (msg.type === 'answer' && mode === 'send') {
-        await self_.pc.setRemoteDescription(new RTCSessionDescription(msg.payload));
+        // Signals arrive by more than one route (same-device channel and the relay): apply once.
+        const pc = self_.pc;
+        if (!pc || pc.signalingState !== 'have-local-offer' || pc._answered) return;
+        pc._answered = true;
+        await pc.setRemoteDescription(new RTCSessionDescription(msg.payload));
       } else if (msg.type === 'ice') {
         try {
           if (self_.pc) await self_.pc.addIceCandidate(new RTCIceCandidate(msg.payload));
@@ -524,7 +532,19 @@ export default {
         if (isCancelled) break;
         const curFile = fileQueue[i];
         const filePrefix = fileQueue.length > 1 ? `[${i + 1}/${fileQueue.length}] ` : '';
-        progressLabel.textContent = `${filePrefix}Streaming ${curFile.name} over WebRTC...`;
+        // Documents, PDFs and text are packed losslessly first (see transfer-pack.js): fewer
+        // bytes on the wire, and the receiver checks the original's fingerprint on unpack.
+        let wire = curFile;
+        let packed = false;
+        if (curFile.size <= PACK_LIMIT && isCompressible(curFile)) {
+          progressLabel.textContent = `${filePrefix}Packing ${curFile.name}...`;
+          const pack = await packForTransfer(curFile).catch(() => null);
+          if (pack?.packed) { wire = pack.blob; packed = true; }
+        }
+        if (isCancelled) break;
+        progressLabel.textContent = packed
+          ? `${filePrefix}Streaming ${curFile.name} (packed ${Math.round((1 - wire.size / curFile.size) * 100)}% smaller)...`
+          : `${filePrefix}Streaming ${curFile.name} over WebRTC...`;
 
         self_.dc.send(JSON.stringify({
           type: 'file-info',
@@ -532,6 +552,7 @@ export default {
             name: curFile.name,
             size: curFile.size,
             type: curFile.type,
+            ...(packed ? { packed: true, wireSize: wire.size } : {}),
             index: i + 1,
             totalFiles: fileQueue.length
           }
@@ -539,7 +560,7 @@ export default {
 
         const chunkSize = 16384; // 16 KB for WebRTC DataChannel
         let offset = 0;
-        const total = curFile.size;
+        const total = wire.size;
         const startTime = Date.now();
 
         while (offset < total && !isCancelled) {
@@ -548,7 +569,7 @@ export default {
             continue;
           }
 
-          const slice = curFile.slice(offset, offset + chunkSize);
+          const slice = wire.slice(offset, offset + chunkSize);
           const arrayBuf = await slice.arrayBuffer();
 
           try {
@@ -594,7 +615,12 @@ export default {
       rxBar.style.width = '100%';
 
       try {
-        const blob = new Blob(self_.fileChunks, { type: self_.expectedFile.type || 'application/octet-stream' });
+        let blob = new Blob(self_.fileChunks, { type: self_.expectedFile.type || 'application/octet-stream' });
+        if (self_.expectedFile.packed) {
+          rxStatus.textContent = `Unpacking "${self_.expectedFile.name}"...`;
+          const bytes = await unpackTransfer(new Uint8Array(await blob.arrayBuffer()));
+          blob = new Blob([bytes], { type: self_.expectedFile.type || 'application/octet-stream' });
+        }
         const downloadUrl = URL.createObjectURL(blob);
         const fileName = self_.expectedFile.name;
 

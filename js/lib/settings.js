@@ -20,6 +20,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   notificationsPush: false,
   offlineFirst: true,
   assistantOpenTo: 'new',       // 'new' | 'last': what the Assistant shows when it opens
+  assistantPersona: '',         // a profile-avatar id: the Assistant's voice ('' = standard)
+  assistantPopup: true,         // Ask Assistant opens the floating pop-up (false: the full Assistant page)
   assistantResponseAnimation: true,
   assistantAnimationStyle: 'color rave', // 'color rave' | 'glow' | 'Plain Fade' | 'Pop In'
   displayName: '',

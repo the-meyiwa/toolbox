@@ -31,6 +31,8 @@ import './assistant/life-tools.js';
 import './assistant/automation-tools.js';
 import './assistant/mail-tools.js';
 import { coerceArgs, missingArgsResult } from './assistant/args.js';
+import { personaInstruction } from './assistant/personas.js';
+import { getSettings } from './settings.js';
 import { gatherLifeContext, contextBlock, rememberPlace, INTRO_PATTERN, INTRO_VOICE } from './assistant/life-context.js';
 import { QuotaManager } from './quota-manager.js';
 import { tbConfirm } from './dialog.js';
@@ -544,7 +546,7 @@ export function compactForModel(value, depth = 0) {
   if (value == null) return value;
   if (typeof value === 'string') {
     if (/^data:[\w/+.-]+;base64,/.test(value) && value.length > 400) return `[binary data, ${Math.round(value.length * 0.75 / 1024)} KB]`;
-    return value.length > 4000 ? `${value.slice(0, 4000)}… (${value.length - 4000} more characters)` : value;
+    return value.length > 6000 ? `${value.slice(0, 6000)}… (${value.length - 6000} more characters)` : value;
   }
   if (typeof value !== 'object') return value;
   if (depth > 6) return '[…]';
@@ -568,7 +570,10 @@ export function compactForModel(value, depth = 0) {
 function toolResultText(result) {
   let text;
   try { text = JSON.stringify(compactForModel(result)); } catch { text = String(result); }
-  return text.length > 12000 ? `${text.slice(0, 12000)}… (truncated)` : text;
+  // Routes and place results are what the answer is written from (roads in order, stops,
+  // landmarks, distances): they keep the full budget. Everything else is capped tighter.
+  const limit = result?.renderer === 'map-view' || result?.corridor ? 24000 : 12000;
+  return text.length > limit ? `${text.slice(0, limit)}… (truncated)` : text;
 }
 
 /**
@@ -821,7 +826,9 @@ export async function streamChatCompletion({
     // Providers accept at most 128 tools per request.
     return [...names].map(n => byName.get(n)).filter(Boolean).slice(0, 128);
   };
-  const tail = `\n${environment}${memoryBlock}${lifeBlock}${guidance}${hintBlock}${systemInstruction ? `\n${systemInstruction}` : ''}`;
+  let persona = '';
+  try { persona = scope === 'global' ? personaInstruction(getSettings().assistantPersona) : ''; } catch { persona = ''; }
+  const tail = `\n${environment}${memoryBlock}${lifeBlock}${guidance}${hintBlock}${persona}${systemInstruction ? `\n${systemInstruction}` : ''}`;
   const systemFor = () => (scope === 'global' ? `${systemPromptFor(activeGroups || [])}${tail}` : `${systemInstruction || ''}\n${environment}`);
   const system = systemFor();
   // Read attached PDFs (last two user messages) before building the request.

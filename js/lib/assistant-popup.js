@@ -12,6 +12,8 @@
      artifact — { from: 'ask-assistant', file, prompt } to attach a file
    ============================================================ */
 
+import { getCurrentUser } from './supabase.js';
+
 let panel = null;
 let body = null;
 let mod = null;          // the Assistant tool module
@@ -79,7 +81,15 @@ function build() {
     window.dispatchEvent(new CustomEvent('toolbox:assistant-drop', { detail: { files: [...(e.dataTransfer.files || [])], paths } }));
   });
   // The full Assistant page takes over the same chat.
-  window.addEventListener('hashchange', () => { if (onAssistantPage() && isAssistantOpen()) closeAssistant({ restoreFocus: false }); });
+  // A button in the chat that opens a tool ("Open in Maps", "Open in Mail"…) is followed by
+  // a route change: step aside so the person sees that tool. The chat is kept for next time.
+  let clickedInside = 0;
+  panel.addEventListener('click', () => { clickedInside = Date.now(); }, true);
+  const toolOpenedFromChat = () => isAssistantOpen() && Date.now() - clickedInside < 1500;
+  window.addEventListener('hashchange', () => {
+    if ((onAssistantPage() || toolOpenedFromChat()) && isAssistantOpen()) closeAssistant({ restoreFocus: false });
+  });
+  window.addEventListener('toolbox:maps-handoff', () => { if (toolOpenedFromChat()) closeAssistant({ restoreFocus: false }); });
 }
 
 /** Opens the full Assistant in a new browser tab. False if the browser blocked it. */
@@ -92,10 +102,61 @@ export function openAssistantTab() {
 
 export const isAssistantOpen = () => !!panel && !panel.hidden;
 
+function popupEnabled() {
+  try { return JSON.parse(localStorage.getItem('toolbox_settings') || '{}').assistantPopup !== false; } catch { return true; }
+}
+
+/* Pop-up off: the question (and any file) goes with the Assistant to its own tab. This tab
+   leaves a short-lived id in localStorage; the new tab claims it and asks for the rest over
+   a BroadcastChannel, which carries File objects as they are. */
+const HANDOFF_KEY = 'toolbox_assistant_handoff';
+const HANDOFF_CHANNEL = 'toolbox-assistant-handoff';
+
+function handOff(ask) {
+  if (typeof BroadcastChannel === 'undefined') return null;
+  const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+  const ch = new BroadcastChannel(HANDOFF_CHANNEL);
+  const cancel = () => { clearTimeout(timer); ch.close(); };
+  const timer = setTimeout(cancel, 30_000);
+  ch.onmessage = ({ data }) => {
+    if (data?.want !== id) return;
+    try { ch.postMessage({ id, ask }); } catch { ch.postMessage({ id, ask: { prompt: ask.prompt, send: ask.send } }); }
+    cancel();
+  };
+  try { localStorage.setItem(HANDOFF_KEY, JSON.stringify({ id, at: Date.now() })); } catch { cancel(); return null; }
+  return { cancel: () => { cancel(); try { localStorage.removeItem(HANDOFF_KEY); } catch { /* ignore */ } } };
+}
+
+/** On a freshly opened Assistant tab: the question another tab sent with it, or null. */
+export function claimHandoff() {
+  let rec = null;
+  try { rec = JSON.parse(localStorage.getItem(HANDOFF_KEY) || 'null'); if (rec) localStorage.removeItem(HANDOFF_KEY); } catch { /* ignore */ }
+  if (!rec?.id || !(Date.now() - rec.at < 20_000) || typeof BroadcastChannel === 'undefined') return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const ch = new BroadcastChannel(HANDOFF_CHANNEL);
+    const finish = (v) => { clearTimeout(t); ch.close(); resolve(v); };
+    const t = setTimeout(() => finish(null), 4000);
+    ch.onmessage = ({ data }) => { if (data?.id === rec.id) finish(data.ask || null); };
+    ch.postMessage({ want: rec.id });
+  });
+}
+
 export async function openAssistant({ prompt = '', artifact = null, send = true } = {}) {
   // Already on the Assistant page: hand the question to it.
   if (onAssistantPage()) {
     window.dispatchEvent(new CustomEvent('toolbox:assistant-ask', { detail: { prompt, artifact, send } }));
+    return;
+  }
+  // Settings → Assistant → pop-up off: the full Assistant takes the question instead, in its
+  // own tab like every other way in (or this tab, if the browser blocks the new one).
+  if (!popupEnabled()) {
+    if (getCurrentUser()) {
+      const handoff = prompt || artifact ? handOff({ prompt, artifact, send }) : null;
+      if (openAssistantTab()) return;
+      handoff?.cancel();
+    }
+    window.__toolboxQueuedAsk = { prompt, artifact, send, at: Date.now() };
+    window.location.hash = '#assistant';
     return;
   }
   if (!panel) build();

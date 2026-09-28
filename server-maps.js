@@ -746,7 +746,8 @@ export async function directions({ from, to, mode = 'driving', near, analyse = f
     const p = asPoint(v);
     if (p) {
       const place = { name: v.name || 'Start', address: '', lng: p[0], lat: p[1] };
-      pending.push(withTimeout(reverseGeocode(p), 2500).then((r) => {
+      // Runs alongside routing; its country decides driving side and local-transport advice, so it is awaited.
+      pending.push(withTimeout(reverseGeocode(p), 12_000).then((r) => {
         if (!r) return;
         if (!v.name && r.name) place.name = r.name;
         Object.assign(place, { address: r.address || '', country: r.country, countryCode: r.countryCode, area: r.area });
@@ -755,11 +756,17 @@ export async function directions({ from, to, mode = 'driving', near, analyse = f
     }
     return resolvePlace(v, bias);
   };
-  // Both ends are looked up at the same time (each biased toward the person).
+  // The destination is searched near the start ("from Ikeja to Shoprite" means the Shoprite by
+  // Ikeja), so a named start is resolved first. A point start is known already: both at once.
   const fromPoint = asPoint(from);
-  const [a, b] = await Promise.all([resolveEnd(from, near), resolveEnd(to, fromPoint || near)]);
+  let a, b;
+  if (fromPoint) [a, b] = await Promise.all([resolveEnd(from, near), resolveEnd(to, fromPoint)]);
+  else {
+    a = await resolveEnd(from, near);
+    if (a.place) b = await resolveEnd(to, [a.place.lng, a.place.lat]);
+  }
   if (!a.place) return { status: 'not_found', which: 'from', message: `Could not find "${from}" on the map.` };
-  if (!b.place) return { status: 'not_found', which: 'to', message: `Could not find "${to}" on the map.` };
+  if (!b?.place) return { status: 'not_found', which: 'to', message: `Could not find "${to}" on the map.` };
   const aPt = [a.place.lng, a.place.lat];
   const bPt = [b.place.lng, b.place.lat];
 

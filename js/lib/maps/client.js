@@ -67,7 +67,7 @@ export async function directions({ from, to, mode = 'driving', near, analyse = f
 let lastFix = null;
 /** The device position as { lat, lng, accuracy }, or null if unavailable or refused. */
 export async function deviceLocation({ timeout = 8000, maxAge = 120_000, precise = false } = {}) {
-  if (lastFix && Date.now() - lastFix.at < maxAge && (!precise || lastFix.pos.accuracy <= 100)) return lastFix.pos;
+  if (lastFix && Date.now() - lastFix.at < maxAge && (!precise || lastFix.pos.accuracy <= 150)) return lastFix.pos;
   if (typeof navigator === 'undefined' || !navigator.geolocation) return null;
   const ask = (opts, ms) => new Promise((resolve, reject) => {
     // The browser's own timeout does not run while its permission prompt is open, so an
@@ -84,7 +84,7 @@ export async function deviceLocation({ timeout = 8000, maxAge = 120_000, precise
     // routes and "nearest"; waiting for GPS took seconds on laptops. Precise only when asked,
     // or when the quick fix is too rough to be useful.
     let p = precise ? null : await ask({ enableHighAccuracy: false, maximumAge: maxAge }, Math.min(timeout, 4000)).catch(() => null);
-    if (!p || (p.coords.accuracy || 0) > 2000) p = await ask({ enableHighAccuracy: true, maximumAge: maxAge }, timeout).catch(() => p);
+    if (!p || (p.coords.accuracy || 0) > 300) p = await ask({ enableHighAccuracy: true, maximumAge: maxAge }, timeout).catch(() => p);
     if (!p) throw new Error('No position');
     const pos = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: Math.round(p.coords.accuracy || 0) };
     lastFix = { at: Date.now(), pos };

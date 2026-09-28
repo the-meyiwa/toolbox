@@ -22,6 +22,7 @@ import { QuotaManager } from './quota-manager.js';
 import { getCurrentUser, updateUserProfile, persistUserProfile, claimUsername, getUsernameChangeStatus, signOut, MADSELKIE_EMAILS } from './supabase.js';
 import { getSettings, updateSettings, exportSettings, importSettings } from './settings.js';
 import { PROFILE_PICTURES, getProfilePictureSrc, getUserAvatarHtml } from './profile-pictures.js';
+import { personaChoices as PERSONA_CHOICES } from './assistant/personas.js';
 import { openAccountModal } from '../views/account-modal.js';
 import { NotificationEngine, prepareNotificationSound } from './notifications.js';
 import { renderContributionSettings } from './flutterwave-contribution.js';
@@ -37,6 +38,7 @@ const LAST_PAGE = 'toolbox_settings_page';
 const NARROW = '(max-width: 760px)';
 
 const ICONS = {
+  sparkles: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 3v4M21 5h-4"/>',
   profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
   appearance: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z"/>',
   general: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
@@ -601,7 +603,17 @@ function renderAiSettings() {
   const pct = quota && quota.messagesLimit ? Math.min(100, Math.round((quota.messagesUsed / quota.messagesLimit) * 100)) : 0;
 
   const openTo = getSettings().assistantOpenTo === 'last' ? 'last' : 'new';
-  container.innerHTML = section('Conversations', '', `<div class="stg-card">
+  const persona = getSettings().assistantPersona || '';
+  const personas = PERSONA_CHOICES();
+  container.innerHTML = section('Personality', 'Give the Assistant the voice of one of the avatars. Only the voice changes: answers, figures and tools work the same.', `<div class="stg-card stg-persona-card">
+    <div class="stg-persona-grid" role="radiogroup" aria-label="Assistant personality">
+      <button type="button" class="stg-persona${persona ? '' : ' is-on'}" role="radio" aria-checked="${!persona}" data-persona="">
+        <span class="stg-persona-img stg-persona-std" aria-hidden="true">${icon('sparkles', 20)}</span><span class="stg-persona-name">Standard</span><span class="stg-persona-tag">Clear and professional</span></button>
+      ${personas.map(p => `<button type="button" class="stg-persona${persona === p.id ? ' is-on' : ''}" role="radio" aria-checked="${persona === p.id}" data-persona="${escapeHtml(p.id)}">
+        <img class="stg-persona-img" src="${escapeHtml(p.src)}" alt="" loading="lazy" width="44" height="44"><span class="stg-persona-name">${escapeHtml(p.name)}</span><span class="stg-persona-tag">${escapeHtml(p.tagline)}</span></button>`).join('')}
+    </div></div>`) + section('Pop-up', '', `<div class="stg-card">
+    ${row({ title: 'Open the Assistant as a pop-up', hint: 'On: “Ask Assistant” opens a floating panel over what you are doing. Off: it opens the full Assistant page.', forId: 'ai-popup', control: switchInput('ai-popup', getSettings().assistantPopup !== false) })}
+  </div>`) + section('Conversations', '', `<div class="stg-card">
     ${row({ title: 'When the Assistant opens', hint: 'Start fresh each time, or pick up the chat you had open last. Past chats are always in the list.', tag: 'div', control: `
       <span class="stg-seg" role="radiogroup" aria-label="When the Assistant opens">
         <input type="radio" name="ai-open-to" id="ai-open-new" value="new" ${openTo === 'new' ? 'checked' : ''}><label for="ai-open-new">New chat</label>
@@ -617,6 +629,14 @@ function renderAiSettings() {
     </div>` : ''}
   </div>`);
 
+  container.querySelector('.stg-persona-grid')?.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-persona]');
+    if (!b) return;
+    updateSettings({ assistantPersona: b.dataset.persona });
+    container.querySelectorAll('[data-persona]').forEach(x => { const on = x === b; x.classList.toggle('is-on', on); x.setAttribute('aria-checked', String(on)); });
+    flashSaved();
+  });
+  container.querySelector('#ai-popup')?.addEventListener('change', (e) => { updateSettings({ assistantPopup: e.target.checked }); flashSaved(); });
   container.querySelectorAll('input[name="ai-open-to"]').forEach((r) => r.addEventListener('change', (e) => { if (e.target.checked) { updateSettings({ assistantOpenTo: e.target.value }); flashSaved(); } }));
   container.querySelector('#btn-reset-quota-modal')?.addEventListener('click', () => {
     try { QuotaManager.resetQuotas(); renderAiSettings(); flashSaved(); } catch (err) { tbAlert(err.message, 'Settings error'); }

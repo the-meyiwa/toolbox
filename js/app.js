@@ -6,7 +6,7 @@
    js/lib/search.js, so adding a tool never means editing the shell.
    ============================================================ */
 
-import { TOOLS, CATEGORY_LABELS, OFFLINE_TOOLS, categorised, byTask, popular, resolveId, BY_ID } from './registry/index.js';
+import { TOOLS, CATEGORY_LABELS, OFFLINE_TOOLS, categorised, byTask, popular, resolveRoute, BY_ID } from './registry/index.js';
 import { search, relatedTools } from './lib/search.js';
 import { track, toolSession } from './lib/analytics.js';
 import * as artifacts from './lib/artifacts.js';
@@ -695,11 +695,11 @@ function handleHash() {
     return;
   }
 
-  const { id, redirected } = resolveId(raw);
+  const { id, redirected, query } = resolveRoute(raw);
   if (!id) return showPage('home');
   if (redirected) {
     // Replace so a retired link does not linger in history.
-    window.location.replace(`#${id}`);
+    window.location.replace(`#${id}${query}`);
     return;
   }
   openTool(id);

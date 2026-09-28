@@ -503,18 +503,28 @@ export default {
 
     /* ---------- Assistant handoff ---------- */
 
-    let handoff = null;
-    try {
-      handoff = JSON.parse(sessionStorage.getItem(HANDOFF_KEY) || 'null');
-      sessionStorage.removeItem(HANDOFF_KEY);
-    } catch { /* nothing handed over */ }
-    if (handoff?.from && handoff?.to && isLngLat([handoff.to.lng, handoff.to.lat])) {
-      state.mode = ['driving', 'walking', 'cycling', 'transit'].includes(handoff.mode) ? handoff.mode : 'driving';
-      root.querySelectorAll('[data-mode]').forEach(x => x.setAttribute('aria-checked', String(x.dataset.mode === state.mode)));
-      openDirections({ from: handoff.from, to: handoff.to });
-    } else if (Array.isArray(handoff?.places) && handoff.places.length) {
-      showResults(handoff.places.map(p => ({ ...p, kind: p.category || p.kind, distanceM: Number.isFinite(p.distanceKm) ? p.distanceKm * 1000 : undefined })), handoff.title || 'Places');
-    } else {
+    const takeHandoff = () => {
+      let handoff = null;
+      try {
+        handoff = JSON.parse(sessionStorage.getItem(HANDOFF_KEY) || 'null');
+        sessionStorage.removeItem(HANDOFF_KEY);
+      } catch { /* nothing handed over */ }
+      if (handoff?.from && handoff?.to && isLngLat([handoff.to.lng, handoff.to.lat])) {
+        state.mode = ['driving', 'walking', 'cycling', 'transit'].includes(handoff.mode) ? handoff.mode : 'driving';
+        root.querySelectorAll('[data-mode]').forEach(x => x.setAttribute('aria-checked', String(x.dataset.mode === state.mode)));
+        openDirections({ from: handoff.from, to: handoff.to });
+        return true;
+      }
+      if (Array.isArray(handoff?.places) && handoff.places.length) {
+        showResults(handoff.places.map(p => ({ ...p, kind: p.category || p.kind, distanceM: Number.isFinite(p.distanceKm) ? p.distanceKm * 1000 : undefined })), handoff.title || 'Places');
+        return true;
+      }
+      return false;
+    };
+    // The Assistant's "Open in Maps" while Maps is already open: take it without a reload.
+    this._onHandoff = () => { takeHandoff(); };
+    window.addEventListener('toolbox:maps-handoff', this._onHandoff);
+    if (!takeHandoff()) {
       // Start where the person is, if location is already allowed; never prompt on open.
       try {
         const perm = await navigator.permissions?.query({ name: 'geolocation' });
@@ -525,6 +535,7 @@ export default {
 
   destroy() {
     if (this._onKey) window.removeEventListener('keydown', this._onKey, true);
+    if (this._onHandoff) window.removeEventListener('toolbox:maps-handoff', this._onHandoff);
     this._ro?.disconnect();
     this._view?.destroy();
     this._view = null;

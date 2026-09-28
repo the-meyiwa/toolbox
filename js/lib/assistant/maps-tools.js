@@ -98,12 +98,13 @@ export const MAPS_TOOL_NAMES = new Set(MAPS_TOOL_DECLARATIONS.map(d => d.name));
 
 /* ---------------- helpers ---------------- */
 
-async function userPoint(taskState) {
+async function userPoint(taskState, { precise = false } = {}) {
   const known = taskState?.userLocation;
-  if (known && isLngLat([Number(known.lng), Number(known.lat)])) return [Number(known.lng), Number(known.lat)];
-  const pos = await maps.deviceLocation();
+  const knownOk = known && isLngLat([Number(known.lng), Number(known.lat)]) && (!precise || !(Number(known.accuracy) > 150));
+  if (knownOk) return [Number(known.lng), Number(known.lat)];
+  const pos = await maps.deviceLocation({ precise });
   if (!pos) return null;
-  if (taskState) taskState.userLocation = { ...(taskState.userLocation || {}), lat: pos.lat, lng: pos.lng };
+  if (taskState) taskState.userLocation = { ...(taskState.userLocation || {}), lat: pos.lat, lng: pos.lng, accuracy: pos.accuracy };
   return [pos.lng, pos.lat];
 }
 
@@ -219,9 +220,9 @@ async function getDirections(args, ctx) {
   const mode = ['driving', 'walking', 'cycling', 'transit'].includes(args.mode) ? args.mode : 'driving';
   let from = String(args.from || '').trim();
   const fromHere = !from || HERE_RE.test(from);
-  // With a named start the location only biases the search: give it a moment, never seconds.
-  const locating = userPoint(ctx.taskState).catch(() => null);
-  const here = fromHere ? await locating : await Promise.race([locating, new Promise(r => setTimeout(() => r(null), 400))]);
+  // Routing from the person's position needs a precise fix (a Wi-Fi estimate can be off by a
+  // kilometre and start the route on the wrong street). A named start only uses it as a bias.
+  const here = await userPoint(ctx.taskState, { precise: fromHere }).catch(() => null);
   if (fromHere) {
     if (!here) return needLocation('the start of the route is unknown');
     from = { lat: here[1], lng: here[0], name: 'Your location' };

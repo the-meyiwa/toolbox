@@ -57,6 +57,14 @@ export function resolveId(rawId) {
   return { id: null, redirected: false };
 }
 
+/** resolveId for a whole hash route: a tool link may carry options after "?" (File Drop's
+    pairing link is file-drop?room=…), which the tool reads from the hash itself. */
+export function resolveRoute(raw) {
+  const at = (raw || '').indexOf('?');
+  const query = at > 0 ? raw.slice(at) : '';
+  return { ...resolveId(at > 0 ? raw.slice(0, at) : raw), query };
+}
+
 /** Tools that never touch the network — the ones safe to use offline. */
 export const OFFLINE_TOOLS = TOOLS.filter(t => t.offline !== false);
 

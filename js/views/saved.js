@@ -1847,7 +1847,9 @@ function wire(host, ctx, refresh, ui) {
     draggingPath = itemEl.dataset.path;
     e.dataTransfer.setData('application/toolbox-path', draggingPath);
     e.dataTransfer.setData('text/plain', itemEl.querySelector('.sv-item-name, .sv-grid-name')?.textContent || draggingPath);
-    e.dataTransfer.effectAllowed = 'move';
+    // copyMove: folders here take it as a move, other drop targets (the Assistant, tools) as a
+    // copy. With 'move' alone the browser refused every drop that asked for a copy.
+    e.dataTransfer.effectAllowed = 'copyMove';
     itemEl.classList.add('is-dragging');
     dragHoldTimer = setTimeout(() => openDragDesk(draggingPath), 650);
   });
