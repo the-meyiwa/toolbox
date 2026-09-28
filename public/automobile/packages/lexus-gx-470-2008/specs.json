@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "vehicle": "2008 Lexus GX 470",
+  "generation": "J120 (UZJ120)",
+  "groups": [
+    {
+      "title": "Overview",
+      "rows": [
+        [
+          "Model year",
+          "2008"
+        ],
+        [
+          "Generation",
+          "First generation (J120, UZJ120), 2003–2009"
+        ],
+        [
+          "Body",
+          "4-door SUV, body-on-frame, up to eight seats"
+        ],
+        [
+          "Related",
+          "Toyota Land Cruiser Prado (120 series), Toyota 4Runner (N210)"
+        ]
+      ]
+    },
+    {
+      "title": "Engine",
+      "rows": [
+        [
+          "Code",
+          "2UZ-FE with VVT-i"
+        ],
+        [
+          "Type",
+          "4.7 L (4,664 cc) 90° V8, DOHC 32-valve"
+        ],
+        [
+          "Bore × stroke",
+          "94.0 × 84.0 mm"
+        ],
+        [
+          "Output",
+          "263 hp @ 5,400 rpm · 323 lb-ft @ 3,400 rpm"
+        ],
+        [
+          "Cam drive",
+          "Timing belt"
+        ],
+        [
+          "Firing order",
+          "1-8-4-3-6-5-7-2"
+        ]
+      ]
+    },
+    {
+      "title": "Drivetrain & chassis",
+      "rows": [
+        [
+          "Transmission",
+          "Five-speed automatic"
+        ],
+        [
+          "Drive",
+          "Full-time 4WD: Torsen limited-slip centre differential with lock, two-speed transfer case"
+        ],
+        [
+          "Traction aids",
+          "A-TRAC active traction control, VSC stability control, Downhill Assist and Hill-start Assist"
+        ],
+        [
+          "Front suspension",
+          "Independent double wishbone with coil springs"
+        ],
+        [
+          "Rear suspension",
+          "Four-link rigid axle with height-control air springs"
+        ],
+        [
+          "Steering",
+          "Rack and pinion, hydraulic power assistance"
+        ],
+        [
+          "Brakes",
+          "Four-wheel discs with ABS, brake-force distribution and Brake Assist"
+        ],
+        [
+          "Tyres",
+          "P265/65R17 on 17-inch alloys"
+        ],
+        [
+          "Wheel fastening",
+          "6 × 139.7 mm"
+        ]
+      ]
+    },
+    {
+      "title": "Dimensions",
+      "rows": [
+        [
+          "Length",
+          "188.2 in (4,780 mm)"
+        ],
+        [
+          "Width",
+          "74.0 in (1,880 mm)"
+        ],
+        [
+          "Height",
+          "74.6 in (1,895 mm) with roof rails"
+        ],
+        [
+          "Wheelbase",
+          "109.8 in (2,790 mm)"
+        ],
+        [
+          "Track F / R",
+          "62.4 in / 62.4 in (1,585 mm)"
+        ],
+        [
+          "Ground clearance",
+          "8.3 in (211 mm)"
+        ],
+        [
+          "Curb weight",
+          "About 4,870 lb (2,210 kg), Lexus Canada"
+        ]
+      ]
+    },
+    {
+      "title": "Capacities",
+      "rows": [
+        [
+          "Fuel tank",
+          "23.0 US gal (87 L)"
+        ],
+        [
+          "Engine oil",
+          "SAE 5W-30, about 7 US qt (6.6 L) with filter (published figures differ; check the owner’s manual)"
+        ],
+        [
+          "Towing",
+          "Up to 6,500 lb (2,948 kg), properly equipped"
+        ]
+      ]
+    },
+    {
+      "title": "Cabin & safety",
+      "rows": [
+        [
+          "Seating",
+          "Up to eight: 2 + 3 (60/40) + 3 (fold-away third row)"
+        ],
+        [
+          "Airbags",
+          "Front, front-seat side, and side curtains covering all three rows"
+        ],
+        [
+          "Rear door",
+          "Side-hinged (on the right) with separately opening glass"
+        ]
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "label": "Lexus Canada — 2008 GX 470 specifications and features",
+      "url": "https://media.lexus.ca/content/dam/media-lexus/general/unassigned/20145/GX470_2008_specs.pdf"
+    },
+    {
+      "label": "Edmunds — 2008 Lexus GX 470 features & specs",
+      "url": "https://www.edmunds.com/lexus/gx-470/2008/features-specs/"
+    },
+    {
+      "label": "CarSpecs — 2008 Lexus GX 470 4.7L V8 4x4",
+      "url": "https://www.carspecs.us/cars/2008/lexus/gx/41603"
+    },
+    {
+      "label": "Wikipedia — Lexus GX",
+      "url": "https://en.wikipedia.org/wiki/Lexus_GX"
+    },
+    {
+      "label": "Wikipedia — Toyota UZ engine",
+      "url": "https://en.wikipedia.org/wiki/Toyota_UZ_engine"
+    },
+    {
+      "label": "AMSOIL — 2008 Lexus GX 470 (2UZ-FE) lubricant guide",
+      "url": "https://www.amsoil.com/lookup/auto-and-light-truck/2008/lexus/gx470/4-7l-8-cyl-engine-code-2uz-fe-e/"
+    },
+    {
+      "label": "Go-Parts — 2003–2009 GX 470 rear door and flip-up glass",
+      "url": "https://www.go-parts.com/garage/deck-lid-lexus-gx470-2003-2009"
+    }
+  ],
+  "disclaimer": "Figures come from the public sources listed and can differ by market and options. Confirm against the owner’s manual or a Lexus dealer before servicing."
+}

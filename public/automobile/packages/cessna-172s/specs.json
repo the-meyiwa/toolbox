@@ -1,0 +1,221 @@
+{
+  "schemaVersion": 1,
+  "vehicle": "Cessna 172S Skyhawk SP",
+  "generation": "172S",
+  "groups": [
+    {
+      "title": "Overview",
+      "rows": [
+        [
+          "Type",
+          "Four-seat, single-engine, strut-braced high-wing monoplane"
+        ],
+        [
+          "Model",
+          "172S Skyhawk SP (from 1998); G1000 NAV III avionics from 2005"
+        ],
+        [
+          "Family",
+          "The most-produced aircraft in history (over 44,000 Cessna 172s built)"
+        ],
+        [
+          "Seats",
+          "4"
+        ]
+      ]
+    },
+    {
+      "title": "Dimensions",
+      "rows": [
+        [
+          "Length",
+          "27 ft 2 in (8.28 m)"
+        ],
+        [
+          "Wingspan",
+          "36 ft 1 in (11.00 m)"
+        ],
+        [
+          "Height",
+          "8 ft 11 in (2.72 m)"
+        ],
+        [
+          "Wing area",
+          "174 sq ft (16.2 m²)"
+        ],
+        [
+          "Wheelbase",
+          "About 65 in (1.65 m)"
+        ],
+        [
+          "Propeller",
+          "McCauley two-blade fixed pitch, 76 in (1.93 m)"
+        ]
+      ]
+    },
+    {
+      "title": "Weights",
+      "rows": [
+        [
+          "Maximum takeoff weight",
+          "2,550 lb (1,157 kg)"
+        ],
+        [
+          "Standard empty weight",
+          "About 1,660 lb (753 kg); varies by equipment"
+        ],
+        [
+          "Baggage",
+          "Up to 120 lb, within the handbook’s area limits"
+        ]
+      ]
+    },
+    {
+      "title": "Engine & fuel",
+      "rows": [
+        [
+          "Engine",
+          "Lycoming IO-360-L2A, four-cylinder, horizontally opposed, air-cooled, fuel-injected"
+        ],
+        [
+          "Power",
+          "180 bhp @ 2,700 rpm"
+        ],
+        [
+          "Fuel",
+          "56 US gal total, 53 usable (two wing tanks)"
+        ],
+        [
+          "Fuel grade",
+          "100LL (blue) or 100 (green) aviation gasoline"
+        ],
+        [
+          "Oil",
+          "8 US qt capacity, aviation-grade ashless dispersant oil"
+        ]
+      ]
+    },
+    {
+      "title": "Performance",
+      "rows": [
+        [
+          "Maximum speed",
+          "126 KTAS at sea level"
+        ],
+        [
+          "Cruise",
+          "124 KTAS at 75 % power, 8,000 ft"
+        ],
+        [
+          "Range",
+          "518 nm at 75 % power; 638 nm at 45 % power"
+        ],
+        [
+          "Rate of climb",
+          "730 ft/min at sea level"
+        ],
+        [
+          "Service ceiling",
+          "14,000 ft"
+        ],
+        [
+          "Takeoff",
+          "960 ft ground roll; 1,630 ft over a 50 ft obstacle"
+        ],
+        [
+          "Landing",
+          "575 ft ground roll; 1,335 ft over a 50 ft obstacle"
+        ],
+        [
+          "Stall speed",
+          "48 KCAS flaps up; 40 KCAS flaps 30°"
+        ]
+      ]
+    },
+    {
+      "title": "Airspeeds (KIAS)",
+      "rows": [
+        [
+          "Never exceed (VNE)",
+          "163"
+        ],
+        [
+          "Max structural cruise (VNO)",
+          "129"
+        ],
+        [
+          "Manoeuvring (VA, 2,550 lb)",
+          "105"
+        ],
+        [
+          "Max flap extended (VFE)",
+          "110 at 10°; 85 at 10°–30°"
+        ],
+        [
+          "Best angle of climb (VX)",
+          "62"
+        ],
+        [
+          "Best rate of climb (VY)",
+          "74"
+        ],
+        [
+          "Best glide",
+          "68"
+        ]
+      ]
+    },
+    {
+      "title": "Systems",
+      "rows": [
+        [
+          "Electrical",
+          "28-volt DC with engine-driven alternator and 24-volt battery"
+        ],
+        [
+          "Flaps",
+          "Electric single-slotted, 0°–30°"
+        ],
+        [
+          "Landing gear",
+          "Fixed tricycle: spring-steel main legs, air-oil nose strut steered by the rudder pedals"
+        ],
+        [
+          "Brakes",
+          "Hydraulic discs on the main wheels, toe-operated"
+        ],
+        [
+          "Tyres",
+          "Main 6.00-6, nose 5.00-5"
+        ]
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "label": "Cessna 172S Pilot’s Operating Handbook and FAA-approved flight manual",
+      "url": "https://www.befa.org/wp-content/uploads/2019/12/POH-Cessna-172S.pdf"
+    },
+    {
+      "label": "Cessna 172S NAV III (G1000) Pilot’s Operating Handbook",
+      "url": "https://www.norcalflight.com/pdfs/poh/POH_C172S_Nav_III.pdf"
+    },
+    {
+      "label": "Airmart — Cessna 172S Skyhawk performance and specifications",
+      "url": "https://airmart.com/wp-content/uploads/2022/11/Cessna-172S-Skyhawk-Performance-and-Specs.pdf"
+    },
+    {
+      "label": "AOPA — Cessna 172 aircraft guide",
+      "url": "https://www.aopa.org/go-fly/aircraft-and-ownership/aircraft-guide/aircraft/cessna-172"
+    },
+    {
+      "label": "Wikipedia — Cessna 172",
+      "url": "https://en.wikipedia.org/wiki/Cessna_172"
+    },
+    {
+      "label": "Wikipedia — Lycoming O-360 (IO-360 variants)",
+      "url": "https://en.wikipedia.org/wiki/Lycoming_O-360"
+    }
+  ],
+  "disclaimer": "Figures are from the Cessna 172S handbook and the public sources listed; individual aircraft differ with equipment and modifications. For learning only; follow the aircraft’s own handbook and checklist."
+}

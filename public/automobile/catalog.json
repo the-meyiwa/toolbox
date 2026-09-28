@@ -76,6 +76,119 @@
       }
     },
     {
+      "id": "lexus-gx-470-2008",
+      "make": "Lexus",
+      "model": "GX 470",
+      "year": 2008,
+      "years": "2008",
+      "generation": "First generation (J120)",
+      "variant": "SUV · 4.7 L V8 · full-time 4WD",
+      "bodyStyle": "SUV",
+      "category": "car",
+      "aliases": [
+        "GX",
+        "GX470",
+        "GX 470",
+        "Lexus GX",
+        "Lexus GX470",
+        "UZJ120",
+        "J120",
+        "2008",
+        "GX 2008",
+        "Land Cruiser Prado",
+        "SUV"
+      ],
+      "manifest": "/automobile/packages/lexus-gx-470-2008/manifest.json",
+      "specSheet": "/automobile/packages/lexus-gx-470-2008/specs.json",
+      "specifications": {
+        "bodyStyle": "SUV",
+        "layout": "Front-engine, full-time four-wheel drive",
+        "engine": {
+          "code": "2UZ-FE 4.7 L V8"
+        },
+        "transmission": {
+          "code": "5-speed automatic"
+        },
+        "curbWeight": "About 4,870 lb",
+        "wheelbase": "109.8 in (2,790 mm)"
+      }
+    },
+    {
+      "id": "boeing-737-800",
+      "make": "Boeing",
+      "model": "737-800",
+      "year": null,
+      "years": "1998–2020",
+      "generation": "Next Generation (737NG)",
+      "variant": "Passenger · blended winglets · CFM56-7B",
+      "bodyStyle": "Narrow-body airliner",
+      "category": "aircraft",
+      "aliases": [
+        "737",
+        "B737",
+        "B738",
+        "Boeing 737",
+        "737-800",
+        "737NG",
+        "737 NG",
+        "Next Generation",
+        "airliner",
+        "jet",
+        "plane",
+        "aircraft",
+        "airplane",
+        "aeroplane"
+      ],
+      "manifest": "/automobile/packages/boeing-737-800/manifest.json",
+      "specSheet": "/automobile/packages/boeing-737-800/specs.json",
+      "specifications": {
+        "bodyStyle": "Narrow-body airliner",
+        "layout": "Low wing, twin underwing turbofans",
+        "engine": {
+          "code": "2 × CFM56-7B"
+        },
+        "curbWeight": "MTOW 79,010 kg (174,200 lb)",
+        "wheelbase": "15.60 m (51 ft 2 in)"
+      }
+    },
+    {
+      "id": "cessna-172s",
+      "make": "Cessna",
+      "model": "172S Skyhawk SP",
+      "year": null,
+      "years": "1998–present",
+      "generation": "172S",
+      "variant": "Four-seat trainer and tourer · Lycoming IO-360",
+      "bodyStyle": "Light aircraft",
+      "category": "aircraft",
+      "aliases": [
+        "Cessna",
+        "172",
+        "C172",
+        "Cessna 172",
+        "Skyhawk",
+        "Skyhawk SP",
+        "172S",
+        "plane",
+        "aircraft",
+        "airplane",
+        "aeroplane",
+        "light aircraft",
+        "trainer"
+      ],
+      "manifest": "/automobile/packages/cessna-172s/manifest.json",
+      "specSheet": "/automobile/packages/cessna-172s/specs.json",
+      "specifications": {
+        "bodyStyle": "Light aircraft",
+        "layout": "Strut-braced high wing, single piston engine",
+        "engine": {
+          "code": "Lycoming IO-360-L2A, 180 hp"
+        },
+        "curbWeight": "MTOW 2,550 lb (1,157 kg)",
+        "wheelbase": "About 65 in (1.65 m)"
+      }
+    },
+    {
       "id": "ford-mustang-gt-2005",
       "make": "Ford",
       "model": "Mustang GT",

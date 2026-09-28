@@ -2,7 +2,7 @@
    Vehicle control panel — draws one cluster of controls
    (door switches, stalks, warning lamps, …) as an SVG panel of
    real-looking switches with their symbols, and explains whichever
-   one is tapped. Shared by the Automobile Guide and the Assistant.
+   one is tapped. Shared by the Vehicle Guide and the Assistant.
    Styles: css/vehicle-controls.css
    ============================================================ */
 

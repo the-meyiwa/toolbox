@@ -394,7 +394,7 @@ export default {
 
     renderCompounds(true);
 
-    // Opened from a link elsewhere in Toolbox (a drug in the Automobile Guide or the Assistant).
+    // Opened from a link elsewhere in Toolbox (a drug in the Vehicle Guide or the Assistant).
     let focus = null;
     try { focus = JSON.parse(localStorage.getItem('toolbox.compounds.focus') || 'null'); localStorage.removeItem('toolbox.compounds.focus'); } catch { /* storage unavailable */ }
     if (focus?.name) {

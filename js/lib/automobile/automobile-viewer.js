@@ -114,6 +114,9 @@ export class AutomobileViewer {
   }
 
   /** Keep the vehicle centred in the area left visible above an overlay (e.g. the phone info panel). */
+  /** World units per metre of the loaded model (every model is scaled to the same size). */
+  get unitScale() { return this.asset?.root?.scale?.x || 1; }
+
   setBottomInset(px = 0) {
     this.bottomInset = Math.max(0, Math.round(px));
     this.applyViewOffset();

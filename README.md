@@ -25,7 +25,7 @@ Every tool is registered in [`js/registry/tools.js`](js/registry/tools.js), the 
 | Security & Privacy | 4 | Password Generator, File Checksum, Certificate Decoder, Bcrypt Hash & Verify |
 | Networking | 11 | Subnet Calculator, IP Lookup, DNS Lookup, WHOIS Lookup |
 | 3D & Modeling | 4 | Anatomy Explorer, 3D Lab, Container Builder, Architecture Editor |
-| Reference | 5 | Automobile Guide, Wiki, Dictionary, Bible, Quran |
+| Reference | 5 | Vehicle Guide, Wiki, Dictionary, Bible, Quran |
 | Music | 8 | Metronome, Instrument Tuner, Chord & Scale Finder, Spotify Player |
 | Everyday | 10 | Timer & Stopwatch, Weather Forecast, Interactive Map, Calendar |
 
@@ -76,7 +76,7 @@ Server-only secrets must never carry the `VITE_` prefix, because Vite ships thos
 | `npm run preview` | Serve the production build locally |
 | `npm start` | Run the standalone Node API and signaling server (port `4444` by default) |
 | `npm test` | Run the test suite in `tests/` |
-| `npm run vehicle:*` | Build 3D vehicle packages for the Automobile Guide ([details](docs/automobile-viewer.md)) |
+| `npm run vehicle:*` | Build 3D vehicle packages for the Vehicle Guide ([details](docs/automobile-viewer.md)) |
 
 ## Supabase setup
 
@@ -130,7 +130,7 @@ Add an entry to `js/registry/tools.js` and create `js/tools/<id>.js` exporting `
 - [Assistant quick start](docs/ASSISTANT_QUICKSTART.md) and [integration guide](docs/ASSISTANT_INTEGRATION_GUIDE.md)
 - [Architecture, structures and 3D](docs/architecture-and-3d.md)
 - [Code Playground](docs/code-playground.md)
-- [Automobile Guide](docs/automobile-viewer.md)
+- [Vehicle Guide](docs/automobile-viewer.md)
 - [Device comparisons](docs/device-comparisons.md)
 - [Supporter setup](docs/supporter-setup.md)
 - [Latest audit](docs/toolbox-audit.md)

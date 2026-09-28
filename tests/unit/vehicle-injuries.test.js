@@ -1,5 +1,5 @@
 /* ============================================================
-   Automobile Guide injury reference: every drug and substance is in
+   Vehicle Guide injury reference: every drug and substance is in
    the Compound Database, every body site resolves to atlas
    structures, and every hazardous part has safety information.
    ============================================================ */

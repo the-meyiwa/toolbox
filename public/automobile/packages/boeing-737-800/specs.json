@@ -1,0 +1,233 @@
+{
+  "schemaVersion": 1,
+  "vehicle": "Boeing 737-800",
+  "generation": "Next Generation",
+  "groups": [
+    {
+      "title": "Overview",
+      "rows": [
+        [
+          "Type",
+          "Narrow-body twin-engine jet airliner"
+        ],
+        [
+          "Family",
+          "Next-Generation 737 (-600, -700, -800, -900)"
+        ],
+        [
+          "First flight",
+          "31 July 1997"
+        ],
+        [
+          "Entered service",
+          "1998 (launch customer Hapag-Lloyd)"
+        ],
+        [
+          "Flight crew",
+          "Two pilots"
+        ],
+        [
+          "Seating",
+          "Typically 162 in two classes; up to 189 (exit limit)"
+        ]
+      ]
+    },
+    {
+      "title": "Dimensions",
+      "rows": [
+        [
+          "Length",
+          "39.47 m (129 ft 6 in)"
+        ],
+        [
+          "Wingspan",
+          "35.79 m (117 ft 5 in) with blended winglets; 34.32 m (112 ft 7 in) without"
+        ],
+        [
+          "Height",
+          "12.55 m (41 ft 2 in)"
+        ],
+        [
+          "Fuselage width",
+          "3.76 m (12 ft 4 in)"
+        ],
+        [
+          "Cabin width",
+          "3.54 m (11 ft 7 in)"
+        ],
+        [
+          "Wing area",
+          "124.6 m² (1,341 sq ft)"
+        ],
+        [
+          "Wing sweep",
+          "25° at quarter chord"
+        ],
+        [
+          "Wheelbase",
+          "15.60 m (51 ft 2 in)"
+        ],
+        [
+          "Main gear track",
+          "5.72 m (18 ft 9 in)"
+        ]
+      ]
+    },
+    {
+      "title": "Weights",
+      "rows": [
+        [
+          "Maximum takeoff weight",
+          "79,010 kg (174,200 lb)"
+        ],
+        [
+          "Maximum landing weight",
+          "66,360 kg (146,300 lb)"
+        ],
+        [
+          "Operating empty weight",
+          "About 41,000 kg (90,700 lb); varies by operator"
+        ]
+      ]
+    },
+    {
+      "title": "Engines",
+      "rows": [
+        [
+          "Engines",
+          "2 × CFM International CFM56-7B"
+        ],
+        [
+          "Thrust",
+          "24,200–27,300 lbf (108–121 kN) each, by rating (-7B24 / -7B26 / -7B27)"
+        ],
+        [
+          "Fan diameter",
+          "1.55 m (61 in), 24 blades"
+        ],
+        [
+          "Bypass ratio",
+          "About 5.1–5.5"
+        ],
+        [
+          "APU",
+          "Honeywell 131-9B (most aircraft)"
+        ]
+      ]
+    },
+    {
+      "title": "Performance & fuel",
+      "rows": [
+        [
+          "Cruise speed",
+          "Mach 0.785 typical"
+        ],
+        [
+          "Maximum operating Mach",
+          "0.82"
+        ],
+        [
+          "Range",
+          "About 2,935 nmi (5,436 km) with typical passengers"
+        ],
+        [
+          "Service ceiling",
+          "41,000 ft"
+        ],
+        [
+          "Fuel capacity",
+          "26,020 L (6,875 US gal)"
+        ]
+      ]
+    },
+    {
+      "title": "Landing gear & doors",
+      "rows": [
+        [
+          "Gear",
+          "Retractable tricycle; main gear retracts inboard into doorless wells"
+        ],
+        [
+          "Main tyres",
+          "4 × H44.5 × 16.5-21"
+        ],
+        [
+          "Nose tyres",
+          "2 × 27 × 7.75-15"
+        ],
+        [
+          "Passenger doors",
+          "Two entry doors (left) and two service doors (right), 0.86 × 1.83 m and 0.76 × 1.65 m"
+        ],
+        [
+          "Emergency exits",
+          "Four overwing exits (two each side)"
+        ],
+        [
+          "Cargo",
+          "Forward and aft bulk holds, about 44 m³ (1,555 cu ft), doors on the right side"
+        ]
+      ]
+    },
+    {
+      "title": "Systems",
+      "rows": [
+        [
+          "Hydraulics",
+          "Systems A and B, plus standby, at 3,000 psi"
+        ],
+        [
+          "Flight controls",
+          "Hydraulically powered ailerons, elevators and rudder, with manual reversion for ailerons and elevators"
+        ],
+        [
+          "High-lift",
+          "Double-slotted trailing-edge flaps; leading-edge slats outboard and Krueger flaps inboard"
+        ],
+        [
+          "Spoilers",
+          "Six per wing: four flight spoilers and two ground spoilers"
+        ],
+        [
+          "Displays",
+          "Six flat-panel display units"
+        ]
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "label": "Boeing — Next-Generation 737 Airplane Characteristics for Airport Planning",
+      "url": "https://www.boeing.com/content/dam/boeing/v2/airports/acaps/737NG_REV_C.pdf"
+    },
+    {
+      "label": "Boeing — 737 Airplane Characteristics for Airport Planning (D6-58325-6)",
+      "url": "https://www.boeing.com/content/dam/boeing/boeingdotcom/commercial/airports/acaps/737.pdf"
+    },
+    {
+      "label": "Wikipedia — Boeing 737 Next Generation",
+      "url": "https://en.wikipedia.org/wiki/Boeing_737_Next_Generation"
+    },
+    {
+      "label": "Wikipedia — CFM International CFM56",
+      "url": "https://en.wikipedia.org/wiki/CFM_International_CFM56"
+    },
+    {
+      "label": "MTU Aero Engines — CFM56-7B",
+      "url": "https://www.mtu.de/engines/commercial-aircraft-engines/narrowbody-and-regional-jets/cfm56-2/-5b/-7/"
+    },
+    {
+      "label": "Dunlop Aircraft Tyres — Boeing 737 Next Generation",
+      "url": "https://www.dunlopaircrafttyres.co.uk/aircraft/boeing-737-next-generation-tires/"
+    },
+    {
+      "label": "The Boeing 737 Technical Site — Landing gear",
+      "url": "https://www.b737.org.uk/landinggear.htm"
+    },
+    {
+      "label": "AviationHunt — Boeing 737 flight control surfaces",
+      "url": "https://www.aviationhunt.com/boeing-737-flight-control-surfaces/"
+    }
+  ],
+  "disclaimer": "Figures come from Boeing’s airport-planning data and the public sources listed. Individual aircraft differ by operator options, engine rating and modification status. Described for learning. Operators’ procedures and fits vary; always follow the approved manuals. Not for operational use."
+}

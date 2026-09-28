@@ -1,6 +1,8 @@
-# Toolbox Automobile Guide
+# Toolbox Vehicle Guide
 
-The Automobile Guide is fully client-side. Three.js loads Toolbox Vehicle Packages from static assets, and all rendering, picking, highlighting, X-Ray, isolation, labels and component search run in the browser. No API key or live vehicle/rendering service is used.
+The Vehicle Guide (formerly the Automobile Guide) covers cars, an SUV and two aircraft. Its tool id is still `automobile-guide`, so old links keep working, and `#vehicle-guide` opens it too.
+
+The Guide is fully client-side. Three.js loads Toolbox Vehicle Packages from static assets, and all rendering, picking, highlighting, X-Ray, isolation, labels and component search run in the browser. No API key or live vehicle/rendering service is used.
 
 ## Toolbox Vehicle Package v1
 
@@ -36,6 +38,9 @@ The pipeline accepts CC0 1.0 and CC BY 4.0 inputs, strips presentation-only mate
 - 2005 Ford Mustang GT by Ricy, CC BY 4.0.
 - 2018 Tesla Model 3 by Ameer Studio, CC BY 4.0.
 - BMW M4 Competition M Package by SRT Performance, CC BY 4.0. Its exact model year is unavailable in the source, so Toolbox labels it representative rather than exact.
+- 2008 Lexus GX 470 (J120) — Toolbox-original procedural package: body-on-frame SUV with the 2UZ-FE V8, full-time 4WD, side-hinged rear door and separately opening glass.
+- Boeing 737-800 (Next Generation) — Toolbox-original procedural package: airframe, flight deck, cabin, CFM56-7B engines, landing gear and every flight control surface.
+- Cessna 172S Skyhawk SP — Toolbox-original procedural package: airframe, cockpit with the conventional six-instrument panel, IO-360 engine and propeller.
 
 Attribution and source links are embedded in every manifest and displayed in the viewer.
 
@@ -91,6 +96,78 @@ node scripts/build-procedural-vehicle.mjs --check   # CI: fail if committed outp
 
 Output is deterministic: the generator writes byte-identical files on every run.
 
+## Procedural packages: Lexus GX 470, Boeing 737-800, Cessna 172S
+
+The same generator builds these three (`npm run vehicle:procedural`; `--check` in CI). Each has a model file, a data file with the reference text for every component and the grouped spec sheet, and a package file that ties them together:
+
+| Package | Model | Data | Package |
+| --- | --- | --- | --- |
+| 2008 Lexus GX 470 | `gx470-model.mjs` | `gx470-data.mjs` | `gx470-package.mjs` |
+| Boeing 737-800 | `b737-model.mjs` | `b737-data.mjs` | `b737-package.mjs` |
+| Cessna 172S | `c172-model.mjs` | `c172-data.mjs` | `c172-package.mjs` |
+
+Shared building blocks live in `scripts/procedural-vehicle/`:
+
+- `shapes.mjs`:
+  - `Loft` sweeps a skin through cross-sections along the length. It builds the fuselages, the nacelles and the GX 470's body.
+  - `Wing` builds any lifting surface from leading-edge stations, chord and thickness: wings, tailplanes, fins, winglets and propeller blades.
+  - Both cut their skin into components on a parameter grid whose lines fall on every door, window and control-surface edge, so panels meet exactly.
+- `aircraft-parts.mjs` cuts trailing-edge control surfaces out of a wing on hinge-line pivots. It also lays spoilers, slats and Krueger flaps over the skin, and builds aircraft wheels.
+- `package-data.mjs` turns families of component descriptions into manifest entries with their sources.
+
+The published figures that the tests hold the geometry to (`tests/unit/vehicle-guide-packages.test.js`):
+
+- **GX 470:**
+  - length 4,780 mm, width 1,880 mm and height 1,895 mm with the roof rails
+  - wheelbase 2,790 mm, track 1,585 mm
+  - ground clearance 211 mm under the rear differential
+- **737-800:**
+  - length 39.47 m, span 35.79 m with blended winglets, tail height 12.55 m
+  - fuselage 3.76 × 4.01 m
+  - wheelbase 15.60 m, main-gear track 5.72 m
+  - H44.5 main tyres
+- **172S:** length 8.28 m, span 11.00 m, height 2.72 m, 76-inch propeller.
+
+Section shapes, planforms between the published points and the placement of systems are approximations. Each manifest says so, and every package is labelled `representative`.
+
+Manifests can now carry three optional fields (see the schema):
+
+- `vehicle.category`: `car` or `aircraft`. Aircraft use the aircraft safety notes, and the Guide calls their interior the flight deck or cockpit.
+- `quickActions`: vehicle-wide toggles for an articulation group (open all doors), a list of articulations (deploy both reversers), layers (hide the skin to see inside), or every wheel.
+- `cabin`: the eye point for Interior mode. It gives the head component, how far forward and down the eye sits in metres, and what to look at. The viewer scales every model to the same size, so the Guide converts these offsets with `viewer.unitScale`.
+
+What moves:
+
+- **737:**
+  - doors and exits, cargo doors, radome
+  - main and nose gear with the nose-gear doors
+  - flaps 5 and 30, with slats and Krueger flaps
+  - roll, pitch and yaw (control surfaces, control wheels and pedals), stabiliser trim
+  - speed brakes and ground spoilers
+  - fan cowls and thrust reversers, which guard each other
+  - flight deck door and APU inlet
+- **172S:**
+  - doors and baggage door
+  - flaps 10/20/30
+  - roll, pitch and yaw (with nose-wheel steering), trim tab
+  - oil door and dipstick, upper cowling, fuel caps, seats
+- **GX 470:**
+  - doors and windows, mirrors, bonnet
+  - the side-hinged rear door (hinged on the right) and its glass hatch
+  - fuel door, glovebox, console lid
+  - steering, wheels, calipers and tyres
+  - front seats, the fold-away third row
+  - service items that need the bonnet open
+  - the spare-tyre winch
+
+Controls libraries (`js/lib/automobile/gx470-controls.js`, `b737-controls.js`, `c172-controls.js`) follow the Corolla's format and share `controls-search.js`. The Guide picks the library for the loaded vehicle through `vehicle-controls.js`.
+
+- **737:** the mode control panel, EFIS, warning lights, displays, gear and autobrake, five overhead panels, the control stand, radios and fire panel, control wheel, and pedals and tiller. The exterior walk-around covers the nose probes, doors, engines, gear, lights, refuelling, APU and cargo doors.
+- **Cessna:** instruments, switches, power, flaps and trim, fuel, radios, yoke and cabin, and a pre-flight walk-around.
+- **GX 470:** switches, stalks and warning lights, including its 4WD controls.
+
+Aircraft content is written for learning, not for operating an aircraft, and the panels say so.
+
 ## Articulations
 
 A manifest may declare `articulations` (see the schema). Each has an `id`, `label`, `group`, `actions.on/off` labels, the `components` whose selection offers it, and `transforms` that rotate (`axis`, `degrees`) or translate a pivot node. Optional `requires` entries express service order — e.g. the caliper can only be removed once the wheel is off, and the wheel cannot be refitted until the caliper is back. `exclusive` groups (steering left/right) are mutually exclusive.
@@ -124,7 +201,7 @@ The data behind it:
 
 ## Assistant: "One of these?"
 
-When someone asks what a button, light, symbol, lever or exterior part is for, the Assistant calls `vehicle_controls`. The card shows only that part of the car, with every switch and symbol, and highlights the most likely match. It suggests nearby groups in case the first guess is wrong. **Open in Automobile Guide** hands the group and control to the Guide through `localStorage['toolbox.automobile.focus']`, and the Guide opens on it.
+When someone asks what a button, light, symbol, lever or exterior part is for, the Assistant calls `vehicle_controls`. The card shows only that part of the car, with every switch and symbol, and highlights the most likely match. It suggests nearby groups in case the first guess is wrong. **Open in Vehicle Guide** hands the group and control to the Guide through `localStorage['toolbox.automobile.focus']`, and the Guide opens on it.
 
 For other cars, the card says the drawing is the Corolla's; the symbols are standard.
 
@@ -163,4 +240,4 @@ Tests: `tests/unit/vehicle-injuries.test.js` checks that every drug exists, ever
 
 ## Verification
 
-Run `npm test`, `npm run build`, `node scripts/build-procedural-vehicle.mjs --check`, and validate all package directories with the command above. The interactive harness at `/tests/browser/automobile-viewer.html` renders the real Guide component; `tests/browser/automobile-viewer.mjs` drives desktop right-click and mobile Toggle flows against it.
+Run `npm test`, `npm run build`, `node scripts/build-procedural-vehicle.mjs --check`, and validate all package directories with the command above. `tests/unit/vehicle-guide-packages.test.js` covers the GX 470, 737-800 and 172S. The interactive harness at `/tests/browser/automobile-viewer.html` renders the real Guide component; `tests/browser/automobile-viewer.mjs` drives desktop right-click and mobile Toggle flows against it.

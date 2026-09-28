@@ -59,6 +59,13 @@
             "representative",
             "development"
           ]
+        },
+        "category": {
+          "enum": [
+            "car",
+            "aircraft"
+          ],
+          "description": "Aircraft packages use the aircraft safety notes and call the interior the flight deck or cockpit."
         }
       },
       "additionalProperties": true
@@ -338,6 +345,84 @@
               }
             }
           }
+        }
+      }
+    },
+    "quickActions": {
+      "type": "array",
+      "description": "Optional vehicle-wide actions for the Guide. Each toggles an articulation group, a list of articulations, a set of layers (hide the skin to see inside), or every wheel.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "on",
+          "off"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "on": {
+            "type": "string"
+          },
+          "off": {
+            "type": "string"
+          },
+          "group": {
+            "type": "string"
+          },
+          "articulations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "layers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "wheels": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "cabin": {
+      "type": "object",
+      "description": "Optional eye point for the Guide's Interior mode: the head component (and point within its bounds), how far forward and down the eye sits from it in metres, and what to look at.",
+      "required": [
+        "head"
+      ],
+      "properties": {
+        "head": {
+          "type": "string"
+        },
+        "headAt": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "forward": {
+          "type": "number"
+        },
+        "down": {
+          "type": "number"
+        },
+        "look": {
+          "type": "string"
+        },
+        "lookAt": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
         }
       }
     }

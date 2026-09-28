@@ -5,7 +5,7 @@
    Every cluster of controls a driver can see or touch, grouped the
    way they sit in the car, with what each one does and how to use
    it. Drawn by control-panel.js; found by findControls() for the
-   Automobile Guide's Interior and Exterior modes and the
+   Vehicle Guide's Interior and Exterior modes and the
    Assistant's "One of these?" answers.
 
    Sources: Toyota owner's manual and Quick Reference Guide for the
@@ -23,6 +23,8 @@
    drawing (button, round, rocker, knob, dial, lamp, lever, handle,
    port, screen, tile).
    ============================================================ */
+
+import { makeFinder, allControls } from './controls-search.js';
 
 export const VEHICLE_ID = 'toyota-corolla-2014-2016';
 
@@ -337,55 +339,12 @@ export const CLUSTERS = [
 ];
 
 export const CLUSTER = Object.fromEntries(CLUSTERS.map(x => [x.id, x]));
-export const allControls = (cl) => cl.rows.flat();
+export { allControls };
 
 /* ---------------- search ---------------- */
-
-const STOP = new Set('the a an of my on in at to for is it what whats what\'s this that there these those do does and or with car toyota corolla button buttons switch switches thing one mean means used use why how can i me some little small near next'.split(' '));
-const words = (s) => (String(s || '').toLowerCase().replace(/[’']/g, '').match(/[a-z0-9/]+/g) || []);
 
 /**
  * What the person most likely means. Returns { cluster, control, confidence,
  * alternatives: [cluster ids] } — `control` only when one control clearly stands out.
  */
-export function findControls(query) {
-  const q = String(query || '').toLowerCase();
-  const qw = words(q).filter(w => !STOP.has(w));
-  if (!qw.length) return null;
-  const has = (a) => new RegExp(`(^|[^a-z0-9])${a.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}([^a-z0-9]|$)`).test(q);
-  const phraseHit = (list) => list.reduce((s, a) => s + (a.length > 1 && has(a) ? (a.includes(' ') ? 4 : 2.5) : 0), 0);
-  // Intent: "light / symbol on the dash" means a lamp; "button / switch" means something you press;
-  // "lever / stalk on the left / right" means that stalk.
-  const wantsLamp = /\b(light|lamp|symbol|icon|indicator|warning)s?\b/.test(q) && /\b(dash|dashboard|cluster|came on|comes on|lit|on the dash|flashing|blinking|symbol|icon|warning|orange|amber|yellow|red|green|blue|looks like|shaped like|shape of)\b/.test(q);
-  const wantsPress = /\b(button|switch|press|knob)\b/.test(q);
-  const wantsLever = /\b(lever|stalk)\b/.test(q);
-  const side = /\bright\b/.test(q) ? 'right' : /\bleft\b/.test(q) ? 'left' : null;
-  const intent = (cl) => {
-    let b = 0;
-    if (wantsLamp) b += cl.id === 'cluster' ? 4 : 0;
-    if (wantsPress && cl.id === 'cluster' && !wantsLamp) b -= 2;
-    if (wantsLever && /lever/i.test(cl.name)) b += 2 + (side && ((side === 'right' && cl.id === 'wiper-stalk') || (side === 'left' && cl.id === 'light-stalk')) ? 3 : 0);
-    return b;
-  };
-  const wordHit = (text) => { const t = new Set(words(text)); return qw.reduce((s, w) => s + (t.has(w) ? 1 : 0), 0); };
-  const scored = CLUSTERS.map(cl => {
-    let score = phraseHit(cl.aliases) + wordHit(`${cl.name} ${cl.where}`) * 1.2 + intent(cl);
-    let best = null;
-    for (const ctl of allControls(cl)) {
-      const s = phraseHit(ctl.keywords || []) * 1.3 + wordHit(`${ctl.label} ${ctl.what}`) * 0.6 + wordHit((ctl.keywords || []).join(' ')) * 0.8;
-      if (!best || s > best.s) best = { ctl, s };
-    }
-    return { cl, score: score + (best ? best.s * 0.7 : 0), best };
-  }).sort((a, b) => b.score - a.score);
-  const top = scored[0];
-  if (!top || top.score < 0.5) return null;
-  const second = scored[1];
-  const ctlScores = allControls(top.cl).map(ctl => phraseHit(ctl.keywords || []) * 1.3 + wordHit(`${ctl.label} ${ctl.what}`) * 0.6 + wordHit((ctl.keywords || []).join(' ')) * 0.8).sort((a, b) => b - a);
-  const standout = top.best && top.best.s >= 1.5 && top.best.s >= (ctlScores[1] || 0) * 1.5;
-  return {
-    cluster: top.cl,
-    control: standout ? top.best.ctl : null,
-    confidence: second ? top.score / (top.score + second.score) : 1,
-    alternatives: scored.slice(1, 4).filter(x => x.score > 0.5).map(x => x.cl.id),
-  };
-}
+export const findControls = makeFinder(CLUSTERS, { stop: ['car', 'toyota', 'corolla'] });

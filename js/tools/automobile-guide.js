@@ -1,7 +1,7 @@
-/** Automobile Guide: reference data, semantic inspector and interactive technical 3D viewport. */
+/** Vehicle Guide: cars, SUVs and aircraft — reference data, semantic inspector and interactive technical 3D viewport. */
 
 import { autoClient } from '../lib/automotive-data.js';
-import { CLUSTERS as COROLLA_CONTROLS, CLUSTER as COROLLA_CLUSTER, VEHICLE_ID as COROLLA_ID } from '../lib/automobile/corolla-controls.js';
+import { controlsFor } from '../lib/automobile/vehicle-controls.js';
 import { mountControlPanel } from '../lib/automobile/control-panel.js';
 import { symbolSvg } from '../lib/automobile/vehicle-symbols.js';
 import { safetyFor } from '../lib/automobile/injury-data.js';
@@ -569,7 +569,7 @@ export default {
                 <circle cx="7" cy="17" r="2"></circle>
                 <circle cx="17" cy="17" r="2"></circle>
               </svg>
-              Automobile Guide
+              Vehicle Guide
             </h2>
           </div>
 
@@ -579,7 +579,7 @@ export default {
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
-              <input type="text" id="ag-search-input" class="ag-search-input" placeholder="Search vehicle (e.g. Corolla 2015, Mustang, Model 3)…" autocomplete="off" aria-label="Search vehicles" />
+              <input type="text" id="ag-search-input" class="ag-search-input" placeholder="Search vehicle (e.g. Corolla 2015, GX 470, Boeing 737, Cessna 172)…" autocomplete="off" aria-label="Search vehicles" />
               <div id="ag-search-dropdown" class="ag-search-dropdown" role="listbox"></div>
             </div>
           </div>
@@ -689,7 +689,7 @@ export default {
         </div>
 
         <!-- Mobile Navigation Switcher -->
-        <nav class="ag-mobile-tabs" aria-label="Automobile Guide panels">
+        <nav class="ag-mobile-tabs" aria-label="Vehicle Guide panels">
           <button type="button" class="ag-mob-btn active" data-mob-tab="diag">3D Viewer</button>
           <button type="button" class="ag-mob-btn" data-mob-tab="specs">Vehicle Specs</button>
           <button type="button" class="ag-mob-btn" data-mob-tab="inspector">Component</button>
@@ -715,7 +715,7 @@ export default {
         onArticulation:change=>this.onArticulation(change),
         onRender:()=>this.positionHotspots()
       });
-      // The Assistant's "Open in Automobile Guide" names the vehicle to start on.
+      // The Assistant's "Open in Vehicle Guide" names the vehicle to start on.
       const wanted=(()=>{ try{ return JSON.parse(localStorage.getItem('toolbox.automobile.focus')||'null')?.vehicleId; }catch{ return null; } })();
       const all=await autoClient.searchVehicles('');
       const initial=all.find(v=>v.id===wanted)||all[0];
@@ -932,41 +932,76 @@ export default {
     this.container.querySelector('#ag-quick-list').innerHTML=quick.map(item=>`<button type="button" class="ag-quick-btn" data-quick="${item.id}">${escape(item.label)}</button>`).join('');
   },
 
+  /** Vehicle-wide actions. Packages can declare their own (aircraft, SUVs); otherwise the sedan set. */
   quickActions() {
     const c=this.viewer?.articulation;
     if(!c)return [];
     const groupActive=group=>c.list().some(def=>def.group===group&&c.isActive(def.id));
+    const wheelsOff=()=>c.list().some(d=>/^wheel_/.test(d.id)&&c.isActive(d.id));
+    const declared=this.packageManifest?.quickActions;
+    if(Array.isArray(declared)&&declared.length){
+      const items=declared.map(q=>{
+        const active=q.group?groupActive(q.group)
+          :q.articulations?q.articulations.some(id=>c.isActive(id))
+          :q.layers?q.layers.every(l=>this.state.hiddenLayers.has(l))
+          :q.wheels?wheelsOff():false;
+        const available=q.group?c.list().some(d=>d.group===q.group)
+          :q.articulations?q.articulations.some(id=>c.get(id))
+          :q.layers?(this.layerGroups||[]).some(l=>q.layers.includes(l.id))
+          :q.wheels?c.list().some(d=>/^wheel_/.test(d.id)):false;
+        return { id:q.id, label:active?q.off:q.on, available, layer:Boolean(q.layers) };
+      });
+      return [...items,{ id:'reset', label:'Reset all moving parts', available:true }];
+    }
     const has=id=>Boolean(c.get(id));
     return [
       { id:'doors', label: groupActive('Doors') ? 'Close all doors' : 'Open all doors', available: c.list().some(d=>d.group==='Doors') },
       { id:'hood', label: c.isActive('hood') ? 'Close bonnet' : 'Open bonnet', available: has('hood') },
       { id:'trunk', label: c.isActive('trunk_lid') ? 'Close boot' : 'Open boot', available: has('trunk_lid') },
       { id:'windows', label: groupActive('Windows') ? 'Raise all windows' : 'Lower all windows', available: c.list().some(d=>d.group==='Windows') },
-      { id:'wheels', label: c.list().some(d=>/^wheel_/.test(d.id)&&c.isActive(d.id)) ? 'Refit all wheels' : 'Remove all wheels', available: c.list().some(d=>/^wheel_/.test(d.id)) },
-      { id:'exterior', label: this.state.hiddenLayers.has('body') ? 'Show body shell' : 'Hide body shell (see inside)', available: (this.layerGroups||[]).some(l=>l.id==='body') },
+      { id:'wheels', label: wheelsOff() ? 'Refit all wheels' : 'Remove all wheels', available: c.list().some(d=>/^wheel_/.test(d.id)) },
+      { id:'exterior', label: this.state.hiddenLayers.has('body') ? 'Show body shell' : 'Hide body shell (see inside)', available: (this.layerGroups||[]).some(l=>l.id==='body'), layer:true },
       { id:'reset', label:'Reset all moving parts', available:true }
     ];
+  },
+
+  toggleWheels() {
+    const c=this.viewer.articulation;
+    const wheels=c.list().filter(d=>/^wheel_/.test(d.id));
+    const remove=!wheels.some(d=>c.isActive(d.id));
+    if(!remove)for(const d of c.list())if(/^(caliper_|brake_drum_|tyre_)/.test(d.id))c.set(d.id,false,{force:true});
+    wheels.forEach(d=>c.set(d.id,remove));
+    this.setStatus(remove?`All ${wheels.length===4?'four ':''}wheels removed. Right-click or tap a brake to go further.`:'All wheels refitted.');
   },
 
   runQuickAction(id) {
     const c=this.viewer?.articulation;
     if(!c)return;
     const groupActive=group=>c.list().some(def=>def.group===group&&c.isActive(def.id));
+    const declared=this.packageManifest?.quickActions?.find?.(q=>q.id===id);
+    if(declared){
+      if(declared.group){ const open=!groupActive(declared.group); c.setGroup(declared.group,open); this.setStatus(open?`${declared.on}.`:`${declared.off}.`); }
+      else if(declared.articulations){ const on=!declared.articulations.some(a=>c.isActive(a)); let moved=0; for(const a of declared.articulations)if(c.set(a,on))moved++; this.setStatus(moved?(on?`${declared.on}.`:`${declared.off}.`):(c.availability(declared.articulations[0]).reason||'Not available right now.')); }
+      else if(declared.layers){ const hide=!declared.layers.every(l=>this.state.hiddenLayers.has(l)); for(const l of declared.layers){ if(hide)this.state.hiddenLayers.add(l); else this.state.hiddenLayers.delete(l); } this.applyVisibility(); this.setStatus(hide?'Skin hidden: you can see inside.':'Skin shown.'); return; }
+      else if(declared.wheels)this.toggleWheels();
+      this.renderModelControls();
+      this.refreshInspector();
+      return;
+    }
     if(id==='doors'){ const open=!groupActive('Doors'); c.setGroup('Doors',open); this.setStatus(open?'All doors opened.':'All doors closed.'); }
     else if(id==='windows'){ const open=!groupActive('Windows'); c.setGroup('Windows',open); this.setStatus(open?'All windows lowered.':'All windows raised.'); }
     else if(id==='hood')this.runArticulation('hood');
     else if(id==='trunk')this.runArticulation('trunk_lid');
-    else if(id==='wheels'){
-      const wheels=c.list().filter(d=>/^wheel_/.test(d.id));
-      const remove=!wheels.some(d=>c.isActive(d.id));
-      if(!remove)for(const d of c.list())if(/^(caliper_|brake_drum_|tyre_)/.test(d.id))c.set(d.id,false,{force:true});
-      wheels.forEach(d=>c.set(d.id,remove));
-      this.setStatus(remove?'All four wheels removed. Right-click or tap a brake to go further.':'All wheels refitted.');
-    }
+    else if(id==='wheels')this.toggleWheels();
     else if(id==='exterior'){ this.toggleLayer('body'); return; }
     else if(id==='reset'){ c.resetAll(); this.setStatus('All moving parts returned to their resting positions.'); }
     this.renderModelControls();
     this.refreshInspector();
+  },
+
+  /** Safety notes for a part, using the aircraft rules for aircraft packages. */
+  safetyOf(componentId) {
+    return safetyFor(componentId,{ kind: this.packageManifest?.vehicle?.category==='aircraft'?'aircraft':'car' });
   },
 
   toggleLayer(layerId) {
@@ -1020,7 +1055,7 @@ export default {
   async loadVisualization(vehicle) {
     if(!this.viewer)return;
     const version=this._version,request=this._assetRequest=(this._assetRequest||0)+1;
-    this.viewer.clear();this.assetMetadata=null;this.layerGroups=[];this.state.selectedComponent=null;this.clearInspector();this.renderSectionNav();this.renderModelControls();
+    this.viewer.clear();this.assetMetadata=null;this.layerGroups=[];this.packageManifest=null;this.state.selectedComponent=null;this.clearInspector();this.renderSectionNav();this.renderModelControls();
     this.container.querySelector('#ag-asset-label').textContent='Loading model';
     this.container.querySelector('#ag-asset-description').textContent='';
     this.container.querySelector('#ag-asset-attribution').replaceChildren();
@@ -1033,6 +1068,7 @@ export default {
       if(!asset||version!==this._version||request!==this._assetRequest)return;
       this.assetMetadata=asset.metadata;
       this.layerGroups=descriptor.layerGroups||[];
+      this.packageManifest=descriptor.manifest||null;
       const accuracy=asset.metadata.accuracy;
       const label=accuracy==='development'?'DEVELOPMENT MODEL · Not vehicle geometry':accuracy==='representative'?'REPRESENTATIVE · Not the exact vehicle':accuracy==='generation'?'GENERATION MODEL':accuracy==='exact'?'VEHICLE-SPECIFIC MODEL':'UNVERIFIED GEOMETRY';
       this.container.querySelector('#ag-asset-label').textContent=label;
@@ -1097,7 +1133,7 @@ export default {
         </div>
       </header>
       ${rows?`<div class="ag-part-card-toggles" role="group" aria-label="Toggles">${rows}</div>`:`<p class="ag-part-card-text">${escape(comp.location||'')} No moving or removable parts here.</p>`}
-      ${(()=>{ const safety=safetyFor(comp.id); return safety?`<button type="button" class="ag-safety-chip" data-open-inspector><span aria-hidden="true">⚠</span> Safety · ${safety.injuries.length} injur${safety.injuries.length===1?'y':'ies'} and how to prevent them</button>`:''; })()}`;
+      ${(()=>{ const safety=this.safetyOf(comp.id); return safety?`<button type="button" class="ag-safety-chip" data-open-inspector><span aria-hidden="true">⚠</span> Safety · ${safety.injuries.length} injur${safety.injuries.length===1?'y':'ies'} and how to prevent them</button>`:''; })()}`;
     // Lift the vehicle into the space above the panel.
     const host=this.container.querySelector('#ag-viewer-host');
     this.viewer?.setBottomInset(host ? Math.max(0, host.getBoundingClientRect().bottom - card.getBoundingClientRect().top) : 0);
@@ -1162,7 +1198,7 @@ export default {
       specs+
       block('Maintenance',comp.maintenance)+
       block('Common failure modes',comp.failures,'ag-failure-box')+
-      safetyHtml(safetyFor(comp.id))+
+      safetyHtml(this.safetyOf(comp.id))+
       (comp.accuracyNote?`<p class="ag-asset-note ag-accuracy-note">${escape(comp.accuracyNote)}</p>`:'')+
       sources+
       (!comp.description&&!comp.purpose?'<p class="ag-asset-note">No component description was supplied with this asset.</p>':'')+
@@ -1187,7 +1223,7 @@ export default {
       items.push({ label:'Hide this part', action:()=>this.runPartAction('hide') });
     }
     if(this.state.hiddenParts.size||this.state.hiddenLayers.size)items.push({ label:`Show all hidden (${this.viewer.hidden.size})`, action:()=>this.showAllLayers() });
-    const quick=this.quickActions().filter(item=>item.available&&item.id!=='exterior');
+    const quick=this.quickActions().filter(item=>item.available&&!item.layer);
     if(quick.length){
       items.push({ separator:true },{ heading:'Vehicle' });
       for(const q of quick)items.push({ label:q.label, action:()=>this.runQuickAction(q.id) });
@@ -1310,18 +1346,28 @@ export default {
 
   /* ---------------- Exterior / Interior / Parts ---------------- */
 
-  /** The researched control clusters for the loaded vehicle (only the 2014–2016 Corolla has them). */
+  /** The researched controls library for the loaded vehicle (empty when the package has none). */
+  controls(vehicle=this.state.selectedVehicle){
+    return controlsFor(vehicle?.id);
+  },
   clustersFor(vehicle=this.state.selectedVehicle){
-    return vehicle?.id===COROLLA_ID?COROLLA_CONTROLS:[];
+    return this.controls(vehicle).clusters;
+  },
+  cluster(id){
+    return this.controls().byId[id]||null;
   },
 
   setupControls(){
     this.closeCluster();
     const focus=(()=>{ try{ const f=JSON.parse(localStorage.getItem('toolbox.automobile.focus')||'null'); localStorage.removeItem('toolbox.automobile.focus'); return f; }catch{ return null; } })();
     const clusters=this.clustersFor();
-    this.container.querySelector('#ag-space').hidden=!this.viewer?.asset;
-    if(focus&&clusters.length&&COROLLA_CLUSTER[focus.cluster]){
-      const cl=COROLLA_CLUSTER[focus.cluster];
+    const spaceBar=this.container.querySelector('#ag-space');
+    spaceBar.hidden=!this.viewer?.asset;
+    // Aircraft call the interior the flight deck or cockpit.
+    const interiorBtn=spaceBar.querySelector('[data-space="interior"]');
+    if(interiorBtn)interiorBtn.textContent=this.controls().spaces.interior||'Interior';
+    if(focus&&clusters.length&&this.cluster(focus.cluster)){
+      const cl=this.cluster(focus.cluster);
       this.setSpace(cl.zone==='interior'?'interior':'exterior',{ quiet:true });
       this.openCluster(cl.id, focus.control);
       return;
@@ -1348,20 +1394,32 @@ export default {
     this.container.querySelector('.ag-root')?.setAttribute('data-ag-space',space);
     if(space==='interior')this.enterCabin();
     else if(was==='interior')this.viewer?.exitInterior();
-    if(space==='parts'||(this.state.openCluster&&COROLLA_CLUSTER[this.state.openCluster]?.zone!==(space==='interior'?'interior':'exterior')))this.closeCluster();
+    if(space==='parts'||(this.state.openCluster&&this.cluster(this.state.openCluster)?.zone!==(space==='interior'?'interior':'exterior')))this.closeCluster();
     this.renderHotspots();
     if(!quiet){
       const n=this.clustersFor().filter(c=>space==='interior'?c.zone==='interior':c.zone!=='interior').length;
+      const hints=this.controls().hints, place=(this.controls().spaces.interior||'Interior');
       this.setStatus(space==='parts'?'Parts: select any component, right-click (or tap) for its actions.'
-        :space==='interior'?(n?`Interior: drag to look around the cabin. Tap a marker to see its ${n} groups of switches and lights.`:'Interior: drag to look around the cabin.')
-        :(n?'Exterior: tap a marker to see lights, the fuel door, key and more.':'Exterior: drag to orbit the vehicle.'));
+        :space==='interior'?(n?(hints.interior||`Interior: drag to look around the cabin. Tap a marker to see its ${n} groups of switches and lights.`):`${place}: drag to look around.`)
+        :(n?(hints.exterior||'Exterior: tap a marker to see lights, the fuel door, key and more.'):'Exterior: drag to orbit the vehicle.'));
     }
   },
 
-  /** Driver's eye: from the driver's head restraint, forward and slightly down towards the instruments. */
+  /** Driver's (or pilot's) eye: from the head restraint, forward and slightly down towards the instruments. */
   enterCabin(){
     const v=this.viewer;
     if(!v?.asset)return;
+    const cabin=this.packageManifest?.cabin;
+    if(cabin){
+      // Offsets are in metres; the viewer scales every model to the same size.
+      const k=v.unitScale;
+      const eye=v.componentPoint(cabin.head,cabin.headAt||[0.5,0.45,0.5]);
+      if(!eye){ v.reset(); return; }
+      eye.x+=(cabin.forward||0.3)*k; eye.y-=(cabin.down||0)*k;
+      const look=(cabin.look&&v.componentPoint(cabin.look,cabin.lookAt||[0.5,0.5,0.5]))||eye.clone().setX(eye.x+k);
+      v.enterInterior(eye,look);
+      return;
+    }
     const head=v.componentPoint('headrest_front_left',[0.5,0.45,0.5])||v.componentPoint('seat_back_front_left',[0.5,1,0.5]);
     const wheel=v.componentPoint('steering_wheel',[0.5,0.6,0.5]);
     if(!head){ v.reset(); return; }  // no named driver's seat in this package
@@ -1391,7 +1449,7 @@ export default {
     const w=layer.clientWidth||v.host.clientWidth, h=layer.clientHeight||v.host.clientHeight;
     const pts=[];
     for(const btn of layer.children){
-      const c=COROLLA_CLUSTER[btn.dataset.hotspot];
+      const c=this.cluster(btn.dataset.hotspot);
       const p=c&&v.componentPoint(c.anchor,c.at);
       const s=p&&v.project(p);
       const show=Boolean(s&&s.x>-10&&s.y>-10&&s.x<w+10&&s.y<h+10);
@@ -1413,7 +1471,7 @@ export default {
   },
 
   openCluster(id, controlId=null){
-    const cl=COROLLA_CLUSTER[id];
+    const cl=this.cluster(id);
     const panel=this.container?.querySelector('#ag-controls');
     if(!cl||!panel)return;
     this.state.openCluster=id;
@@ -1425,6 +1483,7 @@ export default {
         <div><span class="ag-controls-kicker">${escape(cl.where)}</span><h3>${escape(cl.name)}</h3></div>
         <button type="button" class="ag-controls-close" data-controls-close aria-label="Close">×</button>
       </header>
+      ${this.controls().note?`<p class="ag-controls-note">${escape(this.controls().note)}</p>`:''}
       <div class="ag-controls-body"></div>
       ${same.length?`<nav class="ag-controls-more" aria-label="Other controls">${same.map(c=>`<button type="button" data-cluster-go="${escape(c.id)}">${escape(c.name)}</button>`).join('')}</nav>`:''}`;
     this._panel=mountControlPanel(panel.querySelector('.ag-controls-body'),cl,{ selected:controlId, hinted:controlId?[controlId]:[] });

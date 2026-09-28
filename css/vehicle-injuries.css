@@ -1,4 +1,4 @@
-/* Injury reference (Automobile Guide, Assistant cards) and the Anatomy Explorer focus banner.
+/* Injury reference (Vehicle Guide, Assistant cards) and the Anatomy Explorer focus banner.
    Drugs are green links, hazardous substances amber, body sites underlined. */
 .inj { --inj-drug: #15803d; --inj-drug-bg: rgba(22, 163, 74, 0.1); --inj-sub: #b45309; --inj-sub-bg: rgba(217, 119, 6, 0.12); --inj-site: #2563eb;
   display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }

@@ -746,7 +746,7 @@ export default {
 
     /* ── start ───────────────────────────────────────────────────── */
 
-    /* ── focus mode (links from the Automobile Guide, the Assistant…) ── */
+    /* ── focus mode (links from the Vehicle Guide, the Assistant…) ── */
 
     const focusEl = container.querySelector('#an-focus');
     const byName = new Map(index.structures.map(s => [s.name.toLowerCase(), s]));

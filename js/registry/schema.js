@@ -140,6 +140,7 @@ export const ALIASES = {
   'net-ipv4-ipv6':   'net-subnet',
   'loan-calculator': 'amortization-schedule',
   // Renames kept from earlier revisions.
+  'vehicle-guide':   'automobile-guide',
   'inet-qr-generator': 'qr-generator',
   'inet-password':     'password-generator',
   'inet-uuid':         'uuid-generator',

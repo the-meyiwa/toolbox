@@ -3,7 +3,7 @@
    opens its links:
      drugs and substances  → Compound Database, on that compound
      body sites            → Anatomy Explorer, showing only that part
-   Used by the Automobile Guide and the Assistant's cards.
+   Used by the Vehicle Guide and the Assistant's cards.
    Styles: css/vehicle-injuries.css
    ============================================================ */
 
@@ -101,7 +101,7 @@ export function openAnatomySite(key, { title, from } = {}) {
   const site = SITES[key];
   if (!site) return;
   try {
-    localStorage.setItem('toolbox.anatomy.focus', JSON.stringify({ structures: site.structures, context: site.context || [], marker: site.marker || null, label: site.label, title: title || site.label, from: from || 'the Automobile Guide' }));
+    localStorage.setItem('toolbox.anatomy.focus', JSON.stringify({ structures: site.structures, context: site.context || [], marker: site.marker || null, label: site.label, title: title || site.label, from: from || 'the Vehicle Guide' }));
   } catch { /* opens without focus */ }
   window.location.hash = '#anatomy-explorer';
 }
@@ -114,6 +114,6 @@ export function installInjuryLinks() {
     const c = e.target.closest?.('[data-compound]');
     if (c) { e.preventDefault(); openCompound(c.dataset.compound); return; }
     const s = e.target.closest?.('[data-anatomy-site]');
-    if (s) { e.preventDefault(); openAnatomySite(s.dataset.anatomySite, { title: s.dataset.anatomyTitle || s.textContent.trim(), from: s.closest('.astc') ? 'the Assistant' : 'the Automobile Guide' }); }
+    if (s) { e.preventDefault(); openAnatomySite(s.dataset.anatomySite, { title: s.dataset.anatomyTitle || s.textContent.trim(), from: s.closest('.astc') ? 'the Assistant' : 'the Vehicle Guide' }); }
   });
 }

@@ -7601,7 +7601,7 @@ body[data-tool-id="mail"] #viewport-content {
     width: 100% !important;
   }
 }
-/* Mail and Automobile Guide Desktop Full-Height Fixes */
+/* Mail and Vehicle Guide Desktop Full-Height Fixes */
 body[data-tool-id="mail"] #viewport-content,
 body[data-tool-id="automobile-guide"] #viewport-content {
   flex: 1 !important;

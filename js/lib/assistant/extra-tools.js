@@ -126,24 +126,24 @@ export const EXTRA_TOOL_DECLARATIONS = [
   },
   {
     name: 'vehicle_part',
-    description: `Find a part on the car and show it: where it is, what it does, its specifications, maintenance, common failures, and the matching spec-sheet figures (oil grade and capacity, spark plugs, tyres, wheel torque, brakes…), with a "Show in 3D" button that opens the Automobile Guide on that part, in X-Ray if it sits under the skin. Use it for "where is the …", "show me the …", "what does the … do", or when a diagnosis points at a part. Understands mechanics' and British/American names (sump, fan belt, cat, CV axle, bonnet, boot, rotor, shock, O2 sensor) and sides (front left, passenger side). Covers the 2014–2016 Toyota Corolla (E170) package, 224 components. Quote figures as given and pass on the accuracy note: some positions are approximate.`,
+    description: `Find a part on a vehicle or aircraft and show it: where it is, what it does, its specifications, maintenance, common failures, and the matching spec-sheet figures (oil grade and capacity, spark plugs, tyres, wheel torque, brakes…), with a "Show in 3D" button that opens the Vehicle Guide on that part, in X-Ray if it sits under the skin. Use it for "where is the …", "show me the …", "what does the … do", or when a diagnosis points at a part. Understands mechanics' and British/American names (sump, fan belt, cat, CV axle, bonnet, boot, rotor, shock, O2 sensor) and sides (front left, passenger side). Covers four detailed packages: the 2014–2016 Toyota Corolla (E170, the default), the 2008 Lexus GX 470, the Boeing 737-800 and the Cessna 172S — pass the vehicle the person means. Quote figures as given and pass on the accuracy note: some positions are approximate.`,
     parameters: {
       type: 'object',
       properties: {
         query: { type: 'string', description: 'The part, in the person\'s words, with side or end if they said (e.g. "front left brake pads").' },
-        vehicle: { type: 'string', description: 'The car, if they said.' },
+        vehicle: { type: 'string', description: 'The vehicle or aircraft, if they said (e.g. "GX 470", "737", "Cessna 172").' },
       },
       required: ['query'],
     },
   },
   {
     name: 'vehicle_controls',
-    description: `Identify a button, switch, knob, lever, warning light, symbol or exterior part on a car and SHOW the person that part of the car drawn with every switch and symbol, so they can point at the one they mean ("One of these?"). Use it whenever someone asks what a button, light, symbol, lever or fitting is for, e.g. "there's a button on my car door, what is it for?", "orange light that looks like an engine", "lever on the right of the steering wheel", "how do I open the fuel door". Covers the 2014–2016 Toyota Corolla (E170) in detail: door switches, steering-wheel switches, stalks, instrument-cluster warning lamps, centre stack, climate, console, overhead, releases, key fob, front and rear exterior, fuel door, door pillar labels and the engine bay. Other cars share most ISO symbols, so it still helps; say so. After the card is shown, answer in one or two sentences and invite them to tap the one they mean.`,
+    description: `Identify a button, switch, knob, lever, warning light, symbol or exterior part on a car or aircraft and SHOW the person that part drawn with every switch and symbol, so they can point at the one they mean ("One of these?"). Use it whenever someone asks what a button, light, symbol, lever or fitting is for, e.g. "there's a button on my car door, what is it for?", "orange light that looks like an engine", "lever on the right of the steering wheel", "how do I open the fuel door", "what does the MCP do on a 737", "which knob is the mixture in a Cessna". Covers in detail: the 2014–2016 Toyota Corolla (the default: door switches, stalks, warning lamps, centre stack, climate, console, overhead, releases, key fob, exterior, engine bay), the 2008 Lexus GX 470 (plus its 4WD controls, side-hinged rear door and glass hatch), the Boeing 737-800 flight deck (mode control panel, EFIS, warnings, displays, overhead panels, control stand, radios and fire panel) and walk-around, and the Cessna 172S cockpit and pre-flight walk-around. Pass the vehicle. Other cars share most ISO symbols, so it still helps; say so. Aircraft answers are for learning, not operating. After the card is shown, answer in one or two sentences and invite them to tap the one they mean.`,
     parameters: {
       type: 'object',
       properties: {
         query: { type: 'string', description: 'What the person described, in their words (location, shape, colour, symbol).' },
-        vehicle: { type: 'string', description: 'The car, if they said (make, model, year).' },
+        vehicle: { type: 'string', description: 'The vehicle or aircraft, if they said (make, model, year).' },
       },
       required: ['query'],
     },
@@ -155,7 +155,7 @@ export const EXTRA_TOOL_DECLARATIONS = [
       type: 'object',
       properties: {
         query: { type: 'string', description: 'Make and model, e.g. "Toyota Corolla 2020", or a 17-character VIN.' },
-        open_guide: { type: 'boolean', description: 'Also open the Automobile Guide (3D) if a package exists.' },
+        open_guide: { type: 'boolean', description: 'Also open the Vehicle Guide (3D) if a package exists.' },
       },
       required: ['query'],
     },
@@ -690,30 +690,42 @@ async function deviceCompare({ a, b, category }) {
 
 /* ---------------- vehicles ---------------- */
 
-/* A part of the Corolla package: where it is, its data and the spec-sheet rows that go with it. */
-let corollaPackage = null;
-async function loadCorollaPackage() {
-  if (!corollaPackage) {
-    const base = '/automobile/packages/toyota-corolla-2014-2016';
-    corollaPackage = Promise.all([fetch(`${base}/manifest.json`), fetch(`${base}/specs.json`)])
+/* Detailed Vehicle Guide packages: the one the person means, its manifest and spec sheet. */
+const DEFAULT_VEHICLE = 'toyota-corolla-2014-2016';
+const packages = new Map();
+async function loadPackage(id = DEFAULT_VEHICLE) {
+  if (!packages.has(id)) {
+    const base = `/automobile/packages/${id}`;
+    packages.set(id, Promise.all([fetch(`${base}/manifest.json`), fetch(`${base}/specs.json`)])
       .then(async ([m, s]) => ({ manifest: await m.json(), specs: s.ok ? await s.json() : null }))
-      .catch((error) => { corollaPackage = null; throw error; });
+      .catch((error) => { packages.delete(id); throw error; }));
   }
-  return corollaPackage;
+  return packages.get(id);
+}
+const loadCorollaPackage = () => loadPackage(DEFAULT_VEHICLE);
+
+/** Which package to answer from: the vehicle named (or named in the question), else the Corolla. */
+async function resolvePackage(vehicle, query) {
+  const { vehicleFromText } = await import('../automobile/vehicle-controls.js');
+  const named = vehicleFromText(vehicle) || vehicleFromText(query);
+  // An unknown vehicle ("Honda Civic") is answered from the Corolla, with a caveat.
+  return { id: named || DEFAULT_VEHICLE, mismatch: Boolean(vehicle && !named) };
 }
 
 async function vehiclePartTool({ query = '', vehicle = '' } = {}) {
   const { findPart, specRowsFor } = await import('../automobile/part-search.js');
   const { safetyFor } = await import('../automobile/injury-data.js');
   const { plainText } = await import('../automobile/injury-render.js');
+  const target = await resolvePackage(vehicle, query);
   let pkg;
-  try { pkg = await loadCorollaPackage(); } catch { return { status: 'error', message: 'The Automobile Guide data could not be loaded.' }; }
+  try { pkg = await loadPackage(target.id); } catch { return { status: 'error', message: 'The Vehicle Guide data could not be loaded.' }; }
+  const name = pkg.manifest.vehicle?.displayName || 'this vehicle';
+  const kind = pkg.manifest.vehicle?.category === 'aircraft' ? 'aircraft' : 'car';
   const hit = findPart(pkg.manifest.components || [], query);
-  if (!hit) return { status: 'error', message: `No part in the 2014–2016 Corolla package matches "${query}". It has 224 components (engine, cooling, fuel, brakes, suspension, steering, electrical, SRS, body, interior); ask what it is called or what it does.` };
+  if (!hit) return { status: 'error', message: `No part in the ${name} package matches "${query}". It has ${pkg.manifest.components.length} components; ask what it is called or what it does.` };
   const c = hit.component;
   const specRows = specRowsFor(pkg.specs, c);
-  const safety = safetyFor(c.id);
-  const other = vehicle && !/corolla/i.test(vehicle);
+  const safety = safetyFor(c.id, { kind });
   const lines = [
     `${c.label} (${c.category}). Where: ${c.location || 'not recorded'}.`,
     c.description, c.specs ? `Specs: ${typeof c.specs === 'string' ? c.specs : JSON.stringify(c.specs)}` : '',
@@ -721,12 +733,12 @@ async function vehiclePartTool({ query = '', vehicle = '' } = {}) {
     specRows.length ? `Spec sheet: ${specRows.map(([, k, v]) => `${k}: ${v}`).join('; ')}.` : '',
     c.accuracyNote ? `Accuracy: ${c.accuracyNote}` : '',
     safety ? `Safety: ${plainText(safety.hazard)} Common injuries: ${safety.injuries.map(i => i.name).join('; ')}. Prevention: ${safety.prevention.map(plainText).join(' ')}` : '',
-    other ? `This is the 2014–2016 Corolla; ${vehicle} may differ.` : '',
+    target.mismatch ? `This is the ${name}; ${vehicle} may differ.` : '',
     'Shown to the user as a card with a "Show in 3D" button.',
   ];
   return {
     status: 'success', renderer: 'vehicle-part', type: 'vehicle-part',
-    vehicle: 'Toyota Corolla 2014–2016 (E170)', askedAbout: vehicle || '',
+    vehicleId: target.id, vehicle: name, kind, askedAbout: vehicle || '', mismatch: target.mismatch,
     component: { id: c.id, label: c.label, category: c.category, layer: c.layer, location: c.location || '', description: c.description || '', specs: c.specs || null, maintenance: c.maintenance || '', failures: c.failures || '', accuracyNote: c.accuracyNote || '', sources: (c.sources || []).slice(0, 4) },
     specRows,
     alternatives: hit.alternatives.map(a => ({ id: a.id, label: a.label })),
@@ -735,7 +747,7 @@ async function vehiclePartTool({ query = '', vehicle = '' } = {}) {
   };
 }
 
-/* Car injuries: the injury reference behind the Automobile Guide's safety sections. */
+/* Car injuries: the injury reference behind the Vehicle Guide's safety sections. */
 async function carInjuryTool({ query = '' } = {}) {
   const { findInjuries, safetyFor, DISCLAIMER } = await import('../automobile/injury-data.js');
   const { plainText } = await import('../automobile/injury-render.js');
@@ -765,25 +777,29 @@ async function carInjuryTool({ query = '' } = {}) {
   };
 }
 
-/* The researched 2014–2016 Corolla controls: find what the person means and show that part of the car. */
+/* The researched controls libraries: find what the person means and show that part of the vehicle. */
 async function vehicleControlsTool({ query = '', vehicle = '' } = {}) {
-  const { findControls, CLUSTER } = await import('../automobile/corolla-controls.js');
-  const hit = findControls(`${query}`);
-  const other = vehicle && !/corolla/i.test(vehicle);
+  const { controlsFor } = await import('../automobile/vehicle-controls.js');
+  const target = await resolvePackage(vehicle, query);
+  let lib = controlsFor(target.id);
+  if (!lib.clusters.length) lib = controlsFor(DEFAULT_VEHICLE);
+  const names = { 'toyota-corolla-2014-2016': 'Toyota Corolla 2014–2016 (E170)', 'lexus-gx-470-2008': 'Lexus GX 470 (2008)', 'boeing-737-800': 'Boeing 737-800', 'cessna-172s': 'Cessna 172S Skyhawk SP' };
+  const name = names[lib.vehicleId] || lib.vehicleId;
+  const hit = lib.find(`${query}`);
   if (!hit) {
-    return { status: 'error', message: 'Could not tell which part of the car that is. Ask where it is (door, steering wheel, dashboard, ceiling, outside) and what the symbol looks like.' };
+    return { status: 'error', message: `Could not tell which part of the ${name} that is. Ask where it is (door, steering wheel or yoke, dashboard or panel, ceiling or overhead, outside) and what the symbol looks like.` };
   }
   const cl = hit.cluster, ctl = hit.control;
   return {
     status: 'success', renderer: 'vehicle-controls', type: 'vehicle-controls',
-    vehicle: 'Toyota Corolla 2014–2016 (E170)',
-    askedAbout: vehicle || '',
+    vehicleId: lib.vehicleId, vehicle: name,
+    askedAbout: vehicle || '', mismatch: target.mismatch,
     cluster: cl.id, clusterName: cl.name, where: cl.where,
     control: ctl?.id || null,
-    alternatives: hit.alternatives.map(id => ({ id, name: CLUSTER[id]?.name })).filter(a => a.name),
+    alternatives: hit.alternatives.map(id => ({ id, name: lib.byId[id]?.name })).filter(a => a.name),
     controls: cl.rows.flat().map(c => ({ id: c.id, label: c.label, what: c.what })),
     ...(ctl ? { best_match: { label: ctl.label, what: ctl.what, how: ctl.how || '', note: ctl.note || '', trim: ctl.trim || '' } } : {}),
-    message: `Shown to the user as "One of these?": ${cl.name} (${cl.where})${ctl ? `, with "${ctl.label}" highlighted` : ''}. They can tap any control to read what it does.${other ? ` The drawing is the 2014–2016 Corolla; ${vehicle} may lay these out differently, though the symbols are standard.` : ''}`,
+    message: `Shown to the user as "One of these?": ${cl.name} (${cl.where})${ctl ? `, with "${ctl.label}" highlighted` : ''}. They can tap any control to read what it does.${target.mismatch ? ` The drawing is the ${name}; ${vehicle} may lay these out differently, though the symbols are standard.` : ''}${lib.note ? ` ${lib.note}` : ''}`,
   };
 }
 
@@ -819,10 +835,13 @@ async function vehicleLookup({ query = '', open_guide: openGuide }) {
       if (specs?.specSheet?.groups) {
         out.specSheet = specs.specSheet.groups.slice(0, 8).map(g => ({ group: g.title || g.name, rows: (g.rows || g.items || []).slice(0, 10) }));
       } else if (specs && Object.keys(specs).length) out.specifications = specs;
-      if (openGuide) window.location.hash = '#automobile-guide';
+      if (openGuide) {
+        try { localStorage.setItem('toolbox.automobile.focus', JSON.stringify({ vehicleId: p.id })); } catch { /* the guide still opens */ }
+        window.location.hash = '#automobile-guide';
+      }
     }
   } catch { /* packages are optional */ }
-  out.message = [out.summary ? out.summary.slice(0, 900) : '', out.models?.length ? `Models found: ${out.models.slice(0, 12).join(', ')}.` : '', out.package ? `A detailed 3D package exists in the Automobile Guide: ${out.package.name}.` : ''].filter(Boolean).join('\n') || `No vehicle data found for "${q}".`;
+  out.message = [out.summary ? out.summary.slice(0, 900) : '', out.models?.length ? `Models found: ${out.models.slice(0, 12).join(', ')}.` : '', out.package ? `A detailed 3D package exists in the Vehicle Guide: ${out.package.name}.` : ''].filter(Boolean).join('\n') || `No vehicle data found for "${q}".`;
   return out;
 }
 

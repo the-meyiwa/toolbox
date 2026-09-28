@@ -12,7 +12,7 @@
    While a run is active:
    - confirmation dialogs are answered "Don't allow" automatically;
    - tools that navigate the app (open_toolbox_tool, chess_open_board,
-     the Automobile Guide) are stubbed, and the page hash is restored;
+     the Vehicle Guide) are stubbed, and the page hash is restored;
    - the Assistant memory is restored to what it was before the run.
    ============================================================ */
 

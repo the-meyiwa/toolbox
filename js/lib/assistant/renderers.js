@@ -18,7 +18,7 @@ import { sanitizeSvg } from './extra-tools.js';
 import { renderContainerDesign } from './container-design-card.js';
 import { renderStructureModel } from './structure-card.js';
 import { renderLab3dObject } from './lab3d-card.js';
-import { CLUSTER as CAR_CLUSTER } from '../automobile/corolla-controls.js';
+import { controlsFor } from '../automobile/vehicle-controls.js';
 import { mountControlPanel } from '../automobile/control-panel.js';
 import { safetyFor, INJURIES, DISCLAIMER } from '../automobile/injury-data.js';
 import { safetyHtml, injuryHtml, richText, installInjuryLinks } from '../automobile/injury-render.js';
@@ -383,7 +383,7 @@ function renderVehicle(data, container) {
     icon: I.car,
     title: data.title || data.query || 'Vehicle',
     sub: data.vin ? `VIN <code>${esc(data.vin)}</code>` : data.package ? `3D package: ${esc(data.package.name)}` : 'Vehicle information',
-    actions: data.package ? btn('Open Automobile Guide', I.external, 'data-act="guide"') : '',
+    actions: data.package ? btn('Open Vehicle Guide', I.external, 'data-act="guide"') : '',
   });
   const groups = [];
   if (data.decoded && Object.keys(data.decoded).length) groups.push({ group: 'Decoded from VIN', rows: Object.entries(data.decoded).filter(([k]) => k !== 'ErrorText').map(([k, v]) => [humanKey(k), v]) });
@@ -403,7 +403,7 @@ function renderVehicle(data, container) {
     ${data.models?.length ? `<div class="astc-chips">${data.models.slice(0, 18).map(m => `<span>${esc(m)}</span>`).join('')}</div>` : ''}
     ${!groups.length && !data.summary && !data.models?.length ? `<p class="astc-muted">${esc(data.message || 'No details found.')}</p>` : ''}`;
   el.querySelector('img')?.addEventListener('error', (e) => e.target.remove());
-  el.addEventListener('click', (e) => { if (e.target.closest('[data-act="guide"]')) window.location.hash = '#automobile-guide'; });
+  el.addEventListener('click', (e) => { if (e.target.closest('[data-act="guide"]')) openGuideOn({}, data.package?.id); });
   container.appendChild(el);
   return el;
 }
@@ -433,8 +433,8 @@ export function renderCarInjury(data, container) {
    Car part — where it is, its data, "Show in 3D"
    ============================================================ */
 
-const openGuideOn = (focus) => {
-  try { localStorage.setItem('toolbox.automobile.focus', JSON.stringify({ vehicleId: 'toyota-corolla-2014-2016', ...focus })); } catch { /* storage unavailable: the guide still opens */ }
+const openGuideOn = (focus, vehicleId = 'toyota-corolla-2014-2016') => {
+  try { localStorage.setItem('toolbox.automobile.focus', JSON.stringify({ vehicleId, ...focus })); } catch { /* storage unavailable: the guide still opens */ }
   window.location.hash = '#automobile-guide';
 };
 
@@ -453,17 +453,17 @@ export function renderVehiclePart(data, container) {
     ['Maintenance', c.maintenance], ['Common failures', c.failures],
   ].filter(([, v]) => v);
   el.querySelector('.astc-body').innerHTML = `
-    ${data.askedAbout && !/corolla/i.test(data.askedAbout) ? `<p class="astc-muted astc-vc-caveat">From the 2014–2016 Corolla. Your ${esc(data.askedAbout)} may differ.</p>` : ''}
+    ${data.mismatch || (data.mismatch === undefined && data.askedAbout && !/corolla/i.test(data.askedAbout)) ? `<p class="astc-muted astc-vc-caveat">From the ${esc(data.vehicle || '2014–2016 Corolla')}. Your ${esc(data.askedAbout)} may differ.</p>` : ''}
     <div class="astc-sheet"><section><dl>${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></section>
     ${data.specRows?.length ? `<section><h5>Spec sheet</h5><dl>${data.specRows.map(([, k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></section>` : ''}</div>
     ${c.accuracyNote ? `<p class="astc-muted astc-vp-note">${esc(c.accuracyNote)}</p>` : ''}
     ${c.sources?.length ? `<p class="astc-muted astc-vp-note">Sources: ${c.sources.map(s => s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.label || s.url)}</a>` : esc(s.label)).join(' · ')}</p>` : ''}
     ${data.alternatives?.length ? `<div class="astc-vc-alts"><span>Nearby</span>${data.alternatives.map(a => `<button type="button" data-vp-part="${esc(a.id)}">${esc(a.label)}</button>`).join('')}</div>` : ''}
-    ${safetyHtml(safetyFor(c.id))}`;
+    ${safetyHtml(safetyFor(c.id, { kind: data.kind === 'aircraft' ? 'aircraft' : 'car' }))}`;
   el.addEventListener('click', (e) => {
     const alt = e.target.closest('[data-vp-part]');
-    if (alt) { openGuideOn({ component: alt.dataset.vpPart }); return; }
-    if (e.target.closest('[data-act="part3d"]')) openGuideOn({ component: c.id });
+    if (alt) { openGuideOn({ component: alt.dataset.vpPart }, data.vehicleId); return; }
+    if (e.target.closest('[data-act="part3d"]')) openGuideOn({ component: c.id }, data.vehicleId);
   });
   container.appendChild(el);
   return el;
@@ -474,12 +474,13 @@ export function renderVehiclePart(data, container) {
    ============================================================ */
 
 export function renderVehicleControls(data, container) {
+  const CAR_CLUSTER = controlsFor(data.vehicleId || 'toyota-corolla-2014-2016').byId;
   let clusterId = CAR_CLUSTER[data.cluster] ? data.cluster : null;
   const el = card('vehicle-controls', {
     icon: I.car,
     title: 'One of these?',
     sub: esc(data.vehicle || 'Toyota Corolla 2014–2016'),
-    actions: btn('Open in Automobile Guide', I.external, 'data-act="guide"'),
+    actions: btn('Open in Vehicle Guide', I.external, 'data-act="guide"'),
   });
   const body = el.querySelector('.astc-body');
   let panel = null, selected = data.control || null;
@@ -490,7 +491,7 @@ export function renderVehicleControls(data, container) {
     const back = clusterId !== data.cluster && CAR_CLUSTER[data.cluster] ? [{ id: data.cluster, name: CAR_CLUSTER[data.cluster].name }] : [];
     body.innerHTML = `
       <p class="astc-vc-where"><strong>${esc(cl.name)}</strong> · ${esc(cl.where)}</p>
-      ${data.askedAbout && !/corolla/i.test(data.askedAbout) ? `<p class="astc-muted astc-vc-caveat">Drawn from the 2014–2016 Corolla. The symbols are standard, but your ${esc(data.askedAbout)} may lay them out differently.</p>` : ''}
+      ${data.mismatch || (data.mismatch === undefined && data.askedAbout && !/corolla/i.test(data.askedAbout)) ? `<p class="astc-muted astc-vc-caveat">Drawn from the ${esc(data.vehicle || '2014–2016 Corolla')}. The symbols are standard, but your ${esc(data.askedAbout)} may lay them out differently.</p>` : ''}
       <div class="astc-vc-panel"></div>
       ${[...back, ...others].length ? `<div class="astc-vc-alts"><span>Not it? Try</span>${[...back, ...others].map(a => `<button type="button" data-vc-cluster="${esc(a.id)}">${esc(a.name)}</button>`).join('')}</div>` : ''}`;
     panel?.destroy();
@@ -505,7 +506,7 @@ export function renderVehicleControls(data, container) {
     const alt = e.target.closest('[data-vc-cluster]');
     if (alt) { clusterId = alt.dataset.vcCluster; paint(); return; }
     if (e.target.closest('[data-act="guide"]')) {
-      openGuideOn({ cluster: clusterId, control: clusterId === data.cluster ? selected : null });
+      openGuideOn({ cluster: clusterId, control: clusterId === data.cluster ? selected : null }, data.vehicleId);
     }
   });
   container.appendChild(el);

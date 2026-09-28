@@ -2,7 +2,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-const ORDER = ['toyota-corolla-2014-2016', 'toyota-corolla-2013'];
+const ORDER = ['toyota-corolla-2014-2016', 'toyota-corolla-2013', 'lexus-gx-470-2008', 'boeing-737-800', 'cessna-172s'];
 
 export function mergeCatalog(catalog, entries) {
   const ids = new Set(entries.map(entry => entry.id));
