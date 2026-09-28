@@ -2102,7 +2102,7 @@ export class PlaygroundIDE {
           <li><b>SQL</b> (SQLite), <b>Lua</b>, and Java, Go, Rust, C#, PHP, Ruby, Swift… compiled on Wandbox.</li>
           <li><b>Git</b> with push, pull and clone to GitHub.</li>
         </ul>
-        <p class="cpg-dim">Editor: CodeMirror 5 · C/C++ interpreter: JSCPP (JSCPP-NG) · Python: Pyodide · SQL: sql.js · Formatter: Prettier · Types: TypeScript.</p>
+        <p class="cpg-dim">Editor: CodeMirror 5 · C/C++ interpreter: JSCPP (thatcrazydave/JSCPP) · Python: Pyodide · SQL: sql.js · Formatter: Prettier · Types: TypeScript.</p>
       </div>`);
   }
 

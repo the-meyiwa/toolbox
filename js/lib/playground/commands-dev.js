@@ -884,7 +884,7 @@ export function registerDevCommands(shell, host) {
   }
 
   async function compileCommand(ctx, defaultLang) {
-    if (ctx.args[0] === '--version' || ctx.args[0] === '-v') { ctx.outln(defaultLang === 'c' ? 'gcc (Toolbox) 13.2.0' : 'g++ (Toolbox) 13.2.0\nIn-browser interpreter: JSCPP 2.2 · Real compiler: GCC 13 on Wandbox'); return 0; }
+    if (ctx.args[0] === '--version' || ctx.args[0] === '-v') { ctx.outln(defaultLang === 'c' ? 'gcc (Toolbox) 13.2.0' : 'g++ (Toolbox) 13.2.0\nIn-browser interpreter: JSCPP 2.2.5 (thatcrazydave/JSCPP) · Real compiler: GCC 13 on Wandbox'); return 0; }
     const parsed = parseCompileArgs(ctx.args, { defaultLang });
     if (!parsed.sources.length) { ctx.stderr.write(`${defaultLang === 'c' ? 'gcc' : 'g++'}: fatal error: no input files\ncompilation terminated.\n`); return 1; }
     const sources = [];

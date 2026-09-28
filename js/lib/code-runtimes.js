@@ -241,7 +241,7 @@ self.onmessage = async function (e) {
 };`;
 
 /* ---------------- C++ (In-Browser Offline Engine) ----------------
-   C and C++ run in the JSCPP-NG interpreter inside a dedicated worker
+   C and C++ run in the JSCPP interpreter (thatcrazydave/JSCPP) inside a dedicated worker
    (public/playground/cpp-runtime.js, shared with Code Playground), so
    an endless loop can't freeze the page and a run can be terminated.
    The worker speaks its own protocol; this adapter translates it into
@@ -260,7 +260,7 @@ function createCppRunner() {
       worker.postMessage({
         type: 'run',
         code: data.code || '',
-        jscppUrl: `${origin}/vendor/jscpp/JSCPP.es5.min.js`,
+        jscppUrl: `${origin}/vendor/jscpp/JSCPP.min.js`,
         interactive: false,
         stdinText: data.stdin || '',
         maxTimeout: 20000,
@@ -483,7 +483,7 @@ export const LANGUAGES = { ...BASE_LANGUAGES, ...EXTRA_LANGUAGES };
 const blobUrls = new Map();
 
 export function makeWorker(languageId) {
-  // C++ runs in the shared JSCPP-NG worker behind a small protocol adapter.
+  // C++ runs in the shared JSCPP worker behind a small protocol adapter.
   if (languageId === 'cpp') return createCppRunner();
 
   const lang = LANGUAGES[languageId];

@@ -25,7 +25,7 @@ stored in IndexedDB (`toolbox-code-playground`) and autosaved as you type.
 - **Python**: Pyodide with interactive `input()`, `pip install` (micropip), and matplotlib figures shown in the terminal.
   `pytest` falls back to a built-in runner when it can't be installed.
 - **C / C++**: `g++`/`gcc` check the program with real GCC on Wandbox when online, and `./a.out` runs it:
-  - Programs that read input run in the JSCPP-NG interpreter, so `cin` works interactively.
+  - Programs that read input run in the JSCPP interpreter ([thatcrazydave/JSCPP](https://github.com/thatcrazydave/JSCPP)), so `cin` works interactively and plain C (structs, `malloc`, `scanf`, `fgets`) runs too.
   - Programs that use features JSCPP lacks (classes, templates, many STL algorithms) run on real GCC.
   - The engine can be forced from the status bar.
   - `public/vendor/jscpp/VERSION` records a local patch: `getline` no longer echoes its input.

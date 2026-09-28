@@ -1,0 +1,149 @@
+diff --git a/pegjs/ast.pegjs b/pegjs/ast.pegjs
+index cfca71c..e969853 100644
+--- a/pegjs/ast.pegjs
++++ b/pegjs/ast.pegjs
+@@ -377,7 +377,7 @@ STLIdentifier =
+ 
+ STLDeclaration = 
+ 	a:STLIdentifier d:(EQU? d:Initializer { return d; })? SEMI {
+-    	return addPositionInfo({type:'STLDeclaration', Identifier: a.Identifier ?? a.Declarator.Declarator.left.Identifier, DeclarationSpecifiers: a.DeclarationSpecifiers, Type: a.Type, Initializer: d ?? a.Declarator.Initializers });
++    	return addPositionInfo({type:'STLDeclaration', Identifier: a.Identifier ?? a.Declarator.Declarator.left.Identifier, DeclarationSpecifiers: a.DeclarationSpecifiers, Type: a.Type, Initializer: d ?? a.Declarator.Initializers, Constructor: a.Declarator.Declarator && a.Declarator.Declarator.right || null });
+     }
+ 	;
+ 
+@@ -576,6 +576,9 @@ UnaryExpression
+     = NEW a:DeclarationSpecifiers LBRK b:Expression RBRK {
+       return addPositionInfo({type: 'NewExpression', TypeSpecifiers: a, Size: b});
+     }
++    / NEW a:DeclarationSpecifiers LPAR b:ArgumentExpressionList? RPAR {
++      return addPositionInfo({type: 'NewExpression', TypeSpecifiers: a, Size: null, Arguments: b || []});
++    }
+     / NEW a:DeclarationSpecifiers {
+       return addPositionInfo({type: 'NewExpression', TypeSpecifiers: a, Size: null});
+     }
+diff --git a/rebuild.sh b/rebuild.sh
+index 31b7ab8..32afb7b 100755
+--- a/rebuild.sh
++++ b/rebuild.sh
+@@ -14,7 +14,9 @@ const peg = require('./node_modules/pegjs'), fs = require('fs');
+ for (const n of ['prepast', 'ast']) {
+   const grammar = fs.readFileSync('pegjs/' + n + '.pegjs', 'utf8');
+   const src = peg.generate(grammar, { output: 'source', format: 'commonjs', optimize: 'speed' });
+-  fs.writeFileSync('lib/' + n + '.js', 'module.exports = ' + src + ';');
++  // src/ holds a committed copy that tsc (allowJs) copies over lib/, so
++  // both must be regenerated or the old parser silently wins.
++  for (const dir of ['lib', 'src']) fs.writeFileSync(dir + '/' + n + '.js', 'module.exports = ' + src + ';');
+ }
+ " || { echo 'PEG GENERATION FAILED'; exit 1; }
+ 
+diff --git a/src/includes/iostream.ts b/src/includes/iostream.ts
+index 8768145..bd2683e 100644
+--- a/src/includes/iostream.ts
++++ b/src/includes/iostream.ts
+@@ -85,6 +85,9 @@ export = {
+                                 len = r[0].length;
+                             }
+                             _cin.v.failbit = len === 0;
++                            // A failed numeric read stores 0 (C++11), rather than
++                            // NaN, which the runtime rejects as an overflow.
++                            if (_cin.v.failbit && typeof v === "number" && Number.isNaN(v)) v = 0;
+                             if (!_cin.v.failbit) {
+                                 t.v = rt.val(t.t, v).v;
+                                 _cin.v.buf = b.substring(len);
+@@ -95,7 +98,7 @@ export = {
+ 
+                             if (stdio.isMochaTest) {
+                                 stdio.write((rt.isCharType(t.t) ? String.fromCharCode(v as number) : v) + "\n");
+-                            } else if (!is_raw) {
++                            } else if (!is_raw && rt.config.printStdin !== false) {
+                                 stdio.write(b + "\n");
+                             } 
+ 
+@@ -183,7 +186,7 @@ export = {
+                 }
+                 tar[r.length + initialPos] = rt.val(rt.charTypeLiteral, 0);
+ 
+-                stdio.write(b + "\n");
++                if (rt.config.printStdin !== false) stdio.write(b + "\n");
+                 stdio.cinProceed();
+             }).catch((err) => {
+                 console.log(err);
+diff --git a/src/includes/string.ts b/src/includes/string.ts
+index 0157888..4568cc9 100644
+--- a/src/includes/string.ts
++++ b/src/includes/string.ts
+@@ -267,7 +267,7 @@ export = {
+ 
+                 iStream.cinStop();
+                 iStream.getInput().then((input: string) => {
+-                    iStream.write(`${input}\n`);
++                    if (rt.config.printStdin !== false) iStream.write(`${input}\n`);
+                     str.v = rt.makeCharArrayFromString(input).v;
+                     iStream.cinProceed();
+                 });
+diff --git a/src/interpreter.ts b/src/interpreter.ts
+index 08d7ccc..ab4ea8c 100644
+--- a/src/interpreter.ts
++++ b/src/interpreter.ts
+@@ -359,7 +359,22 @@ export class Interpreter extends BaseInterpreter {
+                 const vectorClass: any = rt.defaultValue(basetype, true);
+ 
+                 const STLType = rt.simpleType(s.Type);
+-                if (s.Initializer != null) {
++                // `vector<T> v(n)` and `vector<T> v(n, value)`: n elements,
++                // each a copy of value (or T's default). Without this the
++                // arguments were dropped and v silently started empty.
++                const ctor = (s.Constructor || []).find((m: any) => m.type === "DirectDeclarator_modifier_Constructor");
++                if (ctor && ctor.Expressions && ctor.Expressions.length) {
++                    const n = rt.cast(rt.intTypeLiteral, rt.captureValue(yield* interp.visit(interp, ctor.Expressions[0], param))).v as number;
++                    if (!(n >= 0)) rt.raiseException("cannot create a vector of negative size");
++                    const fill = ctor.Expressions.length > 1 ? rt.captureValue(yield* interp.visit(interp, ctor.Expressions[1], param)) : null;
++                    const elements = [];
++                    for (let i = 0; i < n; i++) {
++                        elements.push(fill == null
++                            ? rt.defaultValue(STLType, true)
++                            : (rt.isClassType(STLType) || rt.isStructType(STLType) ? rt.makeConstructor(STLType, [fill], true) : rt.val(STLType, rt.cast(STLType, fill).v, true)));
++                    }
++                    vectorClass.v.members.element_container.elements = elements;
++                } else if (s.Initializer != null) {
+                     const initializer: any = yield* interp.arrayInit([s.Initializer.Initializers.length], s.Initializer, STLType, param);
+                     vectorClass.v.members.element_container.elements = initializer.v.target;
+                 }
+@@ -444,7 +459,23 @@ export class Interpreter extends BaseInterpreter {
+                     }
+                 }
+ 
+-                return rt.defaultValue(rt.arrayPointerType(elementType, count), true);
++                const allocated = rt.defaultValue(rt.arrayPointerType(elementType, count), true);
++
++                // `new T(args)`: construct the one element with the arguments,
++                // as `T x(args);` would. A primitive takes its single value.
++                if (s.Arguments != null) {
++                    const args: Variable[] = [];
++                    for (const argument of s.Arguments) {
++                        args.push(rt.captureValue(yield* interp.visit(interp, argument, param)));
++                    }
++                    const target = (allocated.v as any).target;
++                    if (rt.isClassType(elementType) || rt.isStructType(elementType)) {
++                        target[0] = rt.makeConstructor(elementType, args, true);
++                    } else if (args.length) {
++                        target[0] = rt.val(elementType, rt.cast(elementType, args[0]).v, true);
++                    }
++                }
++                return allocated;
+             },
+             /**
+              * `delete` and `delete[]`.
+diff --git a/src/rt.ts b/src/rt.ts
+index dfed727..fdb6ff3 100644
+--- a/src/rt.ts
++++ b/src/rt.ts
+@@ -42,6 +42,8 @@ export interface JSCPPConfig {
+         finishCallback: (ExitCode: number) => void;
+         write: (s: string) => void;
+     };
++    /** Echo what cin and getline read (a terminal that does not echo typed input). Default true. */
++    printStdin?: boolean;
+     unsigned_overflow?: "error" | "warn" | "ignore";
+ 
+     debug?: boolean;

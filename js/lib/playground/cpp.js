@@ -2,9 +2,10 @@
    C and C++ support.
 
    Two engines:
-     interpreter  JSCPP in a web worker — offline, instant, interactive
-                  cin; covers procedural C/C++ with the common STL
-                  containers (vector, string, map, set, algorithm, ...)
+     interpreter  JSCPP (thatcrazydave/JSCPP) in a web worker — offline,
+                  instant, interactive cin; covers C (structs, malloc,
+                  scanf, fgets) and C++ with classes, single inheritance,
+                  new/delete, vector, string, algorithm and iomanip
      g++ / gcc    the real compiler on Wandbox — full language (classes,
                   templates, lambdas, exceptions, smart pointers, ...)
    "Auto" reads the program and picks the interpreter when it can handle
@@ -20,7 +21,6 @@
 import { resolve as resolvePath, dirname, basename } from './paths.js';
 
 const INTERPRETER_UNSUPPORTED = [
-  [/\bclass\s+\w+/, 'classes'],
   [/\btemplate\s*</, 'templates'],
   [/\bstd::function\b|#include\s*<functional>/, 'std::function'],
   [/\boperator\s*(?:[-+*/%^&|~!=<>]=?|\(\s*\)|\[\s*\]|<<|>>|==|!=|\+\+|--|->)/, 'operator overloading'],
@@ -30,13 +30,13 @@ const INTERPRETER_UNSUPPORTED = [
   [/\bnamespace\s+\w+\s*\{/, 'custom namespaces'],
   [/\benum\s+class\b/, 'enum class'],
   [/\bvirtual\b|\boverride\b/, 'virtual functions'],
-  [/\bstruct\s+\w+\s*(?::[^{]*)?\{[^}]*\b\w+\s*\([^;{]*\)\s*(?:const\s*)?\{/s, 'member functions'],
-  [/\bwhile\s*\(\s*(?:std::)?cin\s*>>/, 'while (cin >> x) loops'],
   [/\bwhile\s*\(\s*(?:std::)?getline\s*\(/, 'while (getline(...)) loops'],
-  [/#include\s*<(?:thread|mutex|chrono|random|regex|optional|variant|tuple|queue|stack|deque|list|array|bitset|memory|fstream|ifstream|ofstream|limits|numeric)>/, 'headers the interpreter lacks'],
+  [/#include\s*<(?:map|set|unordered_map|unordered_set|thread|mutex|chrono|random|regex|optional|variant|tuple|queue|stack|deque|list|array|bitset|memory|fstream|ifstream|ofstream|limits|numeric)>/, 'headers the interpreter lacks'],
+  [/\b(?:string|istring|ostring)stream\b/, 'string streams'],
+  [/\bconst\s+(?:std::)?string\s*&/, 'const string& parameters'],
   [/\bstatic_cast\s*<|\bdynamic_cast\s*<|\breinterpret_cast\s*</, 'C++ casts'],
   [/\bconstexpr\b|\bnullptr\b\s*;?\s*$|\bnoexcept\b/m, 'modern C++ keywords'],
-  [/\bstd::(?:pair|tuple|optional|array|queue|stack|deque|list|priority_queue|unordered_map|unordered_set)\b|\b(?:pair|queue|stack|deque|priority_queue)\s*</, 'containers the interpreter lacks'],
+  [/\bstd::(?:pair|tuple|optional|array|queue|stack|deque|list|priority_queue|unordered_map|unordered_set|map|set)\b|\b(?:pair|queue|stack|deque|priority_queue|map|set)\s*</, 'containers the interpreter lacks'],
 ];
 
 /** Why the interpreter can't run this code (empty array = it probably can). */

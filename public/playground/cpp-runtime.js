@@ -1,18 +1,17 @@
 /* ============================================================
    Toolbox Code Playground — C/C++ interpreter worker (JSCPP)
 
-   Runs C and C++ programs entirely in the browser with JSCPP
-   (the maintained JSCPP-NG fork: vector, string, map, set, algorithm,
-   iomanip, sstream, structs, pointers, new/delete ...). The interpreter
-   is asynchronous, so `cin >> x` pauses the program and asks the page
-   for a line of input — programs are interactive in the terminal, just
-   like a compiled binary.
+   Runs C and C++ programs entirely in the browser with JSCPP, built
+   from github.com/thatcrazydave/JSCPP: C++ classes, inheritance,
+   pointers and new/delete, plus C that works (structs with self
+   pointers, malloc/free, scanf, fgets, strcpy into buffers). The
+   interpreter is asynchronous, so `cin >> x` pauses the program and
+   asks the page for a line of input, like a compiled binary.
 
-   JSCPP decides at load time whether it is in a worker by looking at
-   `window.document`; loaded naively into a worker it installs its own
-   message protocol and hides its API. Giving it a stand-in `window`
-   object makes it publish `JSCPP.run` there instead, while the real
-   worker global stays untouched.
+   The bundle (public/vendor/jscpp/JSCPP.min.js) is a classic script
+   that sets `self.JSCPP`; see public/vendor/jscpp/VERSION for how it
+   was built. C's stdio reads all of its input at once through
+   `stdio.drain`, which is served here from the same input as cin.
 
    page → worker  { type:'run', code, jscppUrl, interactive, stdinText, maxTimeout, maxSteps }
                   { type:'stdin', data:string|null }
@@ -31,10 +30,10 @@ function send(m) { self.postMessage(m); }
 
 function load(url) {
   if (JSCPP) return JSCPP;
-  self.window = { document: {} };
   importScripts(url);
-  JSCPP = self.window.JSCPP;
-  if (!JSCPP || typeof JSCPP.run !== 'function') throw new Error('The C++ interpreter failed to load.');
+  var mod = self.JSCPP;
+  JSCPP = mod && typeof mod.run !== 'function' && mod.default ? mod.default : mod;
+  if (!JSCPP || typeof JSCPP.run !== 'function') { JSCPP = null; throw new Error('The C++ interpreter failed to load.'); }
   return JSCPP;
 }
 
@@ -57,7 +56,7 @@ self.onmessage = function (e) {
   if (msg.type !== 'run') return;
 
   var jscpp;
-  try { jscpp = load(msg.jscppUrl || '/vendor/jscpp/JSCPP.es5.min.js'); } catch (err) {
+  try { jscpp = load(msg.jscppUrl || '/vendor/jscpp/JSCPP.min.js'); } catch (err) {
     send({ type: 'error', kind: 'runtime', message: String(err && err.message || err) });
     send({ type: 'exit', code: 1 });
     return;
@@ -69,19 +68,31 @@ self.onmessage = function (e) {
 
   function nextLine() {
     // JSCPP asks for one line at a time and appends the newline itself.
+    // At end of input a read gets nothing, as from a real terminal, so
+    // `while (cin >> x)` ends instead of stopping the program with an error.
     if (batch) {
-      if (!batch.length) return Promise.reject(new Error('end of input'));
+      if (!batch.length) return Promise.resolve('');
       return Promise.resolve(batch.shift().replace(/\r?\n$/, ''));
     }
-    return new Promise(function (resolve, reject) {
+    return new Promise(function (resolve) {
       var take = function () {
         if (pendingInput.length) { resolve(pendingInput.shift().replace(/\r?\n$/, '')); return; }
-        if (inputEOF) { reject(new Error('end of input')); return; }
+        if (inputEOF) { resolve(''); return; }
         stdinWaiter = take;
         send({ type: 'stdin-request' });
       };
       take();
     });
+  }
+
+  /* C's stdio (scanf, getchar, fgets) takes the whole of its input in one
+     synchronous call. In batch runs that is everything supplied; in the
+     interactive terminal it is whatever has been typed so far. */
+  function drainAll() {
+    if (batch) { var all = batch.join(''); batch = []; return all; }
+    var typed = pendingInput.map(function (l) { return /\n$/.test(l) ? l : l + '\n'; }).join('');
+    pendingInput = [];
+    return typed;
   }
 
   var config = {
@@ -92,6 +103,7 @@ self.onmessage = function (e) {
     printStdin: false,
     stdio: {
       write: function (s) { send({ type: 'stdout', data: String(s) }); },
+      drain: drainAll,
       finishCallback: function (code) { finish(typeof code === 'number' ? code : Number(code) || 0); },
       promiseError: function (err) {
         var message = cleanMessage(err && err.message || err);

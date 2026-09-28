@@ -21,7 +21,7 @@ const DEFAULT_CDN = {
   wasmoon: 'https://cdn.jsdelivr.net/npm/wasmoon@1.16.0/+esm',
   esm: 'https://esm.sh/',
   typescript: '/vendor/typescript/typescript.min.js',
-  jscpp: '/vendor/jscpp/JSCPP.es5.min.js',
+  jscpp: '/vendor/jscpp/JSCPP.min.js',
   workers: '/playground/',
   sync: '/__pg_sync/',
   sw: '/pg-sw.js',
