@@ -252,6 +252,83 @@ export function patchHtml(el, html) {
   for (; i < prev.length; i++) prev[i].remove();
 }
 
+/**
+ * Where the finished part of a streaming reply ends: just after the last blank line that is
+ * outside a code fence and outside a $$ math block. Everything before it can no longer change
+ * as more text arrives. Scans only from `from` (already known to be a safe point).
+ */
+export function stableBoundary(text, from = 0) {
+  let fence = null;       // the opening fence (``` or ~~~) while inside a code block
+  let math = false;
+  let boundary = from;
+  let i = from;
+  while (i < text.length) {
+    const nl = text.indexOf('\n', i);
+    if (nl === -1) break;   // the last line may still be growing
+    const line = text.slice(i, nl);
+    const t = line.trim();
+    if (fence) { if (t.startsWith(fence)) fence = null; }
+    else if (/^(```|~~~)/.test(t)) fence = t.slice(0, 3);
+    else {
+      const dd = (line.match(/\$\$/g) || []).length;
+      if (dd % 2 === 1) math = !math;
+      if (!t && !math) boundary = nl + 1;
+    }
+    i = nl + 1;
+  }
+  return boundary;
+}
+
+/**
+ * Renders a reply that is still streaming, in time proportional to the new text rather than
+ * the whole reply: finished blocks are rendered once and kept, and only the live tail after
+ * the last stable boundary is re-rendered each frame. The final render (renderMarkdown on the
+ * complete text) replaces it all, so any block that would read differently whole is exact.
+ * Returns { hasMath }.
+ */
+export function renderStreamingInto(el, text) {
+  const src = String(text || '');
+  let state = el._stream;
+  if (!state || !src.startsWith(state.prefix)) {
+    state = el._stream = { prefix: '', count: 0, hasMath: false };
+    el.replaceChildren(...[...el.childNodes].filter(n => n.nodeType === 1 && n.classList?.contains('md-caret')));
+  }
+  const caret = el.querySelector(':scope > .md-caret');
+  const blocks = () => [...el.childNodes].filter(n => !(n.nodeType === 1 && n.classList?.contains('md-caret')));
+  const b = stableBoundary(src, state.prefix.length);
+  if (b > state.prefix.length) {
+    // Freeze the newly finished blocks: drop the tail that showed them, append them rendered for good.
+    blocks().slice(state.count).forEach(n => n.remove());
+    const done = renderMarkdown(src.slice(state.prefix.length, b), { streaming: false });
+    const tpl = document.createElement('template');
+    tpl.innerHTML = done.html;
+    const nodes = [...tpl.content.childNodes].filter(n => n.nodeType === 1 || (n.nodeType === 3 && n.textContent.trim()));
+    for (const n of nodes) el.insertBefore(n, caret);
+    state.count += nodes.length;
+    state.prefix = src.slice(0, b);
+    state.hasMath = state.hasMath || done.hasMath;
+  }
+  // The live tail, patched block by block after the frozen ones.
+  const tail = renderMarkdown(src.slice(b), { streaming: true });
+  const tpl = document.createElement('template');
+  tpl.innerHTML = tail.html;
+  const next = [...tpl.content.childNodes].filter(n => n.nodeType === 1 || (n.nodeType === 3 && n.textContent.trim()));
+  const prev = blocks().slice(state.count);
+  let i = 0;
+  for (; i < next.length; i++) {
+    const n = next[i];
+    const p = prev[i];
+    if (p && p.nodeType === n.nodeType && (p.nodeType === 3 ? p.textContent === n.textContent : p.outerHTML === n.outerHTML)) continue;
+    if (p) el.replaceChild(n, p);
+    else el.insertBefore(n, caret);
+  }
+  for (; i < prev.length; i++) prev[i].remove();
+  return { hasMath: state.hasMath || tail.hasMath };
+}
+
+/** Forgets streaming state, so the next render is a complete one. */
+export function resetStreaming(el) { if (el) delete el._stream; }
+
 /** Delegated handler for code-block copy buttons. */
 export function handleMarkdownClick(event) {
   const btn = event.target.closest?.('[data-md-copy]');

@@ -15,7 +15,7 @@
 import { getSetting } from '../lib/settings.js';
 import { tbConfirm, tbPrompt, tbAlert } from '../lib/dialog.js';
 import { showToast } from '../utils.js';
-import { streamChatCompletion, getActiveAiMode, setActiveAiMode, AI_MODES } from '../lib/ai-provider.js';
+import { streamChatCompletion, getActiveAiMode, setActiveAiMode, AI_MODES, prewarmAssistant } from '../lib/ai-provider.js';
 import { warmGateway } from '../lib/model-gateway.js';
 import { QuotaManager } from '../lib/quota-manager.js';
 import { getCurrentUser } from '../lib/supabase.js';
@@ -24,7 +24,7 @@ import { AssistantAudioManager } from '../lib/assistant-audio.js';
 import { ConversationIntegrationManager } from '../lib/assistant-integration.js';
 import { isPlainTextResult } from '../lib/assistant-result-renderer.js';
 import { ToolboxFilesystem, fs } from '../lib/filesystem.js';
-import { renderMarkdown, patchHtml, handleMarkdownClick, cleanReplyText } from '../lib/assistant/markdown.js';
+import { renderMarkdown, patchHtml, handleMarkdownClick, cleanReplyText, renderStreamingInto, resetStreaming } from '../lib/assistant/markdown.js';
 import { ConversationStore, newId } from '../lib/assistant/conversations.js';
 import '../lib/assistant/renderers.js';
 import { gatherLifeContext, introText, lifeSuggestions } from '../lib/assistant/life-context.js';
@@ -436,8 +436,10 @@ function mountAssistant(container, state) {
   const jumpBtn = $('.ast-jump');
   const form = $('.ast-composer');
   const input = $('.ast-input');
-  // Wake the model service while the person is still typing.
+  // Wake the model service while the person is still typing, and load the lookup tables the
+  // first message would otherwise wait for.
   warmGateway();
+  (window.requestIdleCallback || ((f) => setTimeout(f, 800)))(() => prewarmAssistant());
   input.addEventListener('focus', warmGateway);
   input.addEventListener('input', warmGateway, { passive: true });
   const filesRow = $('.ast-files');
@@ -911,17 +913,29 @@ function mountAssistant(container, state) {
     scheduleMd(el, getText, streaming = false) {
       if (!el) return;
       el._pending = getText;
-      if (this.raf) return;
-      this.raf = requestAnimationFrame(() => {
-        this.raf = 0;
-        for (const node of this.flow.querySelectorAll('.ast-md')) {
-          if (!node._pending) continue;
-          const text = node._pending();
-          node._pending = null;
-          renderMdInto(node, text, streaming);
-        }
-        onContent();
-      });
+      if (this.raf || this.paceTimer) return;
+      // Pace renders by their cost: a cheap render runs every frame, an expensive one (a long
+      // code block still open) waits about three times its own cost, so reading the stream,
+      // scrolling and typing stay smooth on slower machines.
+      const wait = Math.max(0, (this.lastRenderAt || 0) + (this.renderGap || 0) - performance.now());
+      const run = () => {
+        this.paceTimer = 0;
+        this.raf = requestAnimationFrame(() => {
+          this.raf = 0;
+          const t0 = performance.now();
+          for (const node of this.flow.querySelectorAll('.ast-md')) {
+            if (!node._pending) continue;
+            const text = node._pending();
+            node._pending = null;
+            renderMdInto(node, text, streaming);
+          }
+          onContent();
+          const cost = performance.now() - t0;
+          this.lastRenderAt = performance.now();
+          this.renderGap = cost > 6 ? Math.min(250, cost * 3) : 0;
+        });
+      };
+      if (wait > 0) this.paceTimer = setTimeout(run, wait); else run();
     }
 
     /* tools */
@@ -1093,6 +1107,7 @@ function mountAssistant(container, state) {
       this.timers.forEach(clearInterval);
       this.timers = [];
       if (this.raf) { cancelAnimationFrame(this.raf); this.raf = 0; }
+      if (this.paceTimer) { clearTimeout(this.paceTimer); this.paceTimer = 0; }
       // Final, non-streaming render of every text block.
       this.msg.segments.forEach((seg, i) => { if (seg.k === 'text' && this.segEls[i]) renderMdInto(this.segEls[i], seg.text, false); });
       for (const seg of this.msg.segments) if (seg.k === 'tools') for (const run of seg.runs) if (run.status === 'running') run.status = 'error';
@@ -1154,6 +1169,14 @@ function mountAssistant(container, state) {
   }
 
   function renderMdInto(el, text, streaming) {
+    // While streaming, only the unfinished tail is re-rendered each frame (see renderStreamingInto);
+    // the final render is a complete one.
+    if (streaming) {
+      const { hasMath } = renderStreamingInto(el, text);
+      if (hasMath) { el.dataset.math = '1'; el._src = text; }
+      return;
+    }
+    resetStreaming(el);
     const { html, hasMath } = renderMarkdown(text, { streaming });
     patchHtml(el, html);
     if (hasMath) { el.dataset.math = '1'; el._src = text; } else if (el.dataset.math) delete el.dataset.math;

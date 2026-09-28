@@ -1175,7 +1175,11 @@ initMessageNotifications();
 startReminderClock();
 startAutomationClock();
 // Signed-in visitors usually ask the Assistant something: wake its service early, off the critical path.
-if (getCurrentUser()) (window.requestIdleCallback || ((f) => setTimeout(f, 2500)))(() => import('./lib/model-gateway.js').then(m => m.warmGateway()).catch(() => {}));
+if (getCurrentUser()) (window.requestIdleCallback || ((f) => setTimeout(f, 2500)))(() => {
+  import('./lib/model-gateway.js').then(m => m.warmGateway()).catch(() => {});
+  // Fetch the Assistant's code ahead of time, so the pop-up opens and answers without a download.
+  if (!navigator.connection?.saveData) import('./tools/assistant.js').catch(() => {});
+}, { timeout: 6000 });
   initWorkspace({ main: () => ({ id: currentPage === 'tool' ? currentToolId : null, instance: currentToolInstance, host: viewportContent }) });
   initScrollNarrative();
   initHomeScrollNarrative();

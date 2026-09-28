@@ -209,17 +209,17 @@ function initExtras(view) {
    tilts toward the pointer with a light that follows it (transform and custom properties only). */
 function initShowcase(view) {
   const show = view.querySelector('.about-showcase');
-  const friends = view.querySelector('.about-friends');
   if (!show) return;
+  const sections = [...view.querySelectorAll('.about-showcase, .about-principles, .about-day, .about-friends')];
   const reveal = (el) => { el.classList.add('is-in'); el.querySelectorAll('[data-count-to]').forEach(animateCount); };
-  if (typeof IntersectionObserver === 'undefined') { reveal(show); friends && reveal(friends); }
+  if (typeof IntersectionObserver === 'undefined') sections.forEach(reveal);
   else {
     const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { reveal(e.target); io.unobserve(e.target); } }), { rootMargin: '0px 0px -15% 0px' });
-    io.observe(show);
-    if (friends) io.observe(friends);
+    sections.forEach((el) => io.observe(el));
+    // Replay the entrances each time the page is opened.
     new MutationObserver(() => {
       if (!view.classList.contains('hidden')) return;
-      [show, friends].filter(Boolean).forEach((el) => { el.classList.remove('is-in'); io.observe(el); });
+      sections.forEach((el) => { el.classList.remove('is-in'); io.observe(el); });
     }).observe(view, { attributes: true, attributeFilter: ['class'] });
   }
   if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;

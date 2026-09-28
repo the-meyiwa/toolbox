@@ -746,6 +746,18 @@ export function systemPromptFor(groups) {
 
 /* ---------------- main entry ---------------- */
 
+const HINT_BUDGET_MS = 40;
+/** Resolves to the promise's value, or null if it takes longer than `ms` (the work carries on). */
+function withinMs(promise, ms) {
+  let timer;
+  return Promise.race([promise, new Promise((resolve) => { timer = setTimeout(() => resolve(null), ms); })]).finally(() => clearTimeout(timer));
+}
+
+/** Loads what the first message would otherwise wait for (called when the Assistant opens). */
+export function prewarmAssistant() {
+  entityHints('aspirin').catch(() => {});
+}
+
 export async function streamChatCompletion({
   mode = null,
   history = [],
@@ -787,13 +799,15 @@ export async function streamChatCompletion({
   const lastUserText = [...history].reverse().find(m => m.role === 'user')?.content;
   let entities = null;
   if (scope === 'global' && typeof lastUserText === 'string') {
-    try { entities = await entityHints(lastUserText); } catch { entities = null; }
+    // Hints are a nicety: the first message of a session must not wait for the compound table
+    // to download. If it is not ready in time, this message goes without and it keeps loading.
+    try { entities = await withinMs(entityHints(lastUserText), HINT_BUDGET_MS); } catch { entities = null; }
   }
   const hintBlock = entities?.hint ? `\n${entities.hint}\n` : '';
   // A greeting or "what can you do" gets a snapshot of their things, so the answer is about them.
   let lifeBlock = '';
   if (scope === 'global' && typeof lastUserText === 'string' && INTRO_PATTERN.test(lastUserText)) {
-    try { lifeBlock = `\n${contextBlock(await gatherLifeContext())}\n${INTRO_VOICE}\n`; } catch { lifeBlock = ''; }
+    try { const life = await withinMs(gatherLifeContext(), 250); lifeBlock = life ? `\n${contextBlock(life)}\n${INTRO_VOICE}\n` : ''; } catch { lifeBlock = ''; }
   }
   // Tools: a caller-supplied list as is; otherwise the core set plus the groups this conversation needs.
   const fullList = toolDeclarations ? buildToolList(toolDeclarations) : defaultToolList();

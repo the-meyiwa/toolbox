@@ -180,7 +180,12 @@ async function authorised(request) {
 
 const hasImages = (messages) => messages.some(m => Array.isArray(m.content) && m.content.some(c => c?.type === 'image_url'));
 
-function providerBody(provider, model, { messages, tools, mode }, plain = false) {
+// "fast" asks Gemini not to think at all, which gets the first token out sooner. Models that
+// reject "none" step down to "low" (remembered per model), never straight to no options.
+const noneRejected = new Set();       // provider:model that refused reasoning_effort "none"
+const wantsNone = (provider, mode) => provider.id === 'gemini' && mode === 'fast';
+
+function providerBody(provider, model, { messages, tools, mode }, plain = false, low = false) {
   const body = { model, messages, stream: true };
   if (Array.isArray(tools) && tools.length) {
     body.tools = tools;
@@ -189,7 +194,7 @@ function providerBody(provider, model, { messages, tools, mode }, plain = false)
   if (plain) return body;
   if (provider.id === 'gemini') {
     // Gemini takes either reasoning_effort or a thinking_config, not both.
-    body.reasoning_effort = mode === 'reasoning' ? 'high' : 'low';
+    body.reasoning_effort = mode === 'reasoning' ? 'high' : (wantsNone(provider, mode) && !low ? 'none' : 'low');
   } else if (provider.id === 'openai') {
     body.reasoning_effort = mode === 'reasoning' ? 'high' : mode === 'fast' ? 'minimal' : 'low';
   } else if (provider.id === 'groq' && /gpt-oss/.test(model)) {
@@ -204,11 +209,12 @@ function providerBody(provider, model, { messages, tools, mode }, plain = false)
 async function open(provider, model, payload, signal) {
   const vkey = `${provider.id}:${model}`;
   let plain = variants.get(vkey) === 'plain';
+  let low = noneRejected.has(vkey);
   for (;;) {
     const res = await fetch(provider.url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${provider.key()}`, ...(provider.headers || {}) },
-      body: JSON.stringify(providerBody(provider, model, payload, plain)),
+      body: JSON.stringify(providerBody(provider, model, payload, plain, low)),
       signal,
     });
     if (res.ok && res.body) {
@@ -219,7 +225,13 @@ async function open(provider, model, payload, signal) {
     let message = text.slice(0, 400);
     try { const j = JSON.parse(text); message = j.error?.message || j[0]?.error?.message || j.message || message; } catch { /* plain text */ }
     // Reasoning options differ between model generations; retry once without them and remember.
-    if (!plain && res.status === 400 && /thinking|reasoning|effort|extra_body|unknown name|unrecognized|unsupported (parameter|value)|invalid.*param/i.test(message)) {
+    const optionRejected = res.status === 400 && /thinking|reasoning|effort|extra_body|unknown name|unrecognized|unsupported (parameter|value)|invalid.*param/i.test(message);
+    if (optionRejected && !plain && !low && wantsNone(provider, payload.mode)) {
+      low = true;
+      noneRejected.add(vkey);
+      continue;
+    }
+    if (!plain && optionRejected) {
       plain = true;
       variants.set(vkey, 'plain');
       continue;

@@ -35,3 +35,14 @@ Free model tiers are limited two ways: **requests per day** and **tokens per min
 ## Robust tool calls
 
 Models sometimes send the wrong types (`"name": 2024`, `"amount": "₦1,500"`, a single value for a list, `null`). `js/lib/assistant/args.js` coerces every call's arguments to the tool's declared schema before it runs, and answers a call missing a required argument with a clear message. `tests/unit/assistant-tool-fuzz.test.js` runs every Assistant tool with empty, wrongly typed, hostile and very long arguments and fails on raw JavaScript errors, `undefined`/`NaN`/`[object Object]` in messages, or hangs.
+
+## Response time
+
+- **Warm-up.** Opening the Assistant, focusing its box or typing calls `/api/assistant/v2/warm`: it wakes the server, checks and caches the session, and opens the TLS connections to the model providers, so the first message pays for none of that.
+- **Nothing slow before the request.** The compound/element hints and the "about you" snapshot for greetings are given a few milliseconds; if they are not ready, the message goes without them (the tables keep loading in the background and are preloaded when the Assistant opens).
+- **Code preloaded.** Signed-in visitors fetch the Assistant's code when the browser is idle, so the pop-up opens and answers without a download.
+- **Less thinking in Fast mode.** Gemini is asked for `reasoning_effort: "none"`; a model that refuses steps down to `"low"` (remembered per model), never to no options.
+
+## Smooth streaming
+
+A reply is rendered incrementally while it streams (`renderStreamingInto` in `js/lib/assistant/markdown.js`): blocks before the last blank line outside a code fence or `$$` math are rendered once and kept, and only the live tail is re-rendered each frame. Renders are paced by their own cost (an expensive frame waits about three times its cost, at most 250 ms), so reading the stream, scrolling and typing stay smooth. The final render is a complete one. On a 4× CPU-throttled browser an 18,000-character reply went from 89 s to 42 s to finish streaming, with long tasks down from 55 to 5.
