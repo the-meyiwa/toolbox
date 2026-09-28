@@ -600,7 +600,14 @@ function renderAiSettings() {
   const isUnlimited = user ? QuotaManager.isUserUnlimited() : false;
   const pct = quota && quota.messagesLimit ? Math.min(100, Math.round((quota.messagesUsed / quota.messagesLimit) * 100)) : 0;
 
-  container.innerHTML = section('Usage and sync', '', `<div class="stg-card">
+  const openTo = getSettings().assistantOpenTo === 'last' ? 'last' : 'new';
+  container.innerHTML = section('Conversations', '', `<div class="stg-card">
+    ${row({ title: 'When the Assistant opens', hint: 'Start fresh each time, or pick up the chat you had open last. Past chats are always in the list.', tag: 'div', control: `
+      <span class="stg-seg" role="radiogroup" aria-label="When the Assistant opens">
+        <input type="radio" name="ai-open-to" id="ai-open-new" value="new" ${openTo === 'new' ? 'checked' : ''}><label for="ai-open-new">New chat</label>
+        <input type="radio" name="ai-open-to" id="ai-open-last" value="last" ${openTo === 'last' ? 'checked' : ''}><label for="ai-open-last">Last chat</label>
+      </span>` })}
+  </div>`) + section('Usage and sync', '', `<div class="stg-card">
     ${row({ title: 'Conversation sync', hint: user ? 'Your chats are saved to your account and restored when you sign in.' : 'Sign in to keep your chats on every device.', tag: 'div',
       control: `<span class="stg-pill ${user ? 'is-on' : ''}">${user ? 'On' : 'Off'}</span>` })}
     ${user && quota ? `<div class="stg-row stg-row-stack">
@@ -610,6 +617,7 @@ function renderAiSettings() {
     </div>` : ''}
   </div>`);
 
+  container.querySelectorAll('input[name="ai-open-to"]').forEach((r) => r.addEventListener('change', (e) => { if (e.target.checked) { updateSettings({ assistantOpenTo: e.target.value }); flashSaved(); } }));
   container.querySelector('#btn-reset-quota-modal')?.addEventListener('click', () => {
     try { QuotaManager.resetQuotas(); renderAiSettings(); flashSaved(); } catch (err) { tbAlert(err.message, 'Settings error'); }
   });

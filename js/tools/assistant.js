@@ -12,6 +12,7 @@
      picker, Toolbox Files), mode picker, send / stop
    ============================================================ */
 
+import { getSetting } from '../lib/settings.js';
 import { tbConfirm, tbPrompt, tbAlert } from '../lib/dialog.js';
 import { showToast } from '../utils.js';
 import { streamChatCompletion, getActiveAiMode, setActiveAiMode, AI_MODES } from '../lib/ai-provider.js';
@@ -1602,13 +1603,16 @@ function mountAssistant(container, state) {
     else input.focus({ preventScroll: true });
   }
   on(window, 'toolbox:assistant-ask', (e) => { ask(e.detail || {}); });
+  on(window, 'toolbox:assistant-reopened', () => { if (!dead && !running && messages.length && getSetting('assistantOpenTo') !== 'last') startNewChat(); });
   const pendingAsk = state.artifact?.from === 'ask-assistant' && state.artifact.file
     ? { artifact: state.artifact }
     : (state.prompt ? { prompt: state.prompt, send: state.send !== false } : null);
   (async () => {
     await store.load();
     if (dead) return;
-    const last = !pendingAsk && store.active && store.active.messages?.length ? store.active : null;
+    // A fresh chat every time, unless Settings → Assistant says pick up the last one.
+    const resume = getSetting('assistantOpenTo') === 'last';
+    const last = resume && !pendingAsk && store.active && store.active.messages?.length ? store.active : null;
     if (last) { conv = last; messages = last.messages.map(m => ({ ...m })); }
     else { conv = { id: newId(), title: 'New chat', createdAt: Date.now(), updatedAt: Date.now(), messages: [] }; store.activeId = conv.id; }
     renderThread();

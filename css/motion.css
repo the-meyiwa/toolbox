@@ -83,17 +83,9 @@ details > summary { cursor: pointer; }
 details > summary::marker { transition: color var(--motion) var(--motion-ease); }
 details.mo-animating { overflow: hidden; }
 
-/* ---------- Things that appear ---------- */
-:where([role="dialog"]:not(.io-pick-card):not(.pal-panel)) { animation: motion-rise var(--motion-slow) var(--motion-ease) both; }
-@keyframes motion-rise { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }
-:where(.kit-result:not([hidden]), .kit-progress:not([hidden]), .kit-thumbs > figure) { animation: motion-in var(--motion-slow) var(--motion-ease) both; }
-.kit-thumbs > figure:nth-child(n) { animation-delay: calc(min(var(--i, 0), 12) * 18ms); }
-@keyframes motion-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-/* Result rows arrive together rather than all at once. */
-.kit-files > .kit-file { animation: motion-in var(--motion-slow) var(--motion-ease) both; }
-
-/* ---------- Tool content arrives with the page, not before it ---------- */
-#viewport-content[aria-busy="false"] > * { animation: motion-in var(--motion-slow) var(--motion-ease) both; }
+/* No entrance fades: content appears when it is ready. Motion is kept for
+   things that move, change state or come from somewhere (menus, dialogs,
+   the side pane, switcher indicators). */
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
@@ -120,3 +112,5 @@ a[href^="#"], .kit-file, .kit-thumbs figure, .beside-row { -webkit-touch-callout
 /* Menu icons: registry tool icons carry no size of their own. */
 .finder-menu-icon { width: 16px; height: 16px; justify-content: center; color: var(--text-2); }
 .finder-menu-icon > svg { width: 16px; height: 16px; }
+
+@keyframes motion-rise { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }

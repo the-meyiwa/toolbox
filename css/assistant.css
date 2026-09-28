@@ -166,7 +166,7 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
   margin: 0 auto; padding: var(--space-2) var(--space-6) var(--space-8);
 }
 .ast-turn-user + .ast-turn-ai { margin-top: -20px; }
-.ast-turn { min-width: 0; animation: ast-rise var(--dur-4) var(--ease-out) both; }
+.ast-turn { min-width: 0; }
 
 /* user */
 .ast-turn-user { display: flex; justify-content: flex-end; }
@@ -273,7 +273,6 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
 .ast-think-head:hover { background: var(--tint); color: var(--text); }
 .ast-think-icon { display: grid; place-items: center; width: 22px; height: 22px; }
 .ast-think-done { width: 7px; height: 7px; border-radius: 1.5px; background: var(--text-3); transform: rotate(45deg); animation: ast-settle var(--dur-4) var(--ease-spring) both; }
-.ast-think.is-settling .ast-think-label { animation: ast-fade var(--dur-4) ease both; }
 .ast-think-time { font-size: 12.5px; font-weight: 400; color: var(--text-3); }
 .ast-think-time:empty { display: none; }
 .ast-think-chev { display: grid; color: var(--text-3); transition: transform var(--dur-2) var(--ease-out); }
@@ -299,7 +298,7 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
 /* ---------- tool steps ---------- */
 .ast-work { min-width: 0; }
 .ast-steps { list-style: none; margin: 0; padding: 0; }
-.ast-step { position: relative; animation: ast-fade var(--dur-3) ease both; }
+.ast-step { position: relative; }
 .ast-step:not(:last-child)::before {
   content: ""; position: absolute; left: 13px; top: 31px; bottom: -3px; width: 1px;
   background: var(--line-strong);
@@ -362,7 +361,7 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
 .ast-card > * { max-width: 100%; }
 
 /* ---------- empty state ---------- */
-.ast-empty { margin-block: auto; display: flex; flex-direction: column; align-items: center; padding: var(--space-8) 0 var(--space-4); text-align: center; animation: ast-rise var(--dur-4) var(--ease-out) both; }
+.ast-empty { margin-block: auto; display: flex; flex-direction: column; align-items: center; padding: var(--space-8) 0 var(--space-4); text-align: center; }
 .ast-empty-mark { display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: var(--space-4); border-radius: 15px; background: var(--ink); color: var(--text-inverse); box-shadow: var(--shadow-2); }
 .ast-empty-title { font-size: 28px; line-height: 34px; font-weight: 600; letter-spacing: -.025em; }
 .ast-empty-sub { max-width: 470px; margin-top: var(--space-2); font-size: 15px; line-height: 23px; color: var(--text-2); }
@@ -374,7 +373,6 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
   min-width: 0; padding: 14px;
   border: 1px solid var(--line); border-radius: var(--radius-md);
   background: var(--surface);
-  animation: ast-rise var(--dur-4) var(--ease-out) both; animation-delay: calc(var(--i, 0) * 35ms + 60ms);
   transition: border-color var(--dur-2) ease, background-color var(--dur-2) ease, transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2) ease;
 }
 .ast-sug:hover { border-color: var(--line-control); transform: translateY(-2px); box-shadow: var(--shadow-2); }
@@ -453,7 +451,6 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
   width: 36px; height: 36px; margin-left: -18px; border-radius: 50%;
   background: var(--overlay); color: var(--text);
   border: 1px solid var(--line-strong); box-shadow: var(--shadow-2);
-  animation: ast-rise var(--dur-3) var(--ease-out) both;
 }
 .ast-jump[hidden] { display: none; }
 
@@ -467,7 +464,6 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
   max-width: 240px; height: 54px; padding: 6px var(--space-3) 6px 6px;
   border: 1px solid var(--line); border-radius: var(--radius-md);
   background: var(--surface);
-  animation: ast-settle var(--dur-3) var(--ease-out) both;
 }
 .ast-user-files .ast-file { background: var(--surface); }
 .ast-file-thumb { display: grid; place-items: center; width: 40px; height: 40px; flex: none; overflow: hidden; border-radius: 10px; background: var(--surface-2); }
@@ -525,7 +521,7 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
   background: color-mix(in srgb, var(--surface) 90%, transparent);
   pointer-events: none;
 }
-.ast.is-dragging .ast-drop { display: grid; animation: ast-fade var(--dur-2) ease both; }
+.ast.is-dragging .ast-drop { display: grid; }
 .ast-drop div { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
 .ast-drop strong { font-size: 16px; font-weight: 600; }
 .ast-drop span { font-size: 13px; color: var(--text-3); }
@@ -611,7 +607,6 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
   background: var(--surface);
   border: 1px solid var(--line); border-radius: var(--radius-lg);
   box-shadow: var(--shadow-1);
-  animation: ast-rise var(--dur-4) var(--ease-out) both;
 }
 [data-theme="dark"] .astc { background: var(--surface); border-color: var(--line-strong); }
 .astc-head { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) 14px var(--space-3) var(--space-4); border-bottom: 1px solid var(--line); }

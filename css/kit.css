@@ -165,7 +165,7 @@ body.is-resizing-beside .beside, body.is-resizing-beside #tool-viewport { transi
 .beside-row strong { display: block; font-size: 13.5px; font-weight: 600; }
 .beside-row em { display: block; font-style: normal; font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .beside-body { flex: 1; min-height: 0; overflow: auto; padding: var(--space-4); overscroll-behavior: contain; }
-.beside-content { animation: beside-in var(--dur-3) var(--ease-out); }
+
 @keyframes beside-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 /* Two-column tool layouts stack in the narrow pane. */
 .beside .kit-io, .beside .tool-split { grid-template-columns: minmax(0, 1fr); }

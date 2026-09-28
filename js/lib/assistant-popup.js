@@ -94,6 +94,10 @@ export async function openAssistant({ prompt = '', artifact = null, send = true 
     mod.render(body, { compact: true, prompt, send, artifact });
   } else if (prompt || artifact) {
     window.dispatchEvent(new CustomEvent('toolbox:assistant-ask', { detail: { prompt, artifact, send } }));
+  } else if (!wasOpen) {
+    // Reopened: the Assistant decides (per Settings) whether to start fresh.
+    window.dispatchEvent(new CustomEvent('toolbox:assistant-reopened'));
+    body.querySelector('.ast-input')?.focus({ preventScroll: true });
   } else {
     body.querySelector('.ast-input')?.focus({ preventScroll: true });
   }

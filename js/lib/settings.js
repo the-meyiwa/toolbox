@@ -19,6 +19,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   notificationSound: false,
   notificationsPush: false,
   offlineFirst: true,
+  assistantOpenTo: 'new',       // 'new' | 'last': what the Assistant shows when it opens
   assistantResponseAnimation: true,
   assistantAnimationStyle: 'color rave', // 'color rave' | 'glow' | 'Plain Fade' | 'Pop In'
   displayName: '',

@@ -349,7 +349,7 @@ svg { flex-shrink: 0; }
 .fz-stat-l { font-size: 12px; line-height: 16px; color: var(--text-2); }
 
 .fz-list { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius-md); overflow: hidden; margin-bottom: var(--space-5); background: var(--surface); }
-.fz-row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface); animation: tb-row-in var(--dur-3) var(--ease-out) both; }
+.fz-row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface); }
 .fz-row + .fz-row { border-top: 1px solid var(--line); }
 .fz-row-block { align-items: flex-start; }
 .fz-row-error { background: var(--danger-soft); }

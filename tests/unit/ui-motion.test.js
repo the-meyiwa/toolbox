@@ -38,3 +38,17 @@ test('Palette and menus animate out as well as in', () => {
   assert.match(read('js/lib/menu-motion.js'), /animate\(/);
   assert.match(read('js/lib/context-menu.js'), /transformOrigin/);
 });
+
+test('Every stylesheet parses (an unclosed brace silently drops everything after it)', async () => {
+  const { default: postcss } = await import('postcss');
+  for (const f of walk('css/', '.css')) assert.doesNotThrow(() => postcss.parse(read(f), { from: f }), f);
+});
+
+test('No entrance fades on content in the Assistant or the page shell', () => {
+  const ast = read('css/assistant.css');
+  for (const sel of ['.ast-turn', '.ast-step', '.ast-sug', '.astc']) {
+    const block = ast.match(new RegExp(`\\${sel} \\{[^}]*\\}`))?.[0] || '';
+    assert.doesNotMatch(block, /animation:\s*ast-(rise|fade)/, sel);
+  }
+  assert.doesNotMatch(read('css/shell.css'), /\.page-view:not\(\.hidden\) \{ animation/);
+});

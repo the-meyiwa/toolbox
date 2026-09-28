@@ -104,7 +104,6 @@ body.is-scrolled #app-header, body.in-tool #app-header { border-bottom-color: va
 
 /* ---------- Pages ---------- */
 .page-view { width: 100%; }
-.page-view:not(.hidden) { animation: tb-page-in var(--dur-4) var(--ease-out) both; }
 @keyframes tb-page-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .page { max-width: var(--content-max); margin: 0 auto; padding: var(--space-12) var(--space-6) var(--space-16); }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-6); flex-wrap: wrap; margin-bottom: var(--space-6); }
@@ -134,7 +133,6 @@ body.is-scrolled #app-header, body.in-tool #app-header { border-bottom-color: va
   height: 28px; padding: 0 var(--space-3);
   border-radius: var(--radius-pill); background: var(--surface); border: 1px solid var(--line);
   font-size: 13px; font-weight: 500; color: var(--text-2);
-  animation: tb-rise var(--dur-4) var(--ease-out) both;
 }
 .home-eyebrow b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
 .home-eyebrow i { width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 20%, transparent); }
@@ -142,15 +140,14 @@ body.is-scrolled #app-header, body.in-tool #app-header { border-bottom-color: va
   margin-top: var(--space-6);
   font-size: clamp(36px, 6vw, 56px); line-height: 1.04; font-weight: 600; letter-spacing: -0.04em;
   text-wrap: balance;
-  animation: tb-rise var(--dur-4) var(--ease-out) 60ms both;
 }
-.home-desc { margin-top: var(--space-3); font-size: 17px; line-height: 26px; color: var(--text-2); animation: tb-rise var(--dur-4) var(--ease-out) 120ms both; }
+.home-desc { margin-top: var(--space-3); font-size: 17px; line-height: 26px; color: var(--text-2); }
 @keyframes tb-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
 /* z-index: the entrance animations below (quick chips, Assistant card) each create a
    stacking context that comes later in the page, so without this they painted over the
    open suggestions dropdown. */
-.home-search-wrap { position: relative; z-index: 30; width: 100%; margin-top: var(--space-8); animation: tb-rise var(--dur-4) var(--ease-out) 180ms both; }
+.home-search-wrap { position: relative; z-index: 30; width: 100%; margin-top: var(--space-8); }
 .home-search-field { position: relative; display: flex; align-items: center; }
 .home-search-field > svg { position: absolute; left: 20px; width: 20px; height: 20px; color: var(--text-3); pointer-events: none; }
 .home-search-input {
@@ -192,7 +189,7 @@ body.is-scrolled #app-header, body.in-tool #app-header { border-bottom-color: va
 .hero-dd-desc { display: block; font-size: 12px; line-height: 16px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hero-dd-empty { padding: var(--space-3); font-size: 13px; color: var(--text-2); text-align: center; }
 
-.home-quick { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); margin-top: var(--space-5); animation: tb-rise var(--dur-4) var(--ease-out) 240ms both; }
+.home-quick { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); margin-top: var(--space-5); }
 .home-quick-item {
   display: inline-flex; align-items: center; gap: var(--space-2);
   height: var(--control-sm); padding: 0 var(--space-3);
@@ -205,7 +202,7 @@ body.is-scrolled #app-header, body.in-tool #app-header { border-bottom-color: va
 .home-quick-icon { display: inline-flex; width: 14px; height: 14px; }
 .home-quick-icon svg { width: 100%; height: 100%; }
 
-.home-assistant { width: 100%; margin-top: var(--space-8); animation: tb-rise var(--dur-4) var(--ease-out) 300ms both; }
+.home-assistant { width: 100%; margin-top: var(--space-8); }
 .home-assistant-card {
   display: flex; align-items: center; gap: var(--space-4);
   padding: var(--space-4) var(--space-4) var(--space-4) var(--space-5);
@@ -311,7 +308,6 @@ body.is-scrolled #app-header, body.in-tool #app-header { border-bottom-color: va
 .category-label { font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.015em; }
 .category-count { font-size: 13px; font-weight: 500; color: var(--text-3); font-variant-numeric: tabular-nums; }
 .category-blurb { margin-top: -12px; margin-bottom: var(--space-4); font-size: 14px; line-height: 22px; color: var(--text-2); }
-.category-tools .tool-card { animation: tb-card-in var(--dur-4) var(--ease-out) both; animation-delay: calc(min(var(--i, 0), 12) * 24ms); }
 @keyframes tb-card-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 /* ---------- Tool viewport ---------- */
@@ -350,7 +346,6 @@ body.tool-wide #tool-viewport { max-width: 1480px; }
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-1);
   padding: var(--space-6);
-  animation: tb-panel-in var(--dur-4) var(--ease-out) both;
 }
 #viewport-content[aria-busy="true"] { min-height: 240px; }
 #viewport-content[aria-busy="true"]::after {
