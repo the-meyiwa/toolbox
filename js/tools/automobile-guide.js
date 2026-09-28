@@ -172,7 +172,7 @@ export default {
           font-weight: 600;
           color: var(--text-muted, #94a3b8);
           cursor: pointer;
-          transition: all 0.15s ease;
+          transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
         }
         .ag-view-btn.active {
           background: var(--accent, #3b82f6);
@@ -273,7 +273,7 @@ export default {
           cursor: pointer;
           font-size: 0.82rem;
           color: var(--text-muted, #94a3b8);
-          transition: all 0.15s ease;
+          transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
           border: 1px solid transparent;
         }
         .ag-nav-item:hover {
@@ -352,7 +352,7 @@ export default {
           justify-content: center;
           cursor: pointer;
           box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-          transition: all 0.15s ease;
+          transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
         }
         .ag-tool-btn:hover {
           background: var(--bg-subtle, #334155);
@@ -474,7 +474,7 @@ export default {
           border-radius: 999px;
           color: var(--text, #f8fafc);
           cursor: pointer;
-          transition: all 0.15s ease;
+          transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
         }
         .ag-chip:hover {
           border-color: var(--accent, #3b82f6);

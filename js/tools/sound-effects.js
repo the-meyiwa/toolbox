@@ -174,7 +174,7 @@ export default {
       sfxGrid.innerHTML = items.map((s) => {
         const isFav = favorites.some(f => f.id === s.id);
         return `
-          <div class="sfx-card" data-id="${s.id}" style="background:var(--white); border:1px solid var(--g200); border-radius:10px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:all 0.15s cubic-bezier(0.16,1,0.3,1);" title="Click to play ${s.name.replace(/"/g, '&quot;')}">
+          <div class="sfx-card" data-id="${s.id}" style="background:var(--white); border:1px solid var(--g200); border-radius:10px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:background-color 0.15s cubic-bezier(0.16,1,0.3,1), border-color 0.15s cubic-bezier(0.16,1,0.3,1), color 0.15s cubic-bezier(0.16,1,0.3,1), box-shadow 0.15s cubic-bezier(0.16,1,0.3,1), opacity 0.15s cubic-bezier(0.16,1,0.3,1), transform 0.15s cubic-bezier(0.16,1,0.3,1);" title="Click to play ${s.name.replace(/"/g, '&quot;')}">
             <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
               ${s.artworkUrl ? `<img src="${s.artworkUrl}" style="width:30px; height:30px; border-radius:4px; object-fit:cover;">` : ''}
               <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-right:8px;">

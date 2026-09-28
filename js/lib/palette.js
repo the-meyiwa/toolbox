@@ -280,6 +280,8 @@ function onKeys(e) {
 export function openPalette(prefill = '', { data = null } = {}) {
   if (!root) build();
   open = true;
+  clearTimeout(root._closeTimer);
+  root.classList.remove('is-closing');
   root.hidden = false;
   pasted = data;
   input.value = data != null ? flat(data).slice(0, 500) : prefill;
@@ -291,7 +293,10 @@ export function openPalette(prefill = '', { data = null } = {}) {
 export function close() {
   if (!root || !open) return;
   open = false;
-  root.hidden = true;
+  // Fade out, then hide; reopening during the fade cancels it.
+  root.classList.add('is-closing');
+  clearTimeout(root._closeTimer);
+  root._closeTimer = setTimeout(() => { if (!open) root.hidden = true; root.classList.remove('is-closing'); }, 150);
 }
 
 export const isOpen = () => open;

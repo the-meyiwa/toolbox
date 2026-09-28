@@ -1,0 +1,122 @@
+/* ==========================================================================
+   Motion — one quiet motion language for every control.
+
+   Everything here is wrapped in :where(), so it has no specificity: any
+   component that styles its own transition keeps it, and anything that
+   styled none gets these. Only colour, border, shadow, opacity and
+   transform move; nothing animates layout. Values come from tokens.css.
+   ========================================================================== */
+
+:root {
+  --motion-fast: var(--dur-1, 120ms);
+  --motion: var(--dur-2, 180ms);
+  --motion-slow: var(--dur-3, 260ms);
+  --motion-ease: var(--ease-out, cubic-bezier(.2, .8, .2, 1));
+  --motion-spring: cubic-bezier(.3, 1.35, .5, 1);
+}
+
+/* ---------- Every control responds ---------- */
+:where(button, [role="button"], [role="tab"], [role="radio"], [role="switch"], [role="menuitem"], [role="option"], summary, a.btn, .chip, label.tool-checkbox) {
+  transition:
+    background-color var(--motion) var(--motion-ease),
+    border-color var(--motion) var(--motion-ease),
+    color var(--motion) var(--motion-ease),
+    box-shadow var(--motion) var(--motion-ease),
+    opacity var(--motion) var(--motion-ease),
+    transform var(--motion-fast) var(--motion-ease);
+}
+:where(input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  transition: background-color var(--motion) var(--motion-ease), border-color var(--motion) var(--motion-ease), box-shadow var(--motion) var(--motion-ease), color var(--motion) var(--motion-ease);
+}
+/* Press feedback: a small, fast settle, never a bounce. */
+:where(button, [role="button"], [role="tab"], a.btn, .chip):where(:active:not(:disabled):not([aria-disabled="true"])) { transform: scale(.97); }
+:where(button.btn-icon, .btn-icon):where(:active:not(:disabled)) { transform: scale(.92); }
+
+/* ---------- Checkboxes: the tick draws in ---------- */
+.tool-checkbox input[type="checkbox"]:not(.switch) { transition: background-color var(--motion) var(--motion-ease), border-color var(--motion) var(--motion-ease), box-shadow var(--motion) var(--motion-ease), transform var(--motion-fast) var(--motion-ease); }
+.tool-checkbox input[type="checkbox"]:not(.switch):active { transform: scale(.9); }
+.tool-checkbox input[type="checkbox"]:not(.switch):checked::after { animation: motion-tick var(--motion-slow) var(--motion-spring) both; }
+@keyframes motion-tick { from { opacity: 0; transform: rotate(-45deg) scale(.4); } to { opacity: 1; transform: rotate(-45deg) scale(1); } }
+.switch::after { transition: transform var(--motion-slow) var(--motion-spring), width var(--motion-fast) var(--motion-ease), background-color var(--motion) var(--motion-ease); }
+.switch:active::after { width: 20px; }
+.switch:checked:active::after { transform: translateX(10px); }
+
+/* ---------- Sliders: a filled track and a thumb that responds ---------- */
+.tool-range, input[type="range"].mo-range { --mo-p: 50%; }
+.tool-range::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, var(--ink) 0 var(--mo-p), var(--surface-3) var(--mo-p) 100%);
+  transition: background-size var(--motion) var(--motion-ease);
+}
+.tool-range::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--ink); }
+.tool-range::-webkit-slider-thumb { transition: transform var(--motion) var(--motion-spring), box-shadow var(--motion) var(--motion-ease); }
+.tool-range::-moz-range-thumb { transition: transform var(--motion) var(--motion-spring), box-shadow var(--motion) var(--motion-ease); }
+.tool-range:hover::-webkit-slider-thumb { transform: scale(1.12); }
+.tool-range:hover::-moz-range-thumb { transform: scale(1.12); }
+.tool-range:active::-webkit-slider-thumb { transform: scale(1.25); box-shadow: 0 0 0 1px var(--ink), 0 0 0 7px var(--tint); }
+.tool-range:active::-moz-range-thumb { transform: scale(1.25); box-shadow: 0 0 0 1px var(--ink), 0 0 0 7px var(--tint); }
+.tool-range:focus-visible { outline: none; }
+.tool-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 1px var(--ink), 0 0 0 4px var(--focus-ring, var(--tint)); }
+
+/* ---------- Switchers: a gliding indicator (js/lib/motion.js) ---------- */
+.mo-seg { position: relative; isolation: isolate; }
+/* The indicator is this layer's own element, so its geometry is pinned: a
+   component's rules for its children (".btn-group > *") must not move it.
+   Position uses the translate property, which transform rules cannot reset. */
+.mo-seg > .mo-seg-ind {
+  position: absolute !important; left: 0 !important; top: 0; z-index: -1; pointer-events: none; margin: 0 !important; padding: 0 !important;
+  width: var(--mo-w, 0) !important; height: var(--mo-h, 0); flex: none !important;
+  transform: none !important; translate: var(--mo-x, 0) var(--mo-y, 0);
+  border-radius: var(--mo-r, 10px); background: var(--mo-bg, var(--surface)); box-shadow: var(--mo-shadow, var(--shadow-1));
+  opacity: 0;
+  transition: translate var(--motion-slow) var(--motion-ease), width var(--motion-slow) var(--motion-ease), height var(--motion-slow) var(--motion-ease), opacity var(--motion) ease !important;
+}
+.mo-seg.mo-ready > .mo-seg-ind { opacity: 1; }
+.mo-seg.mo-underline > .mo-seg-ind { top: auto; bottom: 0; height: 2px; border-radius: 2px; background: var(--mo-line, var(--ink)); box-shadow: none; translate: var(--mo-x, 0) 0; }
+/* The indicator paints the active background, so the item itself stays clear. */
+.mo-seg.mo-pill.mo-ready > .mo-active { background: transparent !important; box-shadow: none !important; }
+.mo-seg.mo-underline.mo-ready > .mo-active { border-bottom-color: transparent !important; box-shadow: none !important; }
+.mo-seg.mo-underline.mo-ready > .mo-active::after { opacity: 0 !important; }
+.mo-seg.mo-instant > .mo-seg-ind { transition: none !important; }
+
+/* ---------- Disclosure: <details> opens and closes smoothly ---------- */
+details > summary { cursor: pointer; }
+details > summary::marker { transition: color var(--motion) var(--motion-ease); }
+details.mo-animating { overflow: hidden; }
+
+/* ---------- Things that appear ---------- */
+:where([role="dialog"]:not(.io-pick-card):not(.pal-panel)) { animation: motion-rise var(--motion-slow) var(--motion-ease) both; }
+@keyframes motion-rise { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }
+:where(.kit-result:not([hidden]), .kit-progress:not([hidden]), .kit-thumbs > figure) { animation: motion-in var(--motion-slow) var(--motion-ease) both; }
+.kit-thumbs > figure:nth-child(n) { animation-delay: calc(min(var(--i, 0), 12) * 18ms); }
+@keyframes motion-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+/* Result rows arrive together rather than all at once. */
+.kit-files > .kit-file { animation: motion-in var(--motion-slow) var(--motion-ease) both; }
+
+/* ---------- Tool content arrives with the page, not before it ---------- */
+#viewport-content[aria-busy="false"] > * { animation: motion-in var(--motion-slow) var(--motion-ease) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
+  .mo-seg-ind { transition: none !important; }
+}
+
+/* ---------- Search palette ---------- */
+.pal:not([hidden]) .pal-scrim { animation: motion-fade var(--motion-slow) var(--motion-ease) both; }
+.pal:not([hidden]) .pal-panel { animation: motion-rise var(--motion-slow) var(--motion-ease) both; }
+.pal.is-closing .pal-scrim { animation: motion-fade-out 150ms ease both; }
+.pal.is-closing .pal-panel { animation: motion-sink 150ms cubic-bezier(.4, 0, 1, 1) both; }
+.pal-row { transition: background-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease); }
+@keyframes motion-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes motion-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes motion-sink { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(6px) scale(.985); } }
+
+/* Bare checkboxes and radios (not styled as .tool-checkbox) still respond. */
+:where(input[type="checkbox"], input[type="radio"]) { transition: box-shadow var(--motion) var(--motion-ease), background-color var(--motion) var(--motion-ease), border-color var(--motion) var(--motion-ease), transform var(--motion-fast) var(--motion-ease); }
+
+/* In-app links open a Toolbox menu on long press (js/lib/global-menus.js), so
+   Safari's own link preview must not appear over it. */
+a[href^="#"], .kit-file, .kit-thumbs figure, .beside-row { -webkit-touch-callout: none; }
+
+/* Menu icons: registry tool icons carry no size of their own. */
+.finder-menu-icon { width: 16px; height: 16px; justify-content: center; color: var(--text-2); }
+.finder-menu-icon > svg { width: 16px; height: 16px; }

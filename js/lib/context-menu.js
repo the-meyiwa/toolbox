@@ -130,6 +130,9 @@ export function openContextMenu({ x, y, title = '', items = [], className = '', 
 
   menu.style.left = `${left}px`;
   menu.style.top = `${top}px`;
+  // Unfold from the point that was clicked, even when the menu had to be
+  // pushed back from a screen edge.
+  menu.style.transformOrigin = `${Math.max(0, Math.min(rect.width, x - left))}px ${Math.max(0, Math.min(rect.height, y - top))}px`;
   menu.style.visibility = 'visible';
   if (focusFirst) menu.querySelector('[role="menuitem"]:not([aria-disabled="true"])')?.focus();
 

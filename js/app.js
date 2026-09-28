@@ -33,7 +33,8 @@ import '../css/code-playground.css';
 import { initHomeScrollNarrative } from './home-scroll.js';
 import { listJoinedSpaces } from './lib/space-engine.js';
 import { deliverToFileInput } from './lib/interop.js';
-import { installGlobalMenus } from './lib/global-menus.js';
+import { installGlobalMenus, installLongPress } from './lib/global-menus.js';
+import { installMotion } from './lib/motion.js';
 import { initMessageNotifications } from './lib/message-notifications.js';
 import { installSessionKeeper } from './lib/session-keeper.js';
 import { startReminderClock } from './lib/reminders.js';
@@ -1160,9 +1161,11 @@ reflectSavedWork();
 
 
 // Right-click menus for tool links, the open tool and the page (js/lib/global-menus.js).
+installLongPress();
 installGlobalMenus({ getTool: () => (currentPage === 'tool' && currentToolObj ? { tool: currentToolObj, instance: currentToolInstance } : null) });
 
 initTheme();
+installMotion();
 
 installSettingsUI();
 initSupporterProfile();

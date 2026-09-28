@@ -84,7 +84,7 @@ export default {
             <div style="display:flex; flex-direction:column; gap:14px;">
               
               <!-- Drop target -->
-              <div id="p2p-dropzone" style="border:2px dashed var(--g300); border-radius:14px; padding:36px 20px; text-align:center; background:var(--white); cursor:pointer; transition:all 0.15s cubic-bezier(0.16,1,0.3,1);">
+              <div id="p2p-dropzone" style="border:2px dashed var(--g300); border-radius:14px; padding:36px 20px; text-align:center; background:var(--white); cursor:pointer; transition:background-color 0.15s cubic-bezier(0.16,1,0.3,1), border-color 0.15s cubic-bezier(0.16,1,0.3,1), color 0.15s cubic-bezier(0.16,1,0.3,1), box-shadow 0.15s cubic-bezier(0.16,1,0.3,1), opacity 0.15s cubic-bezier(0.16,1,0.3,1), transform 0.15s cubic-bezier(0.16,1,0.3,1);">
                 <input type="file" id="p2p-file-input" multiple style="display:none;">
                 <div style="width:48px; height:48px; border-radius:50%; background:var(--g100); display:flex; align-items:center; justify-content:center; margin:0 auto 12px; color:var(--black);">
                   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>

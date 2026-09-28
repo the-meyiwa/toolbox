@@ -1626,7 +1626,7 @@ export class FileSavedResultRenderer extends ResultRenderer {
     viewBtn.className = 'assistant-saved-link';
     viewBtn.href = data.artifactId ? `#/saved?id=${data.artifactId}` : '#/saved';
     viewBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">View in Saved Work ${ICONS.external}</span>`;
-    viewBtn.style.cssText = 'font-size:0.78rem; font-weight:700; color:var(--primary, #2563eb); text-decoration:none; padding:4px 12px; border-radius:9999px; background:var(--white); border:1px solid var(--g200); transition:all .15s; white-space:nowrap;';
+    viewBtn.style.cssText = 'font-size:0.78rem; font-weight:700; color:var(--primary, #2563eb); text-decoration:none; padding:4px 12px; border-radius:9999px; background:var(--white); border:1px solid var(--g200); transition:background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease, opacity .15s ease, transform .15s ease; white-space:nowrap;';
     viewBtn.onmouseover = () => { viewBtn.style.background = 'var(--g100)'; };
     viewBtn.onmouseout = () => { viewBtn.style.background = 'var(--white)'; };
 
@@ -2659,7 +2659,7 @@ export class AlgorithmResultRenderer extends ResultRenderer {
         const hPct = Math.max(10, Math.round((val / maxVal) * 100));
         const isFocus = f.a === i || f.b === i || f.mid === i;
         const isDone = Array.isArray(f.sorted) && f.sorted.includes(i);
-        bar.style.cssText = `flex:1; max-width:24px; height:${hPct}%; border-radius:4px 4px 0 0; background:${isFocus ? 'var(--primary, #2563eb)' : (isDone ? '#10b981' : 'var(--g300)')}; transition:all 0.15s ease; display:flex; align-items:flex-end; justify-content:center;`;
+        bar.style.cssText = `flex:1; max-width:24px; height:${hPct}%; border-radius:4px 4px 0 0; background:${isFocus ? 'var(--primary, #2563eb)' : (isDone ? '#10b981' : 'var(--g300)')}; transition:background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, transform 0.15s ease; display:flex; align-items:flex-end; justify-content:center;`;
         bar.innerHTML = `<span style="font-size:0.6rem; color:var(--white); margin-bottom:2px; font-weight:700;">${val}</span>`;
         barContainer.appendChild(bar);
       });
@@ -2789,7 +2789,7 @@ export class MetronomeResultRenderer extends ResultRenderer {
     for (let i = 0; i < beats; i++) {
       const dot = document.createElement('div');
       dot.className = `met-dot met-dot-${i}`;
-      dot.style.cssText = 'width:14px; height:14px; border-radius:50%; background:var(--g200); border:1.5px solid var(--g300); transition:all 0.08s ease;';
+      dot.style.cssText = 'width:14px; height:14px; border-radius:50%; background:var(--g200); border:1.5px solid var(--g300); transition:background-color 0.08s ease, border-color 0.08s ease, color 0.08s ease, box-shadow 0.08s ease, opacity 0.08s ease, transform 0.08s ease;';
       dotsWrap.appendChild(dot);
     }
 

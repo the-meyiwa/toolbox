@@ -121,3 +121,34 @@ export function installGlobalMenus({ getTool }) {
     openContextMenu({ x: e.clientX, y: e.clientY, title: 'Toolbox', items: pageItems() });
   });
 }
+
+/**
+ * iOS Safari never fires `contextmenu` for a long press, so every menu in
+ * the app would be unreachable there. Hold still for half a second and a
+ * contextmenu event is sent to what is under the finger, which every menu
+ * (these, Files, Notes, the kit shells) already listens for. Android fires
+ * its own and is left alone.
+ */
+export function installLongPress() {
+  const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (!ios || window.__toolboxLongPress) return;
+  window.__toolboxLongPress = true;
+  let timer = 0; let start = null; let fired = false;
+  const cancel = () => { clearTimeout(timer); timer = 0; };
+  document.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return cancel();
+    const t = e.touches[0];
+    const target = e.target instanceof Element ? e.target : null;
+    if (!target || target.closest(EDITABLE)) return;
+    start = { x: t.clientX, y: t.clientY }; fired = false;
+    cancel();
+    timer = setTimeout(() => {
+      fired = true;
+      target.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: start.x, clientY: start.y, button: 2 }));
+      navigator.vibrate?.(8);
+    }, 480);
+  }, { passive: true });
+  document.addEventListener('touchmove', (e) => { const t = e.touches[0]; if (start && Math.hypot(t.clientX - start.x, t.clientY - start.y) > 10) cancel(); }, { passive: true });
+  document.addEventListener('touchend', (e) => { cancel(); if (fired) { e.preventDefault(); fired = false; } }, { passive: false });
+  document.addEventListener('touchcancel', cancel, { passive: true });
+}

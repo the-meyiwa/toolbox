@@ -4,7 +4,7 @@ export default {
       <div class="tool-content">
         
         <div class="tool-section">
-          <div id="doc-dropzone" role="button" tabindex="0" aria-label="Choose a text file to analyse" style="border: 2px dashed var(--g300); border-radius: 8px; padding: 40px 20px; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--g50);">
+          <div id="doc-dropzone" role="button" tabindex="0" aria-label="Choose a text file to analyse" style="border: 2px dashed var(--g300); border-radius: 8px; padding: 40px 20px; text-align: center; cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, transform 0.2s ease; background: var(--g50);">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--g400)" stroke-width="2" style="margin-bottom:12px;">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
             </svg>
