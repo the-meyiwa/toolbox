@@ -13,6 +13,7 @@
    ============================================================ */
 
 import { marked } from 'marked';
+import { cleanHtml } from '../safe-html.js';
 import { WorkspaceFS } from './vfs.js';
 import { AutoSaver, putWorkspace, putObjects, getObject } from './store.js';
 import { Shell, StringInput } from './shell.js';
@@ -41,7 +42,8 @@ function loadPrefs() {
 function savePrefs(p) { try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch { /* ignore */ } }
 
 export function renderMarkdown(md) {
-  try { return (typeof marked?.parse === 'function' ? marked.parse(String(md || '')) : marked(String(md || ''))); } catch { return `<pre>${esc(md)}</pre>`; }
+  // READMEs are often written by the agent or imported from a repository: clean before display.
+  try { return cleanHtml(typeof marked?.parse === 'function' ? marked.parse(String(md || '')) : marked(String(md || ''))); } catch { return `<pre>${esc(md)}</pre>`; }
 }
 
 /* ============================================================

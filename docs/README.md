@@ -11,6 +11,8 @@ Welcome to the canonical engineering guide, architectural blueprint, and complet
 | **[Architecture Guide](ARCHITECTURE.md)** | Core system architecture, SPA shell, ESM code splitting, hash router, AI Assistant integration, Supabase Cloud Sync, and P2P WebRTC Spaces engine. |
 | **[Implementation & Tool Reference](IMPLEMENTATION_GUIDE.md)** | Exhaustive technical directory of all 100+ tools, AI capability matrices, shared file/PDF engines, and extension guide. |
 | **[Architecture, structures and 3D](architecture-and-3d.md)** | Realistic rendering, the ISO container model and structural check, the Assistant's `model_3d` and `knowledge_library` tools, the architecture calculators and the Math Utility Structures mode. |
+| **[Assistant efficiency](assistant-efficiency.md)** | How requests stay small on free model tiers: per-group prompts, compacted steps, one-call site builds, document caching, argument coercion and the fuzz tests that guard them. |
+| **[Automations and notifications](automations-and-notifications.md)** | Scheduled recipes (triggers, chained steps, catch-up rules) and how notifications reach the person in and out of the tab. |
 | **[Music Theory Library](music-theory-library.md)** | The theory engine, content format, labs, and the Assistant's `music_library` and `music_theory` tools. |
 | **[Platform Integration Guide](INTEGRATION_GUIDE.md)** | Ecosystem alignment, shared data contracts (JSON schemas, artifacts), AI provider APIs (Gemini), WebRTC signaling protocols, and maintainability standards. |
 

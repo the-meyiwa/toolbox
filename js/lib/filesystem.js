@@ -751,10 +751,17 @@ export class ToolboxFilesystem {
     const src = normalizePath(oldPath);
     const targetDst = newPath.includes('/') ? newPath : `${getParentPath(src)}/${newPath}`;
     const dst = normalizePath(targetDst);
-    if (src === dst) return await this.stat(src);
-
     const record = await dbDriver.get(src);
     if (!record) throw new Error(`Not found: ${src}`);
+    if (src === dst) return await this.stat(src);
+    // Refuse moves that would orphan the item or silently replace another one.
+    const dstParent = getParentPath(dst);
+    if (dstParent && dstParent !== '/') {
+      const parent = await dbDriver.get(dstParent);
+      if (!parent || !parent.isDirectory) throw new Error(`Folder not found: ${dstParent}`);
+    }
+    if (await dbDriver.get(dst)) throw new Error(`Something already exists at ${dst}`);
+    if (record.isDirectory && (dst + '/').startsWith(src + '/')) throw new Error('A folder cannot be moved into itself.');
 
     if (record.isDirectory) {
       // Move directory and all descendants

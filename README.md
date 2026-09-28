@@ -1,6 +1,6 @@
 # Toolbox
 
-**174 everyday and specialist tools in one fast web app, with an AI assistant that can use all of them.**
+**176 everyday and specialist tools in one fast web app, with an AI assistant that can use all of them.**
 
 Compress an image, balance a chemical equation, digest a court judgment, draft an invoice or run some Python, all from one page with no sign-up. Most tools run entirely in your browser, so your files stay on your device. Accounts are optional and only add cloud sync, and live Spaces let you collaborate peer to peer.
 
@@ -128,6 +128,8 @@ Add an entry to `js/registry/tools.js` and create `js/tools/<id>.js` exporting `
 - [Implementation and tool reference](docs/IMPLEMENTATION_GUIDE.md)
 - [Platform integration](docs/INTEGRATION_GUIDE.md)
 - [Assistant quick start](docs/ASSISTANT_QUICKSTART.md) and [integration guide](docs/ASSISTANT_INTEGRATION_GUIDE.md)
+- [Assistant efficiency](docs/assistant-efficiency.md): keeping requests small on free model tiers
+- [Automations and notifications](docs/automations-and-notifications.md)
 - [Architecture, structures and 3D](docs/architecture-and-3d.md)
 - [Code Playground](docs/code-playground.md)
 - [Vehicle Guide](docs/automobile-viewer.md)

@@ -1,7 +1,4 @@
-import { marked } from 'marked';
-
-// Configure marked
-marked.setOptions({ breaks: true, gfm: true });
+import { safeMarkdown } from '../lib/safe-html.js';
 
 export default {
   render(container, { artifact } = {}) {
@@ -23,7 +20,8 @@ export default {
 
     function update() {
       try {
-        preview.innerHTML = marked.parse(input.value || '');
+        // Pasted or handed-over Markdown may carry HTML: scripts and handlers are removed.
+        preview.innerHTML = safeMarkdown(input.value || '', { breaks: true, gfm: true });
       } catch {
         preview.innerHTML = '<p style="color:var(--g400);">Error parsing markdown</p>';
       }

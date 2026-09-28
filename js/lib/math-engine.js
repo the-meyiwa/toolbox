@@ -2237,6 +2237,8 @@ export function calculateLinearRegression(dataOrX, dataY = null) {
    CALCULATE -> VERIFY -> RETURN STRUCTURED RESULT -> RENDER
    ============================================================ */
 
+const MAX_EXPRESSION_CHARS = 5000;
+
 export function calculateMath({
   operation = 'evaluate',
   expression = '',
@@ -2278,8 +2280,20 @@ export function calculateMath({
   term = null,
   remainders = null
 } = {}) {
-  const op = (operation || 'evaluate').toLowerCase().trim();
+  const op = String(operation || 'evaluate').toLowerCase().trim();
   let resultObj = null;
+
+  // Runs of letters are read as implicit multiplication (xxxx = x·x·x·x), which the algebra
+  // engine expands symbolically: 1,000 letters took seconds and 20,000 froze the tab. No real
+  // expression or command has a word that long, so refuse before parsing.
+  const exprText = typeof expression === 'string' ? expression : '';
+  if (exprText.length > MAX_EXPRESSION_CHARS) {
+    return { status: 'error', success: false, type: 'math-result', message: `That expression is ${exprText.length.toLocaleString()} characters long; the calculator takes up to ${MAX_EXPRESSION_CHARS.toLocaleString()}.` };
+  }
+  const longWord = /[A-Za-z]{40,}/.exec(exprText);
+  if (longWord) {
+    return { status: 'error', success: false, type: 'math-result', message: `The expression contains a ${longWord[0].length}-letter word ("${longWord[0].slice(0, 12)}…") the calculator cannot read. Separate variables with operators, e.g. x*y.` };
+  }
 
   if (op === 'command' || op === 'cas' || op === 'advanced' || op === 'mathx') {
     return { status: 'success', type: 'math-result', ...runAdvancedMath(String(expression || input || '')) };

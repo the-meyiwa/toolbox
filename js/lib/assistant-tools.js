@@ -4536,7 +4536,7 @@ if (container) {
     case 'save_toolbox_artifact': {
       const { name: artName, content, kind = 'text' } = args;
       try {
-        const { saveArtifact } = await import('./artifacts.js');
+        const { save: saveArtifact } = await import('./artifacts.js');
         const art = saveArtifact({ kind, name: artName, text: content, from: 'assistant' });
         return {
           status: 'success',

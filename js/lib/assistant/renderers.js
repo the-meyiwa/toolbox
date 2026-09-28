@@ -866,6 +866,53 @@ export function renderAutomations(data, container) {
 }
 
 registerResultRenderer('automations', renderAutomations);
+
+/* A site or app the Assistant built: a live preview in a sandboxed frame (scripts run, but it
+   cannot reach Toolbox's storage, cookies or the page around it), with the project's files. */
+const CODE_ICON = '<path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/>';
+export function renderIdeProject(data, container) {
+  const files = Array.isArray(data.files) ? data.files : [];
+  const ok = data.status !== 'error';
+  const el = card('ide', {
+    icon: CODE_ICON,
+    title: data.project || 'Project',
+    sub: ok ? (data.htmlBundle ? 'Live preview' : 'Code Playground project') : 'Build failed',
+    actions: `${data.htmlBundle ? btn('Full screen', I.external, 'data-act="full"') : ''}${btn('Open in Code Playground', I.external, 'data-act="ide"')}`,
+  });
+  const body = el.querySelector('.astc-body');
+  if (data.htmlBundle) {
+    const frame = document.createElement('iframe');
+    frame.className = 'astc-ide-frame';
+    frame.title = `${data.project || 'Project'} preview`;
+    frame.setAttribute('sandbox', 'allow-scripts allow-forms allow-modals');
+    frame.setAttribute('loading', 'lazy');
+    frame.srcdoc = data.htmlBundle;
+    body.appendChild(frame);
+  }
+  if (data.diagnostics?.length) {
+    const list = document.createElement('ul');
+    list.className = 'astc-ide-diag';
+    list.innerHTML = data.diagnostics.slice(0, 8).map(d => `<li><strong>${esc(d.file)}</strong> ${esc(d.message)}</li>`).join('');
+    body.appendChild(list);
+  }
+  if (files.length) {
+    const p = document.createElement('p');
+    p.className = 'astc-muted astc-ide-files';
+    p.textContent = files.join(' · ');
+    body.appendChild(p);
+  }
+  el.addEventListener('click', (e) => {
+    const act = e.target.closest('[data-act]')?.dataset.act;
+    if (act === 'ide') openTool('code-playground');
+    // Full screen keeps the site in its sandboxed frame: opened as a page of its own it would
+    // run on Toolbox's origin, with access to the person's session.
+    if (act === 'full') el.querySelector('.astc-ide-frame')?.requestFullscreen?.().catch(() => {});
+  });
+  container.appendChild(el);
+  return el;
+}
+registerResultRenderer('ide-preview', renderIdeProject);
+registerResultRenderer('ide-project', renderIdeProject);
 registerResultRenderer('music-library', renderMusicLibrary);
 registerResultRenderer('music-theory', renderMusicTheory);
 registerResultRenderer('business-calc', renderBusinessCalc);

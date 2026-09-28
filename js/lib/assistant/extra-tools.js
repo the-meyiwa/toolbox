@@ -1076,7 +1076,7 @@ async function estimateConstruction(args = {}) {
   if (!elements.length) return { status: 'error', message: 'Give a building outline (length and width), a container_base, or a list of elements to estimate.' };
   const region = CE.REGIONS[args.region] ? args.region : prefs.region;
   const project = CE.normaliseProject({
-    name: args.project_name || (args.building ? `${args.building.length} × ${args.building.width} m building` : 'Construction estimate'),
+    name: args.project_name || (Number(args.building?.length) > 0 && Number(args.building?.width) > 0 ? `${args.building.length} × ${args.building.width} m building` : 'Construction estimate'),
     client: args.client, site: args.site,
     contingency: args.contingency_pct ?? 5,
     vat: typeof args.vat === 'boolean' ? args.vat : null,

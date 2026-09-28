@@ -247,3 +247,9 @@
 @media (max-width: 640px) { .astc-ml-road li { grid-template-columns: 1fr; gap: 2px; } }
 .astc-music .astc-sheet, .astc-biz .astc-sheet, .astc-net .astc-sheet { grid-template-columns: 1fr; }
 .astc-net .astc-sheet dd { text-align: right; word-break: break-word; }
+/* Assistant: site/app preview and automation cards */
+.astc-ide-frame { display: block; width: 100%; height: clamp(260px, 52vh, 520px); border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.astc-ide-frame:fullscreen { border: 0; border-radius: 0; height: 100%; }
+.astc-ide-diag { margin: 10px 0 0; padding-left: 18px; color: var(--danger); font-size: 13px; }
+.astc-ide-files { margin: 8px 0 0; font-size: 12.5px; overflow-wrap: anywhere; }
+.astc-auto .astc-sheet + .astc-sheet { margin-top: 8px; }

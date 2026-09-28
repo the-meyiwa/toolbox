@@ -219,7 +219,9 @@ async function musicTheoryTool(args = {}) {
       default: return { status: 'error', message: 'Unknown action.' };
     }
   } catch (e) {
-    return { status: 'error', message: `Could not work that out: ${e.message}. Check the note names (letters A–G with # or b).` };
+    // An unrecognised note surfaces as a null deep in the theory code; say what that means.
+    const why = /Cannot read|is not a function|undefined|null/.test(String(e?.message)) ? 'a note or key name was not recognised' : e.message;
+    return { status: 'error', message: `Could not work that out: ${why}. Check the note names (letters A–G with # or b, e.g. C, F#, Bb4).` };
   }
 }
 

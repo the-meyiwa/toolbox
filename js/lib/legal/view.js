@@ -139,8 +139,9 @@ export async function copyToClipboard(text, btn) {
 
 /** Prints Markdown through a hidden frame, so "Save as PDF" gives a clean document. */
 export async function printMarkdown(title, md) {
-  const { marked } = await import('marked');
-  const html = marked.parse(md);
+  // The frame is same-origin, so the document's own HTML must not be able to run.
+  const { safeMarkdown } = await import('../safe-html.js');
+  const html = safeMarkdown(md, { gfm: true });
   const frame = document.createElement('iframe');
   frame.setAttribute('aria-hidden', 'true');
   frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';

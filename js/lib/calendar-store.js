@@ -87,6 +87,35 @@ export function saveEvents(events) {
   }
 }
 
+const pad2 = (n) => String(n).padStart(2, '0');
+
+/** "2026-10-01", "2026-10-01T09:00", "1 Oct 2026" → "2026-10-01"; throws on anything else. */
+export function normalizeEventDate(value) {
+  const s = String(value ?? '').trim();
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s);
+  let d = null;
+  if (iso) d = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+  else if (s && !/^[-+]?\d+(\.\d+)?$/.test(s)) { const t = Date.parse(s); if (Number.isFinite(t)) d = new Date(t); }
+  if (!d || Number.isNaN(d.getTime()) || (iso && (d.getMonth() !== Number(iso[2]) - 1 || d.getDate() !== Number(iso[3])))) {
+    throw new Error(`"${s.slice(0, 40)}" is not a date. Use YYYY-MM-DD, e.g. 2026-10-01.`);
+  }
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+/** "9:00", "09:00", "3pm", "3:30 PM", "15:30:00" → "HH:MM"; empty → fallback; throws on nonsense. */
+export function normalizeEventTime(value, fallback = '09:00') {
+  const s = String(value ?? '').trim().toLowerCase();
+  if (!s) return fallback;
+  const m = /^(\d{1,2})(?::(\d{2}))?(?::\d{2})?\s*(am|pm)?$/.exec(s);
+  if (!m) throw new Error(`"${String(value).slice(0, 20)}" is not a time. Use HH:MM, e.g. 14:30.`);
+  let h = Number(m[1]);
+  const min = Number(m[2] || 0);
+  if (m[3] === 'pm' && h < 12) h += 12;
+  if (m[3] === 'am' && h === 12) h = 0;
+  if (h > 23 || min > 59) throw new Error(`"${String(value).slice(0, 20)}" is not a time. Use HH:MM, e.g. 14:30.`);
+  return `${pad2(h)}:${pad2(min)}`;
+}
+
 /**
  * Add a new event
  */
@@ -101,12 +130,18 @@ export function addEvent({
   isAllDay = false,
   recurrence = 'none'
 }) {
-  if (!title || !title.trim()) {
+  if (!title || !String(title).trim()) {
     throw new Error('Event title is required.');
   }
+  title = String(title);
   if (!date) {
     const now = new Date();
     date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  }
+  date = normalizeEventDate(date);
+  if (!isAllDay) {
+    startTime = normalizeEventTime(startTime, '09:00');
+    endTime = normalizeEventTime(endTime, startTime);
   }
 
   const events = loadEvents();
@@ -139,9 +174,13 @@ export function updateEvent(id, updates) {
   if (idx === -1) return null;
 
   const existing = events[idx];
+  const clean = { ...updates };
+  if ('date' in clean && clean.date) clean.date = normalizeEventDate(clean.date);
+  if ('startTime' in clean && clean.startTime) clean.startTime = normalizeEventTime(clean.startTime, existing.startTime || '09:00');
+  if ('endTime' in clean && clean.endTime) clean.endTime = normalizeEventTime(clean.endTime, clean.startTime || existing.endTime || '10:00');
   const updated = {
     ...existing,
-    ...updates,
+    ...clean,
     updatedAt: Date.now()
   };
   events[idx] = updated;

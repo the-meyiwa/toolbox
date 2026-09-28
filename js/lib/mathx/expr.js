@@ -799,7 +799,17 @@ export function canon(x) {
   }
 }
 
-export function parse(src) { return canon(parseRaw(src)); }
+// A run of letters is read as a product (xxxx = x·x·x·x) that the algebra expands symbolically;
+// thousands of letters froze the page. Real input never needs a word this long.
+const MAX_SOURCE = 5000;
+const LONG_WORD = /[A-Za-z]{40,}/;
+export function parse(src) {
+  const s = String(src ?? '');
+  if (s.length > MAX_SOURCE) throw new Error(`Expression too long (${s.length.toLocaleString()} characters; the limit is ${MAX_SOURCE.toLocaleString()}).`);
+  const long = LONG_WORD.exec(s);
+  if (long) throw new Error(`"${long[0].slice(0, 12)}…" (${long[0].length} letters) is not a name the calculator knows. Separate variables with operators, e.g. x*y.`);
+  return canon(parseRaw(src));
+}
 
 /* ---------------- printing ---------------- */
 

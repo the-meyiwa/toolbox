@@ -29,6 +29,7 @@ import { CORE_TOOLS, TOOL_GROUPS, LOAD_TOOLS_DECLARATION, selectGroups, groupOfT
 import { packDeclarations, packVersion, isPackTool, executePackTool } from './assistant/tool-packs.js';
 import './assistant/life-tools.js';
 import './assistant/automation-tools.js';
+import { coerceArgs, missingArgsResult } from './assistant/args.js';
 import { gatherLifeContext, contextBlock, rememberPlace, INTRO_PATTERN, INTRO_VOICE } from './assistant/life-context.js';
 import { QuotaManager } from './quota-manager.js';
 import { tbConfirm } from './dialog.js';
@@ -846,6 +847,19 @@ export async function streamChatCompletion({
     // A tool from a group that is not loaded yet still runs; load its group for the next step.
     const g = groupOfTool(name);
     if (g && activeGroups && !activeGroups.has(g)) activeGroups.add(g);
+    // Give the tool the types it declared (models send "2024" for numbers, 5 for strings, null…).
+    const schema = byName.get(name)?.function?.parameters;
+    if (schema) {
+      const fixed = coerceArgs(args, schema);
+      if (fixed.missing.length) {
+        const res = { ...missingArgsResult(name, fixed.missing, schema), toolName: name };
+        onToolCallStart(name, args, id);
+        onToolCallResult(name, res, id);
+        cache.set(key, res);
+        return res;
+      }
+      args = fixed.args;
+    }
     onToolCallStart(name, args, id);
     let result;
     try {

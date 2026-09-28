@@ -291,7 +291,7 @@ class AssistantAudioService {
     if (!inst) return { success: false, type: 'audio', message: 'No active audio found to pause.' };
     inst.audio.pause();
     inst.isPlaying = false;
-    return { success: true, type: 'audio', audioId: inst.id, action: 'pause', message: `Paused "${inst.title}".` };
+    return { success: true, type: 'audio', audioId: inst.id, action: 'pause', message: inst.title ? `Paused "${inst.title}".` : 'Paused the audio.' };
   }
 
   resume(audioId) {
@@ -308,7 +308,7 @@ class AssistantAudioService {
       inst.isPlaying = false;
       console.warn('Resume playback failed:', e);
     });
-    return { success: true, type: 'audio', audioId: inst.id, action: 'resume', message: `Resumed "${inst.title}".` };
+    return { success: true, type: 'audio', audioId: inst.id, action: 'resume', message: inst.title ? `Resumed "${inst.title}".` : 'Resumed the audio.' };
   }
 
   stop(audioId) {
@@ -319,7 +319,7 @@ class AssistantAudioService {
     inst.currentTime = 0;
     inst.isPlaying = false;
     this.notify('stop', inst);
-    return { success: true, type: 'audio', audioId: inst.id, action: 'stop', message: `Stopped "${inst.title}".` };
+    return { success: true, type: 'audio', audioId: inst.id, action: 'stop', message: inst.title ? `Stopped "${inst.title}".` : 'Stopped the audio.' };
   }
 
   seek(audioId, seconds) {
