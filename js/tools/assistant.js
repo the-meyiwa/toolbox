@@ -1427,6 +1427,17 @@ function mountAssistant(container, state) {
       persist(targetConv, targetMessages);
       if (conv === targetConv) { updateComposerState(); onContent(); }
       renderConvList();
+      // Long replies often finish while the person is elsewhere: tell them it is ready.
+      const away = document.hidden || !root.isConnected || conv !== targetConv;
+      if (away && msg.status !== 'stopped' && msg.ms > 4000) {
+        const preview = String(msg.content || msg.error || '').replace(/[#*_`>\[\]()]/g, '').replace(/\s+/g, ' ').trim().slice(0, 140);
+        import('../lib/notifications.js').then(({ NotificationEngine }) => NotificationEngine.addNotification(
+          msg.status === 'failed' ? 'The Assistant could not finish' : 'The Assistant replied',
+          preview || 'Your answer is ready.',
+          msg.status === 'failed' ? 'error' : 'assistant',
+          '#assistant', `assistant-${msg.id}`,
+        )).catch(() => {});
+      }
     }
   }
 

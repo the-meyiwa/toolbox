@@ -33,6 +33,24 @@ self.addEventListener('message', (event) => {
   }
 });
 
+/* Notifications. This is the only service worker on the origin, so it also shows Toolbox's
+   system notifications (mobile browsers require one) and opens Toolbox when one is tapped. */
+self.addEventListener('notificationclick', (event) => {
+  const link = event.notification.data?.link || '';
+  event.notification.close();
+  event.waitUntil((async () => {
+    const target = link.startsWith('#') ? `/${link}` : (/^https?:/.test(link) ? link : '/');
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const own = clients.find(c => new URL(c.url).origin === self.location.origin);
+    if (own) {
+      await own.focus();
+      if (link.startsWith('#')) own.postMessage({ type: 'toolbox-open', link, id: event.notification.data?.id });
+      return;
+    }
+    await self.clients.openWindow(target);
+  })());
+});
+
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin || !url.pathname.startsWith(PREFIX)) return;

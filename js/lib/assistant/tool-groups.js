@@ -12,7 +12,7 @@
    ============================================================ */
 
 export const CORE_TOOLS = [
-  'update_plan', 'load_tools', 'update_memory', 'calculate_math', 'browse_web',
+  'update_plan', 'load_tools', 'update_memory', 'browse_web',
   'find_toolbox_tools', 'run_toolbox_tool', 'open_toolbox_tool',
 ];
 
@@ -20,7 +20,7 @@ export const TOOL_GROUPS = {
   web: {
     label: 'Web research: read pages, crawl sites, find images',
     tools: ['browse_web', 'browser_navigate', 'browser_scrape', 'browser_extract_images', 'browser_crawl', 'search_images', 'save_scraped_images', 'knowledge_library'],
-    match: /\b(search|google|look ?up|research|website|web ?site|online|internet|news|latest|today|current|price[sd]?|review|url|https?:|www\.|\.com|\.ng|scrape|crawl|source|cite|article|image[s]? of|picture[s]? of|photo[s]? of|what does .* look like)\b/i,
+    match: /\b(search|google|look ?up|research|online|internet|news|latest|today|current|price[sd]?|review|url|https?:|www\.|\.com|\.ng|scrape|crawl|source|cite|article|image[s]? of|picture[s]? of|photo[s]? of|what does .* look like)\b/i,
   },
   math: {
     label: 'Maths: algebra, calculus, equations, matrices, statistics, units',
@@ -45,7 +45,7 @@ export const TOOL_GROUPS = {
   documents: {
     label: 'Documents: create Word, spreadsheet and slide files; PDF tools, PDF to Word, annotate, clean text',
     tools: ['generate_document', 'pdf_process', 'convert_pdf_to_word', 'annotate_pdf', 'clean_text'],
-    match: /\b(pdf|word|docx?|odt|rtf|xlsx|pptx|document|report|letter|memo|proposal|cv|resume|essay|slides?|deck|presentation|powerpoint|spreadsheet|workbook|excel|page[s]?|merge|split|annotate|redact|watermark|clean (up )?text|contract|agreement)\b/i,
+    match: /\b(pdf|word|docx?|odt|rtf|xlsx|pptx|document|report|letter|memo|proposal|cv|resume|essay|slides?|deck|presentation|powerpoint|spreadsheet|workbook|excel|merge|split|annotate|redact|watermark|clean (up )?text|contract|agreement)\b/i,
   },
   legal: {
     label: 'Legal (Nigeria): review contracts and leases, parse citations and build tables of authorities, digest judgments',
@@ -63,9 +63,14 @@ export const TOOL_GROUPS = {
     match: /\b(csv|excel|xlsx|spreadsheet|table|dataset|data|chart|graph|plot|visuali[sz]|json|column|rows?)\b/i,
   },
   code: {
-    label: 'Code: run code, build apps in the Code Playground, regex, cron, UML, flowcharts, logic circuits',
-    tools: ['code_execute', 'ide_create_project', 'ide_write_file', 'ide_build_and_preview', 'ide_package_project', 'ide_run_command', 'ide_run_tests', 'ide_git_push', 'regex_tester', 'cron_parser', 'hash_generator', 'uuid_generator', 'slug_generator', 'generate_uml', 'generate_flowchart', 'simulate_algorithm', 'simulate_logic_circuit', 'build_logic_circuit'],
-    match: /\b(code|program|script|python|javascript|typescript|js|html|css|sql|c\+\+|app|website|build|function|bug|debug|compile|run it|playground|regex|cron|uuid|hash|uml|flowchart|algorithm|logic gate|circuit)\b/i,
+    label: 'Code: run code, build apps and websites in the Code Playground',
+    tools: ['code_execute', 'ide_create_project', 'ide_write_file', 'ide_build_and_preview', 'ide_package_project', 'ide_run_command', 'ide_run_tests', 'ide_git_push'],
+    match: /\b(code|program|script|python|javascript|typescript|js|html|css|sql|c\+\+|app|website|web ?site|web ?page|landing page|portfolio|build|function|bug|debug|compile|run it|playground)\b/i,
+  },
+  devtools: {
+    label: 'Developer utilities: regex, cron, hashes, UUIDs, slugs, UML, flowcharts, algorithms, logic circuits',
+    tools: ['regex_tester', 'cron_parser', 'hash_generator', 'uuid_generator', 'slug_generator', 'generate_uml', 'generate_flowchart', 'simulate_algorithm', 'simulate_logic_circuit', 'build_logic_circuit'],
+    match: /\b(regex|regular expression|cron|uuid|guid|hash|sha-?\d+|md5|slug|uml|class diagram|sequence diagram|flowchart|algorithms?|logic gates?|circuits?|truth table)\b/i,
   },
   notes: {
     label: 'Notes: create, list, read and edit notes',
@@ -110,7 +115,7 @@ export const TOOL_GROUPS = {
   building: {
     label: 'Architecture and buildings: architecture advice (structure, climate, software/system design), container and portacabin design, quotes, floor plans, construction cost estimates',
     tools: ['architecture_advisor', 'model_3d', 'design_container', 'plan_container_quote', 'generate_floor_plan', 'estimate_construction', 'knowledge_library'],
-    match: /\b(architect\w*|microservices?|monolith|kubernetes|k8s|docker|system design|scalab\w*|beams?|columns?|spans?|stairs?|staircase|ventilation|container|portacabin|porta ?cabin|cabin|20 ?ft|40 ?ft|high cube|site office|shop|kiosk|floor ?plan|office space|build(ing)?|structure|quote|quotation|boq|bill of quantities|building cost|cement|concrete|rebar|iron rods?|sandcrete|blockwork|slab|foundation|footing|roofing|plaster(ing)?|bungalow|duplex|construction)\b/i,
+    match: /\b(architect\w*|microservices?|monolith|kubernetes|k8s|docker|system design|scalab\w*|beams?|columns?|spans?|stairs?|staircase|ventilation|container|portacabin|porta ?cabin|cabin|20 ?ft|40 ?ft|high cube|site office|shop|kiosk|floor ?plan|office space|building|structural|quotation|boq|bill of quantities|building cost|cement|concrete|rebar|iron rods?|sandcrete|blockwork|slab|foundation|footing|roofing|plaster(ing)?|bungalow|duplex|construction)\b/i,
   },
   scripture: {
     label: 'Scripture: Bible and Quran passages',
@@ -160,7 +165,7 @@ export function addToolGroup(id, { label, tools = [], match } = {}) {
 export const LOAD_TOOLS_DECLARATION = {
   name: 'load_tools',
   get description() {
-    return `Loads more tools for this conversation. Only a core set is loaded by default; call this with the groups you need before using a tool you do not have. Groups: ${Object.entries(TOOL_GROUPS).map(([id, g]) => `${id} (${g.label})`).join('; ')}.`;
+    return `Loads more tools. Only a core set is loaded; call this with the groups you need first. Groups: ${Object.entries(TOOL_GROUPS).map(([id, g]) => `${id} (${g.label.split(':')[0]})`).join(', ')}.`;
   },
   get parameters() {
     return {
@@ -174,11 +179,13 @@ export const LOAD_TOOLS_DECLARATION = {
 /** Picks groups for a request from recent text, tools already used and attachments. */
 export function selectGroups({ history = [], hasFile = false, fileType = '' } = {}) {
   const picked = new Set();
-  const recent = history.slice(-4);
+  // Only the person's own recent words pick groups: the Assistant's long replies mention
+  // everything ("build", "page", "data"…) and used to pull in most groups on every follow-up.
+  const recent = history.filter(m => m.role === 'user').slice(-2);
   const text = recent.map(m => (typeof m.content === 'string' ? m.content : '')).join('\n');
   for (const [id, g] of Object.entries(TOOL_GROUPS)) if (g.match.test(text)) picked.add(id);
   // Keep groups whose tools this chat already used, so follow-ups ("now make it red") still work.
-  for (const m of history.slice(-12)) {
+  for (const m of history.slice(-6)) {
     for (const r of m.toolResults || []) {
       const g = groupOfTool(r?.toolName);
       if (g) picked.add(g);

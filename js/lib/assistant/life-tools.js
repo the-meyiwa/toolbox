@@ -193,6 +193,8 @@ const FILE_DECLARATIONS = [
       properties: {
         path: { type: 'string', description: 'Path (e.g. "/Documents/Lease.pdf") or saved-work id from search_files; a file name also works.' },
         maxChars: { type: 'number', description: 'Most characters to return (default 12000, up to 40000).' },
+        offset: { type: 'number', description: 'Character to start from, to read on after a truncated read.' },
+        find: { type: 'string', description: 'Words to look for: returns only the passages that mention them (faster and cheaper than reading a long document whole).' },
       },
       required: ['path'],
     },
@@ -279,20 +281,62 @@ export async function searchFiles(query, { limit = 8, fsImpl, artifacts } = {}) 
   return results.sort((a, b) => b.score - a.score || (b.updated || 0) - (a.updated || 0)).slice(0, Math.max(1, Math.min(25, Number(limit) || 8)));
 }
 
-async function readDocument({ path, maxChars } = {}, { fsImpl, artifacts } = {}) {
+/** Paragraphs of text that mention the query words, with their character offsets. */
+export function findPassages(text, query, cap = 12_000) {
+  const words = String(query || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(w => w.length > 2 && !STOP.has(w));
+  if (!words.length) return null;
+  // Split by page markers first, then into paragraphs, so each passage knows its page.
+  const paras = [];
+  const chunks = String(text).split(/\[Page (\d+)\]/);
+  for (let c = 0; c < chunks.length; c += 2) {
+    const page = c > 0 ? chunks[c - 1] : null;
+    for (const para of chunks[c].split(/\n\s*\n/)) if (para.trim()) paras.push({ page, text: para.trim() });
+  }
+  const scored = paras.map((p, i) => {
+    const low = p.text.toLowerCase();
+    const score = words.reduce((s, w) => s + (low.includes(w) ? 1 : 0), 0);
+    return { ...p, i, score };
+  }).filter(p => p.score > 0).sort((a, b) => b.score - a.score || a.i - b.i);
+  const out = [];
+  let used = 0;
+  for (const p of scored) {
+    const block = `${p.page ? `(page ${p.page}) ` : ''}${p.text}`;
+    if (used + block.length > cap) break;
+    out.push({ i: p.i, block });
+    used += block.length;
+  }
+  return { matches: scored.length, content: out.sort((a, b) => a.i - b.i).map(o => o.block).join('\n\n…\n\n') };
+}
+
+async function readDocument({ path, maxChars, offset, find } = {}, { fsImpl, artifacts } = {}) {
   const raw = String(path || '').trim();
   if (!raw) return { status: 'error', success: false, message: 'Give the path or name of the document.' };
   const cap = Math.max(500, Math.min(40_000, Number(maxChars) || 12_000));
-  const done = (name, where, text) => ({
-    status: 'success',
-    type: 'document-text',
-    path: where,
-    name,
-    chars: text.length,
-    truncated: text.length > cap,
-    content: text.length > cap ? `${text.slice(0, cap)}\n[… ${text.length - cap} more characters not shown; ask for a larger maxChars if needed]` : text,
-    message: `Read ${name} (${text.length.toLocaleString()} characters).`,
-  });
+  const done = (name, where, text) => {
+    const found = find ? findPassages(text, find, cap) : null;
+    if (found) {
+      return {
+        status: 'success', type: 'document-text', path: where, name, chars: text.length,
+        matches: found.matches,
+        content: found.content || `Nothing in ${name} mentions "${find}".`,
+        message: `Found ${found.matches} passage${found.matches === 1 ? '' : 's'} about "${find}" in ${name}.`,
+      };
+    }
+    const start = Math.max(0, Math.min(text.length, Math.floor(Number(offset) || 0)));
+    const slice = text.slice(start, start + cap);
+    const rest = text.length - start - slice.length;
+    return {
+      status: 'success',
+      type: 'document-text',
+      path: where,
+      name,
+      chars: text.length,
+      offset: start,
+      truncated: rest > 0,
+      content: rest > 0 ? `${slice}\n[… ${rest} more characters; read on with offset ${start + slice.length}, or use find]` : slice,
+      message: `Read ${name} (${text.length.toLocaleString()} characters).`,
+    };
+  };
   if (raw.startsWith('saved:')) {
     const a = (artifacts || await savedWork()).find(x => x.id === raw.slice(6));
     return a ? done(a.name || 'Untitled', raw, String(a.text || '')) : { status: 'error', success: false, message: 'That saved item no longer exists.' };
@@ -303,7 +347,7 @@ async function readDocument({ path, maxChars } = {}, { fsImpl, artifacts } = {})
   let meta = metas.find(m => m.path === norm) || metas.find(m => m.name.toLowerCase() === raw.toLowerCase().split('/').pop());
   if (!meta) {
     const [best] = await searchFiles(raw, { limit: 1, fsImpl: fs, artifacts });
-    if (best?.path.startsWith('saved:')) return readDocument({ path: best.path, maxChars }, { fsImpl, artifacts });
+    if (best?.path.startsWith('saved:')) return readDocument({ path: best.path, maxChars, offset, find }, { fsImpl, artifacts });
     meta = best && metas.find(m => m.path === best.path);
   }
   if (!meta) return { status: 'error', success: false, message: `No file called "${raw}" in Files. Search for it first, or ask them to upload it.` };

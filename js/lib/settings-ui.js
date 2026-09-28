@@ -700,9 +700,15 @@ function renderNotificationSettings() {
   container.innerHTML = section('Alerts', '', `<div class="stg-card">
       ${row({ title: 'In-app notifications', hint: 'Badges and alerts for new messages and reminders', forId: 'pref-notif-enabled', control: switchInput('pref-notif-enabled', current.notificationsEnabled !== false) })}
       ${row({ title: 'Sounds', hint: 'A soft chime when an alert arrives', forId: 'pref-notif-sound', control: switchInput('pref-notif-sound', !!current.notificationSound) })}
-      ${row({ title: 'Desktop alerts', hint: `System notifications while Toolbox is open<span class="stg-row-status" id="pref-notif-status" role="status">${permission === 'denied' ? 'Blocked in your browser’s site settings.' : permission === 'unsupported' ? 'Not supported by this browser.' : ''}</span>`, forId: 'pref-notif-push', control: switchInput('pref-notif-push', !!current.notificationsPush) })}
+      ${row({ title: 'Test', hint: 'Send a sample alert through the channels that are on', forId: 'pref-notif-test', control: '<button type="button" class="btn btn-secondary btn-sm" id="pref-notif-test">Send test</button>' })}
+      ${row({ title: 'System alerts', hint: `Phone and desktop notifications when Toolbox is in the background<span class="stg-row-status" id="pref-notif-status" role="status">${permission === 'denied' ? 'Blocked in your browser’s site settings.' : permission === 'unsupported' ? 'Not supported by this browser.' : ''}</span>`, forId: 'pref-notif-push', control: switchInput('pref-notif-push', !!current.notificationsPush) })}
     </div>`);
   container.querySelector('#pref-notif-enabled')?.addEventListener('change', (e) => updateSettings({ notificationsEnabled: e.target.checked }));
+  container.querySelector('#pref-notif-test')?.addEventListener('click', async () => {
+    const status = container.querySelector('#pref-notif-status');
+    const sent = await NotificationEngine.sendTest();
+    if (!sent && status) status.textContent = 'In-app notifications are off.';
+  });
   container.querySelector('#pref-notif-sound')?.addEventListener('change', (e) => {
     if (e.target.checked) prepareNotificationSound();
     updateSettings({ notificationSound: e.target.checked });

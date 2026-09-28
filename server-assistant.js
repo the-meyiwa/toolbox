@@ -86,6 +86,7 @@ const ORDER = {
 };
 // How long the first model gets to start answering before a second one is started alongside it.
 const HEDGE_MS = { fast: 3500, auto: 5000, reasoning: 9000, code: 8000 };
+const HEDGE_MAX_BYTES = 24_000;
 // How long any one model gets to start answering at all.
 const FIRST_TOKEN_TIMEOUT_MS = { fast: 25_000, auto: 40_000, reasoning: 90_000, code: 90_000 };
 
@@ -295,7 +296,9 @@ function race(candidates, payload, { signal, hedgeMs, timeoutMs, bytes, onError 
       signal.addEventListener('abort', onAbort, { once: true });
       const entry = { c, ctrl, started: Date.now() };
       running.add(entry);
-      const hedge = setTimeout(() => { if (!winner && running.size < 2) launch(true); }, hedgeMs);
+      // A hedge bills the whole prompt a second time, so only small requests are hedged;
+      // big ones (long chats, documents, code) wait for the first model or its failure.
+      const hedge = bytes > HEDGE_MAX_BYTES ? null : setTimeout(() => { if (!winner && running.size < 2) launch(true); }, hedgeMs);
       attempt(c, payload, ctrl.signal, timeoutMs).then((won) => {
         clearTimeout(hedge);
         running.delete(entry);

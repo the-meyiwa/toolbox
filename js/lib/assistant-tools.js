@@ -792,13 +792,26 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
   },
   {
     name: 'ide_create_project',
-    description: 'Creates a complete runnable web application or project in the Toolbox IDE filesystem (/Projects/<name>).',
+    description: 'Creates a complete web app or website in the Code Playground (/Projects/<name>). Pass every file in files and it writes them, builds and shows the live preview in this one call.',
     parameters: {
       type: 'OBJECT',
       properties: {
         name: {
           type: 'STRING',
           description: 'Project name (e.g. "logistics-landing", "todo-app").'
+        },
+        files: {
+          type: 'ARRAY',
+          description: 'Every file of the project, e.g. index.html, style.css and app.js. Paths are relative to the project.',
+          items: {
+            type: 'OBJECT',
+            properties: { path: { type: 'STRING' }, content: { type: 'STRING' } },
+            required: ['path', 'content']
+          }
+        },
+        preview: {
+          type: 'BOOLEAN',
+          description: 'Build and preview after writing the files (default true).'
         },
         template: {
           type: 'STRING',
@@ -1778,6 +1791,21 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
 /**
  * Assistant Tool Execution Engine (Client-Side Sandboxed Dispatcher)
  */
+/** {"index.html": "…"} or [{path, content}] → [[relative path, content]], confined to the project. */
+export function projectFilesFrom(files) {
+  const entries = Array.isArray(files)
+    ? files.map(f => [f?.path || f?.name, f?.content])
+    : (files && typeof files === 'object' ? Object.entries(files) : []);
+  const out = [];
+  for (const [raw, content] of entries) {
+    if (typeof raw !== 'string' || content == null) continue;
+    const rel = raw.replace(/\\/g, '/').replace(/^\/?Projects\/[^/]+\//, '').replace(/^\/+/, '')
+      .split('/').filter(p => p && p !== '.' && p !== '..').join('/');
+    if (rel) out.push([rel, typeof content === 'string' ? content : JSON.stringify(content, null, 2)]);
+  }
+  return out.slice(0, 40);
+}
+
 export async function executeAssistantTool(name, args, { currentFile, taskState } = {}) {
   // STRICT FILE SAFETY CHECK: Only confirmed deletions or confirmation requests are permitted.
   if (name.includes('delete') || name.includes('remove_file') || name.includes('purge') || name.includes('wipe')) {
@@ -3467,18 +3495,33 @@ header h1 { font-size: 2rem; margin-bottom: 6px; }
 }
 `;
 
-      await fs.writeFile(`${projDir}/index.html`, html);
-      await fs.writeFile(`${projDir}/style.css`, css);
-      await fs.writeFile(`${projDir}/app.js`, js);
+      // Files passed with the call replace the template, so a whole site is one tool step.
+      const given = projectFilesFrom(args.files);
+      const written = new Set();
+      for (const [rel, content] of given) {
+        await fs.writeFile(`${projDir}/${rel}`, content);
+        written.add(rel);
+      }
+      if (!written.has('index.html')) await fs.writeFile(`${projDir}/index.html`, html);
+      if (!given.length) {
+        await fs.writeFile(`${projDir}/style.css`, css);
+        await fs.writeFile(`${projDir}/app.js`, js);
+      }
+      const files = given.length ? [...new Set(['index.html', ...written])] : ['index.html', 'style.css', 'app.js'];
 
-      return {
+      const created = {
         status: 'success',
         type: 'ide-project',
         project: name,
         path: projDir,
-        files: ['index.html', 'style.css', 'app.js'],
-        message: `Created project "${name}" in ${projDir} with index.html, style.css, and app.js. Ready to edit, preview, and package.`
+        files,
+        message: `Created project "${name}" in ${projDir} with ${files.join(', ')}.`
       };
+      if (given.length && args.preview !== false) {
+        const built = await executeAssistantTool('ide_build_and_preview', { projectName: name }, { currentFile, taskState });
+        return { ...built, files, message: `${created.message} ${built.message}` };
+      }
+      return created;
     }
 
     case 'ide_write_file': {

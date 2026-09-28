@@ -848,6 +848,24 @@ export function renderNetworkResult(data, container) {
   return el;
 }
 
+const AUTO_ICON = '<path d="M13 3 5 14h6l-1 7 8-11h-6z"/>';
+export function renderAutomations(data, container) {
+  const list = Array.isArray(data.automations) ? data.automations : [];
+  const el = card('auto', { icon: AUTO_ICON, title: list.length === 1 ? list[0].name : 'Automations', sub: list.length === 1 ? esc(list[0].schedule) : `${list.length} automation${list.length === 1 ? '' : 's'}`, actions: btn('Open Automations', I.external, 'data-act="open"') });
+  el.querySelector('.astc-body').innerHTML = list.length
+    ? list.slice(0, 12).map(a => sheet([
+      ...(list.length > 1 ? [['Name', a.name], ['When', a.schedule]] : []),
+      ['Steps', a.steps || '—'],
+      ['Next run', a.enabled ? (a.nextRun || '—') : 'Paused'],
+      ...(a.lastRun ? [['Last run', `${a.lastRun}${a.lastResult && a.lastResult !== 'ok' ? ` (${a.lastResult})` : ''}`]] : []),
+    ])).join('')
+    : '<p class="astc-muted">No automations yet.</p>';
+  el.addEventListener('click', (e) => { if (e.target.closest('[data-act="open"]')) openTool('automations'); });
+  container.appendChild(el);
+  return el;
+}
+
+registerResultRenderer('automations', renderAutomations);
 registerResultRenderer('music-library', renderMusicLibrary);
 registerResultRenderer('music-theory', renderMusicTheory);
 registerResultRenderer('business-calc', renderBusinessCalc);

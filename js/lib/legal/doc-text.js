@@ -40,13 +40,22 @@ export async function pdfText(data, { maxPages = 400, onProgress } = {}) {
   const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
   const doc = await pdfjs.getDocument({ data: bytes.slice() }).promise;
   const total = Math.min(doc.numPages, maxPages);
-  const pageTexts = [];
-  for (let n = 1; n <= total; n++) {
-    const page = await doc.getPage(n);
-    const content = await page.getTextContent();
-    pageTexts.push(itemsToText(content.items));
-    page.cleanup?.();
-    onProgress?.(n, total);
+  const pageTexts = new Array(total).fill('');
+  // Pages are read in parallel batches: pdf.js pipelines the worker requests, so a 40-page
+  // document takes a few round trips instead of forty.
+  let done = 0;
+  for (let first = 1; first <= total; first += 8) {
+    const nums = [];
+    for (let n = first; n < first + 8 && n <= total; n++) nums.push(n);
+    await Promise.all(nums.map(async (n) => {
+      try {
+        const page = await doc.getPage(n);
+        const content = await page.getTextContent();
+        pageTexts[n - 1] = itemsToText(content.items);
+        page.cleanup?.();
+      } catch { /* an unreadable page stays empty */ }
+      onProgress?.(++done, total);
+    }));
   }
   const text = pageTexts.map((t, i) => `[Page ${i + 1}]\n${t}`).join('\n\n');
   const chars = pageTexts.join('').replace(/\s/g, '').length;

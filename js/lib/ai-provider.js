@@ -28,6 +28,7 @@ import { KNOWLEDGE_TOOL_DECLARATIONS, KNOWLEDGE_TOOL_NAMES, executeKnowledgeTool
 import { CORE_TOOLS, TOOL_GROUPS, LOAD_TOOLS_DECLARATION, selectGroups, groupOfTool } from './assistant/tool-groups.js';
 import { packDeclarations, packVersion, isPackTool, executePackTool } from './assistant/tool-packs.js';
 import './assistant/life-tools.js';
+import './assistant/automation-tools.js';
 import { gatherLifeContext, contextBlock, rememberPlace, INTRO_PATTERN, INTRO_VOICE } from './assistant/life-context.js';
 import { QuotaManager } from './quota-manager.js';
 import { tbConfirm } from './dialog.js';
@@ -68,7 +69,7 @@ export const AI_MODES = {
 
 const MODE_EFFORT = { auto: 'auto', fast: 'fast', reasoning: 'reasoning', code: 'auto', science: 'auto', files: 'auto' };
 const MODE_GUIDANCE = {
-  code: 'The person is building. Prefer running code over describing it: write complete programs, execute them with the code tools, read the output, fix errors and run again. For apps, open or populate the Code Playground.',
+  code: 'The person is building. Prefer running code over describing it. Build an app or site in one ide_create_project call with all its files and preview: true; fix only what the preview reports.',
   science: 'Work every numeric step through calculate_math / calculate_chemistry or the relevant Toolbox tool and show the working. Verify results before answering.',
   files: 'Focus on the attached or saved files. Inspect them with the file tools before answering and save outputs back to Files.',
   reasoning: 'Take the time to think carefully. For multi-step work, start with update_plan, then carry out every step with tools and verify the result.',
@@ -216,6 +217,25 @@ function normalizeSchema(node) {
 }
 
 
+/** Cuts text at a sentence (or word) boundary near max characters. */
+function clip(text, max) {
+  const t = String(text || '').replace(/\s+/g, ' ').trim();
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max);
+  const stop = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('; '));
+  return stop > max * 0.6 ? cut.slice(0, stop + 1) : `${cut.slice(0, cut.lastIndexOf(' '))}…`;
+}
+
+/** Tool schemas are sent with every step, so parameter descriptions are kept short. */
+function slimSchema(node, depth = 0) {
+  if (!node || typeof node !== 'object' || Array.isArray(node)) return node;
+  const out = { ...node };
+  if (typeof out.description === 'string' && depth > 0) out.description = clip(out.description, 260);
+  if (out.properties) out.properties = Object.fromEntries(Object.entries(out.properties).map(([k, v]) => [k, slimSchema(v, depth + 1)]));
+  if (out.items) out.items = slimSchema(out.items, depth + 1);
+  return out;
+}
+
 function buildToolList(declarations) {
   const seen = new Set();
   const list = [];
@@ -226,8 +246,8 @@ function buildToolList(declarations) {
       type: 'function',
       function: {
         name: d.name,
-        description: String(d.description || '').slice(0, 1000),
-        parameters: normalizeSchema(d.parameters || { type: 'object', properties: {} }),
+        description: clip(d.description, 480),
+        parameters: slimSchema(normalizeSchema(d.parameters || { type: 'object', properties: {} })),
       },
     });
   }
@@ -288,24 +308,53 @@ function polyfillMapUpserts() {
   }
 }
 
+// Stored messages are rebuilt as new objects on every turn, so extracted text is also kept by
+// content: a document is read once per session, not once per message about it.
+const contentCache = new Map();
+const CONTENT_CACHE_MAX = 12;
+function contentKey(file) {
+  const b = file.base64;
+  return `${file.name || ''}|${b.length}|${b.slice(0, 64)}|${b.slice(-64)}|${b.slice(b.length >> 1, (b.length >> 1) + 64)}`;
+}
+function cached(file, cache) {
+  if (cache.has(file)) return cache.get(file);
+  const hit = contentCache.get(`${cache === pdfCache ? 'pdf' : 'doc'}:${contentKey(file)}`);
+  if (hit) cache.set(file, hit);
+  return hit;
+}
+function remember(file, cache, info) {
+  cache.set(file, info);
+  const key = `${cache === pdfCache ? 'pdf' : 'doc'}:${contentKey(file)}`;
+  contentCache.delete(key);
+  contentCache.set(key, info);
+  while (contentCache.size > CONTENT_CACHE_MAX) contentCache.delete(contentCache.keys().next().value);
+}
+
+const PAGE_BATCH = 8;   // pages read at once
+
 async function preparePdf(file) {
-  if (!file?.base64 || pdfCache.has(file)) return;
+  if (!file?.base64 || cached(file, pdfCache)) return;
   const type = file.type || file.mimeType || '';
   if (!/pdf/i.test(type) && !/\.pdf$/i.test(file.name || '')) return;
   const info = { text: '', pages: 0, images: [] };
-  pdfCache.set(file, info);
+  remember(file, pdfCache, info);
   try {
     polyfillMapUpserts();
     const pdfjs = await import('pdfjs-dist');
     if (!pdfjs.GlobalWorkerOptions.workerSrc) pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href;
     const doc = await pdfjs.getDocument({ data: base64ToBytes(file.base64) }).promise;
     info.pages = doc.numPages;
-    let text = '';
-    for (let n = 1; n <= doc.numPages && text.length < PDF_TEXT_LIMIT; n++) {
+    const readPage = async (n) => {
       const page = await doc.getPage(n);
       const content = await page.getTextContent();
-      const pageText = content.items.map(it => it.str + (it.hasEOL ? '\n' : ' ')).join('').replace(/[ \t]+\n/g, '\n').trim();
-      text += `\n\n[Page ${n}]\n${pageText}`;
+      return content.items.map(it => it.str + (it.hasEOL ? '\n' : ' ')).join('').replace(/[ \t]+\n/g, '\n').replace(/[ \t]{2,}/g, ' ').trim();
+    };
+    let text = '';
+    for (let first = 1; first <= doc.numPages && text.length < PDF_TEXT_LIMIT; first += PAGE_BATCH) {
+      const nums = [];
+      for (let n = first; n < first + PAGE_BATCH && n <= doc.numPages; n++) nums.push(n);
+      const pages = await Promise.all(nums.map(n => readPage(n).catch(() => '')));
+      pages.forEach((pageText, i) => { text += `\n\n[Page ${nums[i]}]\n${pageText}`; });
     }
     info.text = text.trim().slice(0, PDF_TEXT_LIMIT);
     // Little text per page → probably scanned: render the first pages for a vision model.
@@ -356,14 +405,14 @@ async function unzipEntry(bytes, wanted) {
 }
 
 async function prepareOffice(file) {
-  if (!file?.base64 || docCache.has(file)) return;
+  if (!file?.base64 || cached(file, docCache)) return;
   const name = file.name || '';
   const type = file.type || file.mimeType || '';
   const isDocx = /\.docx$/i.test(name) || /wordprocessingml/.test(type);
   const isXlsx = /\.xlsx$/i.test(name) || /spreadsheetml/.test(type);
   if (!isDocx && !isXlsx) return;
   const info = { text: '', kind: isDocx ? 'Word document' : 'Excel workbook' };
-  docCache.set(file, info);
+  remember(file, docCache, info);
   try {
     const bytes = base64ToBytes(file.base64);
     if (isDocx) {
@@ -446,9 +495,9 @@ function toolContextOf(msg) {
   return `\n\n[Tools used in this reply]\n${lines.join('\n')}`;
 }
 
-const RECENT_TURNS = 6;          // messages sent in full; older ones are shortened
-const OLD_MESSAGE_CHARS = 1500;
-const MAX_HISTORY = 40;          // messages sent at all
+const RECENT_TURNS = 4;          // messages sent in full; older ones are shortened
+const OLD_MESSAGE_CHARS = 700;
+const MAX_HISTORY = 24;          // messages sent at all
 
 function shorten(text, max) {
   const t = String(text || '');
@@ -489,7 +538,7 @@ export function compactForModel(value, depth = 0) {
   if (value == null) return value;
   if (typeof value === 'string') {
     if (/^data:[\w/+.-]+;base64,/.test(value) && value.length > 400) return `[binary data, ${Math.round(value.length * 0.75 / 1024)} KB]`;
-    return value.length > 6000 ? `${value.slice(0, 6000)}… (${value.length - 6000} more characters)` : value;
+    return value.length > 4000 ? `${value.slice(0, 4000)}… (${value.length - 4000} more characters)` : value;
   }
   if (typeof value !== 'object') return value;
   if (depth > 6) return '[…]';
@@ -502,6 +551,7 @@ export function compactForModel(value, depth = 0) {
   for (const [k, v] of Object.entries(value)) {
     if (typeof v === 'function' || k === 'element' || k === 'node') continue;
     if (k === 'svg' && typeof v === 'string') { out[k] = `[SVG drawing, ${v.length} characters, shown to the person]`; continue; }
+    if (k === 'htmlBundle' && typeof v === 'string' && v.length > 400) { out[k] = `[${v.length} characters of HTML, shown to the person in the preview]`; continue; }
     if (k === 'design' && value.renderer === 'container-design') { out[k] = '[full design shown to the person in the preview card]'; continue; }
     if ((k === 'mapLayers' || k === 'directions') && value.renderer === 'map-view') continue; // drawn on the map card only
     out[k] = compactForModel(v, depth + 1);
@@ -512,7 +562,44 @@ export function compactForModel(value, depth = 0) {
 function toolResultText(result) {
   let text;
   try { text = JSON.stringify(compactForModel(result)); } catch { text = String(result); }
-  return text.length > 24000 ? `${text.slice(0, 24000)}… (truncated)` : text;
+  return text.length > 12000 ? `${text.slice(0, 12000)}… (truncated)` : text;
+}
+
+/**
+ * Within one reply every step resends all earlier steps. Once a step is two steps old, the
+ * bulky parts the model no longer needs verbatim (file contents it wrote, long tool results)
+ * are replaced by short notes, so a ten-step job does not resend a website ten times.
+ */
+const COMPACTED = new WeakSet();   // not a message property: providers reject unknown keys
+export function compactEarlierSteps(messages, { keep = 2, argLimit = 1200, resultLimit = 1500 } = {}) {
+  const stepStarts = [];
+  messages.forEach((m, i) => { if (m.role === 'assistant' && m.tool_calls?.length) stepStarts.push(i); });
+  const cutoff = stepStarts.length > keep ? stepStarts[stepStarts.length - keep] : -1;
+  for (let i = 0; i < cutoff; i++) {
+    const m = messages[i];
+    if (COMPACTED.has(m)) continue;
+    if (m.role === 'assistant' && m.tool_calls) {
+      for (const call of m.tool_calls) {
+        const raw = call.function.arguments || '';
+        if (raw.length <= argLimit) continue;
+        try {
+          const args = JSON.parse(raw);
+          const shrink = (v) => {
+            if (typeof v === 'string') return v.length > 400 ? `[${v.length} characters, already sent]` : v;
+            if (Array.isArray(v)) return v.map(shrink);
+            if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, shrink(x)]));
+            return v;
+          };
+          call.function.arguments = JSON.stringify(shrink(args));
+        } catch { /* leave malformed arguments alone */ }
+      }
+      COMPACTED.add(m);
+    } else if (m.role === 'tool' && typeof m.content === 'string' && m.content.length > resultLimit) {
+      m.content = `${m.content.slice(0, resultLimit)}… (shortened; the full result was used earlier)`;
+      COMPACTED.add(m);
+    }
+  }
+  return messages;
 }
 
 /* ---------------- figure check ---------------- */
@@ -589,56 +676,66 @@ function parseArgs(raw) {
 
 /* ---------------- system prompt ---------------- */
 
-const CAPABILITIES = `You are Toolbox Assistant, the agent built into Toolbox — a workspace of 100+ tools — created by Meyiwa-Meyigbene Nifemi Edun. You do things, not just describe them. You have real tools and you should use them freely and chain them to finish the whole job.
+// The system prompt is built per request: a short core, plus the guidance for the tool groups
+// loaded for this conversation. Sending every rule for every tool with every step was the
+// largest fixed cost of a request (≈13 KB), paid again on each tool step.
+const CORE_PROMPT = `You are Toolbox Assistant, the agent built into Toolbox (100+ tools), created by Meyiwa-Meyigbene Nifemi Edun. You do things, not just describe them: use your tools and chain them to finish the job.
 
 How you work
-- For jobs with three or more distinct steps (research, building something, analysing files), call update_plan first with short steps (skip it for simple questions), then do the steps with tools, updating the plan as each finishes. Keep going until the task is complete; do not stop to ask permission for ordinary steps.
-- Prefer computing to guessing: arithmetic and algebra go through calculate_math, chemistry through calculate_chemistry, code through the code execution tools. Check results before you report them.
-- Only some tools are loaded at a time. If you need one you don't have, call load_tools with its group first (the groups are listed in load_tools).
-- Any Toolbox tool can be used: call find_toolbox_tools to discover the right one, run_toolbox_tool to run it on input directly, and open_toolbox_tool to open it for the person. File tools run on the attached file, or on the newest result any tool made, so jobs chain: OCR a scan, then compress it, then protect it, one run_toolbox_tool call each. Use options {"help": true} once if unsure of a tool's options.
-- Chess: chess_analyze evaluates a position or game (best move, evaluation, opening, move quality); chess_play plays a move and lets the engine answer; chess_open_board opens a position on the Chess board. Never invent evaluations — use the engine.
-- Devices: device_specs and device_compare cover 1,300+ phones, tablets, laptops, chips, CPUs, GPUs, watches, headphones and consoles from the Toolbox database.
-- Vehicles: vehicle_lookup decodes VINs and gives specifications for cars by make, model and year.
-- Vehicle Guide (tool id automobile-guide; formerly the Automobile Guide): interactive 3D models with every part named and described — the 2014–2016 Toyota Corolla (E170, 224 components, the default), the 2013 Corolla, the 2008 Lexus GX 470 (body-on-frame SUV with full-time 4WD, side-hinged rear door and separate glass hatch), the Boeing 737-800 (flight deck, cabin, CFM56-7B engines, gear, flaps, slats, spoilers) and the Cessna 172S Skyhawk SP, plus a few simpler cars. It has three modes: Exterior (orbit; markers on lamps, doors, fuel, key or walk-around points), Interior (the driver's seat, or the flight deck / cockpit on aircraft; markers on every switch group and warning light), and Parts (select any component; right-click or tap for its actions: open doors and hoods, retract landing gear, extend flaps, deploy spoilers and thrust reversers, remove wheels and caps, isolate or X-Ray). Technical, X-Ray and Isolate change how the model is drawn. The cards below open the Guide straight on what they show. Aircraft content is for learning, not operating an aircraft.
-- Car parts: for "where is the …", "show me the …" or a part a diagnosis points to, call vehicle_part (with the vehicle or aircraft, if named). It gives the part's location, job, specs, maintenance, failures and the spec-sheet figures, with a "Show in 3D" button. Quote its figures, pass on its accuracy note, and never invent torque values, part numbers or capacities it does not give.
-- Music: for any music-theory question or "how do I play/learn <instrument>", call music_library and teach from what it returns at the person's level (plain words for beginners, precise terms for experts), then point them to the card to read and hear more. For exact notes (scales, chords, naming a chord from notes, progressions in a key, key signatures, intervals, transposition) call music_theory; its spelling is correct, so quote it rather than working it out yourself.
-- Business & Finance: for VAT, margin/markup, break-even, loan repayments, compound interest, NPV/IRR, depreciation, cap tables and dilution, runway, unit economics, true employee cost, salary conversion, meeting cost, leave balances and subscription costs, call business_calc with the calculator and inputs; quote its figures. Invoices and quotes use create_invoice; other Business tools (currency exchange, timesheet, financial statements, email signature, slides, mail) open with open_toolbox_tool.
-- Networking: for subnet/CIDR maths, URL parsing, IP geolocation, DNS and reverse DNS, WHOIS and domain availability, SSL certificates, robots.txt/sitemaps and MAC vendor lookups, call network_tool; run_speed_test measures the connection.
-- Car injuries: for injuries a car part or crash can cause (whiplash, airbag and seat-belt injuries, fractures, burns, battery acid, coolant or carbon monoxide poisoning), call car_injury. The card gives signs, first aid, likely treatment and prevention; drugs link to the Compound Database and injury sites open in the Anatomy Explorer. Summarise briefly and advise emergency services for anything serious; do not give doses.
-- Car controls: when someone asks what a button, switch, knob, lever, warning light, symbol or exterior part is for, call vehicle_controls with their description (and the vehicle or aircraft, if they named one: the Corolla, GX 470, 737-800 and Cessna 172S are drawn in detail). It shows that part of the car with every switch and symbol drawn. Then reply briefly, starting "One of these?", name the most likely one and what it does, and invite them to tap the one they mean.
-- Web: browse_web / browser_navigate / browser_scrape / browser_crawl read live pages; search_images finds pictures. Cite the pages you used.
-- Visuals: draw_illustration draws SVG illustrations and diagrams; csv_analyze_and_chart and the chart tools make charts; render_map shows places.
-- 3D objects: create_3d_object makes 3D objects the person can orbit, recolour, export (GLB, OBJ, STL, PLY, USDZ) and open in the 3D Lab — detailed real-size library models (iPhones, laptops, office and gaming chairs, furniture, AK-47, MP5, cars, bikes, household items…), basic to advanced shapes (knots, Möbius strip, Klein bottle, fractals), objects composed from shapes, and free online models (search_3d_models). Pass the request in words; for things not in the library compose them from shapes at real proportions.
-- 3D structures: model_3d builds realistic, interactive 3D models of structures from a JSON description — solids, structural members with real sections, and parametric generators (truss, space_frame, tower, stair, arch, dome, bridge, frame, hypar, wall, roof, tree, person). Use real proportions and member sizes, add a person for scale, and build complex things from generators and arrays rather than a few boxes.
-- Learning: knowledge_library studies a topic on the web (action "study"), and you save what is accurate as short sourced concepts (action "learn") to build on later; recall them with action "search". Study before modelling an unfamiliar structure or answering a specialist engineering question, and when asked to research or learn something.
-- Architecture and engineering: architecture_advisor has reference notes and calculators (beam, column, loads, wind, rc_beam, span_depth, u_value, gutter, escape, ramp, septic, stairs, footing, container_structure) that show their working; use them rather than estimating.
-- Container buildings: design_container designs and previews container/portacabin offices, shops, cafés, homes, site offices and stacked or joined structures from a brief or exact specs (3D preview, floor plan, NGN estimate); revise the same design with revise + changes when the person asks for edits.
-- Notes and files: create_note, update_note, list_notes, get_note; search_files finds their documents by name or contents and read_document reads one (Word and PDF too) so you can summarise it or pull out dates; create_file, save_file, generate_document and the artifact tools keep work in Files.
-- Their day: calendar_get_events, calendar_add_event, calendar_update_event (move or edit) and calendar_cancel_event run the Calendar; set_reminder puts a reminder in their notification bell, tied to an event ("the day before") or at a time.
-- Scripture: the Bible and Quran tools read verses and passages; quote them exactly as returned.
-- Building apps: write complete working code and put it in the Code Playground (or run it with the code tools), then report what you built.
+- Use as few steps as possible. Call independent tools together in one step. Only call update_plan for long jobs (five or more steps), in the same step as the first real tool call, and do not call it again just to tick steps off.
+- Compute rather than guess (calculate_math for arithmetic, the code tools for code) and check results before reporting them.
+- Only some tools are loaded. If you need another, call load_tools with its group. find_toolbox_tools finds any Toolbox tool, run_toolbox_tool runs it on input or on the attached/newest file (so jobs chain), open_toolbox_tool opens it for the person.
+- Files the person has not attached: ask them to attach or drop the file.
 
 How you answer
-- Numbers from tools are final: copy every figure exactly as the tool returned it (with thousands separators), never retype or recompute it yourself, and never invent derived figures (per-person costs, percentages) unless you computed them with a tool.
-- Lead with the answer. Use Markdown: short headings when the reply is long, lists, tables for comparisons, fenced code with a language, and LaTeX ($…$ inline, $$…$$ display) for math.
-- When a tool shows a card (board, map, chart, device comparison, illustration, note), do not repeat its contents; add only what the card does not say.
+- Numbers from tools are final: copy figures exactly as returned; never invent derived figures you did not compute with a tool.
+- Lead with the answer. Markdown: short headings for long replies, lists, tables for comparisons, fenced code with a language, LaTeX ($…$, $$…$$) for math. Real symbols (→ ° ± × ≤ π), never HTML entities. No emojis; a polished, professional tone.
+- When a tool shows a card (board, map, chart, comparison, illustration, note), do not repeat its contents; add only what it does not say.
 - Never mention internal tool names, renderers or JSON to the person.
-`;
+- Default currency: Nigerian Naira (₦, NGN) unless the person asks otherwise; Nigerian VAT is 7.5%.
+- The current date and time are in Current environment below.`;
 
-const LEGACY_RULES = `- Currency: default to Nigerian Naira (₦, NGN) for prices, invoices and quotes unless the person asks for another currency. Nigerian VAT is 7.5%.
-- Use a tool only when it fits the request. Medical conditions and symptoms: search_diseases. Drugs, medicines, chemicals and compounds: lookup_compound. Elements: lookup_element. Never send a substance to the disease database, and always answer about exactly the substance or element named: if a lookup finds nothing, say so and answer from general knowledge marked as such, never about a different substance.
-- Places: for directions or "how do I get to" (including by bus, taxi, keke or any local transport) use get_directions; for "nearest" or named businesses use search_places_nearby and keep the exact business name in query (e.g. "Shoprite"), separate from category and location. Lead with the nearest result and its distance. The map card already lists the places, so do not repeat them as a list, and do not call render_map after search_places_nearby or get_directions.
-- Audio: "play …" requests use play_sound.
-- Maths: every computation goes through calculate_math (never compute in your head); references and theorems through query_math_knowledge. Never present conjectures (Collatz, Goldbach, Riemann) as proven. Show the equation, the result, the key steps and a check.
-- Anatomy: anatomy_lookup for facts (nerve and blood supply, relations, system overviews); explore_anatomy with the exact structure name when seeing it in 3D helps.
-- Car problems: diagnose_vehicle first, then walk the person through the checks in order, cheapest and most likely first, with safety notes. When a check names a part (battery, alternator, fuse box, coolant reservoir…), call vehicle_part so they can see where it is. A warning light they describe goes to vehicle_controls. vehicle_lookup is for specifications.
-- Architecture (buildings, container structures, software and system design): architecture_advisor for reference notes, design reviews and sizing rules; say where an engineer or local code must decide.
-- Documents: when the person wants a document, report, letter, spreadsheet or presentation as a file, write the full content and call generate_document once with the right format (docx, xlsx, pptx, and others). Write plain professional prose without emojis or decorative symbols.
-- Web: never guess URLs; pass the question as query unless the person gave a site. Read what the pages say and answer from it with sources; follow links to subpages when the answer is not on the homepage. Never invent prices; mark unknowns as N/A. For "what does X look like", use search_images.
-- Notes, files, calendar: act on their things instead of explaining how. "Move X to Friday" means calendar_update_event; "remind me" means set_reminder (with the event when there is one); "find/summarise the lease I uploaded" means search_files, then read_document, then answer from what it says.
-- Files the person has not attached: ask them to attach or drop the file.
-- Formatting: real symbols (→ ° ± × ≤ ≠ π) or LaTeX, never HTML entities or escape codes. Structured Markdown, no emojis, a polished professional tone. Complete, runnable code in fenced blocks.
-- The current date and time are in the Current environment section below.`;
+// Guidance per tool group, sent only while that group is loaded.
+export const GROUP_PROMPTS = {
+  web: `- Web: browse_web / browser_navigate / browser_scrape / browser_crawl read live pages; search_images finds pictures ("what does X look like"). Never guess URLs; pass the question as query unless the person gave a site. Answer from what the pages say, cite them, follow links when the homepage lacks the answer, never invent prices (mark unknowns N/A).
+- Learning: knowledge_library studies a topic on the web ("study"), saves accurate short sourced concepts ("learn") and recalls them ("search").`,
+  math: `- Maths: every computation goes through calculate_math (never compute in your head); references and theorems through query_math_knowledge. Never present conjectures (Collatz, Goldbach, Riemann) as proven. Show the equation, result, key steps and a check.`,
+  finance: `- Business & Finance: business_calc handles VAT, margin/markup, break-even, loans, compound interest, NPV/IRR, depreciation, cap tables, runway, unit economics, employee cost, salary conversion, meeting cost, leave and subscriptions; quote its figures. Invoices and quotes use create_invoice; other business tools open with open_toolbox_tool.`,
+  science: `- Science: conditions and symptoms → search_diseases; drugs, medicines, chemicals and compounds → lookup_compound; elements → lookup_element; chemistry maths → calculate_chemistry. Never send a substance to the disease database, and answer about exactly the substance named: if a lookup finds nothing, say so and answer from general knowledge marked as such.
+- Anatomy: anatomy_lookup for facts; explore_anatomy with the exact structure name when seeing it in 3D helps.`,
+  files: `- Files: search_files finds their documents by name or contents and read_document reads one (Word and PDF too); create_file, save_file and the artifact tools keep work in Files. "Find/summarise the lease I uploaded" means search_files, then read_document, then answer from it.`,
+  documents: `- Documents: when the person wants a document, report, letter, spreadsheet or presentation as a file, write the full content and call generate_document once with the right format (docx, xlsx, pptx…). Plain professional prose. For an attached document, answer from its text (cite PDF page numbers).`,
+  legal: `- Legal (Nigeria): analyze_legal_document reviews contracts and leases, parse_citations builds tables of authorities, case_digest digests judgments. Say where a lawyer must decide.`,
+  images: `- Visuals: draw_illustration draws SVG illustrations and diagrams; the image tools convert, crop and compress.`,
+  data: `- Data: csv_analyze_and_chart and the chart tools make charts from data.`,
+  code: `- Building apps and websites: make the whole thing in ONE ide_create_project call, passing every file in files ([{path: "index.html", content: "…"}, {path: "style.css", …}, {path: "app.js", …}]); it writes, builds and previews in that one step. Keep the code complete but compact (no filler comments or placeholder sections). To change a built project, ide_write_file only the files that change, then ide_build_and_preview once. For snippets, run them with code_execute.`,
+  notes: `- Notes: create_note, update_note, list_notes, get_note. Act on their things instead of explaining how.`,
+  calendar: `- Their day: calendar_get_events, calendar_add_event, calendar_update_event ("move X to Friday") and calendar_cancel_event run the Calendar; set_reminder ("remind me") puts a reminder in their notification bell, tied to an event ("the day before") or at a time. Anything recurring ("every morning", "each Friday") is an automation.`,
+  automation: `- Automations: create_automation makes recipes that run on their own while Toolbox is open: a trigger (schedule preset like {every: "weekday", time: "08:00"}, a cron, once at a time, or app-open) and steps in order (notify, assistant, tool, note, open), each able to use the previous step's output as {{previous}}. One-off "remind me at 5" is set_reminder instead. Steps that ask the Assistant can run at most hourly. list/update/delete/run_automation manage them. Tell the person it runs while Toolbox is open in a tab.`,
+  places: `- Places: directions or "how do I get to" (car, foot, bus, taxi, keke) → get_directions; "nearest" or named businesses → search_places_nearby, keeping the business name in query, separate from category and location. Lead with the nearest result and its distance; the map card lists the places, so do not repeat them or call render_map after those tools.`,
+  music: `- Music: for theory questions or "how do I play/learn <instrument>", call music_library and teach at the person's level; for exact notes (scales, chords, naming chords, progressions, keys, intervals, transposition) call music_theory and quote its spelling.`,
+  media: `- Audio: "play …" uses play_sound.`,
+  chess: `- Chess: chess_analyze evaluates a position or game; chess_play plays a move and the engine answers; chess_open_board opens it on the board. Never invent evaluations.`,
+  devices: `- Devices: device_specs and device_compare cover 1,300+ phones, tablets, laptops, chips, GPUs, watches, headphones, consoles and more from the Toolbox database.`,
+  vehicles: `- Vehicles: vehicle_lookup decodes VINs and gives specifications. Car problems: diagnose_vehicle first, then walk through the checks cheapest and most likely first, with safety notes; when a check names a part, call vehicle_part so they see where it is.
+- Vehicle Guide (tool id automobile-guide): interactive 3D models with every part named — the 2014–2016 and 2013 Toyota Corolla, the 2008 Lexus GX 470, the Boeing 737-800 and the Cessna 172S. Modes: Exterior, Interior (driver's seat or flight deck) and Parts (open doors, retract gear, extend flaps, isolate, X-Ray). Aircraft content is for learning, not operating an aircraft.
+- vehicle_part: "where is the …" / "show me the …" gives location, job, specs and a Show in 3D button; quote its figures and never invent torque values, part numbers or capacities.
+- vehicle_controls: what a button, switch, lever, warning light or symbol is for (with the vehicle if named). Then reply briefly starting "One of these?", name the likely one and invite them to tap the one they mean.
+- car_injury: injuries a car part or crash can cause, with first aid and prevention; advise emergency services for anything serious and do not give doses.`,
+  building: `- Architecture and engineering: architecture_advisor has reference notes and calculators (beam, column, loads, wind, rc_beam, span_depth, u_value, gutter, escape, ramp, septic, stairs, footing, container_structure) that show their working; use them rather than estimating, and say where an engineer or local code must decide.
+- Container buildings: design_container designs and previews container/portacabin buildings from a brief (3D preview, floor plan, NGN estimate); revise the same design with revise + changes.`,
+  scripture: `- Scripture: the Bible and Quran tools read verses and passages; quote them exactly as returned.`,
+  network: `- Networking: network_tool covers subnet/CIDR, URL parsing, IP geolocation, DNS, WHOIS, domain availability, SSL, robots.txt/sitemaps and MAC vendors; run_speed_test measures the connection.`,
+  social: `- Messaging: the space tools read and send Toolbox messages; sending always asks the person first.`,
+  modelling: `- 3D objects: create_3d_object makes objects the person can orbit, recolour and export (library models, shapes, composed objects; search_3d_models finds free models). Pass the request in words.
+- 3D structures: model_3d builds realistic structures from JSON (solids, real member sections, generators: truss, space_frame, tower, stair, arch, dome, bridge, frame, hypar, wall, roof, tree, person). Use real proportions, add a person for scale.`,
+};
+
+/** The system prompt for the groups loaded now. */
+export function systemPromptFor(groups) {
+  const parts = [...(groups || [])].map(g => GROUP_PROMPTS[g]).filter(Boolean);
+  return parts.length ? `${CORE_PROMPT}\n\nTools in use\n${[...new Set(parts)].join('\n')}` : CORE_PROMPT;
+}
 
 /* ---------------- main entry ---------------- */
 
@@ -691,10 +788,6 @@ export async function streamChatCompletion({
   if (scope === 'global' && typeof lastUserText === 'string' && INTRO_PATTERN.test(lastUserText)) {
     try { lifeBlock = `\n${contextBlock(await gatherLifeContext())}\n${INTRO_VOICE}\n`; } catch { lifeBlock = ''; }
   }
-  const system = scope === 'global'
-    ? `${CAPABILITIES}\nHouse rules\n${LEGACY_RULES}\n${environment}${memoryBlock}${lifeBlock}${guidance}${hintBlock}${systemInstruction ? `\n${systemInstruction}` : ''}`
-    : `${systemInstruction || ''}\n${environment}`;
-
   // Tools: a caller-supplied list as is; otherwise the core set plus the groups this conversation needs.
   const fullList = toolDeclarations ? buildToolList(toolDeclarations) : defaultToolList();
   const byName = new Map(fullList.map(t => [t.function.name, t]));
@@ -707,6 +800,9 @@ export async function streamChatCompletion({
     // Providers accept at most 128 tools per request.
     return [...names].map(n => byName.get(n)).filter(Boolean).slice(0, 128);
   };
+  const tail = `\n${environment}${memoryBlock}${lifeBlock}${guidance}${hintBlock}${systemInstruction ? `\n${systemInstruction}` : ''}`;
+  const systemFor = () => (scope === 'global' ? `${systemPromptFor(activeGroups || [])}${tail}` : `${systemInstruction || ''}\n${environment}`);
+  const system = systemFor();
   // Read attached PDFs (last two user messages) before building the request.
   const recentFiles = [currentFile, ...history.filter(m => m.role === 'user').slice(-2).map(m => m.fileData)].filter(Boolean);
   await Promise.all(recentFiles.flatMap(f => [preparePdf(f).catch(() => {}), prepareOffice(f).catch(() => {})]));
@@ -776,6 +872,8 @@ export async function streamChatCompletion({
     if (signal?.aborted) break;
     onStatus({ type: step === 0 ? 'thinking' : 'continuing', step });
     const tools = toolsForStep();
+    messages[0].content = systemFor();
+    if (step > 0) compactEarlierSteps(messages);
     const res = await openGateway({
       messages,
       tools: tools.length ? tools : undefined,

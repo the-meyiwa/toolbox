@@ -38,6 +38,7 @@ import { installMotion } from './lib/motion.js';
 import { initMessageNotifications } from './lib/message-notifications.js';
 import { installSessionKeeper } from './lib/session-keeper.js';
 import { startReminderClock } from './lib/reminders.js';
+import { startAutomationClock } from './lib/automations.js';
 
 installSessionKeeper();
 
@@ -1172,6 +1173,7 @@ initSupporterProfile();
 installHeaderMenu();
 initMessageNotifications();
 startReminderClock();
+startAutomationClock();
   initWorkspace({ main: () => ({ id: currentPage === 'tool' ? currentToolId : null, instance: currentToolInstance, host: viewportContent }) });
   initScrollNarrative();
   initHomeScrollNarrative();
