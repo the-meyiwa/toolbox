@@ -49,3 +49,6 @@
 .home-search-keys kbd { display: inline-grid; place-items: center; min-width: 22px; height: 20px; padding: 0 5px; border-radius: 5px; border: 1px solid var(--line-strong); background: var(--surface); font: 600 11px/1 var(--font-sans, system-ui); color: var(--text-2); }
 @media (max-width: 768px), (hover: none) { .home-search-keys { display: none; } }
 .hero-dd-row > kbd { flex: none; padding: 3px 7px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--surface); font: 600 11px/1 var(--font-sans, system-ui); color: var(--text-3); white-space: nowrap; }
+/* A file dragged over the panel (from the computer or the Files app). */
+.asp.is-drop { outline: 2px dashed color-mix(in srgb, var(--text) 45%, transparent); outline-offset: -6px; }
+.asp.is-drop .asp-head::after { content: "Drop to attach"; margin-left: 8px; font-size: 12px; color: var(--text-2); }

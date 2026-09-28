@@ -1,0 +1,101 @@
+/* ==========================================================================
+   Glass — the Toolbox surface language.
+   Floating chrome (header, menus, panels, dialogs, the Assistant pop-up) is
+   frosted glass over a softly tinted page: translucent surface, backdrop
+   blur with extra saturation, a hairline border and a bright top edge.
+   Everything is built from theme tokens, so light and dark both work.
+   Loaded last, so it refines the shell and tool styles without rewriting them.
+   ========================================================================== */
+
+:root {
+  --glass-bg: color-mix(in srgb, var(--surface) 70%, transparent);
+  --glass-bg-strong: color-mix(in srgb, var(--surface) 84%, transparent);
+  --glass-border: color-mix(in srgb, var(--text) 10%, transparent);
+  --glass-edge: inset 0 1px 0 color-mix(in srgb, var(--surface) 70%, transparent);
+  --glass-blur: saturate(180%) blur(22px);
+  --glass-shadow: 0 1px 1px color-mix(in srgb, var(--text) 4%, transparent), 0 18px 50px -18px color-mix(in srgb, var(--text) 24%, transparent);
+  --glass-tint-1: color-mix(in srgb, #7aa7ff 14%, transparent);
+  --glass-tint-2: color-mix(in srgb, #c68bff 11%, transparent);
+  --glass-tint-3: color-mix(in srgb, #5fe0c2 10%, transparent);
+}
+[data-theme="dark"] {
+  --glass-bg: color-mix(in srgb, var(--surface) 62%, transparent);
+  --glass-bg-strong: color-mix(in srgb, var(--surface) 80%, transparent);
+  --glass-border: color-mix(in srgb, var(--text) 12%, transparent);
+  --glass-edge: inset 0 1px 0 color-mix(in srgb, var(--text) 8%, transparent);
+  --glass-tint-1: color-mix(in srgb, #4f7cff 12%, transparent);
+  --glass-tint-2: color-mix(in srgb, #a855f7 9%, transparent);
+  --glass-tint-3: color-mix(in srgb, #14b8a6 8%, transparent);
+}
+
+/* A soft tinted backdrop so the glass has something to refract. Fixed and
+   behind everything; painted once, never animated. */
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(60vw 50vh at 12% -5%, var(--glass-tint-1), transparent 70%),
+    radial-gradient(50vw 45vh at 95% 10%, var(--glass-tint-2), transparent 70%),
+    radial-gradient(60vw 50vh at 60% 110%, var(--glass-tint-3), transparent 70%);
+}
+
+/* Header */
+#app-header {
+  background: color-mix(in srgb, var(--bg) 68%, transparent);
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom-color: var(--glass-border);
+}
+
+/* Floating chrome */
+.header-dropdown-menu,
+.header-notif-panel,
+.asp,
+.custom-dialog-window,
+.home-hero-dropdown {
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-edge), var(--glass-shadow);
+}
+.asp { border-radius: 22px; }
+.asp .ast, .asp .ast-main, .asp .ast-side { background: transparent; }
+.asp-head { background: color-mix(in srgb, var(--surface) 35%, transparent); border-bottom: 1px solid var(--glass-border); }
+
+/* Toasts: dark glass pills */
+.toolbox-toast {
+  background: color-mix(in srgb, var(--ink) 82%, transparent);
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Assistant composer floats on glass */
+.ast-composer {
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  border-color: var(--glass-border);
+  box-shadow: var(--glass-edge), var(--glass-shadow);
+}
+
+/* Cards: translucent with a gentle lift. No blur here: a grid of blurred
+   cards is expensive to scroll, and the tinted page already shows through. */
+.tool-card {
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
+  box-shadow: var(--glass-edge), var(--shadow-1);
+  transition: border-color .2s ease, box-shadow .25s ease, transform .25s var(--ease-out);
+}
+.tool-card:hover { transform: translateY(-2px); box-shadow: var(--glass-edge), var(--glass-shadow); }
+.astc { background: var(--glass-bg); border-color: var(--glass-border); box-shadow: var(--glass-edge), var(--shadow-1); }
+
+/* Browsers without backdrop-filter get solid surfaces instead of see-through ones. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .header-dropdown-menu, .header-notif-panel, .asp, .custom-dialog-window, .home-hero-dropdown, .ast-composer { background: var(--surface); }
+  #app-header { background: var(--bg); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .header-dropdown-menu, .header-notif-panel, .asp, .custom-dialog-window, .home-hero-dropdown, .ast-composer, .tool-card, .astc { background: var(--surface); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  #app-header { background: var(--bg); }
+  body::before { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tool-card:hover { transform: none; }
+}

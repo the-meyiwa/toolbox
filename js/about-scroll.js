@@ -84,6 +84,8 @@ export function initScrollNarrative() {
   // Real numbers, never hard-coded.
   const toolCount = view.querySelector('#about-tool-count');
   if (toolCount) toolCount.dataset.countTo = String(TOOLS.length);
+  const bentoCount = view.querySelector('#about-bento-tools');
+  if (bentoCount) bentoCount.dataset.countTo = String(TOOLS.length);
   const catCount = view.querySelector('#about-cat-count');
   if (catCount) catCount.dataset.countTo = String(categorised(TOOLS).length);
 
@@ -181,6 +183,7 @@ export function initScrollNarrative() {
 
 /* Pointer spotlight and marquee: shared by both motion paths. */
 function initExtras(view) {
+  initShowcase(view);
   // A soft spotlight follows a mouse pointer. It is its own composited
   // layer moved by transform, so it never restyles the page.
   if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
@@ -200,4 +203,41 @@ function initExtras(view) {
   if (marquee && typeof IntersectionObserver !== 'undefined') {
     new IntersectionObserver(([e]) => marquee.classList.toggle('is-running', e.isIntersecting)).observe(marquee);
   } else marquee?.classList.add('is-running');
+}
+
+/* "Why Toolbox": cards rise in one after another, numbers count up, and on a mouse each card
+   tilts toward the pointer with a light that follows it (transform and custom properties only). */
+function initShowcase(view) {
+  const show = view.querySelector('.about-showcase');
+  const friends = view.querySelector('.about-friends');
+  if (!show) return;
+  const reveal = (el) => { el.classList.add('is-in'); el.querySelectorAll('[data-count-to]').forEach(animateCount); };
+  if (typeof IntersectionObserver === 'undefined') { reveal(show); friends && reveal(friends); }
+  else {
+    const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { reveal(e.target); io.unobserve(e.target); } }), { rootMargin: '0px 0px -15% 0px' });
+    io.observe(show);
+    if (friends) io.observe(friends);
+    new MutationObserver(() => {
+      if (!view.classList.contains('hidden')) return;
+      [show, friends].filter(Boolean).forEach((el) => { el.classList.remove('is-in'); io.observe(el); });
+    }).observe(view, { attributes: true, attributeFilter: ['class'] });
+  }
+  if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  view.querySelectorAll('.bento-card, .korelearn-card').forEach((card) => {
+    let raf = 0, ev = null;
+    card.addEventListener('pointermove', (e) => {
+      ev = e;
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const r = card.getBoundingClientRect();
+        const x = (ev.clientX - r.left) / r.width, y = (ev.clientY - r.top) / r.height;
+        card.style.setProperty('--rx', `${((0.5 - y) * 6).toFixed(2)}deg`);
+        card.style.setProperty('--ry', `${((x - 0.5) * 8).toFixed(2)}deg`);
+        card.style.setProperty('--gx', `${(x * 100).toFixed(1)}%`);
+        card.style.setProperty('--gy', `${(y * 100).toFixed(1)}%`);
+      });
+    }, { passive: true });
+    card.addEventListener('pointerleave', () => { card.style.setProperty('--rx', '0deg'); card.style.setProperty('--ry', '0deg'); });
+  });
 }

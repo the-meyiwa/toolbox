@@ -62,6 +62,22 @@ function build() {
     e.preventDefault();
     closeAssistant();
   });
+  // The whole panel takes files: from the computer, or dragged from the Toolbox Files app.
+  // Drops on the chat itself are handled by the Assistant; anywhere else on the panel
+  // (header, edges) is forwarded to it.
+  const carriesFiles = (e) => { const t = [...(e.dataTransfer?.types || [])]; return t.includes('Files') || t.includes('application/toolbox-path'); };
+  let depth = 0;
+  panel.addEventListener('dragenter', (e) => { if (!carriesFiles(e)) return; e.preventDefault(); depth++; panel.classList.add('is-drop'); });
+  panel.addEventListener('dragover', (e) => { if (!carriesFiles(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+  panel.addEventListener('dragleave', () => { depth = Math.max(0, depth - 1); if (!depth) panel.classList.remove('is-drop'); });
+  panel.addEventListener('drop', (e) => {
+    depth = 0;
+    panel.classList.remove('is-drop');
+    if (!carriesFiles(e) || e.defaultPrevented) return;   // the Assistant already took it
+    e.preventDefault();
+    const paths = (e.dataTransfer.getData('application/toolbox-path') || '').split('\n').map(x => x.trim()).filter(Boolean);
+    window.dispatchEvent(new CustomEvent('toolbox:assistant-drop', { detail: { files: [...(e.dataTransfer.files || [])], paths } }));
+  });
   // The full Assistant page takes over the same chat.
   window.addEventListener('hashchange', () => { if (onAssistantPage() && isAssistantOpen()) closeAssistant({ restoreFocus: false }); });
 }

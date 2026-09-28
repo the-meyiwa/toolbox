@@ -142,6 +142,20 @@ function remember(p, m, err, { tools, bytes }) {
   health.set(key, { until, reason: msg.slice(0, 240) });
 }
 
+/* ---------------- warm-up ---------------- */
+
+let warmedAt = 0;
+/** Opens a keep-alive connection to each configured provider (no key sent, nothing billed). */
+export function warmProviders() {
+  const now = Date.now();
+  if (now - warmedAt < 60_000) return;
+  warmedAt = now;
+  const origins = new Set(PROVIDERS.filter(p => p.key()).map(p => new URL(p.url).origin));
+  for (const origin of origins) {
+    fetch(origin, { method: 'HEAD', signal: AbortSignal.timeout(8000) }).then(r => r.body?.cancel?.()).catch(() => {});
+  }
+}
+
 /* ---------------- helpers ---------------- */
 
 export function assistantProviders() {
@@ -417,6 +431,16 @@ export async function handleAssistantGateway(request, response, url) {
   }
   if (url.pathname === '/api/assistant/v2/diagnose' && request.method === 'GET') {
     return diagnose(request, response);
+  }
+  if (url.pathname === '/api/assistant/v2/warm' && (request.method === 'GET' || request.method === 'POST')) {
+    // Called when the person opens the Assistant or starts typing: wakes this server, checks and
+    // caches their session (so the first message skips that round trip), and opens the TLS
+    // connections to the model providers so the first request does not pay for the handshake.
+    response.writeHead(204, { 'Cache-Control': 'no-store' });
+    response.end();
+    warmProviders();
+    authorised(request).catch(() => {});
+    return true;
   }
   if (url.pathname !== '/api/assistant/v2/chat' || request.method !== 'POST') return false;
 

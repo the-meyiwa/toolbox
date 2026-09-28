@@ -84,5 +84,19 @@ export const mailApi = {
   disconnect(accountId) { return request('disconnect', { method: 'POST', body: { accountId } }); },
 };
 
+/* Hand-off from other parts of Toolbox (the Assistant's cards) to the Mail tool:
+   { type: 'open', id, threadId } opens that message; { type: 'compose', to, cc, subject, body,
+   replyToId, mode } opens a pre-filled draft. The Mail tool takes it once, after it has loaded. */
+let pendingIntent = null;
+export function setMailIntent(intent) {
+  pendingIntent = intent && typeof intent === 'object' ? { ...intent, at: Date.now() } : null;
+  try { window.dispatchEvent(new CustomEvent('toolbox:mail-intent')); } catch { /* no window */ }
+}
+export function takeMailIntent() {
+  const it = pendingIntent;
+  pendingIntent = null;
+  return it && Date.now() - it.at < 5 * 60_000 ? it : null;
+}
+
 /* Compatibility alias for older imports. */
 export const mailClient = mailApi;

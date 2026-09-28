@@ -867,6 +867,51 @@ export function renderAutomations(data, container) {
 
 registerResultRenderer('automations', renderAutomations);
 
+/* Mail. Email text comes from other people: it is only ever inserted escaped. */
+const MAIL_ICON = '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m4 7 8 6 8-6"/>';
+export function renderMailList(data, container) {
+  const msgs = Array.isArray(data.messages) ? data.messages : [];
+  const el = card('mail', { icon: MAIL_ICON, title: data.query ? `Mail: ${data.query}` : 'Inbox', sub: `${msgs.length} message${msgs.length === 1 ? '' : 's'}`, actions: btn('Open Mail', I.external, 'data-act="open"') });
+  el.querySelector('.astc-body').innerHTML = msgs.length
+    ? `<ul class="astc-mail-list">${msgs.map(m => `<li class="${m.unread ? 'is-unread' : ''}" data-mail-id="${esc(m.id)}" data-thread-id="${esc(m.threadId || '')}" tabindex="0" role="button" aria-label="Open ${esc(m.subject)} in Mail">
+        <div class="astc-mail-top"><span class="astc-mail-from">${esc(m.from)}</span><span class="astc-mail-date">${esc(m.date)}</span></div>
+        <div class="astc-mail-subj">${m.starred ? '★ ' : ''}${esc(m.subject)}${m.attachments ? ' <span class="astc-muted">· attachment</span>' : ''}</div>
+        <div class="astc-mail-snip">${esc(m.snippet)}</div></li>`).join('')}</ul>`
+    : '<p class="astc-muted">No messages.</p>';
+  const openRow = (li) => openInMail({ type: 'open', id: li.dataset.mailId, threadId: li.dataset.threadId });
+  el.addEventListener('click', (e) => {
+    if (e.target.closest('[data-act="open"]')) { openTool('mail'); return; }
+    const li = e.target.closest('[data-mail-id]');
+    if (li) openRow(li);
+  });
+  el.addEventListener('keydown', (e) => { const li = e.target.closest('[data-mail-id]'); if (li && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openRow(li); } });
+  container.appendChild(el);
+  return el;
+}
+function openInMail(intent) {
+  import('../mail-provider.js').then(({ setMailIntent }) => { setMailIntent(intent); openTool('mail'); }).catch(() => openTool('mail'));
+}
+export function renderMailMessage(data, container) {
+  const msgs = Array.isArray(data.messages) ? data.messages : [];
+  const last = msgs[msgs.length - 1];
+  const el = card('mail', { icon: MAIL_ICON, title: data.subject || 'Email', sub: msgs.length > 1 ? `${msgs.length} messages` : esc(msgs[0]?.from || ''), actions: `${btn('Reply', I.pen, 'data-act="reply"')}${btn('Open in Mail', I.external, 'data-act="open"')}` });
+  el.querySelector('.astc-body').innerHTML = msgs.map(m => `<article class="astc-mail-msg">
+      <div class="astc-mail-top"><span class="astc-mail-from">${esc(m.from)}</span><span class="astc-mail-date">${esc(m.date)}</span></div>
+      ${m.to ? `<div class="astc-muted astc-mail-to">To ${esc(m.to)}</div>` : ''}
+      <div class="astc-mail-body">${esc(m.body)}</div>
+      ${m.attachments?.length ? `<div class="astc-muted">Attachments: ${esc(m.attachments.join(', '))}</div>` : ''}
+    </article>`).join('');
+  el.addEventListener('click', (e) => {
+    const act = e.target.closest('[data-act]')?.dataset.act;
+    if (act === 'open' && last?.id) openInMail({ type: 'open', id: last.id });
+    if (act === 'reply' && last?.id) openInMail({ type: 'compose', replyToId: last.id, mode: 'reply', body: '' });
+  });
+  container.appendChild(el);
+  return el;
+}
+registerResultRenderer('mail-list', renderMailList);
+registerResultRenderer('mail-message', renderMailMessage);
+
 /* A site or app the Assistant built: a live preview in a sandboxed frame (scripts run, but it
    cannot reach Toolbox's storage, cookies or the page around it), with the project's files. */
 const CODE_ICON = '<path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/>';

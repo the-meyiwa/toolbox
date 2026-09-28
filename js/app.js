@@ -1174,6 +1174,8 @@ installHeaderMenu();
 initMessageNotifications();
 startReminderClock();
 startAutomationClock();
+// Signed-in visitors usually ask the Assistant something: wake its service early, off the critical path.
+if (getCurrentUser()) (window.requestIdleCallback || ((f) => setTimeout(f, 2500)))(() => import('./lib/model-gateway.js').then(m => m.warmGateway()).catch(() => {}));
   initWorkspace({ main: () => ({ id: currentPage === 'tool' ? currentToolId : null, instance: currentToolInstance, host: viewportContent }) });
   initScrollNarrative();
   initHomeScrollNarrative();

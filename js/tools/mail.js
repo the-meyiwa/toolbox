@@ -15,7 +15,7 @@
    and a CSP that blocks remote content until "Show images".
    ============================================================ */
 
-import { mailApi } from '../lib/mail-provider.js';
+import { mailApi, takeMailIntent } from '../lib/mail-provider.js';
 import { createMailSetupUI, connectMailbox } from '../views/mail-setup.js';
 import { getCurrentUser } from '../lib/supabase.js';
 import { openSettings } from '../lib/settings-ui.js';
@@ -225,6 +225,10 @@ export default {
     window.addEventListener('toolbox:mailconfigchange', onConfig);
     window.addEventListener('toolbox:authchange', reinit);
     this.cleanup.push(() => { window.removeEventListener('toolbox:mailconfigchange', onConfig); window.removeEventListener('toolbox:authchange', reinit); });
+    // The Assistant handed something over while Mail was already open.
+    const onIntent = () => { if (this.S && !this.S.listLoading) void this.applyIntent(); };
+    window.addEventListener('toolbox:mail-intent', onIntent);
+    this.cleanup.push(() => window.removeEventListener('toolbox:mail-intent', onIntent));
     this.onKey = (e) => this.handleKey(e);
     window.addEventListener('keydown', this.onKey, true);
     // "/" searches mail while Mail is open (the app palette would take it otherwise).
@@ -303,7 +307,49 @@ export default {
     this.restoreDraft();
     await this.loadFolders();
     await this.loadList();
+    void this.applyIntent();
     this.refreshTimer = setInterval(() => { if (document.visibilityState === 'visible') void this.refresh({ silent: true }); }, REFRESH_MS);
+  },
+
+  /** Opens what the Assistant handed over: a message, or a pre-filled draft (never sent without the person). */
+  async applyIntent() {
+    const S = this.S;
+    if (!S) return;
+    const intent = takeMailIntent();
+    if (!intent) return;
+    try {
+      if (intent.type === 'open' && intent.id) {
+        let row = S.rows.find(r => r.id === intent.id || (intent.threadId && r.threadId === intent.threadId));
+        if (!row) {
+          // Not on the first page: fetch it and show it at the top of the list.
+          const m = await mailApi.message(S.accountId, intent.id);
+          if (!m || this.S !== S) return;
+          row = { id: m.id, threadId: m.threadId, from: m.from, to: m.to, subject: m.subject, snippet: m.snippet || '', date: m.date, unread: false, starred: !!m.starred, hasAttachments: !!m.attachments?.length };
+          S.rows.unshift(row);
+          this.renderRows();
+        }
+        await this.open(this.keyOf(row), { focus: true });
+      } else if (intent.type === 'compose') {
+        const plain = String(intent.body || '');
+        const bodyHtml = plain.split(/\n{2,}/).map(p => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('');
+        const addr = (xs) => [].concat(xs || []).filter(Boolean).map(x => (typeof x === 'string' ? { email: x, name: '' } : x));
+        let reply = null, quoteHtml = '', mode = 'new';
+        if (intent.replyToId) {
+          const m = await mailApi.message(S.accountId, intent.replyToId);
+          if (m && this.S === S) {
+            mode = intent.mode === 'forward' ? 'forward' : intent.mode === 'replyAll' ? 'replyAll' : 'reply';
+            const quoted = m.html ? sanitizeDoc(m.html).body.innerHTML : plainToHtml(m.text || m.snippet || '');
+            quoteHtml = `<div class="tb-quote"><div>On ${esc(longDate(m.date))}, ${esc(displayName(m.from))} &lt;${esc(m.from?.email || '')}&gt; wrote:</div><blockquote style="margin:0 0 0 .8ex;border-left:1px solid #ccc;padding-left:1ex">${quoted}</blockquote></div>`;
+            reply = { inReplyTo: mode === 'forward' ? '' : m.messageId, references: [m.references, m.messageId].filter(Boolean).join(' '), threadId: mode === 'forward' ? '' : m.threadId, replyToId: m.id };
+            if (!intent.to?.length && mode !== 'forward') intent.to = [m.replyTo?.[0] || m.from].filter(Boolean);
+            if (!intent.subject) intent.subject = subjectPrefix(mode === 'forward' ? 'Fwd:' : 'Re:', m.subject);
+          }
+        }
+        this.openCompose({ mode, to: addr(intent.to), cc: addr(intent.cc), subject: intent.subject || '', bodyHtml, quoteHtml, reply, dirty: true });
+      }
+    } catch (err) {
+      this.toast(`Could not open that from the Assistant: ${err?.message || 'unknown error'}`, { tone: 'error' });
+    }
   },
 
   renderConnect() {

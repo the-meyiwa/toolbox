@@ -21,6 +21,19 @@ export class GatewayError extends Error {
   constructor(message, status) { super(message); this.status = status; }
 }
 
+let lastWarm = 0;
+/**
+ * Wakes the Assistant service before the person sends anything: the server may be asleep
+ * (free hosting), their session check and the model providers' connections all take time on
+ * the first message. Cheap and throttled, so it can be called on focus or open.
+ */
+export function warmGateway() {
+  const now = Date.now();
+  if (now - lastWarm < 90_000 || typeof fetch !== 'function' || typeof window === 'undefined') return;
+  lastWarm = now;
+  authHeader().then(headers => fetch('/api/assistant/v2/warm', { method: 'POST', headers, keepalive: true })).catch(() => {});
+}
+
 export async function openGateway(body, signal) {
   for (let attempt = 0; attempt < 2; attempt++) {
     const res = await fetch('/api/assistant/v2/chat', {

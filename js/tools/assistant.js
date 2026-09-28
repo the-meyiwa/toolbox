@@ -16,6 +16,7 @@ import { getSetting } from '../lib/settings.js';
 import { tbConfirm, tbPrompt, tbAlert } from '../lib/dialog.js';
 import { showToast } from '../utils.js';
 import { streamChatCompletion, getActiveAiMode, setActiveAiMode, AI_MODES } from '../lib/ai-provider.js';
+import { warmGateway } from '../lib/model-gateway.js';
 import { QuotaManager } from '../lib/quota-manager.js';
 import { getCurrentUser } from '../lib/supabase.js';
 import { openAccountModal } from '../views/account-modal.js';
@@ -435,6 +436,10 @@ function mountAssistant(container, state) {
   const jumpBtn = $('.ast-jump');
   const form = $('.ast-composer');
   const input = $('.ast-input');
+  // Wake the model service while the person is still typing.
+  warmGateway();
+  input.addEventListener('focus', warmGateway);
+  input.addEventListener('input', warmGateway, { passive: true });
   const filesRow = $('.ast-files');
   const sendBtn = $('.ast-send');
   const fileInput = $('.ast-file-input');
@@ -1245,6 +1250,44 @@ function mountAssistant(container, state) {
     input.focus();
   }
 
+  /** Attaches a file from Toolbox Files (the picker, or a drag from the Files app). */
+  async function attachFromFiles(f) {
+    const type = f.mimeType || mimeFromName(f.name);
+    const pseudo = { name: f.name, size: f.size || 0, type };
+    let att;
+    if (isTextFile(pseudo) && !/^image\//.test(type)) {
+      const text = String(await fs.readFile(f.path, { encoding: 'utf-8' }));
+      att = { id: newId('f'), ...pseudo, text, base64: b64FromText(text), isText: true, path: f.path };
+    } else {
+      const bytes = await fs.readFile(f.path, { encoding: 'binary' });
+      const base64 = bytesToBase64(bytes);
+      const dataUrl = `data:${type};base64,${base64}`;
+      att = { id: newId('f'), ...pseudo, size: pseudo.size || bytes.length, dataUrl, base64, path: f.path };
+      if (/^image\//.test(type)) att.thumb = await makeThumb(dataUrl);
+      const prev = attachments.find(a => !a.isText);
+      if (prev) attachments = attachments.filter(a => a !== prev);
+    }
+    attachments.push(att);
+    renderFiles();
+    updateComposerState();
+  }
+
+  /** Files dragged from the Toolbox Files app carry their paths (folders attach every file inside, up to 10). */
+  async function attachDroppedPaths(paths) {
+    const metas = await fs.listAllMeta();
+    const picked = [];
+    for (const p of paths) {
+      const m = metas.find(x => x.path === p);
+      if (!m) continue;
+      if (m.isDirectory) picked.push(...metas.filter(x => !x.isDirectory && x.path.startsWith(`${p}/`)));
+      else picked.push(m);
+    }
+    for (const f of picked.slice(0, 10)) {
+      try { await attachFromFiles(f); } catch (err) { tbAlert(`Could not attach ${f.name}: ${err?.message || err}`); }
+    }
+    input.focus();
+  }
+
   async function openToolboxFilePicker() {
     const backdrop = document.createElement('div');
     backdrop.className = 'ast-modal';
@@ -1282,23 +1325,7 @@ function mountAssistant(container, state) {
         const f = files.find(x => x.path === row.dataset.path);
         row.classList.add('is-loading');
         try {
-          const type = f.mimeType || mimeFromName(f.name);
-          const pseudo = { name: f.name, size: f.size || 0, type };
-          let att;
-          if (isTextFile(pseudo) && !/^image\//.test(type)) {
-            const text = String(await fs.readFile(f.path, { encoding: 'utf-8' }));
-            att = { id: newId('f'), ...pseudo, text, base64: b64FromText(text), isText: true, path: f.path };
-          } else {
-            const bytes = await fs.readFile(f.path, { encoding: 'binary' });
-            const base64 = bytesToBase64(bytes);
-            const dataUrl = `data:${type};base64,${base64}`;
-            att = { id: newId('f'), ...pseudo, size: pseudo.size || bytes.length, dataUrl, base64, path: f.path };
-            if (/^image\//.test(type)) att.thumb = await makeThumb(dataUrl);
-            const prev = attachments.find(a => !a.isText);
-            if (prev) attachments = attachments.filter(a => a !== prev);
-          }
-          attachments.push(att);
-          renderFiles();
+          await attachFromFiles(f);
           close();
           input.focus();
         } catch (err) {
@@ -1575,7 +1602,8 @@ function mountAssistant(container, state) {
   // Drag & drop anywhere on the chat
   let dragDepth = 0;
   const main = $('.ast-main');
-  const hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
+  // Files from the computer ('Files') or from the Toolbox Files app ('application/toolbox-path').
+  const hasFiles = (e) => { const t = [...(e.dataTransfer?.types || [])]; return t.includes('Files') || t.includes('application/toolbox-path'); };
   on(main, 'dragenter', (e) => { if (!hasFiles(e)) return; e.preventDefault(); dragDepth++; root.classList.add('is-dragging'); });
   on(main, 'dragover', (e) => { if (!hasFiles(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
   on(main, 'dragleave', () => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) root.classList.remove('is-dragging'); });
@@ -1584,10 +1612,19 @@ function mountAssistant(container, state) {
     e.preventDefault();
     dragDepth = 0;
     root.classList.remove('is-dragging');
-    if (!getCurrentUser()) return;
+    if (!getCurrentUser()) { openAccountModal(); return; }
+    const toolboxPath = e.dataTransfer.getData('application/toolbox-path');
+    if (toolboxPath) { void attachDroppedPaths(toolboxPath.split('\n').map(x => x.trim()).filter(Boolean)); return; }
     addFiles(e.dataTransfer.files);
   });
 
+  on(window, 'toolbox:assistant-drop', (e) => {
+    if (dead || !root.isConnected) return;
+    if (!getCurrentUser()) { openAccountModal(); return; }
+    const { files = [], paths = [] } = e.detail || {};
+    if (paths.length) void attachDroppedPaths(paths);
+    else if (files.length) addFiles(files);
+  });
   on(window, 'toolbox:aimodechange', (e) => { mode = e.detail?.mode || getActiveAiMode(); renderModeButton(); });
   on(window, 'toolbox:authchange', async () => {
     if (dead) return;
