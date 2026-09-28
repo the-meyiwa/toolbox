@@ -11,6 +11,14 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
 @media (min-width: 769px) {
   body.in-tool:has(.ast) #tool-viewport { padding-bottom: var(--space-5); }
 }
+/* On phones the page is sized by its content, so a long chat stretched the
+   whole document instead of scrolling inside .ast-scroll. Pin the chain to
+   the screen so the thread is the only scroller. */
+@media (max-width: 768px) {
+  body.in-tool:has(#viewport-content .ast) #app { height: 100dvh; min-height: 0; }
+  body.in-tool:has(#viewport-content .ast) :is(#main, #tool-viewport, #viewport-content) { min-height: 0; }
+  body.in-tool:has(#viewport-content .ast) #viewport-content { overflow: hidden; }
+}
 
 /* ---------- shell ---------- */
 .ast {
@@ -145,11 +153,26 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
 .ast.is-compact[data-side="open"] .ast-side { transform: none; visibility: visible; box-shadow: var(--shadow-3); transition: transform var(--dur-3) var(--ease-out), visibility 0s, box-shadow var(--dur-3) ease; }
 .ast.is-compact .ast-scrim { display: block; position: absolute; inset: 0; z-index: 35; background: var(--scrim); opacity: 0; pointer-events: none; transition: opacity var(--dur-3) ease; }
 .ast.is-compact[data-side="open"] .ast-scrim { opacity: 1; pointer-events: auto; }
-.ast.is-compact .ast-top { height: 44px; }
 .ast.is-compact .ast-note { display: none; }
 
 /* ---------- top bar ---------- */
 .ast-top { flex: none; display: flex; align-items: center; gap: var(--space-1); height: 52px; padding: 0 var(--space-2) 0 var(--space-3); }
+/* The bar floats over the thread: its buttons stay reachable at any scroll
+   position and it takes no height of its own. */
+.ast-top {
+  position: absolute; z-index: 30; top: 0; left: 0; right: 0;
+  height: auto !important; padding: 10px 10px 0 !important;
+  pointer-events: none; background: transparent;
+}
+.ast-top > .ast-ib {
+  pointer-events: auto; width: 36px; height: 36px; border-radius: 50%;
+  background: color-mix(in srgb, var(--overlay) 88%, transparent);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border: 1px solid var(--line); box-shadow: var(--shadow-1); color: var(--text-2);
+}
+.ast-top > .ast-ib:hover { background: var(--overlay); color: var(--text); }
+.ast-top-title { visibility: hidden; }
+.ast-scroll { padding-top: 52px; scroll-padding-top: 52px; }
 .ast-top-title { flex: 1; min-width: 0; padding-left: var(--space-1); font-size: 14.5px; font-weight: 600; letter-spacing: -.005em; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
 /* ---------- thread ---------- */
@@ -855,7 +878,6 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
 /* ---------- phone ---------- */
 @media (max-width: 768px) {
   .ast { border: 0; border-radius: 0; box-shadow: none; background: var(--bg); }
-  .ast-top { height: 48px; padding: 0 var(--space-2); }
   .ast-dock { padding: 0 var(--space-3) calc(var(--space-2) + env(safe-area-inset-bottom)); }
   .ast-composer { border-radius: 22px; }
   .ast-note { display: none; }
