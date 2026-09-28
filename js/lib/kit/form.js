@@ -40,7 +40,7 @@ function control(f, id, v) {
   }
 }
 
-function resolveDefault(f) { return typeof f.value === 'function' ? f.value() : (f.value ?? (f.type === 'checkbox' ? false : '')); }
+export function resolveDefault(f) { return typeof f.value === 'function' ? f.value() : (f.value ?? (f.type === 'checkbox' ? false : '')); }
 
 /**
  * Render fields into `host` and keep a live values object.
@@ -144,4 +144,20 @@ export function humanBytes(n) {
   const u = ['KB', 'MB', 'GB']; let i = -1;
   do { n /= 1024; i++; } while (n >= 1024 && i < u.length - 1);
   return `${n.toFixed(n < 10 ? 2 : 1)} ${u[i]}`;
+}
+
+/** Default values for a field list, overridden by whatever is given. */
+export function defaults(fields, given = {}) {
+  const v = {};
+  for (const f of fields) v[f.key] = given[f.key] !== undefined ? given[f.key] : resolveDefault(f);
+  return v;
+}
+
+/** A compact description of fields, for the Assistant. */
+export function describeFields(fields) {
+  return fields.map((f) => ({
+    key: f.key, label: f.label || f.key, type: f.type || 'text', default: resolveDefault(f),
+    ...(f.options ? { options: f.options.map(([k]) => k) } : {}),
+    ...(f.hint ? { hint: f.hint } : {}),
+  }));
 }

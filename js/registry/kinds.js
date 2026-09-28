@@ -14,7 +14,7 @@
 
 /**
  * @typedef {'text'|'json'|'csv'|'yaml'|'sql'|'markdown'|'code'|'uml'
- *          |'flowchart'|'html'|'svg'|'colour'|'regex'|'pdf'|'docx'|'image'|'binary'} ArtifactKind
+ *          |'flowchart'|'html'|'svg'|'colour'|'regex'|'pdf'|'docx'|'image'|'video'|'audio'|'archive'|'binary'} ArtifactKind
  */
 
 /** Everything the artifact layer knows how to hold, name and hand on. */
@@ -34,6 +34,9 @@ export const KINDS = {
   pdf:       { label: 'PDF Document',ext: 'pdf',  mime: 'application/pdf' },
   docx:      { label: 'Word Document', ext: 'docx', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
   image:     { label: 'Image',       ext: 'png',  mime: 'image/png' },
+  video:     { label: 'Video',       ext: 'mp4',  mime: 'video/mp4' },
+  audio:     { label: 'Audio',       ext: 'mp3',  mime: 'audio/mpeg' },
+  archive:   { label: 'Archive',     ext: 'zip',  mime: 'application/zip' },
   binary:    { label: 'Binary file', ext: 'bin',  mime: 'application/octet-stream' },
 };
 
@@ -47,7 +50,12 @@ export const kindMime = (kind) => KINDS[kind]?.mime ?? 'text/plain';
 export function kindFromFilename(name = '') {
   const ext = String(name).toLowerCase().split('.').pop();
   if (['py', 'js', 'ts', 'jsx', 'tsx', 'c', 'cpp', 'h', 'cs', 'java', 'go', 'rs', 'php', 'rb'].includes(ext)) return 'code';
-  if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'avif'].includes(ext)) return 'image';
+  if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'avif', 'heic', 'tif', 'tiff'].includes(ext)) return 'image';
+  if (['mp4', 'mov', 'webm', 'mkv', 'avi', 'm4v', '3gp'].includes(ext)) return 'video';
+  if (['mp3', 'wav', 'm4a', 'aac', 'ogg', 'opus', 'flac', 'wma'].includes(ext)) return 'audio';
+  if (['zip', 'gz', 'tgz', 'tar', 'bz2', '7z', 'rar', 'own', 'klf'].includes(ext)) return 'archive';
+  if (ext === 'tsv') return 'csv';
+  if (ext === 'xml') return 'text';
   if (ext === 'docx' || ext === 'doc') return 'docx';
   if (ext === 'pdf') return 'pdf';
   if (ext === 'yml') return 'yaml';

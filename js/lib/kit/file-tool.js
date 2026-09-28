@@ -20,9 +20,10 @@
    ============================================================ */
 
 import { attachFileInput, dropZone } from '../file-engine.js';
-import { mountForm, esc, saveBlob, humanBytes } from './form.js';
+import { mountForm, esc, saveBlob, humanBytes, defaults, describeFields } from './form.js';
 import { createZip } from '../pdf/zip.js';
 import { copyText } from '../../utils.js';
+import { actionsFor, actionsButton, publish, pickWork, kindOf } from '../interop.js';
 
 export class Cancelled extends Error { constructor() { super('Cancelled'); this.name = 'AbortError'; this.cancelled = true; } }
 export const checkAbort = (signal) => { if (signal?.aborted) throw new Cancelled(); };
@@ -30,6 +31,17 @@ export const checkAbort = (signal) => { if (signal?.aborted) throw new Cancelled
 const MIME = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', mp4: 'video/mp4', webm: 'video/webm',
   mov: 'video/quicktime', mkv: 'video/x-matroska', mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', m4a: 'audio/mp4', aac: 'audio/aac', flac: 'audio/flac',
   opus: 'audio/ogg', txt: 'text/plain', csv: 'text/csv', md: 'text/markdown', json: 'application/json', zip: 'application/zip', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
+/** Artifact kinds an accept string covers, for the Recent & Files picker. */
+function acceptKinds(accept) {
+  const kinds = new Set();
+  for (const a of accept.split(',').map((x) => x.trim().toLowerCase())) {
+    if (a.startsWith('video')) kinds.add('video'); else if (a.startsWith('audio')) kinds.add('audio');
+    else if (a.startsWith('image')) kinds.add('image'); else if (a.includes('pdf')) kinds.add('pdf');
+    else if (a.startsWith('.')) kinds.add(kindOf(`x${a}`));
+  }
+  return kinds.size ? [...kinds] : null;
+}
+
 export const mimeOf = (name) => MIME[String(name).split('.').pop().toLowerCase()] || 'application/octet-stream';
 const toBlob = (f) => (f.data instanceof Blob ? f.data : new Blob([f.data], { type: f.type || mimeOf(f.name) }));
 
@@ -37,8 +49,31 @@ export function makeFileTool(def) {
   const min = def.min ?? 1;
   const max = def.max ?? 1;
 
+  const fieldsFor = (files) => (typeof def.fields === 'function' ? def.fields(files) : def.fields || []);
+
   return {
     ownFileChrome: true,
+
+    /* ---- headless: the same job without the UI, for the Assistant and other tools ---- */
+
+    describe() {
+      return { kind: 'files', accept: def.accept || '*/*', minFiles: min, maxFiles: max, action: def.action || 'Run', options: describeFields(fieldsFor([])) };
+    },
+
+    /**
+     * @param {{name: string, data: Uint8Array|Blob, type?: string}[]} inputs
+     * @param {object} options field values; anything missing takes its default
+     */
+    async runHeadless(inputs, options = {}, { signal, progress = () => {} } = {}) {
+      if (inputs.length < min) throw new Error(`${def.action || 'This job'} needs ${min} file${min === 1 ? '' : 's'}; got ${inputs.length}.`);
+      const files = inputs.slice(0, max).map((f) => {
+        const blob = f.data instanceof Blob ? f.data : new Blob([f.data], { type: f.type || mimeOf(f.name) });
+        const file = typeof File === 'function' ? new File([blob], f.name, { type: blob.type }) : Object.assign(blob, { name: f.name });
+        let cache = null;
+        return { file, name: f.name, size: blob.size, bytes: async () => (cache ??= new Uint8Array(await blob.arrayBuffer())) };
+      });
+      return def.run(files, defaults(fieldsFor(files), options), { signal, progress });
+    },
 
     render(container) {
       /** @type {{file: File, name: string, size: number, bytes: () => Promise<Uint8Array>, id: number}[]} */
@@ -52,6 +87,7 @@ export function makeFileTool(def) {
       container.innerHTML = `
         <div class="kit" data-kit="${esc(def.id)}">
           ${dropZone(`${def.id}-zone`, { label: def.dropLabel || 'Drop a file', hint: def.dropHint || 'or click to choose', accept: def.accept || '*/*', multiple: max > 1 })}
+          <div class="kit-actions io-sources"><button type="button" class="btn btn-ghost btn-sm" data-act="pick">Use earlier work or Toolbox Files…</button></div>
           <div class="kit-files" data-el="files" hidden></div>
           <div class="kit-form" data-el="form" hidden></div>
           <p class="kit-note" data-el="note" hidden></p>
@@ -89,7 +125,7 @@ export function makeFileTool(def) {
         const prior = form?.values || {};
         form?.destroy();
         form = mountForm($('form'), list, { prefix: `${def.id}-f`, initial: prior, onChange: () => def.onChange?.(form.values, files) });
-        $('form').hidden = !list.length;
+        $('form').hidden = !list.some((f) => !f.show || f.show(form.values));
       };
 
       const paint = () => {
@@ -144,6 +180,15 @@ export function makeFileTool(def) {
         else if (res.text && !out.length) html += `<pre class="kit-pre">${esc(res.text.slice(0, 200000))}</pre>`;
         box.innerHTML = html;
         box.hidden = false;
+        // Every output becomes reachable from other tools, Files and the Assistant.
+        const items = out.map((f) => publish({ name: f.name, kind: kindOf(f.name, f.type || f.data?.type || ''), blob: toBlob(f), from: def.id }));
+        const bar = box.querySelector('.kit-actions');
+        if (bar && items.length === 1) bar.insertBefore(actionsButton(items[0], { exclude: def.id }), bar.children[1] || null);
+        box.querySelectorAll('[data-save]').forEach((b) => {
+          const item = items[Number(b.dataset.save)];
+          if (item) b.parentElement.insertBefore(actionsButton(item, { exclude: def.id, label: 'Open in…' }), b);
+        });
+        last.items = items;
       };
 
       const go = async () => {
@@ -183,6 +228,13 @@ export function makeFileTool(def) {
         else if (act === 'cancel') running?.abort();
         else if (act === 'clear') { running?.abort(); files = []; showResult(null); paint(); }
         else if (act === 'add') input.click();
+        else if (act === 'pick') {
+          const kinds = def.kinds || (def.accept && def.accept !== '*/*' ? acceptKinds(def.accept) : null);
+          pickWork({ kinds, multiple: max > 1 }).then((items) => {
+            const list = items.filter((i) => i.blob || i.text != null).map((i) => new File([i.blob || i.text], i.name, { type: i.blob?.type || '' }));
+            if (list.length) addFiles(list);
+          });
+        }
         else if (act === 'save-all' && last?.files?.length) {
           const out = last.files;
           if (out.length === 1) saveBlob(toBlob(out[0]), out[0].name);
@@ -197,6 +249,19 @@ export function makeFileTool(def) {
         }
       });
 
+      container.addEventListener('contextmenu', async (e) => {
+        if (!last?.items?.length) return;
+        const row = e.target.closest('[data-el="result"] .kit-file, [data-el="result"] figure, [data-el="result"] .kit-media, [data-el="result"] img');
+        if (!row) return;
+        const rows = [...container.querySelectorAll('[data-el="result"] .kit-file')];
+        const figs = [...container.querySelectorAll('[data-el="result"] figure')];
+        const i = rows.includes(row) ? rows.indexOf(row) : figs.includes(row) ? figs.indexOf(row) : 0;
+        const item = last.items[i] || last.items[0];
+        e.preventDefault();
+        const { openContextMenu } = await import('../context-menu.js');
+        openContextMenu({ x: e.clientX, y: e.clientY, title: item.name, items: actionsFor(item, { exclude: def.id, download: () => saveBlob(item.blob, item.name) }) });
+      });
+
       this._detach = attachFileInput(zone, input, (list) => addFiles(list), { accept: def.accept });
       this._abort = () => running?.abort();
       this._clearUrls = clearUrls;
@@ -205,7 +270,13 @@ export function makeFileTool(def) {
     },
 
     async setArtifact(a) {
-      const blob = a?.blob || (a?.content instanceof Blob ? a.content : null);
+      let blob = null;
+      // Files reads the body after navigating, so give it a moment to land.
+      for (let t = 0; t < 70 && !blob; t++) {
+        blob = a?.blob || (a?.content instanceof Blob ? a.content : null);
+        if (!blob) await new Promise((r) => setTimeout(r, 60));
+      }
+      if (!blob && a?.text != null) blob = new Blob([a.text], { type: 'text/plain' });
       if (!blob || !this._addFiles) return;
       this._addFiles([new File([blob], a.name || 'file', { type: blob.type })]);
     },

@@ -7,7 +7,7 @@
    ============================================================ */
 
 import { makeFileTool, checkAbort } from '../lib/kit/file-tool.js';
-import { mountForm, esc } from '../lib/kit/form.js';
+import { mountForm, esc, defaults } from '../lib/kit/form.js';
 import * as O from '../lib/pdf/ops.js';
 import { loadPdfLib, openPdfLib, savePdf, applyWatermark, applyHeaderFooter, compressPdfBytes, stripMetadata, baseName, parseRange } from '../lib/pdf/core.js';
 
@@ -65,9 +65,10 @@ export async function runWorkflow(bytes, steps, { signal, onProgress } = {}) {
   for (let i = 0; i < steps.length; i++) {
     checkAbort(signal);
     const def = STEPS[steps[i].step];
+    if (!def) throw new Error(`Unknown step: ${steps[i].step}`);
     const part = (f, label) => onProgress?.((i + (Number.isFinite(f) ? f : 0)) / steps.length, `Step ${i + 1} of ${steps.length}: ${label || def.label}`);
     part(0);
-    cur = await def.run(cur, steps[i].values, { signal, onProgress: part });
+    cur = await def.run(cur, defaults(def.fields, steps[i].values), { signal, onProgress: part });
   }
   return cur;
 }
@@ -129,9 +130,17 @@ export default makeFileTool({
       paintSteps(host);
     });
   },
-  async run(files, _v, { signal, progress }) {
-    if (!chain.length) throw new Error('Add at least one step.');
-    const steps = chain.map((s) => ({ step: s.step, values: { ...s.values } }));
+  fields: () => [
+    // Hidden from the form (the step list is its own UI); used when run headlessly.
+    { key: 'steps', label: 'Steps', type: 'text', value: '', show: () => false, hint: `Comma-separated steps or a preset (${Object.keys(PRESETS).join(', ')}). Steps: ${Object.keys(STEPS).join(', ')}.` },
+  ],
+  async run(files, v, { signal, progress }) {
+    const named = String(v.steps || '').trim();
+    const list = named ? (PRESETS[named] || named.split(/[\s,]+/).filter(Boolean)) : null;
+    if (list) { const bad = list.filter((x) => !STEPS[x]); if (bad.length) throw new Error(`Unknown step: ${bad.join(', ')}. Steps: ${Object.keys(STEPS).join(', ')}.`); }
+    const steps = (list ? list.map((step) => ({ step, values: {} })) : chain)
+      .map((s) => ({ step: s.step, values: defaults(STEPS[s.step].fields, s.values) }));
+    if (!steps.length) throw new Error('Add at least one step.');
     const out = [];
     for (let k = 0; k < files.length; k++) {
       const f = files[k];

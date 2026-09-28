@@ -308,13 +308,13 @@ export const EXTRA_TOOL_DECLARATIONS = [
   },
   {
     name: 'run_toolbox_tool',
-    description: 'Run a Toolbox tool headlessly on text input (e.g. word-counter, case-converter, text-diff, json-formatter, base64-codec, hash-generator, markdown-preview, csv-to-json). Returns its output. If the tool cannot run headlessly it is opened instead.',
+    description: 'Run any Toolbox tool without opening it. Text tools (json-tools, data-converter, sql-formatter, csv-tools, list-tools, text-extractor, date-calculator, number-to-words, cert-decoder, …) take `input`. File tools (pdf-ocr, pdf-compare, pdf-nup, pdf-protect, pdf-tables, pdf-to-image, pdf-workflow, video-compressor, video-trimmer, video-to-gif, audio-converter, audio-editor, lossless-archiver, …) use the attached file(s), or else the latest result from another tool, and return a downloadable file that the next tool can use in turn, so jobs chain. Pass options by field name; call with options {"help": true} to list a tool\'s modes and options. Tools that cannot run this way are opened for the person.',
     parameters: {
       type: 'object',
       properties: {
         tool_id: { type: 'string', description: 'Tool id from find_toolbox_tools, e.g. "json-formatter".' },
         input: { type: 'string', description: 'The text to process.' },
-        options: { type: 'object', description: 'Optional tool-specific options.' },
+        options: { type: 'object', description: 'Tool options by field name, plus "mode" for text tools with modes. {"help": true} lists them.' },
       },
       required: ['tool_id'],
     },
@@ -878,13 +878,92 @@ function findTools(query) {
   };
 }
 
-async function runTool({ tool_id: id, input = '', options = {} }) {
+/* Attached files and earlier results, as work items for a file tool. */
+async function inputFiles(ctx, tool, wanted) {
+  const { kindOf, toItem } = await import('../interop.js');
+  const { recent } = await import('../recent.js');
+  const accepts = new Set(tool.accepts || []);
+  const fits = (it) => !accepts.size || accepts.has(it.kind);
+  const toBytes = (b64) => Uint8Array.from(atob(String(b64).replace(/^data:[^,]*,/, '')), c => c.charCodeAt(0));
+  const out = [];
+  const cf = ctx?.currentFile;
+  const attached = cf ? (Array.isArray(cf.files) && cf.files.length ? cf.files : [cf]) : [];
+  for (const f of attached) {
+    const b64 = f.base64 || f.dataUrl;
+    if (!b64) continue;
+    const item = await toItem({ name: f.name || 'file', type: f.type, data: toBytes(b64) });
+    if (fits(item)) out.push(item);
+  }
+  // Nothing attached: take the newest results that fit, so "now compress it" works.
+  if (!out.length) for (const r of recent([...accepts])) { if (out.length >= wanted) break; if (r.blob) out.push(r); }
+  if (!out.length && ctx?.taskState?.lastProcessedFile?.dataUrl) {
+    const lp = ctx.taskState.lastProcessedFile;
+    const item = await toItem({ name: lp.filename || 'file', type: (lp.dataUrl.match(/^data:([^;,]+)/) || [])[1], data: toBytes(lp.dataUrl) });
+    if (fits(item)) out.push(item);
+  }
+  return out.map(i => ({ name: i.name, data: i.blob, type: i.blob?.type || '', kind: i.kind || kindOf(i.name) }));
+}
+
+async function blobToDataUrl(blob) {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return `data:${blob.type || 'application/octet-stream'};base64,${btoa(s)}`;
+}
+
+/* A file tool's result, as a chat result: one file to download (several are zipped). */
+async function fileResult(tool, res, ctx) {
+  const { mimeOf } = await import('../kit/file-tool.js');
+  const { publish, kindOf } = await import('../interop.js');
+  const files = (res.files || []).map(f => ({ name: f.name, blob: f.data instanceof Blob ? f.data : new Blob([f.data], { type: f.type || mimeOf(f.name) }) }));
+  for (const f of files) publish({ name: f.name, kind: kindOf(f.name, f.blob.type), blob: f.blob, from: tool.id });
+  const note = typeof res.note === 'string' ? res.note : '';
+  if (!files.length) return { status: 'success', renderer: 'transform', type: 'transform', operation: tool.name, resultText: res.text || note || 'Done.', message: `${tool.name}: ${note || res.text || 'done, nothing to download.'}` };
+  let out = files[0];
+  if (files.length > 1) {
+    const { createZip } = await import('../pdf/zip.js');
+    const entries = await Promise.all(files.map(async f => ({ name: f.name, data: new Uint8Array(await f.blob.arrayBuffer()) })));
+    out = { name: res.zipName || `${tool.id}.zip`, blob: new Blob([createZip(entries)], { type: 'application/zip' }) };
+  }
+  const dataUrl = await blobToDataUrl(out.blob);
+  const ext = out.name.split('.').pop().toLowerCase();
+  const result = {
+    status: 'success', type: /^image\//.test(out.blob.type) ? 'image' : 'file', renderer: /^image\//.test(out.blob.type) ? 'image' : 'file',
+    operation: tool.name, filename: out.name, format: ext, dataUrl, size: out.blob.size,
+    message: `${tool.name} made ${files.length > 1 ? `${files.length} files (${files.map(f => f.name).join(', ')}), zipped as ${out.name}` : out.name} (${Math.round(out.blob.size / 1024)} KB).${note ? ` ${note}` : ''}${res.text ? `\n${String(res.text).slice(0, 4000)}` : ''} It is ready to download and is also in Recent, so another tool can use it next.`,
+  };
+  if (ctx?.taskState) ctx.taskState.lastProcessedFile = result;
+  return result;
+}
+
+async function runTool({ tool_id: id, input = '', options = {} }, ctx = {}) {
   const tool = TOOLS.find(t => t.id === id || t.id === String(id).replace(/_/g, '-'));
   if (!tool) return { status: 'error', message: `No tool "${id}". Use find_toolbox_tools.` };
   try {
     const modules = import.meta.glob('../../tools/*.js');
     const loader = modules[`../../tools/${tool.id}.js`];
     const instance = loader ? (await loader()).default : null;
+
+    /* Tools built on the shared shells run directly: same code, no UI. */
+    if (options?.help || options?.describe) {
+      if (instance?.describe) return { status: 'success', tool: tool.id, ...instance.describe(), message: `${tool.name} options listed. Pass them in options (and "mode" for text tools).` };
+    }
+    if (instance?.runHeadless && instance.describe?.().kind === 'text') {
+      const res = await instance.runHeadless(String(input ?? ''), options || {});
+      const text = res.text || (res.html ? res.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '');
+      const stats = (res.stats || []).map(([l, v]) => `${v} ${l}`).join(', ');
+      return { status: 'success', renderer: 'transform', type: 'transform', operation: tool.name, output: text, resultText: text, message: `Ran ${tool.name}${res.mode ? ` (${res.mode})` : ''}.${stats ? ` ${stats}.` : ''}` };
+    }
+    if (instance?.runHeadless) {
+      const d = instance.describe();
+      const files = await inputFiles(ctx, tool, d.maxFiles || 1);
+      if (files.length < (d.minFiles || 1)) {
+        return { status: 'needs_file', message: `${tool.name} needs ${d.minFiles > 1 ? `${d.minFiles} files` : 'a file'} (${(tool.accepts || []).join(', ') || 'any'}). Ask the person to attach ${d.minFiles > 1 ? 'them' : 'one'}, or make one with another tool first.` };
+      }
+      const res = await instance.runHeadless(files, options || {});
+      return fileResult(tool, res || {}, ctx);
+    }
+
     if (instance?.setArtifact && instance?.getArtifact) {
       const host = document.createElement('div');
       host.style.cssText = 'position:fixed;left:-99999px;top:0;width:800px;visibility:hidden';
@@ -1139,7 +1218,7 @@ async function caseDigestTool(args) {
 EXTRA_TOOL_DECLARATIONS.push(...DOMAIN_TOOL_DECLARATIONS, ...LAB3D_TOOL_DECLARATIONS);
 export const EXTRA_TOOL_NAMES = new Set(EXTRA_TOOL_DECLARATIONS.map(d => d.name));
 
-export async function executeExtraTool(name, args = {}) {
+export async function executeExtraTool(name, args = {}, ctx = {}) {
   switch (name) {
     case 'analyze_legal_document': return analyzeLegalDocument(args);
     case 'parse_citations': return parseCitationsTool(args);
@@ -1170,7 +1249,7 @@ export async function executeExtraTool(name, args = {}) {
     case 'create_invoice': return createInvoiceTool(args);
     case 'list_invoices': return listInvoicesTool(args);
     case 'find_toolbox_tools': return findTools(args.query || '');
-    case 'run_toolbox_tool': return runTool(args);
+    case 'run_toolbox_tool': return runTool(args, ctx);
     case 'estimate_construction': return estimateConstruction(args);
     case 'open_toolbox_tool': {
       const tool = TOOLS.find(t => t.id === args.tool_id || t.id === String(args.tool_id).replace(/_/g, '-'));

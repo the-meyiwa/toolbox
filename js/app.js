@@ -32,7 +32,8 @@ import '../css/automobile-viewer.css';
 import '../css/code-playground.css';
 import { initHomeScrollNarrative } from './home-scroll.js';
 import { listJoinedSpaces } from './lib/space-engine.js';
-import { openContextMenu } from './lib/context-menu.js';
+import { deliverToFileInput } from './lib/interop.js';
+import { installGlobalMenus } from './lib/global-menus.js';
 import { initMessageNotifications } from './lib/message-notifications.js';
 import { installSessionKeeper } from './lib/session-keeper.js';
 import { startReminderClock } from './lib/reminders.js';
@@ -539,6 +540,13 @@ async function openTool(id, routeState = {}) {
     /* The artifact layer wraps the tool rather than living inside it: a tool
        that declares neither hook gets nothing, sees nothing, and is
        completely unaffected by any of this. */
+    if (incoming && typeof currentToolInstance.setArtifact !== 'function') {
+      // A file tool with no artifact hook still has a file input: hand it the
+      // file exactly as if it had been dropped there.
+      deliverToFileInput(viewportContent, incoming).then((ok) => {
+        if (ok && !currentToolInstance?.ownFileChrome) viewportContent.prepend(incomingBanner(incoming, BY_ID.get(incoming.from)));
+      });
+    }
     if (incoming && typeof currentToolInstance.setArtifact === 'function') {
       try {
         currentToolInstance.setArtifact(incoming);
@@ -1151,47 +1159,8 @@ artifacts.onChange(reflectSavedWork);
 reflectSavedWork();
 
 
-viewport.addEventListener('contextmenu', (e) => {
-  // A tool that already handled the right-click (its own menu, or the 3D
-  // viewer, which opens its part menu on pointerup) owns the gesture; opening
-  // the generic menu here would replace the tool's menu.
-  if (e.defaultPrevented) return;
-  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.target.closest('[contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]')) return;
-  
-  let items = [];
-  if (currentToolInstance && typeof currentToolInstance.getContextMenu === 'function') {
-      const customItems = currentToolInstance.getContextMenu(e);
-      if (customItems && customItems.length > 0) {
-          items = items.concat(customItems);
-      }
-  } else if (currentToolObj) {
-      // Tailored actions based on category
-      switch (currentToolObj.category) {
-        case 'text':
-          items.push({ label: 'Clear Editor', action: () => { const els = document.querySelectorAll('textarea, input[type="text"]'); els.forEach(el => el.value = ''); } });
-          break;
-        case 'numbers':
-        case 'business':
-          items.push({ label: 'Reset Calculation', action: () => { const btn = document.querySelector('button[class*="reset"], button[id*="reset"], button[class*="clear"], button[id*="clear"]'); if(btn) btn.click(); else { document.querySelectorAll('input').forEach(el => el.value = ''); } } });
-          break;
-        case 'audio':
-        case 'music':
-          items.push({ label: 'Stop Audio', action: () => { document.querySelectorAll('audio, video').forEach(a => { a.pause(); a.currentTime = 0; }); } });
-          break;
-      }
-  }
-  
-  if (currentToolObj) {
-      if (items.length > 0) items.push({ separator: true });
-      items.push({ label: 'Copy Tool Link', action: () => navigator.clipboard.writeText(window.location.href).catch(()=>{}) });
-      const standaloneMode = new URLSearchParams(window.location.search).get('standalone') === 'true';
-      if (!standaloneMode) {
-          items.push({ label: 'Open in new tab', action: () => window.open(window.location.href, '_blank') });
-      }
-      openContextMenu({ x: e.clientX, y: e.clientY, items, title: currentToolObj.name });
-      e.preventDefault();
-  }
-});
+// Right-click menus for tool links, the open tool and the page (js/lib/global-menus.js).
+installGlobalMenus({ getTool: () => (currentPage === 'tool' && currentToolObj ? { tool: currentToolObj, instance: currentToolInstance } : null) });
 
 initTheme();
 
@@ -1200,7 +1169,7 @@ initSupporterProfile();
 installHeaderMenu();
 initMessageNotifications();
 startReminderClock();
-  initWorkspace(openTool);
+  initWorkspace({ main: () => ({ id: currentPage === 'tool' ? currentToolId : null, instance: currentToolInstance, host: viewportContent }) });
   initScrollNarrative();
   initHomeScrollNarrative();
 

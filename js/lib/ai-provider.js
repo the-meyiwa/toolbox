@@ -17,6 +17,13 @@
 
 import { ASSISTANT_TOOL_DECLARATIONS, executeAssistantTool } from './assistant-tools.js';
 import { EXTRA_TOOL_DECLARATIONS, EXTRA_TOOL_NAMES, executeExtraTool } from './assistant/extra-tools.js';
+
+async function publishDataUrl(result) {
+  if (typeof window === 'undefined') return;
+  const blob = await (await fetch(result.dataUrl)).blob();
+  const { publish, kindOf } = await import('./interop.js');
+  publish({ name: result.filename, kind: kindOf(result.filename, blob.type), blob, from: 'assistant' });
+}
 import { KNOWLEDGE_TOOL_DECLARATIONS, KNOWLEDGE_TOOL_NAMES, executeKnowledgeTool, entityHints } from './assistant/knowledge-tools.js';
 import { CORE_TOOLS, TOOL_GROUPS, LOAD_TOOLS_DECLARATION, selectGroups, groupOfTool } from './assistant/tool-groups.js';
 import { packDeclarations, packVersion, isPackTool, executePackTool } from './assistant/tool-packs.js';
@@ -588,7 +595,7 @@ How you work
 - For jobs with three or more distinct steps (research, building something, analysing files), call update_plan first with short steps (skip it for simple questions), then do the steps with tools, updating the plan as each finishes. Keep going until the task is complete; do not stop to ask permission for ordinary steps.
 - Prefer computing to guessing: arithmetic and algebra go through calculate_math, chemistry through calculate_chemistry, code through the code execution tools. Check results before you report them.
 - Only some tools are loaded at a time. If you need one you don't have, call load_tools with its group first (the groups are listed in load_tools).
-- Any Toolbox tool can be used: call find_toolbox_tools to discover the right one, run_toolbox_tool to run it on input directly, and open_toolbox_tool to open it for the person.
+- Any Toolbox tool can be used: call find_toolbox_tools to discover the right one, run_toolbox_tool to run it on input directly, and open_toolbox_tool to open it for the person. File tools run on the attached file, or on the newest result any tool made, so jobs chain: OCR a scan, then compress it, then protect it, one run_toolbox_tool call each. Use options {"help": true} once if unsure of a tool's options.
 - Chess: chess_analyze evaluates a position or game (best move, evaluation, opening, move quality); chess_play plays a move and lets the engine answer; chess_open_board opens a position on the Chess board. Never invent evaluations — use the engine.
 - Devices: device_specs and device_compare cover 1,300+ phones, tablets, laptops, chips, CPUs, GPUs, watches, headphones and consoles from the Toolbox database.
 - Vehicles: vehicle_lookup decodes VINs and gives specifications for cars by make, model and year.
@@ -749,13 +756,15 @@ export async function streamChatCompletion({
       if (toolExecutor) result = await toolExecutor(name, args);
       if (result === undefined && isPackTool(name)) result = await executePackTool(name, args, { currentFile, taskState });
       if (result === undefined && KNOWLEDGE_TOOL_NAMES.has(name)) result = await executeKnowledgeTool(name, args);
-      if (result === undefined && EXTRA_TOOL_NAMES.has(name)) result = await executeExtraTool(name, args);
+      if (result === undefined && EXTRA_TOOL_NAMES.has(name)) result = await executeExtraTool(name, args, { currentFile, taskState });
       if (result === undefined) result = await executeAssistantTool(name, args, { currentFile, taskState });
       if (result == null || typeof result !== 'object') result = { status: 'success', message: String(result ?? 'Done.') };
     } catch (err) {
       result = { status: 'error', success: false, error: err?.message || 'The tool failed.', message: `That did not work: ${err?.message || 'unknown error'}` };
     }
     if (!result.toolName) result.toolName = name;
+    // Any file the Assistant makes is put in Recent, so the next tool can take it.
+    if (name !== 'run_toolbox_tool' && typeof result.dataUrl === 'string' && result.dataUrl.startsWith('data:') && result.filename) publishDataUrl(result).catch(() => {});
     if ((name === 'get_current_location' || name === 'request_user_location') && result.status !== 'error') rememberPlace(result.area || taskState?.userLocation?.area);
     cache.set(key, result);
     executed.push(result);

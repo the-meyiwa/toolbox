@@ -1723,6 +1723,8 @@ function wire(host, ctx, refresh, ui) {
         ? { label: 'Open', icon: ICONS.folderOpen, shortcut: 'Enter', action: () => navigate(path) }
         : { label: 'Quick Look', icon: ICONS.eye, shortcut: 'Space', action: () => openQuickLook(path) },
       ...(top ? [{ label: `Open in ${top.name}`, icon: ICONS.external, shortcut: 'Enter', action: () => openFileInTool(item, top.id) }] : []),
+      // The next few tools that take this kind of file, so any file reaches any tool.
+      ...(isDir ? [] : getToolsForFile(item).filter((t) => t.id !== top?.id).slice(0, 4).map((t) => ({ label: `Open in ${t.name}`, icon: ICONS.external, action: () => openFileInTool(item, t.id) }))),
       ...(isDir ? [] : [{ label: 'Ask Assistant', icon: ASK_ICON, action: () => askAboutFile(path) }]),
       { separator: true },
       { label: 'Rename', icon: ICONS.pencil, shortcut: 'F2', action: () => startRename(path) },

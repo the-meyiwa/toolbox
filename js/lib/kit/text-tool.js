@@ -17,14 +17,35 @@
    `run` may be async. Errors thrown by `run` are shown, not swallowed.
    ============================================================ */
 
-import { mountForm, modeSwitch, esc, saveBlob } from './form.js';
+import { mountForm, modeSwitch, esc, saveBlob, defaults, describeFields } from './form.js';
 import { copyText } from '../../utils.js';
 import { kindExt, kindMime } from '../../registry/kinds.js';
+import { actionsFor } from '../interop.js';
 
 export function makeTextTool(def) {
   const modes = def.modes?.length ? def.modes : [{ id: 'run', label: 'Run', run: def.run, fields: [] }];
 
+  const modeOf = (id) => modes.find((m) => m.id === id) || modes[0];
+
   return {
+    /* ---- headless: the same logic without the UI, for the Assistant and other tools ---- */
+
+    /** What this tool can do: its modes and their options. */
+    describe() {
+      return { kind: 'text', input: def.inputLabel || 'Input', modes: modes.map((m) => ({ id: m.id, label: m.label, needsInput: !m.noInput, options: describeFields([...(def.fields || []), ...(m.fields || [])]) })) };
+    },
+
+    /** Run on text. options: { mode, ...field values }. Returns { text, html?, stats?, kind }. */
+    async runHeadless(input, options = {}) {
+      const mode = modeOf(options.mode);
+      const values = defaults([...(def.fields || []), ...(mode.fields || [])], options);
+      let res = await mode.run(String(input ?? ''), values);
+      if (res == null) res = '';
+      if (typeof res === 'string') res = { text: res };
+      if (res.error) throw new Error(res.error);
+      return { ...res, text: res.text ?? '', kind: res.kind || mode.outputKind || def.outputKind || 'text', mode: mode.id };
+    },
+
     render(container) {
       let mode = modes[0];
       let form = null;
@@ -122,6 +143,23 @@ export function makeTextTool(def) {
           pick.onchange = async () => { const f = pick.files?.[0]; if (f) { input.value = await f.text(); run(); } };
           pick.click();
         }
+      });
+
+      // Right-click the result: copy it, or send it anywhere that takes its kind.
+      out.addEventListener('contextmenu', async (e) => {
+        if (!lastText || window.getSelection()?.toString()) return;
+        e.preventDefault();
+        const item = { name: `${def.id}-result.${def.ext || kindExt(lastKind)}`, kind: lastKind, text: lastText, from: def.id };
+        const { openContextMenu } = await import('../context-menu.js');
+        openContextMenu({
+          x: e.clientX, y: e.clientY, title: 'Result',
+          items: [
+            { label: 'Copy result', action: () => copyText(lastText) },
+            { label: 'Use as input', action: () => { input.value = lastText; run(); } },
+            { separator: true },
+            ...actionsFor(item, { exclude: def.id, download: () => saveBlob(new Blob([lastText], { type: kindMime(lastKind) }), item.name) }),
+          ],
+        });
       });
 
       show('');
