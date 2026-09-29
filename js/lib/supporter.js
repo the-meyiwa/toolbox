@@ -12,7 +12,11 @@ export async function supporterRequest(path, body = null, authenticated = true) 
     ...(body ? { body:JSON.stringify(body) } : {}),
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || 'Supporter services are unavailable. Please try again later.');
+  if (!response.ok) {
+    throw new Error(data.error || (response.status === 404
+      ? 'The Toolbox server does not have contributions yet. It needs redeploying with the latest code.'
+      : "The Toolbox server isn't answering (it may be waking up). Try again in a minute."));
+  }
   return data;
 }
 export async function refreshSupporterState() {

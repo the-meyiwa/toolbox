@@ -101,7 +101,11 @@ export function renderContributionSettings(container, onSignIn) {
     try {
       const configuration = await supporterRequest('configuration', null, false);
       ready = configuration.ready; button.disabled = !ready;
-      if (!ready) report('Contributions are temporarily unavailable on this deployment.');
+      if (!ready) {
+        // The server says what is missing or wrong (setting names and fixed text only).
+        const missing = Array.isArray(configuration.missing) ? configuration.missing.filter(n => /^[A-Z_]+$/.test(n)) : [];
+        report(configuration.problem || `Contributions are not switched on for this site yet${missing.length ? `: the server is missing ${missing.join(', ')}` : ''}.`);
+      }
       if (user) {
         await Promise.allSettled([refreshSupporterState(), claimRememberedContribution()]);
         renderMemberControls(container, report);

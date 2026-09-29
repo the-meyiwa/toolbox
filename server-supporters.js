@@ -1,27 +1,39 @@
 import { randomUUID } from 'node:crypto';
-import { createFlutterwaveClient } from './server-flutterwave.js';
+import { createFlutterwaveClient, FlutterwaveError } from './server-flutterwave.js';
 
 export const SUPPORTER_THRESHOLD_NGN = 5000;
 export const PROFILE_STYLES = ['classic', 'etched', 'halo', 'orbit'];
 const CURRENCIES = ['NGN', 'USD', 'CAD', 'GBP'];
 
-export function resolveFlutterwaveCredentials(env = {}) {
-  const publicKey = (env.FLUTTERWAVE_PUBLIC_KEY || env.FLW_PUBLIC_KEY || '').trim();
-  const secretKey = (env.FLUTTERWAVE_SECRET_KEY || env.FLW_SECRET_KEY || '').trim();
-  const clientId = (env.FLW_CLIENT_ID || env.FLUTTERWAVE_CLIENT_ID || '').trim();
-  const clientSecret = (env.FLW_CLIENT_SECRET || env.FLUTTERWAVE_CLIENT_SECRET || '').trim();
-  const mode = (env.FLW_ENVIRONMENT || 'production').trim().toLowerCase();
+// Settings pasted with quotes or spaces around them ("FLWPUBK-…") are read without them.
+const setting = (value) => String(value ?? '').trim().replace(/^(['"])(.*)\1$/, '$2').trim();
 
-  let clientPublicKey = publicKey || clientId;
-  if (clientPublicKey && !/^FLWPUBK(_TEST)?-/i.test(clientPublicKey) && /^[a-fA-F0-9]{32}-X$/i.test(clientPublicKey)) {
-    clientPublicKey = (mode === 'sandbox' ? 'FLWPUBK_TEST-' : 'FLWPUBK-') + clientPublicKey;
+export function resolveFlutterwaveCredentials(env = {}) {
+  const publicKey = setting(env.FLUTTERWAVE_PUBLIC_KEY || env.FLW_PUBLIC_KEY);
+  const secretKey = setting(env.FLUTTERWAVE_SECRET_KEY || env.FLW_SECRET_KEY);
+  const clientId = setting(env.FLW_CLIENT_ID || env.FLUTTERWAVE_CLIENT_ID);
+  const clientSecret = setting(env.FLW_CLIENT_SECRET || env.FLUTTERWAVE_CLIENT_SECRET);
+  const mode = setting(env.FLW_ENVIRONMENT || 'production').toLowerCase();
+  // A test secret key means test mode even when FLW_ENVIRONMENT was left at its default.
+  const testMode = mode === 'sandbox' || mode === 'test' || /^FLWSECK_TEST-/i.test(secretKey);
+
+  // The inline checkout (checkout.flutterwave.com/v3.js) accepts only the account's public key
+  // (dashboard → Settings → API keys: FLWPUBK-…-X, or FLWPUBK_TEST-…-X in test mode). A v4 Client
+  // ID is not one: Flutterwave answers "Invalid parameter (PBFPubKey)", so it is never sent.
+  let checkoutKey = publicKey;
+  if (checkoutKey && !/^FLWPUBK(_TEST)?-/i.test(checkoutKey) && /^[a-fA-F0-9]{32}-X$/i.test(checkoutKey)) {
+    checkoutKey = (testMode ? 'FLWPUBK_TEST-' : 'FLWPUBK-') + checkoutKey;
   }
 
   const hasOAuth = Boolean(clientId && clientSecret);
   const hasApiKeys = Boolean(publicKey && secretKey);
+  const keyProblem = !publicKey ? (hasOAuth ? 'oauth-only' : 'missing')
+    : /^FLWSECK/i.test(publicKey) || publicKey === secretKey ? 'secret-in-public'
+      : (/^FLWPUBK_TEST-/i.test(checkoutKey) && /^FLWSECK-/i.test(secretKey)) || (/^FLWPUBK-/i.test(checkoutKey) && /^FLWSECK_TEST-/i.test(secretKey)) ? 'mode-mismatch'
+        : !secretKey && !hasOAuth ? 'missing-secret' : '';
 
   return {
-    publicKey: clientPublicKey,
+    publicKey: checkoutKey,
     rawPublicKey: publicKey,
     secretKey,
     clientId,
@@ -30,11 +42,37 @@ export function resolveFlutterwaveCredentials(env = {}) {
     hasOAuth,
     hasApiKeys,
     configured: hasOAuth || hasApiKeys,
+    checkoutReady: !keyProblem,
+    keyProblem,
   };
 }
 
-function flutterwaveKeysPresent(env) {
-  return resolveFlutterwaveCredentials(env).configured;
+/* What to change on the server when the checkout cannot open, in the owner's words. */
+export const KEY_PROBLEMS = {
+  missing: 'Flutterwave checkout needs FLUTTERWAVE_PUBLIC_KEY on the server: the key labelled Public key in the Flutterwave dashboard under Settings, API keys (it starts FLWPUBK- and ends -X).',
+  'missing-secret': 'Flutterwave checkout needs FLUTTERWAVE_SECRET_KEY on the server: the Secret key (FLWSECK-…) from the same Flutterwave dashboard page as the public key.',
+  'oauth-only': 'Flutterwave checkout needs the account\'s public and secret API keys (Flutterwave dashboard, Settings, API keys: FLWPUBK-… and FLWSECK-…) in FLUTTERWAVE_PUBLIC_KEY and FLUTTERWAVE_SECRET_KEY. The Client ID and Client Secret cannot open the checkout.',
+  'secret-in-public': 'FLUTTERWAVE_PUBLIC_KEY on the server holds a secret key. Put the Public key (FLWPUBK-…) there, and keep the secret key only in FLUTTERWAVE_SECRET_KEY.',
+  'mode-mismatch': 'The Flutterwave public and secret keys on the server come from different modes (one test, one live). Use both test keys or both live keys.',
+};
+
+/** Names of the database settings checkout still needs (names only, never values). */
+export function missingSettings(env) {
+  return [
+    ['SUPABASE_URL', env.SUPABASE_URL || env.VITE_SUPABASE_URL],
+    ['SUPABASE_SERVICE_ROLE_KEY', env.SUPABASE_SERVICE_ROLE_KEY],
+  ].filter(([, value]) => !setting(value)).map(([name]) => name);
+}
+
+/** What went wrong upstream, in words the site owner can act on. Details go to the server log. */
+export function upstreamMessage(service, status, detail = '') {
+  if (service === 'flutterwave') {
+    if (status === 401 || status === 403) return "Flutterwave rejected this server's secret key. FLUTTERWAVE_SECRET_KEY must be the Secret key from the same Flutterwave account and mode (test or live) as FLUTTERWAVE_PUBLIC_KEY.";
+    return 'Flutterwave is not answering right now. Please try again shortly.';
+  }
+  if (status === 401 || status === 403) return "The Toolbox database rejected this server's key. SUPABASE_SERVICE_ROLE_KEY must be the project's service_role key (not the anon key).";
+  if (status === 404 || /PGRST20[25]|42P01|42883|does not exist|Could not find the (table|function)/i.test(detail)) return 'Contributions are not set up in the database yet: run supabase/supporters.sql in the Supabase SQL editor.';
+  return 'The Toolbox database is not answering right now. Please try again shortly.';
 }
 
 export function validateContribution(payment, intent) {
@@ -71,22 +109,36 @@ export function createSupporterHandler({ env = process.env, fetcher = fetch, now
   const creds = resolveFlutterwaveCredentials(env);
   const v4Client = createFlutterwaveClient({ env, fetcher, now });
   const base = () => (env.SUPABASE_URL || env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
-  const configured = () => !!(base() && env.SUPABASE_SERVICE_ROLE_KEY && creds.configured);
-  async function jsonFetch(url, options = {}) {
-    const response = await fetcher(url, { ...options, signal: AbortSignal.timeout(15000) });
-    if (!response.ok) throw new RequestError(503, 'Contributions are temporarily unavailable. Please try again later.');
+  const serviceKey = () => setting(env.SUPABASE_SERVICE_ROLE_KEY);
+  const configured = () => !!(base() && serviceKey() && creds.configured);
+  // Upstream failures are logged with their status and a short excerpt (never keys),
+  // so the cause shows in the server log, and answered with a message that names it.
+  const log = (...parts) => console.error('[supporter]', ...parts);
+  async function jsonFetch(url, options = {}, service = 'supabase') {
+    let response;
+    try {
+      response = await fetcher(url, { ...options, signal: AbortSignal.timeout(15000) });
+    } catch (error) {
+      log(service, 'unreachable', url.split('?')[0], error?.message);
+      throw new RequestError(503, service === 'flutterwave' ? 'The server could not reach Flutterwave. Please try again shortly.' : 'The server could not reach the Toolbox database. Please try again shortly.');
+    }
+    if (!response.ok) {
+      const detail = typeof response.text === 'function' ? await response.text().catch(() => '') : '';
+      log(service, response.status, url.split('?')[0], String(detail).slice(0, 300));
+      throw new RequestError(503, upstreamMessage(service, response.status, detail));
+    }
     return response.status === 204 ? null : response.json();
   }
   const db = (path, options = {}) => jsonFetch(`${base()}/rest/v1/${path}`, {
     ...options,
-    headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+    headers: { apikey: serviceKey(), Authorization: `Bearer ${serviceKey()}`,
       'Content-Type': 'application/json', Prefer: 'return=representation', ...options.headers },
   });
   const flw = async path => {
-    if (!creds.secretKey) throw new RequestError(503, 'Payment provider credentials are not configured.');
+    if (!creds.secretKey) throw new RequestError(503, KEY_PROBLEMS['missing-secret']);
     const result = await jsonFetch(`https://api.flutterwave.com/v3/${path}`, {
       headers: { Authorization: `Bearer ${creds.secretKey}` },
-    });
+    }, 'flutterwave');
     if (result.status !== 'success') throw new RequestError(503, 'Payment confirmation is not available yet. Try checking again shortly.');
     return result.data;
   };
@@ -94,7 +146,7 @@ export function createSupporterHandler({ env = process.env, fetcher = fetch, now
     const authorization = request.headers.authorization || '';
     if (!/^Bearer [\w.-]+$/.test(authorization)) throw new RequestError(401, 'Sign in to your Toolbox account to continue.');
     const response = await fetcher(`${base()}/auth/v1/user`, {
-      headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: authorization },
+      headers: { apikey: serviceKey(), Authorization: authorization },
       signal: AbortSignal.timeout(15000),
     });
     if (!response.ok) throw new RequestError(401, 'Your session has expired. Please sign in again.');
@@ -115,6 +167,16 @@ export function createSupporterHandler({ env = process.env, fetcher = fetch, now
   }
   const quote = async currency => {
     if (currency === 'NGN') return supporterThreshold(null, currency);
+    try {
+      return await convertedThreshold(currency);
+    } catch (error) {
+      if (error instanceof RequestError && /rejected|needs/.test(error.message)) throw error;
+      if (error instanceof FlutterwaveError && error.code === 'authentication') throw error;
+      log('flutterwave', 'rate', currency, error?.message);
+      throw new RequestError(503, `The ${currency} to NGN rate is not available right now. Contribute in NGN, or try again shortly.`);
+    }
+  };
+  const convertedThreshold = async currency => {
     if (v4Client.configured()) {
       try {
         const v4Rate = await v4Client.getTransferRate({ sourceCurrency: currency, destinationCurrency: 'NGN', amount: 5000 });
@@ -164,10 +226,15 @@ export function createSupporterHandler({ env = process.env, fetcher = fetch, now
     try {
       const route = url.pathname.slice('/api/supporter/'.length);
       if (route === 'configuration' && request.method === 'GET') {
-        send(200, { ready: !!configured() });
+        const missing = missingSettings(env);
+        const problem = creds.keyProblem ? KEY_PROBLEMS[creds.keyProblem] : '';
+        send(200, !missing.length && configured() && !problem ? { ready: true } : { ready: false, ...(missing.length ? { missing } : {}), ...(problem ? { problem } : {}) });
         return true;
       }
-      if (!configured()) throw new RequestError(503, 'Supporter checkout needs Supabase and Flutterwave credentials on this server.');
+      if (!configured()) {
+        const missing = missingSettings(env);
+        throw new RequestError(503, missing.length ? `Contributions are not switched on yet: the server is missing ${missing.join(', ')}.` : KEY_PROBLEMS[creds.keyProblem || 'missing']);
+      }
       if (route === 'quote' && request.method === 'GET') {
         const currency = url.searchParams.get('currency') || 'NGN';
         if (!CURRENCIES.includes(currency)) throw new RequestError(400, 'Unsupported currency.');
@@ -185,6 +252,8 @@ export function createSupporterHandler({ env = process.env, fetcher = fetch, now
         const previews = member?.early_access ? await db('toolbox_supporter_previews?published=eq.true&select=title,description,url&order=created_at.desc') : [];
         send(200, { supporter: !!member, profileStyle: member?.profile_style || 'classic', earlyAccess: !!member?.early_access, previews, pending });
       } else if (route === 'intent' && request.method === 'POST') {
+        // Never open the checkout with a key Flutterwave will refuse.
+        if (!creds.checkoutReady) throw new RequestError(503, KEY_PROBLEMS[creds.keyProblem]);
         const body = await readBody(request);
         const user = await optionalUser(request);
         const amount = Number(body.amount);
@@ -222,7 +291,11 @@ export function createSupporterHandler({ env = process.env, fetcher = fetch, now
         send(200, { saved: true });
       } else throw new RequestError(404, 'Not found.');
     } catch (error) {
-      send(error.status || 503, { error: error instanceof RequestError ? error.message : 'Contributions are temporarily unavailable. Please try again later.' });
+      // Flutterwave adapter errors carry fixed, safe messages; anything else is logged and summarised.
+      const known = error instanceof RequestError || error instanceof FlutterwaveError;
+      if (!known) log('unexpected', url.pathname, error?.stack || error);
+      else if (error instanceof FlutterwaveError) log('flutterwave', error.code, url.pathname);
+      send(error.status || 503, { error: known ? error.message : 'Something went wrong on the server while preparing the contribution. Please try again.' });
     }
     return true;
   };

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Readable } from 'node:stream';
-import { createSupporterHandler, validateContribution, supporterThreshold, resolveFlutterwaveCredentials } from '../server-supporters.js';
+import { createSupporterHandler, validateContribution, supporterThreshold, KEY_PROBLEMS, resolveFlutterwaveCredentials } from '../server-supporters.js';
 
 const reference = 'TBX-11111111-1111-4111-8111-111111111111';
 const intent = { tx_ref:reference, user_id:'account-a', amount:5000, currency:'NGN', supporter_threshold:5000 };
@@ -46,7 +46,9 @@ test('missing Flutterwave keys keep checkout unavailable', async () => {
     { FLUTTERWAVE_SECRET_KEY:'' },
   ]) {
     const handler=createSupporterHandler({ env:{ ...env,...keys }, fetcher:()=>assert.fail('must not call network') });
-    assert.deepEqual((await request(handler,'configuration')).data,{ ready:false });
+    const { data }=await request(handler,'configuration');
+    assert.equal(data.ready,false);
+    assert.match(data.problem,new RegExp(Object.keys(keys)[0]));
     assert.equal((await request(handler,'intent',{ amount:5000,currency:'NGN',email:'test@example.invalid' },null)).status,503);
   }
 });
@@ -151,7 +153,10 @@ test('resolveFlutterwaveCredentials supports v4 OAuth, v4 API keys, and normaliz
   const creds4 = resolveFlutterwaveCredentials({ FLW_CLIENT_ID: 'client-123', FLW_CLIENT_SECRET: 'secret-123' });
   assert.equal(creds4.configured, true);
   assert.equal(creds4.hasOAuth, true);
-  assert.equal(creds4.publicKey, 'client-123');
+  // a Client ID is not a checkout public key: Flutterwave answers "Invalid parameter (PBFPubKey)"
+  assert.equal(creds4.publicKey, '');
+  assert.equal(creds4.checkoutReady, false);
+  assert.equal(creds4.keyProblem, 'oauth-only');
 });
 
 test('validateContribution verifies v4 charge schemas with string IDs and succeeded status', () => {
@@ -243,3 +248,55 @@ test('v4 transfer rate quote calculates threshold using POST /transfers/rates', 
   assert.equal(res.data.threshold, 3.13);
 });
 
+
+test('checkout never opens with a key Flutterwave refuses (PBFPubKey)', async () => {
+  const guest={ amount:5000, currency:'NGN', email:'guest@example.invalid' };
+  // v4 OAuth credentials only: no public key for the inline checkout
+  const oauth=createSupporterHandler({ env:{ SUPABASE_URL:'https://x.supabase.co', SUPABASE_SERVICE_ROLE_KEY:'k', FLW_CLIENT_ID:'client-123', FLW_CLIENT_SECRET:'s' }, fetcher:()=>assert.fail('must not call network') });
+  const cfg=(await request(oauth,'configuration')).data;
+  assert.equal(cfg.ready,false);
+  assert.equal(cfg.problem,KEY_PROBLEMS['oauth-only']);
+  const res=await request(oauth,'intent',guest,null);
+  assert.equal(res.status,503);
+  assert.ok(!JSON.stringify(res.data).includes('client-123'));
+  // the secret key pasted into the public slot, and keys from different modes
+  for (const [keys, problem] of [
+    [{ FLUTTERWAVE_PUBLIC_KEY:'FLWSECK-abc-X', FLUTTERWAVE_SECRET_KEY:'FLWSECK-abc-X' }, 'secret-in-public'],
+    [{ FLUTTERWAVE_PUBLIC_KEY:'FLWPUBK_TEST-abc-X', FLUTTERWAVE_SECRET_KEY:'FLWSECK-abc-X' }, 'mode-mismatch'],
+  ]) {
+    const h=createSupporterHandler({ env:{ ...env, ...keys }, fetcher:()=>assert.fail('must not call network') });
+    assert.equal((await request(h,'configuration')).data.problem,KEY_PROBLEMS[problem]);
+    assert.equal((await request(h,'intent',guest,null)).data.error,KEY_PROBLEMS[problem]);
+  }
+});
+
+test('keys are read without quotes, and a test secret key means a test public key', async () => {
+  const creds=resolveFlutterwaveCredentials({ FLUTTERWAVE_PUBLIC_KEY:' "cb3d7945751843f1c06e13b27c4089e7-X" ', FLUTTERWAVE_SECRET_KEY:"'FLWSECK_TEST-abc-X'" });
+  assert.equal(creds.publicKey,'FLWPUBK_TEST-cb3d7945751843f1c06e13b27c4089e7-X');
+  assert.equal(creds.secretKey,'FLWSECK_TEST-abc-X');
+  assert.equal(creds.checkoutReady,true);
+  let inserted;
+  const h=createSupporterHandler({ env:{ ...env, FLUTTERWAVE_PUBLIC_KEY:'"FLWPUBK-live-X"', FLUTTERWAVE_SECRET_KEY:'FLWSECK-live-X' }, fetcher:async (url,options) => { inserted=JSON.parse(options.body); return json([inserted]); } });
+  const res=await request(h,'intent',{ amount:5000,currency:'NGN',email:'guest@example.invalid' },null);
+  assert.equal(res.status,200);
+  assert.equal(res.data.public_key,'FLWPUBK-live-X');
+});
+
+test('configuration names missing database settings, never a value', async () => {
+  const h=createSupporterHandler({ env:{ VITE_SUPABASE_URL:'https://x.supabase.co', FLUTTERWAVE_PUBLIC_KEY:'FLWPUBK-abc-X', FLUTTERWAVE_SECRET_KEY:'FLWSECK-abc-X' }, fetcher:()=>assert.fail('must not call network') });
+  const { data }=await request(h,'configuration');
+  assert.deepEqual(data,{ ready:false, missing:['SUPABASE_SERVICE_ROLE_KEY'] });
+});
+
+test('upstream failures say which setting or step to fix', async () => {
+  const quiet=console.error; console.error=()=>{};
+  try {
+    const intentFor=async (fetcher, currency='NGN') => (await request(createSupporterHandler({ env, fetcher }),'intent',{ amount:5000,currency,email:'guest@example.invalid' },null)).data.error;
+    const fail=(status, body='') => ({ ok:false, status, text:async () => body });
+    assert.match(await intentFor(async () => fail(404,'{"code":"PGRST205","message":"Could not find the table public.toolbox_contributions"}')),/supporters\.sql/);
+    assert.match(await intentFor(async () => fail(401,'{"message":"Invalid API key"}')),/SUPABASE_SERVICE_ROLE_KEY/);
+    assert.match(await intentFor(async () => { throw new Error('getaddrinfo ENOTFOUND'); }),/could not reach the Toolbox database/);
+    assert.match(await intentFor(async () => fail(401,'{"status":"error","message":"Invalid authorization key"}'),'USD'),/FLUTTERWAVE_SECRET_KEY/);
+    assert.match(await intentFor(async () => json({ status:'error', message:'Transfers not enabled' }),'USD'),/USD to NGN rate is not available/);
+  } finally { console.error=quiet; }
+});
