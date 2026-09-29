@@ -1214,7 +1214,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "1,3,7-trimethylpurine-2,6-dione",
   "melt": 236.1,
   "density": 1.232,
-  "use": "CNS stimulant; Stimulant in beverages; Skin-care active"
+  "inci": [
+   "Caffeine"
+  ],
+  "use": "CNS stimulant; Stimulant in beverages; Skin-care active; Skin-conditioning active"
  },
  {
   "name": "Levodopa",
@@ -1600,7 +1603,8 @@ export const COMPOUNDS_DATA = [
   "name": "Niacin",
   "category": "Pharmaceutical",
   "fields": [
-   "Pharmaceutical"
+   "Pharmaceutical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "59-67-6",
   "cid": 938,
@@ -1610,7 +1614,10 @@ export const COMPOUNDS_DATA = [
   "melt": 237.0,
   "density": 1.473,
   "flash": 123.8,
-  "use": "Vitamin B3, lipid lowering"
+  "inci": [
+   "Niacin"
+  ],
+  "use": "Vitamin B3, lipid lowering; Vitamin (B3)"
  },
  {
   "name": "Lisinopril",
@@ -2094,7 +2101,8 @@ export const COMPOUNDS_DATA = [
   "category": "Pharmaceutical",
   "fields": [
    "Pharmaceutical",
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "69-65-8",
   "cid": 6251,
@@ -2103,7 +2111,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "(2r,3r,4r,5r)-hexane-1,2,3,4,5,6-hexol",
   "melt": 164.1,
   "density": 1.489,
-  "use": "Osmotic diuretic; Sugar alcohol sweetener (E421)"
+  "inci": [
+   "Mannitol"
+  ],
+  "use": "Osmotic diuretic; Sugar alcohol sweetener (E421); Humectant"
  },
  {
   "name": "Digoxin",
@@ -2171,7 +2182,8 @@ export const COMPOUNDS_DATA = [
   "category": "Pharmaceutical",
   "fields": [
    "Pharmaceutical",
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "58-61-7",
   "cid": 60961,
@@ -2179,7 +2191,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 267.241,
   "iupac": "(2r,3r,4s,5r)-2-(6-aminopurin-9-yl)-5-(hydroxymethyl)oxolane-3,4-diol",
   "melt": 235.5,
-  "use": "Antiarrhythmic (SVT); Nucleoside"
+  "inci": [
+   "Adenosine"
+  ],
+  "use": "Antiarrhythmic (SVT); Nucleoside; Skin-conditioning active (anti-wrinkle)"
  },
  {
   "name": "Warfarin",
@@ -7565,7 +7580,8 @@ export const COMPOUNDS_DATA = [
   "name": "Copper(ii) sulfate",
   "category": "Agricultural",
   "fields": [
-   "Agricultural"
+   "Agricultural",
+   "Cosmetic & Personal Care"
   ],
   "cas": "7758-98-7",
   "cid": 24462,
@@ -7574,7 +7590,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "copper;sulfate",
   "melt": 590.0,
   "density": 3.6,
-  "use": "Fungicide (Bordeaux mixture), algicide"
+  "inci": [
+   "Copper Sulfate"
+  ],
+  "use": "Fungicide (Bordeaux mixture), algicide; Skin-conditioning active (antibacterial)"
  },
  {
   "name": "Copper oxychloride",
@@ -7968,6 +7987,9 @@ export const COMPOUNDS_DATA = [
   "boil": 191.9,
   "density": 1.323,
   "flash": 102.2,
+  "inci": [
+   "Urea"
+  ],
   "use": "Nitrogen fertilizer; Humectant, keratolytic; Protein denaturant; Resins, fertilizer; Nitrogen excretion product"
  },
  {
@@ -8171,7 +8193,8 @@ export const COMPOUNDS_DATA = [
   "category": "Agricultural",
   "fields": [
    "Agricultural",
-   "Laboratory Reagent"
+   "Laboratory Reagent",
+   "Cosmetic & Personal Care"
   ],
   "cas": "7487-88-9",
   "cid": 24083,
@@ -8180,7 +8203,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "magnesium;sulfate",
   "melt": 1137.0,
   "density": 2.66,
-  "use": "Magnesium fertilizer (Epsom salt); Drying agent"
+  "inci": [
+   "Magnesium Sulfate"
+  ],
+  "use": "Magnesium fertilizer (Epsom salt); Drying agent; Emulsion stabilizer"
  },
  {
   "name": "Calcium carbonate",
@@ -8256,7 +8282,8 @@ export const COMPOUNDS_DATA = [
   "name": "Zinc sulfate",
   "category": "Agricultural",
   "fields": [
-   "Agricultural"
+   "Agricultural",
+   "Cosmetic & Personal Care"
   ],
   "cas": "7733-02-0",
   "cid": 24424,
@@ -8264,7 +8291,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 161.443,
   "iupac": "zinc;sulfate",
   "density": 3.8,
-  "use": "Micronutrient fertilizer"
+  "inci": [
+   "Zinc Sulfate"
+  ],
+  "use": "Micronutrient fertilizer; Anti-tartar (mineral)"
  },
  {
   "name": "Manganese(ii) sulfate",
@@ -8580,6 +8610,9 @@ export const COMPOUNDS_DATA = [
   "melt": 153.0,
   "boil": 385.9,
   "density": 1.665,
+  "inci": [
+   "Citric Acid"
+  ],
   "use": "Acidulant (E330); pH adjuster; Krebs cycle intermediate"
  },
  {
@@ -8587,7 +8620,8 @@ export const COMPOUNDS_DATA = [
   "category": "Food & Nutrition",
   "fields": [
    "Food & Nutrition",
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "6915-15-7",
   "cid": 525,
@@ -8596,13 +8630,17 @@ export const COMPOUNDS_DATA = [
   "iupac": "2-oxidanylbutanedioic acid",
   "melt": 131.0,
   "boil": 328.9,
-  "use": "Acidulant (E296); Krebs cycle intermediate"
+  "inci": [
+   "Malic Acid"
+  ],
+  "use": "Acidulant (E296); Krebs cycle intermediate; Exfoliant (AHA), pH adjuster"
  },
  {
   "name": "Tartaric acid",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "133-37-9",
   "cid": 875,
@@ -8612,7 +8650,10 @@ export const COMPOUNDS_DATA = [
   "melt": 206.0,
   "density": 1.788,
   "flash": 210.0,
-  "use": "Acidulant (E334)"
+  "inci": [
+   "Tartaric Acid"
+  ],
+  "use": "Acidulant (E334); Exfoliant (AHA), pH adjuster"
  },
  {
   "name": "Lactic acid",
@@ -8628,7 +8669,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 90.078,
   "iupac": "2-oxidanylpropanoic acid",
   "melt": 18.0,
-  "use": "Acidulant (E270); Alpha-hydroxy acid exfoliant; Anaerobic metabolite"
+  "inci": [
+   "Lactic Acid"
+  ],
+  "use": "Acidulant (E270); Alpha-hydroxy acid exfoliant; Anaerobic metabolite; Exfoliant (AHA), pH adjuster"
  },
  {
   "name": "Acetic acid",
@@ -8673,7 +8717,8 @@ export const COMPOUNDS_DATA = [
   "category": "Food & Nutrition",
   "fields": [
    "Food & Nutrition",
-   "Industrial"
+   "Industrial",
+   "Cosmetic & Personal Care"
   ],
   "cas": "7664-38-2",
   "cid": 1004,
@@ -8682,10 +8727,13 @@ export const COMPOUNDS_DATA = [
   "iupac": "phosphoric acid",
   "melt": 42.4,
   "boil": 407.0,
+  "inci": [
+   "Phosphoric Acid"
+  ],
   "hazards": [
    "Ontario OEL TWA 1 mg/m³, STEL 3 mg/m³"
   ],
-  "use": "Acidulant in colas (E338); Fertilizers, food, rust removal"
+  "use": "Acidulant in colas (E338); Fertilizers, food, rust removal; pH adjuster"
  },
  {
   "name": "Succinic acid",
@@ -8728,7 +8776,8 @@ export const COMPOUNDS_DATA = [
   "name": "Glucono delta-lactone",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "90-80-2",
   "cid": 7027,
@@ -8736,13 +8785,17 @@ export const COMPOUNDS_DATA = [
   "molarMass": 178.14,
   "iupac": "(3r,4s,5s,6r)-6-(hydroxymethyl)-3,4,5-tris(oxidanyl)oxan-2-one",
   "melt": 153.0,
-  "use": "Acidifier, coagulant (E575)"
+  "inci": [
+   "Gluconolactone"
+  ],
+  "use": "Acidifier, coagulant (E575); Exfoliant (PHA)"
  },
  {
   "name": "Sodium citrate",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "68-04-2",
   "cid": 6224,
@@ -8750,7 +8803,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 258.069,
   "iupac": "trisodium;2-oxidanylpropane-1,2,3-tricarboxylate",
   "melt": 300.0,
-  "use": "Acidity regulator (E331)"
+  "inci": [
+   "Sodium Citrate"
+  ],
+  "use": "Acidity regulator (E331); Buffer (pH adjuster)"
  },
  {
   "name": "Potassium citrate",
@@ -8869,7 +8925,8 @@ export const COMPOUNDS_DATA = [
   "category": "Food & Nutrition",
   "fields": [
    "Food & Nutrition",
-   "Materials"
+   "Materials",
+   "Cosmetic & Personal Care"
   ],
   "cas": "7647-14-5",
   "cid": 5234,
@@ -8879,7 +8936,10 @@ export const COMPOUNDS_DATA = [
   "melt": 800.7,
   "boil": 1465.0,
   "density": 2.17,
-  "use": "Table salt; Salt, optical windows"
+  "inci": [
+   "Sodium Chloride"
+  ],
+  "use": "Table salt; Salt, optical windows; Thickener (salt)"
  },
  {
   "name": "Potassium iodate",
@@ -8909,13 +8969,17 @@ export const COMPOUNDS_DATA = [
   "molarMass": 144.103,
   "iupac": "sodium;benzoate",
   "melt": 300.0,
+  "inci": [
+   "Sodium Benzoate"
+  ],
   "use": "Preservative (E211); Preservative"
  },
  {
   "name": "Benzoic acid",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "65-85-0",
   "cid": 243,
@@ -8926,7 +8990,10 @@ export const COMPOUNDS_DATA = [
   "boil": 250.2,
   "density": 1.266,
   "flash": 121.1,
-  "use": "Preservative (E210)"
+  "inci": [
+   "Benzoic Acid"
+  ],
+  "use": "Preservative (E210); Preservative"
  },
  {
   "name": "Potassium sorbate",
@@ -8941,13 +9008,17 @@ export const COMPOUNDS_DATA = [
   "molarMass": 150.217,
   "iupac": "potassium;hexa-2,4-dienoate",
   "density": 1.361,
+  "inci": [
+   "Potassium Sorbate"
+  ],
   "use": "Preservative (E202); Preservative"
  },
  {
   "name": "Sorbic acid",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "110-44-1",
   "cid": 643460,
@@ -8956,7 +9027,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "(2e,4e)-hexa-2,4-dienoic acid",
   "melt": 134.5,
   "density": 1.204,
-  "use": "Preservative (E200)"
+  "inci": [
+   "Sorbic Acid"
+  ],
+  "use": "Preservative (E200); Preservative"
  },
  {
   "name": "Calcium propionate",
@@ -9105,13 +9179,17 @@ export const COMPOUNDS_DATA = [
   "iupac": "methyl 4-oxidanylbenzoate",
   "melt": 125.2,
   "boil": 265.0,
+  "inci": [
+   "Methylparaben"
+  ],
   "use": "Preservative (E218); Preservative"
  },
  {
   "name": "Ethylparaben",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "120-47-8",
   "cid": 8434,
@@ -9120,7 +9198,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "ethyl 4-oxidanylbenzoate",
   "melt": 117.0,
   "boil": 297.5,
-  "use": "Preservative (E214)"
+  "inci": [
+   "Ethylparaben"
+  ],
+  "use": "Preservative (E214); Preservative"
  },
  {
   "name": "Natamycin",
@@ -9181,7 +9262,8 @@ export const COMPOUNDS_DATA = [
   "name": "Ascorbic acid",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "50-81-7",
   "cid": 54670067,
@@ -9191,7 +9273,10 @@ export const COMPOUNDS_DATA = [
   "melt": 191.0,
   "boil": 363.9,
   "density": 1.653,
-  "use": "Antioxidant, vitamin C (E300); Vitamin C"
+  "inci": [
+   "Ascorbic Acid"
+  ],
+  "use": "Antioxidant, vitamin C (E300); Vitamin C; Antioxidant (vitamin C)"
  },
  {
   "name": "Sodium ascorbate",
@@ -9235,7 +9320,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 414.533,
   "iupac": "[(2S)-2-[(2R)-3,4-dihydroxy-5-oxo-2H-furan-2-yl]-2-hydroxyethyl] hexadecanoate",
   "melt": 112.0,
-  "use": "Antioxidant (E304); Vitamin C derivative"
+  "inci": [
+   "Ascorbyl Palmitate"
+  ],
+  "use": "Antioxidant (E304); Vitamin C derivative; Antioxidant (vitamin C derivative)"
  },
  {
   "name": "Alpha-tocopherol",
@@ -9256,7 +9344,8 @@ export const COMPOUNDS_DATA = [
   "name": "Butylated hydroxyanisole",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "121-00-6",
   "cid": 8456,
@@ -9264,13 +9353,17 @@ export const COMPOUNDS_DATA = [
   "molarMass": 180.244,
   "iupac": "2-tert-butyl-4-methoxy-phenol",
   "melt": 62.5,
-  "use": "Antioxidant BHA (E320)"
+  "inci": [
+   "BHA"
+  ],
+  "use": "Antioxidant BHA (E320); Antioxidant"
  },
  {
   "name": "Butylated hydroxytoluene",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "128-37-0",
   "cid": 31404,
@@ -9281,10 +9374,13 @@ export const COMPOUNDS_DATA = [
   "boil": 265.0,
   "density": 0.894,
   "flash": 117.0,
+  "inci": [
+   "BHT"
+  ],
   "hazards": [
    "Ontario OEL TWA 2 mg/m³"
   ],
-  "use": "Antioxidant BHT (E321)"
+  "use": "Antioxidant BHT (E321); Antioxidant"
  },
  {
   "name": "Tert-butylhydroquinone",
@@ -9344,6 +9440,9 @@ export const COMPOUNDS_DATA = [
   "molarMass": 292.243,
   "iupac": "2-[2-[bis(2-hydroxy-2-oxoethyl)amino]ethyl-(2-hydroxy-2-oxoethyl)amino]ethanoic acid",
   "melt": 245.0,
+  "inci": [
+   "Disodium EDTA"
+  ],
   "use": "Sequestrant; Chelating agent; Chelator (metal ions)"
  },
  {
@@ -9351,7 +9450,8 @@ export const COMPOUNDS_DATA = [
   "category": "Food & Nutrition",
   "fields": [
    "Food & Nutrition",
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "57-50-1",
   "cid": 1115,
@@ -9360,16 +9460,20 @@ export const COMPOUNDS_DATA = [
   "iupac": "2-[2,5-bis(hydroxymethyl)-3,4-bis(oxidanyl)oxolan-2-yl]oxy-6-(hydroxymethyl)oxane-3,4,5-triol",
   "melt": 181.0,
   "density": 1.581,
+  "inci": [
+   "Sucrose"
+  ],
   "hazards": [
    "Ontario OEL TWA 10 mg/m³"
   ],
-  "use": "Sugar; Disaccharide"
+  "use": "Sugar; Disaccharide; Humectant"
  },
  {
   "name": "Glucose",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "50-99-7",
   "cid": 107526,
@@ -9377,14 +9481,18 @@ export const COMPOUNDS_DATA = [
   "molarMass": 180.156,
   "iupac": "(2R,3S,4R,5R)-2,3,4,5,6-pentahydroxyhexanal",
   "melt": 146.0,
-  "use": "Sugar (dextrose)"
+  "inci": [
+   "Glucose"
+  ],
+  "use": "Sugar (dextrose); Humectant"
  },
  {
   "name": "Fructose",
   "category": "Food & Nutrition",
   "fields": [
    "Food & Nutrition",
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "57-48-7",
   "cid": 5984,
@@ -9393,7 +9501,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "(3S,4R,5R)-1,3,4,5,6-pentahydroxyhexan-2-one",
   "melt": 93.0,
   "boil": 104.0,
-  "use": "Sugar; Monosaccharide"
+  "inci": [
+   "Fructose"
+  ],
+  "use": "Sugar; Monosaccharide; Humectant"
  },
  {
   "name": "Lactose",
@@ -9416,7 +9527,8 @@ export const COMPOUNDS_DATA = [
   "category": "Food & Nutrition",
   "fields": [
    "Food & Nutrition",
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "69-79-4",
   "cid": 6255,
@@ -9424,14 +9536,18 @@ export const COMPOUNDS_DATA = [
   "molarMass": 342.296,
   "iupac": "(2r,3s,4s,5r,6r)-2-(hydroxymethyl)-6-[(2r,3s,4r,5r,6r)-2-(hydroxymethyl)-4,5,6-tris(oxidanyl)oxan-3-yl]oxy-oxane-3,4,5-triol",
   "melt": 240.0,
-  "use": "Malt sugar; Disaccharide"
+  "inci": [
+   "Maltose"
+  ],
+  "use": "Malt sugar; Disaccharide; Humectant"
  },
  {
   "name": "Trehalose",
   "category": "Food & Nutrition",
   "fields": [
    "Food & Nutrition",
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "99-20-7",
   "cid": 7427,
@@ -9440,7 +9556,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "(2r,3s,4s,5r,6r)-2-(hydroxymethyl)-6-[(2r,3r,4s,5s,6r)-6-(hydroxymethyl)-3,4,5-tris(oxidanyl)oxan-2-yl]oxy-oxane-3,4,5-triol",
   "melt": 209.4,
   "density": 1.582,
-  "use": "Sugar, stabilizer; Disaccharide"
+  "inci": [
+   "Trehalose"
+  ],
+  "use": "Sugar, stabilizer; Disaccharide; Humectant"
  },
  {
   "name": "Isomaltulose",
@@ -9459,7 +9578,8 @@ export const COMPOUNDS_DATA = [
   "name": "Sorbitol",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "50-70-4",
   "cid": 5780,
@@ -9469,13 +9589,17 @@ export const COMPOUNDS_DATA = [
   "melt": 97.0,
   "boil": 430.9,
   "density": 1.489,
-  "use": "Sugar alcohol sweetener (E420)"
+  "inci": [
+   "Sorbitol"
+  ],
+  "use": "Sugar alcohol sweetener (E420); Humectant"
  },
  {
   "name": "Xylitol",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "87-99-0",
   "cid": 827,
@@ -9484,7 +9608,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "pentane-1,2,3,4,5-pentol",
   "melt": 95.9,
   "boil": 380.0,
-  "use": "Sugar alcohol sweetener (E967)"
+  "inci": [
+   "Xylitol"
+  ],
+  "use": "Sugar alcohol sweetener (E967); Humectant, sweetener"
  },
  {
   "name": "Erythritol",
@@ -9513,10 +9640,14 @@ export const COMPOUNDS_DATA = [
   "name": "Isomalt",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Sugar alcohol sweetener (E953)"
+  "inci": [
+   "Isomalt"
+  ],
+  "use": "Sugar alcohol sweetener (E953); Humectant"
  },
  {
   "name": "Glycerol",
@@ -9535,6 +9666,9 @@ export const COMPOUNDS_DATA = [
   "boil": 289.0,
   "density": 1.261,
   "flash": 173.8,
+  "inci": [
+   "Glycerin"
+  ],
   "hazards": [
    "Ontario OEL TWA 10 mg/m³"
   ],
@@ -9556,6 +9690,9 @@ export const COMPOUNDS_DATA = [
   "boil": 187.3,
   "density": 1.036,
   "flash": 85.5,
+  "inci": [
+   "Propylene Glycol"
+  ],
   "hazards": [
    "Ontario OEL TWA 50 ppm"
   ],
@@ -9565,7 +9702,8 @@ export const COMPOUNDS_DATA = [
   "name": "Saccharin",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "81-07-2",
   "cid": 5143,
@@ -9574,7 +9712,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "1,1-bis(oxidanylidene)-1,2-benzothiazol-3-one",
   "melt": 227.0,
   "density": 0.828,
-  "use": "Artificial sweetener (E954)"
+  "inci": [
+   "Sodium Saccharin"
+  ],
+  "use": "Artificial sweetener (E954); Sweetener"
  },
  {
   "name": "Aspartame",
@@ -9594,7 +9735,8 @@ export const COMPOUNDS_DATA = [
   "name": "Acesulfame potassium",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "55589-62-3",
   "cid": 11074431,
@@ -9602,7 +9744,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 201.242,
   "iupac": "potassium;6-methyl-2,2-bis(oxidanylidene)-1-oxa-2$l^{6}-thia-3-azanidacyclohex-5-en-4-one",
   "melt": 68.0,
-  "use": "Artificial sweetener (E950)"
+  "inci": [
+   "Potassium Acesulfame"
+  ],
+  "use": "Artificial sweetener (E950); Sweetener"
  },
  {
   "name": "Sucralose",
@@ -9770,7 +9915,10 @@ export const COMPOUNDS_DATA = [
   "melt": 81.0,
   "boil": 285.0,
   "density": 1.056,
-  "use": "Vanilla flavor; Fragrance (vanilla)"
+  "inci": [
+   "Vanillin"
+  ],
+  "use": "Vanilla flavor; Fragrance (vanilla); Flavour, fragrance"
  },
  {
   "name": "Ethyl vanillin",
@@ -9801,7 +9949,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "(e)-3-phenylprop-2-enal",
   "melt": -7.5,
   "boil": 246.0,
-  "use": "Cinnamon flavor; Fragrance (cinnamon)"
+  "inci": [
+   "Cinnamal"
+  ],
+  "use": "Cinnamon flavor; Fragrance (cinnamon); Fragrance allergen (cinnamon)"
  },
  {
   "name": "Benzaldehyde",
@@ -9827,10 +9978,14 @@ export const COMPOUNDS_DATA = [
   "name": "Citral",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Lemon flavor"
+  "inci": [
+   "Citral"
+  ],
+  "use": "Lemon flavor; Fragrance allergen (lemon)"
  },
  {
   "name": "Limonene",
@@ -9847,10 +10002,13 @@ export const COMPOUNDS_DATA = [
   "melt": -90.0,
   "boil": 178.0,
   "flash": 43.0,
+  "inci": [
+   "Limonene"
+  ],
   "hazards": [
    "Flammable (flash point 43 °C)"
   ],
-  "use": "Citrus flavor; Fragrance (citrus)"
+  "use": "Citrus flavor; Fragrance (citrus); Fragrance allergen (citrus)"
  },
  {
   "name": "Menthol",
@@ -9865,6 +10023,9 @@ export const COMPOUNDS_DATA = [
   "molarMass": 156.265,
   "iupac": "5-methyl-2-propan-2-yl-cyclohexan-1-ol",
   "melt": 35.0,
+  "inci": [
+   "Menthol"
+  ],
   "use": "Mint flavor, cooling agent; Cooling agent"
  },
  {
@@ -9913,13 +10074,17 @@ export const COMPOUNDS_DATA = [
   "melt": -7.5,
   "boil": 254.0,
   "density": 1.065,
-  "use": "Clove flavor; Fragrance (clove)"
+  "inci": [
+   "Eugenol"
+  ],
+  "use": "Clove flavor; Fragrance (clove); Fragrance allergen (clove)"
  },
  {
   "name": "Thymol",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "89-83-8",
   "cid": 6989,
@@ -9929,7 +10094,10 @@ export const COMPOUNDS_DATA = [
   "melt": 49.6,
   "boil": 233.0,
   "density": 0.97,
-  "use": "Thyme flavor, antiseptic"
+  "inci": [
+   "Thymol"
+  ],
+  "use": "Thyme flavor, antiseptic; Antiseptic, flavour"
  },
  {
   "name": "Isoamyl acetate",
@@ -9988,11 +10156,14 @@ export const COMPOUNDS_DATA = [
   "boil": 77.1,
   "density": 0.9,
   "flash": -9.8,
+  "inci": [
+   "Ethyl Acetate"
+  ],
   "hazards": [
    "Ontario OEL TWA 400 ppm",
    "Flammable (flash point -9.8 °C)"
   ],
-  "use": "Fruity flavor, solvent; Nail polish solvent; Solvent"
+  "use": "Fruity flavor, solvent; Nail polish solvent; Solvent; Solvent (nail polish)"
  },
  {
   "name": "Methyl anthranilate",
@@ -10302,14 +10473,18 @@ export const COMPOUNDS_DATA = [
   "name": "Tartrazine",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "1934-21-0",
   "cid": 164825,
   "formula": "C16H9N4Na3O9S2",
   "molarMass": 534.363,
   "iupac": "trisodium;5-oxidanylidene-1-(4-sulfonatophenyl)-4-[(4-sulfonatophenyl)diazenyl]-4h-pyrazole-3-carboxylate",
-  "use": "Yellow azo dye (E102)"
+  "inci": [
+   "CI 19140"
+  ],
+  "use": "Yellow azo dye (E102); Colourant (yellow 5)"
  },
  {
   "name": "Quinoline yellow",
@@ -10324,10 +10499,14 @@ export const COMPOUNDS_DATA = [
   "name": "Sunset yellow FCF",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Orange azo dye (E110)"
+  "inci": [
+   "CI 15985"
+  ],
+  "use": "Orange azo dye (E110); Colourant (yellow 6)"
  },
  {
   "name": "Carminic acid",
@@ -10347,10 +10526,14 @@ export const COMPOUNDS_DATA = [
   "name": "Azorubine",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Red azo dye (E122)"
+  "inci": [
+   "CI 14720"
+  ],
+  "use": "Red azo dye (E122); Colourant (red, azorubine)"
  },
  {
   "name": "Amaranth",
@@ -10369,10 +10552,14 @@ export const COMPOUNDS_DATA = [
   "name": "Ponceau 4r",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Red azo dye (E124)"
+  "inci": [
+   "CI 16255"
+  ],
+  "use": "Red azo dye (E124); Colourant (red, ponceau 4R)"
  },
  {
   "name": "Erythrosine",
@@ -10423,27 +10610,35 @@ export const COMPOUNDS_DATA = [
   "name": "Brilliant blue FCF",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "3844-45-9",
   "cid": 19700,
   "formula": "C37H34N2Na2O9S3",
   "molarMass": 792.848,
   "iupac": "disodium;2-[[4-[ethyl-[(3-sulfonatophenyl)methyl]amino]phenyl]-[4-[ethyl-[(3-sulfonatophenyl)methyl]azaniumylidene]cyclohexa-2,5-dien-1-ylidene]methyl]benzenesulfonate",
-  "use": "Blue dye (E133)"
+  "inci": [
+   "CI 42090"
+  ],
+  "use": "Blue dye (E133); Colourant (blue 1)"
  },
  {
   "name": "Fast green FCF",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "2353-45-9",
   "cid": 16887,
   "formula": "C37H34N2Na2O10S3",
   "molarMass": 808.848,
   "iupac": "disodium;2-[[4-[ethyl-[(3-sulfonatophenyl)methyl]amino]phenyl]-[4-[ethyl-[(3-sulfonatophenyl)methyl]azaniumylidene]cyclohexa-2,5-dien-1-ylidene]methyl]-5-oxidanyl-benzenesulfonate",
-  "use": "Green dye (E143)"
+  "inci": [
+   "CI 42053"
+  ],
+  "use": "Green dye (E143); Colourant (green 3)"
  },
  {
   "name": "Brilliant black bn",
@@ -10463,7 +10658,8 @@ export const COMPOUNDS_DATA = [
   "category": "Food & Nutrition",
   "fields": [
    "Food & Nutrition",
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "7235-40-7",
   "cid": 5280489,
@@ -10472,7 +10668,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "1,3,3-trimethyl-2-[(1e,3e,5e,7e,9e,11e,13e,15e,17e)-3,7,12,16-tetramethyl-18-(2,6,6-trimethylcyclohexen-1-yl)octadeca-1,3,5,7,9,11,13,15,17-nonaenyl]cyclohexene",
   "melt": 183.0,
   "density": 1.002,
-  "use": "Orange color, provitamin A (E160a); Carotenoid"
+  "inci": [
+   "Beta-Carotene"
+  ],
+  "use": "Orange color, provitamin A (E160a); Carotenoid; Antioxidant, colourant"
  },
  {
   "name": "Lycopene",
@@ -10568,18 +10767,23 @@ export const COMPOUNDS_DATA = [
   "iupac": "bis(oxidanylidene)titanium",
   "melt": 1843.0,
   "boil": 2750.0,
+  "inci": [
+   "CI 77891",
+   "Titanium Dioxide"
+  ],
   "hazards": [
    "IARC Group 2B: possibly carcinogenic",
    "Ontario OEL TWA 10 mg/m³"
   ],
-  "use": "White pigment (E171); Mineral UV filter, white pigment; White pigment"
+  "use": "White pigment (E171); Mineral UV filter, white pigment; White pigment; Colourant (white), opacifier; UV filter (mineral), white pigment"
  },
  {
   "name": "Iron(iii) oxide",
   "category": "Food & Nutrition",
   "fields": [
    "Food & Nutrition",
-   "Materials"
+   "Materials",
+   "Cosmetic & Personal Care"
   ],
   "cas": "1309-37-1",
   "cid": 14833,
@@ -10588,19 +10792,27 @@ export const COMPOUNDS_DATA = [
   "iupac": "iron(3+);oxygen(2-)",
   "melt": 1539.0,
   "density": 5.25,
+  "inci": [
+   "CI 77491",
+   "Iron Oxides"
+  ],
   "hazards": [
    "Ontario OEL TWA 5 mg/m³"
   ],
-  "use": "Color (E172); Rust, red pigment, thermite"
+  "use": "Color (E172); Rust, red pigment, thermite; Colourant (red iron oxide); Colourant (iron oxides)"
  },
  {
   "name": "Lecithin",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Emulsifier (E322)"
+  "inci": [
+   "Lecithin"
+  ],
+  "use": "Emulsifier (E322); Emulsifier, emollient"
  },
  {
   "name": "Polysorbate 80",
@@ -10638,6 +10850,9 @@ export const COMPOUNDS_DATA = [
   "molarMass": 358.556,
   "iupac": "2,3-bis(oxidanyl)propyl octadecanoate",
   "melt": 65.5,
+  "inci": [
+   "Glyceryl Stearate"
+  ],
   "use": "Emulsifier (E471); Emulsifier"
  },
  {
@@ -10675,28 +10890,40 @@ export const COMPOUNDS_DATA = [
   "name": "Carrageenan",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Thickener (E407)"
+  "inci": [
+   "Carrageenan"
+  ],
+  "use": "Thickener (E407); Thickener"
  },
  {
   "name": "Xanthan gum",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Thickener (E415)"
+  "inci": [
+   "Xanthan Gum"
+  ],
+  "use": "Thickener (E415); Thickener"
  },
  {
   "name": "Pectin",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Gelling agent (E440)"
+  "inci": [
+   "Pectin"
+  ],
+  "use": "Gelling agent (E440); Thickener"
  },
  {
   "name": "Sodium carboxymethyl cellulose",
@@ -10744,7 +10971,8 @@ export const COMPOUNDS_DATA = [
   "name": "Magnesium chloride",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "7786-30-3",
   "cid": 24584,
@@ -10754,13 +10982,17 @@ export const COMPOUNDS_DATA = [
   "melt": 714.0,
   "boil": 1412.0,
   "density": 2.325,
-  "use": "Tofu coagulant (nigari) (E511)"
+  "inci": [
+   "Magnesium Chloride"
+  ],
+  "use": "Tofu coagulant (nigari) (E511); Skin-conditioning (mineral)"
  },
  {
   "name": "Sodium phosphate",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "7601-54-9",
   "cid": 24243,
@@ -10769,7 +11001,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "trisodium;phosphate",
   "melt": 1583.0,
   "density": 2.54,
-  "use": "Emulsifying salt (E339)"
+  "inci": [
+   "Trisodium Phosphate"
+  ],
+  "use": "Emulsifying salt (E339); Buffer, anti-tartar"
  },
  {
   "name": "Disodium phosphate",
@@ -10846,7 +11081,8 @@ export const COMPOUNDS_DATA = [
   "name": "Magnesium stearate",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "557-04-0",
   "cid": 11177,
@@ -10854,7 +11090,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 591.244,
   "iupac": "magnesium;octadecanoate",
   "melt": 132.0,
-  "use": "Anticaking agent, lubricant (E470b)"
+  "inci": [
+   "Magnesium Stearate"
+  ],
+  "use": "Anticaking agent, lubricant (E470b); Texture (powder binder), thickener"
  },
  {
   "name": "Potassium ferrocyanide",
@@ -10896,7 +11135,8 @@ export const COMPOUNDS_DATA = [
   "name": "Nitrogen",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "7727-37-9",
   "cid": 947,
@@ -10905,7 +11145,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "molecular nitrogen",
   "melt": -210.0,
   "boil": -195.8,
-  "use": "Packaging gas (E941)"
+  "inci": [
+   "Nitrogen"
+  ],
+  "use": "Packaging gas (E941); Propellant"
  },
  {
   "name": "Argon",
@@ -11000,7 +11243,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 286.452,
   "iupac": "(2e,4e,6e,8e)-3,7-dimethyl-9-(2,6,6-trimethylcyclohexen-1-yl)nona-2,4,6,8-tetraen-1-ol",
   "melt": 63.5,
-  "use": "Vitamin A; Anti-aging retinoid"
+  "inci": [
+   "Retinol"
+  ],
+  "use": "Vitamin A; Anti-aging retinoid; Retinoid (vitamin A)"
  },
  {
   "name": "Thiamine",
@@ -11030,7 +11276,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "pyridine-3-carboxamide",
   "melt": 128.8,
   "density": 1.4,
-  "use": "Vitamin B3; Skin-conditioning vitamin B3"
+  "inci": [
+   "Niacinamide"
+  ],
+  "use": "Vitamin B3; Skin-conditioning vitamin B3; Skin-conditioning active (vitamin B3)"
  },
  {
   "name": "Pantothenic acid",
@@ -11063,7 +11312,8 @@ export const COMPOUNDS_DATA = [
   "name": "Biotin",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "58-85-5",
   "cid": 171548,
@@ -11071,7 +11321,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 244.311,
   "iupac": "5-[(3as,4s,6ar)-2-oxidanylidene-1,3,3a,4,6,6a-hexahydrothieno[3,4-d]imidazol-4-yl]pentanoic acid",
   "melt": 231.0,
-  "use": "Vitamin B7"
+  "inci": [
+   "Biotin"
+  ],
+  "use": "Vitamin B7; Vitamin (B7)"
  },
  {
   "name": "Folic acid",
@@ -11091,7 +11344,8 @@ export const COMPOUNDS_DATA = [
   "name": "Cyanocobalamin",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "68-19-9",
   "cid": 4289526,
@@ -11099,7 +11353,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 1355.365,
   "iupac": "cobalt(3+);[5-(5,6-dimethylbenzimidazol-1-yl)-2-(hydroxymethyl)-4-oxidanyl-oxolan-3-yl] 1-[3-[2,13,18-tris(2-azanyl-2-oxidanylidene-ethyl)-7,12,17-tris(3-azanyl-3-oxidanylidene-propyl)-3,5,8,8,13,15,18,19-octamethyl-2,7,12,17-tetrahydro-1h-corrin-24-id-3-yl]propanoylamino]propan-2-yl phosphate;cyanide",
   "melt": 300.0,
-  "use": "Vitamin B12"
+  "inci": [
+   "Cyanocobalamin"
+  ],
+  "use": "Vitamin B12; Vitamin (B12), colourant"
  },
  {
   "name": "Ergocalciferol",
@@ -11152,7 +11409,8 @@ export const COMPOUNDS_DATA = [
   "name": "l-Carnitine",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "541-15-1",
   "cid": 10917,
@@ -11160,7 +11418,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 161.199,
   "iupac": "(3r)-3-oxidanyl-4-(trimethylazaniumyl)butanoate",
   "melt": 196.5,
-  "use": "Nutrient supplement"
+  "inci": [
+   "Carnitine"
+  ],
+  "use": "Nutrient supplement; Skin-conditioning active"
  },
  {
   "name": "Creatine",
@@ -11230,7 +11491,8 @@ export const COMPOUNDS_DATA = [
   "category": "Food & Nutrition",
   "fields": [
    "Food & Nutrition",
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "60-33-3",
   "cid": 5280450,
@@ -11240,13 +11502,17 @@ export const COMPOUNDS_DATA = [
   "melt": -6.9,
   "boil": 354.9,
   "density": 0.902,
-  "use": "Omega-6 fatty acid"
+  "inci": [
+   "Linoleic Acid"
+  ],
+  "use": "Omega-6 fatty acid; Skin-barrier lipid (fatty acid)"
  },
  {
   "name": "Alpha-linolenic acid",
   "category": "Food & Nutrition",
   "fields": [
-   "Food & Nutrition"
+   "Food & Nutrition",
+   "Cosmetic & Personal Care"
   ],
   "cas": "463-40-1",
   "cid": 5280934,
@@ -11256,7 +11522,10 @@ export const COMPOUNDS_DATA = [
   "melt": -10.0,
   "boil": 231.0,
   "density": 0.916,
-  "use": "Omega-3 fatty acid"
+  "inci": [
+   "Linolenic Acid"
+  ],
+  "use": "Omega-3 fatty acid; Skin-barrier lipid (fatty acid)"
  },
  {
   "name": "Ferrous fumarate",
@@ -11285,10 +11554,13 @@ export const COMPOUNDS_DATA = [
   "iupac": "oxidanylidenezinc",
   "melt": 1974.0,
   "density": 5.6,
+  "inci": [
+   "Zinc Oxide"
+  ],
   "hazards": [
    "Ontario OEL TWA 2 mg/m³, STEL 10 mg/m³"
   ],
-  "use": "Zinc fortificant; Mineral UV filter"
+  "use": "Zinc fortificant; Mineral UV filter; UV filter (mineral), skin protectant"
  },
  {
   "name": "Sodium fluoride",
@@ -11305,7 +11577,10 @@ export const COMPOUNDS_DATA = [
   "melt": 996.0,
   "boil": 1704.0,
   "density": 2.78,
-  "use": "Fluoridation agent; Anticavity toothpaste agent"
+  "inci": [
+   "Sodium Fluoride"
+  ],
+  "use": "Fluoridation agent; Anticavity toothpaste agent; Anticavity (fluoride)"
  },
  {
   "name": "Acrylamide",
@@ -11554,7 +11829,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 288.379,
   "iupac": "sodium;dodecyl sulfate",
   "melt": 205.0,
-  "use": "Anionic surfactant (cleanser, foaming); Denaturing detergent (SDS-PAGE)"
+  "inci": [
+   "Sodium Lauryl Sulfate"
+  ],
+  "use": "Anionic surfactant (cleanser, foaming); Denaturing detergent (SDS-PAGE); Cleansing agent (anionic), foaming"
  },
  {
   "name": "Sodium laureth sulfate",
@@ -11563,7 +11841,10 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Anionic surfactant (shampoo)"
+  "inci": [
+   "Sodium Laureth Sulfate"
+  ],
+  "use": "Anionic surfactant (shampoo); Cleansing agent (anionic)"
  },
  {
   "name": "Ammonium lauryl sulfate",
@@ -11589,7 +11870,10 @@ export const COMPOUNDS_DATA = [
   "formula": "C19H38N2O3",
   "molarMass": 342.517,
   "iupac": "2-[3-(dodecanoylamino)propyl-dimethyl-azaniumyl]ethanoate",
-  "use": "Amphoteric surfactant"
+  "inci": [
+   "Cocamidopropyl Betaine"
+  ],
+  "use": "Amphoteric surfactant; Cleansing agent (amphoteric)"
  },
  {
   "name": "Sodium lauroyl sarcosinate",
@@ -11598,7 +11882,10 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Mild anionic surfactant"
+  "inci": [
+   "Sodium Lauroyl Sarcosinate"
+  ],
+  "use": "Mild anionic surfactant; Cleansing agent (mild anionic)"
  },
  {
   "name": "Decyl glucoside",
@@ -11607,7 +11894,10 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Nonionic surfactant"
+  "inci": [
+   "Decyl Glucoside"
+  ],
+  "use": "Nonionic surfactant; Cleansing agent (non-ionic)"
  },
  {
   "name": "Cetrimonium bromide",
@@ -11621,7 +11911,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 364.447,
   "iupac": "hexadecyl(trimethyl)azanium;bromide",
   "melt": 240.0,
-  "use": "Cationic conditioning agent"
+  "inci": [
+   "Cetrimonium Bromide"
+  ],
+  "use": "Cationic conditioning agent; Cleansing agent (cationic), preservative"
  },
  {
   "name": "Behentrimonium chloride",
@@ -11630,7 +11923,10 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Hair conditioning agent"
+  "inci": [
+   "Behentrimonium Chloride"
+  ],
+  "use": "Hair conditioning agent; Hair conditioning"
  },
  {
   "name": "Benzalkonium chloride",
@@ -11639,7 +11935,10 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Preservative, antiseptic"
+  "inci": [
+   "Benzalkonium Chloride"
+  ],
+  "use": "Preservative, antiseptic; Preservative, antimicrobial"
  },
  {
   "name": "Cetylpyridinium chloride",
@@ -11713,6 +12012,9 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
+  "inci": [
+   "Hyaluronic Acid"
+  ],
   "use": "Humectant"
  },
  {
@@ -11722,7 +12024,10 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Humectant"
+  "inci": [
+   "Sodium PCA"
+  ],
+  "use": "Humectant; Humectant (natural moisturizing factor)"
  },
  {
   "name": "Panthenol",
@@ -11736,7 +12041,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 205.251,
   "iupac": "3,3-dimethyl-2,4-bis(oxidanyl)-n-(3-oxidanylpropyl)butanamide",
   "melt": 68.0,
-  "use": "Provitamin B5 moisturizer"
+  "inci": [
+   "Panthenol"
+  ],
+  "use": "Provitamin B5 moisturizer; Humectant, soothing (provitamin B5)"
  },
  {
   "name": "Allantoin",
@@ -11750,7 +12058,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 158.115,
   "iupac": "1-[2,5-bis(oxidanylidene)imidazolidin-4-yl]urea",
   "melt": 239.0,
-  "use": "Skin protectant"
+  "inci": [
+   "Allantoin"
+  ],
+  "use": "Skin protectant; Soothing, skin protectant"
  },
  {
   "name": "Retinyl palmitate",
@@ -11764,7 +12075,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 524.86,
   "iupac": "[(2e,4e,6e,8e)-3,7-dimethyl-9-(2,6,6-trimethylcyclohexen-1-yl)nona-2,4,6,8-tetraenyl] hexadecanoate",
   "melt": 28.0,
-  "use": "Retinoid ester"
+  "inci": [
+   "Retinyl Palmitate"
+  ],
+  "use": "Retinoid ester; Retinoid (vitamin A ester)"
  },
  {
   "name": "Tocopheryl acetate",
@@ -11779,7 +12093,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "[(2r)-2,5,7,8-tetramethyl-2-[(4r,8r)-4,8,12-trimethyltridecyl]-3,4-dihydrochromen-6-yl] ethanoate",
   "melt": -27.5,
   "density": 0.953,
-  "use": "Vitamin E antioxidant"
+  "inci": [
+   "Tocopheryl Acetate"
+  ],
+  "use": "Vitamin E antioxidant; Antioxidant (vitamin E ester)"
  },
  {
   "name": "Salicylic acid",
@@ -11797,7 +12114,10 @@ export const COMPOUNDS_DATA = [
   "boil": 255.9,
   "density": 1.443,
   "flash": 128.8,
-  "use": "Beta-hydroxy acid exfoliant, anti-acne; Plant defense hormone"
+  "inci": [
+   "Salicylic Acid"
+  ],
+  "use": "Beta-hydroxy acid exfoliant, anti-acne; Plant defense hormone; Exfoliant (BHA)"
  },
  {
   "name": "Glycolic acid",
@@ -11812,7 +12132,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "2-oxidanylethanoic acid",
   "melt": 79.5,
   "boil": 100.0,
-  "use": "Alpha-hydroxy acid exfoliant"
+  "inci": [
+   "Glycolic Acid"
+  ],
+  "use": "Alpha-hydroxy acid exfoliant; Exfoliant (AHA)"
  },
  {
   "name": "Mandelic acid",
@@ -11842,7 +12165,10 @@ export const COMPOUNDS_DATA = [
   "melt": 106.5,
   "boil": 357.1,
   "density": 1.225,
-  "use": "Anti-acne, anti-rosacea"
+  "inci": [
+   "Azelaic Acid"
+  ],
+  "use": "Anti-acne, anti-rosacea; Skin-conditioning active (anti-blemish, tone)"
  },
  {
   "name": "Kojic acid",
@@ -11902,6 +12228,9 @@ export const COMPOUNDS_DATA = [
   "boil": 420.0,
   "density": 0.812,
   "flash": 209.7,
+  "inci": [
+   "Squalane"
+  ],
   "use": "Emollient"
  },
  {
@@ -11935,6 +12264,9 @@ export const COMPOUNDS_DATA = [
   "melt": 3.0,
   "density": 0.853,
   "flash": 150.1,
+  "inci": [
+   "Isopropyl Myristate"
+  ],
   "use": "Emollient"
  },
  {
@@ -11950,6 +12282,9 @@ export const COMPOUNDS_DATA = [
   "iupac": "propan-2-yl hexadecanoate",
   "melt": 12.8,
   "density": 0.84,
+  "inci": [
+   "Isopropyl Palmitate"
+  ],
   "use": "Emollient"
  },
  {
@@ -11967,7 +12302,10 @@ export const COMPOUNDS_DATA = [
   "boil": 325.0,
   "density": 0.819,
   "flash": 169.9,
-  "use": "Fatty-alcohol emollient, thickener"
+  "inci": [
+   "Cetyl Alcohol"
+  ],
+  "use": "Fatty-alcohol emollient, thickener; Emollient, thickener"
  },
  {
   "name": "Stearyl alcohol",
@@ -11984,7 +12322,10 @@ export const COMPOUNDS_DATA = [
   "boil": 351.0,
   "density": 0.812,
   "flash": 185.0,
-  "use": "Fatty-alcohol emollient"
+  "inci": [
+   "Stearyl Alcohol"
+  ],
+  "use": "Fatty-alcohol emollient; Emollient, thickener"
  },
  {
   "name": "Cetearyl alcohol",
@@ -11993,7 +12334,10 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Emulsion stabilizer"
+  "inci": [
+   "Cetearyl Alcohol"
+  ],
+  "use": "Emulsion stabilizer; Emollient, thickener"
  },
  {
   "name": "Stearic acid",
@@ -12011,6 +12355,9 @@ export const COMPOUNDS_DATA = [
   "boil": 371.0,
   "density": 0.941,
   "flash": 195.9,
+  "inci": [
+   "Stearic Acid"
+  ],
   "use": "Emulsifier, thickener; Saturated fatty acid"
  },
  {
@@ -12028,7 +12375,10 @@ export const COMPOUNDS_DATA = [
   "melt": 62.5,
   "boil": 351.0,
   "density": 0.853,
-  "use": "Emollient, cleanser; Saturated fatty acid"
+  "inci": [
+   "Palmitic Acid"
+  ],
+  "use": "Emollient, cleanser; Saturated fatty acid; Emollient, cleansing agent (fatty acid)"
  },
  {
   "name": "Myristic acid",
@@ -12044,7 +12394,10 @@ export const COMPOUNDS_DATA = [
   "melt": 54.2,
   "boil": 326.0,
   "density": 0.862,
-  "use": "Cleanser"
+  "inci": [
+   "Myristic Acid"
+  ],
+  "use": "Cleanser; Cleansing agent (fatty acid)"
  },
  {
   "name": "Lauric acid",
@@ -12061,7 +12414,10 @@ export const COMPOUNDS_DATA = [
   "boil": 299.0,
   "density": 0.868,
   "flash": 160.7,
-  "use": "Soap fatty acid"
+  "inci": [
+   "Lauric Acid"
+  ],
+  "use": "Soap fatty acid; Cleansing agent (soap fatty acid)"
  },
  {
   "name": "Oleic acid",
@@ -12079,7 +12435,10 @@ export const COMPOUNDS_DATA = [
   "boil": 360.0,
   "density": 0.894,
   "flash": 188.9,
-  "use": "Emollient; Monounsaturated fatty acid"
+  "inci": [
+   "Oleic Acid"
+  ],
+  "use": "Emollient; Monounsaturated fatty acid; Emollient (fatty acid)"
  },
  {
   "name": "Caprylic/capric triglyceride",
@@ -12088,6 +12447,9 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
+  "inci": [
+   "Caprylic/Capric Triglyceride"
+  ],
   "use": "Emollient"
  },
  {
@@ -12097,7 +12459,10 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Silicone emollient"
+  "inci": [
+   "Dimethicone"
+  ],
+  "use": "Silicone emollient; Silicone, emollient"
  },
  {
   "name": "Cyclopentasiloxane",
@@ -12106,7 +12471,10 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Volatile silicone"
+  "inci": [
+   "Cyclopentasiloxane"
+  ],
+  "use": "Volatile silicone; Silicone (volatile)"
  },
  {
   "name": "Octamethylcyclotetrasiloxane",
@@ -12135,7 +12503,11 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Occlusive emollient"
+  "inci": [
+   "Mineral Oil",
+   "Paraffinum Liquidum"
+  ],
+  "use": "Occlusive emollient; Emollient, occlusive"
  },
  {
   "name": "Petrolatum",
@@ -12144,7 +12516,10 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Occlusive emollient"
+  "inci": [
+   "Petrolatum"
+  ],
+  "use": "Occlusive emollient; Occlusive"
  },
  {
   "name": "Lanolin",
@@ -12153,7 +12528,10 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Emollient"
+  "inci": [
+   "Lanolin"
+  ],
+  "use": "Emollient; Emollient, occlusive"
  },
  {
   "name": "Beeswax",
@@ -12162,7 +12540,11 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Thickener, emollient"
+  "inci": [
+   "Beeswax",
+   "Cera Alba"
+  ],
+  "use": "Thickener, emollient; Wax"
  },
  {
   "name": "Paraffin",
@@ -12171,7 +12553,10 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Wax"
+  "inci": [
+   "Paraffin"
+  ],
+  "use": "Wax; Wax, occlusive"
  },
  {
   "name": "Carbomer",
@@ -12180,6 +12565,9 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
+  "inci": [
+   "Carbomer"
+  ],
   "use": "Thickener"
  },
  {
@@ -12198,6 +12586,9 @@ export const COMPOUNDS_DATA = [
   "boil": 350.0,
   "density": 1.124,
   "flash": 190.0,
+  "inci": [
+   "Triethanolamine"
+  ],
   "hazards": [
    "Ontario OEL TWA 0.5 ppm"
   ],
@@ -12221,10 +12612,13 @@ export const COMPOUNDS_DATA = [
   "density": 2.13,
   "toxicProfile": "corrosive",
   "handling": "Causes severe burns. Wear resistant gloves, goggles and a face shield. When diluting acids, add acid to water, never the reverse. Flush skin or eyes with water for at least 15 minutes and get medical care.",
+  "inci": [
+   "Sodium Hydroxide"
+  ],
   "hazards": [
    "Ontario OEL Ceiling 2 mg/m³"
   ],
-  "use": "pH adjuster, saponification; Caustic soda; pulp, soap, alumina; Severe caustic burns"
+  "use": "pH adjuster, saponification; Caustic soda; pulp, soap, alumina; Severe caustic burns; pH adjuster"
  },
  {
   "name": "Tetrasodium EDTA",
@@ -12238,6 +12632,9 @@ export const COMPOUNDS_DATA = [
   "molarMass": 380.17,
   "iupac": "tetrasodium;2-[2-[bis(2-oxidanidyl-2-oxidanylidene-ethyl)amino]ethyl-(2-oxidanidyl-2-oxidanylidene-ethyl)amino]ethanoate",
   "melt": 300.0,
+  "inci": [
+   "Tetrasodium EDTA"
+  ],
   "use": "Chelating agent"
  },
  {
@@ -12254,6 +12651,9 @@ export const COMPOUNDS_DATA = [
   "melt": 96.1,
   "boil": 103.5,
   "density": 1.063,
+  "inci": [
+   "Propylparaben"
+  ],
   "use": "Preservative"
  },
  {
@@ -12269,6 +12669,9 @@ export const COMPOUNDS_DATA = [
   "iupac": "butyl 4-oxidanylbenzoate",
   "melt": 68.5,
   "boil": 309.0,
+  "inci": [
+   "Butylparaben"
+  ],
   "use": "Preservative"
  },
  {
@@ -12285,6 +12688,9 @@ export const COMPOUNDS_DATA = [
   "melt": 12.0,
   "boil": 246.0,
   "density": 1.102,
+  "inci": [
+   "Phenoxyethanol"
+  ],
   "hazards": [
    "Ontario OEL TWA 25 ppm (skin)"
   ],
@@ -12304,7 +12710,10 @@ export const COMPOUNDS_DATA = [
   "melt": -15.5,
   "boil": 205.3,
   "density": 1.042,
-  "use": "Preservative, solvent"
+  "inci": [
+   "Benzyl Alcohol"
+  ],
+  "use": "Preservative, solvent; Preservative, fragrance allergen"
  },
  {
   "name": "DMDM Hydantoin",
@@ -12340,6 +12749,9 @@ export const COMPOUNDS_DATA = [
   "molarMass": 115.154,
   "iupac": "2-methyl-1,2-thiazol-3-one",
   "melt": 50.5,
+  "inci": [
+   "Methylisothiazolinone"
+  ],
   "use": "Preservative (sensitizer)"
  },
  {
@@ -12355,6 +12767,9 @@ export const COMPOUNDS_DATA = [
   "iupac": "5-chloranyl-2-methyl-1,2-thiazol-3-one",
   "melt": 52.0,
   "boil": 109.7,
+  "inci": [
+   "Methylchloroisothiazolinone"
+  ],
   "use": "Preservative (sensitizer)"
  },
  {
@@ -12369,6 +12784,9 @@ export const COMPOUNDS_DATA = [
   "molarMass": 202.635,
   "iupac": "3-(4-chloranylphenoxy)propane-1,2-diol",
   "melt": 78.0,
+  "inci": [
+   "Chlorphenesin"
+  ],
   "use": "Preservative"
  },
  {
@@ -12378,6 +12796,9 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
+  "inci": [
+   "Ethylhexylglycerin"
+  ],
   "use": "Preservative booster"
  },
  {
@@ -12396,7 +12817,11 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "UVA filter"
+  "inci": [
+   "Avobenzone",
+   "Butyl Methoxydibenzoylmethane"
+  ],
+  "use": "UVA filter; UV filter (UVA)"
  },
  {
   "name": "Oxybenzone",
@@ -12411,7 +12836,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "(4-methoxy-2-oxidanyl-phenyl)-phenyl-methanone",
   "melt": 65.5,
   "boil": 155.0,
-  "use": "UV filter (benzophenone-3)"
+  "inci": [
+   "Oxybenzone"
+  ],
+  "use": "UV filter (benzophenone-3); UV filter (UVB/UVA2)"
  },
  {
   "name": "Octinoxate",
@@ -12420,7 +12848,11 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "UVB filter"
+  "inci": [
+   "Ethylhexyl Methoxycinnamate",
+   "Octinoxate"
+  ],
+  "use": "UVB filter; UV filter (UVB)"
  },
  {
   "name": "Octocrylene",
@@ -12433,7 +12865,10 @@ export const COMPOUNDS_DATA = [
   "formula": "C24H27NO2",
   "molarMass": 361.477,
   "iupac": "2-ethylhexyl 2-cyano-3,3-diphenyl-prop-2-enoate",
-  "use": "UVB filter"
+  "inci": [
+   "Octocrylene"
+  ],
+  "use": "UVB filter; UV filter (UVB)"
  },
  {
   "name": "Homosalate",
@@ -12447,7 +12882,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 262.344,
   "iupac": "(3,3,5-trimethylcyclohexyl) 2-oxidanylbenzoate",
   "boil": 163.0,
-  "use": "UVB filter"
+  "inci": [
+   "Homosalate"
+  ],
+  "use": "UVB filter; UV filter (UVB)"
  },
  {
   "name": "Octisalate",
@@ -12462,7 +12900,11 @@ export const COMPOUNDS_DATA = [
   "iupac": "2-ethylhexyl 2-oxidanylbenzoate",
   "boil": 189.0,
   "density": 1.01,
-  "use": "UVB filter"
+  "inci": [
+   "Ethylhexyl Salicylate",
+   "Octisalate"
+  ],
+  "use": "UVB filter; UV filter (UVB)"
  },
  {
   "name": "Ensulizole",
@@ -12484,7 +12926,10 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "UVA filter"
+  "inci": [
+   "Terephthalylidene Dicamphor Sulfonic Acid"
+  ],
+  "use": "UVA filter; UV filter (UVA, Mexoryl SX)"
  },
  {
   "name": "Bemotrizinol",
@@ -12493,7 +12938,10 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Broad-spectrum UV filter"
+  "inci": [
+   "Bis-Ethylhexyloxyphenol Methoxyphenyl Triazine"
+  ],
+  "use": "Broad-spectrum UV filter; UV filter (broad spectrum)"
  },
  {
   "name": "Zinc pyrithione",
@@ -12502,7 +12950,10 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Anti-dandruff agent"
+  "inci": [
+   "Zinc Pyrithione"
+  ],
+  "use": "Anti-dandruff agent; Anti-dandruff"
  },
  {
   "name": "Selenium disulfide",
@@ -12529,7 +12980,10 @@ export const COMPOUNDS_DATA = [
   "formula": "C16H30N2O3",
   "molarMass": 298.421,
   "iupac": "2-azanylethanol;4-methyl-1-oxidanyl-6-(2,4,4-trimethylpentyl)pyridin-2-one",
-  "use": "Anti-dandruff agent"
+  "inci": [
+   "Piroctone Olamine"
+  ],
+  "use": "Anti-dandruff agent; Anti-dandruff"
  },
  {
   "name": "Stannous fluoride",
@@ -12542,7 +12996,10 @@ export const COMPOUNDS_DATA = [
   "formula": "F2Sn",
   "molarMass": 156.707,
   "iupac": "bis(fluoranyl)tin",
-  "use": "Anticavity toothpaste agent"
+  "inci": [
+   "Stannous Fluoride"
+  ],
+  "use": "Anticavity toothpaste agent; Anticavity (fluoride), anti-gingivitis"
  },
  {
   "name": "Sodium monofluorophosphate",
@@ -12579,7 +13036,10 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Toothpaste abrasive"
+  "inci": [
+   "Hydrated Silica"
+  ],
+  "use": "Toothpaste abrasive; Abrasive, absorbent"
  },
  {
   "name": "Hydrogen peroxide",
@@ -12624,6 +13084,9 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
+  "inci": [
+   "Aluminum Chlorohydrate"
+  ],
   "use": "Antiperspirant"
  },
  {
@@ -12783,12 +13246,15 @@ export const COMPOUNDS_DATA = [
   "boil": 78.2,
   "density": 0.789,
   "flash": -13.1,
+  "inci": [
+   "Alcohol"
+  ],
   "hazards": [
    "IARC Group 1: carcinogenic to humans",
    "Ontario OEL STEL 1000 ppm",
    "Flammable (flash point -13.1 °C)"
   ],
-  "use": "Solvent, astringent; Solvent, fuel"
+  "use": "Solvent, astringent; Solvent, fuel; Solvent"
  },
  {
   "name": "Isopropyl alcohol",
@@ -12806,11 +13272,14 @@ export const COMPOUNDS_DATA = [
   "boil": 82.2,
   "density": 0.781,
   "flash": -9.8,
+  "inci": [
+   "Isopropyl Alcohol"
+  ],
   "hazards": [
    "Ontario OEL TWA 200 ppm, STEL 400 ppm",
    "Flammable (flash point -9.8 °C)"
   ],
-  "use": "Solvent, antiseptic; Solvent, disinfectant"
+  "use": "Solvent, antiseptic; Solvent, disinfectant; Solvent"
  },
  {
   "name": "Acetone",
@@ -12850,11 +13319,14 @@ export const COMPOUNDS_DATA = [
   "boil": 126.0,
   "density": 0.883,
   "flash": 25.0,
+  "inci": [
+   "Butyl Acetate"
+  ],
   "hazards": [
    "Ontario OEL TWA 150 ppm, STEL 200 ppm",
    "Flammable (flash point 25 °C)"
   ],
-  "use": "Nail polish solvent; Solvent"
+  "use": "Nail polish solvent; Solvent; Solvent (nail polish)"
  },
  {
   "name": "Nitrocellulose",
@@ -12863,7 +13335,10 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Nail polish film former"
+  "inci": [
+   "Nitrocellulose"
+  ],
+  "use": "Nail polish film former; Film former (nail polish)"
  },
  {
   "name": "Toluene",
@@ -12929,10 +13404,13 @@ export const COMPOUNDS_DATA = [
   "melt": 178.4,
   "boil": 207.4,
   "flash": 65.6,
+  "inci": [
+   "Camphor"
+  ],
   "hazards": [
    "Ontario OEL TWA 2 ppm, STEL 3 ppm"
   ],
-  "use": "Fragrance, cooling agent"
+  "use": "Fragrance, cooling agent; Cooling agent, fragrance"
  },
  {
   "name": "Eucalyptol",
@@ -12948,7 +13426,10 @@ export const COMPOUNDS_DATA = [
   "melt": 1.4,
   "boil": 176.0,
   "density": 0.927,
-  "use": "Fragrance, cooling agent"
+  "inci": [
+   "Eucalyptol"
+  ],
+  "use": "Fragrance, cooling agent; Cooling agent, flavour"
  },
  {
   "name": "Linalool",
@@ -12962,7 +13443,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 154.249,
   "iupac": "3,7-dimethylocta-1,6-dien-3-ol",
   "boil": 197.0,
-  "use": "Fragrance (lavender)"
+  "inci": [
+   "Linalool"
+  ],
+  "use": "Fragrance (lavender); Fragrance allergen (lavender)"
  },
  {
   "name": "Geraniol",
@@ -12971,7 +13455,10 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Fragrance (rose)"
+  "inci": [
+   "Geraniol"
+  ],
+  "use": "Fragrance (rose); Fragrance allergen (rose)"
  },
  {
   "name": "Citronellol",
@@ -12985,7 +13472,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 156.265,
   "iupac": "3,7-dimethyloct-6-en-1-ol",
   "boil": 225.0,
-  "use": "Fragrance (rose)"
+  "inci": [
+   "Citronellol"
+  ],
+  "use": "Fragrance (rose); Fragrance allergen (rose)"
  },
  {
   "name": "Coumarin",
@@ -13001,7 +13491,10 @@ export const COMPOUNDS_DATA = [
   "melt": 68.0,
   "boil": 301.7,
   "density": 0.935,
-  "use": "Fragrance (hay/tonka)"
+  "inci": [
+   "Coumarin"
+  ],
+  "use": "Fragrance (hay/tonka); Fragrance allergen (tonka, hay)"
  },
  {
   "name": "Isoeugenol",
@@ -13016,7 +13509,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "2-methoxy-4-[(E)-prop-1-enyl]phenol",
   "melt": 33.5,
   "density": 1.085,
-  "use": "Fragrance (sensitizer)"
+  "inci": [
+   "Isoeugenol"
+  ],
+  "use": "Fragrance (sensitizer); Fragrance allergen"
  },
  {
   "name": "Hydroxycitronellal",
@@ -13031,7 +13527,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "3,7-dimethyl-7-oxidanyl-octanal",
   "melt": 22.5,
   "density": 0.922,
-  "use": "Fragrance (lily)"
+  "inci": [
+   "Hydroxycitronellal"
+  ],
+  "use": "Fragrance (lily); Fragrance allergen (lily)"
  },
  {
   "name": "Benzyl benzoate",
@@ -13047,7 +13546,10 @@ export const COMPOUNDS_DATA = [
   "melt": 19.0,
   "boil": 321.3,
   "density": 1.112,
-  "use": "Fragrance fixative, scabicide"
+  "inci": [
+   "Benzyl Benzoate"
+  ],
+  "use": "Fragrance fixative, scabicide; Fragrance allergen, solvent"
  },
  {
   "name": "Benzyl salicylate",
@@ -13063,7 +13565,10 @@ export const COMPOUNDS_DATA = [
   "melt": 74.8,
   "boil": 320.0,
   "density": 1.18,
-  "use": "Fragrance fixative"
+  "inci": [
+   "Benzyl Salicylate"
+  ],
+  "use": "Fragrance fixative; Fragrance allergen, UV absorber"
  },
  {
   "name": "Hexyl cinnamal",
@@ -13081,7 +13586,10 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Fragrance (violet)"
+  "inci": [
+   "Alpha-Isomethyl Ionone"
+  ],
+  "use": "Fragrance (violet); Fragrance allergen (violet)"
  },
  {
   "name": "Beta-ionone",
@@ -13244,7 +13752,10 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Cosmetic pigment"
+  "inci": [
+   "CI 77499"
+  ],
+  "use": "Cosmetic pigment; Colourant (black iron oxide)"
  },
  {
   "name": "Ultramarine blue",
@@ -13274,7 +13785,10 @@ export const COMPOUNDS_DATA = [
   "melt": 2432.0,
   "boil": 3000.0,
   "density": 5.22,
-  "use": "Green cosmetic pigment; Green pigment"
+  "inci": [
+   "Chromium Oxide Greens"
+  ],
+  "use": "Green cosmetic pigment; Green pigment; Colourant (green)"
  },
  {
   "name": "Bismuth oxychloride",
@@ -13297,7 +13811,10 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Shimmer pigment"
+  "inci": [
+   "Mica"
+  ],
+  "use": "Shimmer pigment; Shimmer, texture (mineral)"
  },
  {
   "name": "Talc",
@@ -13311,11 +13828,14 @@ export const COMPOUNDS_DATA = [
   "molarMass": 102.405,
   "iupac": "talc (Mg3H2(SiO3)4)",
   "melt": 950.0,
+  "inci": [
+   "Talc"
+  ],
   "hazards": [
    "IARC Group 2B: possibly carcinogenic",
    "Ontario OEL TWA 2 mg/m³"
   ],
-  "use": "Absorbent powder"
+  "use": "Absorbent powder; Absorbent, texture (mineral)"
  },
  {
   "name": "Kaolin",
@@ -13329,10 +13849,13 @@ export const COMPOUNDS_DATA = [
   "molarMass": 258.16,
   "iupac": "oxidanylidene-oxidanylidenealumanyloxy-[oxidanylidene(oxidanylidenealumanyloxy)silyl]oxy-silane;dihydrate",
   "density": 2.59,
+  "inci": [
+   "Kaolin"
+  ],
   "hazards": [
    "Ontario OEL TWA 2 mg/m³"
   ],
-  "use": "Clay absorbent"
+  "use": "Clay absorbent; Absorbent (clay)"
  },
  {
   "name": "Bentonite",
@@ -13350,13 +13873,17 @@ export const COMPOUNDS_DATA = [
    "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Thickener"
+  "inci": [
+   "Magnesium Aluminum Silicate"
+  ],
+  "use": "Thickener; Thickener (clay)"
  },
  {
   "name": "Tris(hydroxymethyl)aminomethane",
   "category": "Laboratory Reagent",
   "fields": [
-   "Laboratory Reagent"
+   "Laboratory Reagent",
+   "Cosmetic & Personal Care"
   ],
   "cas": "77-86-1",
   "cid": 6503,
@@ -13365,7 +13892,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "2-azanyl-2-(hydroxymethyl)propane-1,3-diol",
   "melt": 170.5,
   "boil": 219.5,
-  "use": "Buffer (Tris)"
+  "inci": [
+   "Tromethamine"
+  ],
+  "use": "Buffer (Tris); pH adjuster"
  },
  {
   "name": "HEPES",
@@ -13470,7 +14000,8 @@ export const COMPOUNDS_DATA = [
   "category": "Laboratory Reagent",
   "fields": [
    "Laboratory Reagent",
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "56-40-6",
   "cid": 750,
@@ -13479,7 +14010,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "2-azanylethanoic acid",
   "melt": 251.0,
   "density": 1.161,
-  "use": "Buffer, electrophoresis; Amino acid"
+  "inci": [
+   "Glycine"
+  ],
+  "use": "Buffer, electrophoresis; Amino acid; Skin-conditioning active (amino acid)"
  },
  {
   "name": "Sodium dihydrogen phosphate",
@@ -13514,14 +14048,18 @@ export const COMPOUNDS_DATA = [
   "name": "Dipotassium hydrogen phosphate",
   "category": "Laboratory Reagent",
   "fields": [
-   "Laboratory Reagent"
+   "Laboratory Reagent",
+   "Cosmetic & Personal Care"
   ],
   "cas": "7758-11-4",
   "cid": 24450,
   "formula": "HK2O4P",
   "molarMass": 174.176,
   "iupac": "dipotassium;hydrogen phosphate",
-  "use": "Phosphate buffer component"
+  "inci": [
+   "Dipotassium Phosphate"
+  ],
+  "use": "Phosphate buffer component; Buffer (pH adjuster)"
  },
  {
   "name": "Boric acid",
@@ -16726,7 +17264,8 @@ export const COMPOUNDS_DATA = [
   "category": "Industrial",
   "fields": [
    "Industrial",
-   "Toxic & Hazardous"
+   "Toxic & Hazardous",
+   "Cosmetic & Personal Care"
   ],
   "cas": "108-95-2",
   "cid": 996,
@@ -16739,10 +17278,13 @@ export const COMPOUNDS_DATA = [
   "flash": 67.2,
   "toxicProfile": "corrosive",
   "handling": "Causes severe burns. Wear resistant gloves, goggles and a face shield. When diluting acids, add acid to water, never the reverse. Flush skin or eyes with water for at least 15 minutes and get medical care.",
+  "inci": [
+   "Phenol"
+  ],
   "hazards": [
    "Ontario OEL TWA 5 ppm (skin)"
   ],
-  "use": "Resins, bisphenol A precursor; Rapid skin absorption; systemic toxicity"
+  "use": "Resins, bisphenol A precursor; Rapid skin absorption; systemic toxicity; Antiseptic, cooling (lip balm)"
  },
  {
   "name": "Aniline",
@@ -17310,7 +17852,8 @@ export const COMPOUNDS_DATA = [
   "name": "Propane",
   "category": "Industrial",
   "fields": [
-   "Industrial"
+   "Industrial",
+   "Cosmetic & Personal Care"
   ],
   "cas": "74-98-6",
   "cid": 6334,
@@ -17319,16 +17862,20 @@ export const COMPOUNDS_DATA = [
   "iupac": "propane",
   "melt": -187.7,
   "boil": -42.1,
+  "inci": [
+   "Propane"
+  ],
   "hazards": [
    "Ontario OEL TWA 1000 ppm"
   ],
-  "use": "Fuel gas, refrigerant"
+  "use": "Fuel gas, refrigerant; Propellant"
  },
  {
   "name": "Butane",
   "category": "Industrial",
   "fields": [
-   "Industrial"
+   "Industrial",
+   "Cosmetic & Personal Care"
   ],
   "cas": "106-97-8",
   "cid": 7843,
@@ -17337,16 +17884,20 @@ export const COMPOUNDS_DATA = [
   "iupac": "butane",
   "melt": -138.3,
   "boil": -0.5,
+  "inci": [
+   "Butane"
+  ],
   "hazards": [
    "Ontario OEL TWA 800 ppm"
   ],
-  "use": "Fuel gas"
+  "use": "Fuel gas; Propellant"
  },
  {
   "name": "Isobutane",
   "category": "Industrial",
   "fields": [
-   "Industrial"
+   "Industrial",
+   "Cosmetic & Personal Care"
   ],
   "cas": "75-28-5",
   "cid": 6360,
@@ -17355,7 +17906,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "2-methylpropane",
   "melt": -159.6,
   "boil": -11.7,
-  "use": "Refrigerant, propellant"
+  "inci": [
+   "Isobutane"
+  ],
+  "use": "Refrigerant, propellant; Propellant"
  },
  {
   "name": "Pentane",
@@ -17814,7 +18368,8 @@ export const COMPOUNDS_DATA = [
   "name": "Zinc stearate",
   "category": "Industrial",
   "fields": [
-   "Industrial"
+   "Industrial",
+   "Cosmetic & Personal Care"
   ],
   "cas": "557-05-1",
   "cid": 11178,
@@ -17823,7 +18378,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "zinc;octadecanoate",
   "melt": 130.0,
   "density": 1.095,
-  "use": "Lubricant, release agent"
+  "inci": [
+   "Zinc Stearate"
+  ],
+  "use": "Lubricant, release agent; Texture (powder binder)"
  },
  {
   "name": "Dibutyltin dilaurate",
@@ -17860,7 +18418,8 @@ export const COMPOUNDS_DATA = [
   "name": "Propylene carbonate",
   "category": "Industrial",
   "fields": [
-   "Industrial"
+   "Industrial",
+   "Cosmetic & Personal Care"
   ],
   "cas": "108-32-7",
   "cid": 7924,
@@ -17870,7 +18429,10 @@ export const COMPOUNDS_DATA = [
   "melt": -48.8,
   "boil": 241.6,
   "density": 1.205,
-  "use": "Battery electrolyte solvent"
+  "inci": [
+   "Propylene Carbonate"
+  ],
+  "use": "Battery electrolyte solvent; Solvent"
  },
  {
   "name": "Ethylene carbonate",
@@ -18218,14 +18780,18 @@ export const COMPOUNDS_DATA = [
   "name": "Aluminium oxide",
   "category": "Materials",
   "fields": [
-   "Materials"
+   "Materials",
+   "Cosmetic & Personal Care"
   ],
   "cas": "39377-45-2",
   "cid": 9989226,
   "formula": "Al2O3",
   "molarMass": 101.961,
   "iupac": "dialuminum;oxygen(2-)",
-  "use": "Alumina ceramic, sapphire"
+  "inci": [
+   "Alumina"
+  ],
+  "use": "Alumina ceramic, sapphire; Absorbent, opacifier"
  },
  {
   "name": "Aluminium nitride",
@@ -18912,7 +19478,8 @@ export const COMPOUNDS_DATA = [
   "name": "Tin(iv) oxide",
   "category": "Materials",
   "fields": [
-   "Materials"
+   "Materials",
+   "Cosmetic & Personal Care"
   ],
   "cas": "18282-10-5",
   "cid": 29011,
@@ -18921,7 +19488,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "bis(oxidanylidene)tin",
   "melt": 1630.0,
   "density": 6.85,
-  "use": "Opacifier, conductor"
+  "inci": [
+   "Tin Oxide"
+  ],
+  "use": "Opacifier, conductor; Opacifier (shimmer coating)"
  },
  {
   "name": "Antimony pentoxide",
@@ -19638,7 +20208,8 @@ export const COMPOUNDS_DATA = [
   "name": "l-Alanine",
   "category": "Biochemical",
   "fields": [
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "56-41-7",
   "cid": 5950,
@@ -19647,13 +20218,17 @@ export const COMPOUNDS_DATA = [
   "iupac": "(2s)-2-azanylpropanoic acid",
   "melt": 297.5,
   "density": 1.432,
-  "use": "Amino acid"
+  "inci": [
+   "Alanine"
+  ],
+  "use": "Amino acid; Skin-conditioning active (amino acid)"
  },
  {
   "name": "l-Valine",
   "category": "Biochemical",
   "fields": [
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "72-18-4",
   "cid": 6287,
@@ -19662,7 +20237,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "(2s)-2-azanyl-3-methyl-butanoic acid",
   "melt": 315.0,
   "density": 1.232,
-  "use": "Essential amino acid"
+  "inci": [
+   "Valine"
+  ],
+  "use": "Essential amino acid; Skin-conditioning active (amino acid)"
  },
  {
   "name": "l-Leucine",
@@ -19697,7 +20275,8 @@ export const COMPOUNDS_DATA = [
   "name": "l-Proline",
   "category": "Biochemical",
   "fields": [
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "147-85-3",
   "cid": 145742,
@@ -19705,13 +20284,17 @@ export const COMPOUNDS_DATA = [
   "molarMass": 115.13,
   "iupac": "(2s)-pyrrolidine-2-carboxylic acid",
   "melt": 228.0,
-  "use": "Amino acid"
+  "inci": [
+   "Proline"
+  ],
+  "use": "Amino acid; Skin-conditioning active (amino acid)"
  },
  {
   "name": "l-Phenylalanine",
   "category": "Biochemical",
   "fields": [
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "63-91-2",
   "cid": 6140,
@@ -19719,7 +20302,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 165.189,
   "iupac": "(2s)-2-azanyl-3-phenyl-propanoic acid",
   "melt": 283.0,
-  "use": "Essential amino acid"
+  "inci": [
+   "Phenylalanine"
+  ],
+  "use": "Essential amino acid; Skin-conditioning active (amino acid)"
  },
  {
   "name": "l-Tyrosine",
@@ -19753,7 +20339,8 @@ export const COMPOUNDS_DATA = [
   "name": "l-Serine",
   "category": "Biochemical",
   "fields": [
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "56-45-1",
   "cid": 5951,
@@ -19762,13 +20349,17 @@ export const COMPOUNDS_DATA = [
   "iupac": "(2s)-2-azanyl-3-oxidanyl-propanoic acid",
   "melt": 222.0,
   "density": 1.622,
-  "use": "Amino acid"
+  "inci": [
+   "Serine"
+  ],
+  "use": "Amino acid; Skin-conditioning active (amino acid)"
  },
  {
   "name": "l-Threonine",
   "category": "Biochemical",
   "fields": [
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "72-19-5",
   "cid": 6288,
@@ -19776,7 +20367,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 119.119,
   "iupac": "(2s,3r)-2-azanyl-3-oxidanyl-butanoic acid",
   "melt": 256.0,
-  "use": "Essential amino acid"
+  "inci": [
+   "Threonine"
+  ],
+  "use": "Essential amino acid; Skin-conditioning active (amino acid)"
  },
  {
   "name": "l-Methionine",
@@ -19797,7 +20391,8 @@ export const COMPOUNDS_DATA = [
   "name": "l-Aspartic acid",
   "category": "Biochemical",
   "fields": [
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "56-84-8",
   "cid": 5960,
@@ -19806,7 +20401,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "(2s)-2-azanylbutanedioic acid",
   "melt": 270.0,
   "density": 1.66,
-  "use": "Amino acid"
+  "inci": [
+   "Aspartic Acid"
+  ],
+  "use": "Amino acid; Skin-conditioning active (amino acid)"
  },
  {
   "name": "l-Asparagine",
@@ -19856,7 +20454,8 @@ export const COMPOUNDS_DATA = [
   "name": "l-Arginine",
   "category": "Biochemical",
   "fields": [
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "74-79-3",
   "cid": 6322,
@@ -19864,13 +20463,18 @@ export const COMPOUNDS_DATA = [
   "molarMass": 174.201,
   "iupac": "(2s)-2-azanyl-5-[bis(azanyl)methylideneamino]pentanoic acid",
   "melt": 260.0,
-  "use": "Amino acid"
+  "inci": [
+   "Arginine",
+   "Arginine HCl"
+  ],
+  "use": "Amino acid; Skin-conditioning active (amino acid), pH adjuster; Skin-conditioning active (amino acid)"
  },
  {
   "name": "l-Histidine",
   "category": "Biochemical",
   "fields": [
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "71-00-1",
   "cid": 6274,
@@ -19878,7 +20482,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 155.155,
   "iupac": "(2s)-2-azanyl-3-(1h-imidazol-5-yl)propanoic acid",
   "melt": 284.5,
-  "use": "Essential amino acid"
+  "inci": [
+   "Histidine"
+  ],
+  "use": "Essential amino acid; Skin-conditioning active (amino acid)"
  },
  {
   "name": "l-Selenocysteine",
@@ -19935,7 +20542,8 @@ export const COMPOUNDS_DATA = [
   "name": "Glutathione",
   "category": "Biochemical",
   "fields": [
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "70-18-8",
   "cid": 124886,
@@ -19943,16 +20551,23 @@ export const COMPOUNDS_DATA = [
   "molarMass": 307.323,
   "iupac": "(2s)-2-azanyl-5-[[(2r)-1-(2-hydroxy-2-oxoethylamino)-1-oxidanylidene-3-sulfanyl-propan-2-yl]amino]-5-oxidanylidene-pentanoic acid",
   "melt": 195.0,
-  "use": "Antioxidant tripeptide"
+  "inci": [
+   "Glutathione"
+  ],
+  "use": "Antioxidant tripeptide; Antioxidant"
  },
  {
   "name": "Carnosine",
   "category": "Biochemical",
   "fields": [
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "live": true,
-  "use": "Dipeptide"
+  "inci": [
+   "Carnosine"
+  ],
+  "use": "Dipeptide; Antioxidant"
  },
  {
   "name": "Adenine",
@@ -20121,7 +20736,8 @@ export const COMPOUNDS_DATA = [
   "name": "Adenosine monophosphate",
   "category": "Biochemical",
   "fields": [
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "61-19-8",
   "cid": 6083,
@@ -20129,7 +20745,10 @@ export const COMPOUNDS_DATA = [
   "molarMass": 347.221,
   "iupac": "[(2r,3s,4r,5r)-5-(6-aminopurin-9-yl)-3,4-bis(oxidanyl)oxolan-2-yl]methyl dihydrogen phosphate",
   "melt": 185.5,
-  "use": "AMP"
+  "inci": [
+   "Adenosine Phosphate"
+  ],
+  "use": "AMP; Skin-conditioning active"
  },
  {
   "name": "Cyclic adenosine monophosphate",
@@ -20339,7 +20958,8 @@ export const COMPOUNDS_DATA = [
   "name": "d-Mannose",
   "category": "Biochemical",
   "fields": [
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "3458-28-4",
   "cid": 161658,
@@ -20348,7 +20968,10 @@ export const COMPOUNDS_DATA = [
   "iupac": "(2S,3S,4R,5R)-2,3,4,5,6-pentahydroxyhexanal",
   "melt": 118.0,
   "density": 1.539,
-  "use": "Monosaccharide"
+  "inci": [
+   "Mannose"
+  ],
+  "use": "Monosaccharide; Humectant"
  },
  {
   "name": "d-Ribose",
@@ -20738,7 +21361,8 @@ export const COMPOUNDS_DATA = [
   "name": "Cholesterol",
   "category": "Biochemical",
   "fields": [
-   "Biochemical"
+   "Biochemical",
+   "Cosmetic & Personal Care"
   ],
   "cas": "57-88-5",
   "cid": 5997,
@@ -20748,7 +21372,10 @@ export const COMPOUNDS_DATA = [
   "melt": 148.2,
   "boil": 459.0,
   "density": 1.067,
-  "use": "Membrane sterol"
+  "inci": [
+   "Cholesterol"
+  ],
+  "use": "Membrane sterol; Skin-barrier lipid"
  },
  {
   "name": "Aldosterone",
@@ -22484,5 +23111,6500 @@ export const COMPOUNDS_DATA = [
   "toxicProfile": "carcinogen",
   "handling": "Keep exposure as low as possible: use a closed system or fume hood, a designated and labelled work area, and gloves rated for this chemical. Follow local occupational exposure limits.",
   "use": "Polychlorinated biphenyl congener (persistent)"
+ },
+ {
+  "name": "1,2-Hexanediol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "6920-22-5",
+  "cid": 94335,
+  "formula": "C6H14O2",
+  "molarMass": 118.174,
+  "iupac": "hexane-1,2-diol",
+  "melt": 45.0,
+  "boil": 234.0,
+  "inci": [
+   "1,2-Hexanediol"
+  ],
+  "use": "Preservative booster, humectant"
+ },
+ {
+  "name": "Acacia gum",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Acacia Senegal Gum"
+  ],
+  "use": "Thickener, film former"
+ },
+ {
+  "name": "Acetyl glutamine",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Acetyl Glutamine"
+  ],
+  "use": "Skin-conditioning active (amino acid)"
+ },
+ {
+  "name": "Acetyl tributyl citrate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "77-90-7",
+  "cid": 6505,
+  "formula": "C20H34O8",
+  "molarMass": 402.479,
+  "iupac": "tributyl 2-acetyloxypropane-1,2,3-tricarboxylate",
+  "melt": -80.0,
+  "boil": 173.0,
+  "inci": [
+   "Acetyl Tributyl Citrate"
+  ],
+  "use": "Plasticizer (nail polish)"
+ },
+ {
+  "name": "Acetylated glycol stearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Acetylated Glycol Stearate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Acrylates copolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Acrylates Copolymer"
+  ],
+  "use": "Film former"
+ },
+ {
+  "name": "Acrylates/C10-30 alkyl acrylate crosspolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Acrylates/C10-30 Alkyl Acrylate Crosspolymer"
+  ],
+  "use": "Thickener, emulsion stabilizer"
+ },
+ {
+  "name": "Acrylates/dimethicone copolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Acrylates/Dimethicone Copolymer"
+  ],
+  "use": "Film former"
+ },
+ {
+  "name": "Acrylates/octylacrylamide copolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Acrylates/Octylacrylamide Copolymer"
+  ],
+  "use": "Film former (setting spray)"
+ },
+ {
+  "name": "Baobab seed oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Adansonia Digitata Seed Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Adipic acid/neopentyl glycol/trimellitic anhydride copolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Adipic Acid/Neopentyl Glycol/Trimellitic Anhydride Copolymer"
+  ],
+  "use": "Film former (nail polish)"
+ },
+ {
+  "name": "Ahnfeltia concinna algae extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Ahnfeltia Concinna Extract"
+  ],
+  "use": "Plant extract (red algae)"
+ },
+ {
+  "name": "Denatured alcohol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Alcohol Denat."
+  ],
+  "use": "Solvent, astringent"
+ },
+ {
+  "name": "Algae extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Algae Extract"
+  ],
+  "use": "Plant extract (seaweed)"
+ },
+ {
+  "name": "Aloe vera",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Aloe Barbadensis Leaf Extract",
+   "Aloe Barbadensis Leaf Juice",
+   "Aloe Barbadensis Leaf Water"
+  ],
+  "use": "Soothing (plant extract)"
+ },
+ {
+  "name": "Aluminum distearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "300-92-5",
+  "cid": 16682938,
+  "formula": "C36H72AlO5",
+  "molarMass": 611.935,
+  "iupac": "di(octadecanoyloxy)aluminum;hydrate",
+  "melt": 145.0,
+  "inci": [
+   "Aluminum Distearate"
+  ],
+  "use": "Thickener (oil phase)"
+ },
+ {
+  "name": "Aluminum hydroxide",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "21645-51-2",
+  "cid": 10176082,
+  "formula": "AlH3O3",
+  "molarMass": 78.004,
+  "iupac": "aluminum;trihydroxide",
+  "melt": 300.0,
+  "density": 2.42,
+  "inci": [
+   "Aluminum Hydroxide"
+  ],
+  "use": "Opacifier, pigment coating"
+ },
+ {
+  "name": "Aluminum starch octenylsuccinate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Aluminum Starch Octenylsuccinate"
+  ],
+  "use": "Absorbent, mattifier"
+ },
+ {
+  "name": "Aluminum stearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "637-12-7",
+  "cid": 12496,
+  "formula": "C54H105AlO6",
+  "molarMass": 877.389,
+  "iupac": "aluminum;octadecanoate",
+  "melt": 115.0,
+  "density": 1.07,
+  "inci": [
+   "Aluminum Stearate",
+   "Aluminum Stearates"
+  ],
+  "use": "Thickener (oil phase)"
+ },
+ {
+  "name": "Aminomethyl propanediol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "115-69-5",
+  "cid": 1531,
+  "formula": "C4H11NO2",
+  "molarMass": 105.136,
+  "iupac": "2-azanyl-2-methyl-propane-1,3-diol",
+  "melt": 110.9,
+  "boil": 151.5,
+  "inci": [
+   "Aminomethyl Propanediol"
+  ],
+  "use": "pH adjuster"
+ },
+ {
+  "name": "Aminomethyl propanol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "124-68-5",
+  "cid": 11807,
+  "formula": "C4H11NO",
+  "molarMass": 89.136,
+  "iupac": "2-azanyl-2-methyl-propan-1-ol",
+  "melt": 25.5,
+  "boil": 163.8,
+  "density": 0.934,
+  "inci": [
+   "Aminomethyl Propanol"
+  ],
+  "use": "pH adjuster"
+ },
+ {
+  "name": "Ammonium polyacryloyldimethyl taurate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Ammonium Polyacryldimethyltauramide",
+   "Ammonium Polyacryloyldimethyl Taurate"
+  ],
+  "use": "Thickener"
+ },
+ {
+  "name": "Roman chamomile",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Anthemis Nobilis Flower Extract",
+   "Anthemis Nobilis Flower Oil"
+  ],
+  "use": "Soothing (plant extract); Fragrance (essential oil)"
+ },
+ {
+  "name": "Water",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "7732-18-5",
+  "cid": 962,
+  "formula": "H2O",
+  "molarMass": 18.015,
+  "iupac": "oxidane",
+  "melt": 0.0,
+  "boil": 100.0,
+  "density": 0.997,
+  "inci": [
+   "Aqua",
+   "Water"
+  ],
+  "use": "Solvent"
+ },
+ {
+  "name": "Aquaphilus dolomiae ferment filtrate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Aquaphilus Dolomiae Ferment Filtrate"
+  ],
+  "use": "Soothing (postbiotic)"
+ },
+ {
+  "name": "Argan oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Argania Spinosa Kernel Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Fragrance",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Aroma",
+   "Flavor",
+   "Fragrance",
+   "Parfum"
+  ],
+  "use": "Flavour; Fragrance"
+ },
+ {
+  "name": "Ascorbyl glucoside",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Ascorbyl Glucoside"
+  ],
+  "use": "Antioxidant (vitamin C derivative)"
+ },
+ {
+  "name": "Aspergillus ferment",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Aspergillus Ferment Extract"
+  ],
+  "use": "Ferment"
+ },
+ {
+  "name": "Murumuru butter",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Astrocaryum Murumuru Seed Butter"
+  ],
+  "use": "Emollient (plant butter)"
+ },
+ {
+  "name": "Avène thermal spring water",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Avene Aqua"
+  ],
+  "use": "Soothing (thermal water)"
+ },
+ {
+  "name": "Neem leaf extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Azadirachta Indica Leaf Extract",
+   "Melia Azadirachta Leaf Extract"
+  ],
+  "use": "Plant extract (antibacterial); Plant extract"
+ },
+ {
+  "name": "Bacillus/soybean ferment extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Bacillus/Soybean Ferment Extract",
+   "Bacillus/Soybean/Folic Acid Ferment Extract"
+  ],
+  "use": "Ferment"
+ },
+ {
+  "name": "Acerola cherry extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Barbados Cherry Extract"
+  ],
+  "use": "Antioxidant (plant extract)"
+ },
+ {
+  "name": "Behentrimonium methosulfate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "81646-13-1",
+  "cid": 157846,
+  "formula": "C26H57NO4S",
+  "molarMass": 479.8,
+  "iupac": "docosyl(trimethyl)azanium;methyl sulfate",
+  "inci": [
+   "Behentrimonium Methosulfate"
+  ],
+  "use": "Hair conditioning, emulsifier"
+ },
+ {
+  "name": "Behenyl alcohol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "661-19-8",
+  "cid": 12620,
+  "formula": "C22H46O",
+  "molarMass": 326.6,
+  "iupac": "docosan-1-ol",
+  "melt": 71.0,
+  "boil": 407.0,
+  "inci": [
+   "Behenyl Alcohol"
+  ],
+  "use": "Emollient, thickener"
+ },
+ {
+  "name": "Benzophenone-1",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "131-56-6",
+  "cid": 8572,
+  "formula": "C13H10O3",
+  "molarMass": 214.217,
+  "iupac": "[2,4-bis(oxidanyl)phenyl]-phenyl-methanone",
+  "melt": 144.0,
+  "inci": [
+   "Benzophenone-1"
+  ],
+  "use": "UV absorber (protects the colour)"
+ },
+ {
+  "name": "Benzyl cinnamate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "103-41-3",
+  "cid": 7652,
+  "formula": "C16H14O2",
+  "molarMass": 238.281,
+  "iupac": "(phenylmethyl) 3-phenylprop-2-enoate",
+  "melt": 37.0,
+  "inci": [
+   "Benzyl Cinnamate"
+  ],
+  "use": "Fragrance allergen"
+ },
+ {
+  "name": "Betaine",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "107-43-7",
+  "cid": 247,
+  "formula": "C5H11NO2",
+  "molarMass": 117.146,
+  "iupac": "2-(trimethylazaniumyl)ethanoate",
+  "melt": 293.0,
+  "inci": [
+   "Betaine"
+  ],
+  "use": "Humectant"
+ },
+ {
+  "name": "Betaine salicylate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Betaine Salicylate"
+  ],
+  "use": "Exfoliant (BHA)"
+ },
+ {
+  "name": "Bifida ferment lysate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Bifida Ferment Lysate"
+  ],
+  "use": "Ferment (skin-conditioning)"
+ },
+ {
+  "name": "Biosaccharide gum-1",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Biosaccharide Gum-1"
+  ],
+  "use": "Humectant, soothing"
+ },
+ {
+  "name": "Bis-aminopropyl diglycol dimaleate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Bis-Aminopropyl Diglycol Dimaleate"
+  ],
+  "use": "Hair conditioning (bond builder)"
+ },
+ {
+  "name": "Bis-diglyceryl polyacyladipate-2",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Bis-Diglyceryl Polyacyladipate-2"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Bis-PEG-18 methyl ether dimethyl silane",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Bis-PEG-18 Methyl Ether Dimethyl Silane"
+  ],
+  "use": "Silicone, skin-conditioning"
+ },
+ {
+  "name": "Alpha-bisabolol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "515-69-5",
+  "cid": 10586,
+  "formula": "C15H26O",
+  "molarMass": 222.366,
+  "iupac": "6-methyl-2-(4-methylcyclohex-3-en-1-yl)hept-5-en-2-ol",
+  "boil": 154.0,
+  "inci": [
+   "Bisabolol"
+  ],
+  "use": "Soothing"
+ },
+ {
+  "name": "Borage seed oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Borago Officinalis Seed Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Boswellia serrata extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Boswellia Serrata Extract"
+  ],
+  "use": "Soothing (plant extract)"
+ },
+ {
+  "name": "Broccoli extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Brassica Oleracea Italica Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "1,3-Butanediol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "107-88-0",
+  "cid": 7896,
+  "formula": "C4H10O2",
+  "molarMass": 90.121,
+  "iupac": "butane-1,3-diol",
+  "melt": -77.0,
+  "boil": 208.2,
+  "density": 1.005,
+  "flash": 108.9,
+  "inci": [
+   "Butylene Glycol"
+  ],
+  "use": "Humectant, solvent"
+ },
+ {
+  "name": "Butylene/ethylene/styrene copolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Butylene/Ethylene/Styrene Copolymer"
+  ],
+  "use": "Thickener (gloss)"
+ },
+ {
+  "name": "Butyloctyl salicylate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Butyloctyl Salicylate"
+  ],
+  "use": "Emollient, SPF booster"
+ },
+ {
+  "name": "Butylphenyl methylpropional",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "80-54-6",
+  "cid": 228987,
+  "formula": "C14H20O",
+  "molarMass": 204.308,
+  "iupac": "3-(4-tert-butylphenyl)-2-methyl-propanal",
+  "melt": 107.5,
+  "inci": [
+   "Butylphenyl Methylpropional"
+  ],
+  "use": "Fragrance allergen (lilial; banned in the EU since 2022)"
+ },
+ {
+  "name": "Shea butter",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Butyrospermum Parkii Butter"
+  ],
+  "use": "Emollient (plant butter)"
+ },
+ {
+  "name": "C12-15 alkyl benzoate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "2915-72-2",
+  "cid": 76204,
+  "formula": "C19H30O2",
+  "molarMass": 290.44,
+  "iupac": "dodecyl benzoate",
+  "inci": [
+   "C12-15 Alkyl Benzoate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "C12-15 alkyl lactate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "C12-15 Alkyl Lactate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "C13-14 isoparaffin",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "C13-14 Isoparaffin"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "CI 15850 (Red 7 / Red 6)",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "CI 15850"
+  ],
+  "use": "Colourant (red)"
+ },
+ {
+  "name": "CI 17200 (Red 33)",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "CI 17200"
+  ],
+  "use": "Colourant (red 33)"
+ },
+ {
+  "name": "Sudan III",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "85-86-9",
+  "cid": 5379348,
+  "formula": "C22H16N4O",
+  "molarMass": 352.389,
+  "iupac": "(1e)-1-[(4-phenyldiazenylphenyl)hydrazinylidene]naphthalen-2-one",
+  "melt": 195.0,
+  "inci": [
+   "CI 26100"
+  ],
+  "use": "Colourant (red 17)"
+ },
+ {
+  "name": "CI 45410 (Red 27 / Red 28)",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "CI 45410"
+  ],
+  "use": "Colourant (red 28)"
+ },
+ {
+  "name": "Quinoline yellow SS",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "83-08-9",
+  "cid": 6731,
+  "formula": "C18H11NO2",
+  "molarMass": 273.285,
+  "iupac": "2-quinolin-2-ylindene-1,3-dione",
+  "melt": 241.0,
+  "inci": [
+   "CI 47000"
+  ],
+  "use": "Colourant (yellow 11)"
+ },
+ {
+  "name": "Yellow iron oxide",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "CI 77492"
+  ],
+  "use": "Colourant (yellow iron oxide)"
+ },
+ {
+  "name": "Calcium aluminum borosilicate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Calcium Aluminum Borosilicate"
+  ],
+  "use": "Shimmer (glass flakes)"
+ },
+ {
+  "name": "Calcium gluconate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "299-28-5",
+  "cid": 9290,
+  "formula": "C12H22CaO14",
+  "molarMass": 430.373,
+  "iupac": "calcium;(2r,3s,4r,5r)-2,3,4,5,6-pentakis(oxidanyl)hexanoate",
+  "melt": 120.0,
+  "inci": [
+   "Calcium Gluconate"
+  ],
+  "use": "Skin-conditioning active"
+ },
+ {
+  "name": "Calcium sodium borosilicate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Calcium Sodium Borosilicate"
+  ],
+  "use": "Shimmer (glass flakes)"
+ },
+ {
+  "name": "Calcium sodium phosphosilicate (NovaMin)",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Calcium Sodium Phosphosilicate"
+  ],
+  "use": "Tooth remineralizing (desensitizing)"
+ },
+ {
+  "name": "Calendula extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Calendula Officinalis Extract",
+   "Calendula Officinalis Flower Extract"
+  ],
+  "use": "Soothing (plant extract)"
+ },
+ {
+  "name": "Camellia seed oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Camellia Japonica Seed Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Green tea extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Camellia Oleifera Leaf Extract",
+   "Camellia Sinensis Leaf Extract",
+   "Camellia Sinensis Leaf Water"
+  ],
+  "use": "Antioxidant (plant extract)"
+ },
+ {
+  "name": "Green tea seed oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Camellia Sinensis Seed Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Candelilla wax",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Candelilla Cera",
+   "Candelilla Wax"
+  ],
+  "use": "Wax"
+ },
+ {
+  "name": "Canola oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Canola Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Capryloyl salicylic acid",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Capryloyl Salicylic Acid"
+  ],
+  "use": "Exfoliant (LHA)"
+ },
+ {
+  "name": "1,2-Octanediol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "1117-86-8",
+  "cid": 14231,
+  "formula": "C8H18O2",
+  "molarMass": 146.227,
+  "iupac": "octane-1,2-diol",
+  "melt": 30.2,
+  "inci": [
+   "Caprylyl Glycol"
+  ],
+  "use": "Humectant, preservative booster"
+ },
+ {
+  "name": "Caprylyl methicone",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Caprylyl Methicone"
+  ],
+  "use": "Silicone, emollient"
+ },
+ {
+  "name": "Carboxymethyl cellulose",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Cellulose Gum"
+  ],
+  "use": "Thickener"
+ },
+ {
+  "name": "Cornflower water",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Centaurea Cyanus Flower Water"
+  ],
+  "use": "Soothing (floral water)"
+ },
+ {
+  "name": "Centella asiatica extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Centella Asiatica Extract"
+  ],
+  "use": "Soothing (plant extract)"
+ },
+ {
+  "name": "Microcrystalline wax",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Cera Microcristallina",
+   "Microcrystalline Wax"
+  ],
+  "use": "Wax, occlusive"
+ },
+ {
+  "name": "Ceramide ap",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Ceramide AP"
+  ],
+  "use": "Skin-barrier lipid (ceramide)"
+ },
+ {
+  "name": "Ceramide eop",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Ceramide EOP"
+  ],
+  "use": "Skin-barrier lipid (ceramide)"
+ },
+ {
+  "name": "Ceramide np",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Ceramide NP"
+  ],
+  "use": "Skin-barrier lipid (ceramide)"
+ },
+ {
+  "name": "Ceresin",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Ceresin"
+  ],
+  "use": "Wax"
+ },
+ {
+  "name": "Ceteareth-20",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Ceteareth-20"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Ceteareth-6",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Ceteareth-6"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Cetearyl ethylhexanoate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Cetearyl Ethylhexanoate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Cetearyl olivate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Cetearyl Olivate"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Cetrimonium chloride",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "112-02-7",
+  "cid": 8154,
+  "formula": "C19H42ClN",
+  "molarMass": 319.996,
+  "iupac": "hexadecyl(trimethyl)azanium;chloride",
+  "melt": 70.0,
+  "boil": 82.2,
+  "inci": [
+   "Cetrimonium Chloride"
+  ],
+  "use": "Hair conditioning"
+ },
+ {
+  "name": "Cetrimonium methosulfate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Cetrimonium Methosulfate"
+  ],
+  "use": "Hair conditioning"
+ },
+ {
+  "name": "Cetyl esters",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Cetyl Esters"
+  ],
+  "use": "Emollient, wax"
+ },
+ {
+  "name": "Cetyl PEG/PPG-10/1 dimethicone",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Cetyl PEG/PPG-10/1 Dimethicone"
+  ],
+  "use": "Emulsifier (silicone)"
+ },
+ {
+  "name": "Cetyl palmitate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "540-10-3",
+  "cid": 10889,
+  "formula": "C32H64O2",
+  "molarMass": 480.849,
+  "iupac": "hexadecyl hexadecanoate",
+  "melt": 43.9,
+  "boil": 451.0,
+  "density": 0.989,
+  "inci": [
+   "Cetyl Palmitate"
+  ],
+  "use": "Emollient, wax"
+ },
+ {
+  "name": "Cetyl-pg hydroxyethyl palmitamide",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Cetyl-PG Hydroxyethyl Palmitamide"
+  ],
+  "use": "Skin-barrier lipid (pseudo-ceramide)"
+ },
+ {
+  "name": "Hinoki cypress leaf extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Chamaecyparis Obtusa Leaf Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Chamomile extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Chamomilla Recutita Flower Extract"
+  ],
+  "use": "Soothing (plant extract)"
+ },
+ {
+  "name": "Chlorhexidine digluconate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "18472-51-0",
+  "cid": 9552081,
+  "formula": "C34H54Cl2N10O14",
+  "molarMass": 897.757,
+  "iupac": "(1e)-2-[6-[[azanyl-[(e)-[azanyl-[(4-chlorophenyl)amino]methylidene]amino]methylidene]amino]hexyl]-1-[azanyl-[(4-chlorophenyl)amino]methylidene]guanidine;(2r,3s,4r,5r)-2,3,4,5,6-pentakis(oxidanyl)hexanoic acid",
+  "inci": [
+   "Chlorhexidine Digluconate"
+  ],
+  "use": "Preservative, antimicrobial"
+ },
+ {
+  "name": "Irish moss extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Chondrus Crispus Extract"
+  ],
+  "use": "Thickener, humectant (seaweed)"
+ },
+ {
+  "name": "Chrysanthemum extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Chrysanthemum Indicum Flower Extract"
+  ],
+  "use": "Soothing (plant extract)"
+ },
+ {
+  "name": "Feverfew extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Chrysanthemum Parthenium Extract"
+  ],
+  "use": "Soothing (plant extract)"
+ },
+ {
+  "name": "Cinnamyl alcohol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "104-54-1",
+  "cid": 5315892,
+  "formula": "C9H10O",
+  "molarMass": 134.175,
+  "iupac": "(e)-3-phenylprop-2-en-1-ol",
+  "melt": 34.0,
+  "boil": 254.0,
+  "inci": [
+   "Cinnamyl Alcohol"
+  ],
+  "use": "Fragrance allergen"
+ },
+ {
+  "name": "Lime peel extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Citrus Aurantifolia Peel Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Orange fruit extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Citrus Aurantium Dulcis Fruit Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Orange peel oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Citrus Aurantium Dulcis Peel Oil"
+  ],
+  "use": "Fragrance (essential oil)"
+ },
+ {
+  "name": "Yuzu fruit extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Citrus Junos Fruit Extract"
+  ],
+  "use": "Antioxidant (plant extract)"
+ },
+ {
+  "name": "Cocamide MEA",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Cocamide MEA"
+  ],
+  "use": "Foam booster, thickener"
+ },
+ {
+  "name": "Cocamidopropyl dimethylamine",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Cocamidopropyl Dimethylamine"
+  ],
+  "use": "Hair conditioning, emulsifier"
+ },
+ {
+  "name": "Cocamidopropyl hydroxysultaine",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Cocamidopropyl Hydroxysultaine"
+  ],
+  "use": "Cleansing agent (amphoteric)"
+ },
+ {
+  "name": "Cocamidopropyl pg-dimonium chloride phosphate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Cocamidopropyl PG-Dimonium Chloride Phosphate"
+  ],
+  "use": "Conditioning agent"
+ },
+ {
+  "name": "Coco-betaine",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Coco-Betaine"
+  ],
+  "use": "Cleansing agent (amphoteric)"
+ },
+ {
+  "name": "Coco-caprylate/caprate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Coco-Caprylate/Caprate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Coco-glucoside",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Coco-Glucoside"
+  ],
+  "use": "Cleansing agent (non-ionic)"
+ },
+ {
+  "name": "Coconut acid",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Coconut Acid"
+  ],
+  "use": "Cleansing agent (soap fatty acid)"
+ },
+ {
+  "name": "Coconut alkanes",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Coconut Alkanes"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Coconut oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Cocos Nucifera Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Coconut water",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Cocos Nucifera Water"
+  ],
+  "use": "Humectant"
+ },
+ {
+  "name": "Colloidal oatmeal",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Colloidal Oatmeal"
+  ],
+  "use": "Skin protectant, soothing"
+ },
+ {
+  "name": "Carnauba wax",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Copernicia Cerifera Cera"
+  ],
+  "use": "Wax"
+ },
+ {
+  "name": "Copper gluconate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "527-09-3",
+  "cid": 10692,
+  "formula": "C12H22CuO14",
+  "molarMass": 453.841,
+  "iupac": "copper;(2r,3s,4r,5r)-2,3,4,5,6-pentakis(oxidanyl)hexanoate",
+  "melt": 156.0,
+  "inci": [
+   "Copper Gluconate"
+  ],
+  "use": "Skin-conditioning active (trace mineral)"
+ },
+ {
+  "name": "Copper palmitoyl heptapeptide-14",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Copper Palmitoyl Heptapeptide-14"
+  ],
+  "use": "Peptide"
+ },
+ {
+  "name": "Coriander seed oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Coriandrum Sativum Fruit Oil"
+  ],
+  "use": "Emollient, fragrance"
+ },
+ {
+  "name": "Hazelnut oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Corylus Avellana Seed Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Japanese cedar leaf extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Cryptomeria Japonica Leaf Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Cucumber extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Cucumis Sativus Fruit Extract"
+  ],
+  "use": "Soothing (plant extract)"
+ },
+ {
+  "name": "Turmeric extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Curcuma Longa Root Extract"
+  ],
+  "use": "Antioxidant (plant extract)"
+ },
+ {
+  "name": "Dodecamethylcyclohexasiloxane",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "540-97-6",
+  "cid": 10911,
+  "formula": "C12H36O6Si6",
+  "molarMass": 444.924,
+  "iupac": "2,2,4,4,6,6,8,8,10,10,12,12-dodecamethyl-1,3,5,7,9,11-hexaoxa-2,4,6,8,10,12-hexasilacyclododecane",
+  "melt": -4.2,
+  "boil": 245.0,
+  "density": 0.967,
+  "flash": 93.0,
+  "inci": [
+   "Cyclohexasiloxane"
+  ],
+  "use": "Silicone (volatile)"
+ },
+ {
+  "name": "Cyclomethicone",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Cyclomethicone"
+  ],
+  "use": "Silicone (volatile)"
+ },
+ {
+  "name": "Carrot extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Daucus Carota Sativa Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Decyl oleate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Decyl Oleate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Dextrin palmitate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Dextrin Palmitate"
+  ],
+  "use": "Thickener (oil phase)"
+ },
+ {
+  "name": "Diacetone alcohol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "123-42-2",
+  "cid": 31256,
+  "formula": "C6H12O2",
+  "molarMass": 116.158,
+  "iupac": "4-methyl-4-oxidanyl-pentan-2-one",
+  "melt": -47.0,
+  "boil": 167.9,
+  "density": 0.939,
+  "flash": 60.9,
+  "inci": [
+   "Diacetone Alcohol"
+  ],
+  "hazards": [
+   "Ontario OEL TWA 50 ppm"
+  ],
+  "use": "Solvent (nail polish)"
+ },
+ {
+  "name": "Dibutyl adipate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "105-99-7",
+  "cid": 7784,
+  "formula": "C14H26O4",
+  "molarMass": 258.354,
+  "iupac": "dibutyl hexanedioate",
+  "melt": -32.4,
+  "boil": 305.1,
+  "density": 0.961,
+  "inci": [
+   "Dibutyl Adipate"
+  ],
+  "use": "Emollient, UV-filter solvent"
+ },
+ {
+  "name": "Dicaprylyl carbonate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Dicaprylyl Carbonate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Dicaprylyl ether",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "629-82-3",
+  "cid": 12399,
+  "formula": "C16H34O",
+  "molarMass": 242.441,
+  "iupac": "1-octoxyoctane",
+  "melt": -7.7,
+  "boil": 289.0,
+  "density": 0.806,
+  "flash": 123.6,
+  "inci": [
+   "Dicaprylyl Ether"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Diethylamino hydroxybenzoyl hexyl benzoate (Uvinul A Plus)",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Diethylamino Hydroxybenzoyl Hexyl Benzoate"
+  ],
+  "use": "UV filter (UVA)"
+ },
+ {
+  "name": "Diethylhexyl 2,6-naphthalate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Diethylhexyl 2,6-Naphthalate"
+  ],
+  "use": "Photostabilizer"
+ },
+ {
+  "name": "Diethylhexyl butamido triazone (iscotrizinol)",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Diethylhexyl Butamido Triazone"
+  ],
+  "use": "UV filter (UVB)"
+ },
+ {
+  "name": "Diisopropyl sebacate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Diisopropyl Sebacate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Diisostearyl malate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Diisostearyl Malate"
+  ],
+  "use": "Emollient (lip products)"
+ },
+ {
+  "name": "Dimethicone crosspolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Dimethicone Crosspolymer"
+  ],
+  "use": "Silicone, texture"
+ },
+ {
+  "name": "Dimethicone PEG-7 isostearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Dimethicone PEG-7 Isostearate"
+  ],
+  "use": "Silicone, emulsifier"
+ },
+ {
+  "name": "Dimethicone/vinyl dimethicone crosspolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Dimethicone/Vinyl Dimethicone Crosspolymer"
+  ],
+  "use": "Silicone, texture"
+ },
+ {
+  "name": "Dimethiconol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Dimethiconol"
+  ],
+  "use": "Silicone, emollient"
+ },
+ {
+  "name": "Dimethyl isosorbide",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "5306-85-4",
+  "cid": 62990,
+  "formula": "C8H14O4",
+  "molarMass": 174.194,
+  "iupac": "(3s,3ar,6r,6ar)-3,6-dimethoxy-2,3,3a,5,6,6a-hexahydrofuro[3,2-b]furan",
+  "boil": 234.0,
+  "inci": [
+   "Dimethyl Isosorbide"
+  ],
+  "use": "Solvent, penetration enhancer"
+ },
+ {
+  "name": "Dipotassium glycyrrhizate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "68797-35-3",
+  "cid": 656852,
+  "formula": "C42H60K2O16",
+  "molarMass": 899.113,
+  "iupac": "dipotassium;(2s,3s,4s,5r,6r)-6-[(2s,3r,4s,5s,6s)-2-[[(3s,4ar,6ar,6bs,8as,11s,12ar,14ar,14bs)-11-carboxy-4,4,6a,6b,8a,11,14b-heptamethyl-14-oxidanylidene-2,3,4a,5,6,7,8,9,10,12,12a,14a-dodecahydro-1h-picen-3-yl]oxy]-6-carboxylato-4,5-bis(oxidanyl)oxan-3-yl]oxy-3,4,5-tris(oxidanyl)oxane-2-carboxylate",
+  "inci": [
+   "Dipotassium Glycyrrhizate"
+  ],
+  "use": "Soothing (licorice-derived)"
+ },
+ {
+  "name": "Dipropylene glycol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "25265-71-8",
+  "cid": 6537503,
+  "formula": "C6H14O3",
+  "molarMass": 134.174,
+  "iupac": "1-(1-hydroxypropoxy)propan-1-ol",
+  "boil": 231.0,
+  "density": 1.021,
+  "flash": 117.9,
+  "inci": [
+   "Dipropylene Glycol"
+  ],
+  "use": "Solvent, humectant"
+ },
+ {
+  "name": "Disodium laureth sulfosuccinate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Disodium Laureth Sulfosuccinate"
+  ],
+  "use": "Cleansing agent (mild anionic)"
+ },
+ {
+  "name": "Disodium stearoyl glutamate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Disodium Stearoyl Glutamate"
+  ],
+  "use": "Emulsifier, pigment coating"
+ },
+ {
+  "name": "Disteardimonium hectorite",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Disteardimonium Hectorite"
+  ],
+  "use": "Thickener (clay)"
+ },
+ {
+  "name": "Drometrizole trisiloxane (Mexoryl XL)",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Drometrizole Trisiloxane"
+  ],
+  "use": "UV filter (broad spectrum)"
+ },
+ {
+  "name": "Ecklonia cava extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Ecklonia Cava Extract"
+  ],
+  "use": "Plant extract (seaweed)"
+ },
+ {
+  "name": "Elastin",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Elastin"
+  ],
+  "use": "Skin-conditioning (protein)"
+ },
+ {
+  "name": "Epigallocatechin gallatyl glucoside",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Epigallocatechin Gallatyl Glucoside"
+  ],
+  "use": "Antioxidant"
+ },
+ {
+  "name": "Ethoxydiglycol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "111-90-0",
+  "cid": 8146,
+  "formula": "C6H14O3",
+  "molarMass": 134.174,
+  "iupac": "2-(2-ethoxyethoxy)ethanol",
+  "melt": -76.0,
+  "boil": 202.0,
+  "density": 0.989,
+  "flash": 86.9,
+  "inci": [
+   "Ethoxydiglycol"
+  ],
+  "hazards": [
+   "Ontario OEL TWA 30 ppm"
+  ],
+  "use": "Solvent"
+ },
+ {
+  "name": "2-Ethyl-1,3-hexanediol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "94-96-2",
+  "cid": 7211,
+  "formula": "C8H18O2",
+  "molarMass": 146.227,
+  "iupac": "2-ethylhexane-1,3-diol",
+  "melt": -40.0,
+  "boil": 243.0,
+  "density": 0.933,
+  "inci": [
+   "Ethyl Hexanediol"
+  ],
+  "use": "Solvent, humectant"
+ },
+ {
+  "name": "Ethyl macadamiate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Ethyl Macadamiate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Ethylene/propylene/styrene copolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Ethylene/Propylene/Styrene Copolymer"
+  ],
+  "use": "Thickener (gloss)"
+ },
+ {
+  "name": "Ethylene/vinyl acetate copolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Ethylene/VA Copolymer"
+  ],
+  "use": "Film former, thickener"
+ },
+ {
+  "name": "Ethylenediamine/stearyl dimer dilinoleate copolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Ethylenediamine/Stearyl Dimer Dilinoleate Copolymer"
+  ],
+  "use": "Film former (mascara)"
+ },
+ {
+  "name": "Ethylhexyl hydroxystearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Ethylhexyl Hydroxystearate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Ethylhexyl palmitate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "29806-73-3",
+  "cid": 62851,
+  "formula": "C24H48O2",
+  "molarMass": 368.637,
+  "iupac": "2-ethylhexyl hexadecanoate",
+  "melt": 2.0,
+  "inci": [
+   "Ethylhexyl Palmitate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Ethylhexyl triazone",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Ethylhexyl Triazone"
+  ],
+  "use": "UV filter (UVB)"
+ },
+ {
+  "name": "Eucalyptus leaf extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Eucalyptus Globulus Leaf Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Eucalyptus oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Eucalyptus Globulus Leaf Oil"
+  ],
+  "use": "Fragrance (essential oil)"
+ },
+ {
+  "name": "Oakmoss extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Evernia Prunastri Extract"
+  ],
+  "use": "Fragrance allergen (oakmoss)"
+ },
+ {
+  "name": "Farnesol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Farnesol"
+  ],
+  "use": "Fragrance allergen"
+ },
+ {
+  "name": "Ferulic acid",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "537-98-4",
+  "cid": 445858,
+  "formula": "C10H10O4",
+  "molarMass": 194.184,
+  "iupac": "(e)-3-(3-methoxy-4-oxidanyl-phenyl)prop-2-enoic acid",
+  "melt": 173.0,
+  "inci": [
+   "Ferulic Acid"
+  ],
+  "use": "Antioxidant"
+ },
+ {
+  "name": "Fructooligosaccharides",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Fructooligosaccharides"
+  ],
+  "use": "Prebiotic, humectant"
+ },
+ {
+  "name": "Galactomyces ferment filtrate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Galactomyces Ferment Filtrate"
+  ],
+  "use": "Ferment (skin-conditioning)"
+ },
+ {
+  "name": "Gallyl glucoside",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Gallyl Glucoside"
+  ],
+  "use": "Antioxidant"
+ },
+ {
+  "name": "Tiare flower extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Gardenia Taitensis Flower Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Glycereth-26",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Glycereth-26"
+  ],
+  "use": "Humectant"
+ },
+ {
+  "name": "Glyceryl acrylate/acrylic acid copolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Glyceryl Acrylate/Acrylic Acid Copolymer"
+  ],
+  "use": "Humectant, film former"
+ },
+ {
+  "name": "Glyceryl behenate/eicosadioate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Glyceryl Behenate/Eicosadioate"
+  ],
+  "use": "Thickener (oil phase)"
+ },
+ {
+  "name": "Glyceryl caprylate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "26402-26-6",
+  "cid": 3033877,
+  "formula": "C11H22O4",
+  "molarMass": 218.29,
+  "iupac": "2,3-bis(oxidanyl)propyl octanoate",
+  "melt": 40.0,
+  "inci": [
+   "Glyceryl Caprylate"
+  ],
+  "use": "Emollient, preservative booster"
+ },
+ {
+  "name": "Glyceryl glucoside",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Glyceryl Glucoside"
+  ],
+  "use": "Humectant"
+ },
+ {
+  "name": "Glyceryl stearate SE",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Glyceryl Stearate SE"
+  ],
+  "use": "Emulsifier (self-emulsifying)"
+ },
+ {
+  "name": "Soybean oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Glycine Soja Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Soybean seed extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Glycine Soja Seed Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Glycol distearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "627-83-8",
+  "cid": 61174,
+  "formula": "C38H74O4",
+  "molarMass": 594.992,
+  "iupac": "2-octadecanoyloxyethyl octadecanoate",
+  "melt": 75.3,
+  "density": 0.858,
+  "inci": [
+   "Glycol Distearate"
+  ],
+  "use": "Opacifier (pearlescent)"
+ },
+ {
+  "name": "Ethylene glycol monostearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "9004-99-3",
+  "cid": 24762,
+  "formula": "C20H40O3",
+  "molarMass": 328.53,
+  "iupac": "2-hydroxyethyl octadecanoate",
+  "melt": 60.5,
+  "inci": [
+   "Glycol Stearate"
+  ],
+  "use": "Opacifier, thickener"
+ },
+ {
+  "name": "Glycolipids",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Glycolipids"
+  ],
+  "use": "Skin-conditioning"
+ },
+ {
+  "name": "Licorice root extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Glycyrrhiza Glabra Root Extract"
+  ],
+  "use": "Soothing, brightening (plant extract)"
+ },
+ {
+  "name": "Grapefruit peel oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Grapefruit Peel Oil"
+  ],
+  "use": "Fragrance (essential oil)"
+ },
+ {
+  "name": "Guar hydroxypropyltrimonium chloride",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Guar Hydroxypropyltrimonium Chloride"
+  ],
+  "use": "Hair conditioning"
+ },
+ {
+  "name": "Witch hazel water",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hamamelis Virginiana Water"
+  ],
+  "use": "Astringent, soothing"
+ },
+ {
+  "name": "Sunflower seed oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Helianthus Annuus Seed Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Sunflower seedcake",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Helianthus Annuus Seedcake"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Heptapeptide-15 palmitate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Heptapeptide-15 Palmitate"
+  ],
+  "use": "Peptide"
+ },
+ {
+  "name": "Hexyl laurate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "34316-64-8",
+  "cid": 94454,
+  "formula": "C18H36O2",
+  "molarMass": 284.477,
+  "iupac": "hexyl dodecanoate",
+  "melt": -3.4,
+  "boil": 130.0,
+  "inci": [
+   "Hexyl Laurate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Hexyl nicotinate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "23597-82-2",
+  "cid": 90202,
+  "formula": "C12H17NO2",
+  "molarMass": 207.269,
+  "iupac": "hexyl pyridine-3-carboxylate",
+  "boil": 147.0,
+  "inci": [
+   "Hexyl Nicotinate"
+  ],
+  "use": "Skin-conditioning active (warming, circulation)"
+ },
+ {
+  "name": "Hexylene glycol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "107-41-5",
+  "cid": 7870,
+  "formula": "C6H14O2",
+  "molarMass": 118.174,
+  "iupac": "2-methylpentane-2,4-diol",
+  "melt": -50.0,
+  "boil": 197.9,
+  "density": 0.923,
+  "flash": 92.9,
+  "inci": [
+   "Hexylene Glycol"
+  ],
+  "hazards": [
+   "Ontario OEL Ceiling 25 ppm"
+  ],
+  "use": "Solvent, humectant"
+ },
+ {
+  "name": "Hibiscus flower extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hibiscus Sabdariffa Flower Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Barley extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hordeum Vulgare Extract",
+   "Hordeum Vulgare Leaf Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Heartleaf (houttuynia cordata) extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Houttuynia Cordata Extract"
+  ],
+  "use": "Soothing (plant extract)"
+ },
+ {
+  "name": "Hydrogen dimethicone",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hydrogen Dimethicone"
+  ],
+  "use": "Silicone (pigment coating)"
+ },
+ {
+  "name": "Hydrogenated castor oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "139-44-6",
+  "cid": 25100,
+  "formula": "C57H110O9",
+  "molarMass": 939.478,
+  "iupac": "2,3-bis(12-oxidanyloctadecanoyloxy)propyl 12-oxidanyloctadecanoate",
+  "melt": 89.4,
+  "inci": [
+   "Hydrogenated Castor Oil"
+  ],
+  "use": "Thickener, wax"
+ },
+ {
+  "name": "Hydrogenated coco-glycerides",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hydrogenated Coco-Glycerides"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Hydrogenated lecithin",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hydrogenated Lecithin"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Hydrogenated poly(C6-14 olefin)",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hydrogenated Poly(C6-14 Olefin)"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Hydrogenated polydecene",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hydrogenated Polydecene"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Hydrogenated polyisobutene",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hydrogenated Polyisobutene"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Hydrogenated starch hydrolysate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hydrogenated Starch Hydrolysate"
+  ],
+  "use": "Humectant"
+ },
+ {
+  "name": "Hydrolyzed algin",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hydrolyzed Algin"
+  ],
+  "use": "Humectant (seaweed)"
+ },
+ {
+  "name": "Hydrolyzed collagen",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hydrolyzed Collagen"
+  ],
+  "use": "Humectant (protein)"
+ },
+ {
+  "name": "Hydrolyzed hyaluronic acid",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hydrolyzed Hyaluronic Acid"
+  ],
+  "use": "Humectant"
+ },
+ {
+  "name": "Hydrolyzed jojoba esters",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hydrolyzed Jojoba Esters"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Hydrolyzed keratin",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hydrolyzed Keratin"
+  ],
+  "use": "Hair conditioning (protein)"
+ },
+ {
+  "name": "Hydrolyzed lupine protein",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hydrolyzed Lupine Protein"
+  ],
+  "use": "Skin-conditioning (protein)"
+ },
+ {
+  "name": "Hydrolyzed silk",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hydrolyzed Silk"
+  ],
+  "use": "Hair conditioning (protein)"
+ },
+ {
+  "name": "Hydrolyzed wheat protein",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hydrolyzed Wheat Protein"
+  ],
+  "use": "Skin-conditioning (protein)"
+ },
+ {
+  "name": "4-Hydroxyacetophenone",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "99-93-4",
+  "cid": 7469,
+  "formula": "C8H8O2",
+  "molarMass": 136.148,
+  "iupac": "1-(4-hydroxyphenyl)ethanone",
+  "melt": 108.2,
+  "boil": 328.5,
+  "density": 1.109,
+  "inci": [
+   "Hydroxyacetophenone"
+  ],
+  "use": "Antioxidant, preservative booster"
+ },
+ {
+  "name": "Hydroxyethyl acrylate/sodium acryloyldimethyl taurate copolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hydroxyethyl Acrylate/Sodium Acryloyldimethyl Taurate Copolymer"
+  ],
+  "use": "Thickener, emulsion stabilizer"
+ },
+ {
+  "name": "(2-Hydroxyethyl)urea",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "2078-71-9",
+  "cid": 73984,
+  "formula": "C3H8N2O2",
+  "molarMass": 104.108,
+  "iupac": "1-(2-hydroxyethyl)urea",
+  "melt": 94.5,
+  "inci": [
+   "Hydroxyethyl Urea"
+  ],
+  "use": "Humectant"
+ },
+ {
+  "name": "Hydroxyethylcellulose",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hydroxyethylcellulose"
+  ],
+  "use": "Thickener"
+ },
+ {
+  "name": "Lyral (hydroxyisohexyl 3-cyclohexene carboxaldehyde)",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hydroxyisohexyl 3-Cyclohexene Carboxaldehyde"
+  ],
+  "use": "Fragrance allergen (banned in the EU since 2021)"
+ },
+ {
+  "name": "Hydroxymethoxyphenyl decanone",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hydroxymethoxyphenyl Decanone"
+  ],
+  "use": "Antioxidant"
+ },
+ {
+  "name": "Hydroxypinacolone retinoate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hydroxypinacolone Retinoate"
+  ],
+  "use": "Retinoid (skin-conditioning active)"
+ },
+ {
+  "name": "St John's wort extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Hypericum Perforatum Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Inulin lauryl carbamate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Inulin Lauryl Carbamate"
+  ],
+  "use": "Emulsion stabilizer"
+ },
+ {
+  "name": "Isoceteth-20",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Isoceteth-20"
+  ],
+  "use": "Emulsifier, solubilizer"
+ },
+ {
+  "name": "Isocetyl stearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "25339-09-7",
+  "cid": 91410,
+  "formula": "C34H68O2",
+  "molarMass": 508.903,
+  "iupac": "14-methylpentadecyl octadecanoate",
+  "inci": [
+   "Isocetyl Stearate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Isodecyl neopentanoate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Isodecyl Neopentanoate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Isododecane",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "7045-71-8",
+  "cid": 23459,
+  "formula": "C12H26",
+  "molarMass": 170.335,
+  "iupac": "2-methylundecane",
+  "melt": -46.8,
+  "boil": 211.0,
+  "inci": [
+   "Isododecane"
+  ],
+  "use": "Emollient (volatile)"
+ },
+ {
+  "name": "Isohexadecane",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "4390-04-9",
+  "cid": 20414,
+  "formula": "C16H34",
+  "molarMass": 226.441,
+  "iupac": "2,2,4,4,6,8,8-heptamethylnonane",
+  "boil": 246.0,
+  "flash": 65.2,
+  "inci": [
+   "Isohexadecane"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Isoleucine",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "443-79-8",
+  "cid": 791,
+  "formula": "C6H13NO2",
+  "molarMass": 131.173,
+  "iupac": "2-azanyl-3-methyl-pentanoic acid",
+  "melt": 95.5,
+  "inci": [
+   "Isoleucine"
+  ],
+  "use": "Skin-conditioning active (amino acid)"
+ },
+ {
+  "name": "Isononyl isononanoate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "59219-71-5",
+  "cid": 100986,
+  "formula": "C18H36O2",
+  "molarMass": 284.477,
+  "iupac": "3,5,5-trimethylhexyl 3,5,5-trimethylhexanoate",
+  "inci": [
+   "Isononyl Isononanoate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Isopentane",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "78-78-4",
+  "cid": 6556,
+  "formula": "C5H12",
+  "molarMass": 72.149,
+  "iupac": "2-methylbutane",
+  "melt": -159.8,
+  "boil": 27.8,
+  "density": 0.62,
+  "flash": -56.0,
+  "inci": [
+   "Isopentane"
+  ],
+  "hazards": [
+   "Ontario OEL TWA 600 ppm",
+   "Flammable (flash point -56 °C)"
+  ],
+  "use": "Propellant, foaming agent"
+ },
+ {
+  "name": "Isopropyl isostearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "31478-84-9",
+  "cid": 94625,
+  "formula": "C21H42O2",
+  "molarMass": 326.557,
+  "iupac": "propan-2-yl 16-methylheptadecanoate",
+  "inci": [
+   "Isopropyl Isostearate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Isopropyl lauroyl sarcosinate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Isopropyl Lauroyl Sarcosinate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Isopropylmethylphenol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "3228-02-2",
+  "cid": 18597,
+  "formula": "C10H14O",
+  "molarMass": 150.218,
+  "iupac": "3-methyl-4-propan-2-ylphenol",
+  "melt": 114.0,
+  "boil": 238.0,
+  "flash": 94.6,
+  "inci": [
+   "Isopropylmethylphenol"
+  ],
+  "use": "Antimicrobial"
+ },
+ {
+  "name": "Isostearic acid",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "2724-58-5",
+  "cid": 21859,
+  "formula": "C18H36O2",
+  "molarMass": 284.477,
+  "iupac": "16-methylheptadecanoic acid",
+  "melt": 68.2,
+  "inci": [
+   "Isostearic Acid"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Isostearyl glyceryl ether",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Isostearyl Glyceryl Ether"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Kakadu plum extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Kakadu Plum Extract"
+  ],
+  "use": "Antioxidant (plant extract)"
+ },
+ {
+  "name": "Kalahari melon seed oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Kalahari Melon Seed Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Lactic acid/glycolic acid copolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Lactic Acid/Glycolic Acid Copolymer"
+  ],
+  "use": "Film former"
+ },
+ {
+  "name": "Lactobacillus ferment",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Lactobacillus Ferment",
+   "Lactobacillus Ferment Lysate",
+   "Lactobacillus/Pueraria Lobata Root Ferment Extract",
+   "Lactobacillus/Rice Ferment Filtrate",
+   "Lactobacillus/Soybean Ferment Extract"
+  ],
+  "use": "Ferment"
+ },
+ {
+  "name": "Lactobionic acid",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Lactobionic Acid"
+  ],
+  "use": "Exfoliant (PHA)"
+ },
+ {
+  "name": "Laminaria ochroleuca extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Laminaria Ochroleuca Extract"
+  ],
+  "use": "Plant extract (seaweed)"
+ },
+ {
+  "name": "Lanolin alcohol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Lanolin Alcohol"
+  ],
+  "use": "Emollient, emulsifier"
+ },
+ {
+  "name": "Laureth-23",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Laureth-23"
+  ],
+  "use": "Emulsifier, solubilizer"
+ },
+ {
+  "name": "Laureth-4",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Laureth-4"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Laureth-7",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "3055-97-8",
+  "cid": 76459,
+  "formula": "C26H54O8",
+  "molarMass": 494.702,
+  "iupac": "2-[2-[2-[2-[2-[2-(2-dodecoxyethoxy)ethoxy]ethoxy]ethoxy]ethoxy]ethoxy]ethanol",
+  "melt": 28.0,
+  "inci": [
+   "Laureth-7"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Lauryl methacrylate/sodium methacrylate crosspolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Lauryl Methacrylate/Sodium Methacrylate Crosspolymer"
+  ],
+  "use": "Thickener"
+ },
+ {
+  "name": "Lauryl PEG-9 polydimethylsiloxyethyl dimethicone",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Lauryl PEG-9 Polydimethylsiloxyethyl Dimethicone"
+  ],
+  "use": "Emulsifier (silicone)"
+ },
+ {
+  "name": "Lavender oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Lavandula Angustifolia Oil"
+  ],
+  "use": "Fragrance (essential oil)"
+ },
+ {
+  "name": "Lemon peel oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Lemon Peel Oil"
+  ],
+  "use": "Fragrance (essential oil)"
+ },
+ {
+  "name": "Maca root extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Lepidium Meyenii Root Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Madonna lily extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Lilium Candidum Bulb Extract",
+   "Lilium Candidum Flower Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Linalyl acetate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "115-95-7",
+  "cid": 8294,
+  "formula": "C12H20O2",
+  "molarMass": 196.286,
+  "iupac": "3,7-dimethylocta-1,6-dien-3-yl ethanoate",
+  "boil": 221.0,
+  "density": 0.895,
+  "inci": [
+   "Linalyl Acetate"
+  ],
+  "use": "Fragrance"
+ },
+ {
+  "name": "Linseed extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Linum Usitatissimum Seed Extract"
+  ],
+  "use": "Hair conditioning (plant extract)"
+ },
+ {
+  "name": "Macadamia oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Macadamia Ternifolia Seed Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Macrotermes termite protease",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Macrotermes Termite Protease"
+  ],
+  "use": "Ferment (enzyme)"
+ },
+ {
+  "name": "Madecassoside",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Madecassoside"
+  ],
+  "use": "Soothing (centella-derived)"
+ },
+ {
+  "name": "Magnesium ascorbyl phosphate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Magnesium Ascorbyl Phosphate"
+  ],
+  "use": "Antioxidant (vitamin C derivative)"
+ },
+ {
+  "name": "Magnesium carbonate hydroxide",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "39409-82-0",
+  "cid": 156592356,
+  "formula": "CH6Mg2O6",
+  "molarMass": 162.665,
+  "iupac": "carbonic acid, magnesium salt (1:1), mixt. with magnesium hydroxide (Mg(OH)2), hydrate",
+  "density": 2.3,
+  "inci": [
+   "Magnesium Carbonate Hydroxide"
+  ],
+  "use": "Absorbent"
+ },
+ {
+  "name": "Magnesium gluconate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Magnesium Gluconate"
+  ],
+  "use": "Skin-conditioning (mineral)"
+ },
+ {
+  "name": "Magnesium myristate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Magnesium Myristate"
+  ],
+  "use": "Texture (powder binder)"
+ },
+ {
+  "name": "Maltodextrin",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Maltodextrin"
+  ],
+  "use": "Film former, absorbent"
+ },
+ {
+  "name": "Manganese gluconate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "6485-39-8",
+  "cid": 21226518,
+  "formula": "C12H22MnO14",
+  "molarMass": 445.233,
+  "iupac": "manganese(2+);2,3,4,5,6-pentakis(oxidanyl)hexanoate",
+  "inci": [
+   "Manganese Gluconate"
+  ],
+  "use": "Skin-conditioning (mineral)"
+ },
+ {
+  "name": "Meadowfoam estolide",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Meadowfoam Estolide"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Alfalfa seed powder",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Medicago Sativa Seed Powder"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Tea tree oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Melaleuca Alternifolia Leaf Oil"
+  ],
+  "use": "Antimicrobial (essential oil)"
+ },
+ {
+  "name": "Tea tree leaf water",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Melaleuca Alternifolia Leaf Water"
+  ],
+  "use": "Soothing (plant water)"
+ },
+ {
+  "name": "Melanin",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Melanin"
+  ],
+  "use": "Colourant, antioxidant"
+ },
+ {
+  "name": "Peppermint oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Mentha Piperita Oil"
+  ],
+  "use": "Cooling agent, flavour (essential oil)"
+ },
+ {
+  "name": "Methoxypropylamino cyclohexenylidene ethoxyethylcyanoacetate (Mexoryl 400)",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Methoxypropylamino Cyclohexenylidene Ethoxyethylcyanoacetate"
+  ],
+  "use": "UV filter (long UVA)"
+ },
+ {
+  "name": "Methyl gluceth-20",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Methyl Gluceth-20"
+  ],
+  "use": "Humectant"
+ },
+ {
+  "name": "Methyl methacrylate crosspolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Methyl Methacrylate Crosspolymer"
+  ],
+  "use": "Texture (soft-focus powder)"
+ },
+ {
+  "name": "Methyl salicylate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "119-36-8",
+  "cid": 4133,
+  "formula": "C8H8O3",
+  "molarMass": 152.147,
+  "iupac": "methyl 2-oxidanylbenzoate",
+  "melt": -8.5,
+  "boil": 222.6,
+  "density": 1.181,
+  "flash": 95.9,
+  "inci": [
+   "Methyl Salicylate"
+  ],
+  "use": "Flavour, cooling agent"
+ },
+ {
+  "name": "Methyl trimethicone",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Methyl Trimethicone"
+  ],
+  "use": "Silicone (volatile)"
+ },
+ {
+  "name": "Methylene bis-benzotriazolyl tetramethylbutylphenol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Methylene Bis-Benzotriazolyl Tetramethylbutylphenol"
+  ],
+  "use": "UV filter (broad spectrum)"
+ },
+ {
+  "name": "2-Methyl-1,3-propanediol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "2163-42-0",
+  "cid": 75103,
+  "formula": "C4H10O2",
+  "molarMass": 90.121,
+  "iupac": "2-methylpropane-1,3-diol",
+  "melt": -91.0,
+  "boil": 221.0,
+  "density": 1.015,
+  "flash": 112.4,
+  "inci": [
+   "Methylpropanediol"
+  ],
+  "use": "Solvent, humectant"
+ },
+ {
+  "name": "Monascus/rice ferment",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Monascus/Rice Ferment"
+  ],
+  "use": "Ferment"
+ },
+ {
+  "name": "White mulberry leaf extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Morus Alba Leaf Extract"
+  ],
+  "use": "Brightening (plant extract)"
+ },
+ {
+  "name": "Myristyl alcohol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "112-72-1",
+  "cid": 8209,
+  "formula": "C14H30O",
+  "molarMass": 214.387,
+  "iupac": "tetradecan-1-ol",
+  "melt": 37.7,
+  "boil": 295.8,
+  "density": 0.824,
+  "flash": 148.0,
+  "inci": [
+   "Myristyl Alcohol"
+  ],
+  "use": "Emollient, thickener"
+ },
+ {
+  "name": "Myristyl myristate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "3234-85-3",
+  "cid": 18605,
+  "formula": "C28H56O2",
+  "molarMass": 424.743,
+  "iupac": "tetradecyl tetradecanoate",
+  "melt": 37.4,
+  "inci": [
+   "Myristyl Myristate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Lotus extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Nelumbo Nucifera Leaf Extract",
+   "Nelumbo Nucifera Seed Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Nylon",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Nylon"
+  ],
+  "use": "Texture (fibres)"
+ },
+ {
+  "name": "Nylon-12",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Nylon-12"
+  ],
+  "use": "Texture (soft-focus powder)"
+ },
+ {
+  "name": "Nylon-611/dimethicone copolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Nylon-611/Dimethicone Copolymer"
+  ],
+  "use": "Film former"
+ },
+ {
+  "name": "White water lily extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Nymphaea Alba Root Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Blue lotus extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Nymphaea Caerulea Flower Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Holy basil extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Ocimum Sanctum Leaf Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Octyldodecanol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "5333-42-6",
+  "cid": 21414,
+  "formula": "C20H42O",
+  "molarMass": 298.547,
+  "iupac": "2-octyldodecan-1-ol",
+  "inci": [
+   "Octyldodecanol"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Octyldodecyl neopentanoate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Octyldodecyl Neopentanoate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Octyldodecyl stearoyl stearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Octyldodecyl Stearoyl Stearate"
+  ],
+  "use": "Emollient, binder"
+ },
+ {
+  "name": "Evening primrose extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Oenothera Biennis Flower Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Evening primrose oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Oenothera Biennis Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Olive oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Olea Europaea Fruit Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Oleth-3",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Oleth-3"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Oleth-3 phosphate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Oleth-3 Phosphate"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Oleth-5",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Oleth-5"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Rice bran wax",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Oryza Sativa Cera"
+  ],
+  "use": "Wax"
+ },
+ {
+  "name": "Rice extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Oryza Sativa Extract",
+   "Oryza Sativa Germ Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Oxidized glutathione",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "27025-41-8",
+  "cid": 65359,
+  "formula": "C20H32N6O12S2",
+  "molarMass": 612.631,
+  "iupac": "(2s)-2-azanyl-5-[[(2r)-3-[[(2r)-2-[[(4s)-4-azanyl-5-oxidanyl-5-oxidanylidene-pentanoyl]amino]-3-(2-hydroxy-2-oxoethylamino)-3-oxidanylidene-propyl]disulfanyl]-1-(2-hydroxy-2-oxoethylamino)-1-oxidanylidene-propan-2-yl]amino]-5-oxidanylidene-pentanoic acid",
+  "melt": 179.0,
+  "inci": [
+   "Oxidized Glutathione"
+  ],
+  "use": "Antioxidant"
+ },
+ {
+  "name": "Pidolic acid",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "98-79-3",
+  "cid": 7405,
+  "formula": "C5H7NO3",
+  "molarMass": 129.114,
+  "iupac": "(2s)-5-oxidanylidenepyrrolidine-2-carboxylic acid",
+  "melt": 162.0,
+  "inci": [
+   "PCA"
+  ],
+  "use": "Humectant (natural moisturizing factor)"
+ },
+ {
+  "name": "PEG-10 dimethicone",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PEG-10 Dimethicone",
+   "Peg-10 Dimethicone"
+  ],
+  "use": "Emulsifier (silicone)"
+ },
+ {
+  "name": "PEG-100 stearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PEG-100 Stearate"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "PEG-120 methyl glucose dioleate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PEG-120 Methyl Glucose Dioleate"
+  ],
+  "use": "Thickener"
+ },
+ {
+  "name": "PEG-150 distearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PEG-150 Distearate"
+  ],
+  "use": "Thickener"
+ },
+ {
+  "name": "PEG-150 pentaerythrityl tetrastearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PEG-150 Pentaerythrityl Tetrastearate"
+  ],
+  "use": "Thickener"
+ },
+ {
+  "name": "PEG-20",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PEG-20"
+  ],
+  "use": "Humectant, solvent"
+ },
+ {
+  "name": "PEG-22/dodecyl glycol copolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PEG-22/Dodecyl Glycol Copolymer"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "PEG-23m",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PEG-23M"
+  ],
+  "use": "Thickener (shave foam glide)"
+ },
+ {
+  "name": "PEG-30 stearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PEG-30 Stearate"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "PEG-32",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PEG-32"
+  ],
+  "use": "Humectant"
+ },
+ {
+  "name": "PEG-40 hydrogenated castor oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PEG-40 Hydrogenated Castor Oil"
+  ],
+  "use": "Solubilizer"
+ },
+ {
+  "name": "PEG-40 stearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PEG-40 Stearate"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "PEG-6",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "2615-15-8",
+  "cid": 17472,
+  "formula": "C12H26O7",
+  "molarMass": 282.331,
+  "iupac": "2-[2-[2-[2-[2-(2-hydroxyethyloxy)ethoxy]ethoxy]ethoxy]ethoxy]ethanol",
+  "melt": 6.0,
+  "boil": 217.0,
+  "inci": [
+   "PEG-6"
+  ],
+  "use": "Humectant, solvent"
+ },
+ {
+  "name": "PEG-6 caprylic/capric glycerides",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PEG-6 Caprylic/Capric Glycerides"
+  ],
+  "use": "Cleansing agent (micellar)"
+ },
+ {
+  "name": "PEG-60 hydrogenated castor oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PEG-60 Hydrogenated Castor Oil"
+  ],
+  "use": "Solubilizer"
+ },
+ {
+  "name": "PEG-7 trimethylolpropane coconut ether",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PEG-7 Trimethylolpropane Coconut Ether"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "PEG-8",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PEG-8"
+  ],
+  "use": "Humectant, solvent"
+ },
+ {
+  "name": "PEG-8 stearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PEG-8 Stearate"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "PEG-80 sorbitan laurate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PEG-80 Sorbitan Laurate"
+  ],
+  "use": "Cleansing agent (mild)"
+ },
+ {
+  "name": "PEG-9 polydimethylsiloxyethyl dimethicone",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PEG-9 Polydimethylsiloxyethyl Dimethicone"
+  ],
+  "use": "Emulsifier (silicone)"
+ },
+ {
+  "name": "PEG-90m",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PEG-90M"
+  ],
+  "use": "Thickener (shave foam glide)"
+ },
+ {
+  "name": "PPG-14 butyl ether",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PPG-14 Butyl Ether"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "PPG-26-buteth-26",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PPG-26-Buteth-26"
+  ],
+  "use": "Solubilizer"
+ },
+ {
+  "name": "PPG-3 myristyl ether",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PPG-3 Myristyl Ether"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Polyvinylpyrrolidone",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "PVP",
+   "Polyvinylpyrrolidone"
+  ],
+  "use": "Film former"
+ },
+ {
+  "name": "White peony root extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Paeonia Albiflora Root Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Palmitoyl pentapeptide-4 (Matrixyl)",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Palmitoyl Pentapeptide-4"
+  ],
+  "use": "Peptide"
+ },
+ {
+  "name": "Palmitoyl tetrapeptide-7",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Palmitoyl Tetrapeptide-7"
+  ],
+  "use": "Peptide"
+ },
+ {
+  "name": "Palmitoyl tripeptide-1",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Palmitoyl Tripeptide-1"
+  ],
+  "use": "Peptide"
+ },
+ {
+  "name": "Palmitoyl tripeptide-8",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Palmitoyl Tripeptide-8"
+  ],
+  "use": "Peptide"
+ },
+ {
+  "name": "Ginseng root extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Panax Ginseng Root Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Panthenyl ethyl ether",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Panthenyl Ethyl Ether"
+  ],
+  "use": "Hair conditioning (provitamin B5)"
+ },
+ {
+  "name": "Pantolactone",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "79-50-5",
+  "cid": 989,
+  "formula": "C6H10O3",
+  "molarMass": 130.142,
+  "iupac": "4,4-dimethyl-3-oxidanyl-oxolan-2-one",
+  "melt": 91.0,
+  "inci": [
+   "Pantolactone"
+  ],
+  "use": "Humectant"
+ },
+ {
+  "name": "PEG/PPG/polybutylene glycol-8/5/3 glycerin",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Peg/Ppg/Polybutylene Glycol-8/5/3 Glycerin"
+  ],
+  "use": "Humectant"
+ },
+ {
+  "name": "Pentaerythrityl tetra-di-t-butyl hydroxyhydrocinnamate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Pentaerythrityl Tetra-Di-t-Butyl Hydroxyhydrocinnamate"
+  ],
+  "use": "Antioxidant"
+ },
+ {
+  "name": "Pentaerythrityl tetraisostearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Pentaerythrityl Tetraisostearate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "1,2-Pentanediol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "5343-92-0",
+  "cid": 93000,
+  "formula": "C5H12O2",
+  "molarMass": 104.148,
+  "iupac": "pentane-1,2-diol",
+  "melt": 104.0,
+  "boil": 209.0,
+  "inci": [
+   "Pentylene Glycol"
+  ],
+  "use": "Humectant, preservative booster"
+ },
+ {
+  "name": "Peptide complex",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Peptide Complex"
+  ],
+  "use": "Peptide"
+ },
+ {
+  "name": "Perlite",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Perlite"
+  ],
+  "use": "Absorbent (volcanic glass)"
+ },
+ {
+  "name": "Avocado oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Persea Gratissima Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Phenyl trimethicone",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "2116-84-9",
+  "cid": 62427,
+  "formula": "C15H32O3Si4",
+  "molarMass": 372.755,
+  "iupac": "trimethyl-[phenyl-bis(trimethylsilyloxy)silyl]oxy-silane",
+  "melt": -102.0,
+  "boil": 265.0,
+  "inci": [
+   "Phenyl Trimethicone"
+  ],
+  "use": "Silicone, shine"
+ },
+ {
+  "name": "3-Phenyl-1-propanol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "122-97-4",
+  "cid": 31234,
+  "formula": "C9H12O",
+  "molarMass": 136.191,
+  "iupac": "3-phenylpropan-1-ol",
+  "melt": -18.0,
+  "boil": 241.0,
+  "density": 0.995,
+  "flash": 109.0,
+  "inci": [
+   "Phenylpropanol"
+  ],
+  "use": "Preservative booster"
+ },
+ {
+  "name": "Phosphates (pyrophosphates)",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Phosphates"
+  ],
+  "use": "Anti-tartar agent"
+ },
+ {
+  "name": "Phytosphingosine",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Phytosphingosine"
+  ],
+  "use": "Skin-barrier lipid"
+ },
+ {
+  "name": "Phytosteryl canola glycerides",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Phytosteryl Canola Glycerides"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Phytosteryl/isostearyl/cetyl/stearyl/behenyl dimer dilinoleate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Phytosteryl/Isostearyl/Cetyl/Stearyl/Behenyl Dimer Dilinoleate"
+  ],
+  "use": "Emollient (lip)"
+ },
+ {
+  "name": "Longleaf pine extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Pinus Palustris Leaf Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Poloxamer 184",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Poloxamer 184"
+  ],
+  "use": "Cleansing agent (non-ionic)"
+ },
+ {
+  "name": "Poloxamer 338",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Poloxamer 338"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Poloxamer 407",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Poloxamer 407"
+  ],
+  "use": "Solubilizer"
+ },
+ {
+  "name": "Poly C10-30 alkyl acrylate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Poly C10-30 Alkyl Acrylate"
+  ],
+  "use": "Film former (water resistance)"
+ },
+ {
+  "name": "Polyacrylamide",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polyacrylamide"
+  ],
+  "use": "Thickener"
+ },
+ {
+  "name": "Polyacrylate crosspolymer-6",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polyacrylate Crosspolymer-6"
+  ],
+  "use": "Thickener"
+ },
+ {
+  "name": "Polybutene",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polybutene"
+  ],
+  "use": "Film former (gloss)"
+ },
+ {
+  "name": "Polyethylene",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polyethylene"
+  ],
+  "use": "Thickener, film former"
+ },
+ {
+  "name": "Polyglyceryl-10 laurate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polyglyceryl-10 Laurate"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Polyglyceryl-10 stearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polyglyceryl-10 Stearate"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Polyglyceryl-2 diisostearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polyglyceryl-2 Diisostearate"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Polyglyceryl-2 sesquiisostearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polyglyceryl-2 Sesquiisostearate"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Polyglyceryl-3 methylglucose distearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polyglyceryl-3 Methylglucose Distearate"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Polyglyceryl-4 caprate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polyglyceryl-4 Caprate"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Polyglyceryl-4 isostearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polyglyceryl-4 Isostearate"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Solomon's seal extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polygonatum Officinale Rhizome/Root Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Polyisobutene",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polyisobutene",
+   "Polyisobutylene"
+  ],
+  "use": "Film former; Adhesive (patch)"
+ },
+ {
+  "name": "Polymethyl methacrylate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polymethyl Methacrylate"
+  ],
+  "use": "Texture (soft-focus powder)"
+ },
+ {
+  "name": "Polymethylsilsesquioxane",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polymethylsilsesquioxane"
+  ],
+  "use": "Texture (silicone powder)"
+ },
+ {
+  "name": "Polypropylsilsesquioxane",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polypropylsilsesquioxane"
+  ],
+  "use": "Film former (silicone resin)"
+ },
+ {
+  "name": "Polyquaternium-10",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polyquaternium-10"
+  ],
+  "use": "Hair conditioning, film former"
+ },
+ {
+  "name": "Polyquaternium-37",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polyquaternium-37"
+  ],
+  "use": "Hair conditioning, thickener"
+ },
+ {
+  "name": "Polysilicone-11",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polysilicone-11"
+  ],
+  "use": "Film former (silicone)"
+ },
+ {
+  "name": "Polysorbate 20",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polysorbate 20"
+  ],
+  "use": "Emulsifier, solubilizer"
+ },
+ {
+  "name": "Polysorbate 60",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polysorbate 60"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Polyvinyl alcohol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Polyvinyl Alcohol"
+  ],
+  "use": "Film former"
+ },
+ {
+  "name": "Purslane extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Portulaca Oleracea Extract"
+  ],
+  "use": "Soothing (plant extract)"
+ },
+ {
+  "name": "Potassium cetyl phosphate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "19035-79-1",
+  "cid": 23672321,
+  "formula": "C16H34KO4P",
+  "molarMass": 360.511,
+  "iupac": "potassium;hexadecyl hydrogen phosphate",
+  "inci": [
+   "Potassium Cetyl Phosphate"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Potassium phosphate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "7778-53-2",
+  "cid": 62657,
+  "formula": "K3O4P",
+  "molarMass": 212.266,
+  "iupac": "tripotassium;phosphate",
+  "melt": 1340.0,
+  "density": 2.564,
+  "inci": [
+   "Potassium Phosphate"
+  ],
+  "use": "Buffer (pH adjuster)"
+ },
+ {
+  "name": "1,3-Propanediol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "504-63-2",
+  "cid": 10442,
+  "formula": "C3H8O2",
+  "molarMass": 76.094,
+  "iupac": "propane-1,3-diol",
+  "melt": -27.6,
+  "boil": 214.7,
+  "density": 1.054,
+  "inci": [
+   "Propanediol"
+  ],
+  "use": "Humectant, solvent"
+ },
+ {
+  "name": "Propolis extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Propolis Extract"
+  ],
+  "use": "Soothing, antibacterial (bee product)"
+ },
+ {
+  "name": "Propyl acetate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "109-60-4",
+  "cid": 7997,
+  "formula": "C5H10O2",
+  "molarMass": 102.132,
+  "iupac": "propyl ethanoate",
+  "melt": -93.0,
+  "boil": 101.0,
+  "density": 0.882,
+  "flash": 10.6,
+  "inci": [
+   "Propyl Acetate"
+  ],
+  "hazards": [
+   "Ontario OEL TWA 200 ppm, STEL 250 ppm",
+   "Flammable (flash point 10.6 °C)"
+  ],
+  "use": "Solvent (nail polish)"
+ },
+ {
+  "name": "Propylene glycol dicaprate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Propylene Glycol Dicaprate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Sweet almond oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Prunus Amygdalus Dulcis Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Almond meal",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Prunus Amygdalus Dulcis Seed Meal"
+  ],
+  "use": "Exfoliant (plant)"
+ },
+ {
+  "name": "Apricot kernel oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Prunus Armeniaca Kernel Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Pseudoalteromonas ferment extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Pseudoalteromonas Ferment Extract"
+  ],
+  "use": "Ferment (skin-conditioning)"
+ },
+ {
+  "name": "Kudzu root extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Pueraria Lobata Root Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Pumpkin ferment extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Pumpkin Ferment Extract"
+  ],
+  "use": "Ferment (enzyme exfoliant)"
+ },
+ {
+  "name": "Pomegranate extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Punica Granatum Fruit Extract"
+  ],
+  "use": "Antioxidant (plant extract)"
+ },
+ {
+  "name": "Quaternium-91",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Quaternium-91"
+  ],
+  "use": "Hair conditioning"
+ },
+ {
+  "name": "Rehmannia root extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Rehmannia Glutinosa Root Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "l-Rhamnose",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "3615-41-6",
+  "cid": 19233,
+  "formula": "C6H12O5",
+  "molarMass": 164.156,
+  "iupac": "(2r,3r,4s,5s)-2,3,4,5-tetrakis(oxidanyl)hexanal",
+  "melt": 122.0,
+  "inci": [
+   "Rhamnose"
+  ],
+  "use": "Humectant, soothing"
+ },
+ {
+  "name": "Rhizopus oligosporus/rice ferment filtrate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Rhizopus Oligosporus/Rice Ferment Filtrate"
+  ],
+  "use": "Ferment"
+ },
+ {
+  "name": "Castor oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Ricinus Communis Seed Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Rosehip oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Rosa Canina Fruit Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Rose oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Rosa Damascena Flower Oil"
+  ],
+  "use": "Fragrance (essential oil)"
+ },
+ {
+  "name": "Rose water",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Rosa Damascena Flower Water"
+  ],
+  "use": "Soothing (floral water)"
+ },
+ {
+  "name": "Rosemary extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Rosmarinus Officinalis Leaf Extract"
+  ],
+  "use": "Antioxidant (plant extract)"
+ },
+ {
+  "name": "Rosemary oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Rosmarinus Officinalis Leaf Oil"
+  ],
+  "use": "Fragrance (essential oil)"
+ },
+ {
+  "name": "Saccharomyces ferment",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Saccharomyces Ferment",
+   "Saccharomyces/Rice Ferment Filtrate"
+  ],
+  "use": "Ferment"
+ },
+ {
+  "name": "Sargassum fulvellum extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sargassum Fulvellum Extract"
+  ],
+  "use": "Plant extract (seaweed)"
+ },
+ {
+  "name": "Marula oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sclerocarya Birrea Seed Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Sea water",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sea Water"
+  ],
+  "use": "Skin-conditioning (minerals)"
+ },
+ {
+  "name": "Sesame oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sesamum Indicum Oil",
+   "Sesamum Indicum Seed Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Sesame seed powder",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sesamum Indicum Seed Powder"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Silica",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "7631-86-9",
+  "cid": 24261,
+  "formula": "O2Si",
+  "molarMass": 60.084,
+  "iupac": "dioxosilane",
+  "melt": 164.5,
+  "boil": 2230.0,
+  "inci": [
+   "Silica"
+  ],
+  "use": "Absorbent, texture"
+ },
+ {
+  "name": "Silica dimethyl silylate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Silica Dimethyl Silylate"
+  ],
+  "use": "Thickener (oil phase)"
+ },
+ {
+  "name": "Jojoba oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Simmondsia Chinensis Seed Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Snail secretion filtrate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Snail Secretion Filtrate"
+  ],
+  "use": "Humectant, skin-conditioning"
+ },
+ {
+  "name": "Sodium acetylated hyaluronate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Acetylated Hyaluronate"
+  ],
+  "use": "Humectant"
+ },
+ {
+  "name": "Sodium acrylates copolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Acrylates Copolymer"
+  ],
+  "use": "Thickener"
+ },
+ {
+  "name": "Sodium ascorbyl phosphate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Ascorbyl Phosphate"
+  ],
+  "use": "Antioxidant (vitamin C derivative)"
+ },
+ {
+  "name": "Sodium benzotriazolyl butylphenol sulfonate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Benzotriazolyl Butylphenol Sulfonate"
+  ],
+  "use": "UV absorber (protects the product)"
+ },
+ {
+  "name": "Sodium borate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "1330-43-4",
+  "cid": 10219853,
+  "formula": "B4Na2O7",
+  "molarMass": 201.219,
+  "iupac": "disodium;3,7-dioxido-2,4,6,8,9-pentaoxa-1,3,5,7-tetraborabicyclo[3.3.1]nonane",
+  "melt": 743.0,
+  "boil": 1575.0,
+  "density": 2.4,
+  "inci": [
+   "Sodium Borate"
+  ],
+  "hazards": [
+   "Ontario OEL TWA 2 mg/m³, STEL 6 mg/m³"
+  ],
+  "use": "Emulsifier (cold cream)"
+ },
+ {
+  "name": "Sodium C14-16 olefin sulfonate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium C14-16 Olefin Sulfonate"
+  ],
+  "use": "Cleansing agent (anionic)"
+ },
+ {
+  "name": "Sodium carbomer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Carbomer"
+  ],
+  "use": "Thickener"
+ },
+ {
+  "name": "Sodium cocoate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Cocoate"
+  ],
+  "use": "Cleansing agent (soap)"
+ },
+ {
+  "name": "Sodium dehydroacetate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "4418-26-2",
+  "cid": 23675081,
+  "formula": "C8H7NaO4",
+  "molarMass": 190.129,
+  "iupac": "sodium;(1e)-1-[6-methyl-2,4-bis(oxidanylidene)pyran-3-ylidene]ethanolate",
+  "inci": [
+   "Sodium Dehydroacetate"
+  ],
+  "use": "Preservative"
+ },
+ {
+  "name": "Sodium gluconate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "527-07-1",
+  "cid": 23672301,
+  "formula": "C6H11NaO7",
+  "molarMass": 218.137,
+  "iupac": "sodium;(2r,3s,4r,5r)-2,3,4,5,6-pentakis(oxidanyl)hexanoate",
+  "inci": [
+   "Sodium Gluconate"
+  ],
+  "use": "Chelating agent"
+ },
+ {
+  "name": "Sodium hexametaphosphate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Hexametaphosphate"
+  ],
+  "use": "Anti-tartar, anti-stain"
+ },
+ {
+  "name": "Sodium hyaluronate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "9067-32-7",
+  "cid": 3084049,
+  "formula": "C28H44N2NaO23+",
+  "molarMass": 799.638,
+  "iupac": "sodium;(2s,3s,4s,5r,6r)-6-[(2s,3r,4r,5s,6r)-3-acetamido-2-[(2s,3s,4r,5r,6r)-6-[(2r,3s,4r,5r,6r)-5-acetamido-2-(hydroxymethyl)-3,6-bis(oxidanyl)oxan-4-yl]oxy-2-carboxy-4,5-bis(oxidanyl)oxan-3-yl]oxy-6-(hydroxymethyl)-5-oxidanyl-oxan-4-yl]oxy-3,4,5-tris(oxidanyl)oxane-2-carboxylic acid",
+  "inci": [
+   "Sodium Hyaluronate"
+  ],
+  "use": "Humectant"
+ },
+ {
+  "name": "Sodium hyaluronate crosspolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Hyaluronate Crosspolymer"
+  ],
+  "use": "Humectant, film former"
+ },
+ {
+  "name": "Sodium isethionate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "1562-00-1",
+  "cid": 517063,
+  "formula": "C2H5NaO4S",
+  "molarMass": 148.113,
+  "iupac": "sodium;2-oxidanylethanesulfonate",
+  "melt": 193.0,
+  "inci": [
+   "Sodium Isethionate"
+  ],
+  "use": "Cleansing agent"
+ },
+ {
+  "name": "Sodium lactate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "72-17-3",
+  "cid": 23666456,
+  "formula": "C3H5NaO3",
+  "molarMass": 112.06,
+  "iupac": "sodium;2-oxidanylpropanoate",
+  "inci": [
+   "Sodium Lactate"
+  ],
+  "use": "Humectant (natural moisturizing factor)"
+ },
+ {
+  "name": "Sodium lauroyl isethionate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Lauroyl Isethionate"
+  ],
+  "use": "Cleansing agent (mild anionic)"
+ },
+ {
+  "name": "Sodium lauroyl lactylate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Lauroyl Lactylate"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Sodium lauroyl methyl isethionate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Lauroyl Methyl Isethionate"
+  ],
+  "use": "Cleansing agent (mild anionic)"
+ },
+ {
+  "name": "Sodium methyl cocoyl taurate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Methyl Cocoyl Taurate"
+  ],
+  "use": "Cleansing agent (mild anionic)"
+ },
+ {
+  "name": "Sodium methyl stearoyl taurate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "149-39-3",
+  "cid": 23667652,
+  "formula": "C21H42NNaO4S",
+  "molarMass": 427.617,
+  "iupac": "sodium;2-[methyl(octadecanoyl)amino]ethanesulfonate",
+  "inci": [
+   "Sodium Methyl Stearoyl Taurate"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Sodium palm kernelate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Palm Kernelate"
+  ],
+  "use": "Cleansing agent (soap)"
+ },
+ {
+  "name": "Sodium palmate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Palmate"
+  ],
+  "use": "Cleansing agent (soap)"
+ },
+ {
+  "name": "Sodium phytate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Phytate"
+  ],
+  "use": "Chelating agent"
+ },
+ {
+  "name": "Sodium polyacrylate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Polyacrylate"
+  ],
+  "use": "Thickener"
+ },
+ {
+  "name": "Sodium polyacryloyldimethyl taurate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Polyacryloyldimethyl Taurate"
+  ],
+  "use": "Thickener"
+ },
+ {
+  "name": "Sodium starch octenylsuccinate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Starch Octenylsuccinate"
+  ],
+  "use": "Absorbent"
+ },
+ {
+  "name": "Sodium stearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "822-16-2",
+  "cid": 2724691,
+  "formula": "C18H35NaO2",
+  "molarMass": 306.459,
+  "iupac": "sodium;octadecanoate",
+  "melt": 270.0,
+  "inci": [
+   "Sodium Stearate"
+  ],
+  "use": "Cleansing agent (soap), thickener"
+ },
+ {
+  "name": "Sodium stearoyl glutamate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Stearoyl Glutamate"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Sodium tallowate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Tallowate"
+  ],
+  "use": "Cleansing agent (soap)"
+ },
+ {
+  "name": "Sodium trideceth sulfate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Trideceth Sulfate"
+  ],
+  "use": "Cleansing agent (anionic)"
+ },
+ {
+  "name": "Sodium xylenesulfonate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sodium Xylenesulfonate"
+  ],
+  "use": "Viscosity control"
+ },
+ {
+  "name": "Tomato extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Solanum Lycopersicum Fruit Extract"
+  ],
+  "use": "Antioxidant (plant extract)"
+ },
+ {
+  "name": "Sorbitan isostearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sorbitan Isostearate"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Sorbitan olivate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sorbitan Olivate"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Soy protein",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Soy Protein"
+  ],
+  "use": "Skin-conditioning (protein)"
+ },
+ {
+  "name": "Stannous chloride",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "7772-99-8",
+  "cid": 24479,
+  "formula": "Cl2Sn",
+  "molarMass": 189.607,
+  "iupac": "dichlorotin",
+  "melt": 247.0,
+  "boil": 623.0,
+  "density": 3.9,
+  "inci": [
+   "Stannous Chloride"
+  ],
+  "use": "Anti-sensitivity, anti-gingivitis"
+ },
+ {
+  "name": "Stearalkonium bentonite",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Stearalkonium Bentonite"
+  ],
+  "use": "Thickener (clay)"
+ },
+ {
+  "name": "Stearalkonium hectorite",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Stearalkonium Hectorite"
+  ],
+  "use": "Thickener (clay)"
+ },
+ {
+  "name": "Stearamide AMP",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Stearamide AMP"
+  ],
+  "use": "Thickener, opacifier"
+ },
+ {
+  "name": "Stearamidopropyl dimethylamine",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "7651-02-7",
+  "cid": 62109,
+  "formula": "C23H48N2O",
+  "molarMass": 368.64,
+  "iupac": "n-[3-(dimethylamino)propyl]octadecanamide",
+  "melt": 49.5,
+  "inci": [
+   "Stearamidopropyl Dimethylamine"
+  ],
+  "use": "Hair conditioning"
+ },
+ {
+  "name": "Japanese snowbell extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Styrax Japonicus Branch/Fruit/Leaf Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Styrene/isoprene copolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Styrene Isoprene Styrene Block Copolymer"
+  ],
+  "use": "Adhesive (patch)"
+ },
+ {
+  "name": "Styrene/acrylates copolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Styrene/Acrylates Copolymer"
+  ],
+  "use": "Film former"
+ },
+ {
+  "name": "Styrene/acrylates/ammonium methacrylate copolymer",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Styrene/Acrylates/Ammonium Methacrylate Copolymer"
+  ],
+  "use": "Film former (mascara)"
+ },
+ {
+  "name": "Sucrose laurate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sucrose Dilaurate",
+   "Sucrose Laurate",
+   "Sucrose Trilaurate"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Sucrose stearate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sucrose Stearate"
+  ],
+  "use": "Emulsifier"
+ },
+ {
+  "name": "Sucrose tetrastearate triacetate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Sucrose Tetrastearate Triacetate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Comfrey callus culture extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Symphytum Officinale Callus Culture Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Synthetic beeswax",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Synthetic Beeswax"
+  ],
+  "use": "Wax"
+ },
+ {
+  "name": "Synthetic wax",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Synthetic Wax"
+  ],
+  "use": "Wax"
+ },
+ {
+  "name": "Tackifier resin",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Tackifier Resin"
+  ],
+  "use": "Adhesive (patch)"
+ },
+ {
+  "name": "Tamarind seed gum",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Tamarindus Indica Seed Gum"
+  ],
+  "use": "Thickener, humectant"
+ },
+ {
+  "name": "Tasmanian pepperberry extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Tasmannia Lanceolata Fruit/Leaf Extract"
+  ],
+  "use": "Soothing (plant extract)"
+ },
+ {
+  "name": "Tetrasodium etidronate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Tetrasodium Etidronate"
+  ],
+  "use": "Chelating agent"
+ },
+ {
+  "name": "Cocoa butter",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Theobroma Cacao Seed Butter"
+  ],
+  "use": "Emollient (plant butter)"
+ },
+ {
+  "name": "Tocopherol",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "10191-41-0",
+  "cid": 2116,
+  "formula": "C29H50O2",
+  "molarMass": 430.706,
+  "iupac": "2,5,7,8-tetramethyl-2-(4,8,12-trimethyltridecyl)-3,4-dihydrochromen-6-ol",
+  "inci": [
+   "Tocopherol"
+  ],
+  "use": "Antioxidant (vitamin E)"
+ },
+ {
+  "name": "Tocopherol succinate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "4345-03-3",
+  "cid": 20353,
+  "formula": "C33H54O5",
+  "molarMass": 530.779,
+  "iupac": "4-oxidanylidene-4-[[(2r)-2,5,7,8-tetramethyl-2-[(4r,8r)-4,8,12-trimethyltridecyl]-3,4-dihydrochromen-6-yl]oxy]butanoic acid",
+  "melt": 76.5,
+  "inci": [
+   "Tocopheryl Succinate"
+  ],
+  "use": "Antioxidant (vitamin E ester)"
+ },
+ {
+  "name": "Tosylamide/epoxy resin",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Tosylamide/Epoxy Resin"
+  ],
+  "use": "Film former (nail polish)"
+ },
+ {
+  "name": "Tribehenin",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "18641-57-1",
+  "cid": 62726,
+  "formula": "C69H134O6",
+  "molarMass": 1059.799,
+  "iupac": "2,3-di(docosanoyloxy)propyl docosanoate",
+  "melt": 41.0,
+  "inci": [
+   "Tribehenin"
+  ],
+  "use": "Emollient, thickener"
+ },
+ {
+  "name": "Tridecyl trimellitate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Tridecyl Trimellitate"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Triethoxycaprylylsilane",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Triethoxycaprylylsilane"
+  ],
+  "use": "Pigment coating (silane)"
+ },
+ {
+  "name": "Triethylhexanoin",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Triethylhexanoin"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Triisononanoin",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Triisononanoin"
+  ],
+  "use": "Emollient"
+ },
+ {
+  "name": "Trimethylsiloxysilicate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Trimethylsiloxysilicate"
+  ],
+  "use": "Film former (long wear)"
+ },
+ {
+  "name": "Triolein",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "122-32-7",
+  "cid": 5497163,
+  "formula": "C57H104O6",
+  "molarMass": 885.432,
+  "iupac": "2,3-bis[[(Z)-octadec-9-enoyl]oxy]propyl (Z)-octadec-9-enoate",
+  "melt": 5.3,
+  "density": 0.915,
+  "inci": [
+   "Triolein"
+  ],
+  "use": "Emollient (lipid)"
+ },
+ {
+  "name": "Tripeptide-32",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Tripeptide-32"
+  ],
+  "use": "Peptide"
+ },
+ {
+  "name": "Trisodium EDTA",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Trisodium EDTA"
+  ],
+  "use": "Chelating agent"
+ },
+ {
+  "name": "Trisodium ethylenediamine disuccinate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Trisodium Ethylenediamine Disuccinate"
+  ],
+  "use": "Chelating agent"
+ },
+ {
+  "name": "Tristearin",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "555-43-1",
+  "cid": 11146,
+  "formula": "C57H110O6",
+  "molarMass": 891.48,
+  "iupac": "2,3-di(octadecanoyloxy)propyl octadecanoate",
+  "melt": 55.0,
+  "density": 0.856,
+  "inci": [
+   "Tristearin"
+  ],
+  "use": "Thickener (oil phase)"
+ },
+ {
+  "name": "Elm root extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Ulmus Davidiana Root Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Wakame extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Undaria Pinnatifida Extract"
+  ],
+  "use": "Plant extract (seaweed)"
+ },
+ {
+  "name": "D&C violet 2 (CI 60725)",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Violet 2"
+  ],
+  "use": "Colourant (violet)"
+ },
+ {
+  "name": "Chasteberry extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Vitex Agnus Castus Extract",
+   "Vitex Agnus-Castus Extract"
+  ],
+  "use": "Plant extract"
+ },
+ {
+  "name": "Grapevine shoot extract (Viniferine)",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Vitis Vinifera Shoot Extract"
+  ],
+  "use": "Brightening (plant extract)"
+ },
+ {
+  "name": "Vitreoscilla ferment",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Vitreoscilla Ferment"
+  ],
+  "use": "Ferment (skin-conditioning)"
+ },
+ {
+  "name": "Yeast extract",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Yeast Extract"
+  ],
+  "use": "Skin-conditioning"
+ },
+ {
+  "name": "Corn germ oil",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Zea Mays Germ Oil"
+  ],
+  "use": "Emollient (plant oil)"
+ },
+ {
+  "name": "Corn starch",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Zea Mays Starch"
+  ],
+  "use": "Absorbent"
+ },
+ {
+  "name": "Zinc carbonate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "3486-35-9",
+  "cid": 19005,
+  "formula": "CO3Zn",
+  "molarMass": 125.389,
+  "iupac": "zinc;carbonate",
+  "density": 4.434,
+  "inci": [
+   "Zinc Carbonate"
+  ],
+  "use": "Skin protectant (anti-dandruff booster)"
+ },
+ {
+  "name": "Zinc gluconate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "4468-02-4",
+  "cid": 20543,
+  "formula": "C12H24O14Zn",
+  "molarMass": 457.691,
+  "iupac": "(2r,3s,4r,5r)-2,3,4,5,6-pentakis(oxidanyl)hexanoic acid;zinc",
+  "melt": 173.5,
+  "boil": 319.0,
+  "inci": [
+   "Zinc Gluconate"
+  ],
+  "use": "Skin-conditioning (mineral)"
+ },
+ {
+  "name": "Zinc lactate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Zinc Lactate"
+  ],
+  "use": "Anti-tartar, breath"
+ },
+ {
+  "name": "Zinc PCA",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "Zinc PCA"
+  ],
+  "use": "Sebum control (mineral)"
+ },
+ {
+  "name": "Zinc phosphate",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "cas": "7779-90-0",
+  "cid": 24519,
+  "formula": "O8P2Zn3",
+  "molarMass": 386.083,
+  "iupac": "trizinc;diphosphate",
+  "melt": 900.0,
+  "density": 4.0,
+  "inci": [
+   "Zinc Phosphate"
+  ],
+  "use": "Anti-tartar, anti-gingivitis"
+ },
+ {
+  "name": "Sh-oligopeptide-1 (EGF)",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "sh-Oligopeptide-1"
+  ],
+  "use": "Peptide (growth factor)"
+ },
+ {
+  "name": "Sh-oligopeptide-2 (IGF)",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "sh-Oligopeptide-2"
+  ],
+  "use": "Peptide (growth factor)"
+ },
+ {
+  "name": "Sh-polypeptide-1 (FGF)",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "sh-Polypeptide-1"
+  ],
+  "use": "Peptide (growth factor)"
+ },
+ {
+  "name": "Sh-polypeptide-11",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "sh-Polypeptide-11"
+  ],
+  "use": "Peptide (growth factor)"
+ },
+ {
+  "name": "Sh-polypeptide-9 (VEGF)",
+  "category": "Cosmetic & Personal Care",
+  "fields": [
+   "Cosmetic & Personal Care"
+  ],
+  "live": true,
+  "inci": [
+   "sh-Polypeptide-9"
+  ],
+  "use": "Peptide (growth factor)"
  }
 ];

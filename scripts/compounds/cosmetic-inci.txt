@@ -1,0 +1,723 @@
+# Cosmetic ingredients by INCI name, as printed on product labels
+# (js/lib/cosmetics). Every one becomes a Compound Database record in the
+# Cosmetic & Personal Care field, and the INCI name is kept on that record
+# so it can be searched by the name on the pack.
+#
+# INCI name | compound | what it does in the product
+#   compound: "=" looks the INCI name itself up in the source tables;
+#             a chemical name looks that name up instead;
+#             "~name" is a mixture, polymer or botanical with no single
+#             structure, kept as a named record (PubChem is asked live).
+1,2-Hexanediol | = | Preservative booster, humectant
+Acacia Senegal Gum | ~acacia gum | Thickener, film former
+Acetyl Glutamine | ~acetyl glutamine | Skin-conditioning active (amino acid)
+Acetyl Tributyl Citrate | = | Plasticizer (nail polish)
+Acetylated Glycol Stearate | ~acetylated glycol stearate | Emollient
+Acrylates Copolymer | ~acrylates copolymer | Film former
+Acrylates/C10-30 Alkyl Acrylate Crosspolymer | ~acrylates/C10-30 alkyl acrylate crosspolymer | Thickener, emulsion stabilizer
+Acrylates/Dimethicone Copolymer | ~acrylates/dimethicone copolymer | Film former
+Acrylates/Octylacrylamide Copolymer | ~acrylates/octylacrylamide copolymer | Film former (setting spray)
+Adansonia Digitata Seed Oil | ~baobab seed oil | Emollient (plant oil)
+Adenosine | = | Skin-conditioning active (anti-wrinkle)
+Adenosine Phosphate | = | Skin-conditioning active
+Adipic Acid/Neopentyl Glycol/Trimellitic Anhydride Copolymer | ~adipic acid/neopentyl glycol/trimellitic anhydride copolymer | Film former (nail polish)
+Ahnfeltia Concinna Extract | ~ahnfeltia concinna algae extract | Plant extract (red algae)
+Alanine | l-alanine | Skin-conditioning active (amino acid)
+Alcohol | ethanol | Solvent
+Alcohol Denat. | ~denatured alcohol | Solvent, astringent
+Algae Extract | ~algae extract | Plant extract (seaweed)
+Allantoin | = | Soothing, skin protectant
+Aloe Barbadensis Leaf Extract | ~aloe vera | Soothing (plant extract)
+Aloe Barbadensis Leaf Juice | ~aloe vera | Soothing (plant extract)
+Aloe Barbadensis Leaf Water | ~aloe vera | Soothing (plant extract)
+Alpha-Isomethyl Ionone | alpha-isomethyl ionone | Fragrance allergen (violet)
+Alumina | aluminum oxide | Absorbent, opacifier
+Aluminum Chlorohydrate | aluminium chlorohydrate | Antiperspirant
+Aluminum Distearate | = | Thickener (oil phase)
+Aluminum Hydroxide | = | Opacifier, pigment coating
+Aluminum Starch Octenylsuccinate | ~aluminum starch octenylsuccinate | Absorbent, mattifier
+Aluminum Stearate | = | Thickener (oil phase)
+Aluminum Stearates | aluminum stearate | Thickener (oil phase)
+Aminomethyl Propanediol | = | pH adjuster
+Aminomethyl Propanol | = | pH adjuster
+Ammonium Polyacryldimethyltauramide | ~ammonium polyacryloyldimethyl taurate | Thickener
+Ammonium Polyacryloyldimethyl Taurate | ~ammonium polyacryloyldimethyl taurate | Thickener
+Anthemis Nobilis Flower Extract | ~Roman chamomile | Soothing (plant extract)
+Anthemis Nobilis Flower Oil | ~Roman chamomile | Fragrance (essential oil)
+Aqua | water | Solvent
+Aquaphilus Dolomiae Ferment Filtrate | ~aquaphilus dolomiae ferment filtrate | Soothing (postbiotic)
+Argania Spinosa Kernel Oil | ~argan oil | Emollient (plant oil)
+Arginine | l-arginine | Skin-conditioning active (amino acid), pH adjuster
+Arginine HCl | l-arginine hydrochloride | Skin-conditioning active (amino acid)
+Aroma | ~fragrance | Flavour
+Ascorbic Acid | = | Antioxidant (vitamin C)
+Ascorbyl Glucoside | ascorbic acid 2-glucoside | Antioxidant (vitamin C derivative)
+Ascorbyl Palmitate | = | Antioxidant (vitamin C derivative)
+Aspartic Acid | l-aspartic acid | Skin-conditioning active (amino acid)
+Aspergillus Ferment Extract | ~aspergillus ferment | Ferment
+Astrocaryum Murumuru Seed Butter | ~murumuru butter | Emollient (plant butter)
+Avene Aqua | ~Avène thermal spring water | Soothing (thermal water)
+Avobenzone | = | UV filter (UVA)
+Azadirachta Indica Leaf Extract | ~neem leaf extract | Plant extract (antibacterial)
+Azelaic Acid | = | Skin-conditioning active (anti-blemish, tone)
+BHA | butylated hydroxyanisole | Antioxidant
+BHT | = | Antioxidant
+Bacillus/Soybean Ferment Extract | ~bacillus/soybean ferment extract | Ferment
+Bacillus/Soybean/Folic Acid Ferment Extract | ~bacillus/soybean ferment extract | Ferment
+Barbados Cherry Extract | ~acerola cherry extract | Antioxidant (plant extract)
+Beeswax | ~beeswax | Wax
+Behentrimonium Chloride | behentrimonium chloride | Hair conditioning
+Behentrimonium Methosulfate | = | Hair conditioning, emulsifier
+Behenyl Alcohol | = | Emollient, thickener
+Benzalkonium Chloride | = | Preservative, antimicrobial
+Benzoic Acid | = | Preservative
+Benzophenone-1 | = | UV absorber (protects the colour)
+Benzyl Alcohol | = | Preservative, fragrance allergen
+Benzyl Benzoate | = | Fragrance allergen, solvent
+Benzyl Cinnamate | = | Fragrance allergen
+Benzyl Salicylate | = | Fragrance allergen, UV absorber
+Beta-Carotene | = | Antioxidant, colourant
+Betaine | = | Humectant
+Betaine Salicylate | ~betaine salicylate | Exfoliant (BHA)
+Bifida Ferment Lysate | ~bifida ferment lysate | Ferment (skin-conditioning)
+Biosaccharide Gum-1 | ~biosaccharide gum-1 | Humectant, soothing
+Biotin | = | Vitamin (B7)
+Bis-Aminopropyl Diglycol Dimaleate | ~bis-aminopropyl diglycol dimaleate | Hair conditioning (bond builder)
+Bis-Diglyceryl Polyacyladipate-2 | ~bis-diglyceryl polyacyladipate-2 | Emollient
+Bis-Ethylhexyloxyphenol Methoxyphenyl Triazine | bemotrizinol | UV filter (broad spectrum)
+Bis-PEG-18 Methyl Ether Dimethyl Silane | ~bis-PEG-18 methyl ether dimethyl silane | Silicone, skin-conditioning
+Bisabolol | alpha-bisabolol | Soothing
+Borago Officinalis Seed Oil | ~borage seed oil | Emollient (plant oil)
+Boswellia Serrata Extract | ~boswellia serrata extract | Soothing (plant extract)
+Brassica Oleracea Italica Extract | ~broccoli extract | Plant extract
+Butane | = | Propellant
+Butyl Acetate | = | Solvent (nail polish)
+Butyl Methoxydibenzoylmethane | avobenzone | UV filter (UVA)
+Butylene Glycol | 1,3-butanediol | Humectant, solvent
+Butylene/Ethylene/Styrene Copolymer | ~butylene/ethylene/styrene copolymer | Thickener (gloss)
+Butyloctyl Salicylate | butyloctyl salicylate | Emollient, SPF booster
+Butylparaben | = | Preservative
+Butylphenyl Methylpropional | = | Fragrance allergen (lilial; banned in the EU since 2022)
+Butyrospermum Parkii Butter | ~shea butter | Emollient (plant butter)
+C12-15 Alkyl Benzoate | = | Emollient
+C12-15 Alkyl Lactate | ~C12-15 alkyl lactate | Emollient
+C13-14 Isoparaffin | ~C13-14 isoparaffin | Emollient
+CI 14720 | azorubine | Colourant (red, azorubine)
+CI 15850 | ~CI 15850 (Red 7 / Red 6) | Colourant (red)
+CI 15985 | sunset yellow fcf | Colourant (yellow 6)
+CI 16255 | Ponceau 4R | Colourant (red, ponceau 4R)
+CI 17200 | ~CI 17200 (Red 33) | Colourant (red 33)
+CI 19140 | tartrazine | Colourant (yellow 5)
+CI 26100 | Sudan III | Colourant (red 17)
+CI 42053 | fast green fcf | Colourant (green 3)
+CI 42090 | brilliant blue fcf | Colourant (blue 1)
+CI 45410 | ~CI 45410 (Red 27 / Red 28) | Colourant (red 28)
+CI 47000 | Quinoline yellow SS | Colourant (yellow 11)
+CI 77491 | iron(iii) oxide | Colourant (red iron oxide)
+CI 77492 | ~yellow iron oxide | Colourant (yellow iron oxide)
+CI 77499 | ~iron oxide black | Colourant (black iron oxide)
+CI 77891 | titanium dioxide | Colourant (white), opacifier
+Caffeine | = | Skin-conditioning active
+Calcium Aluminum Borosilicate | ~calcium aluminum borosilicate | Shimmer (glass flakes)
+Calcium Gluconate | = | Skin-conditioning active
+Calcium Sodium Borosilicate | ~calcium sodium borosilicate | Shimmer (glass flakes)
+Calcium Sodium Phosphosilicate | ~calcium sodium phosphosilicate (NovaMin) | Tooth remineralizing (desensitizing)
+Calendula Officinalis Extract | ~calendula extract | Soothing (plant extract)
+Calendula Officinalis Flower Extract | ~calendula extract | Soothing (plant extract)
+Camellia Japonica Seed Oil | ~camellia seed oil | Emollient (plant oil)
+Camellia Oleifera Leaf Extract | ~green tea extract | Antioxidant (plant extract)
+Camellia Sinensis Leaf Extract | ~green tea extract | Antioxidant (plant extract)
+Camellia Sinensis Leaf Water | ~green tea extract | Antioxidant (plant extract)
+Camellia Sinensis Seed Oil | ~green tea seed oil | Emollient (plant oil)
+Camphor | = | Cooling agent, fragrance
+Candelilla Cera | ~candelilla wax | Wax
+Candelilla Wax | ~candelilla wax | Wax
+Canola Oil | ~canola oil | Emollient (plant oil)
+Caprylic/Capric Triglyceride | ~caprylic/capric triglyceride | Emollient
+Capryloyl Salicylic Acid | 5-octanoylsalicylic acid | Exfoliant (LHA)
+Caprylyl Glycol | 1,2-octanediol | Humectant, preservative booster
+Caprylyl Methicone | ~caprylyl methicone | Silicone, emollient
+Carbomer | ~carbomer | Thickener
+Carnitine | = | Skin-conditioning active
+Carnosine | = | Antioxidant
+Carrageenan | ~carrageenan | Thickener
+Cellulose Gum | ~carboxymethyl cellulose | Thickener
+Centaurea Cyanus Flower Water | ~cornflower water | Soothing (floral water)
+Centella Asiatica Extract | ~centella asiatica extract | Soothing (plant extract)
+Cera Alba | ~beeswax | Wax
+Cera Microcristallina | ~microcrystalline wax | Wax, occlusive
+Ceramide AP | ~ceramide ap | Skin-barrier lipid (ceramide)
+Ceramide EOP | ~ceramide eop | Skin-barrier lipid (ceramide)
+Ceramide NP | ~ceramide np | Skin-barrier lipid (ceramide)
+Ceresin | ~ceresin | Wax
+Ceteareth-20 | ~ceteareth-20 | Emulsifier
+Ceteareth-6 | ~ceteareth-6 | Emulsifier
+Cetearyl Alcohol | ~cetearyl alcohol | Emollient, thickener
+Cetearyl Ethylhexanoate | ~cetearyl ethylhexanoate | Emollient
+Cetearyl Olivate | ~cetearyl olivate | Emulsifier
+Cetrimonium Bromide | = | Cleansing agent (cationic), preservative
+Cetrimonium Chloride | = | Hair conditioning
+Cetrimonium Methosulfate | ~cetrimonium methosulfate | Hair conditioning
+Cetyl Alcohol | = | Emollient, thickener
+Cetyl Esters | ~cetyl esters | Emollient, wax
+Cetyl PEG/PPG-10/1 Dimethicone | ~cetyl PEG/PPG-10/1 dimethicone | Emulsifier (silicone)
+Cetyl Palmitate | = | Emollient, wax
+Cetyl-PG Hydroxyethyl Palmitamide | ~cetyl-pg hydroxyethyl palmitamide | Skin-barrier lipid (pseudo-ceramide)
+Chamaecyparis Obtusa Leaf Extract | ~Hinoki cypress leaf extract | Plant extract
+Chamomilla Recutita Flower Extract | ~chamomile extract | Soothing (plant extract)
+Chlorhexidine Digluconate | = | Preservative, antimicrobial
+Chlorphenesin | = | Preservative
+Cholesterol | = | Skin-barrier lipid
+Chondrus Crispus Extract | ~Irish moss extract | Thickener, humectant (seaweed)
+Chromium Oxide Greens | chromium(iii) oxide | Colourant (green)
+Chrysanthemum Indicum Flower Extract | ~chrysanthemum extract | Soothing (plant extract)
+Chrysanthemum Parthenium Extract | ~feverfew extract | Soothing (plant extract)
+Cinnamal | = | Fragrance allergen (cinnamon)
+Cinnamyl Alcohol | = | Fragrance allergen
+Citral | = | Fragrance allergen (lemon)
+Citric Acid | = | pH adjuster
+Citronellol | = | Fragrance allergen (rose)
+Citrus Aurantifolia Peel Extract | ~lime peel extract | Plant extract
+Citrus Aurantium Dulcis Fruit Extract | ~orange fruit extract | Plant extract
+Citrus Aurantium Dulcis Peel Oil | ~orange peel oil | Fragrance (essential oil)
+Citrus Junos Fruit Extract | ~yuzu fruit extract | Antioxidant (plant extract)
+Cocamide MEA | ~cocamide MEA | Foam booster, thickener
+Cocamidopropyl Betaine | = | Cleansing agent (amphoteric)
+Cocamidopropyl Dimethylamine | ~cocamidopropyl dimethylamine | Hair conditioning, emulsifier
+Cocamidopropyl Hydroxysultaine | ~cocamidopropyl hydroxysultaine | Cleansing agent (amphoteric)
+Cocamidopropyl PG-Dimonium Chloride Phosphate | ~cocamidopropyl pg-dimonium chloride phosphate | Conditioning agent
+Coco-Betaine | ~coco-betaine | Cleansing agent (amphoteric)
+Coco-Caprylate/Caprate | ~coco-caprylate/caprate | Emollient
+Coco-Glucoside | ~coco-glucoside | Cleansing agent (non-ionic)
+Coconut Acid | ~coconut acid | Cleansing agent (soap fatty acid)
+Coconut Alkanes | ~coconut alkanes | Emollient
+Cocos Nucifera Oil | ~coconut oil | Emollient (plant oil)
+Cocos Nucifera Water | ~coconut water | Humectant
+Colloidal Oatmeal | ~colloidal oatmeal | Skin protectant, soothing
+Copernicia Cerifera Cera | ~carnauba wax | Wax
+Copper Gluconate | = | Skin-conditioning active (trace mineral)
+Copper Palmitoyl Heptapeptide-14 | ~copper palmitoyl heptapeptide-14 | Peptide
+Copper Sulfate | = | Skin-conditioning active (antibacterial)
+Coriandrum Sativum Fruit Oil | ~coriander seed oil | Emollient, fragrance
+Corylus Avellana Seed Oil | ~hazelnut oil | Emollient (plant oil)
+Coumarin | = | Fragrance allergen (tonka, hay)
+Cryptomeria Japonica Leaf Extract | ~Japanese cedar leaf extract | Plant extract
+Cucumis Sativus Fruit Extract | ~cucumber extract | Soothing (plant extract)
+Curcuma Longa Root Extract | ~turmeric extract | Antioxidant (plant extract)
+Cyanocobalamin | = | Vitamin (B12), colourant
+Cyclohexasiloxane | dodecamethylcyclohexasiloxane | Silicone (volatile)
+Cyclomethicone | ~cyclomethicone | Silicone (volatile)
+Cyclopentasiloxane | ~cyclopentasiloxane | Silicone (volatile)
+Daucus Carota Sativa Extract | ~carrot extract | Plant extract
+Decyl Glucoside | decyl glucoside | Cleansing agent (non-ionic)
+Decyl Oleate | decyl oleate | Emollient
+Dextrin Palmitate | ~dextrin palmitate | Thickener (oil phase)
+Diacetone Alcohol | = | Solvent (nail polish)
+Dibutyl Adipate | = | Emollient, UV-filter solvent
+Dicaprylyl Carbonate | dioctyl carbonate | Emollient
+Dicaprylyl Ether | = | Emollient
+Diethylamino Hydroxybenzoyl Hexyl Benzoate | ~diethylamino hydroxybenzoyl hexyl benzoate (Uvinul A Plus) | UV filter (UVA)
+Diethylhexyl 2,6-Naphthalate | ~diethylhexyl 2,6-naphthalate | Photostabilizer
+Diethylhexyl Butamido Triazone | ~diethylhexyl butamido triazone (iscotrizinol) | UV filter (UVB)
+Diisopropyl Sebacate | diisopropyl decanedioate | Emollient
+Diisostearyl Malate | ~diisostearyl malate | Emollient (lip products)
+Dimethicone | ~dimethicone | Silicone, emollient
+Dimethicone Crosspolymer | ~dimethicone crosspolymer | Silicone, texture
+Dimethicone PEG-7 Isostearate | ~dimethicone PEG-7 isostearate | Silicone, emulsifier
+Dimethicone/Vinyl Dimethicone Crosspolymer | ~dimethicone/vinyl dimethicone crosspolymer | Silicone, texture
+Dimethiconol | ~dimethiconol | Silicone, emollient
+Dimethyl Isosorbide | = | Solvent, penetration enhancer
+Dipotassium Glycyrrhizate | = | Soothing (licorice-derived)
+Dipotassium Phosphate | = | Buffer (pH adjuster)
+Dipropylene Glycol | = | Solvent, humectant
+Disodium EDTA | disodium edta | Chelating agent
+Disodium Laureth Sulfosuccinate | ~disodium laureth sulfosuccinate | Cleansing agent (mild anionic)
+Disodium Stearoyl Glutamate | ~disodium stearoyl glutamate | Emulsifier, pigment coating
+Disteardimonium Hectorite | ~disteardimonium hectorite | Thickener (clay)
+Drometrizole Trisiloxane | ~drometrizole trisiloxane (Mexoryl XL) | UV filter (broad spectrum)
+Ecklonia Cava Extract | ~ecklonia cava extract | Plant extract (seaweed)
+Elastin | ~elastin | Skin-conditioning (protein)
+Epigallocatechin Gallatyl Glucoside | ~epigallocatechin gallatyl glucoside | Antioxidant
+Ethoxydiglycol | = | Solvent
+Ethyl Acetate | = | Solvent (nail polish)
+Ethyl Hexanediol | 2-ethyl-1,3-hexanediol | Solvent, humectant
+Ethyl Macadamiate | ~ethyl macadamiate | Emollient
+Ethylene/Propylene/Styrene Copolymer | ~ethylene/propylene/styrene copolymer | Thickener (gloss)
+Ethylene/VA Copolymer | ~ethylene/vinyl acetate copolymer | Film former, thickener
+Ethylenediamine/Stearyl Dimer Dilinoleate Copolymer | ~ethylenediamine/stearyl dimer dilinoleate copolymer | Film former (mascara)
+Ethylhexyl Hydroxystearate | ~ethylhexyl hydroxystearate | Emollient
+Ethylhexyl Methoxycinnamate | octinoxate | UV filter (UVB)
+Ethylhexyl Palmitate | = | Emollient
+Ethylhexyl Salicylate | octisalate | UV filter (UVB)
+Ethylhexyl Triazone | octyl triazone | UV filter (UVB)
+Ethylhexylglycerin | ethylhexylglycerin | Preservative booster
+Ethylparaben | = | Preservative
+Eucalyptol | = | Cooling agent, flavour
+Eucalyptus Globulus Leaf Extract | ~eucalyptus leaf extract | Plant extract
+Eucalyptus Globulus Leaf Oil | ~eucalyptus oil | Fragrance (essential oil)
+Eugenol | = | Fragrance allergen (clove)
+Evernia Prunastri Extract | ~oakmoss extract | Fragrance allergen (oakmoss)
+Farnesol | trans,trans-farnesol | Fragrance allergen
+Ferulic Acid | = | Antioxidant
+Flavor | ~fragrance | Flavour
+Fragrance | ~fragrance | Fragrance
+Fructooligosaccharides | ~fructooligosaccharides | Prebiotic, humectant
+Fructose | = | Humectant
+Galactomyces Ferment Filtrate | ~galactomyces ferment filtrate | Ferment (skin-conditioning)
+Gallyl Glucoside | ~gallyl glucoside | Antioxidant
+Gardenia Taitensis Flower Extract | ~tiare flower extract | Plant extract
+Geraniol | = | Fragrance allergen (rose)
+Gluconolactone | = | Exfoliant (PHA)
+Glucose | = | Humectant
+Glutathione | = | Antioxidant
+Glycereth-26 | ~glycereth-26 | Humectant
+Glycerin | glycerol | Humectant
+Glyceryl Acrylate/Acrylic Acid Copolymer | ~glyceryl acrylate/acrylic acid copolymer | Humectant, film former
+Glyceryl Behenate/Eicosadioate | ~glyceryl behenate/eicosadioate | Thickener (oil phase)
+Glyceryl Caprylate | = | Emollient, preservative booster
+Glyceryl Glucoside | ~glyceryl glucoside | Humectant
+Glyceryl Stearate | glyceryl monostearate | Emulsifier
+Glyceryl Stearate SE | ~glyceryl stearate SE | Emulsifier (self-emulsifying)
+Glycine | = | Skin-conditioning active (amino acid)
+Glycine Soja Oil | ~soybean oil | Emollient (plant oil)
+Glycine Soja Seed Extract | ~soybean seed extract | Plant extract
+Glycol Distearate | = | Opacifier (pearlescent)
+Glycol Stearate | ethylene glycol monostearate | Opacifier, thickener
+Glycolic Acid | = | Exfoliant (AHA)
+Glycolipids | ~glycolipids | Skin-conditioning
+Glycyrrhiza Glabra Root Extract | ~licorice root extract | Soothing, brightening (plant extract)
+Grapefruit Peel Oil | ~grapefruit peel oil | Fragrance (essential oil)
+Guar Hydroxypropyltrimonium Chloride | ~guar hydroxypropyltrimonium chloride | Hair conditioning
+Hamamelis Virginiana Water | ~witch hazel water | Astringent, soothing
+Helianthus Annuus Seed Oil | ~sunflower seed oil | Emollient (plant oil)
+Helianthus Annuus Seedcake | ~sunflower seedcake | Plant extract
+Heptapeptide-15 Palmitate | ~heptapeptide-15 palmitate | Peptide
+Hexyl Laurate | = | Emollient
+Hexyl Nicotinate | = | Skin-conditioning active (warming, circulation)
+Hexylene Glycol | = | Solvent, humectant
+Hibiscus Sabdariffa Flower Extract | ~hibiscus flower extract | Plant extract
+Histidine | = | Skin-conditioning active (amino acid)
+Homosalate | = | UV filter (UVB)
+Hordeum Vulgare Extract | ~barley extract | Plant extract
+Hordeum Vulgare Leaf Extract | ~barley extract | Plant extract
+Houttuynia Cordata Extract | ~heartleaf (houttuynia cordata) extract | Soothing (plant extract)
+Hyaluronic Acid | ~hyaluronic acid | Humectant
+Hydrated Silica | ~hydrated silica | Abrasive, absorbent
+Hydrogen Dimethicone | ~hydrogen dimethicone | Silicone (pigment coating)
+Hydrogenated Castor Oil | = | Thickener, wax
+Hydrogenated Coco-Glycerides | ~hydrogenated coco-glycerides | Emollient
+Hydrogenated Lecithin | ~hydrogenated lecithin | Emulsifier
+Hydrogenated Poly(C6-14 Olefin) | ~hydrogenated poly(C6-14 olefin) | Emollient
+Hydrogenated Polydecene | ~hydrogenated polydecene | Emollient
+Hydrogenated Polyisobutene | ~hydrogenated polyisobutene | Emollient
+Hydrogenated Starch Hydrolysate | ~hydrogenated starch hydrolysate | Humectant
+Hydrolyzed Algin | ~hydrolyzed algin | Humectant (seaweed)
+Hydrolyzed Collagen | ~hydrolyzed collagen | Humectant (protein)
+Hydrolyzed Hyaluronic Acid | ~hydrolyzed hyaluronic acid | Humectant
+Hydrolyzed Jojoba Esters | ~hydrolyzed jojoba esters | Emollient
+Hydrolyzed Keratin | ~hydrolyzed keratin | Hair conditioning (protein)
+Hydrolyzed Lupine Protein | ~hydrolyzed lupine protein | Skin-conditioning (protein)
+Hydrolyzed Silk | ~hydrolyzed silk | Hair conditioning (protein)
+Hydrolyzed Wheat Protein | ~hydrolyzed wheat protein | Skin-conditioning (protein)
+Hydroxyacetophenone | 4-hydroxyacetophenone | Antioxidant, preservative booster
+Hydroxycitronellal | = | Fragrance allergen (lily)
+Hydroxyethyl Acrylate/Sodium Acryloyldimethyl Taurate Copolymer | ~hydroxyethyl acrylate/sodium acryloyldimethyl taurate copolymer | Thickener, emulsion stabilizer
+Hydroxyethyl Urea | (2-hydroxyethyl)urea | Humectant
+Hydroxyethylcellulose | ~hydroxyethylcellulose | Thickener
+Hydroxyisohexyl 3-Cyclohexene Carboxaldehyde | ~Lyral (hydroxyisohexyl 3-cyclohexene carboxaldehyde) | Fragrance allergen (banned in the EU since 2021)
+Hydroxymethoxyphenyl Decanone | ~hydroxymethoxyphenyl decanone | Antioxidant
+Hydroxypinacolone Retinoate | ~hydroxypinacolone retinoate | Retinoid (skin-conditioning active)
+Hypericum Perforatum Extract | ~St John's wort extract | Plant extract
+Inulin Lauryl Carbamate | ~inulin lauryl carbamate | Emulsion stabilizer
+Iron Oxides | iron(iii) oxide | Colourant (iron oxides)
+Isobutane | = | Propellant
+Isoceteth-20 | ~isoceteth-20 | Emulsifier, solubilizer
+Isocetyl Stearate | = | Emollient
+Isodecyl Neopentanoate | ~isodecyl neopentanoate | Emollient
+Isododecane | = | Emollient (volatile)
+Isoeugenol | = | Fragrance allergen
+Isohexadecane | = | Emollient
+Isoleucine | = | Skin-conditioning active (amino acid)
+Isomalt | isomalt | Humectant
+Isononyl Isononanoate | = | Emollient
+Isopentane | = | Propellant, foaming agent
+Isopropyl Alcohol | = | Solvent
+Isopropyl Isostearate | = | Emollient
+Isopropyl Lauroyl Sarcosinate | ~isopropyl lauroyl sarcosinate | Emollient
+Isopropyl Myristate | = | Emollient
+Isopropyl Palmitate | = | Emollient
+Isopropylmethylphenol | = | Antimicrobial
+Isostearic Acid | = | Emollient
+Isostearyl Glyceryl Ether | ~isostearyl glyceryl ether | Emollient
+Kakadu Plum Extract | ~Kakadu plum extract | Antioxidant (plant extract)
+Kalahari Melon Seed Oil | ~Kalahari melon seed oil | Emollient (plant oil)
+Kaolin | = | Absorbent (clay)
+Lactic Acid | = | Exfoliant (AHA), pH adjuster
+Lactic Acid/Glycolic Acid Copolymer | ~lactic acid/glycolic acid copolymer | Film former
+Lactobacillus Ferment | ~lactobacillus ferment | Ferment
+Lactobacillus Ferment Lysate | ~lactobacillus ferment | Ferment
+Lactobacillus/Pueraria Lobata Root Ferment Extract | ~lactobacillus ferment | Ferment
+Lactobacillus/Rice Ferment Filtrate | ~lactobacillus ferment | Ferment
+Lactobacillus/Soybean Ferment Extract | ~lactobacillus ferment | Ferment
+Lactobionic Acid | lactobionic acid | Exfoliant (PHA)
+Laminaria Ochroleuca Extract | ~laminaria ochroleuca extract | Plant extract (seaweed)
+Lanolin | ~lanolin | Emollient, occlusive
+Lanolin Alcohol | ~lanolin alcohol | Emollient, emulsifier
+Laureth-23 | ~laureth-23 | Emulsifier, solubilizer
+Laureth-4 | ~laureth-4 | Emulsifier
+Laureth-7 | = | Emulsifier
+Lauric Acid | = | Cleansing agent (soap fatty acid)
+Lauryl Methacrylate/Sodium Methacrylate Crosspolymer | ~lauryl methacrylate/sodium methacrylate crosspolymer | Thickener
+Lauryl PEG-9 Polydimethylsiloxyethyl Dimethicone | ~lauryl PEG-9 polydimethylsiloxyethyl dimethicone | Emulsifier (silicone)
+Lavandula Angustifolia Oil | ~lavender oil | Fragrance (essential oil)
+Lecithin | ~lecithin | Emulsifier, emollient
+Lemon Peel Oil | ~lemon peel oil | Fragrance (essential oil)
+Lepidium Meyenii Root Extract | ~maca root extract | Plant extract
+Lilium Candidum Bulb Extract | ~Madonna lily extract | Plant extract
+Lilium Candidum Flower Extract | ~Madonna lily extract | Plant extract
+Limonene | = | Fragrance allergen (citrus)
+Linalool | = | Fragrance allergen (lavender)
+Linalyl Acetate | = | Fragrance
+Linoleic Acid | = | Skin-barrier lipid (fatty acid)
+Linolenic Acid | = | Skin-barrier lipid (fatty acid)
+Linum Usitatissimum Seed Extract | ~linseed extract | Hair conditioning (plant extract)
+Macadamia Ternifolia Seed Oil | ~macadamia oil | Emollient (plant oil)
+Macrotermes Termite Protease | ~macrotermes termite protease | Ferment (enzyme)
+Madecassoside | madecassoside | Soothing (centella-derived)
+Magnesium Aluminum Silicate | ~magnesium aluminum silicate | Thickener (clay)
+Magnesium Ascorbyl Phosphate | magnesium ascorbyl phosphate | Antioxidant (vitamin C derivative)
+Magnesium Carbonate Hydroxide | = | Absorbent
+Magnesium Chloride | = | Skin-conditioning (mineral)
+Magnesium Gluconate | magnesium d-gluconate | Skin-conditioning (mineral)
+Magnesium Myristate | magnesium tetradecanoate | Texture (powder binder)
+Magnesium Stearate | = | Texture (powder binder), thickener
+Magnesium Sulfate | = | Emulsion stabilizer
+Malic Acid | = | Exfoliant (AHA), pH adjuster
+Maltodextrin | ~maltodextrin | Film former, absorbent
+Maltose | = | Humectant
+Manganese Gluconate | = | Skin-conditioning (mineral)
+Mannitol | = | Humectant
+Mannose | = | Humectant
+Meadowfoam Estolide | ~meadowfoam estolide | Emollient
+Medicago Sativa Seed Powder | ~alfalfa seed powder | Plant extract
+Melaleuca Alternifolia Leaf Oil | ~tea tree oil | Antimicrobial (essential oil)
+Melaleuca Alternifolia Leaf Water | ~tea tree leaf water | Soothing (plant water)
+Melanin | ~melanin | Colourant, antioxidant
+Melia Azadirachta Leaf Extract | ~neem leaf extract | Plant extract
+Menthol | = | Cooling agent
+Mentha Piperita Oil | ~peppermint oil | Cooling agent, flavour (essential oil)
+Methoxypropylamino Cyclohexenylidene Ethoxyethylcyanoacetate | ~methoxypropylamino cyclohexenylidene ethoxyethylcyanoacetate (Mexoryl 400) | UV filter (long UVA)
+Methyl Gluceth-20 | ~methyl gluceth-20 | Humectant
+Methyl Methacrylate Crosspolymer | ~methyl methacrylate crosspolymer | Texture (soft-focus powder)
+Methyl Salicylate | = | Flavour, cooling agent
+Methyl Trimethicone | ~methyl trimethicone | Silicone (volatile)
+Methylchloroisothiazolinone | = | Preservative (sensitizer)
+Methylene Bis-Benzotriazolyl Tetramethylbutylphenol | bisoctrizole | UV filter (broad spectrum)
+Methylisothiazolinone | = | Preservative (sensitizer)
+Methylparaben | = | Preservative
+Methylpropanediol | 2-methyl-1,3-propanediol | Solvent, humectant
+Mica | ~mica | Shimmer, texture (mineral)
+Microcrystalline Wax | ~microcrystalline wax | Wax, occlusive
+Mineral Oil | ~mineral oil | Emollient, occlusive
+Monascus/Rice Ferment | ~monascus/rice ferment | Ferment
+Morus Alba Leaf Extract | ~white mulberry leaf extract | Brightening (plant extract)
+Myristic Acid | = | Cleansing agent (fatty acid)
+Myristyl Alcohol | = | Emollient, thickener
+Myristyl Myristate | = | Emollient
+Nelumbo Nucifera Leaf Extract | ~lotus extract | Plant extract
+Nelumbo Nucifera Seed Extract | ~lotus extract | Plant extract
+Niacin | = | Vitamin (B3)
+Niacinamide | = | Skin-conditioning active (vitamin B3)
+Nitrocellulose | = | Film former (nail polish)
+Nitrogen | = | Propellant
+Nylon | ~nylon | Texture (fibres)
+Nylon-12 | ~nylon-12 | Texture (soft-focus powder)
+Nylon-611/Dimethicone Copolymer | ~nylon-611/dimethicone copolymer | Film former
+Nymphaea Alba Root Extract | ~white water lily extract | Plant extract
+Nymphaea Caerulea Flower Extract | ~blue lotus extract | Plant extract
+Ocimum Sanctum Leaf Extract | ~holy basil extract | Plant extract
+Octinoxate | = | UV filter (UVB)
+Octisalate | = | UV filter (UVB)
+Octocrylene | = | UV filter (UVB)
+Octyldodecanol | = | Emollient
+Octyldodecyl Neopentanoate | ~octyldodecyl neopentanoate | Emollient
+Octyldodecyl Stearoyl Stearate | ~octyldodecyl stearoyl stearate | Emollient, binder
+Oenothera Biennis Flower Extract | ~evening primrose extract | Plant extract
+Oenothera Biennis Oil | ~evening primrose oil | Emollient (plant oil)
+Olea Europaea Fruit Oil | ~olive oil | Emollient (plant oil)
+Oleic Acid | = | Emollient (fatty acid)
+Oleth-3 | ~oleth-3 | Emulsifier
+Oleth-3 Phosphate | ~oleth-3 phosphate | Emulsifier
+Oleth-5 | ~oleth-5 | Emulsifier
+Oryza Sativa Cera | ~rice bran wax | Wax
+Oryza Sativa Extract | ~rice extract | Plant extract
+Oryza Sativa Germ Extract | ~rice extract | Plant extract
+Oxidized Glutathione | = | Antioxidant
+Oxybenzone | = | UV filter (UVB/UVA2)
+PCA | pidolic acid | Humectant (natural moisturizing factor)
+PEG-10 Dimethicone | ~PEG-10 dimethicone | Emulsifier (silicone)
+PEG-100 Stearate | ~PEG-100 stearate | Emulsifier
+PEG-120 Methyl Glucose Dioleate | ~PEG-120 methyl glucose dioleate | Thickener
+PEG-150 Distearate | ~PEG-150 distearate | Thickener
+PEG-150 Pentaerythrityl Tetrastearate | ~PEG-150 pentaerythrityl tetrastearate | Thickener
+PEG-20 | ~PEG-20 | Humectant, solvent
+PEG-22/Dodecyl Glycol Copolymer | ~PEG-22/dodecyl glycol copolymer | Emulsifier
+PEG-23M | ~PEG-23m | Thickener (shave foam glide)
+PEG-30 Stearate | ~PEG-30 stearate | Emulsifier
+PEG-32 | ~PEG-32 | Humectant
+PEG-40 Hydrogenated Castor Oil | ~PEG-40 hydrogenated castor oil | Solubilizer
+PEG-40 Stearate | ~PEG-40 stearate | Emulsifier
+PEG-6 | = | Humectant, solvent
+PEG-6 Caprylic/Capric Glycerides | ~PEG-6 caprylic/capric glycerides | Cleansing agent (micellar)
+PEG-60 Hydrogenated Castor Oil | ~PEG-60 hydrogenated castor oil | Solubilizer
+PEG-7 Trimethylolpropane Coconut Ether | ~PEG-7 trimethylolpropane coconut ether | Emollient
+PEG-8 | ~PEG-8 | Humectant, solvent
+PEG-8 Stearate | ~PEG-8 stearate | Emulsifier
+PEG-80 Sorbitan Laurate | ~PEG-80 sorbitan laurate | Cleansing agent (mild)
+PEG-9 Polydimethylsiloxyethyl Dimethicone | ~PEG-9 polydimethylsiloxyethyl dimethicone | Emulsifier (silicone)
+PEG-90M | ~PEG-90m | Thickener (shave foam glide)
+PPG-14 Butyl Ether | ~PPG-14 butyl ether | Emollient
+PPG-26-Buteth-26 | ~PPG-26-buteth-26 | Solubilizer
+PPG-3 Myristyl Ether | ~PPG-3 myristyl ether | Emollient
+PVP | ~polyvinylpyrrolidone | Film former
+Paeonia Albiflora Root Extract | ~white peony root extract | Plant extract
+Palmitic Acid | = | Emollient, cleansing agent (fatty acid)
+Palmitoyl Pentapeptide-4 | ~palmitoyl pentapeptide-4 (Matrixyl) | Peptide
+Palmitoyl Tetrapeptide-7 | ~palmitoyl tetrapeptide-7 | Peptide
+Palmitoyl Tripeptide-1 | ~palmitoyl tripeptide-1 | Peptide
+Palmitoyl Tripeptide-8 | ~palmitoyl tripeptide-8 | Peptide
+Panax Ginseng Root Extract | ~ginseng root extract | Plant extract
+Panthenol | = | Humectant, soothing (provitamin B5)
+Panthenyl Ethyl Ether | panthenyl ethyl ether | Hair conditioning (provitamin B5)
+Pantolactone | = | Humectant
+Paraffin | ~paraffin | Wax, occlusive
+Paraffinum Liquidum | ~mineral oil | Emollient, occlusive
+Parfum | ~fragrance | Fragrance
+Pectin | ~pectin | Thickener
+Peg-10 Dimethicone | ~PEG-10 dimethicone | Emulsifier (silicone)
+Peg/Ppg/Polybutylene Glycol-8/5/3 Glycerin | ~PEG/PPG/polybutylene glycol-8/5/3 glycerin | Humectant
+Pentaerythrityl Tetra-Di-t-Butyl Hydroxyhydrocinnamate | ~pentaerythrityl tetra-di-t-butyl hydroxyhydrocinnamate | Antioxidant
+Pentaerythrityl Tetraisostearate | ~pentaerythrityl tetraisostearate | Emollient
+Pentylene Glycol | 1,2-pentanediol | Humectant, preservative booster
+Peptide Complex | ~peptide complex | Peptide
+Perlite | ~perlite | Absorbent (volcanic glass)
+Persea Gratissima Oil | ~avocado oil | Emollient (plant oil)
+Petrolatum | ~petrolatum | Occlusive
+Phenol | = | Antiseptic, cooling (lip balm)
+Phenoxyethanol | = | Preservative
+Phenyl Trimethicone | = | Silicone, shine
+Phenylalanine | = | Skin-conditioning active (amino acid)
+Phenylpropanol | 3-phenyl-1-propanol | Preservative booster
+Phosphates | ~phosphates (pyrophosphates) | Anti-tartar agent
+Phosphoric Acid | = | pH adjuster
+Phytosphingosine | phytosphingosine | Skin-barrier lipid
+Phytosteryl Canola Glycerides | ~phytosteryl canola glycerides | Emollient
+Phytosteryl/Isostearyl/Cetyl/Stearyl/Behenyl Dimer Dilinoleate | ~phytosteryl/isostearyl/cetyl/stearyl/behenyl dimer dilinoleate | Emollient (lip)
+Pinus Palustris Leaf Extract | ~longleaf pine extract | Plant extract
+Piroctone Olamine | = | Anti-dandruff
+Poloxamer 184 | ~poloxamer 184 | Cleansing agent (non-ionic)
+Poloxamer 338 | ~poloxamer 338 | Emulsifier
+Poloxamer 407 | ~poloxamer 407 | Solubilizer
+Poly C10-30 Alkyl Acrylate | ~poly C10-30 alkyl acrylate | Film former (water resistance)
+Polyacrylamide | ~polyacrylamide | Thickener
+Polyacrylate Crosspolymer-6 | ~polyacrylate crosspolymer-6 | Thickener
+Polybutene | ~polybutene | Film former (gloss)
+Polyethylene | ~polyethylene | Thickener, film former
+Polyglyceryl-10 Laurate | ~polyglyceryl-10 laurate | Emulsifier
+Polyglyceryl-10 Stearate | ~polyglyceryl-10 stearate | Emulsifier
+Polyglyceryl-2 Diisostearate | ~polyglyceryl-2 diisostearate | Emulsifier
+Polyglyceryl-2 Sesquiisostearate | ~polyglyceryl-2 sesquiisostearate | Emulsifier
+Polyglyceryl-3 Methylglucose Distearate | ~polyglyceryl-3 methylglucose distearate | Emulsifier
+Polyglyceryl-4 Caprate | ~polyglyceryl-4 caprate | Emulsifier
+Polyglyceryl-4 Isostearate | ~polyglyceryl-4 isostearate | Emulsifier
+Polygonatum Officinale Rhizome/Root Extract | ~Solomon's seal extract | Plant extract
+Polyisobutene | ~polyisobutene | Film former
+Polyisobutylene | ~polyisobutene | Adhesive (patch)
+Polymethyl Methacrylate | ~polymethyl methacrylate | Texture (soft-focus powder)
+Polymethylsilsesquioxane | ~polymethylsilsesquioxane | Texture (silicone powder)
+Polypropylsilsesquioxane | ~polypropylsilsesquioxane | Film former (silicone resin)
+Polyquaternium-10 | ~polyquaternium-10 | Hair conditioning, film former
+Polyquaternium-37 | ~polyquaternium-37 | Hair conditioning, thickener
+Polysilicone-11 | ~polysilicone-11 | Film former (silicone)
+Polysorbate 20 | ~polysorbate 20 | Emulsifier, solubilizer
+Polysorbate 60 | ~polysorbate 60 | Emulsifier
+Polyvinyl Alcohol | ~polyvinyl alcohol | Film former
+Polyvinylpyrrolidone | ~polyvinylpyrrolidone | Film former
+Portulaca Oleracea Extract | ~purslane extract | Soothing (plant extract)
+Potassium Acesulfame | acesulfame potassium | Sweetener
+Potassium Cetyl Phosphate | = | Emulsifier
+Potassium Phosphate | = | Buffer (pH adjuster)
+Potassium Sorbate | = | Preservative
+Proline | l-proline | Skin-conditioning active (amino acid)
+Propane | = | Propellant
+Propanediol | 1,3-propanediol | Humectant, solvent
+Propolis Extract | ~propolis extract | Soothing, antibacterial (bee product)
+Propyl Acetate | = | Solvent (nail polish)
+Propylene Carbonate | = | Solvent
+Propylene Glycol | = | Humectant, solvent
+Propylene Glycol Dicaprate | ~propylene glycol dicaprate | Emollient
+Propylparaben | = | Preservative
+Prunus Amygdalus Dulcis Oil | ~sweet almond oil | Emollient (plant oil)
+Prunus Amygdalus Dulcis Seed Meal | ~almond meal | Exfoliant (plant)
+Prunus Armeniaca Kernel Oil | ~apricot kernel oil | Emollient (plant oil)
+Pseudoalteromonas Ferment Extract | ~pseudoalteromonas ferment extract | Ferment (skin-conditioning)
+Pueraria Lobata Root Extract | ~kudzu root extract | Plant extract
+Pumpkin Ferment Extract | ~pumpkin ferment extract | Ferment (enzyme exfoliant)
+Punica Granatum Fruit Extract | ~pomegranate extract | Antioxidant (plant extract)
+Quaternium-91 | ~quaternium-91 | Hair conditioning
+Rehmannia Glutinosa Root Extract | ~rehmannia root extract | Plant extract
+Retinol | = | Retinoid (vitamin A)
+Retinyl Palmitate | = | Retinoid (vitamin A ester)
+Rhamnose | l-rhamnose | Humectant, soothing
+Rhizopus Oligosporus/Rice Ferment Filtrate | ~rhizopus oligosporus/rice ferment filtrate | Ferment
+Ricinus Communis Seed Oil | ~castor oil | Emollient (plant oil)
+Rosa Canina Fruit Oil | ~rosehip oil | Emollient (plant oil)
+Rosa Damascena Flower Oil | ~rose oil | Fragrance (essential oil)
+Rosa Damascena Flower Water | ~rose water | Soothing (floral water)
+Rosmarinus Officinalis Leaf Extract | ~rosemary extract | Antioxidant (plant extract)
+Rosmarinus Officinalis Leaf Oil | ~rosemary oil | Fragrance (essential oil)
+Saccharomyces Ferment | ~saccharomyces ferment | Ferment
+Saccharomyces/Rice Ferment Filtrate | ~saccharomyces ferment | Ferment
+Salicylic Acid | = | Exfoliant (BHA)
+Sargassum Fulvellum Extract | ~sargassum fulvellum extract | Plant extract (seaweed)
+Sclerocarya Birrea Seed Oil | ~marula oil | Emollient (plant oil)
+Sea Water | ~sea water | Skin-conditioning (minerals)
+Serine | = | Skin-conditioning active (amino acid)
+Sesamum Indicum Oil | ~sesame oil | Emollient (plant oil)
+Sesamum Indicum Seed Oil | ~sesame oil | Emollient (plant oil)
+Sesamum Indicum Seed Powder | ~sesame seed powder | Plant extract
+Silica | = | Absorbent, texture
+Silica Dimethyl Silylate | ~silica dimethyl silylate | Thickener (oil phase)
+Simmondsia Chinensis Seed Oil | ~jojoba oil | Emollient (plant oil)
+Snail Secretion Filtrate | ~snail secretion filtrate | Humectant, skin-conditioning
+Sodium Acetylated Hyaluronate | ~sodium acetylated hyaluronate | Humectant
+Sodium Acrylates Copolymer | ~sodium acrylates copolymer | Thickener
+Sodium Ascorbyl Phosphate | sodium ascorbyl phosphate | Antioxidant (vitamin C derivative)
+Sodium Benzoate | = | Preservative
+Sodium Benzotriazolyl Butylphenol Sulfonate | ~sodium benzotriazolyl butylphenol sulfonate | UV absorber (protects the product)
+Sodium Borate | = | Emulsifier (cold cream)
+Sodium C14-16 Olefin Sulfonate | ~sodium C14-16 olefin sulfonate | Cleansing agent (anionic)
+Sodium Carbomer | ~sodium carbomer | Thickener
+Sodium Chloride | = | Thickener (salt)
+Sodium Citrate | = | Buffer (pH adjuster)
+Sodium Cocoate | ~sodium cocoate | Cleansing agent (soap)
+Sodium Dehydroacetate | = | Preservative
+Sodium Fluoride | = | Anticavity (fluoride)
+Sodium Gluconate | = | Chelating agent
+Sodium Hexametaphosphate | sodium hexametaphosphate | Anti-tartar, anti-stain
+Sodium Hyaluronate | = | Humectant
+Sodium Hyaluronate Crosspolymer | ~sodium hyaluronate crosspolymer | Humectant, film former
+Sodium Hydroxide | = | pH adjuster
+Sodium Isethionate | = | Cleansing agent
+Sodium Lactate | = | Humectant (natural moisturizing factor)
+Sodium Laureth Sulfate | ~sodium laureth sulfate | Cleansing agent (anionic)
+Sodium Lauroyl Isethionate | sodium lauroyl isethionate | Cleansing agent (mild anionic)
+Sodium Lauroyl Lactylate | sodium lauroyl lactylate | Emulsifier
+Sodium Lauroyl Methyl Isethionate | ~sodium lauroyl methyl isethionate | Cleansing agent (mild anionic)
+Sodium Lauroyl Sarcosinate | sodium lauroyl sarcosinate | Cleansing agent (mild anionic)
+Sodium Lauryl Sulfate | = | Cleansing agent (anionic), foaming
+Sodium Methyl Cocoyl Taurate | ~sodium methyl cocoyl taurate | Cleansing agent (mild anionic)
+Sodium Methyl Stearoyl Taurate | = | Emulsifier
+Sodium PCA | sodium pca | Humectant (natural moisturizing factor)
+Sodium Palm Kernelate | ~sodium palm kernelate | Cleansing agent (soap)
+Sodium Palmate | ~sodium palmate | Cleansing agent (soap)
+Sodium Phytate | sodium phytate | Chelating agent
+Sodium Polyacrylate | ~sodium polyacrylate | Thickener
+Sodium Polyacryloyldimethyl Taurate | ~sodium polyacryloyldimethyl taurate | Thickener
+Sodium Saccharin | = | Sweetener
+Sodium Starch Octenylsuccinate | ~sodium starch octenylsuccinate | Absorbent
+Sodium Stearate | = | Cleansing agent (soap), thickener
+Sodium Stearoyl Glutamate | ~sodium stearoyl glutamate | Emulsifier
+Sodium Tallowate | ~sodium tallowate | Cleansing agent (soap)
+Sodium Trideceth Sulfate | ~sodium trideceth sulfate | Cleansing agent (anionic)
+Sodium Xylenesulfonate | ~sodium xylenesulfonate | Viscosity control
+Solanum Lycopersicum Fruit Extract | ~tomato extract | Antioxidant (plant extract)
+Sorbic Acid | = | Preservative
+Sorbitan Isostearate | ~sorbitan isostearate | Emulsifier
+Sorbitan Olivate | ~sorbitan olivate | Emulsifier
+Sorbitol | = | Humectant
+Soy Protein | ~soy protein | Skin-conditioning (protein)
+Squalane | = | Emollient
+Stannous Chloride | = | Anti-sensitivity, anti-gingivitis
+Stannous Fluoride | = | Anticavity (fluoride), anti-gingivitis
+Stearalkonium Bentonite | ~stearalkonium bentonite | Thickener (clay)
+Stearalkonium Hectorite | ~stearalkonium hectorite | Thickener (clay)
+Stearamide AMP | ~stearamide AMP | Thickener, opacifier
+Stearamidopropyl Dimethylamine | = | Hair conditioning
+Stearic Acid | = | Emulsifier, thickener
+Stearyl Alcohol | = | Emollient, thickener
+Styrax Japonicus Branch/Fruit/Leaf Extract | ~Japanese snowbell extract | Plant extract
+Styrene Isoprene Styrene Block Copolymer | ~styrene/isoprene copolymer | Adhesive (patch)
+Styrene/Acrylates Copolymer | ~styrene/acrylates copolymer | Film former
+Styrene/Acrylates/Ammonium Methacrylate Copolymer | ~styrene/acrylates/ammonium methacrylate copolymer | Film former (mascara)
+Sucrose | = | Humectant
+Sucrose Dilaurate | ~sucrose laurate | Emulsifier
+Sucrose Laurate | ~sucrose laurate | Emulsifier
+Sucrose Stearate | ~sucrose stearate | Emulsifier
+Sucrose Tetrastearate Triacetate | ~sucrose tetrastearate triacetate | Emollient
+Sucrose Trilaurate | ~sucrose laurate | Emulsifier
+Symphytum Officinale Callus Culture Extract | ~comfrey callus culture extract | Plant extract
+Synthetic Beeswax | ~synthetic beeswax | Wax
+Synthetic Wax | ~synthetic wax | Wax
+Tackifier Resin | ~tackifier resin | Adhesive (patch)
+Talc | = | Absorbent, texture (mineral)
+Tamarindus Indica Seed Gum | ~tamarind seed gum | Thickener, humectant
+Tartaric Acid | = | Exfoliant (AHA), pH adjuster
+Tasmannia Lanceolata Fruit/Leaf Extract | ~Tasmanian pepperberry extract | Soothing (plant extract)
+Terephthalylidene Dicamphor Sulfonic Acid | ecamsule | UV filter (UVA, Mexoryl SX)
+Tetrasodium EDTA | = | Chelating agent
+Tetrasodium Etidronate | tetrasodium etidronate | Chelating agent
+Theobroma Cacao Seed Butter | ~cocoa butter | Emollient (plant butter)
+Threonine | l-threonine | Skin-conditioning active (amino acid)
+Thymol | = | Antiseptic, flavour
+Tin Oxide | = | Opacifier (shimmer coating)
+Titanium Dioxide | = | UV filter (mineral), white pigment
+Tocopherol | = | Antioxidant (vitamin E)
+Tocopheryl Acetate | = | Antioxidant (vitamin E ester)
+Tocopheryl Succinate | tocopherol succinate | Antioxidant (vitamin E ester)
+Tosylamide/Epoxy Resin | ~tosylamide/epoxy resin | Film former (nail polish)
+Trehalose | = | Humectant
+Tribehenin | = | Emollient, thickener
+Tridecyl Trimellitate | ~tridecyl trimellitate | Emollient
+Triethanolamine | = | pH adjuster
+Triethoxycaprylylsilane | ~triethoxycaprylylsilane | Pigment coating (silane)
+Triethylhexanoin | ~triethylhexanoin | Emollient
+Triisononanoin | ~triisononanoin | Emollient
+Trimethylsiloxysilicate | ~trimethylsiloxysilicate | Film former (long wear)
+Triolein | = | Emollient (lipid)
+Tripeptide-32 | ~tripeptide-32 | Peptide
+Trisodium EDTA | edetate trisodium | Chelating agent
+Trisodium Ethylenediamine Disuccinate | ~trisodium ethylenediamine disuccinate | Chelating agent
+Trisodium Phosphate | = | Buffer, anti-tartar
+Tristearin | = | Thickener (oil phase)
+Tromethamine | = | pH adjuster
+Ulmus Davidiana Root Extract | ~elm root extract | Plant extract
+Undaria Pinnatifida Extract | ~wakame extract | Plant extract (seaweed)
+Urea | = | Humectant, keratolytic
+Valine | l-valine | Skin-conditioning active (amino acid)
+Vanillin | = | Flavour, fragrance
+Violet 2 | ~D&C violet 2 (CI 60725) | Colourant (violet)
+Vitex Agnus Castus Extract | ~chasteberry extract | Plant extract
+Vitex Agnus-Castus Extract | ~chasteberry extract | Plant extract
+Vitis Vinifera Shoot Extract | ~grapevine shoot extract (Viniferine) | Brightening (plant extract)
+Vitreoscilla Ferment | ~vitreoscilla ferment | Ferment (skin-conditioning)
+Water | = | Solvent
+Xanthan Gum | ~xanthan gum | Thickener
+Xylitol | = | Humectant, sweetener
+Yeast Extract | ~yeast extract | Skin-conditioning
+Zea Mays Germ Oil | ~corn germ oil | Emollient (plant oil)
+Zea Mays Starch | ~corn starch | Absorbent
+Zinc Carbonate | = | Skin protectant (anti-dandruff booster)
+Zinc Gluconate | zinc gluconate | Skin-conditioning (mineral)
+Zinc Lactate | ~zinc lactate | Anti-tartar, breath
+Zinc Oxide | = | UV filter (mineral), skin protectant
+Zinc PCA | ~zinc PCA | Sebum control (mineral)
+Zinc Phosphate | = | Anti-tartar, anti-gingivitis
+Zinc Pyrithione | = | Anti-dandruff
+Zinc Stearate | = | Texture (powder binder)
+Zinc Sulfate | = | Anti-tartar (mineral)
+sh-Oligopeptide-1 | ~sh-oligopeptide-1 (EGF) | Peptide (growth factor)
+sh-Oligopeptide-2 | ~sh-oligopeptide-2 (IGF) | Peptide (growth factor)
+sh-Polypeptide-1 | ~sh-polypeptide-1 (FGF) | Peptide (growth factor)
+sh-Polypeptide-11 | ~sh-polypeptide-11 | Peptide (growth factor)
+sh-Polypeptide-9 | ~sh-polypeptide-9 (VEGF) | Peptide (growth factor)

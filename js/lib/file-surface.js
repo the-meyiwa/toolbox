@@ -62,10 +62,10 @@ export function fileAttrs(ref) {
 
 /** Marks an existing element as a file (for surfaces that build DOM nodes). */
 export function markFile(el, ref) {
-  if (!el) return el;
-  el.dataset.tbFile = registerFile(ref);
+  if (!el?.setAttribute) return el;
+  el.setAttribute('data-tb-file', registerFile(ref));
   el.setAttribute('draggable', 'true');
-  if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+  if (!el.hasAttribute?.('tabindex')) el.setAttribute('tabindex', '0');
   el.setAttribute('aria-roledescription', 'file');
   return el;
 }

@@ -92,6 +92,11 @@ export const TOOL_GROUPS = {
     tools: ['music_library', 'music_theory'],
     match: /\b(music theory|scales?|chords?|arpeggio|triad|seventh|progression|cadence|harmony|harmoni[sz]e|melody|counterpoint|voice leading|modes?|dorian|phrygian|lydian|mixolydian|aeolian|locrian|pentatonic|blues scale|key signature|circle of fifths|interval|transpos\w*|time signature|rhythm|syncopation|polyrhythm|clef|staff|sheet music|read music|solf[eè]ge|ear training|notation|how (do i|to) (play|learn) (the )?\w+|instrument|guitar|piano|violin|cello|viola|bass|ukulele|drums?|flute|clarinet|saxophone|trumpet|trombone|horn|tuba|oboe|recorder|harp|kora|harmonica|organ|synth\w*|singing|vocal|jazz|raga|maqam|gamelan|sonata|fugue|twelve-?tone|serial\w*|temperament|harmonic series)\b/i,
   },
+  cosmetics: {
+    label: 'Cosmetics: skincare, makeup, hair, body, sun care, fragrance and oral-care products, their specs and ingredient lists (every ingredient explained), cosmetic ingredients and beauty brands',
+    tools: ['cosmetics_database', 'lookup_compound'],
+    match: /\b(cosmetics?|beauty|skin ?care|make-?up|ingredients? list|inci|serum|moisturi[sz]er|cleanser|toner|essence|sunscreen|sun ?cream|spf|retinol|retinoid|niacinamide|hyaluronic|ceramides?|salicylic|glycolic|aha|bha|vitamin c serum|foundation|concealer|lipstick|lip ?gloss|lip balm|mascara|eyeliner|blush|bronzer|primer|setting spray|shampoo|conditioner|hair (oil|mask|treatment)|body (lotion|wash)|deodorant|antiperspirant|toothpaste|mouthwash|perfume|fragrance|cologne|eau de (parfum|toilette)|nail polish|acne|pimple|eczema|fragrance-free|non-comedogenic|parabens?|sulfates?|silicones?|cerave|the ordinary|la roche-?posay|neutrogena|cetaphil|nivea|olay|loreal|l'or[eé]al|maybelline|mac cosmetics|fenty|estee lauder|clinique|kiehl'?s|cosrx|laneige|innisfree|beauty of joseon|sk-?ii|shiseido|bioderma|av[eè]ne|vichy|eucerin|vaseline|dove|garnier|chanel|dior|lanc[oô]me|zaron|house of tara|arami)\b/i,
+  },
   media: {
     label: 'Audio: play songs and sounds, metronome, tuner',
     tools: ['play_sound', 'control_audio', 'start_metronome', 'tune_instrument'],

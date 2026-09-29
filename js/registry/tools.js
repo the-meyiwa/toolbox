@@ -1643,10 +1643,25 @@ export const TOOLS = [
     secondary: ['reference'],
     keywords: ['compound', 'chemicals', 'cas number', 'iupac', 'molar mass', 'formula', 'density', 'safety', 'pharmaceutical', 'drug', 'medicine', 'biochemistry', 'organic', 'inorganic', 'pesticide', 'herbicide', 'food additive', 'cosmetic ingredient', 'toxic', 'hazard', 'ghs', 'pubchem', 'solvent', 'reagent'],
     intents: ['look up compound', 'chemical formula lookup', 'cas search', 'drug lookup', 'pharmaceutical database'],
-    related: ['periodic-table', 'chemical-equation-balancer', 'stoichiometry-calculator'],
+    related: ['periodic-table', 'chemical-equation-balancer', 'stoichiometry-calculator', 'cosmetics-database'],
     weight: 75,
     offline: true,
     icon: svg('<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>'),
+  },
+
+  {
+    id: 'cosmetics-database',
+    name: 'Cosmetics Database',
+    description: 'Skincare, makeup, hair, body, sun care, fragrance and oral care from brands around the world: specifications, full ingredient lists read ingredient by ingredient down to the compound, and live labels for any product',
+    category: 'science',
+    secondary: ['reference', 'everyday'],
+    keywords: ['cosmetics', 'beauty', 'skincare', 'skin care', 'makeup', 'make-up', 'ingredients', 'inci', 'ingredient list', 'serum', 'moisturizer', 'moisturiser', 'cleanser', 'sunscreen', 'spf', 'foundation', 'lipstick', 'mascara', 'shampoo', 'conditioner', 'perfume', 'fragrance', 'toothpaste', 'deodorant', 'niacinamide', 'retinol', 'hyaluronic acid', 'fragrance allergens', 'k-beauty', 'brands', 'cerave', 'the ordinary', 'nivea', 'la roche-posay'],
+    synonyms: ['beauty database', 'skincare ingredients', 'cosmetic ingredient checker', 'inci decoder', 'makeup database', 'what is in my skincare'],
+    intents: ['check cosmetic ingredients', 'what is in this moisturizer', 'compare skincare products', 'find fragrance-free products', 'look up a beauty brand'],
+    related: ['compound-database', 'diseases-database', 'periodic-table'],
+    weight: 88,
+    offline: true,
+    icon: svg('<path d="M9 3h6v4H9z"/><path d="M8 7h8l1 3v9a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-9z"/><path d="M7 13h10"/>'),
   },
 
   {

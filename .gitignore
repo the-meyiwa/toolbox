@@ -12,3 +12,5 @@ audit-*.log
 
 # Large third-party source models (download separately; see docs/automobile-viewer.md)
 vehicle-packages/sources/
+
+__pycache__/

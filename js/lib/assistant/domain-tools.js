@@ -7,16 +7,20 @@
                    keys, intervals, transposition
    business_calc   every Business & Finance calculator
    network_tool    every Networking tool
+   cosmetics_database  products, ingredients and brands in the
+                   Cosmetics Database (js/lib/cosmetics/assistant.js)
 
    Cards: js/lib/assistant/domain-cards.js
    ============================================================ */
 
 import { BUSINESS_CALCULATORS, businessCalc } from '../business-calc.js';
 import { NETWORK_ACTIONS } from '../network-calc.js';
+import { COSMETICS_TOOL_DECLARATION } from '../cosmetics/declaration.js';
 
 const SCALE_IDS = ['major', 'natural-minor', 'harmonic-minor', 'melodic-minor', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'locrian', 'major-pentatonic', 'minor-pentatonic', 'blues', 'major-blues', 'whole-tone', 'diminished-hw', 'diminished-wh', 'chromatic', 'lydian-dominant', 'altered', 'phrygian-dominant', 'hungarian-minor', 'double-harmonic', 'bebop-dominant', 'hirajoshi', 'in', 'egyptian'];
 
 export const DOMAIN_TOOL_DECLARATIONS = [
+  COSMETICS_TOOL_DECLARATION,
   {
     name: 'music_library',
     description: 'Search the Music Theory Library (108 topics from first notes to expert analysis, world traditions and jazz; 25 instrument guides — how to hold and play, first lessons, practice, care and a beginner-to-advanced roadmap; 181 glossary terms). Returns the best entry\'s text for you to teach from, related entries, and a card that opens the library on that page. Use it for any music-theory or "how do I play/learn <instrument>" question, then explain at the person\'s level (beginner: plain words; expert: precise terms).',
@@ -296,6 +300,7 @@ export async function executeDomainTool(name, args = {}) {
     case 'music_theory': return musicTheoryTool(args);
     case 'business_calc': return businessCalcTool(args);
     case 'network_tool': return networkTool(args);
+    case 'cosmetics_database': return (await import('../cosmetics/assistant.js')).cosmeticsTool(args);
     default: return undefined;
   }
 }

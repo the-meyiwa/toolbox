@@ -112,7 +112,8 @@ export const LONG_CONTENT_TOOL_IDS = new Set([
   'cap-table', 'amortization-schedule', 'depreciation-calculator', 'invoice-generator',
   'payroll-cost', 'timesheet', 'pto-accrual', 'unit-economics', 'runway-calculator',
   'subscription-analyzer', 'financial-analyzer', 'concrete-estimator', 'beam-calculator',
-  'stoichiometry-calculator', 'chemical-equation-balancer', 'math-utility', 'chess', 'tech-device-comparisons'
+  'stoichiometry-calculator', 'chemical-equation-balancer', 'math-utility', 'chess', 'tech-device-comparisons',
+  'cosmetics-database',
 ]);
 
 /* Tools that bring their own full-screen chrome: no panel around them. */
@@ -127,7 +128,7 @@ const WIDE_TOOL_IDS = new Set([
   'watermark-remover', 'math-utility', 'periodic-table', 'data-bot', 'financial-analyzer', 'wiki',
   'video-player', 'file-drop', 'compound-database', 'diseases-database', 'calculator', 'case-digest',
   'case-comparator', 'legal-research', 'text-diff', 'tech-device-comparisons', 'sound-effects', 'chess',
-  'scribe', 'ledger', 'podium',
+  'scribe', 'ledger', 'podium', 'cosmetics-database',
 ]);
 /* Tools whose content should stretch to fill the panel's height. */
 const FILL_TOOL_IDS = new Set([

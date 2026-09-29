@@ -12,7 +12,7 @@
    "iphone 18 pro vs s23 plus" both just work.
    ============================================================ */
 
-import { CATEGORY_ORDER, CATEGORIES, loadCategory, deviceNameScore } from './db.js';
+import { CATEGORY_ORDER, CATEGORIES, loadCategory, deviceNameScore, searchDevices } from './db.js';
 
 const STORE = 'toolbox_devices_v2';
 const MIN_SINGLE = 0.62;   // confidence floor for a bare "show me this device" query
@@ -64,6 +64,62 @@ export async function resolveDevice(query, { limit = 5 } = {}) {
   const hits = (await Promise.all(CATEGORY_ORDER.map(cat => bestInCategory(q, cat)))).filter(Boolean);
   hits.sort((a, b) => b.score - a.score || (b.device._score || 0) - (a.device._score || 0));
   return hits.slice(0, limit);
+}
+
+/**
+ * Every device matching `query`, across all categories, best first — for a search field
+ * that lists many results (resolveDevice keeps only the best per category). Name matches
+ * come first; when nothing matches by name, specs and attributes are searched instead
+ * ("oled 65", "rtx", "anc").
+ * @returns {Promise<Array<{category, data, device, score}>>}
+ */
+export async function searchAllDevices(query, { limit = 8, categories = CATEGORY_ORDER } = {}) {
+  const q = String(query || '').trim();
+  if (!q) return [];
+  const all = await Promise.all(categories.map(cat => loadCategory(cat).then(data => ({ cat, data }))));
+  const named = [];
+  for (const { cat, data } of all) {
+    for (const d of data.devices) {
+      const s = deviceNameScore(q, d);
+      if (s > 0.3) named.push({ category: cat, data, device: d, score: s });
+    }
+  }
+  if (named.length) {
+    named.sort((a, b) => b.score - a.score || (b.device._score || 0) - (a.device._score || 0) || (b.device.released || '').localeCompare(a.device.released || ''));
+    return named.slice(0, limit);
+  }
+  const loose = [];
+  for (const { cat, data } of all) {
+    searchDevices(data, q, limit).forEach((d, i) => loose.push({ category: cat, data, device: d, score: 0.3 - i * 0.01 }));
+  }
+  return loose.sort((a, b) => b.score - a.score || (b.device._score || 0) - (a.device._score || 0)).slice(0, limit);
+}
+
+const norm = (s) => String(s || '').toLowerCase().replace(/&/g, ' ').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+const CAT_WORDS = {
+  phones: 'smartphone mobile cell', tablets: 'ipad', laptops: 'notebook macbook computer', socs: 'soc mobile chip chipset snapdragon',
+  cpus: 'cpu processor desktop chip', gpus: 'gpu graphics video card', watches: 'smartwatch watch wearable', audio: 'headphones earbuds earphones',
+  consoles: 'console handheld gaming', tvs: 'tv television', monitors: 'monitor display screen', guitars: 'guitar', keyboards: 'piano keyboard synth',
+  coffee: 'coffee espresso', chargers: 'charger cable usb', powerbanks: 'power bank station battery', speakers: 'speaker bluetooth',
+  printers: 'printer', copiers: 'copier photocopier', inverters: 'inverter solar', ups: 'ups backup', evs: 'ev electric car vehicle',
+};
+
+/** Categories a query names ("phones", "graphics card", "tv"), best first. */
+export function matchCategories(query) {
+  const q = norm(query);
+  if (q.length < 2) return [];
+  const out = [];
+  for (const cat of CATEGORY_ORDER) {
+    const def = CATEGORIES[cat];
+    const words = norm(`${def.label} ${def.singular} ${CAT_WORDS[cat] || ''}`).split(' ');
+    const phrase = norm(def.label), single = norm(def.singular);
+    let s = 0;
+    if (q === phrase || q === single || q === cat) s = 1;
+    else if (phrase.startsWith(q) || single.startsWith(q)) s = 0.85;
+    else if (q.split(' ').every(w => words.some(x => x.startsWith(w) && w.length >= 2))) s = 0.7;
+    if (s) out.push({ category: cat, score: s });
+  }
+  return out.sort((a, b) => b.score - a.score);
 }
 
 /**

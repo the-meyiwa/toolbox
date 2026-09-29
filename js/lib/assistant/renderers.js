@@ -850,6 +850,58 @@ export function renderNetworkResult(data, container) {
   return el;
 }
 
+/* Cosmetics Database (cosmetics_database): a product, ingredient, brand, list or comparison. */
+const BEAUTY_ICON = '<path d="M9 3h6v4H9z"/><path d="M8 7h8l1 3v9a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-9z"/><path d="M7 13h10"/>';
+const openCosmetics = (focus) => {
+  try { localStorage.setItem('toolbox.cosmetics.focus', JSON.stringify(focus || {})); } catch { /* opens on Discover */ }
+  window.location.hash = '#cosmetics-database';
+};
+export function renderCosmetic(data, container) {
+  const k = data.kind;
+  const title = k === 'product' ? `${data.brand} ${data.name}` : k === 'ingredient' ? data.inci : k === 'brand' ? data.name
+    : k === 'compare' ? `${data.a.name} vs ${data.b.name}` : k === 'list' ? `${data.total} product${data.total === 1 ? '' : 's'}` : `“${data.query}”`;
+  const sub = k === 'product' ? [data.productType, data.country].filter(Boolean).join(' · ') : k === 'ingredient' ? `${data.does}${data.compound && data.compound !== data.inci ? ` · ${data.compound}` : ''}`
+    : k === 'brand' ? [data.country, data.founded ? `since ${data.founded}` : '', data.parent && data.parent !== data.name ? data.parent : ''].filter(Boolean).join(' · ')
+      : k === 'online' ? 'Search every brand, live from Open Beauty Facts' : 'Cosmetics Database';
+  const el = card('cosmetic', { icon: BEAUTY_ICON, title, sub: esc(sub), actions: btn(k === 'online' ? 'Search every brand' : 'Open in Cosmetics Database', I.external, 'data-act="open"') });
+  const row = (a, b, attrs = '') => `<li ${attrs}><span>${esc(a)}</span><em>${esc(b)}</em></li>`;
+  let body = '';
+  if (k === 'product') {
+    const spec = Object.entries(data.specs || {}).filter(([key]) => key !== 'Type').slice(0, 8);
+    body = `${spec.length ? sheet(spec) : ''}
+      ${(data.notes || []).length ? `<ul class="astc-cz-notes">${data.notes.map(n => `<li class="is-${esc(n.kind)}">${uiIcon(n.kind === 'good' ? 'check-circle' : n.kind === 'warn' ? 'alert' : 'info', { size: 14 })}<span><b>${esc(n.title)}</b> ${esc(n.text)}</span></li>`).join('')}</ul>` : ''}
+      <h5 class="astc-ml-h">Ingredients (${data.ingredients.length})</h5>
+      <ol class="astc-cz-list">${data.ingredients.slice(0, 14).map(x => row(x.name, x.does)).join('')}</ol>
+      ${data.ingredients.length > 14 ? `<p class="astc-muted">and ${data.ingredients.length - 14} more in the full list</p>` : ''}
+      <p class="astc-muted">${esc(data.caveat)}</p>`;
+  } else if (k === 'ingredient') {
+    body = `${sheet([['Compound', data.compound], ['What it does', data.does], ...(data.formula ? [['Formula', data.formula]] : []), ...(data.cas ? [['CAS', data.cas]] : []), ...(data.aliases?.length ? [['Also written', data.aliases.join(', ')]] : [])])}
+      ${data.products?.length ? `<h5 class="astc-ml-h">In these products</h5><ol class="astc-cz-list">${data.products.map(p => row(p.name, `#${p.position} of ${p.of}`, `data-cz-product="${esc(p.id)}" tabindex="0" role="button"`)).join('')}</ol>` : ''}`;
+  } else if (k === 'brand') {
+    body = `${sheet([['Country', data.country], ...(data.founded ? [['Founded', String(data.founded)]] : []), ...(data.parent ? [['Owner', data.parent]] : []), ['Makes', (data.focus || []).join(', ')], ['Market', data.tier]])}
+      ${data.products?.length ? `<h5 class="astc-ml-h">In the catalogue</h5><ol class="astc-cz-list">${data.products.map(p => row(p.name, p.type, `data-cz-product="${esc(p.id)}" tabindex="0" role="button"`)).join('')}</ol>` : ''}`;
+  } else if (k === 'list') {
+    body = data.products?.length ? `<ol class="astc-cz-list">${data.products.map(p => row(`${p.brand} ${p.name}`, p.spf ? `${p.type} · SPF ${p.spf}` : p.type, `data-cz-product="${esc(p.id)}" tabindex="0" role="button"`)).join('')}</ol>` : '<p class="astc-muted">Nothing in the catalogue matches.</p>';
+  } else if (k === 'compare') {
+    body = `${sheet((data.specs || []).slice(0, 10).map(r => [r.label, `${r.a} · ${r.b}`]))}
+      <h5 class="astc-ml-h">${data.shared.length} ingredients in common</h5><p class="astc-ml-text">${esc(data.shared.join(', '))}</p>
+      <h5 class="astc-ml-h">Only in ${esc(data.a.name)}</h5><p class="astc-ml-text">${esc(data.onlyA.join(', ') || 'none')}</p>
+      <h5 class="astc-ml-h">Only in ${esc(data.b.name)}</h5><p class="astc-ml-text">${esc(data.onlyB.join(', ') || 'none')}</p>`;
+  } else {
+    body = '<p class="astc-muted">Not in the built-in catalogue. Open Beauty Facts has labels from brands all over the world.</p>';
+  }
+  el.querySelector('.astc-body').innerHTML = body;
+  el.addEventListener('click', (e) => {
+    const p = e.target.closest('[data-cz-product]');
+    if (p) { openCosmetics({ product: p.dataset.czProduct }); return; }
+    if (e.target.closest('[data-act="open"]')) openCosmetics(data.open);
+  });
+  el.addEventListener('keydown', (e) => { const p = e.target.closest?.('[data-cz-product]'); if (p && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openCosmetics({ product: p.dataset.czProduct }); } });
+  container.appendChild(el);
+  return el;
+}
+registerResultRenderer('cosmetic', renderCosmetic);
+
 const AUTO_ICON = '<path d="M13 3 5 14h6l-1 7 8-11h-6z"/>';
 export function renderAutomations(data, container) {
   const list = Array.isArray(data.automations) ? data.automations : [];

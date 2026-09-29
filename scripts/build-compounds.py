@@ -6,6 +6,9 @@ Outputs
                                       (bundled with the app).
   public/data/compounds-extended.json Every compound in the source tables
                                       (~76k), loaded lazily by the tool.
+  js/lib/cosmetics/inci.js            Every cosmetic ingredient by its INCI
+                                      label name, with the compound record it
+                                      belongs to (Cosmetics Database).
 
 Sources (all shipped in the MIT-licensed `chemicals` package by Caleb Bell)
   Identifiers   PubChem-derived identifier tables (CID, CAS, formula, MW, IUPAC
@@ -20,7 +23,9 @@ Sources (all shipped in the MIT-licensed `chemicals` package by Caleb Bell)
 The curated lists in scripts/compounds/*.txt only name compounds and describe
 their use; every identifier and property comes from the tables above. Names the
 tables do not know ship as lookup stubs that the tool resolves live from
-PubChem.
+PubChem. scripts/compounds/cosmetic-inci.txt maps the ingredient names printed
+on cosmetics (INCI) to compounds, so every ingredient of every product in the
+Cosmetics Database is a record here too, searchable by its label name.
 
 Usage
   python3 -m pip install chemicals==1.5.2
@@ -226,6 +231,30 @@ def read_list(key):
     return rows
 
 
+def inci_display(name, lookup):
+    """Record name for an INCI row: label names (printed in title case) become
+    sentence case, keeping codes and acronyms such as PEG-6, BHT or C12-15."""
+    if lookup == '=':
+        words = name.split(' ')
+        return ' '.join(w if i == 0 or any(c.isdigit() for c in w) or w.split('-')[0].isupper() else w.lower()
+                        for i, w in enumerate(words))
+    if name != name.lower():
+        return name[0].upper() + name[1:]
+    return display_name(name)
+
+
+def read_inci():
+    rows = []
+    with open(os.path.join(LISTS, 'cosmetic-inci.txt'), encoding='utf8') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            inci, lookup, use = [p.strip() for p in line.split('|')]
+            rows.append((inci, lookup, use))
+    return rows
+
+
 def name_variants(name):
     n = name.lower()
     yield n
@@ -240,7 +269,7 @@ def name_variants(name):
 
 # Reviewed with `-v`: synonym matches that land on the wrong compound. Mixtures,
 # polymers and minerals have no single record, so they stay live stubs.
-CAS_OVERRIDES = {'mercury(ii) chloride': '7487-94-7'}
+CAS_OVERRIDES = {'mercury(ii) chloride': '7487-94-7', 'zinc gluconate': '4468-02-4'}
 NO_MATCH = {'sulfur', 'xanthan gum', 'carbomer', 'mica', 'dimethicone', 'giemsa stain', 'hyaluronic acid',
             'quinoline yellow', 'iron oxide black', 'n-acetylglucosamine'}
 
@@ -310,6 +339,47 @@ def main():
             elif use not in rec['uses']:
                 rec['uses'].append(use)
 
+    # Cosmetic ingredients by INCI label name. "=" looks the INCI name up, a
+    # chemical name looks that up, "~name" keeps a mixture, polymer or botanical
+    # as a named record. Records that already exist (same CAS number, or the
+    # same name for records without one) gain the INCI name instead of a twin.
+    by_display = {rec['name'].lower(): rec for rec in curated}
+    inci_map = {}
+    for inci, lookup, use in read_inci():
+        stub = lookup.startswith('~')
+        name = (lookup[1:].strip() or inci) if stub else (inci if lookup == '=' else lookup)
+        cas = None if stub else resolve(name, by_name)
+        rec = by_key.get(cas) if cas else None
+        # a chemical name the tables do not know: name the record after the label
+        pretty = inci_display(inci, '=') if not stub and not cas and lookup != '=' else inci_display(name, lookup)
+        if rec is None:
+            rec = by_display.get(pretty.lower()) or by_key.get(f'name:{name.lower()}')
+        if rec is None:
+            rec = {'name': pretty, 'category': 'Cosmetic & Personal Care', 'fields': [], 'uses': []}
+            if cas:
+                d = db[cas]
+                rec.update({
+                    'cas': cas, 'cid': d['cid'], 'formula': d['formula'], 'molarMass': d['mw'],
+                    'iupac': d['iupac'],
+                    'melt': c_from_k(tm.get(cas)), 'boil': c_from_k(tb.get(cas)),
+                    'density': density_g_cm3(rho.get(cas)),
+                    'flash': c_from_k(flash.get(cas)),
+                })
+                by_key[cas] = rec
+            else:
+                rec['live'] = True
+                unresolved.append(f'inci: {inci} ({name})')
+                by_key[f'name:{name.lower()}'] = rec
+            by_display[rec['name'].lower()] = rec
+            curated.append(rec)
+        if 'Cosmetic & Personal Care' not in rec['fields']:
+            rec['fields'].append('Cosmetic & Personal Care')
+        if inci not in rec.setdefault('inci', []):
+            rec['inci'].append(inci)
+        if use not in rec['uses']:
+            rec['uses'].append(use)
+        inci_map[inci] = {'c': rec['name'], 'f': use}
+
     for rec in curated:
         notes = hazard_notes(rec.get('cas'))
         if rec.get('toxicProfile') and 'Toxic & Hazardous' not in rec['fields']:
@@ -359,7 +429,28 @@ def main():
         f.write(json.dumps(curated, ensure_ascii=False, indent=1))
         f.write(';\n')
 
+    inci_path = os.path.join(ROOT, 'js', 'lib', 'cosmetics', 'inci.js')
+    by_name_out = {rec['name']: rec for rec in curated}
+    with open(inci_path, 'w', encoding='utf8') as f:
+        f.write('/* Generated by scripts/build-compounds.py from scripts/compounds/cosmetic-inci.txt.\n'
+                '   Do not edit by hand.\n\n'
+                '   Every cosmetic ingredient by its INCI label name: c is the Compound Database\n'
+                '   record it belongs to, f what it does in the product, and the identifiers\n'
+                '   (CAS, formula, molar mass, PubChem CID) come from that record. */\n\n')
+        out = {}
+        for inci in sorted(inci_map, key=str.lower):
+            m = inci_map[inci]
+            rec = by_name_out[m['c']]
+            out[inci] = {k: v for k, v in {
+                'c': m['c'], 'f': m['f'], 'cas': rec.get('cas'), 'formula': rec.get('formula'),
+                'mw': rec.get('molarMass'), 'cid': rec.get('cid'),
+            }.items() if v is not None}
+        f.write('export const INCI = ')
+        f.write(json.dumps(out, ensure_ascii=False, indent=0).replace('\n', ''))
+        f.write(';\n')
+
     print(f'curated: {len(curated)} ({len(unresolved)} live stubs)')
+    print(f'cosmetic INCI names: {len(inci_map)}')
     print(f'extended: {len(rows)} rows, {os.path.getsize(ext_path) / 1e6:.1f} MB')
     print(f'module: {os.path.getsize(js_path) / 1e6:.2f} MB')
     if '-v' in sys.argv:

@@ -302,6 +302,7 @@ export default {
                 ${propRow('Flash point', fmtTemp(record.flash))}
                 ${record.iupac ? `<div style="grid-column:1/-1;">${propRow('IUPAC name', escapeHtml(record.iupac))}</div>` : ''}
                 ${record.synonyms?.length ? `<div style="grid-column:1/-1;">${propRow('Also known as', escapeHtml(record.synonyms.join(', ')))}</div>` : ''}
+                ${record.inci?.length ? `<div style="grid-column:1/-1;">${propRow('On cosmetic labels (INCI)', escapeHtml(record.inci.join(', ')))}</div>` : ''}
               </div>
               ${record.cid ? `<img src="${structureImageUrl(record.cid)}" alt="Structure of ${escapeHtml(record.name)}" loading="lazy" style="width:180px; height:180px; object-fit:contain; background:#fff; border:1px solid var(--border); border-radius:10px;" onerror="this.style.display='none'">` : ''}
             </div>
@@ -401,7 +402,7 @@ export default {
       searchIn.value = focus.name;
       renderCompounds(true);
       const want = String(focus.name).toLowerCase();
-      const record = COMPOUNDS_DATA.find(c => c.name.toLowerCase() === want);
+      const record = COMPOUNDS_DATA.find(c => c.name.toLowerCase() === want) || COMPOUNDS_DATA.find(c => (c.inci || []).some(n => n.toLowerCase() === want));
       if (record) openDetails.call(this, record);
     }
   },

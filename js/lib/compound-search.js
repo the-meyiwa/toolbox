@@ -32,7 +32,7 @@ export function rowToRecord(columns, row) {
 function haystackOf(c) {
   return [
     c.name, c.formula, c.cas, c.iupac, c.use, c.category,
-    ...(c.fields || []), ...(c.hazards || []), ...(c.synonyms || []),
+    ...(c.fields || []), ...(c.hazards || []), ...(c.synonyms || []), ...(c.inci || []),
   ].filter(Boolean).join(' ').toLowerCase();
 }
 
@@ -44,7 +44,8 @@ export function buildIndex(records) {
 function rank(record, q) {
   const name = (record.name || '').toLowerCase();
   if (name === q || (record.cas || '') === q || (record.formula || '').toLowerCase() === q) return 0;
-  if ((record.synonyms || []).some(s => s.toLowerCase() === q)) return 1;
+  // A synonym or the ingredient name printed on a cosmetic (INCI: "Aqua", "Glycerin")
+  if ([...(record.synonyms || []), ...(record.inci || [])].some(s => s.toLowerCase() === q)) return 1;
   if (name.startsWith(q)) return 2;
   return 3;
 }
