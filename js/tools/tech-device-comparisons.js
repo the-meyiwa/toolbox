@@ -31,15 +31,12 @@ import IcecatPanel from '../lib/devices/icecat-panel.js';
 import { RevealMotion, flip, pointerLight } from '../lib/reveal-motion.js';
 const deviceImages = new Map();
 async function applyDeviceImages(root) {
-  for (const el of root.querySelectorAll('.dv-hero-glyph[data-image-query]:not(.has-image)')) {
-    const q = el.dataset.imageQuery;
-    if (deviceImages.get(q) === null) continue;
-    if (deviceImages.has(q)) { el.classList.add('has-image'); el.innerHTML = <img src="" style="width:100%;height:100%;object-fit:contain;animation:dv-fade-in 0.3s ease;">; continue; }
-    fetch("https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=&gsrlimit=1&prop=pageimages&pithumbsize=300&format=json&origin=*").then(r => r.json()).then(data => {
-      const p = data?.query?.pages; const src = p ? Object.values(p)[0]?.thumbnail?.source : null;
-      deviceImages.set(q, src || null);
-      if (src) { el.classList.add('has-image'); el.innerHTML = <img src="" style="width:100%;height:100%;object-fit:contain;animation:dv-fade-in 0.3s ease;">; }
-    }).catch(() => deviceImages.set(q, null));
+  for (const el of root.querySelectorAll('.dv-hero-glyph[data-image-id]:not(.has-image)')) {
+    const id = el.dataset.imageId;
+    const img = new Image();
+    img.src = '/images/devices/' + id + '.jpg';
+    img.onload = () => { el.classList.add('has-image'); el.innerHTML = <img src="" style="width:100%;height:100%;object-fit:contain;animation:dv-fade-in 0.3s ease;">; };
+    img.onerror = () => { el.classList.add('has-image'); /* Fallback to placeholder */ };
   }
 }
 import { getToolSettings, onToolSettings } from '../lib/tool-settings.js';
@@ -624,7 +621,7 @@ export default {
     const hero = `
       <div class="dv-hero-card dv-hero-solo" data-side="a" data-flip="dev-${esc(A.id)}">
         <div class="dv-hero-main">
-          <span class="dv-hero-glyph" data-image-query="${esc(A.brand + ' ' + A.name)}">${glyph(cat, 56)}</span>
+          <span class="dv-hero-glyph" data-image-id="${esc(typeof d !== 'undefined' ? d.id : A.id)}">${glyph(cat, 56)}</span>
           <div class="dv-hero-meta">
             <span class="dv-brand">${esc(A.brand)}</span>
             <strong class="dv-hero-name">${esc(A.name)}</strong>
@@ -732,7 +729,7 @@ export default {
       <div class="dv-hero-card${win ? ' win' : ''}" data-side="${side}" data-flip="dev-${esc(d.id)}">
         ${this.pickerHtml(d, side)}
         <div class="dv-hero-main">
-          <span class="dv-hero-glyph" data-image-query="${esc(d.brand + ' ' + d.name)}">${glyph(cat, 56)}</span>
+          <span class="dv-hero-glyph" data-image-id="${esc(typeof d !== 'undefined' ? d.id : A.id)}">${glyph(cat, 56)}</span>
           <div class="dv-hero-meta">
             <span class="dv-brand">${esc(d.brand)}</span>
             <strong class="dv-hero-name">${esc(d.name)}</strong>

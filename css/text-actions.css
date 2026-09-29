@@ -4,7 +4,8 @@
 .finder-menu-item[aria-disabled="true"] { opacity: .45; cursor: default; }
 .finder-menu-chevron { margin-left: auto; color: var(--text-muted); }
 .tb-menu-horizontal { display: flex; align-items: center; min-width: 0; width: max-content; max-width: calc(100vw - 20px); padding: 4px; gap: 2px; overflow-x: auto; }
-.tb-menu-horizontal .finder-menu-item { width: max-content; min-width: 36px; height: 36px; padding: 9px 10px; flex: 0 0 auto; gap: 0; display: flex; align-items: center; border-radius: var(--radius-md, 8px); transition: background 150ms ease, flex-basis 240ms cubic-bezier(.22,1,.36,1); overflow: hidden; }
+.tb-menu-horizontal .finder-menu-item { width: max-content; min-width: 36px; height: 36px; padding: 9px 10px; flex: 0 0 auto; display: flex; align-items: center; border-radius: var(--radius-md, 8px); transition: background 150ms ease; overflow: hidden; }
+.tb-menu-horizontal .finder-menu-item-left { display: flex; align-items: center; gap: 0; }
 .tb-menu-horizontal .finder-menu-icon { width: 16px; height: 16px; flex: 0 0 auto; }
 .tb-menu-horizontal .finder-menu-label { display: block; max-width: 0; opacity: 0; padding-left: 0; white-space: nowrap; overflow: hidden; transition: max-width 240ms cubic-bezier(.22,1,.36,1), opacity 150ms ease, padding-left 240ms cubic-bezier(.22,1,.36,1); }
 .tb-menu-horizontal .finder-menu-item:hover .finder-menu-label, .tb-menu-horizontal .finder-menu-item:focus-visible .finder-menu-label { max-width: 200px; padding-left: 8px; opacity: 1; }
@@ -32,3 +33,24 @@
 @keyframes tb-text-arrive { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }
 @media (max-width: 600px) { .tb-text-popup { right: 12px; bottom: 12px; max-height: calc(100dvh - 24px); } }
 @media (prefers-reduced-motion: reduce) { .tb-menu-reveal .finder-menu-label { transition: none; } .tb-text-popup { animation: none; } }
+
+@media (max-width: 768px) {
+  .tb-menu-reveal {
+    position: absolute !important;
+    top: var(--tb-top, auto) !important;
+    left: var(--tb-left, auto) !important;
+    bottom: auto !important;
+    right: auto !important;
+    width: 48px !important;
+    border-radius: 12px !important;
+    padding: 5px !important;
+    border-bottom: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-xl) !important;
+    animation: none !important;
+  }
+  .tb-menu-reveal .finder-menu-item {
+    min-height: 34px !important;
+    padding: 8px 10px !important;
+    font-size: .86rem !important;
+  }
+}
