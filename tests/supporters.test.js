@@ -6,7 +6,7 @@ import { createSupporterHandler, validateContribution, supporterThreshold } from
 const reference = 'TBX-11111111-1111-4111-8111-111111111111';
 const intent = { tx_ref:reference, user_id:'account-a', amount:5000, currency:'NGN', supporter_threshold:5000 };
 const payment = { id:123, tx_ref:reference, amount:5000, currency:'NGN', status:'successful' };
-const env = { SUPABASE_URL:'https://test.supabase.co', SUPABASE_SERVICE_ROLE_KEY:'test-service', FLUTTERWAVE_SECRET_KEY:'test-secret', FLUTTERWAVE_PUBLIC_KEY:'test-public' };
+const env = { SUPABASE_URL:'https://test.supabase.co', SUPABASE_SERVICE_ROLE_KEY:'test-service', FLUTTERWAVE_SECRET_KEY:'FLWSECK_TEST-example-X', FLUTTERWAVE_PUBLIC_KEY:'FLWPUBK_TEST-example-X' };
 const json = data => ({ ok:true, status:200, json:async () => data });
 
 test('only successful payments with matching reference, currency, amount and ID verify', () => {
@@ -38,6 +38,22 @@ async function request(handler, path, body, token = 'valid-token') {
 test('missing configuration fails closed without contacting providers', async () => {
   const handler=createSupporterHandler({ env:{}, fetcher:()=>assert.fail('must not call network') });
   assert.equal((await request(handler,'intent',{})).status,503);
+});
+
+test('missing Flutterwave keys keep checkout unavailable', async () => {
+  for (const keys of [
+    { FLUTTERWAVE_PUBLIC_KEY:'' },
+    { FLUTTERWAVE_SECRET_KEY:'' },
+  ]) {
+    const handler=createSupporterHandler({ env:{ ...env,...keys }, fetcher:()=>assert.fail('must not call network') });
+    assert.deepEqual((await request(handler,'configuration')).data,{ ready:false });
+    assert.equal((await request(handler,'intent',{ amount:5000,currency:'NGN',email:'test@example.invalid' },null)).status,503);
+  }
+});
+
+test('credential formats are left to Flutterwave to validate', async () => {
+  const handler=createSupporterHandler({ env:{ ...env, FLUTTERWAVE_PUBLIC_KEY:'new-public-format', FLUTTERWAVE_SECRET_KEY:'new-secret-format' }, fetcher:()=>assert.fail('must not call network') });
+  assert.deepEqual((await request(handler,'configuration')).data,{ ready:true });
 });
 
 test('guest contributions require a valid receipt email', async () => {

@@ -4,6 +4,10 @@ export const SUPPORTER_THRESHOLD_NGN = 5000;
 export const PROFILE_STYLES = ['classic', 'etched', 'halo', 'orbit'];
 const CURRENCIES = ['NGN', 'USD', 'CAD', 'GBP'];
 
+function flutterwaveKeysPresent(env) {
+  return !!(env.FLUTTERWAVE_PUBLIC_KEY?.trim() && env.FLUTTERWAVE_SECRET_KEY?.trim());
+}
+
 export function validateContribution(payment, intent) {
   return payment?.status === 'successful'
     && /^\d{1,24}$/.test(String(payment.id))
@@ -29,7 +33,7 @@ class RequestError extends Error {
 
 export function createSupporterHandler({ env = process.env, fetcher = fetch } = {}) {
   const base = () => (env.SUPABASE_URL || env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
-  const configured = () => base() && env.SUPABASE_SERVICE_ROLE_KEY && env.FLUTTERWAVE_SECRET_KEY && env.FLUTTERWAVE_PUBLIC_KEY;
+  const configured = () => !!(base() && env.SUPABASE_SERVICE_ROLE_KEY && flutterwaveKeysPresent(env));
   async function jsonFetch(url, options = {}) {
     const response = await fetcher(url, { ...options, signal: AbortSignal.timeout(15000) });
     if (!response.ok) throw new RequestError(503, 'Contributions are temporarily unavailable. Please try again later.');
@@ -42,7 +46,7 @@ export function createSupporterHandler({ env = process.env, fetcher = fetch } = 
   });
   const flw = async path => {
     const result = await jsonFetch(`https://api.flutterwave.com/v3/${path}`, {
-      headers: { Authorization: `Bearer ${env.FLUTTERWAVE_SECRET_KEY}` },
+      headers: { Authorization: `Bearer ${env.FLUTTERWAVE_SECRET_KEY.trim()}` },
     });
     if (result.status !== 'success') throw new RequestError(503, 'Payment confirmation is not available yet. Try checking again shortly.');
     return result.data;
@@ -95,7 +99,7 @@ export function createSupporterHandler({ env = process.env, fetcher = fetch } = 
         send(200, { ready: !!configured() });
         return true;
       }
-      if (!configured()) throw new RequestError(503, 'Supporter checkout is not configured on this deployment yet.');
+      if (!configured()) throw new RequestError(503, 'Supporter checkout needs Supabase and Flutterwave credentials on this server.');
       if (route === 'quote' && request.method === 'GET') {
         const currency = url.searchParams.get('currency') || 'NGN';
         if (!CURRENCIES.includes(currency)) throw new RequestError(400, 'Unsupported currency.');
@@ -126,7 +130,7 @@ export function createSupporterHandler({ env = process.env, fetcher = fetch } = 
         const intent = { tx_ref: `TBX-${randomUUID()}`, user_id: user?.id || null, currency: body.currency, amount, supporter_threshold: threshold };
         await db('toolbox_contributions', { method: 'POST', body: JSON.stringify(intent) });
         send(200, { tx_ref: intent.tx_ref, amount, currency: intent.currency, threshold,
-          public_key: env.FLUTTERWAVE_PUBLIC_KEY, customer: { email } });
+          public_key: env.FLUTTERWAVE_PUBLIC_KEY.trim(), customer: { email } });
       } else if (route === 'verify' && request.method === 'POST') {
         const body = await readBody(request);
         if (!/^TBX-[a-f0-9-]{36}$/.test(body.reference || '')
