@@ -133,14 +133,19 @@ export const TOOL_GROUPS = {
     match: /\b(speed test|internet speed|bandwidth|latency|ping|dns|reverse dns|ptr|domain|mx record|nameserver|subnet|cidr|netmask|subnet mask|ipv4|ipv6|ip address|my ip|whois|registrar|rdap|ssl|tls|certificate|https cert|robots\.txt|sitemap|mac address|oui|url|query string|network)\b|\b\d{1,3}(\.\d{1,3}){3}(\/\d{1,2})?\b/i,
   },
   social: {
-    label: 'Toolbox messaging and spaces: conversations, messages, profiles',
-    tools: ['list_conversations', 'read_space_messages', 'send_space_message', 'list_profiles'],
+    label: 'Toolbox Messages: list your conversations, read or search live messages',
+    tools: ['list_conversations', 'read_messages', 'search_messages'],
     match: /\b(message|messages|dm|chat with|space|spaces|conversation|profile|send .* to @|@\w+)\b/i,
   },
   design: {
     label: 'Colour: convert colours and check contrast',
     tools: ['color_converter_and_contrast'],
     match: /\b(colou?r|hex|rgb|hsl|contrast|palette)\b/i,
+  },
+  chat_tools: {
+    label: 'Custom tools saved only in this chat: calculators, text transformers and templates',
+    tools: ['create_chat_tool', 'list_chat_tools', 'run_chat_tool'],
+    match: /\b((build|create|make|custom|own|mini|reuse|reusable|interactive|chat)[ -]+(\w+\s+){0,4}tools?|calculator|transformer|template|run (it|that|the tool)|this chat)\b/i,
   },
   modelling: {
     label: '3D: create 3D objects (phones, furniture, props, vehicles, shapes) to view, export and open in the 3D Lab; realistic 3D models of structures (trusses, frames, towers, bridges, domes, buildings, landmarks)',

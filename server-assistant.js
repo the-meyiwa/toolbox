@@ -31,6 +31,8 @@
    variables (ASSISTANT_GEMINI_MODEL, ASSISTANT_OPENAI_MODEL, …).
    ============================================================ */
 
+import { isLocalDevelopmentRequest, sessionCacheKey, safeProviderError } from './server-security.js';
+
 const PROVIDERS = [
   {
     id: 'gemini',
@@ -162,18 +164,22 @@ export function assistantProviders() {
   return PROVIDERS.filter(p => p.key()).map(p => ({ id: p.id, label: p.label, model: p.models()[0], vision: p.vision }));
 }
 
-async function authorised(request) {
+export async function authorised(request) {
   const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
   const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !supabaseKey) return true;            // local development without Supabase
+  if (!supabaseUrl || !supabaseKey) return isLocalDevelopmentRequest(request);
   const header = request.headers.authorization || '';
   if (!/^Bearer [\w.-]+$/.test(header)) return false;
   const now = Date.now();
-  const cached = authCache.get(header);
+  const cacheKey = sessionCacheKey(header);
+  const cached = authCache.get(cacheKey);
   if (cached && cached > now) return true;
   const who = await fetch(`${supabaseUrl}/auth/v1/user`, { headers: { apikey: supabaseKey, Authorization: header }, signal: AbortSignal.timeout(12000) });
   if (!who.ok) return false;
-  authCache.set(header, now + 5 * 60_000);
+  const user = await who.json();
+  if (!user?.id) return false;
+  const expiry = (() => { try { return JSON.parse(Buffer.from(header.slice(7).split('.')[1], 'base64url')).exp * 1000; } catch { return 0; } })();
+  authCache.set(cacheKey, Math.min(now + 60_000, expiry || now));
   if (authCache.size > 500) authCache.delete(authCache.keys().next().value);
   return true;
 }
@@ -354,7 +360,10 @@ function candidatesFor(payload, bytes) {
   const needsVision = hasImages(payload.messages);
   const tools = Boolean(payload.tools?.length);
   let ids = ORDER[mode].slice();
-  if (payload.provider && ids.includes(payload.provider)) ids = [payload.provider, ...ids.filter(id => id !== payload.provider)];
+  // Explicit provider choice is a data boundary, not just a speed preference.
+  // Cross-provider fallback must be explicitly enabled on the server.
+  if (payload.provider && ids.includes(payload.provider)) ids = [payload.provider];
+  else if (process.env.ASSISTANT_ALLOW_CROSS_PROVIDER_FALLBACK !== '1') ids = ids.filter(id => PROVIDERS.find(p => p.id === id)?.key()).slice(0, 1);
   const all = [];
   const skipped = [];
   for (const id of ids) {
@@ -399,6 +408,7 @@ async function diagnose(request, response) {
     response.end(JSON.stringify(body, null, 2));
     return true;
   };
+  if (!isLocalDevelopmentRequest(request)) return send(403, { error: 'Provider diagnostics are available only on the local development server.' });
   try {
     if (!(await authorised(request))) return send(401, { error: 'Sign in to Toolbox first.' });
   } catch { return send(503, { error: 'Could not verify your Toolbox session.' }); }
@@ -510,14 +520,14 @@ export async function handleAssistantGateway(request, response, url) {
     hedgeMs: HEDGE_MS[mode],
     timeoutMs: FIRST_TOKEN_TIMEOUT_MS[mode],
     bytes,
-    onError: (err) => { errors.push(err.message); console.warn('[assistant]', err.message); },
+    onError: (err) => { const message = safeProviderError('Assistant provider', err); errors.push(message); console.warn('[assistant]', message); },
   });
   if (controller.signal.aborted) return true;
   if (!winner) return fail(502, `No model provider could answer. ${errors.slice(-3).join(' · ')}`);
 
   clearInterval(heartbeat);
   const { c, reader, held } = winner;
-  const failed = [...skipped.map(s => `skipped for now — ${s.why}`), ...errors].slice(-8);
+  const failed = [...skipped.map(s => `${s.provider.label}: temporarily unavailable.`), ...errors].slice(-8);
   if (failed.length) response.write(`event: attempts\ndata: ${JSON.stringify({ failed })}\n\n`);
   response.write(`event: provider\ndata: ${JSON.stringify({ provider: c.provider.id, label: c.provider.label, model: c.model, firstTokenMs: Date.now() - received })}\n\n`);
   for (const chunk of held) response.write(Buffer.from(chunk));
@@ -528,7 +538,7 @@ export async function handleAssistantGateway(request, response, url) {
       response.write(Buffer.from(value));
     }
   } catch (err) {
-    if (!controller.signal.aborted) response.write(`event: error\ndata: ${JSON.stringify({ error: `The model connection dropped: ${err.message}` })}\n\n`);
+    if (!controller.signal.aborted) response.write(`event: error\ndata: ${JSON.stringify({ error: 'The model connection dropped. Please try again.' })}\n\n`);
   }
   response.end();
   return true;

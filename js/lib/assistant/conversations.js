@@ -79,7 +79,12 @@ export class ConversationStore {
   emit() { for (const fn of this.listeners) { try { fn(this); } catch { /* ignore */ } } }
 
   async load() {
+    clearTimeout(this.syncTimer);
     this.key = storageKey();
+    this.conversations = [];
+    this.activeId = null;
+    this.deleted = [];
+    const key = this.key;
     try {
       const raw = JSON.parse(localStorage.getItem(this.key) || 'null');
       if (raw?.conversations) {
@@ -88,15 +93,17 @@ export class ConversationStore {
         this.deleted = raw.deleted || [];
       }
     } catch { /* corrupt → start fresh */ }
-    if (!this.conversations.length) await this.migrateLegacy();
+    if (!this.conversations.length) await this.migrateLegacy(key);
+    if (this.key !== key || storageKey() !== key) return this;
     this.sort();
     return this;
   }
 
   /** Imports the single conversation kept by earlier versions. */
-  async migrateLegacy() {
+  async migrateLegacy(key = this.key) {
     try {
       const legacy = await conversationPersistence.loadConversation();
+      if (this.key !== key || storageKey() !== key) return;
       if (!legacy.length) return;
       const messages = legacy.map(m => ({
         id: m.id, turnId: m.turnId, role: m.role, content: m.content,
@@ -154,7 +161,13 @@ export class ConversationStore {
   duplicate(id) {
     const c = this.conversations.find(x => x.id === id);
     if (!c) return null;
-    const copy = { ...c, id: newId(), title: `${c.title || 'Chat'} (copy)`, customTitle: true, pinned: false, createdAt: Date.now(), updatedAt: Date.now(), messages: (c.messages || []).map(m => ({ ...m })) };
+    const copy = { ...c, id: newId(), title: `${c.title || 'Chat'} (copy)`, customTitle: true, pinned: false, createdAt: Date.now(), updatedAt: Date.now(), messages: (c.messages || []).map(compactMessage) };
+    // Custom tools remain owned by the original chat, even when its transcript is copied.
+    delete copy.chatTools;
+    for (const message of copy.messages) {
+      if (message.toolResults) message.toolResults = message.toolResults.map(r => r?.type === 'chat-tool' || r?.renderer === 'chat-tool' ? { status: 'success', type: 'text', message: 'This custom tool is saved in the original chat.' } : r);
+      for (const segment of message.segments || []) for (const run of segment.runs || []) if (run.name === 'create_chat_tool') run.args = {};
+    }
     this.conversations.unshift(copy);
     this.sort();
     this.save();
@@ -172,9 +185,11 @@ export class ConversationStore {
 
   /** Stores the messages of a conversation (creating it if needed). */
   put(conv, messages) {
+    if (this.key !== storageKey()) return;
     let c = this.conversations.find(x => x.id === conv.id);
     if (!c) { c = conv; this.conversations.unshift(c); }
     c.messages = messages.map(compactMessage);
+    if (Array.isArray(conv.chatTools)) c.chatTools = compactValue(conv.chatTools.slice(0, 12));
     if (!c.customTitle) c.title = titleFrom(messages);
     c.updatedAt = Date.now();
     this.sort();
@@ -183,6 +198,7 @@ export class ConversationStore {
   }
 
   save({ sync = true } = {}) {
+    if (this.key !== storageKey()) return;
     const payload = () => JSON.stringify({ conversations: this.conversations.filter(c => c.messages?.length), activeId: this.activeId, deleted: this.deleted || [] });
     for (let attempt = 0; attempt < 6; attempt++) {
       try {
@@ -209,7 +225,8 @@ export class ConversationStore {
   }
 
   async pushCloud() {
-    if (!getCurrentUser()) return;
+    if (!getCurrentUser() || this.key !== storageKey()) return;
+    const key = this.key;
     this.syncState = 'syncing'; this.emit();
     const conversations = this.conversations.filter(c => c.messages?.length).slice(0, 40).map(c => ({
       ...c,
@@ -217,15 +234,18 @@ export class ConversationStore {
       messages: c.messages.map(m => (m.fileData ? { ...m, fileData: { ...m.fileData, base64: null } } : m)),
     }));
     const ok = await saveAssistantConversationToCloud({ version: 2, updatedAt: Date.now(), conversations, deleted: this.deleted || [] }).catch(() => false);
+    if (this.key !== key || storageKey() !== key) return;
     this.syncState = ok ? 'synced' : 'offline';
     this.emit();
   }
 
   /** Merges the cloud copy into the local list (newest version of each conversation wins). */
   async pullCloud() {
-    if (!getCurrentUser()) return false;
+    if (!getCurrentUser() || this.key !== storageKey()) return false;
+    const key = this.key;
     let data = null;
     try { data = await fetchAssistantConversationsFromCloud(); } catch { return false; }
+    if (this.key !== key || storageKey() !== key) return false;
     if (!data || data.version !== 2 || !Array.isArray(data.conversations)) return false;
     const deleted = new Set([...(this.deleted || []), ...(data.deleted || [])]);
     const byId = new Map(this.conversations.map(c => [c.id, c]));

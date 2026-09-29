@@ -65,21 +65,47 @@ if (typeof window !== 'undefined' && !window.__toolboxNativeMenuGuard) {
  * @param {string} [options.title] - Optional header title
  * @param {Array<Object>} options.items - Menu action items
  */
-export function openContextMenu({ x, y, title = '', items = [], className = '', focusFirst = false, label = '' }) {
+export function openContextMenu({ x, y, title = '', items = [], className = '', focusFirst = false, label = '', presentation = 'regular' }) {
   closeContextMenu();
 
+  // A menu tree shares a lifetime, focus handling and outside-click boundary.
+  // Existing callers keep the regular menu; text actions opt into compact modes.
+  const panels = [];
+  let hoverTimer;
+  const previousFocus = document.activeElement;
+  const closeChildren = (level) => {
+    while (panels.length > level + 1) {
+      const removed = panels.pop();
+      removed.parent?.setAttribute('aria-expanded', 'false');
+      removeMenu(removed.element);
+    }
+  };
+  const showChildren = (entry, item, level, keyboard = false) => {
+    clearTimeout(hoverTimer);
+    if (panels[level + 1]?.parent === entry) return;
+    closeChildren(level);
+    const rect = entry.getBoundingClientRect();
+    entry.setAttribute('aria-expanded', 'true');
+    const child = buildPanel(item.children, rect.right + 3, rect.top, level + 1, entry);
+    if (keyboard) child.querySelector('[role="menuitem"]:not([aria-disabled="true"])')?.focus();
+  };
+
+  function buildPanel(entries, px, py, level = 0, parent = null) {
+
   const menu = document.createElement('div');
-  menu.id = 'toolbox-context-menu';
-  menu.className = `finder-context-menu ${className}`.trim();
+  if (!level) menu.id = 'toolbox-context-menu';
+  const mode = level && presentation === 'horizontal' ? 'reveal' : presentation;
+  menu.className = `finder-context-menu ${className} ${mode !== 'regular' ? `tb-menu-${mode}` : ''}`.trim();
   menu.setAttribute('role', 'menu');
-  if (label || title) menu.setAttribute('aria-label', label || title);
+  menu.setAttribute('aria-label', parent?.getAttribute('aria-label') || label || title || 'Actions');
+  if (mode === 'horizontal') menu.setAttribute('aria-orientation', 'horizontal');
 
   let html = '';
-  if (title) {
+  if (title && !level && mode === 'regular') {
     html += `<div class="finder-menu-title">${escapeHtml(title)}</div>`;
   }
 
-  items.forEach((item, index) => {
+  entries.forEach((item, index) => {
     if (item.separator) {
       html += '<div class="finder-menu-separator"></div>';
       return;
@@ -94,12 +120,12 @@ export function openContextMenu({ x, y, title = '', items = [], className = '', 
     }
 
     html += `
-      <div class="finder-menu-item ${item.destructive ? 'destructive' : ''}" data-item-index="${index}" role="menuitem" tabindex="0"${item.disabled ? ' aria-disabled="true"' : ''}${item.hint ? ` title="${escapeHtml(item.hint)}"` : ''}>
+      <div class="finder-menu-item ${item.destructive ? 'destructive' : ''}" data-item-index="${index}" role="menuitem" tabindex="-1" aria-label="${escapeHtml(item.label || '')}"${item.disabled ? ' aria-disabled="true"' : ''} title="${escapeHtml(item.hint || item.label || '')}"${item.children?.length ? ' aria-haspopup="menu" aria-expanded="false"' : ''}>
         <div class="finder-menu-item-left">
           ${item.icon ? `<span class="finder-menu-icon">${item.icon}</span>` : ''}
           <span class="finder-menu-label">${escapeHtml(item.label || '')}</span>
         </div>
-        ${item.shortcut ? `<span class="finder-menu-shortcut">${escapeHtml(item.shortcut)}</span>` : ''}
+        ${item.children?.length ? '<span class="finder-menu-chevron" aria-hidden="true">›</span>' : item.shortcut ? `<span class="finder-menu-shortcut">${escapeHtml(item.shortcut)}</span>` : ''}
       </div>
     `;
   });
@@ -116,11 +142,13 @@ export function openContextMenu({ x, y, title = '', items = [], className = '', 
   const box = menu.getBoundingClientRect();
   const rect = { width: menu.offsetWidth || box.width, height: menu.offsetHeight || box.height };
   const margin = 10;
-  let left = x;
-  let top = y;
+  // Reserve room for the hovered label without making every row wide.
+  const width = mode === 'reveal' ? Math.max(rect.width, 230) : rect.width;
+  let left = px;
+  let top = py;
 
-  if (left + rect.width > window.innerWidth - margin) {
-    left = window.innerWidth - rect.width - margin;
+  if (left + width > window.innerWidth - margin) {
+    left = parent ? parent.getBoundingClientRect().left - width - 3 : window.innerWidth - width - margin;
   }
   if (top + rect.height > window.innerHeight - margin) {
     top = window.innerHeight - rect.height - margin;
@@ -132,16 +160,18 @@ export function openContextMenu({ x, y, title = '', items = [], className = '', 
   menu.style.top = `${top}px`;
   // Unfold from the point that was clicked, even when the menu had to be
   // pushed back from a screen edge.
-  menu.style.transformOrigin = `${Math.max(0, Math.min(rect.width, x - left))}px ${Math.max(0, Math.min(rect.height, y - top))}px`;
+  menu.style.transformOrigin = `${Math.max(0, Math.min(rect.width, px - left))}px ${Math.max(0, Math.min(rect.height, py - top))}px`;
   menu.style.visibility = 'visible';
-  if (focusFirst) menu.querySelector('[role="menuitem"]:not([aria-disabled="true"])')?.focus();
+  panels.push({ element: menu, entries, parent });
+  if (!level && focusFirst) menu.querySelector('[role="menuitem"]:not([aria-disabled="true"])')?.focus();
 
   // Event handlers
   const onMenuClick = (e) => {
     const itemEl = e.target.closest('[data-item-index]');
     if (itemEl) {
       const idx = parseInt(itemEl.dataset.itemIndex, 10);
-      const item = items[idx];
+      const item = entries[idx];
+      if (item?.children?.length && !item.disabled) { showChildren(itemEl, item, level, true); return; }
       if (item && !item.disabled && typeof item.action === 'function') {
         closeContextMenu();
         item.action();
@@ -149,8 +179,25 @@ export function openContextMenu({ x, y, title = '', items = [], className = '', 
     }
   };
 
+  menu.addEventListener('click', onMenuClick);
+  menu.addEventListener('pointerdown', (e) => { if (e.target.closest('[role="menuitem"]')) e.preventDefault(); });
+  menu.addEventListener('pointerover', (e) => {
+    clearTimeout(hoverTimer);
+    const entry = e.target.closest('[data-item-index]');
+    if (!entry) return;
+    const item = entries[Number(entry.dataset.itemIndex)];
+    if (item?.children?.length && !item.disabled) hoverTimer = setTimeout(() => showChildren(entry, item, level), 180);
+    else closeChildren(level);
+  });
+  menu.addEventListener('pointerleave', () => clearTimeout(hoverTimer));
+  return menu;
+  }
+
+  const menu = buildPanel(items, x, y);
+  const contains = (target) => panels.some(p => p.element.contains(target));
+
   const onGlobalPointerDown = (e) => {
-    if (!menu.contains(e.target)) {
+    if (!contains(e.target)) {
       closeContextMenu();
     }
   };
@@ -159,45 +206,61 @@ export function openContextMenu({ x, y, title = '', items = [], className = '', 
   // belongs to the gesture which opened it (Windows fires it after mouseup).
   const onGlobalContextMenu = (e) => {
     const el = eventElement(e);
-    if (el && menu.contains(el)) return;
+    if (el && contains(el)) return;
     if (performance.now() - lastMenuOpenedAt < SAME_GESTURE_MS && el && !isEditableTarget(el)) return;
     closeContextMenu();
   };
 
   const onKeyDown = (e) => {
     if (e.key === 'Escape') {
+      e.preventDefault(); e.stopPropagation();
       closeContextMenu();
+      previousFocus?.focus?.({ preventScroll: true });
+      return;
     }
-    const entries = [...menu.querySelectorAll('[role="menuitem"]')];
+    if (e.key === 'Tab') { closeContextMenu(); return; }
+    const level = Math.max(0, panels.findIndex(p => p.element.contains(document.activeElement)));
+    const current = panels[level];
+    const horizontal = current.element.classList.contains('tb-menu-horizontal');
+    const entries = [...current.element.querySelectorAll('[role="menuitem"]:not([aria-disabled="true"])')];
     const index = entries.indexOf(document.activeElement);
-    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) {
+    const nextKey = horizontal ? 'ArrowRight' : 'ArrowDown';
+    const prevKey = horizontal ? 'ArrowLeft' : 'ArrowUp';
+    if ([nextKey, prevKey, 'Home', 'End'].includes(e.key)) {
       e.preventDefault();
       const next = e.key === 'Home' ? 0 : e.key === 'End' ? entries.length - 1
-        : (index + (e.key === 'ArrowUp' ? -1 : 1) + entries.length) % entries.length;
+        : (index < 0 ? (e.key === prevKey ? entries.length - 1 : 0) : (index + (e.key === prevKey ? -1 : 1) + entries.length) % entries.length);
       entries[next]?.focus();
+    } else if (e.key === 'ArrowRight' || (horizontal && e.key === 'ArrowDown')) {
+      const entry = entries[index];
+      const item = entry && current.entries[Number(entry.dataset.itemIndex)];
+      if (item?.children?.length) { e.preventDefault(); showChildren(entry, item, level, true); }
+    } else if (e.key === 'ArrowLeft' && level) {
+      e.preventDefault(); const parent = current.parent; closeChildren(level - 1); parent?.focus();
     } else if (e.key === 'Enter' || e.key === ' ') {
       if (index >= 0) { e.preventDefault(); entries[index].click(); }
     }
   };
 
-  menu.addEventListener('click', onMenuClick);
   // Delay global listeners so the triggering click doesn't instantly dismiss
   const listenerTimer = setTimeout(() => {
     window.addEventListener('pointerdown', onGlobalPointerDown, true);
     window.addEventListener('contextmenu', onGlobalContextMenu, true);
-    window.addEventListener('scroll', closeContextMenu, { passive: true, capture: true });
+    window.addEventListener('scroll', onScroll, { passive: true, capture: true });
     window.addEventListener('keydown', onKeyDown, true);
   }, 10);
+  function onScroll(e) { if (!contains(e.target)) closeContextMenu(); }
 
   activeMenu = {
     element: menu,
     cleanup: () => {
       clearTimeout(listenerTimer);
+      clearTimeout(hoverTimer);
       window.removeEventListener('pointerdown', onGlobalPointerDown, true);
       window.removeEventListener('contextmenu', onGlobalContextMenu, true);
-      window.removeEventListener('scroll', closeContextMenu, true);
+      window.removeEventListener('scroll', onScroll, true);
       window.removeEventListener('keydown', onKeyDown, true);
-      removeMenu(menu);
+      panels.forEach(p => removeMenu(p.element));
     }
   };
 }

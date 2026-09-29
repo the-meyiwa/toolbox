@@ -47,14 +47,14 @@ function productPayload(p) {
   const brand = p.brandId ? BRAND_BY_ID.get(p.brandId) : null;
   const ingredients = a.rows.map(r => ({ name: r.name, does: r.fn || 'not in the dictionary', compound: r.info?.c || null, group: r.group, formula: r.info?.formula || null }));
   const specs = specLines(p);
-  const caveat = p.source === 'openbeautyfacts' ? 'Ingredients as entered from the label by Open Beauty Facts contributors.'
+  const caveat = p.source === 'openbeautyfacts' ? `Community label from Open Beauty Facts; not independently verified or guaranteed complete.${p.imported ? ` Offline snapshot imported ${p.imported}.` : ''}${p.modified ? ` Source record last edited ${p.modified}.` : ''} Unknown ingredients remain unidentified; check the pack.`
     : p.typical ? 'Representative list: key ingredients confirmed, the full list may differ from a given pack.' : 'Published INCI list for one market and version; formulas change, so the pack is the final word.';
   return {
     status: 'success', renderer: 'cosmetic', type: 'cosmetic', kind: 'product',
     id: p.id, name: p.name, brand: p.brand, brandId: p.brandId, country: brand?.country || null, category: p.category, productType: p.type,
     specs: Object.fromEntries(specs), ingredients, notes: a.notes, groups: a.groups, source: p.source, url: p.url || null, image: p.image || null, caveat,
     similar: p.source === 'catalogue' ? similarProducts(p, 4).map(s => ({ id: s.product.id, name: `${s.product.brand} ${s.product.name}`, shared: s.shared })) : [],
-    open: p.source === 'catalogue' ? { product: p.id } : { online: `${p.brand} ${p.name}` },
+    open: p.source === 'catalogue' || p.offline ? { product: p.id } : { online: `${p.brand} ${p.name}` },
     message: `${p.brand} ${p.name} (${typeLabel(p.type)}${brand?.country ? `, ${brand.country}` : ''}).\nSpecs: ${specs.map(([k, v]) => `${k}: ${v}`).join('; ') || 'none listed'}.\nIngredients in label order (${ingredients.length}): ${ingredients.map((x, i) => `${i + 1}. ${x.name} — ${x.does}${x.compound && lower(x.compound) !== lower(x.name) ? ` (${x.compound})` : ''}`).join('; ')}.\nWorth knowing: ${a.notes.map(n => `${n.title}: ${n.text}`).join(' ') || 'nothing stands out'}.\n${caveat} Shown as a card that opens it in the Cosmetics Database.`,
   };
 }
@@ -118,6 +118,7 @@ export async function cosmeticsTool(args = {}) {
       if ((args.contains || []).some(c => !hasIngredient(p, c))) return false;
       if (free.length) {
         const a = analyse(p);
+        if (!a.complete) return false;
         for (const f of free) { if (FREE_OF[f] ? FREE_OF[f](a, p) : hasIngredient(p, f)) return false; }
       }
       if (args.query && !lower(`${p.brand} ${p.name} ${p.type}`).includes(lower(args.query))) return false;

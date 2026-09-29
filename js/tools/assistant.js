@@ -381,7 +381,7 @@ function mountAssistant(container, state) {
 
   const integration = new ConversationIntegrationManager({ history: [], keepContext: true, audioManager: AssistantAudioManager });
   const store = new ConversationStore();
-  const taskState = { activeToolId: state.tool?.id || null, attachedFiles: [] };
+  let taskState = { activeToolId: state.tool?.id || null, attachedFiles: [] };
 
   let conv = null;          // active conversation
   let messages = [];        // its messages
@@ -649,6 +649,7 @@ function mountAssistant(container, state) {
 
   function startNewChat() {
     if (!guardSwitch()) return;
+    taskState = { activeToolId: state.tool?.id || null, attachedFiles: [] };
     conv = { id: newId(), title: 'New chat', createdAt: Date.now(), updatedAt: Date.now(), messages: [] };
     store.activeId = conv.id;
     messages = [];
@@ -664,6 +665,7 @@ function mountAssistant(container, state) {
     if (!guardSwitch()) return;
     const c = store.conversations.find(x => x.id === id);
     if (!c) return;
+    taskState = { activeToolId: state.tool?.id || null, attachedFiles: [] };
     conv = c;
     messages = (c.messages || []).map(m => ({ ...m }));
     store.select(c.id);
@@ -816,6 +818,7 @@ function mountAssistant(container, state) {
       this.el = document.createElement('div');
       this.el.className = 'ast-turn ast-turn-ai';
       this.el.dataset.id = msg.id;
+      this.el.dataset.chatId = conv?.id || '';
       this.el.innerHTML = `<div class="ast-ai"><div class="ast-flow"></div><div class="ast-live" hidden></div><div class="ast-foot" hidden></div></div>`;
       this.flow = this.el.querySelector('.ast-flow');
       this.liveEl = this.el.querySelector('.ast-live');
@@ -1433,6 +1436,20 @@ function mountAssistant(container, state) {
   async function runTurn() {
     const targetConv = conv;
     const targetMessages = messages;
+    const turnOwner = getCurrentUser()?.id;
+    const storeKey = store.key;
+    const turnTaskState = taskState;
+    turnTaskState.chatScope = {
+      conversationId: targetConv.id,
+      ownerId: turnOwner,
+      isActive: () => !dead && getCurrentUser()?.id === turnOwner && store.key === storeKey && conv?.id === targetConv.id,
+      getTools: () => targetConv.chatTools || [],
+      saveTool: tool => {
+        if (getCurrentUser()?.id !== turnOwner || store.key !== storeKey || conv?.id !== targetConv.id) throw new Error('The active chat changed.');
+        targetConv.chatTools = [...(targetConv.chatTools || []).filter(t => t.id !== tool.id), tool];
+        persist(targetConv, targetMessages);
+      },
+    };
     const userMsg = [...targetMessages].reverse().find(m => m.role === 'user');
     if (!userMsg) return;
     const history = targetMessages.slice();
@@ -1459,7 +1476,7 @@ function mountAssistant(container, state) {
         idempotencyKey: `${userMsg.turnId}_${msg.id}`,
         systemInstruction: `The person is using the Toolbox Assistant. Active tool: ${taskState.activeToolId || 'Assistant'}.`,
         currentFile: userMsg.fileData?.base64 ? userMsg.fileData : null,
-        taskState,
+        taskState: turnTaskState,
         signal: abort.signal,
         onToken: (t) => { bump(); view.text(t); },
         onThinking: (t) => { bump(); view.thinking(t); },
@@ -1494,12 +1511,12 @@ function mountAssistant(container, state) {
       msg.content = cleanReplyText(msg.content || '');
       view.finish();
       running = null;
-      persist(targetConv, targetMessages);
+      if (getCurrentUser()?.id === turnOwner && store.key === storeKey) persist(targetConv, targetMessages);
       if (conv === targetConv) { updateComposerState(); onContent(); }
       renderConvList();
       // Long replies often finish while the person is elsewhere: tell them it is ready.
       const away = document.hidden || !root.isConnected || conv !== targetConv;
-      if (away && msg.status !== 'stopped' && msg.ms > 4000) {
+      if (away && getCurrentUser()?.id === turnOwner && msg.status !== 'stopped' && msg.ms > 4000) {
         const preview = String(msg.content || msg.error || '').replace(/[#*_`>\[\]()]/g, '').replace(/\s+/g, ' ').trim().slice(0, 140);
         import('../lib/notifications.js').then(({ NotificationEngine }) => NotificationEngine.addNotification(
           msg.status === 'failed' ? 'The Assistant could not finish' : 'The Assistant replied',
@@ -1671,6 +1688,10 @@ function mountAssistant(container, state) {
   on(window, 'toolbox:aimodechange', (e) => { mode = e.detail?.mode || getActiveAiMode(); renderModeButton(); });
   on(window, 'toolbox:authchange', async () => {
     if (dead) return;
+    running?.abort.abort();
+    attachments = [];
+    taskState = { activeToolId: state.tool?.id || null, attachedFiles: [] };
+    renderFiles();
     await store.load();
     conv = null; messages = [];
     startNewChat();

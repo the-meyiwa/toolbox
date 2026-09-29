@@ -1292,10 +1292,46 @@ export default {
       });
     }
 
-    function folderMenu(id, pos) {
-      const items = [{ label: 'Rename…', icon: small(ICON.edit), action: () => renameFolder(id) }];
-      if (id !== 'quick') items.push({ separator: true }, { label: 'Delete folder…', icon: small(ICON.trash), destructive: true, action: () => deleteFolder(id) });
-      openContextMenu({ ...pos, title: folderName(id), items });
+    function exportNotes(noteList, filenamePrefix) {
+      saveNow();
+      if (!noteList.length) { el.toast.textContent = 'No notes to export.'; el.toast.hidden = false; setTimeout(() => el.toast.hidden = true, 3000); return; }
+      const content = noteList.map(n => {
+        const t = titleOf(n) || 'Untitled';
+        return `# ${t}\n\n${n.body || ''}`;
+      }).join('\n\n---\n\n');
+      download(`${filenamePrefix.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, '_').slice(0, 80)}.md`, content, 'text/markdown;charset=utf-8');
+    }
+
+    function sidebarMenu(key, pos) {
+      const items = [];
+      const isFolder = key.startsWith('f:');
+      const isTag = key.startsWith('t:');
+      const type = isFolder ? 'folder' : isTag ? 'tag' : key;
+      const id = isFolder ? key.slice(2) : null;
+      const tag = isTag ? key.slice(2) : null;
+      
+      const label = type === 'all' ? 'All notes' : type === 'pinned' ? 'Pinned' : type === 'trash' ? 'Trash' : isFolder ? folderName(id) : `#${tag}`;
+      
+      const ask = () => import('../lib/assistant-popup.js').then(m => m.openAssistant({ prompt: `Help me organize or find something in my notes (${label}).`, send: false }));
+      items.push({ label: 'Ask assistant', icon: small(I('<path d="m12 3 2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z"/>')), action: ask });
+      
+      items.push({ separator: true });
+      
+      if (isFolder) {
+        items.push({ label: 'Rename…', icon: small(ICON.edit), action: () => renameFolder(id) });
+        items.push({ label: 'Export folder', icon: small(ICON.download), action: () => exportNotes(notes.filter(n => folderIdOf(n) === id && !n.trashed), folderName(id)) });
+        if (id !== 'quick') items.push({ separator: true }, { label: 'Delete folder…', icon: small(ICON.trash), destructive: true, action: () => deleteFolder(id) });
+      } else if (isTag) {
+        items.push({ label: 'Export notes', icon: small(ICON.download), action: () => exportNotes(notes.filter(n => tagsOf(n).includes(tag) && !n.trashed), `Tag ${tag}`) });
+      } else if (type === 'all') {
+        items.push({ label: 'Export all notes', icon: small(ICON.download), action: () => exportNotes(notes.filter(n => !n.trashed), 'All Notes') });
+      } else if (type === 'pinned') {
+        items.push({ label: 'Export pinned', icon: small(ICON.download), action: () => exportNotes(notes.filter(n => n.pinned && !n.trashed), 'Pinned Notes') });
+      } else if (type === 'trash') {
+        items.push({ label: 'Empty Trash', icon: small(ICON.trash), destructive: true, action: () => emptyTrash() });
+      }
+
+      openContextMenu({ ...pos, title: label, items });
     }
 
     /* ---------- formatting ---------- */
@@ -1920,16 +1956,16 @@ export default {
 
     on(side, 'click', (e) => {
       const more = e.target.closest('[data-folder-more]');
-      if (more) { e.stopPropagation(); folderMenu(more.dataset.folderMore, menuAt(more)); return; }
+      if (more) { e.stopPropagation(); sidebarMenu('f:' + more.dataset.folderMore, menuAt(more)); return; }
       const nav = e.target.closest('[data-nav]');
       if (!nav) return;
       const k = nav.dataset.nav;
       selectView(k.startsWith('f:') ? { type: 'folder', id: k.slice(2) } : k.startsWith('t:') ? { type: 'tag', tag: k.slice(2) } : { type: k });
     });
     on(side, 'contextmenu', (e) => {
-      const nav = e.target.closest('[data-nav^="f:"]'); if (!nav) return;
+      const nav = e.target.closest('[data-nav]'); if (!nav) return;
       e.preventDefault();
-      folderMenu(nav.dataset.nav.slice(2), { x: e.clientX, y: e.clientY });
+      sidebarMenu(nav.dataset.nav, { x: e.clientX, y: e.clientY });
     });
 
     /* ---------- actions (buttons anywhere) ---------- */

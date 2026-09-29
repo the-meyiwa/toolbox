@@ -34,6 +34,8 @@ import { initHomeScrollNarrative } from './home-scroll.js';
 import { listJoinedSpaces } from './lib/space-engine.js';
 import { deliverToFileInput } from './lib/interop.js';
 import { installGlobalMenus, installLongPress } from './lib/global-menus.js';
+import { installTextActions } from './lib/text-actions.js';
+import { installAssistantShortcut } from './lib/assistant-shortcut.js';
 import { installFileSurface } from './lib/file-surface.js';
 import { installMotion } from './lib/motion.js';
 import { initMessageNotifications } from './lib/message-notifications.js';
@@ -1169,6 +1171,8 @@ installLongPress();
 // Files behave the same everywhere: drag, Space to preview, the file menu (before the page menu).
 installFileSurface();
 installGlobalMenus({ getTool: () => (currentPage === 'tool' && currentToolObj ? { tool: currentToolObj, instance: currentToolInstance } : null) });
+installTextActions();
+installAssistantShortcut();
 
 initTheme();
 installMotion();

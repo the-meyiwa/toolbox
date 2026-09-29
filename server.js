@@ -15,7 +15,7 @@ const wsReadyStateOpen = 1;
 const pingTimeout = 30000;
 const port = process.env.PORT || 4444;
 
-const wss = new WebSocketServer({ noServer: true });
+const wss = new WebSocketServer({ noServer: true, maxPayload: 256 * 1024 });
 
 try {
   if (fs.existsSync('.env')) {
@@ -44,7 +44,13 @@ const server = http.createServer(async (request, response) => {
     return;
   }
 
-  const handled = await handleApiRequest(request, response);
+  let handled;
+  try { handled = await handleApiRequest(request, response); }
+  catch {
+    if (!response.headersSent) response.writeHead(500, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    response.end(JSON.stringify({ success: false, error: 'The request could not be completed.' }));
+    return;
+  }
   if (handled) return;
 
   // An API path nothing handled is an error, not the status page below.
@@ -129,6 +135,7 @@ const onconnection = (conn) => {
   });
 
   conn.on('close', () => {
+    clearInterval(pingInterval);
     subscribedTopics.forEach((topicName) => {
       const subs = topics.get(topicName) || new Set();
       subs.delete(conn);
@@ -151,8 +158,8 @@ const onconnection = (conn) => {
     if (message && message.type && !closed) {
       switch (message.type) {
         case 'subscribe':
-          (message.topics || []).forEach((topicName) => {
-            if (typeof topicName === 'string') {
+          (Array.isArray(message.topics) ? message.topics.slice(0, 32) : []).forEach((topicName) => {
+            if (typeof topicName === 'string' && topicName.length <= 256 && subscribedTopics.size < 32) {
               const topic = map.setIfUndefined(topics, topicName, () => new Set());
               topic.add(conn);
               subscribedTopics.add(topicName);
@@ -160,15 +167,17 @@ const onconnection = (conn) => {
           });
           break;
         case 'unsubscribe':
-          (message.topics || []).forEach((topicName) => {
+          (Array.isArray(message.topics) ? message.topics : []).forEach((topicName) => {
             const subs = topics.get(topicName);
             if (subs) {
               subs.delete(conn);
+              subscribedTopics.delete(topicName);
+              if (!subs.size) topics.delete(topicName);
             }
           });
           break;
         case 'publish':
-          if (message.topic) {
+          if (message.topic && subscribedTopics.has(message.topic)) {
             const receivers = topics.get(message.topic);
             if (receivers) {
               message.clients = receivers.size;
@@ -197,10 +206,10 @@ server.listen(port, () => {
 });
 
 process.on('uncaughtException', (err) => {
-  console.error('[Signaling Server Uncaught Exception]:', err);
+  console.error('[Signaling Server] Uncaught exception.');
 });
 
 process.on('unhandledRejection', (reason) => {
-  console.error('[Signaling Server Unhandled Rejection]:', reason);
+  console.error('[Signaling Server] Unhandled rejection.');
 });
 

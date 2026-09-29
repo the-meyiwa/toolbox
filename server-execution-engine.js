@@ -67,13 +67,15 @@ export function getWorkspaceDir(workspaceId) {
   const targetDir = path.resolve(WORKSPACES_ROOT, cleanId);
 
   // Security: prevent escaping WORKSPACES_ROOT
-  if (!targetDir.startsWith(path.resolve(WORKSPACES_ROOT))) {
+  if (!targetDir.startsWith(path.resolve(WORKSPACES_ROOT) + path.sep)) {
     throw new Error('Access denied: workspace path escapes root');
   }
 
   if (!fs.existsSync(targetDir)) {
     fs.mkdirSync(targetDir, { recursive: true });
   }
+  const realRoot = fs.realpathSync(WORKSPACES_ROOT);
+  if (!fs.realpathSync(targetDir).startsWith(realRoot + path.sep)) throw new Error('Access denied: workspace link escapes root');
 
   return targetDir;
 }
@@ -83,12 +85,19 @@ export function getWorkspaceDir(workspaceId) {
  */
 export function resolveWorkspacePath(workspaceId, subPath = '') {
   const root = getWorkspaceDir(workspaceId);
-  const normalized = path.normalize(subPath).replace(/^(\.\.[\/\\])+/, '');
+  const normalized = path.normalize(String(subPath));
   const resolved = path.resolve(root, normalized);
 
-  if (!resolved.startsWith(root)) {
+  if (resolved !== root && !resolved.startsWith(root + path.sep)) {
     throw new Error(`Security error: path "${subPath}" escapes workspace`);
   }
+  // Check existing parents too: a junction or symlink must never bypass the
+  // lexical boundary for reads or writes of files that do not exist yet.
+  let parent = resolved;
+  while (!fs.existsSync(parent) && parent !== root) parent = path.dirname(parent);
+  const realRoot = fs.realpathSync(root);
+  const realParent = fs.realpathSync(parent);
+  if (realParent !== realRoot && !realParent.startsWith(realRoot + path.sep)) throw new Error('Access denied: file link escapes workspace');
 
   return resolved;
 }
@@ -576,9 +585,14 @@ export function proxyDevServerRequest(port, req, res) {
     method: req.method,
     headers: { ...req.headers, host: `localhost:${targetPort}` }
   };
+  for (const name of ['authorization', 'cookie', 'proxy-authorization', 'x-toolbox-proxy-secret']) delete options.headers[name];
 
   const proxyReq = http.request(options, (proxyRes) => {
-    res.writeHead(proxyRes.statusCode, proxyRes.headers);
+    const headers = { ...proxyRes.headers, 'Cache-Control': 'no-store',
+      'Content-Security-Policy': "sandbox allow-scripts allow-forms allow-modals allow-downloads",
+      'X-Content-Type-Options': 'nosniff' };
+    delete headers['set-cookie'];
+    res.writeHead(proxyRes.statusCode, headers);
     proxyRes.pipe(res, { end: true });
   });
 

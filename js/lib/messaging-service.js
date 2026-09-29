@@ -12,8 +12,9 @@ function context() {
 }
 
 async function request(path, options = {}) {
-  const { url, headers } = context();
+  const { user, url, headers } = context();
   const response = await fetch(`${url}/rest/v1/${path}`, { ...options, headers: { ...headers, ...(options.headers || {}) } });
+  if (getCurrentUser()?.id !== user.id) throw new Error('Your Messages account changed.');
   if (!response.ok) throw new Error((await response.json().catch(() => ({}))).message || `Messages request failed (${response.status}).`);
   if (response.status === 204) return null;
   return response.json();
@@ -37,7 +38,16 @@ export async function approveParticipantRequest(requestMessageId) {
 }
 
 export async function listMessages(conversationId) {
-  return request(`toolbox_messages?conversation_id=eq.${encodeURIComponent(conversationId)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=*&order=created_at.asc&limit=200`);
+  const rows = await request(`toolbox_messages?conversation_id=eq.${encodeURIComponent(conversationId)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=*&order=created_at.desc&limit=200`);
+  return Array.isArray(rows) ? rows.reverse() : [];
+}
+
+export async function setMessageTyping(conversationId, typing) {
+  return request('rpc/set_message_typing', { method: 'POST', body: JSON.stringify({ target_conversation_id: conversationId, is_typing: Boolean(typing) }) });
+}
+
+export async function listMessageTyping(conversationId) {
+  return request(`toolbox_message_typing?conversation_id=eq.${encodeURIComponent(conversationId)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=user_id,expires_at&limit=100`);
 }
 
 export async function sendMessage(conversationId, body, kind = 'text', payload = {}) {
@@ -65,28 +75,55 @@ export async function votePoll(messageId, optionIndex, current = null) {
   const response = await fetch(`${url}/rest/v1/rpc/vote_poll`, { method: 'POST', headers, body: JSON.stringify({ poll_message_id: messageId, option_index: optionIndex }) });
   if (response.ok) return response.json();
   const error = await response.json().catch(() => ({}));
-  // Older databases without vote_poll: fall back to writing the poll back, checked.
-  const missing = response.status === 404 || error.code === 'PGRST202' || /vote_poll/.test(error.message || '');
-  if (!missing || !current) throw new Error(error.message || `Your vote could not be saved (${response.status}).`);
-  const { user } = context();
-  const had = (current.options?.[optionIndex]?.voters || []).includes(user.id);
-  const options = (current.options || []).map((o, i) => ({ ...o, voters: [...(o.voters || []).filter(v => v !== user.id), ...(i === optionIndex && !had ? [user.id] : [])] }));
-  const row = await updateMessagePayload(messageId, { ...current, options });
-  return row.payload;
+  const missing = response.status === 404 || error.code === 'PGRST202';
+  throw new Error(missing ? 'Poll voting needs the latest Messages database update.' : (error.message || `Your vote could not be saved (${response.status}).`));
 }
 
-export async function uploadMessageFile(file) {
+export async function uploadMessageFile(file, conversationId) {
   if (!file || file.size > MESSAGE_FILE_LIMIT) throw new Error('Shared files must be 8 MB or smaller.');
+  if (!/^[0-9a-f-]{36}$/i.test(conversationId || '')) throw new Error('Choose a conversation before sharing a file.');
   const { user, url, headers } = context();
-  const safeName = file.name.replace(/[^a-z0-9._-]/gi, '_');
+  const safeName = file.name.replace(/[^a-z0-9._-]/gi, '_').slice(0, 140);
   // Documents, PDFs and text travel packed (lossless, fingerprint-checked); the recipient's
   // Toolbox unpacks them on download. Photos, video and archives go as they are.
   const { packForTransfer } = await import('./transfer-pack.js');
   const pack = await packForTransfer(file);
-  const path = `${user.id}/messages/${crypto.randomUUID()}-${safeName}${pack.packed ? '.kpk' : ''}`;
-  const response = await fetch(`${url}/storage/v1/object/toolbox-files/${path}`, { method: 'POST', headers: { apikey: headers.apikey, Authorization: headers.Authorization, 'Content-Type': pack.packed ? 'application/octet-stream' : (file.type || 'application/octet-stream'), 'x-upsert': 'false' }, body: pack.blob });
+  if (getCurrentUser()?.id !== user.id) throw new Error('Your Messages account changed.');
+  const path = `${conversationId}/${user.id}/${crypto.randomUUID()}-${safeName}${pack.packed ? '.kpk' : ''}`;
+  const response = await fetch(`${url}/storage/v1/object/message-files/${path}`, { method: 'POST', headers: { apikey: headers.apikey, Authorization: headers.Authorization, 'Content-Type': pack.packed ? 'application/octet-stream' : (file.type || 'application/octet-stream'), 'x-upsert': 'false' }, body: pack.blob });
+  if (getCurrentUser()?.id !== user.id) throw new Error('Your Messages account changed.');
   if (!response.ok) throw new Error('The file could not be uploaded.');
-  return { name: file.name, size: file.size, type: file.type, url: `${url}/storage/v1/object/public/toolbox-files/${path}`, ...(pack.packed ? { packed: true, packedSize: pack.packedSize } : {}) };
+  return { name: file.name, size: file.size, type: file.type, storagePath: path, ...(pack.packed ? { packed: true, packedSize: pack.packedSize } : {}) };
+}
+
+/** Accept private references and trusted legacy Toolbox storage paths, never arbitrary URLs. */
+export function messageFileLocation(payload, configUrl = getSupabaseConfig().url) {
+  let bucket = 'message-files', path = payload?.storagePath;
+  if (!path && payload?.url) {
+    const source = new URL(payload.url), base = new URL(configUrl);
+    if (source.origin !== base.origin || source.username || source.password) throw new Error('This attachment is not in Toolbox storage.');
+    const match = source.pathname.match(/^\/storage\/v1\/object\/(?:public|sign|authenticated)\/(toolbox-files|message-files)\/(.+)$/);
+    if (!match) throw new Error('This attachment has no supported storage reference.');
+    bucket = match[1]; path = decodeURIComponent(match[2]);
+  }
+  if (typeof path !== 'string' || !path || path.length > 500 || path.split('/').some(part => !part || part === '.' || part === '..') || /[\\?#\u0000-\u001f]/.test(path)) throw new Error('Invalid attachment storage reference.');
+  return { bucket, path };
+}
+
+export async function loadMessageFile(payload) {
+  const { user, url, headers } = context(), { bucket, path } = messageFileLocation(payload, url);
+  const response = await fetch(`${url}/storage/v1/object/sign/${bucket}/${path.split('/').map(encodeURIComponent).join('/')}`, { method: 'POST', headers, body: JSON.stringify({ expiresIn: 60 }) });
+  if (!response.ok) throw new Error('This attachment is unavailable, expired or not shared with you.');
+  const data = await response.json();
+  if (getCurrentUser()?.id !== user.id) throw new Error('Your Messages account changed.');
+  const signedPath = data.signedURL || data.signedUrl || '';
+  const signed = new URL(signedPath.startsWith('/object/') ? `/storage/v1${signedPath}` : signedPath, `${url}/storage/v1/`);
+  if (signed.origin !== new URL(url).origin || !signed.pathname.startsWith('/storage/v1/object/sign/')) throw new Error('Invalid attachment download address.');
+  let blob;
+  if (payload.packed) blob = await (await import('./transfer-pack.js')).fetchTransfer(signed.href, { type: payload.type });
+  else { const fileResponse = await fetch(signed.href, { referrerPolicy: 'no-referrer' }); if (!fileResponse.ok) throw new Error('The attachment could not be downloaded.'); blob = await fileResponse.blob(); }
+  if (getCurrentUser()?.id !== user.id) throw new Error('Your Messages account changed.');
+  return blob;
 }
 
 export async function listOnlineToolboxFiles() {

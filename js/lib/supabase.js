@@ -668,9 +668,11 @@ export async function uploadToSupabaseStorage(bucketName, filePath, fileBlob) {
 
   // Enforce user isolation: prefix user.id so RLS prevents cross-user access
   const safePath = filePath.startsWith(`${user.id}/`) ? filePath : `${user.id}/${filePath.replace(/^\/+/, '')}`;
+  if (!/^[a-z0-9_-]+$/i.test(bucketName) || safePath.split('/').some(part => !part || part === '.' || part === '..' || /[\\\u0000-\u001f]/.test(part))) throw new Error('Invalid storage path.');
+  const encodedPath = safePath.split('/').map(encodeURIComponent).join('/');
 
   if (config.url && config.anonKey) {
-    const res = await fetch(`${config.url}/storage/v1/object/${bucketName}/${safePath}`, {
+    const res = await fetch(`${config.url}/storage/v1/object/${bucketName}/${encodedPath}`, {
       method: 'POST',
       headers: {
         'apikey': config.anonKey,
@@ -682,11 +684,34 @@ export async function uploadToSupabaseStorage(bucketName, filePath, fileBlob) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.message || 'Cloud storage upload failed.');
     }
-    return { path: safePath, url: `${config.url}/storage/v1/object/public/${bucketName}/${safePath}` };
+    if (getCurrentUser()?.id !== user.id) throw new Error('The account changed during upload.');
+    return { path: safePath, url: `${config.url}/storage/v1/object/authenticated/${bucketName}/${encodedPath}` };
   }
 
-  // Fallback storage URL
-  return { path: safePath, url: `https://supabase-storage-mock.local/${bucketName}/${safePath}` };
+  throw new Error('Cloud storage is not configured.');
+}
+
+/** Generate a short-lived download URL at use time; never store it as file metadata. */
+export async function resolveStorageDownloadUrl(value) {
+  const config = getSupabaseConfig();
+  let target, base;
+  try { target = new URL(value); base = new URL(config.url); } catch { return value; }
+  if (target.origin !== base.origin || !target.pathname.startsWith('/storage/v1/object/')) return value;
+  const match = target.pathname.match(/^\/storage\/v1\/object\/(?:public|authenticated|sign)\/([a-z0-9_-]+)\/(.+)$/i);
+  if (!match || target.username || target.password) throw new Error('Invalid cloud file address.');
+  const user = getCurrentUser();
+  if (!user) throw new Error('Sign in to open this cloud file.');
+  const parts = match[2].split('/').map(part => decodeURIComponent(part));
+  if (parts.some(part => !part || part === '.' || part === '..' || /[\\/\u0000-\u001f]/.test(part))) throw new Error('Invalid cloud file path.');
+  const response = await fetch(`${base.origin}/storage/v1/object/sign/${match[1]}/${parts.map(encodeURIComponent).join('/')}`, {
+    method: 'POST', headers: { apikey: config.anonKey, Authorization: `Bearer ${user.token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ expiresIn: 60 }), redirect: 'error'
+  });
+  if (!response.ok) throw new Error('You do not have access to this cloud file.');
+  const payload = await response.json();
+  if (getCurrentUser()?.id !== user.id) throw new Error('The account changed while opening this file.');
+  const signed = new URL(payload.signedURL || payload.signedUrl || '', `${base.origin}/storage/v1/`);
+  if (signed.origin !== base.origin || !signed.pathname.startsWith('/storage/v1/object/sign/') || !signed.searchParams.has('token')) throw new Error('Cloud storage returned an invalid download address.');
+  return signed.href;
 }
 
 /**

@@ -24,6 +24,9 @@ import { safetyFor, INJURIES, DISCLAIMER } from '../automobile/injury-data.js';
 import { safetyHtml, injuryHtml, richText, installInjuryLinks } from '../automobile/injury-render.js';
 import { icon as uiIcon } from '../icons.js';
 import { fileAttrs } from '../file-surface.js';
+import { renderChatTool } from './chat-tools.js';
+
+registerResultRenderer('chat-tool', renderChatTool);
 
 installInjuryLinks();
 

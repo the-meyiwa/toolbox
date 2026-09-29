@@ -1,7 +1,8 @@
 import { getCurrentUser } from '../lib/supabase.js';
 import { openSettings } from '../lib/settings-ui.js';
 import { searchToolboxUsers, avatarMarkup } from '../lib/user-directory.js';
-import { listConversations, listMessages, listConversationParticipants, startDirectConversation, sendMessage, updateMessagePayload, votePoll, uploadMessageFile, listOnlineToolboxFiles, approveParticipantRequest, MESSAGE_MAX_LENGTH } from '../lib/messaging-service.js';
+import { listConversations, listMessages, listConversationParticipants, startDirectConversation, sendMessage, updateMessagePayload, votePoll, uploadMessageFile, loadMessageFile, listOnlineToolboxFiles, approveParticipantRequest, setMessageTyping, listMessageTyping, MESSAGE_MAX_LENGTH } from '../lib/messaging-service.js';
+import { createTypingSession } from '../lib/messaging-presence.js';
 import { list as listOfflineFiles, get as getOfflineFile } from '../lib/artifacts.js';
 import { tbPrompt } from '../lib/dialog.js';
 import { NotificationEngine } from '../lib/notifications.js';
@@ -28,7 +29,8 @@ export default {
       return;
     }
 
-    let active = null, conversations = [], messages = [], poll = 0, stopped = false;
+    let active = null, conversations = [], messages = [], poll = 0, stopped = false, typingSession = null;
+    let participantNames = new Map();
     let messagesFingerprint = '', conversationsFingerprint = '';
     container.innerHTML = `<div class="messages-v2">
       <aside class="messages-v2-sidebar" id="msg-sidebar">
@@ -40,6 +42,7 @@ export default {
       <section class="messages-v2-chat">
         <header class="messages-chat-head" id="messages-chat-head"><button class="msg-mobile-back" id="messages-back" aria-label="Back to conversations">${icon('chevron-left')}</button><div id="messages-chat-person"></div><span class="messages-expiry">Clears after 24 hours</span></header>
         <div class="messages-stream" id="messages-stream"><div class="messages-empty"><span>${icon('message')}</span><h3>Your conversations, kept light.</h3><p>Find any Toolbox user to start a private 24-hour chat.</p></div></div>
+        <div class="messages-typing" id="messages-typing" role="status" aria-live="polite" hidden><span class="messages-typing-dots" aria-hidden="true"><i></i><i></i><i></i></span><span id="messages-typing-label"></span></div>
         <form class="messages-compose" id="messages-compose" hidden>
           <input type="file" id="messages-file" hidden><input type="file" id="messages-media" accept="image/*,video/*,audio/*" hidden>
           <div class="messages-action-wrap">
@@ -59,6 +62,21 @@ export default {
     </div>`;
     const $ = selector => container.querySelector(selector);
     const sidebar = $('.messages-v2-sidebar'), stream = $('#messages-stream'), form = $('#messages-compose'), input = $('#messages-input'), results = $('#messages-results');
+    const renderTyping = ids => {
+      const label = $('#messages-typing-label');
+      $('#messages-typing').hidden = !ids.length;
+      label.textContent = ids.length ? `${ids.slice(0, 2).map(id => participantNames.get(id) || 'Someone').join(' and ')}${ids.length > 2 ? ' and others' : ''} ${ids.length === 1 ? 'is' : 'are'} typing…` : '';
+    };
+    const beginTyping = conversationId => {
+      typingSession?.close();
+      typingSession = createTypingSession({
+        ownId: user.id,
+        isVisible: () => !document.hidden && !stopped && getCurrentUser()?.id === user.id,
+        publish: typing => getCurrentUser()?.id === user.id ? setMessageTyping(conversationId, typing) : Promise.resolve(),
+        read: () => listMessageTyping(conversationId),
+        onChange: ids => { if (!stopped && active?.conversation_id === conversationId) renderTyping(ids); },
+      });
+    };
 
     const person = profile => ({ id:profile.other_id || profile.id, email:profile.other_email || profile.email, username:profile.other_username || profile.username, name:profile.other_name || profile.name, avatarUrl:profile.other_avatar_url || profile.avatarUrl, profilePicture:profile.other_profile_picture || profile.profilePicture });
     const renderConversations = () => {
@@ -66,7 +84,7 @@ export default {
       container.querySelectorAll('[data-conversation]').forEach(button => button.onclick=()=>openConversation(conversations.find(item=>item.conversation_id===button.dataset.conversation)));
     };
     const renderGame = message => {
-      const state = message.payload || {}; const board = state.board || Array(9).fill('');
+      const state = message.payload || {}; const board = Array.from({ length: 9 }, (_, i) => ['X', 'O'].includes(state.board?.[i]) ? state.board[i] : '');
       return `<div class="message-game" data-game="${message.id}"><div><strong>Tic-tac-toe</strong><small>${esc(state.winner ? `${state.winner} won` : `${state.turn || 'X'} to play`)}</small></div><div class="message-game-board">${board.map((cell,index)=>`<button data-cell="${index}" ${cell||state.winner?'disabled':''}>${cell}</button>`).join('')}</div></div>`;
     };
     // Results show as bars: each option's share of the votes, my choice ticked. Tapping my choice again takes the vote back.

@@ -7,7 +7,7 @@
    ============================================================ */
 
 /* Same ids as CATEGORIES in ./db.js (tests/unit/cosmetics-database.test.js checks). */
-export const CATEGORY_IDS = ['skincare', 'sun', 'makeup', 'hair', 'body', 'fragrance', 'oral', 'nails', 'lips', 'baby', 'men'];
+export const CATEGORY_IDS = ['skincare', 'sun', 'makeup', 'hair', 'body', 'fragrance', 'oral', 'nails', 'lips', 'baby', 'men', 'other'];
 
 export const COSMETICS_TOOL_DECLARATION = {
   name: 'cosmetics_database',

@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       open: false,
+      fs: { deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/.toolbox-mail*.json', '**/.workspaces/**'] },
     },
     plugins: [
       {
@@ -26,10 +27,10 @@ export default defineConfig(({ mode }) => {
                 const handled = await handleApiRequest(req, res);
                 if (handled) return;
               } catch (err) {
-                console.error('[API Middleware Error]:', err);
+                console.error('[API Middleware] Request failed.');
                 if (!res.headersSent) {
                   res.writeHead(500, { 'Content-Type': 'application/json' });
-                  res.end(JSON.stringify({ success: false, error: err.message }));
+                  res.end(JSON.stringify({ success: false, error: 'The request could not be completed.' }));
                 }
                 return;
               }

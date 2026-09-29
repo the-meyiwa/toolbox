@@ -20,11 +20,12 @@ const RECENT_KEY = 'toolbox.dictionary.recent';
 const SAMPLES = ['serendipity', 'ubiquitous', 'petrichor', 'defenestrate', 'ephemeral', 'sonder', 'quotidian'];
 
 export default {
-  render(container, { analytics } = {}) {
+  render(container, { analytics, initialWord = '', compact = false } = {}) {
     this._alive = true;
 
     const recent = () => { try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch { return []; } };
     const remember = (w) => {
+      if (compact) return; // A selection lookup never enters persistent search history.
       const list = [w, ...recent().filter(x => x !== w)].slice(0, 10);
       try { localStorage.setItem(RECENT_KEY, JSON.stringify(list)); } catch { /* private mode */ }
     };
@@ -111,9 +112,10 @@ export default {
     }
 
     const stripHtml = (html) => {
-      const el = document.createElement('div');
+      const el = document.createElement('template');
       el.innerHTML = html ?? '';
-      return (el.textContent ?? '').replace(/\s+/g, ' ').trim();
+      el.content.querySelectorAll('script, style, iframe, object').forEach(n => n.remove());
+      return (el.content.textContent ?? '').replace(/\s+/g, ' ').trim();
     };
 
     /** Suggestions when nothing matched, so a typo is recoverable. */
@@ -145,11 +147,11 @@ export default {
           fromFreeDictionary(word, signal).catch(() => null),
           fromWiktionary(word, signal).catch(() => null),
         ]);
-        if (!this._alive) return;
+        if (!this._alive || signal.aborted) return;
 
         if (!free && !wikt) {
           const alts = await suggest(word, signal);
-          if (!this._alive) return;
+          if (!this._alive || signal.aborted) return;
           body.innerHTML = `
             <div class="wk-empty">
               <strong>No entry for “${escapeHtml(word)}”</strong>
@@ -168,7 +170,7 @@ export default {
         renderEntry(word, free, wikt);
         analytics?.completed({ resultCount: (free?.groups.length ?? 0) + (wikt?.groups.length ?? 0) });
       } catch (err) {
-        if (err.name === 'AbortError') return;
+        if (err.name === 'AbortError' || signal.aborted || !this._alive) return;
         body.innerHTML = `<div class="wk-error"><strong>Could not look that up.</strong>
           <span>${navigator.onLine ? escapeHtml(err.message) : 'You appear to be offline.'}</span></div>`;
         analytics?.error('lookup_failed');
@@ -261,10 +263,11 @@ export default {
     input.addEventListener('input', () => {
       clearTimeout(debounce);
       const v = input.value.trim();
-      if (!v) { renderHome(); return; }
+      if (!v) { this._abort?.abort(); renderHome(); return; }
       // Waits for a pause: a dictionary lookup per keystroke is both
       // useless and rude to the API.
       debounce = setTimeout(() => lookupBound(v), 450);
+      this._debounce = debounce;
     });
 
     input.addEventListener('keydown', (e) => {
@@ -278,13 +281,15 @@ export default {
       lookupBound(w.dataset.word);
     });
 
-    renderHome();
+    if (initialWord) { input.value = initialWord; lookupBound(initialWord); }
+    else renderHome();
     input.focus();
     analytics?.started();
   },
 
   destroy() {
     this._alive = false;
+    clearTimeout(this._debounce);
     this._abort?.abort();
   },
 };

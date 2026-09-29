@@ -41,8 +41,8 @@ import { fs } from './filesystem.js';
 import { queryDns } from './dns-resolver.js';
 import { fetchPackageMetadata } from './npm-client.js';
 import * as artifacts from './artifacts.js';
-import { listJoinedSpaces, getJoinedSpace, SpaceEngine } from './space-engine.js';
-import { getPublicProfiles } from './profile-system.js';
+import { CHAT_TOOL_DECLARATIONS, executeChatTool } from './assistant/chat-tools.js';
+import { MESSAGES_TOOL_DECLARATIONS, executeMessagesTool } from './assistant/messages-tools.js';
 
 
 let activeAssistantAudios = [];
@@ -56,6 +56,8 @@ const registryDeclarations = toolDiscovery.generateNavigationDeclarations();
 // with the same name (unit_converter, weather_forecast, regex_tester…) and are now covered by
 // find_toolbox_tools / run_toolbox_tool / open_toolbox_tool.
 export const ASSISTANT_TOOL_DECLARATIONS = [
+  ...CHAT_TOOL_DECLARATIONS,
+  ...MESSAGES_TOOL_DECLARATIONS,
   {
     name: 'list_saved_artifacts',
     description: 'List all saved files and artifacts in Toolbox (Files/Saved view).',
@@ -98,7 +100,7 @@ export const ASSISTANT_TOOL_DECLARATIONS = [
   },
   {
     name: 'list_conversations',
-    description: 'List all active messaging spaces/conversations the user has joined.',
+    description: 'List the signed-in person’s private Toolbox Messages conversations, with conversation IDs for read_messages and search_messages. Does not return email addresses or message content.',
     parameters: { type: 'OBJECT', properties: {} }
   },
   {
@@ -1807,6 +1809,8 @@ export function projectFilesFrom(files) {
 }
 
 export async function executeAssistantTool(name, args, { currentFile, taskState } = {}) {
+  if (['create_chat_tool', 'list_chat_tools', 'run_chat_tool'].includes(name)) return executeChatTool(name, args || {}, taskState);
+  if (['list_conversations', 'read_messages', 'search_messages'].includes(name)) return executeMessagesTool(name, args || {});
   // STRICT FILE SAFETY CHECK: Only confirmed deletions or confirmation requests are permitted.
   if (name.includes('delete') || name.includes('remove_file') || name.includes('purge') || name.includes('wipe')) {
     if (name === 'request_file_deletion') {

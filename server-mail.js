@@ -28,6 +28,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { isLocalDevelopmentRequest, isAllowedRequestOrigin, sessionCacheKey } from './server-security.js';
 
 const GMAIL = 'https://gmail.googleapis.com/gmail/v1/users/me';
 const GRAPH = 'https://graph.microsoft.com/v1.0/me';
@@ -50,9 +51,8 @@ class MailError extends Error {
 
 function mailCallbackUrl(request, configuredUrl) {
   if (configuredUrl) return configuredUrl;
-  const protocol = String(request.headers['x-forwarded-proto'] || 'http').split(',')[0].trim();
-  const host = String(request.headers['x-forwarded-host'] || request.headers.host || 'localhost:3000').split(',')[0].trim();
-  return `${protocol}://${host}/api/mail/oauth/callback`;
+  if (!isLocalDevelopmentRequest(request)) throw new MailError('Configure the mailbox OAuth redirect URI for this deployment.', 503);
+  return `http://${request.headers.host}/api/mail/oauth/callback`;
 }
 
 export function encodeMailState(payload, secret) {
@@ -297,7 +297,7 @@ async function sbRequest(pathAndQuery, { method = 'GET', body, prefer } = {}) {
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     if (res.status === 404 || err.code === '42P01' || err.code === 'PGRST205') throw new MissingTableError(err.message || 'mail_accounts table missing');
-    throw new MailError(`Mail account storage failed: ${err.message || res.status}`, 502);
+    throw new MailError('Mail account storage is temporarily unavailable.', 502);
   }
   return res.status === 204 ? null : res.json().catch(() => null);
 }
@@ -347,8 +347,9 @@ const supabaseStore = {
 async function withStore(fn) {
   if (supabaseRest()) {
     try { return await fn(supabaseStore, 'supabase'); }
-    catch (e) { if (!(e instanceof MissingTableError)) throw e; warnMissingTable(); }
+    catch (e) { if (!(e instanceof MissingTableError)) throw e; if (process.env.NODE_ENV === 'production') throw new MailError('Mail account storage is not configured.', 503); warnMissingTable(); }
   }
+  if (process.env.NODE_ENV === 'production') throw new MailError('Mail account storage is not configured.', 503);
   return fn(fileStore, 'file');
 }
 
@@ -393,14 +394,15 @@ async function authenticate(request) {
   const authorization = String(request.headers.authorization || '');
   if (!url || !key) throw new MailError('Toolbox sign-in is not configured on this deployment.', 503);
   if (!/^Bearer [\w.-]+$/.test(authorization)) throw new MailError('Sign in to Toolbox to use Mail.', 401, 'signin');
-  const hit = authCache.get(authorization);
+  const cacheKey = sessionCacheKey(authorization);
+  const hit = authCache.get(cacheKey);
   if (hit && hit.exp > Date.now()) return hit.user;
   const res = await fetch(`${url}/auth/v1/user`, { headers: { apikey: key, Authorization: authorization }, signal: AbortSignal.timeout(15000) });
   if (!res.ok) throw new MailError('Your Toolbox session has expired. Sign in again.', 401, 'signin');
   const user = await res.json();
   if (!user?.id) throw new MailError('A signed-in Toolbox account is required.', 401, 'signin');
   if (authCache.size > 500) authCache.clear();
-  authCache.set(authorization, { user, exp: Date.now() + 60_000 });
+  authCache.set(cacheKey, { user, exp: Date.now() + 60_000 });
   return user;
 }
 
@@ -449,6 +451,11 @@ async function refreshAccount(userId, account) {
 /** A provider API client bound to one account; refreshes tokens transparently. */
 function client(userId, account) {
   const call = async (url, opts = {}, retried = false) => {
+    const target = new URL(url);
+    const expected = new URL(account.provider === 'microsoft' ? GRAPH : GMAIL);
+    if (target.origin !== expected.origin || target.username || target.password || !target.pathname.startsWith(expected.pathname + '/')) {
+      throw new MailError('The mail provider returned an invalid resource address.', 400);
+    }
     if (!account.tokens.access_token || (account.tokens.expires_at && account.tokens.expires_at < Date.now() + 60_000)) {
       if (account.tokens.refresh_token) await refreshAccount(userId, account);
     }
@@ -457,6 +464,7 @@ function client(userId, account) {
       headers: { Authorization: `Bearer ${account.tokens.access_token}`, ...(opts.json !== undefined ? { 'Content-Type': 'application/json' } : {}), ...(opts.headers || {}) },
       ...(opts.json !== undefined ? { body: JSON.stringify(opts.json) } : {}),
       signal: AbortSignal.timeout(opts.timeout || 30000),
+      redirect: 'error',
     });
     if (res.status === 401 && !retried && account.tokens.refresh_token) {
       account.tokens.expires_at = 0;
@@ -948,6 +956,9 @@ async function oauthCallback(request, response, url) {
   const oauthError = url.searchParams.get('error');
   if (oauthError) { page(400, 'Mailbox not connected', url.searchParams.get('error_description') || 'Authorization was cancelled.'); return; }
   if (!code || !state?.userId) { page(400, 'Link expired', 'Invalid or expired mailbox authorization state. Close this window and try again.'); return; }
+  const cookie = String(request.headers.cookie || '').split(';').map(part => part.trim()).find(part => part.startsWith('toolbox_mail_nonce='))?.slice('toolbox_mail_nonce='.length);
+  if (!cookie || cookie !== state.nonce) { page(400, 'Link expired', 'Mailbox authorization must finish in the browser where it started.'); return; }
+  response.setHeader('Set-Cookie', 'toolbox_mail_nonce=; HttpOnly; SameSite=Lax; Path=/api/mail/oauth/callback; Max-Age=0');
   const provider = state.provider === 'microsoft' ? 'microsoft' : 'google';
   try {
     const creds = providerCreds(provider);
@@ -971,7 +982,7 @@ async function oauthCallback(request, response, url) {
     const accountId = `${provider}:${previous?.email || email}`;
     page(200, 'Mailbox connected', 'You can close this window.', `<script>window.opener?.postMessage({type:"toolbox:mail-oauth-success",accountId:${JSON.stringify(accountId).replace(/</g, '\\u003c')}}, ${JSON.stringify(state.appOrigin).replace(/</g, '\\u003c')}); window.close();</script>`);
   } catch (err) {
-    page(500, 'Authentication failed', err.message);
+    page(500, 'Authentication failed', 'Mailbox authorization could not be completed. Please reconnect the account.');
   }
 }
 
@@ -984,8 +995,11 @@ function oauthInit(request, response, url, user) {
     return sendJson(response, 400, { success: false, error: provider === 'microsoft' ? 'Microsoft Mail is not configured on this deployment.' : 'Server is missing GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables.' });
   }
   const claimed = url.searchParams.get('origin') || '';
-  const requestedOrigin = (/^https?:\/\/[\w.-]+(:\d+)?$/i.test(claimed) ? claimed : '') || request.headers.origin || `${String(request.headers['x-forwarded-proto'] || 'http').split(',')[0]}://${String(request.headers['x-forwarded-host'] || request.headers.host || 'localhost:3000').split(',')[0]}`;
-  const state = encodeMailState({ userId: user.id, provider, nonce: crypto.randomUUID(), expiresAt: Date.now() + 10 * 60 * 1000, appOrigin: requestedOrigin }, stateSecret);
+    const requestedOrigin = claimed || request.headers.origin || new URL(mailCallbackUrl(request, provider === 'microsoft' ? env('MICROSOFT_REDIRECT_URI') : env('GOOGLE_REDIRECT_URI'))).origin;
+    if (!isAllowedRequestOrigin(requestedOrigin, request)) throw new MailError('Mailbox linking must start from an allowed Toolbox origin.', 403);
+  const nonce = crypto.randomUUID();
+  response.setHeader('Set-Cookie', `toolbox_mail_nonce=${nonce}; HttpOnly; SameSite=Lax; Path=/api/mail/oauth/callback; Max-Age=600${requestedOrigin.startsWith('https:') ? '; Secure' : ''}`);
+  const state = encodeMailState({ userId: user.id, provider, nonce, expiresAt: Date.now() + 10 * 60 * 1000, appOrigin: requestedOrigin }, stateSecret);
   const loginHint = url.searchParams.get('hint') ? `&login_hint=${encodeURIComponent(url.searchParams.get('hint'))}` : '';
   if (provider === 'microsoft') {
     const redirect = mailCallbackUrl(request, env('MICROSOFT_REDIRECT_URI'));
@@ -1149,8 +1163,8 @@ export async function handleMail(request, response, url) {
     return true;
   } catch (error) {
     const status = error instanceof MailError ? error.status : 500;
-    if (!(error instanceof MailError)) console.error('[mail]', error);
-    if (!response.headersSent) sendJson(response, status, { success: false, error: error.message || 'Mail request failed.', code: error.code || undefined });
+    if (!(error instanceof MailError)) console.error('[mail] Request failed.');
+    if (!response.headersSent) sendJson(response, status, { success: false, error: error instanceof MailError ? error.message : 'Mail request failed.', code: error.code || undefined });
     else response.end();
     return true;
   }

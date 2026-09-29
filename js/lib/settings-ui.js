@@ -28,12 +28,14 @@ import { NotificationEngine, prepareNotificationSound } from './notifications.js
 import { renderContributionSettings } from './flutterwave-contribution.js';
 import { paintSupporterProfile } from './supporter.js';
 import { renderToolPreferences } from './tool-settings-ui.js';
+import { animateSettingsPanel } from './settings-motion.js';
 
 let modalEl = null;
 let isOpen = false;
 let closeTimer = 0;
 let currentPage = null;
 let savedTimer = 0;
+let cancelPanelMotion = () => {};
 const LAST_PAGE = 'toolbox_settings_page';
 const NARROW = '(max-width: 760px)';
 
@@ -277,21 +279,24 @@ function showPage(id, { instant = false } = {}) {
   });
   modalEl.querySelector('.stg-me')?.classList.toggle('is-active', id === 'profile');
   setHeading(page.title, page.hint);
-  swapPanel(id, instant ? 0 : dir);
+  swapPanel(id, instant ? 0 : dir, { instant });
   if (isNarrow()) win.dataset.view = 'page';
   placeIndicator(!instant);
 }
 
-function swapPanel(id, dir) {
+function swapPanel(id, dir, { instant = false } = {}) {
   const scroll = modalEl.querySelector('.stg-scroll');
-  const reduced = reducedMotion();
+  const previous = modalEl.querySelector('[data-settings-panel]:not([hidden])');
+  if (previous?.dataset.settingsPanel === id) return;
+  cancelPanelMotion();
+  let active = null;
   modalEl.querySelectorAll('[data-settings-panel]').forEach(panel => {
     const on = panel.dataset.settingsPanel === id;
     panel.hidden = !on;
-    panel.classList.remove('stg-in-up', 'stg-in-down', 'stg-in-fade');
-    if (on && !reduced && !isNarrow()) { void panel.offsetWidth; panel.classList.add(dir > 0 ? 'stg-in-up' : dir < 0 ? 'stg-in-down' : 'stg-in-fade'); }
+    if (on) active = panel;
   });
   scroll.scrollTop = 0;
+  if (!instant) cancelPanelMotion = animateSettingsPanel(active, dir, { reduced: reducedMotion(), narrow: isNarrow() });
 }
 
 function setHeading(title, sub) {
@@ -406,10 +411,10 @@ export function showAvatarView() {
   currentPage = 'avatars';
   modalEl.querySelectorAll('.stg-link').forEach(l => l.classList.toggle('is-active', l.dataset.page === 'profile'));
   setHeading('Choose your avatar', 'Shown across your tools, files and Spaces');
-  swapPanel('avatars', prev ? 1 : 0);
   modalEl.querySelector('.stg').dataset.view = 'page';
   modalEl.querySelector('.stg').dataset.sub = 'avatars';
   renderAvatarGallery();
+  swapPanel('avatars', prev ? 1 : 0);
   placeIndicator();
 }
 
@@ -790,9 +795,11 @@ export function openSettings(targetSection = null) {
 
 export function closeSettings() {
   if (!modalEl || !isOpen) return;
+  cancelPanelMotion();
+  clearTimeout(savedTimer);
   modalEl.classList.remove('is-open');
   isOpen = false;
-  closeTimer = setTimeout(() => { if (!isOpen) modalEl.style.display = 'none'; }, 260);
+  closeTimer = setTimeout(() => { if (!isOpen) modalEl.style.display = 'none'; }, reducedMotion() ? 0 : 260);
 }
 
 export function installSettingsUI() {

@@ -88,7 +88,8 @@ export async function blobOf(ref) {
   } else if (ref.url) {
     if (ref.packed) blob = await (await import('./transfer-pack.js')).fetchTransfer(ref.url, { type: ref.type });
     else {
-      const res = await fetch(ref.url);
+      const { resolveStorageDownloadUrl } = await import('./supabase.js');
+      const res = await fetch(await resolveStorageDownloadUrl(ref.url), { referrerPolicy: 'no-referrer' });
       if (!res.ok) throw new Error(`The file could not be downloaded (${res.status}).`);
       blob = await res.blob();
     }

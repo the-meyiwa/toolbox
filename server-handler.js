@@ -9,10 +9,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { handleSupporterRequest } from './server-supporters.js';
 import { handleDeviceRequest } from './server-device-specs.js';
-import { handleAssistantGateway } from './server-assistant.js';
+import { handleAssistantGateway, authorised } from './server-assistant.js';
 import { handleMail } from './server-mail.js';
 import { handleMaps, searchNearby, searchPlaces } from './server-maps.js';
 import { isBlockedHost, parseWebPage } from './js/lib/web-scraper-engine.js';
+import { fetchPublicUrl, isAllowedRequestOrigin, isLocalDevelopmentRequest, privateResponseHeaders } from './server-security.js';
 import {
   getWorkspaceDir,
   listWorkspaceFiles,
@@ -64,14 +65,7 @@ function cleanFileDropRooms() {
 const LOCAL_ORIGIN_RE = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
 
 function isAllowedOrigin(origin, request) {
-  if (!origin) return false;
-  if (LOCAL_ORIGIN_RE.test(origin)) return true;
-  const allowed = (process.env.TOOLBOX_ALLOWED_ORIGINS || '')
-    .split(',').map(o => o.trim().replace(/\/$/, '')).filter(Boolean);
-  if (allowed.includes(origin)) return true;
-  // Same public host the visitor used (set by the Worker or a proxy).
-  const host = request.headers['x-forwarded-host'] || request.headers.host || '';
-  try { return Boolean(host) && new URL(origin).host === host; } catch { return false; }
+  return isAllowedRequestOrigin(origin, request);
 }
 
 function safeEqualHex(a, b) {
@@ -82,9 +76,15 @@ function safeEqualHex(a, b) {
 
 export async function handleApiRequest(request, response) {
   const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
+  privateResponseHeaders(response);
 
   // CORS headers: only echo back origins we trust, never '*'.
   const origin = request.headers.origin || '';
+  if (origin && !isAllowedOrigin(origin, request)) {
+    response.writeHead(403, { 'Content-Type': 'application/json' });
+    response.end(JSON.stringify({ success: false, error: 'This origin is not allowed to access Toolbox.' }));
+    return true;
+  }
   if (isAllowedOrigin(origin, request)) {
     response.setHeader('Access-Control-Allow-Origin', origin);
     response.setHeader('Vary', 'Origin');
@@ -112,7 +112,7 @@ export async function handleApiRequest(request, response) {
     // In production the whole API is off unless TOOLBOX_IDE_HOST_EXEC=1.
     const remote = request.socket?.remoteAddress || '';
     const loopback = /^(::1|127\.|::ffff:127\.)/.test(remote);
-    const sameMachineOrigin = !origin || LOCAL_ORIGIN_RE.test(origin);
+    const sameMachineOrigin = isLocalDevelopmentRequest(request);
     const proxied = Boolean(request.headers['x-forwarded-for'] || request.headers['x-real-ip'] || request.headers['x-vercel-id'] || request.headers['x-forwarded-host'] || request.headers['cf-connecting-ip']);
     const disabled = process.env.TOOLBOX_IDE_HOST_EXEC === '0'
       || (process.env.NODE_ENV === 'production' && process.env.TOOLBOX_IDE_HOST_EXEC !== '1');
@@ -566,7 +566,7 @@ export async function handleApiRequest(request, response) {
         response.end(JSON.stringify({ success: false, error: 'Host is blocked.' }));
         return true;
       }
-      const binRes = await fetch(u.toString(), {
+      const binRes = await fetchPublicUrl(u.toString(), {
         headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
         signal: AbortSignal.timeout(15000)
       });
@@ -580,7 +580,10 @@ export async function handleApiRequest(request, response) {
       response.writeHead(200, {
         'Content-Type': contentType,
         'Content-Length': buffer.length,
-        'Cache-Control': 'public, max-age=86400'
+        'Cache-Control': 'no-store',
+        'Content-Disposition': 'attachment',
+        'Content-Security-Policy': "sandbox; default-src 'none'",
+        'X-Content-Type-Options': 'nosniff'
       });
       response.end(buffer);
       return true;
@@ -618,8 +621,22 @@ export async function handleApiRequest(request, response) {
     }
 
     if (url.pathname === '/api/assistant/chat' && request.method === 'POST') {
+      let allowed = false;
+      try { allowed = await authorised(request); } catch { /* fail closed */ }
+      if (!allowed) {
+        response.writeHead(401, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, error: 'Sign in to Toolbox to use the Assistant.' }));
+        return true;
+      }
       let rawBody = '';
-      for await (const chunk of request) rawBody += chunk;
+      for await (const chunk of request) {
+        rawBody += chunk;
+        if (Buffer.byteLength(rawBody) > 2 * 1024 * 1024) {
+          response.writeHead(413, { 'Content-Type': 'application/json' });
+          response.end(JSON.stringify({ success: false, error: 'The request is too large.' }));
+          return true;
+        }
+      }
       try {
         const { history = [], systemInstruction = '' } = rawBody ? JSON.parse(rawBody) : {};
         const apiKey = process.env.GEMINI_API_KEY;
@@ -645,7 +662,7 @@ export async function handleApiRequest(request, response) {
         response.end(JSON.stringify({ success: true, text }));
       } catch (error) {
         response.writeHead(500, { 'Content-Type': 'application/json' });
-        response.end(JSON.stringify({ success: false, error: error.message }));
+        response.end(JSON.stringify({ success: false, error: 'The Assistant request could not be completed.' }));
       }
       return true;
     }
@@ -670,7 +687,7 @@ export async function handleApiRequest(request, response) {
           try {
             const targetU = new URL(targetUrl);
             if (!isBlockedHost(targetU.hostname)) {
-              const pageRes = await fetch(targetUrl, {
+              const pageRes = await fetchPublicUrl(targetUrl, {
                 headers: { 'User-Agent': 'ToolboxBrowser/2.0 (Direct URL Reader)' },
                 signal: AbortSignal.timeout(10000)
               });
@@ -947,7 +964,7 @@ export async function handleApiRequest(request, response) {
       try {
         const fetchCtrl = new AbortController();
         const fetchTimer = setTimeout(() => fetchCtrl.abort(), 20000);
-        const fetchRes = await fetch(parsedU.href, {
+        const fetchRes = await fetchPublicUrl(parsedU.href, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 ToolboxBrowser/2.0',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -1019,7 +1036,7 @@ export async function handleApiRequest(request, response) {
       try {
         const fetchCtrl = new AbortController();
         const fetchTimer = setTimeout(() => fetchCtrl.abort(), 20000);
-        const fetchRes = await fetch(parsedU.href, {
+        const fetchRes = await fetchPublicUrl(parsedU.href, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 ToolboxBrowser/2.0',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
@@ -1111,7 +1128,7 @@ export async function handleApiRequest(request, response) {
       try {
         const fetchCtrl = new AbortController();
         const fetchTimer = setTimeout(() => fetchCtrl.abort(), 20000);
-        const fetchRes = await fetch(parsedU.href, {
+        const fetchRes = await fetchPublicUrl(parsedU.href, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 ToolboxBrowser/2.0'
           },

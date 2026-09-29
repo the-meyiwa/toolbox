@@ -16,8 +16,12 @@ import { SKINCARE_ROWS } from './products-skincare.js';
 import { MAKEUP_ROWS } from './products-makeup.js';
 import { MORE_ROWS } from './products-more.js';
 import { INCI } from './inci.js';
+import OBF_SNAPSHOT from './products-openbeautyfacts.json' with { type: 'json' };
 
 export { INCI };
+export const CATALOGUE_SOURCE = Object.freeze(Object.fromEntries(Object.entries(OBF_SNAPSHOT).filter(([k]) => k !== 'products')));
+export const OBF = 'https://world.openbeautyfacts.org';
+const norm = (s) => String(s || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/\bcreme\b/g, 'cream').replace(/[^a-z0-9%+]+/g, ' ').trim();
 
 /* ---------------- categories and types ---------------- */
 
@@ -33,6 +37,7 @@ export const CATEGORIES = [
   { id: 'lips', label: 'Lip care', blurb: 'Balms and masks' },
   { id: 'baby', label: 'Baby', blurb: 'Gentle care for babies' },
   { id: 'men', label: "Men's grooming", blurb: 'Shaving and aftercare' },
+  { id: 'other', label: 'Other cosmetics', blurb: 'Labels without a confirmed product category' },
 ];
 export const CATEGORY_BY_ID = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
 
@@ -93,6 +98,7 @@ export function parseSpecs(text) {
     const eq = part.indexOf('=');
     if (eq < 0) { flags[part] = true; continue; }
     const k = part.slice(0, eq).trim(), v = part.slice(eq + 1).trim();
+    if (['__proto__', 'constructor', 'prototype'].includes(k)) continue;
     if (k === 'ref') { typical = v === 'typical'; continue; }
     specs[k] = v;
   }
@@ -101,7 +107,7 @@ export function parseSpecs(text) {
 
 const slug = (s) => String(s).toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-export const PRODUCTS = [SKINCARE_ROWS, MAKEUP_ROWS, MORE_ROWS].flatMap(rowsOf).filter(r => r.length >= 7).map(([brandId, name, type, year, size, specText, ...rest]) => {
+const CURATED_PRODUCTS = [SKINCARE_ROWS, MAKEUP_ROWS, MORE_ROWS].flatMap(rowsOf).filter(r => r.length >= 7).map(([brandId, name, type, year, size, specText, ...rest]) => {
   const brand = BRAND_BY_ID.get(brandId);
   const { specs, flags, typical } = parseSpecs(specText);
   const inci = rest.join(' | ').split(/,\s+/).map(s => s.trim()).filter(Boolean);
@@ -111,6 +117,9 @@ export const PRODUCTS = [SKINCARE_ROWS, MAKEUP_ROWS, MORE_ROWS].flatMap(rowsOf).
     source: 'catalogue',
   };
 });
+export const PRODUCTS = [...CURATED_PRODUCTS, ...OBF_SNAPSHOT.products.map(p => ({
+  ...fromOpenBeautyFacts(p), offline: true, imported: OBF_SNAPSHOT.imported,
+}))];
 export const PRODUCT_BY_ID = new Map(PRODUCTS.map(p => [p.id, p]));
 export const productsOfBrand = (brandId) => PRODUCTS.filter(p => p.brandId === brandId);
 
@@ -120,7 +129,7 @@ const INCI_LOWER = new Map(Object.keys(INCI).map(k => [k.toLowerCase(), k]));
 
 /** The dictionary entry for an ingredient as printed (case-insensitive; "Aqua/Water/Eau" tries each part). */
 export function ingredientInfo(name) {
-  const n = String(name || '').trim().replace(/\s*\*+$/, '');
+  const n = String(name || '').trim().replace(/[.*]+$/, '').replace(/\s*\d+(?:\.\d+)?\s*%$/, '').trim();
   const key = INCI_LOWER.get(n.toLowerCase());
   if (key) return { inci: key, ...INCI[key] };
   for (const part of n.split(/\s*\/\s*|\s*\(\s*|\s*\)\s*/).filter(Boolean)) {
@@ -148,7 +157,7 @@ export const FUNCTION_GROUPS = [
 export const FUNCTION_GROUP_BY_ID = Object.fromEntries(FUNCTION_GROUPS.map(g => [g.id, g]));
 export const groupOf = (fn) => (FUNCTION_GROUPS.find(g => g.test.test(fn || '')) || { id: 'other', label: 'Other' });
 
-/* The 26 fragrance allergens EU law makes brands name on the label. */
+/* Legacy set of commonly declared fragrance allergens; not an exhaustive regulatory check. */
 export const EU_ALLERGENS = new Set(['Alpha-Isomethyl Ionone', 'Amyl Cinnamal', 'Amylcinnamyl Alcohol', 'Anise Alcohol', 'Benzyl Alcohol', 'Benzyl Benzoate', 'Benzyl Cinnamate', 'Benzyl Salicylate',
   'Butylphenyl Methylpropional', 'Cinnamal', 'Cinnamyl Alcohol', 'Citral', 'Citronellol', 'Coumarin', 'Eugenol', 'Evernia Furfuracea Extract', 'Evernia Prunastri Extract', 'Farnesol',
   'Geraniol', 'Hexyl Cinnamal', 'Hydroxycitronellal', 'Hydroxyisohexyl 3-Cyclohexene Carboxaldehyde', 'Isoeugenol', 'Limonene', 'Linalool', 'Methyl 2-Octynoate']);
@@ -177,17 +186,20 @@ export function analyse(product) {
   const groups = {};
   rows.forEach(r => { groups[r.group] = (groups[r.group] || 0) + 1; });
   const notes = [];
-  if (!fragrance.length && !allergens.length && !essentialOils.length) notes.push({ kind: 'good', title: 'No added fragrance', text: 'No parfum, flavour, essential oils or declared fragrance allergens on the list.' });
+  const unknown = rows.filter(r => !r.info);
+  const complete = rows.length > 0 && !unknown.length && product.source === 'catalogue' && !product.typical;
+  if (!complete) notes.push({ kind: 'info', title: 'Label coverage', text: `${product.source === 'openbeautyfacts' ? 'Community label; completeness is not independently verified. ' : ''}${unknown.length ? `${unknown.length} ingredient entries are not in the dictionary. ` : ''}An ingredient not detected here is not a guarantee that the product is free of it. Check the pack.` });
+  if (complete && !fragrance.length && !allergens.length && !essentialOils.length) notes.push({ kind: 'good', title: 'No added fragrance', text: 'No parfum, flavour, essential oils or known fragrance allergens detected in this label version. Check your pack for changes.' });
   if (fragrance.length) notes.push({ kind: 'info', title: 'Contains fragrance', text: `${fragrance[0].name} is on the list at position ${fragrance[0].position}.` });
-  if (allergens.length) notes.push({ kind: 'warn', title: `${allergens.length} declared fragrance allergen${allergens.length === 1 ? '' : 's'}`, text: `${allergens.map(a => a.name).join(', ')}. EU rules make these named on the label because some people react to them.` });
+  if (allergens.length) notes.push({ kind: 'warn', title: `${allergens.length} known fragrance allergen${allergens.length === 1 ? '' : 's'} detected`, text: `${allergens.map(a => a.name).join(', ')}. This dictionary does not cover every fragrance allergen; check the full pack label.` });
   if (essentialOils.length) notes.push({ kind: 'info', title: 'Essential oils', text: essentialOils.map(e => e.name).join(', ') });
   if (dryingAlcohol.length) notes.push({ kind: 'warn', title: 'Alcohol high on the list', text: `${dryingAlcohol[0].name} at position ${dryingAlcohol[0].position}: helps it dry fast, and can feel tight on dry skin.` });
   if (sulfates.length) notes.push({ kind: 'info', title: 'Sulfate cleansers', text: sulfates.map(s => s.name).join(', ') });
   if (parabens.length) notes.push({ kind: 'info', title: 'Paraben preservatives', text: parabens.map(s => s.name).join(', ') });
-  if (isothiazolinones.length) notes.push({ kind: 'warn', title: 'Isothiazolinone preservatives', text: `${isothiazolinones.map(s => s.name).join(', ')}: common contact allergens; the EU allows them only in rinse-off products.` });
+  if (isothiazolinones.length) notes.push({ kind: 'warn', title: 'Isothiazolinone preservatives', text: isothiazolinones.map(s => s.name).join(', ') });
   if (silicones.length) notes.push({ kind: 'info', title: `${silicones.length} silicone${silicones.length === 1 ? '' : 's'}`, text: silicones.map(s => s.name).join(', ') });
   if (mineralOil.length) notes.push({ kind: 'info', title: 'Mineral oil or petrolatum', text: mineralOil.map(s => s.name).join(', ') });
-  return { rows, allergens, fragrance, essentialOils, dryingAlcohol, silicones, sulfates, parabens, mineralOil, uvFilters, actives, groups, notes };
+  return { rows, allergens, fragrance, essentialOils, dryingAlcohol, silicones, sulfates, parabens, mineralOil, uvFilters, actives, groups, notes, unknown, complete };
 }
 
 /* ---------------- lookups ---------------- */
@@ -224,7 +236,6 @@ export function similarProducts(product, n = 6) {
 }
 
 // "Crème", "creme" and "cream" are the same word to someone searching.
-const norm = (s) => String(s || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/\bcreme\b/g, 'cream').replace(/[^a-z0-9%+]+/g, ' ').trim();
 const tokens = (s) => norm(s).split(' ').filter(Boolean);
 function score(hay, qt) {
   const h = norm(hay);
@@ -242,7 +253,7 @@ function score(hay, qt) {
 export function search(query, { limit = 8 } = {}) {
   const qt = tokens(query);
   if (!qt.length) return { products: [], brands: [], ingredients: [] };
-  const products = PRODUCTS.map(p => ({ p, s: Math.max(score(`${p.brand} ${p.name}`, qt) * 1.2, score(`${p.name} ${p.type} ${CATEGORY_BY_ID[p.category]?.label}`, qt), score(`${p.brand} ${p.type}`, qt) * 0.9) }))
+  const products = PRODUCTS.map(p => ({ p, s: p.code === String(query).trim() ? 10 : Math.max(score(`${p.brand} ${p.name}`, qt) * 1.2, score(`${p.name} ${p.type} ${CATEGORY_BY_ID[p.category]?.label}`, qt), score(`${p.brand} ${p.type}`, qt) * 0.9) }))
     .filter(x => x.s > 0).sort((a, b) => b.s - a.s || (b.p.year || 0) - (a.p.year || 0)).slice(0, limit).map(x => x.p);
   const brands = BRANDS.map(b => ({ b, s: Math.max(score(b.name, qt) * 1.3, score(`${b.name} ${b.parent} ${b.country}`, qt)) }))
     .filter(x => x.s > 0).sort((a, b) => b.s - a.s).slice(0, limit).map(x => x.b);
@@ -254,7 +265,6 @@ export function search(query, { limit = 8 } = {}) {
 
 /* ---------------- live: Open Beauty Facts ---------------- */
 
-export const OBF = 'https://world.openbeautyfacts.org';
 
 /** Splits a label's ingredient text into names (commas inside brackets stay put). */
 export function splitIngredients(text) {
@@ -276,39 +286,51 @@ export function splitIngredients(text) {
 /** An Open Beauty Facts record as a product like the catalogue's. */
 export function fromOpenBeautyFacts(p) {
   const brand = String(p.brands || '').split(',')[0].trim();
-  const known = BRANDS.find(b => norm(b.name) === norm(brand));
-  const cat = String(p.categories || '').toLowerCase();
-  const type = /sun|spf|solaire/.test(cat) ? 'sunscreen' : /shampoo/.test(cat) ? 'shampoo' : /conditioner|après/.test(cat) ? 'conditioner'
+  const known = BRAND_BY_ID.get(p.brandId) || BRANDS.find(b => norm(b.name) === norm(brand));
+  const cat = norm(`${p.categories || ''} ${p.product_name || ''}`);
+  const type = /baby|bebe/.test(cat) ? 'baby' : /shampoo|shampoing/.test(cat) ? 'shampoo' : /conditioner|apres shampoo/.test(cat) ? 'conditioner'
+    : /sunscreen|sun care|sun cream|sun milk|spf|solaire/.test(cat) ? 'sunscreen'
+    : /lip balm|lip care/.test(cat) ? 'lip balm' : /nail polish|vernis/.test(cat) ? 'nail polish'
+    : /shaving|rasage|aftershave/.test(cat) ? 'shaving' : /mouthwash|bain de bouche/.test(cat) ? 'mouthwash'
     : /toothpaste|dentifrice/.test(cat) ? 'toothpaste' : /deodorant|déodorant/.test(cat) ? 'deodorant' : /perfume|parfum|fragrance|eau de/.test(cat) ? 'fragrance'
       : /lipstick|rouge à lèvres/.test(cat) ? 'lipstick' : /mascara/.test(cat) ? 'mascara' : /foundation|fond de teint/.test(cat) ? 'foundation'
         : /shower|body wash|gel douche/.test(cat) ? 'body wash' : /soap|savon/.test(cat) ? 'bar soap' : /body/.test(cat) ? 'body lotion'
           : /cleans|nettoyant|démaquillant/.test(cat) ? 'cleanser' : /serum|sérum/.test(cat) ? 'serum' : /cream|crème|moistur|hydrat/.test(cat) ? 'moisturizer' : 'cosmetic';
   return {
-    id: `obf-${p.code}`, code: p.code, brandId: known?.id || null, brand: known?.name || brand || 'Unknown brand',
-    name: p.product_name || p.generic_name || `Product ${p.code}`, type, category: TYPE_CATEGORY[type] || 'skincare',
+    id: `obf-${String(p.code).slice(0, 30)}`, code: String(p.code).slice(0, 30), brandId: known?.id || null, brand: known?.name || brand.slice(0, 160) || 'Unknown brand',
+    name: String(p.product_name || p.generic_name || `Product ${p.code}`).slice(0, 240), type, category: TYPE_CATEGORY[type] || 'other',
     year: null, size: p.quantity || '', specs: {}, flags: {}, typical: false,
-    inci: splitIngredients(p.ingredients_text_en || p.ingredients_text || ''),
-    image: p.image_front_small_url || '', countries: p.countries || '',
+    inci: splitIngredients(String(p.ingredients_text_en || p.ingredients_text || '').slice(0, 16000)).slice(0, 160),
+    image: safeProductImage(p.image_front_small_url), countries: String(p.countries || '').slice(0, 500), modified: p.modified || null,
     source: 'openbeautyfacts', url: `${OBF}/product/${encodeURIComponent(p.code)}`,
   };
+}
+
+/** Product records cannot cause requests to arbitrary tracking or private-network URLs. */
+export function safeProductImage(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.hostname === 'images.openbeautyfacts.org' && !url.username && !url.password ? url.href : '';
+  } catch { return ''; }
 }
 
 const OBF_FIELDS = 'code,product_name,generic_name,brands,quantity,categories,ingredients_text,ingredients_text_en,image_front_small_url,countries';
 
 /** Searches Open Beauty Facts (products from every brand, worldwide). Needs a connection. */
 export async function searchOnline(query, { pageSize = 24, signal, fetchImpl = globalThis.fetch } = {}) {
-  const q = String(query || '').trim();
+  const q = String(query || '').trim().slice(0, 240);
   if (!q) return [];
-  const url = `${OBF}/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=${pageSize}&fields=${OBF_FIELDS}`;
-  const res = await fetchImpl(url, { signal, headers: { Accept: 'application/json' } });
+  const url = `${OBF}/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=${Math.max(1, Math.min(100, Number(pageSize) || 24))}&fields=${OBF_FIELDS}`;
+  const res = await fetchImpl(url, { signal, credentials: 'omit', referrerPolicy: 'no-referrer', headers: { Accept: 'application/json' } });
   if (!res.ok) throw new Error(`Open Beauty Facts answered ${res.status}`);
   const data = await res.json();
-  return (data.products || []).filter(p => p.code && (p.product_name || p.ingredients_text)).map(fromOpenBeautyFacts);
+  return (Array.isArray(data.products) ? data.products : []).filter(p => p && /^\d{8,14}$/.test(p.code) && (p.product_name || p.ingredients_text)).slice(0, 100).map(fromOpenBeautyFacts);
 }
 
 /** One product by barcode from Open Beauty Facts. */
 export async function productByBarcode(code, { signal, fetchImpl = globalThis.fetch } = {}) {
-  const res = await fetchImpl(`${OBF}/api/v2/product/${encodeURIComponent(code)}.json?fields=${OBF_FIELDS}`, { signal });
+  if (!/^\d{8,14}$/.test(String(code || ''))) return null;
+  const res = await fetchImpl(`${OBF}/api/v2/product/${encodeURIComponent(code)}.json?fields=${OBF_FIELDS}`, { signal, credentials: 'omit', referrerPolicy: 'no-referrer' });
   if (!res.ok) throw new Error(`Open Beauty Facts answered ${res.status}`);
   const data = await res.json();
   return data.status === 1 && data.product ? fromOpenBeautyFacts({ ...data.product, code }) : null;
@@ -319,4 +341,6 @@ export const STATS = {
   brands: BRANDS.length,
   countries: new Set(BRANDS.map(b => b.country)).size,
   ingredients: Object.keys(INCI).length,
+  curated: CURATED_PRODUCTS.length,
+  community: OBF_SNAPSHOT.products.length,
 };

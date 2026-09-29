@@ -18,7 +18,7 @@
 import {
   CATEGORIES, CATEGORY_BY_ID, REGIONS, REGION_BY_ID, BRANDS, BRAND_BY_ID, PRODUCTS, PRODUCT_BY_ID, INCI, INGREDIENTS,
   FUNCTION_GROUPS, FUNCTION_GROUP_BY_ID, STATS, analyse, ingredientInfo, productsOfBrand, productsWith, similarProducts, search,
-  searchOnline, typeLabel, groupOf,
+  searchOnline, typeLabel, groupOf, CATALOGUE_SOURCE,
 } from '../lib/cosmetics/db.js';
 import { RevealMotion, flip, pointerLight } from '../lib/reveal-motion.js';
 import { icon } from '../lib/icons.js';
@@ -28,6 +28,7 @@ const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-r
 const TABS = ['discover', 'products', 'brands', 'ingredients'];
 const FOCUS_KEY = 'toolbox.cosmetics.focus';
 const PAGE = 60;
+const SOURCE_DATA_URL = new URL('../lib/cosmetics/products-openbeautyfacts.json', import.meta.url).href;
 
 /* Pack shapes, drawn at 48×48. */
 const PACK = {
@@ -85,7 +86,7 @@ export default {
   render(container) {
     this.container = container;
     this.stack = [{ page: 'discover' }];
-    this.productsState = { cat: '', ff: false, spf: false, sort: 'brand', shown: PAGE };
+    this.productsState = { cat: '', ff: false, spf: false, source: '', sort: 'brand', shown: PAGE };
     this.brandsState = { region: '', q: '' };
     this.ingState = { group: '', q: '', shown: 120 };
     this.online = new Map();
@@ -264,7 +265,7 @@ export default {
       <section class="cz-hero">
         <div class="cz-hero-art" aria-hidden="true">${['dropper', 'jar', 'stick', 'perfume', 'tube'].map((s, i) => `<span style="--k:${i}">${pack(s, 56)}</span>`).join('')}</div>
         <h2>What is really in your cosmetics</h2>
-        <p class="cz-sub">Products from brands all over the world, with their specifications and every ingredient explained, down to the compound.</p>
+        <p class="cz-sub">Explore ${STATS.products.toLocaleString()} product labels, curated formulas and an ingredient dictionary that connects cosmetics to chemistry.</p>
         <div class="cz-stats">
           <div class="cz-stat"><b data-count="${STATS.products}">${STATS.products}</b><span>products in detail</span></div>
           <div class="cz-stat"><b data-count="${STATS.brands}">${STATS.brands}</b><span>brands</span></div>
@@ -292,7 +293,7 @@ export default {
         <h3>Icons, taken apart</h3>
         <div class="cz-grid">${featured.map(p => this.productCard(p)).join('')}</div>
       </section>
-      <p class="cz-note-foot">Ingredient lists are the published INCI lists for one market and version; brands reformulate and lists differ between countries, so the pack in hand is the final word. Lists marked "representative" have their key ingredients confirmed but are not a copy of one label. Search every brand to read live labels from Open Beauty Facts.</p>`;
+      <p class="cz-note-foot">${STATS.curated} curated formulas and ${STATS.community.toLocaleString()} community labels from <a href="https://world.openbeautyfacts.org" target="_blank" rel="noopener noreferrer">Open Beauty Facts</a>, imported ${esc(CATALOGUE_SOURCE.imported)}. Community records can be incomplete or out of date; unknown ingredients stay unidentified. The pack in hand is the final word. Data under <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener noreferrer">ODbL</a>. <a href="${esc(SOURCE_DATA_URL)}" download="toolbox-cosmetics-source.json">Download the source catalogue</a>.</p>`;
   },
 
   compoHtml(a, { mini = false } = {}) {
@@ -313,13 +314,18 @@ export default {
       <span class="cz-pcard-meta">${esc([typeLabel(p.type), p.size, p.year].filter(Boolean).join(' · '))}</span>
       ${chips.length ? `<span class="cz-pcard-chips">${chips.map(c => `<em>${esc(c)}</em>`).join('')}</span>` : ''}
       ${p.inci.length ? this.compoHtml(analyse(p), { mini: true }) : ''}
-      <span class="cz-pcard-n">${p.inci.length ? `${p.inci.length} ingredient${p.inci.length === 1 ? '' : 's'}` : 'No ingredient list'}</span>
+      <span class="cz-pcard-n">${p.inci.length ? `${p.inci.length} ingredient${p.inci.length === 1 ? '' : 's'}` : 'No ingredient list'}${p.source === 'openbeautyfacts' ? ' · Community label' : ''}</span>
     </button>`;
   },
 
   page_products() {
     const s = this.productsState;
-    let list = PRODUCTS.filter(p => (!s.cat || p.category === s.cat) && (!s.ff || p.flags.ff || !analyse(p).fragrance.length && !analyse(p).allergens.length) && (!s.spf || p.specs.spf));
+    let list = PRODUCTS.filter(p => {
+      if (s.cat && p.category !== s.cat || s.source && p.source !== s.source || s.spf && !p.specs.spf) return false;
+      if (!s.ff) return true;
+      const a = analyse(p);
+      return a.complete && !a.fragrance.length && !a.allergens.length && !a.essentialOils.length;
+    });
     list = list.slice().sort((a, b) => s.sort === 'newest' ? (b.year || 0) - (a.year || 0) : s.sort === 'name' ? a.name.localeCompare(b.name) : a.brand.localeCompare(b.brand) || a.name.localeCompare(b.name));
     const counts = Object.fromEntries(CATEGORIES.map(c => [c.id, PRODUCTS.filter(p => p.category === c.id).length]));
     return `
@@ -331,6 +337,7 @@ export default {
         <div class="cz-filter-row">
           <label class="cz-switch"><input type="checkbox" class="switch" data-filter="ff" ${s.ff ? 'checked' : ''}><span>No added fragrance</span></label>
           <label class="cz-switch"><input type="checkbox" class="switch" data-filter="spf" ${s.spf ? 'checked' : ''}><span>With SPF</span></label>
+          <select class="tool-select" data-filter="source" aria-label="Label source"><option value="" ${!s.source ? 'selected' : ''}>All sources</option><option value="catalogue" ${s.source === 'catalogue' ? 'selected' : ''}>Curated formulas</option><option value="openbeautyfacts" ${s.source === 'openbeautyfacts' ? 'selected' : ''}>Community labels</option></select>
           <select class="tool-select" data-filter="sort" aria-label="Sort"><option value="brand" ${s.sort === 'brand' ? 'selected' : ''}>Sort: Brand</option><option value="name" ${s.sort === 'name' ? 'selected' : ''}>Sort: Name</option><option value="newest" ${s.sort === 'newest' ? 'selected' : ''}>Sort: Newest</option></select>
         </div>
       </section>
@@ -431,7 +438,7 @@ export default {
           <h2>${esc(p.name)}</h2>
           <p class="cz-sub">${esc([typeLabel(p.type), p.size, p.year ? `launched ${p.year}` : '', brand?.country].filter(Boolean).join(' · '))}</p>
           ${badges ? `<div class="cz-badges">${badges}</div>` : ''}
-          ${p.source === 'openbeautyfacts' ? `<p class="cz-muted">From Open Beauty Facts, as entered from the label by its contributors. <a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">See the record${icon('external', { size: 12 })}</a></p>` : ''}
+          ${p.source === 'openbeautyfacts' ? `<p class="cz-muted">Community label from Open Beauty Facts. ${p.modified ? `Record edited ${esc(p.modified)}. ` : ''}${p.imported ? `Offline snapshot: ${esc(p.imported)}. ` : ''}Not independently verified. <a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">See the record${icon('external', { size: 12 })}</a></p>` : ''}
         </div>
       </section>
       ${actives.length ? `<section class="cz-card cz-sec"><div class="cz-sec-head"><h3>Key actives</h3></div>
@@ -442,7 +449,7 @@ export default {
       </section>` : ''}
       ${a.notes.length ? `<section class="cz-sec"><h3>Worth knowing</h3><div class="cz-notes">${a.notes.map(n => `<div class="cz-note is-${n.kind}"><span class="cz-note-icon">${icon(n.kind === 'good' ? 'check-circle' : n.kind === 'warn' ? 'alert' : 'info', { size: 18 })}</span><span><strong>${esc(n.title)}</strong><small>${esc(n.text)}</small></span></div>`).join('')}</div></section>` : ''}
       <section class="cz-card cz-sec">
-        <div class="cz-sec-head"><h3>Every ingredient</h3><span class="cz-muted">In label order, highest amount first (below 1% the order is free)</span></div>
+        <div class="cz-sec-head"><h3>Every ingredient</h3><span class="cz-muted">${p.source === 'openbeautyfacts' ? 'As transcribed by contributors; verify order and completeness on the pack' : 'In label order, highest amount first (below 1% the order is free)'}</span></div>
         ${p.typical ? `<p class="cz-typical">${icon('info', { size: 15 })}Representative list: the key ingredients are confirmed, the full list may differ from the pack you have.</p>` : ''}
         <ol class="cz-ings">${a.rows.map(row => `<li><button type="button" class="cz-irow" ${row.info ? `data-go-ingredient="${esc(row.info.inci)}"` : `data-compound-search="${esc(row.name)}"`}>
           <span class="cz-irow-pos">${row.position}</span>
@@ -594,6 +601,7 @@ export default {
     const t = e.target;
     if (t.dataset.filter === 'ff' || t.dataset.filter === 'spf') { this.productsState[t.dataset.filter] = t.checked; this.productsState.shown = PAGE; this.refresh(); return; }
     if (t.dataset.filter === 'sort') { this.productsState.sort = t.value; this.refresh(); }
+    if (t.dataset.filter === 'source') { this.productsState.source = t.value; this.productsState.shown = PAGE; this.refresh(); }
   },
   keydown(e) {
     if (!e.target.matches?.('[data-qs-input]')) return;
