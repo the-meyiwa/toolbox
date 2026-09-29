@@ -7,6 +7,7 @@ import { basename, dirname } from './paths.js';
 import { isBinaryPath, langInfo, languageOf } from './languages.js';
 import { toText } from './vfs.js';
 import { unifiedDiff } from './commands-core.js';
+import { icon as uiIcon } from '../icons.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
@@ -104,7 +105,7 @@ export class SearchPanel {
       if (!hits.length) continue;
       fileCount++;
       total += hits.length;
-      html.push(`<div class="cpg-search-file"><div class="cpg-search-file-head">${fileIcon(f)}<b>${esc(basename(f))}</b><span class="cpg-dim">${esc(dirname(f))}</span><span class="cpg-badge">${hits.length}</span>${this.r.value || this.r.value === '' ? `<button type="button" class="cpg-icon-btn" data-replace-file="${esc(f)}" title="Replace in this file">⇄</button>` : ''}</div>`);
+      html.push(`<div class="cpg-search-file"><div class="cpg-search-file-head">${fileIcon(f)}<b>${esc(basename(f))}</b><span class="cpg-dim">${esc(dirname(f))}</span><span class="cpg-badge">${hits.length}</span>${this.r.value || this.r.value === '' ? `<button type="button" class="cpg-icon-btn" data-replace-file="${esc(f)}" title="Replace in this file" aria-label="Replace in this file">${uiIcon('replace')}</button>` : ''}</div>`);
       for (const h of hits.slice(0, 200)) {
         const start = Math.max(0, h.col - 40);
         const before = h.text.slice(start, h.col - 1);
@@ -186,18 +187,18 @@ export class GitPanel {
     this.el.innerHTML = `
       <div class="cpg-panel-head"><span>Source Control</span>
         <span class="cpg-panel-actions">
-          <button type="button" class="cpg-icon-btn" data-git="refresh" title="Refresh">⟳</button>
-          <button type="button" class="cpg-icon-btn" data-git="pull" title="Pull${remote ? ` from ${remote}` : ''}">↓</button>
-          <button type="button" class="cpg-icon-btn" data-git="push" title="Push${remote ? ` to ${remote}` : ''}">↑</button>
+          <button type="button" class="cpg-icon-btn" data-git="refresh" title="Refresh" aria-label="Refresh">${uiIcon('refresh')}</button>
+          <button type="button" class="cpg-icon-btn" data-git="pull" title="Pull${remote ? ` from ${remote}` : ''}" aria-label="Pull">${uiIcon('arrow-down')}</button>
+          <button type="button" class="cpg-icon-btn" data-git="push" title="Push${remote ? ` to ${remote}` : ''}" aria-label="Push">${uiIcon('arrow-up')}</button>
         </span>
       </div>
       <div class="cpg-scm-branch"><button type="button" class="cpg-link" data-git="branch" title="Switch branch">⎇ ${esc(repo.head.detached ? repo.head.detached.slice(0, 7) : repo.head.branch)}</button>${remote ? `<span class="cpg-dim" title="${esc(repo.remotes[remote])}">${esc(remote)}: ${esc(repo.remotes[remote].replace(/^https:\/\/github\.com\//, ''))}</span>` : '<button type="button" class="cpg-link" data-git="remote">+ Add GitHub remote</button>'}</div>
       ${repo.merging ? '<div class="cpg-scm-warn">Merge in progress — resolve conflicts, stage the files, then commit.</div>' : ''}
       <textarea id="cpg-git-msg" class="cpg-input cpg-scm-msg" rows="2" placeholder="Message (Ctrl+Enter to commit on '${esc(repo.head.branch)}')"></textarea>
-      <button type="button" class="cpg-btn cpg-btn-primary cpg-scm-commit" data-git="commit">✓ Commit${st.staged.length ? '' : unstagedAll.length ? ' all' : ''}</button>
-      ${st.staged.length ? `<div class="cpg-scm-group"><div class="cpg-scm-group-head">Staged Changes <span class="cpg-badge">${st.staged.length}</span><button type="button" class="cpg-icon-btn" data-git="unstage-all" title="Unstage all">−</button></div>${st.staged.map((s) => row(s.path, s.kind, '<button type="button" class="cpg-icon-btn" data-git="unstage" title="Unstage">−</button>', 'staged')).join('')}</div>` : ''}
+      <button type="button" class="cpg-btn cpg-btn-primary cpg-scm-commit" data-git="commit">${uiIcon('check')}<span>Commit${st.staged.length ? '' : unstagedAll.length ? ' all' : ''}</span></button>
+      ${st.staged.length ? `<div class="cpg-scm-group"><div class="cpg-scm-group-head">Staged Changes <span class="cpg-badge">${st.staged.length}</span><button type="button" class="cpg-icon-btn" data-git="unstage-all" title="Unstage all" aria-label="Unstage all">${uiIcon('minus')}</button></div>${st.staged.map((s) => row(s.path, s.kind, '<button type="button" class="cpg-icon-btn" data-git="unstage" title="Unstage" aria-label="Unstage">' + uiIcon('minus') + '</button>', 'staged')).join('')}</div>` : ''}
       <div class="cpg-scm-group"><div class="cpg-scm-group-head">Changes <span class="cpg-badge">${unstagedAll.length}</span>${unstagedAll.length ? '<button type="button" class="cpg-icon-btn" data-git="stage-all" title="Stage all">+</button>' : ''}</div>
-        ${unstagedAll.length ? unstagedAll.map((u) => row(u.path, u.kind, `${u.kind !== 'untracked' ? '<button type="button" class="cpg-icon-btn" data-git="discard" title="Discard changes">↺</button>' : ''}<button type="button" class="cpg-icon-btn" data-git="stage" title="Stage">+</button>`, 'changes')).join('') : '<div class="cpg-dim cpg-pad">No changes</div>'}
+        ${unstagedAll.length ? unstagedAll.map((u) => row(u.path, u.kind, `${u.kind !== 'untracked' ? '<button type="button" class="cpg-icon-btn" data-git="discard" title="Discard changes" aria-label="Discard changes">' + uiIcon('undo') + '</button>' : ''}<button type="button" class="cpg-icon-btn" data-git="stage" title="Stage" aria-label="Stage">${uiIcon('plus')}</button>`, 'changes')).join('') : '<div class="cpg-dim cpg-pad">No changes</div>'}
       </div>
       <div class="cpg-scm-group"><div class="cpg-scm-group-head">History</div>
         ${log.length ? log.map((c) => `<div class="cpg-scm-commit-row" title="${esc(c.message)}"><code>${c.id.slice(0, 7)}</code> ${esc(c.message.split('\n')[0])} <span class="cpg-dim">${timeAgo(c.date)}</span></div>`).join('') : '<div class="cpg-dim cpg-pad">No commits yet</div>'}

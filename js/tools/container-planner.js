@@ -27,6 +27,7 @@ import {
   extOf, unitRect, layoutUnits, partNotes,
 } from '../lib/container-library.js';
 import { openContextMenu, closeContextMenu } from '../lib/context-menu.js';
+import { icon } from '../lib/icons.js';
 
 const M_PER_FT = 0.3048;
 const LS_RATES = 'toolbox.container.rates';
@@ -1637,7 +1638,7 @@ export default {
               <span class="ta-right cq-cell" data-c="material">${money(l.materialCost, cur)}</span>
               <span class="ta-right cq-cell" data-c="labour">${money(l.labourCost, cur)}</span>
               <span class="ta-right cq-cell cq-line-total" data-c="total">${money(l.total, cur)}</span>
-              <button class="ct-del" data-remove="${escapeHtml(l.id)}" aria-label="Remove line">×</button>
+              <button class="ct-del" data-remove="${escapeHtml(l.id)}" aria-label="Remove line">${icon('x')}</button>
             </div>
             <div class="cq-line cq-line-rates">
               <span></span><span></span>
@@ -1746,7 +1747,7 @@ export default {
         <div class="cq-mat-row">
           <div class="fz-name"><strong>${escapeHtml(m.name)}</strong>
             <span class="fz-meta">${escapeHtml(byElement.get(m.element) ?? m.element)} · ${money(m.rate, state.currency)} + ${money(m.labour, state.currency)} labour per ${UNITS[m.unit]?.label ?? m.unit}${m.wastage ? ' · ' + m.wastage + '% wastage' : ''}</span></div>
-          <button class="btn btn-sm ct-del" data-mat-remove="${escapeHtml(m.id)}" aria-label="Remove ${escapeHtml(m.name)}">×</button>
+          <button class="btn btn-sm ct-del" data-mat-remove="${escapeHtml(m.id)}" aria-label="Remove ${escapeHtml(m.name)}">${icon('x')}</button>
         </div>`).join('');
     }
     const syncMatUnit = () => { $('#mat-cov-wrap').hidden = matUnit.value !== 'sheet'; };

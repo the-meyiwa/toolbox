@@ -5,6 +5,8 @@
    A-B loop repeat, and stream metadata inspector.
    ============================================================ */
 
+import { icon } from '../lib/icons.js';
+
 export default {
   render(container) {
     this.destroy();
@@ -60,8 +62,8 @@ export default {
 
               <!-- Frame Stepper -->
               <div style="display:flex; align-items:center; gap:4px;">
-                <button type="button" class="btn btn-secondary btn-sm" id="vp-frame-back" title="Step Back 1 Frame (1/30s)">◀ Frame</button>
-                <button type="button" class="btn btn-secondary btn-sm" id="vp-frame-fwd" title="Step Forward 1 Frame (1/30s)">Frame ▶</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="vp-frame-back" title="Step Back 1 Frame (1/30s)">${icon('chevron-left')}<span>Frame</span></button>
+                <button type="button" class="btn btn-secondary btn-sm" id="vp-frame-fwd" title="Step Forward 1 Frame (1/30s)"><span>Frame</span>${icon('chevron-right')}</button>
               </div>
 
               <!-- Audio Volume Boost -->

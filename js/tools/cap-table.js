@@ -1,4 +1,5 @@
 import { currencySelect, statGrid, dataTable, money, num, pct, parseNum, escapeHtml } from '../lib/biz.js';
+import { icon } from '../lib/icons.js';
 
 /* Models a priced-round cap table. Each round issues new shares at the
    post-money valuation, so existing holders keep their share count and
@@ -63,7 +64,7 @@ export default {
         <div class="ct-row" data-founder="${f.id}">
           <input type="text" class="tool-input" data-k="name" value="${escapeHtml(f.name)}" placeholder="Name">
           <input type="number" class="tool-input" data-k="shares" value="${f.shares}" min="0" step="1000" placeholder="Shares">
-          <button class="ct-del" data-del-founder="${f.id}" aria-label="Remove ${escapeHtml(f.name)}">×</button>
+          <button class="ct-del" data-del-founder="${f.id}" aria-label="Remove ${escapeHtml(f.name)}">${icon('x')}</button>
         </div>`).join('');
 
       roundsEl.innerHTML = state.rounds.map(r => `
@@ -71,7 +72,7 @@ export default {
           <input type="text" class="tool-input" data-k="name" value="${escapeHtml(r.name)}" placeholder="Round">
           <input type="number" class="tool-input" data-k="raise" value="${r.raise}" min="0" step="10000" placeholder="Raise">
           <input type="number" class="tool-input" data-k="pre" value="${r.pre}" min="0" step="100000" placeholder="Pre-money">
-          <button class="ct-del" data-del-round="${r.id}" aria-label="Remove ${escapeHtml(r.name)}">×</button>
+          <button class="ct-del" data-del-round="${r.id}" aria-label="Remove ${escapeHtml(r.name)}">${icon('x')}</button>
         </div>`).join('');
     }
 

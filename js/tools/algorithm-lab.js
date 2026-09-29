@@ -5,6 +5,7 @@
    it, scrub the timeline, or feed it your own numbers. */
 
 import { ALGORITHMS } from '../lib/algorithms.js';
+import { icon } from '../lib/icons.js';
 
 const randomArray = (n, max = 99) =>
   Array.from({ length: n }, () => 1 + Math.floor(Math.random() * max));
@@ -48,11 +49,11 @@ export default {
         <div class="alab-note" id="al-note"></div>
 
         <div class="alab-transport">
-          <button class="btn btn-sm" id="al-first" aria-label="First step">⏮</button>
-          <button class="btn btn-sm" id="al-prev" aria-label="Previous step">◀</button>
+          <button class="btn btn-sm" id="al-first" aria-label="First step">${icon('skip-back')}</button>
+          <button class="btn btn-sm" id="al-prev" aria-label="Previous step">${icon('chevron-left')}</button>
           <button class="btn btn-primary" id="al-play">Play</button>
-          <button class="btn btn-sm" id="al-next" aria-label="Next step">▶</button>
-          <button class="btn btn-sm" id="al-last" aria-label="Last step">⏭</button>
+          <button class="btn btn-sm" id="al-next" aria-label="Next step">${icon('chevron-right')}</button>
+          <button class="btn btn-sm" id="al-last" aria-label="Last step">${icon('skip-forward')}</button>
           <input type="range" class="tool-range alab-scrub" id="al-scrub" min="0" max="0" value="0" aria-label="Timeline">
           <span class="alab-count" id="al-count">0 / 0</span>
           <label class="fz-ctl alab-speed"><span>Speed</span>

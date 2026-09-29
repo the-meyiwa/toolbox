@@ -1,4 +1,5 @@
 import { escapeHtml } from '../lib/biz.js';
+import { iconLabel } from '../lib/icons.js';
 
 /* Produces a signature built from tables and inline styles, because
    that is the only thing Outlook renders reliably. Copy is done from a
@@ -171,10 +172,11 @@ export default {
     });
 
     async function flash(btn, text) {
-      const prev = btn.textContent;
-      btn.textContent = text;
+      if (btn.classList.contains('copied')) return;
+      const prev = btn.innerHTML;
+      btn.innerHTML = iconLabel('check', text);
       btn.classList.add('copied');
-      setTimeout(() => { btn.textContent = prev; btn.classList.remove('copied'); }, 1400);
+      setTimeout(() => { btn.innerHTML = prev; btn.classList.remove('copied'); }, 1400);
     }
 
     container.querySelector('#sig-copy').addEventListener('click', async (e) => {
@@ -185,7 +187,7 @@ export default {
           'text/html': new Blob([html], { type: 'text/html' }),
           'text/plain': new Blob([preview.innerText], { type: 'text/plain' }),
         })]);
-        flash(e.target, 'Copied ✓');
+        flash(e.target.closest('button') || e.target, 'Copied');
       } catch {
         // Older browsers: select the rendered node and use execCommand.
         const range = document.createRange();
@@ -195,12 +197,12 @@ export default {
         sel.addRange(range);
         document.execCommand('copy');
         sel.removeAllRanges();
-        flash(e.target, 'Copied ✓');
+        flash(e.target.closest('button') || e.target, 'Copied');
       }
     });
 
     container.querySelector('#sig-copy-html').addEventListener('click', (e) => {
-      navigator.clipboard.writeText(build()).then(() => flash(e.target, 'Copied ✓'));
+      navigator.clipboard.writeText(build()).then(() => flash(e.target.closest('button') || e.target, 'Copied'));
     });
 
     refresh();

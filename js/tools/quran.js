@@ -12,6 +12,7 @@ import { escapeHtml } from '../lib/biz.js';
 import { copyText } from '../utils.js';
 import { getToolSettings, onToolSettings, setToolSetting } from '../lib/tool-settings.js';
 import { openSettings } from '../lib/settings-ui.js';
+import { icon } from '../lib/icons.js';
 
 const API = 'https://api.quran.com/api/v4';
 const PREFS = 'toolbox.quran';
@@ -112,8 +113,8 @@ export default {
                 ${c.id}. ${escapeHtml(c.name_simple)} — ${escapeHtml(c.translated_name.name)}
               </option>`).join('')}
           </select>
-          <button class="btn btn-sm" id="qr-prev">←</button>
-          <button class="btn btn-sm" id="qr-next">→</button>
+          <button class="btn btn-sm" id="qr-prev" aria-label="Previous surah">${icon('arrow-left')}</button>
+          <button class="btn btn-sm" id="qr-next" aria-label="Next surah">${icon('arrow-right')}</button>
           <button class="btn btn-sm" id="qr-settings-btn" title="Translation, reciter and text size">Reading preferences</button>
         </div>
 
@@ -217,9 +218,9 @@ export default {
               <div class="qrn-verse-side">
                 <span class="qrn-num">${v.key}</span>
                 <button class="qrn-icon" data-play="${v.number}" title="Play this verse" aria-label="Play verse ${v.number}"
-                        ${v.audio ? '' : 'disabled'}>▸</button>
-                <button class="qrn-icon" data-copy="${v.number}" title="Copy" aria-label="Copy verse ${v.number}">⧉</button>
-                <button class="qrn-icon" data-save="${v.number}" title="Save" aria-label="Save verse ${v.number}"></button>
+                        ${v.audio ? '' : 'disabled'}>${icon('play')}</button>
+                <button class="qrn-icon" data-copy="${v.number}" title="Copy" aria-label="Copy verse ${v.number}">${icon('copy')}</button>
+                <button class="qrn-icon" data-save="${v.number}" title="Save" aria-label="Save verse ${v.number}">${icon('bookmark')}</button>
               </div>
               <div class="qrn-verse-body">
                 <p class="qrn-arabic" dir="rtl" lang="ar">${escapeHtml(v.arabic)}</p>
@@ -330,7 +331,7 @@ export default {
               const name = state.chapters.find(x => x.id === Number(c))?.name_simple ?? c;
               return `<span class="bib-chip">
                 <button data-goto="${escapeHtml(k)}">${escapeHtml(name)} ${escapeHtml(k)}</button>
-                <button class="bib-chip-x" data-drop="${escapeHtml(k)}" aria-label="Remove">×</button>
+                <button class="bib-chip-x" data-drop="${escapeHtml(k)}" aria-label="Remove">${icon('x')}</button>
               </span>`;
             }).join('')}
           </div>

@@ -22,6 +22,7 @@ import { controlsFor } from '../automobile/vehicle-controls.js';
 import { mountControlPanel } from '../automobile/control-panel.js';
 import { safetyFor, INJURIES, DISCLAIMER } from '../automobile/injury-data.js';
 import { safetyHtml, injuryHtml, richText, installInjuryLinks } from '../automobile/injury-render.js';
+import { icon as uiIcon } from '../icons.js';
 
 installInjuryLinks();
 
@@ -875,7 +876,7 @@ export function renderMailList(data, container) {
   el.querySelector('.astc-body').innerHTML = msgs.length
     ? `<ul class="astc-mail-list">${msgs.map(m => `<li class="${m.unread ? 'is-unread' : ''}" data-mail-id="${esc(m.id)}" data-thread-id="${esc(m.threadId || '')}" tabindex="0" role="button" aria-label="Open ${esc(m.subject)} in Mail">
         <div class="astc-mail-top"><span class="astc-mail-from">${esc(m.from)}</span><span class="astc-mail-date">${esc(m.date)}</span></div>
-        <div class="astc-mail-subj">${m.starred ? '★ ' : ''}${esc(m.subject)}${m.attachments ? ' <span class="astc-muted">· attachment</span>' : ''}</div>
+        <div class="astc-mail-subj">${m.starred ? `${uiIcon('star-fill', { className: 'astc-star', label: 'Starred' })} ` : ''}${esc(m.subject)}${m.attachments ? ' <span class="astc-muted">· attachment</span>' : ''}</div>
         <div class="astc-mail-snip">${esc(m.snippet)}</div></li>`).join('')}</ul>`
     : '<p class="astc-muted">No messages.</p>';
   const openRow = (li) => openInMail({ type: 'open', id: li.dataset.mailId, threadId: li.dataset.threadId });

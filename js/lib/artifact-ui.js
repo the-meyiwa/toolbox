@@ -13,6 +13,7 @@ import * as store from './artifacts.js';
 import { kindLabel, kindExt } from '../registry/kinds.js';
 import { toolsAccepting } from '../registry/index.js';
 import { listJoinedSpaces, SpaceEngine, getUserProfile } from './space-engine.js';
+import { icon } from './icons.js';
 
 const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -159,7 +160,7 @@ export function mountArtifactStrip(host, { tool, instance, incoming }) {
       <div class="art-space-box">
         <div class="art-space-head">
           <h4>Share to Space</h4>
-          <button class="art-space-close" data-act="close-space-modal">✕</button>
+          <button class="art-space-close" data-act="close-space-modal" aria-label="Close">${icon('x')}</button>
         </div>
         <p class="art-space-blurb">Copies <strong>${escapeHtml(art.name)}</strong> into a shared space for all members to view, download, or open.</p>
 

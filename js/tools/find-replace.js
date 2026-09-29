@@ -1,4 +1,5 @@
 import { copyText } from '../utils.js';
+import { setStatus } from '../lib/icons.js';
 
 export default {
   render(container) {
@@ -54,7 +55,7 @@ export default {
         container.querySelector('#fr-stats').textContent = matches + ' replacement' + (matches !== 1 ? 's' : '') + ' made';
       } catch (e) {
         container.querySelector('#fr-result').textContent = text;
-        container.querySelector('#fr-stats').textContent = '✗ ' + e.message;
+        setStatus(container.querySelector('#fr-stats'), 'error', e.message);
       }
     }
 

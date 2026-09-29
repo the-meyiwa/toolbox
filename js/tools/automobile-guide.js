@@ -8,6 +8,7 @@ import { safetyFor } from '../lib/automobile/injury-data.js';
 import { safetyHtml, installInjuryLinks } from '../lib/automobile/injury-render.js';
 import { AutomobileViewer } from '../lib/automobile/automobile-viewer.js';
 import { openContextMenu, closeContextMenu } from '../lib/context-menu.js';
+import { icon } from '../lib/icons.js';
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const COMPACT_QUERY = '(max-width: 900px), (pointer: coarse)';
 
@@ -1134,11 +1135,11 @@ export default {
         <div><span class="ag-part-card-cat">${escape(comp.category||'Part')}</span><strong>${escape(comp.name)}</strong></div>
         <div class="ag-part-card-tools">
           <button type="button" class="ag-part-card-more" data-open-inspector>Details</button>
-          <button type="button" class="ag-part-card-close" data-clear-selection aria-label="Close">×</button>
+          <button type="button" class="ag-part-card-close" data-clear-selection aria-label="Close">${icon('x')}</button>
         </div>
       </header>
       ${rows?`<div class="ag-part-card-toggles" role="group" aria-label="Toggles">${rows}</div>`:`<p class="ag-part-card-text">${escape(comp.location||'')} No moving or removable parts here.</p>`}
-      ${(()=>{ const safety=this.safetyOf(comp.id); return safety?`<button type="button" class="ag-safety-chip" data-open-inspector><span aria-hidden="true">⚠</span> Safety · ${safety.injuries.length} injur${safety.injuries.length===1?'y':'ies'} and how to prevent them</button>`:''; })()}`;
+      ${(()=>{ const safety=this.safetyOf(comp.id); return safety?`<button type="button" class="ag-safety-chip" data-open-inspector>${icon('alert')} Safety · ${safety.injuries.length} injur${safety.injuries.length===1?'y':'ies'} and how to prevent them</button>`:''; })()}`;
     // Lift the vehicle into the space above the panel.
     const host=this.container.querySelector('#ag-viewer-host');
     this.viewer?.setBottomInset(host ? Math.max(0, host.getBoundingClientRect().bottom - card.getBoundingClientRect().top) : 0);
@@ -1501,7 +1502,7 @@ export default {
     panel.innerHTML=`
       <header class="ag-controls-head">
         <div><span class="ag-controls-kicker">${escape(cl.where)}</span><h3>${escape(cl.name)}</h3></div>
-        <button type="button" class="ag-controls-close" data-controls-close aria-label="Close">×</button>
+        <button type="button" class="ag-controls-close" data-controls-close aria-label="Close">${icon('x')}</button>
       </header>
       ${this.controls().note?`<p class="ag-controls-note">${escape(this.controls().note)}</p>`:''}
       <div class="ag-controls-body"></div>

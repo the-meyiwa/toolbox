@@ -23,6 +23,7 @@ import { normalize } from '../lib/playground/paths.js';
 import { langInfo, languageOf, isBinaryPath } from '../lib/playground/languages.js';
 import { toBytes } from '../lib/playground/vfs.js';
 import { createZip, extractZip } from '../lib/archive-engine.js';
+import { icon } from '../lib/icons.js';
 
 const MODE_KEY = 'toolbox_cpg_theme_mode_v1';
 
@@ -137,7 +138,7 @@ export default {
       <p>A complete development environment in your browser: editor with IntelliSense, a real terminal (npm, git, node, python, g++, sqlite3…), live preview, tests, GitHub, and an AI coding agent. Your work saves automatically.</p>
     </div>
     <div class="cpg-landing-actions">
-      <button type="button" class="cpg-btn" data-land="theme" title="Switch between light and dark">${mode === 'dark' ? '☀ Light' : '☾ Dark'}</button>
+      <button type="button" class="cpg-btn" data-land="theme" title="Switch between light and dark">${mode === 'dark' ? `${icon('sun')}<span>Light</span>` : `${icon('moon')}<span>Dark</span>`}</button>
     </div>
   </header>
 
@@ -196,10 +197,10 @@ export default {
         <span class="cpg-ws-text"><b>${esc(w.name)}</b><span class="cpg-dim">${esc(tpl?.name || (w.migratedFrom ? 'Imported from the old playground' : 'Workspace'))} · edited ${esc(timeAgo(w.updatedAt))}${w.git?.repos && Object.keys(w.git.repos).length ? ' · git' : ''}</span></span>
       </button>
       <span class="cpg-ws-actions">
-        <button type="button" class="cpg-icon-btn" data-ws="rename" title="Rename">✎</button>
-        <button type="button" class="cpg-icon-btn" data-ws="duplicate" title="Duplicate">⧉</button>
-        <button type="button" class="cpg-icon-btn" data-ws="download" title="Download as ZIP">⤓</button>
-        <button type="button" class="cpg-icon-btn cpg-danger-btn" data-ws="delete" title="Delete">🗑</button>
+        <button type="button" class="cpg-icon-btn" data-ws="rename" title="Rename" aria-label="Rename">${icon('pencil')}</button>
+        <button type="button" class="cpg-icon-btn" data-ws="duplicate" title="Duplicate" aria-label="Duplicate">${icon('copy')}</button>
+        <button type="button" class="cpg-icon-btn" data-ws="download" title="Download as ZIP" aria-label="Download as ZIP">${icon('download')}</button>
+        <button type="button" class="cpg-icon-btn cpg-danger-btn" data-ws="delete" title="Delete" aria-label="Delete">${icon('trash')}</button>
       </span>
     </div>`;
   },

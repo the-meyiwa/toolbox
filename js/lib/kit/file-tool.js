@@ -24,6 +24,7 @@ import { mountForm, esc, saveBlob, humanBytes, defaults, describeFields } from '
 import { createZip } from '../pdf/zip.js';
 import { copyText } from '../../utils.js';
 import { actionsFor, actionsButton, publish, pickWork, kindOf } from '../interop.js';
+import { icon } from '../icons.js';
 
 export class Cancelled extends Error { constructor() { super('Cancelled'); this.name = 'AbortError'; this.cancelled = true; } }
 export const checkAbort = (signal) => { if (signal?.aborted) throw new Cancelled(); };
@@ -136,9 +137,9 @@ export function makeFileTool(def) {
           <div class="kit-file" data-id="${f.id}">
             <span class="kit-file-name" title="${esc(f.name)}">${max > 1 ? `${i + 1}. ` : ''}${esc(f.name)}</span>
             <span class="kit-file-meta">${humanBytes(f.size)}</span>
-            ${max > 1 ? `<button type="button" class="btn btn-ghost btn-sm" data-move="-1" aria-label="Move up"${i === 0 ? ' disabled' : ''}>↑</button>
-            <button type="button" class="btn btn-ghost btn-sm" data-move="1" aria-label="Move down"${i === files.length - 1 ? ' disabled' : ''}>↓</button>` : ''}
-            <button type="button" class="btn btn-ghost btn-sm" data-remove aria-label="Remove ${esc(f.name)}">✕</button>
+            ${max > 1 ? `<button type="button" class="btn btn-ghost btn-sm" data-move="-1" aria-label="Move up"${i === 0 ? ' disabled' : ''}>${icon('chevron-up')}</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-move="1" aria-label="Move down"${i === files.length - 1 ? ' disabled' : ''}>${icon('chevron-down')}</button>` : ''}
+            <button type="button" class="btn btn-ghost btn-sm" data-remove aria-label="Remove ${esc(f.name)}">${icon('x')}</button>
           </div>`).join('');
         $('actions').hidden = !has;
         const enough = files.length >= min;

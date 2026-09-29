@@ -1,4 +1,5 @@
 import { copyText } from '../utils.js';
+import { setStatus } from '../lib/icons.js';
 
 /* btoa and atob only speak Latin-1, so text has to be carried through bytes
    to survive anything outside it — accents, Arabic, emoji. The old
@@ -46,11 +47,11 @@ export default {
       try {
         const encoded = toBase64(input.value);
         result.textContent = encoded;
-        status.textContent = `✓ Encoded — ${encoded.length} characters`;
+        setStatus(status, 'ok', `Encoded — ${encoded.length} characters`);
         status.style.color = 'var(--black)';
       } catch (e) {
         result.textContent = '';
-        status.textContent = '✗ ' + e.message;
+        setStatus(status, 'error', e.message);
         status.style.color = 'var(--g600)';
       }
     });
@@ -59,11 +60,11 @@ export default {
       try {
         const decoded = fromBase64(input.value);
         result.textContent = decoded;
-        status.textContent = `✓ Decoded — ${decoded.length} characters`;
+        setStatus(status, 'ok', `Decoded — ${decoded.length} characters`);
         status.style.color = 'var(--black)';
       } catch {
         result.textContent = '';
-        status.textContent = '✗ That is not valid Base64 text';
+        setStatus(status, 'error', 'That is not valid Base64 text');
         status.style.color = 'var(--g600)';
       }
     });

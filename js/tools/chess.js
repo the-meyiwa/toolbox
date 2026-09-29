@@ -21,6 +21,7 @@ import { pieceSvg, PIECE_NAMES } from '../lib/chess/pieces.js';
 import { getToolSettings, onToolSettings } from '../lib/tool-settings.js';
 import { openSettings } from '../lib/settings-ui.js';
 import { copyText, showToast } from '../utils.js';
+import { icon as uiIcon } from '../lib/icons.js';
 
 const STORE = 'toolbox_chess_game_v1';
 const TYPE_CHAR = ' pnbrqk';
@@ -786,7 +787,7 @@ export default {
     el.style.bottom = down ? '0' : 'auto';
     el.classList.toggle('from-bottom', down);
     el.innerHTML = [5, 2, 4, 3].map(t => `<button type="button" data-promo="${t}" aria-label="Promote to ${PIECE_NAMES[TYPE_CHAR[t]]}">${pieceSvg(color, TYPE_CHAR[t])}</button>`).join('') +
-      `<button type="button" class="chs-promo-cancel" data-promo="0" aria-label="Cancel">×</button>`;
+      `<button type="button" class="chs-promo-cancel" data-promo="0" aria-label="Cancel">${uiIcon('x')}</button>`;
     el.querySelector('button').focus();
     el.onclick = (e) => {
       const b = e.target.closest('[data-promo]');

@@ -8,6 +8,7 @@
 import { BOOKS, TRANSLATIONS, parseReference, formatReference } from '../lib/bible-data.js';
 import { escapeHtml } from '../lib/biz.js';
 import { copyText } from '../utils.js';
+import { icon } from '../lib/icons.js';
 
 const API = 'https://bible-api.com';
 const PREFS = 'toolbox.bible';
@@ -238,7 +239,7 @@ export default {
             ${state.bookmarks.map(b => `
               <span class="bib-chip">
                 <button data-goto="${escapeHtml(b)}">${escapeHtml(b)}</button>
-                <button class="bib-chip-x" data-drop="${escapeHtml(b)}" aria-label="Remove">×</button>
+                <button class="bib-chip-x" data-drop="${escapeHtml(b)}" aria-label="Remove">${icon('x')}</button>
               </span>`).join('')}
           </div>
         </section>` : '';

@@ -15,6 +15,7 @@
 import { AssistantAudioManager } from './assistant-audio.js';
 import { sanitizeUserFacingText } from '../utils.js';
 import { renderMapCard } from './maps/map-card.js';
+import { icon, iconLabel } from './icons.js';
 import { renderMath, renderMathInText } from './math-renderer.js';
 
 function escapeHtml(str) {
@@ -411,7 +412,7 @@ export class FileDeletionConfirmationRenderer extends ResultRenderer {
         actionRow.innerHTML = '';
         const doneBadge = document.createElement('span');
         doneBadge.style.cssText = 'font-size:0.8rem; color:#16a34a; font-weight:700; display:inline-flex; align-items:center; gap:4px;';
-        doneBadge.innerHTML = '✓ Operation Complete';
+        doneBadge.innerHTML = iconLabel('check', 'Operation Complete');
         actionRow.appendChild(doneBadge);
       } catch (err) {
         confirmBtn.disabled = false;
@@ -857,7 +858,7 @@ export class FlowchartResultRenderer extends ResultRenderer {
     const openToolBtn = document.createElement('button');
     openToolBtn.type = 'button';
     openToolBtn.className = 'btn btn-secondary btn-sm';
-    openToolBtn.textContent = 'Open in Flowchart Tool ↗';
+    openToolBtn.innerHTML = `<span class=\"tb-il\"><span>Open in Flowchart Tool</span>${icon('external')}</span>`;
     openToolBtn.style.cssText = 'font-size:0.75rem; font-weight:700; padding:4px 10px; cursor:pointer; border-radius:9999px;';
     openToolBtn.addEventListener('click', () => {
       try {
@@ -1077,7 +1078,7 @@ export class CodeExecutionResultRenderer extends ResultRenderer {
       copyCodeBtn.style.cssText = 'border:0; background:transparent; color:var(--primary, #2563eb); font-weight:700; cursor:pointer; font-size:0.72rem;';
       copyCodeBtn.onclick = () => {
         navigator.clipboard.writeText(codeText);
-        copyCodeBtn.textContent = 'Copied ✓';
+        copyCodeBtn.innerHTML = iconLabel('check', 'Copied');
         setTimeout(() => copyCodeBtn.textContent = 'Copy Code', 1500);
       };
 
@@ -1154,7 +1155,7 @@ export class TransformResultRenderer extends ResultRenderer {
     copyBtn.style.cssText = 'padding:4px 12px; border-radius:9999px; border:1px solid var(--g200); background:var(--white); font-size:0.75rem; font-weight:700; cursor:pointer; color:var(--black);';
     copyBtn.onclick = () => {
       navigator.clipboard.writeText(resultText);
-      copyBtn.textContent = 'Copied ✓';
+      copyBtn.innerHTML = iconLabel('check', 'Copied');
       copyBtn.style.background = '#10b981';
       copyBtn.style.color = '#ffffff';
       setTimeout(() => {
@@ -1215,7 +1216,7 @@ export class JsonResultRenderer extends ResultRenderer {
     copyBtn.style.cssText = 'border:0; background:transparent; color:#e2e8f0; font-weight:700; font-size:0.72rem; cursor:pointer;';
     copyBtn.onclick = () => {
       navigator.clipboard.writeText(jsonStr);
-      copyBtn.textContent = 'Copied ✓';
+      copyBtn.innerHTML = iconLabel('check', 'Copied');
       setTimeout(() => copyBtn.textContent = 'Copy JSON', 1500);
     };
 
@@ -2619,19 +2620,19 @@ export class AlgorithmResultRenderer extends ResultRenderer {
     const playBtn = document.createElement('button');
     playBtn.type = 'button';
     playBtn.className = 'btn btn-primary btn-sm';
-    playBtn.textContent = '▶ Play';
+    playBtn.innerHTML = iconLabel('play', 'Play');
     playBtn.style.cssText = 'border-radius:9999px; padding:4px 14px; font-size:0.78rem; font-weight:700; cursor:pointer;';
 
     const prevBtn = document.createElement('button');
     prevBtn.type = 'button';
     prevBtn.className = 'btn btn-secondary btn-sm';
-    prevBtn.textContent = '◀ Step';
+    prevBtn.innerHTML = iconLabel('chevron-left', 'Step');
     prevBtn.style.cssText = 'border-radius:9999px; padding:4px 10px; font-size:0.78rem; cursor:pointer;';
 
     const nextBtn = document.createElement('button');
     nextBtn.type = 'button';
     nextBtn.className = 'btn btn-secondary btn-sm';
-    nextBtn.textContent = 'Step ▶';
+    nextBtn.innerHTML = `<span class=\"tb-il\"><span>Step</span>${icon('chevron-right')}</span>`;
     nextBtn.style.cssText = 'border-radius:9999px; padding:4px 10px; font-size:0.78rem; cursor:pointer;';
 
     const scrub = document.createElement('input');
@@ -2669,15 +2670,15 @@ export class AlgorithmResultRenderer extends ResultRenderer {
       if (isPlaying) {
         clearInterval(playInterval);
         isPlaying = false;
-        playBtn.textContent = '▶ Play';
+        playBtn.innerHTML = iconLabel('play', 'Play');
       } else {
         isPlaying = true;
-        playBtn.textContent = '⏸ Pause';
+        playBtn.innerHTML = iconLabel('pause', 'Pause');
         playInterval = setInterval(() => {
           if (currentFrameIdx >= frames.length - 1) {
             clearInterval(playInterval);
             isPlaying = false;
-            playBtn.textContent = '▶ Play';
+            playBtn.innerHTML = iconLabel('play', 'Play');
           } else {
             renderFrame(currentFrameIdx + 1);
           }
@@ -2688,21 +2689,21 @@ export class AlgorithmResultRenderer extends ResultRenderer {
     prevBtn.addEventListener('click', () => {
       clearInterval(playInterval);
       isPlaying = false;
-      playBtn.textContent = '▶ Play';
+      playBtn.innerHTML = iconLabel('play', 'Play');
       renderFrame(currentFrameIdx - 1);
     });
 
     nextBtn.addEventListener('click', () => {
       clearInterval(playInterval);
       isPlaying = false;
-      playBtn.textContent = '▶ Play';
+      playBtn.innerHTML = iconLabel('play', 'Play');
       renderFrame(currentFrameIdx + 1);
     });
 
     scrub.addEventListener('input', (e) => {
       clearInterval(playInterval);
       isPlaying = false;
-      playBtn.textContent = '▶ Play';
+      playBtn.innerHTML = iconLabel('play', 'Play');
       renderFrame(Number(e.target.value));
     });
 
@@ -2803,7 +2804,7 @@ export class MetronomeResultRenderer extends ResultRenderer {
     const toggleBtn = document.createElement('button');
     toggleBtn.type = 'button';
     toggleBtn.className = 'btn btn-primary btn-sm';
-    toggleBtn.textContent = '▶ Start Metronome';
+    toggleBtn.innerHTML = iconLabel('play', 'Start Metronome');
     toggleBtn.style.cssText = 'border-radius:9999px; padding:6px 20px; font-size:0.85rem; font-weight:700; cursor:pointer;';
 
     function clickSound(isAccent) {
@@ -2843,12 +2844,12 @@ export class MetronomeResultRenderer extends ResultRenderer {
       if (isRunning) {
         clearInterval(timer);
         isRunning = false;
-        toggleBtn.textContent = '▶ Start Metronome';
+        toggleBtn.innerHTML = iconLabel('play', 'Start Metronome');
         const dots = dotsWrap.querySelectorAll('.met-dot');
         dots.forEach(d => { d.style.background = 'var(--g200)'; d.style.transform = 'scale(1)'; });
       } else {
         isRunning = true;
-        toggleBtn.textContent = '⏸ Stop Metronome';
+        toggleBtn.innerHTML = iconLabel('stop', 'Stop Metronome');
         beatIdx = 0;
         tick();
         timer = setInterval(tick, (60 / bpm) * 1000);
@@ -2918,7 +2919,7 @@ export class SoundEffectResultRenderer extends ResultRenderer {
     const playBtn = document.createElement('button');
     playBtn.type = 'button';
     playBtn.className = 'btn btn-primary btn-sm';
-    playBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">▶ Play Sound</span>`;
+    playBtn.innerHTML = iconLabel('play', 'Play Sound');
     playBtn.style.cssText = 'border-radius:9999px; padding:5px 16px; font-size:0.78rem; font-weight:700; cursor:pointer;';
     playBtn.addEventListener('click', () => {
       try {

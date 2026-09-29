@@ -5,6 +5,7 @@ import { listConversations, listMessages, listConversationParticipants, startDir
 import { list as listOfflineFiles, get as getOfflineFile } from '../lib/artifacts.js';
 import { tbPrompt } from '../lib/dialog.js';
 import { NotificationEngine } from '../lib/notifications.js';
+import { icon } from '../lib/icons.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const time = value => new Date(value).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
@@ -16,7 +17,7 @@ export default {
     this.destroy();
     const user = getCurrentUser();
     if (!user) {
-      container.innerHTML = `<div class="msg-setup-gate"><div class="msg-setup-icon">✦</div><h2>Messages needs your Toolbox account</h2><p>Sign in and finish your profile to become searchable, message other Toolbox users, share files and play games.</p><button class="btn btn-primary" id="msg-setup">Set up Messages in Settings</button></div>`;
+      container.innerHTML = `<div class="msg-setup-gate"><div class="msg-setup-icon">${icon('message')}</div><h2>Messages needs your Toolbox account</h2><p>Sign in and finish your profile to become searchable, message other Toolbox users, share files and play games.</p><button class="btn btn-primary" id="msg-setup">Set up Messages in Settings</button></div>`;
       container.querySelector('#msg-setup').onclick = () => openSettings('profile');
       return;
     }
@@ -30,27 +31,27 @@ export default {
     let messagesFingerprint = '', conversationsFingerprint = '';
     container.innerHTML = `<div class="messages-v2">
       <aside class="messages-v2-sidebar" id="msg-sidebar">
-        <div class="messages-v2-head"><div><span class="messages-eyebrow">TOOLBOX</span><h2>Messages</h2></div><button class="msg-round-btn" id="messages-new" aria-label="Find someone">＋</button></div>
-        <div class="messages-search"><span>⌕</span><input id="messages-search" class="msg-search-input" placeholder="Find a Toolbox user" autocomplete="off"></div>
+        <div class="messages-v2-head"><div><span class="messages-eyebrow">TOOLBOX</span><h2>Messages</h2></div><button class="msg-round-btn" id="messages-new" aria-label="Find someone">${icon('plus')}</button></div>
+        <div class="messages-search"><span>${icon('search')}</span><input id="messages-search" class="msg-search-input" placeholder="Find a Toolbox user" autocomplete="off"></div>
         <div id="messages-results" class="messages-results" hidden></div>
         <div id="messages-conversations" class="messages-conversations"></div>
       </aside>
       <section class="messages-v2-chat">
-        <header class="messages-chat-head" id="messages-chat-head"><button class="msg-mobile-back" id="messages-back">‹</button><div id="messages-chat-person"></div><span class="messages-expiry">Clears after 24 hours</span></header>
-        <div class="messages-stream" id="messages-stream"><div class="messages-empty"><span>✦</span><h3>Your conversations, kept light.</h3><p>Find any Toolbox user to start a private 24-hour chat.</p></div></div>
+        <header class="messages-chat-head" id="messages-chat-head"><button class="msg-mobile-back" id="messages-back" aria-label="Back to conversations">${icon('chevron-left')}</button><div id="messages-chat-person"></div><span class="messages-expiry">Clears after 24 hours</span></header>
+        <div class="messages-stream" id="messages-stream"><div class="messages-empty"><span>${icon('message')}</span><h3>Your conversations, kept light.</h3><p>Find any Toolbox user to start a private 24-hour chat.</p></div></div>
         <form class="messages-compose" id="messages-compose" hidden>
           <input type="file" id="messages-file" hidden><input type="file" id="messages-media" accept="image/*,video/*,audio/*" hidden>
           <div class="messages-action-wrap">
             <button type="button" class="messages-plus" id="messages-attach" aria-label="Add to conversation" aria-haspopup="menu" aria-expanded="false"><span></span><span></span></button>
             <div class="messages-action-menu" id="messages-action-menu" role="menu" hidden>
-              <button type="button" role="menuitem" data-message-action="poll"><span class="menu-action-icon">▥</span><span><strong>Polls</strong><small>Ask the group</small></span></button>
-              <button type="button" role="menuitem" data-message-action="media"><span class="menu-action-icon">▧</span><span><strong>Media</strong><small>Photos, video or audio</small></span></button>
-              <button type="button" role="menuitem" data-message-action="files"><span class="menu-action-icon">⌑</span><span><strong>Toolbox files</strong><small>Online or offline</small></span></button>
-              <button type="button" role="menuitem" data-message-action="participant"><span class="menu-action-icon">＋</span><span><strong>Participant</strong><small>Invite with group approval</small></span></button>
+              <button type="button" role="menuitem" data-message-action="poll"><span class="menu-action-icon">${icon('chart')}</span><span><strong>Polls</strong><small>Ask the group</small></span></button>
+              <button type="button" role="menuitem" data-message-action="media"><span class="menu-action-icon">${icon('image')}</span><span><strong>Media</strong><small>Photos, video or audio</small></span></button>
+              <button type="button" role="menuitem" data-message-action="files"><span class="menu-action-icon">${icon('file')}</span><span><strong>Toolbox files</strong><small>Online or offline</small></span></button>
+              <button type="button" role="menuitem" data-message-action="participant"><span class="menu-action-icon">${icon('plus')}</span><span><strong>Participant</strong><small>Invite with group approval</small></span></button>
             </div>
             <div class="messages-file-source" id="messages-file-source" role="menu" hidden><button type="button" data-file-source="online">Online files</button><button type="button" data-file-source="offline">Offline files</button></div>
           </div>
-          <button type="button" id="messages-game" aria-label="Start a tic-tac-toe game">⌗</button><textarea id="messages-input" rows="1" maxlength="${MESSAGE_MAX_LENGTH}" placeholder="Message"></textarea><button class="messages-send" type="submit" aria-label="Send">↑</button>
+          <button type="button" id="messages-game" aria-label="Start a tic-tac-toe game">${icon('grid')}</button><textarea id="messages-input" rows="1" maxlength="${MESSAGE_MAX_LENGTH}" placeholder="Message"></textarea><button class="messages-send" type="submit" aria-label="Send">${icon('arrow-up')}</button>
         </form>
         <div class="messages-picker" id="messages-picker" hidden></div>
       </section>
@@ -84,7 +85,7 @@ export default {
       const previousHeight = stream.scrollHeight;
       const previousTop = stream.scrollTop;
       const wasNearBottom = previousHeight - previousTop - stream.clientHeight < 72;
-      stream.innerHTML = messages.length ? messages.map(message => { const mine=message.sender_id===user.id; const content=message.kind==='file' ? `<a class="message-file" href="${esc(message.payload?.url)}" target="_blank" rel="noopener"${message.payload?.packed ? ` data-packed="1" data-name="${esc(message.payload?.name)}" data-type="${esc(message.payload?.type || '')}"` : ''}><span>↗</span><span><strong>${esc(message.payload?.name)}</strong><small>${fileSize(message.payload?.size||0)}</small></span></a>` : message.kind==='game' ? renderGame(message) : message.kind==='poll' ? renderPoll(message) : message.kind==='participant_request' ? renderParticipantRequest(message) : `<p>${esc(message.body).replace(/\n/g,'<br>')}</p>`; return `<div class="message-row ${mine?'mine':''}"><div class="message-bubble">${content}<time>${time(message.created_at)}</time></div></div>`; }).join('') : `<div class="messages-empty"><span>◌</span><h3>Start the conversation</h3><p>Messages disappear 24 hours after they are sent.</p></div>`;
+      stream.innerHTML = messages.length ? messages.map(message => { const mine=message.sender_id===user.id; const content=message.kind==='file' ? `<a class="message-file" href="${esc(message.payload?.url)}" target="_blank" rel="noopener"${message.payload?.packed ? ` data-packed="1" data-name="${esc(message.payload?.name)}" data-type="${esc(message.payload?.type || '')}"` : ''}><span>${icon('download')}</span><span><strong>${esc(message.payload?.name)}</strong><small>${fileSize(message.payload?.size||0)}</small></span></a>` : message.kind==='game' ? renderGame(message) : message.kind==='poll' ? renderPoll(message) : message.kind==='participant_request' ? renderParticipantRequest(message) : `<p>${esc(message.body).replace(/\n/g,'<br>')}</p>`; return `<div class="message-row ${mine?'mine':''}"><div class="message-bubble">${content}<time>${time(message.created_at)}</time></div></div>`; }).join('') : `<div class="messages-empty"><span>${icon('message')}</span><h3>Start the conversation</h3><p>Messages disappear 24 hours after they are sent.</p></div>`;
       stream.classList.toggle('messages-stream-settled', !initial);
       if (initial || (stickToBottom && wasNearBottom)) stream.scrollTop=stream.scrollHeight;
       else stream.scrollTop=previousTop + (stream.scrollHeight - previousHeight);
@@ -110,12 +111,12 @@ export default {
     $('#messages-file').onchange=async event=>{try{await sendSelectedFile(event.target.files[0]);}catch(error){alert(error.message);}event.target.value='';};
     $('#messages-media').onchange=async event=>{try{await sendSelectedFile(event.target.files[0]);}catch(error){alert(error.message);}event.target.value='';};
     const showFilePicker=async mode=>{
-      picker.hidden=false;picker.innerHTML='<div class="messages-picker-card"><div class="messages-picker-head"><strong>Select a file</strong><button type="button" aria-label="Close">×</button></div><div class="messages-picker-list">Loading…</div></div>';
+      picker.hidden=false;picker.innerHTML='<div class="messages-picker-card"><div class="messages-picker-head"><strong>Select a file</strong><button type="button" aria-label="Close">'+icon('x')+'</button></div><div class="messages-picker-list">Loading…</div></div>';
       picker.querySelector('.messages-picker-head button').onclick=()=>{picker.hidden=true;};
       try{
         const files=mode==='online' ? await listOnlineToolboxFiles() : listOfflineFiles();
         const listEl=picker.querySelector('.messages-picker-list');
-        listEl.innerHTML=files.length ? files.map(file=>`<button type="button" data-picker-file="${esc(file.id)}"><span>⌑</span><span><strong>${esc(file.name)}</strong><small>${esc(file.kind||'Toolbox file')}</small></span></button>`).join('') : `<p>No ${mode} Toolbox files are available.</p>`;
+        listEl.innerHTML=files.length ? files.map(file=>`<button type="button" data-picker-file="${esc(file.id)}"><span>${icon('file')}</span><span><strong>${esc(file.name)}</strong><small>${esc(file.kind||'Toolbox file')}</small></span></button>`).join('') : `<p>No ${mode} Toolbox files are available.</p>`;
         listEl.querySelectorAll('[data-picker-file]').forEach(button=>button.onclick=async()=>{const meta=files.find(file=>file.id===button.dataset.pickerFile);try{if(mode==='online'){const url=meta.storage_url||meta.payload?.url;if(!url)throw new Error('This online file has no downloadable copy.');messages.push(await sendMessage(active.conversation_id,meta.name,'file',{name:meta.name,size:meta.payload?.size||0,type:meta.payload?.mimeType||meta.kind,url,...(meta.payload?.packed?{packed:true}:{})}));}else{const saved=getOfflineFile(meta.id);const file=new File([saved?.text||''],meta.name,{type:'text/plain'});await sendSelectedFile(file);}picker.hidden=true;renderMessages();}catch(error){alert(error.message);}});
       }catch(error){picker.querySelector('.messages-picker-list').innerHTML=`<p>${esc(error.message)}</p>`;}
     };
@@ -125,7 +126,7 @@ export default {
     actionMenu.querySelector('[data-message-action="poll"]').onclick=async()=>{closeActions();if(!active)return;const question=await tbPrompt('What would you like to ask?', '', {title:'Create a poll',placeholder:'Poll question'});if(!question)return;const raw=await tbPrompt('Separate each option with a comma.', '', {title:'Poll options',placeholder:'Yes, No, Maybe'});const options=String(raw||'').split(',').map(value=>value.trim()).filter(Boolean).slice(0,6);if(options.length<2)return alert('Add at least two poll options.');messages.push(await sendMessage(active.conversation_id,question,'poll',{question,options:options.map(text=>({text,voters:[]}))}));renderMessages();};
     actionMenu.querySelector('[data-message-action="participant"]').onclick=async()=>{
       closeActions();if(!active)return;
-      picker.hidden=false;picker.innerHTML=`<div class="messages-picker-card"><div class="messages-picker-head"><div><strong>Add a participant</strong><small>Search Toolbox by name or username</small></div><button type="button" aria-label="Close">×</button></div><div class="messages-participant-search"><span>⌕</span><input type="search" placeholder="Search people" autocomplete="off" aria-label="Search Toolbox users"></div><div class="messages-picker-list"><p>Start typing to find someone.</p></div></div>`;
+      picker.hidden=false;picker.innerHTML=`<div class="messages-picker-card"><div class="messages-picker-head"><div><strong>Add a participant</strong><small>Search Toolbox by name or username</small></div><button type="button" aria-label="Close">${icon('x')}</button></div><div class="messages-participant-search"><span>${icon('search')}</span><input type="search" placeholder="Search people" autocomplete="off" aria-label="Search Toolbox users"></div><div class="messages-picker-list"><p>Start typing to find someone.</p></div></div>`;
       const search=picker.querySelector('input'),listEl=picker.querySelector('.messages-picker-list');let inviteTimer=0,participants=[];
       picker.querySelector('.messages-picker-head button').onclick=()=>{clearTimeout(inviteTimer);picker.hidden=true;};
       try{participants=await listConversationParticipants(active.conversation_id);}catch{const p=person(active);participants=[{id:user.id},p].filter(item=>item.id);}

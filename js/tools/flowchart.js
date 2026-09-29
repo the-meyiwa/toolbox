@@ -11,6 +11,7 @@ import { NODE_TYPES, DATA_TYPES, LANGUAGES, EXAMPLES, makeNode, generateCode, pa
 import { escapeHtml } from '../lib/biz.js';
 import { copyText } from '../utils.js';
 import { handOff } from '../lib/artifacts.js';
+import { icon } from '../lib/icons.js';
 
 const STORE = 'toolbox.flowchart';
 
@@ -120,9 +121,9 @@ export default {
       const sel = state.selected === p ? ' is-selected' : '';
       const controls = `
         <span class="flw-node-tools">
-          <button data-move="${p}:-1" aria-label="Move up">↑</button>
-          <button data-move="${p}:1" aria-label="Move down">↓</button>
-          <button data-del="${p}" aria-label="Delete">×</button>
+          <button data-move="${p}:-1" aria-label="Move up">${icon('chevron-up')}</button>
+          <button data-move="${p}:1" aria-label="Move down">${icon('chevron-down')}</button>
+          <button data-del="${p}" aria-label="Delete">${icon('x')}</button>
         </span>`;
 
       if (node.kind === 'if') {

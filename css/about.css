@@ -44,14 +44,16 @@
   opacity: 0; transform: translateY(8px);
   transition: opacity var(--dur-4) var(--ease-out), transform var(--dur-4) var(--ease-out);
 }
-.about-eyebrow span { display: inline-grid; place-items: center; height: 22px; padding: 0 8px; border-radius: var(--radius-pill); background: var(--ink); color: var(--text-inverse); font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.about-eyebrow span { display: inline-grid; place-items: center; height: 22px; min-width: 22px; padding: 0 8px; border-radius: var(--radius-pill); background: var(--ink); color: var(--text-inverse); font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.about-eyebrow span:has(svg) { padding: 0 5px; }
+.about-eyebrow span svg { width: 13px; height: 13px; }
 .about-headline {
   margin: var(--space-4) 0 var(--space-5);
   font-size: clamp(40px, 5.6vw, 76px); line-height: .98; font-weight: 600; letter-spacing: -0.045em;
   text-wrap: balance;
 }
-.about-headline .w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .22em; margin-bottom: -.22em; }
-.about-headline .w > span {
+[data-split] .w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .22em; margin-bottom: -.22em; }
+[data-split] .w > span {
   display: inline-block;
   transform: translateY(105%) rotate(4deg); transform-origin: 0 100%;
   transition: transform 900ms var(--ease-out);
@@ -77,7 +79,7 @@
 .about-chapter.is-in .about-quote,
 .about-chapter.is-in .about-stats,
 .about-chapter.is-in .about-copy > .btn { opacity: 1; transform: none; }
-.about-chapter.is-in .about-headline .w > span { transform: none; }
+.is-in [data-split] .w > span { transform: none; }
 .about-chapter.is-in .about-quote::before { transform: scaleY(1); }
 
 .about-scroll-cue {
@@ -206,6 +208,8 @@
 .about-projects a { display: flex; justify-content: space-between; padding: var(--space-2) 0; font-size: 15px; font-weight: 500; color: var(--text); text-decoration: none; border-bottom: 1px solid var(--line); transition: padding var(--dur-2) var(--ease-out); }
 .about-projects a:last-child { border-bottom: 0; }
 .about-projects a:hover { padding-left: var(--space-2); }
+.about-projects .about-ext { width: 15px; height: 15px; flex-shrink: 0; align-self: center; color: var(--text-3); transition: transform var(--dur-2) var(--ease-out), color var(--dur-2); }
+.about-projects a:hover .about-ext { color: var(--text); transform: translate(2px, -2px); }
 
 .about-marquee {
   position: relative; z-index: 0;
@@ -261,7 +265,7 @@
   .about-chapter { height: auto; --p: 1 !important; }
   .about-stage { position: relative; height: auto; min-height: 80vh; padding-top: var(--space-12); padding-bottom: var(--space-12); }
   .about-chapter::before { transform: none; opacity: .4; }
-  .about-eyebrow, .about-lead, .about-text, .about-quote, .about-stats, .about-copy > .btn, .about-headline .w > span { opacity: 1; transform: none; transition: none; }
+  .about-eyebrow, .about-lead, .about-text, .about-quote, .about-stats, .about-copy > .btn, [data-split] .w > span { opacity: 1; transform: none; transition: none; }
   .about-quote::before { transform: none; }
   .marquee-row { animation: none; }
   .about-spot { display: none; }
@@ -355,11 +359,10 @@
 [data-theme="dark"] .about-aurora { opacity: .36; }
 
 .about-show-head { max-width: 760px; margin: 0 auto var(--space-12); text-align: center; }
-.about-show-head .about-eyebrow, .about-showcase.is-in .about-eyebrow { opacity: 1; transform: none; }
-.about-show-title { margin: var(--space-4) 0 var(--space-4); font-size: clamp(36px, 5.2vw, 72px); line-height: 1; font-weight: 650; letter-spacing: -0.045em; text-wrap: balance;
-  opacity: 0; transform: translateY(24px); transition: opacity 900ms var(--ease-out), transform 900ms var(--ease-out); }
+.about-showcase.is-in .about-eyebrow, .about-principles.is-in .about-eyebrow, .about-day.is-in .about-eyebrow { opacity: 1; transform: none; }
+.about-show-title { margin: var(--space-4) 0 var(--space-4); font-size: clamp(36px, 5.2vw, 72px); line-height: 1; font-weight: 650; letter-spacing: -0.045em; text-wrap: balance; }
 .about-grad { background: linear-gradient(100deg, #4f7cff, #a855f7 45%, #14b8a6); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.about-show-lead { font-size: 19px; line-height: 1.55; color: var(--text-2); opacity: 0; transform: translateY(18px); transition: opacity 900ms 120ms var(--ease-out), transform 900ms 120ms var(--ease-out); }
+.about-show-lead { font-size: 19px; line-height: 1.55; color: var(--text-2); opacity: 0; transform: translateY(18px); transition: opacity 800ms var(--ease-out), transform 800ms var(--ease-out); transition-delay: calc(420ms + var(--li, 0) * 90ms); }
 .about-showcase.is-in .about-show-title, .about-showcase.is-in .about-show-lead { opacity: 1; transform: none; }
 
 .about-bento { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; perspective: 1200px; }
@@ -384,6 +387,7 @@
 .about-showcase.is-in .bento-card:hover { transition: transform 160ms linear, opacity 800ms var(--ease-out); transition-delay: 0s; }
 .bento-xl { grid-row: span 2; }
 .bento-wide { grid-column: span 2; }
+.bento-full { grid-column: 1 / -1; }
 .bento-kicker { display: inline-block; font-size: 12.5px; font-weight: 600; letter-spacing: .02em; color: var(--text-2); margin-bottom: 10px; }
 .bento-card h3 { margin: 0 0 10px; font-size: clamp(21px, 2.1vw, 28px); line-height: 1.12; letter-spacing: -0.03em; font-weight: 650; }
 .bento-card p { margin: 0; color: var(--text-2); font-size: 15px; line-height: 1.55; }
@@ -425,12 +429,17 @@
   background: radial-gradient(40% 50% at 20% 30%, rgba(99, 102, 241, .55), transparent 70%), radial-gradient(35% 45% at 80% 70%, rgba(45, 212, 191, .4), transparent 70%);
   will-change: transform; }
 @keyframes kl-drift { from { transform: translate3d(-6%, 5%, 0) scale(.95); } to { transform: translate3d(8%, -6%, 0) scale(1.1); } }
-.korelearn-kicker { font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: rgba(255, 255, 255, .7); }
+.korelearn-kicker { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: rgba(255, 255, 255, .7); }
+.korelearn-kicker svg { width: 15px; height: 15px; }
+.korelearn-kicker, .korelearn-card > p, .korelearn-cta { --d: calc(480ms + var(--li, 0) * 110ms); opacity: 0; translate: 0 14px; transition: opacity 700ms var(--ease-out) var(--d), translate 700ms var(--ease-out) var(--d); }
+.korelearn-kicker { --d: 200ms; }
+.about-friends.is-in .korelearn-kicker, .about-friends.is-in .korelearn-card > p, .about-friends.is-in .korelearn-cta { opacity: 1; translate: 0 0; }
 .korelearn-card h2 { margin: 12px 0 14px; font-size: clamp(32px, 4.6vw, 60px); line-height: 1.02; letter-spacing: -0.04em; font-weight: 650; }
 .korelearn-name { background: linear-gradient(100deg, #a5b4fc, #5eead4); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .korelearn-card p { max-width: 620px; margin: 0 0 26px; font-size: 18px; line-height: 1.55; color: rgba(255, 255, 255, .82); }
 .korelearn-cta { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px; font-weight: 600; font-size: 15px;
-  background: color-mix(in srgb, #fff 14%, transparent); border: 1px solid color-mix(in srgb, #fff 25%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); transition: background .2s, transform .2s; }
+  background: color-mix(in srgb, #fff 14%, transparent); border: 1px solid color-mix(in srgb, #fff 25%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  transition: opacity 700ms var(--ease-out) var(--d), translate 700ms var(--ease-out) var(--d), background .2s, transform .2s; }
 .korelearn-card:hover .korelearn-cta { background: rgba(255, 255, 255, .24); transform: translateX(3px); }
 .korelearn-cta svg { width: 16px; height: 16px; }
 .korelearn-card:focus-visible { outline: 3px solid #a5b4fc; outline-offset: 4px; }
@@ -438,7 +447,7 @@
 
 @media (max-width: 900px) {
   .about-bento { grid-template-columns: minmax(0, 1fr); }
-  .bento-xl, .bento-wide { grid-row: auto; grid-column: auto; }
+  .bento-xl, .bento-wide, .bento-full { grid-row: auto; grid-column: auto; }
   .about-showcase { padding: 12vh var(--space-4) 8vh; }
   .about-friends { padding: 0 var(--space-4) 12vh; }
 }
@@ -446,12 +455,11 @@
   .about-aurora i, .korelearn-glow, .bento-chat .bc-a b { animation: none; }
   .bento-chat .bc-a { display: none; }
   .bento-chat .bc-r { display: block; opacity: 1; transform: none; animation: none; }
-  .bento-card, .korelearn-card, .about-show-title, .about-show-lead { opacity: 1; transform: none; transition: none; }
+  .bento-card, .korelearn-card, .about-show-title, .about-show-lead, .korelearn-kicker, .korelearn-card > p, .korelearn-cta { opacity: 1; transform: none; translate: none; transition: none; }
 }
 
 /* ---------- Principles ---------- */
 .about-principles, .about-day { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 8vh var(--space-8) 10vh; }
-.about-principles .about-eyebrow, .about-day .about-eyebrow { opacity: 1; transform: none; }
 .about-principles.is-in .about-show-title, .about-day.is-in .about-show-title,
 .about-day.is-in .about-show-lead { opacity: 1; transform: none; }
 .principles-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
@@ -508,3 +516,75 @@
   .principle-icon svg * { stroke-dashoffset: 0; transition: none; }
   .day-line::after { transform: none; animation: none; transition: none; }
 }
+
+/* ---------- A day: stage, clock and sun ----------
+   Without scroll timelines (or on phones) this is an ordinary section: the clock, sky and
+   sun stay hidden and the items rise in once. With them, on larger screens, the section
+   pins like a chapter and the day plays out with the scroll (below). */
+.about-day-stage { position: relative; isolation: isolate; }
+.day-sky, .day-clock, .day-now { display: none; }
+.day-track { position: relative; }
+.day-sky { position: absolute; inset: 0; z-index: -2; pointer-events: none; }
+.day-sky i { position: absolute; inset: 0; }
+.day-dawn { background: radial-gradient(34% 40% at 16% 58%, color-mix(in srgb, #ffb86b 22%, transparent), transparent); }
+.day-dusk { background: radial-gradient(34% 40% at 84% 58%, color-mix(in srgb, #7c6cf6 22%, transparent), transparent); opacity: 0; }
+.day-clock { position: absolute; right: max(3vw, calc((100% - 1200px) / 2)); top: 50%; z-index: -1; pointer-events: none; }
+.day-clock span {
+  position: absolute; right: 0; top: 0; translate: 0 -50%;
+  font: 600 clamp(120px, 17vw, 260px)/1 var(--font-sans); letter-spacing: -0.06em; font-variant-numeric: tabular-nums;
+  color: transparent; -webkit-text-stroke: 1px color-mix(in srgb, var(--text) 13%, transparent); white-space: nowrap; opacity: 0;
+}
+/* The "now" marker: a sun that rides the tip of the rail. Its track is the rail's width,
+   moved by transform, so it stays on the compositor. */
+.day-now { position: absolute; left: 0; right: 0; top: 11px; height: 0; pointer-events: none; transform: translateX(-100%); }
+.day-now i {
+  position: absolute; right: -11px; top: -11px; width: 22px; height: 22px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff4cf, #ffc56b 55%, #ff9748);
+  box-shadow: 0 0 0 6px color-mix(in srgb, #ffb347 22%, transparent), 0 0 34px 8px color-mix(in srgb, #ffb347 38%, transparent);
+}
+
+/* ---------- Scroll-driven motion for the sections between the chapters ---------- */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    /* Section heads drift a little slower than the page, like the chapters' numerals. */
+    .about-show-head { animation: ab-head linear both; animation-timeline: view(); animation-range: cover 0% cover 100%; }
+    .about-day .about-show-head { animation: none; }
+    /* The bento rises and settles into place as it comes up the screen. */
+    .about-bento { animation: ab-bento linear both; animation-timeline: view(); animation-range: entry 0% cover 38%; transform-origin: 50% 0; }
+    /* Principles flip up one after another with the scroll. */
+    .principles-grid { view-timeline: --principles block; perspective: 1100px; }
+    .principle { transition: none; transform-origin: 50% 100%; animation: ab-principle linear both; animation-timeline: --principles; animation-range: cover calc(4% + var(--i) * 5%) cover calc(30% + var(--i) * 5%); }
+    /* KoreLearn: the card grows to full size as it arrives (scale, so the pointer tilt keeps transform). */
+    .korelearn-card { animation: ab-kl linear both; animation-timeline: view(); animation-range: entry 0% cover 42%; }
+  }
+  @media (prefers-reduced-motion: no-preference) and (max-width: 900px) {
+    .principle { animation-timeline: view(); animation-range: entry 5% cover 32%; }
+  }
+  /* A day, pinned: the rail draws from 07:00 to 18:00, each hour lights up as the sun reaches
+     it, the big clock behind turns over, and the light moves from dawn to dusk. */
+  @media (prefers-reduced-motion: no-preference) and (min-width: 901px) and (min-height: 640px) {
+    .about-day { height: 250vh; max-width: none; padding: 0; view-timeline: --day block; view-timeline-inset: var(--header-h) 0; }
+    /* Full width, so the light has no edges; the content keeps the 1200px column. */
+    .about-day-stage { position: sticky; top: var(--header-h); height: calc(100dvh - var(--header-h)); padding: 0 max(var(--space-8), calc((100% - 1200px) / 2 + var(--space-8))); display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+    .about-day .about-show-head { margin-bottom: var(--space-10); }
+    .day-sky, .day-clock, .day-now { display: block; }
+    .day-line::after { animation: day-draw linear both; animation-timeline: --day; animation-range: contain 8% contain 80%; }
+    .day-now { animation: ab-now linear both; animation-timeline: --day; animation-range: contain 8% contain 80%; }
+    .day-line li { transition: none; animation: ab-day-in linear both; animation-timeline: --day; animation-range: contain calc(8% + var(--i) * 14.4%) contain calc(16% + var(--i) * 14.4%); }
+    .day-line li::before { animation: ab-day-dot linear both; animation-timeline: --day; animation-range: contain calc(8% + var(--i) * 14.4%) contain calc(13% + var(--i) * 14.4%); }
+    .day-clock span { animation: ab-clock linear both; animation-timeline: --day; animation-range: contain calc(6% + var(--i) * 14.4%) contain calc(22.4% + var(--i) * 14.4%); }
+    .day-clock span:last-child { animation-name: ab-clock-last; animation-range: contain 63.6% contain 80%; }
+    .day-dawn { animation: ab-fade-out linear both; animation-timeline: --day; animation-range: contain 20% contain 80%; }
+    .day-dusk { animation: ab-fade-in linear both; animation-timeline: --day; animation-range: contain 20% contain 80%; }
+  }
+}
+@keyframes ab-head { from { translate: 0 7vh; } to { translate: 0 -7vh; } }
+@keyframes ab-bento { from { transform: translateY(10vh) scale(.93); } to { transform: none; } }
+@keyframes ab-principle { from { opacity: 0; transform: translateY(70px) rotateX(-24deg) scale(.95); } to { opacity: 1; transform: none; } }
+@keyframes ab-kl { from { scale: .86; } to { scale: 1; } }
+@keyframes ab-now { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+@keyframes ab-day-in { from { opacity: .12; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+@keyframes ab-day-dot { from { transform: scale(.2); } to { transform: scale(1); } }
+@keyframes ab-clock { 0% { opacity: 0; transform: translateY(50px); } 18%, 78% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-50px); } }
+@keyframes ab-clock-last { 0% { opacity: 0; transform: translateY(50px); } 40%, 100% { opacity: 1; transform: none; } }
+@keyframes ab-fade-in { from { opacity: 0; } to { opacity: 1; } }

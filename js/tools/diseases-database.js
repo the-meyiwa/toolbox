@@ -7,6 +7,7 @@
 
 import { searchDiseases, ICD11_CHAPTERS } from '../lib/diseases-data.js';
 import { saveArtifactFile } from '../lib/artifacts.js';
+import { iconLabel } from '../lib/icons.js';
 
 const escapeHtml = (s) => String(s || '').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -126,7 +127,7 @@ export default {
             destination: 'cloud',
             from: 'diseases-database'
           });
-          saveBtn.textContent = '✓ Saved';
+          saveBtn.innerHTML = iconLabel('check', 'Saved');
           saveBtn.disabled = true;
         } catch {}
       });

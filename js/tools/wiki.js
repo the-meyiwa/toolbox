@@ -18,6 +18,7 @@ import {
 } from '../lib/wiki-api.js';
 import { escapeHtml } from '../lib/biz.js';
 import { copyText } from '../utils.js';
+import { icon } from '../lib/icons.js';
 
 const RECENT_KEY = 'toolbox.wiki.recent';
 const LANG_KEY = 'toolbox.wiki.lang';
@@ -258,8 +259,8 @@ export default {
           <div class="wk-find">
             <input type="search" id="wk-find-q" class="tool-input" placeholder="Find in this article…" aria-label="Find in article">
             <span class="wk-find-count" id="wk-find-count"></span>
-            <button class="btn btn-sm" id="wk-find-prev" aria-label="Previous match">↑</button>
-            <button class="btn btn-sm" id="wk-find-next" aria-label="Next match">↓</button>
+            <button class="btn btn-sm" id="wk-find-prev" aria-label="Previous match">${icon('chevron-up')}</button>
+            <button class="btn btn-sm" id="wk-find-next" aria-label="Next match">${icon('chevron-down')}</button>
           </div>
 
           <div class="wk-layout">

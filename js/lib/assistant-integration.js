@@ -15,6 +15,7 @@ import { AssistantMessage, ToolResult, conversationPersistence } from './assista
 import { renderToolResult, cleanupToolResult, selectRenderer, hasResultRenderer } from './assistant-result-renderer.js';
 import './assistant/renderers.js';   // registers the capability-pack cards (chess, devices, plan …)
 import { toolDiscovery } from './assistant-tool-discovery.js';
+import { iconLabel } from './icons.js';
 
 /**
  * Conversation Integration Manager
@@ -317,7 +318,7 @@ export class ConversationIntegrationManager {
       // User message
       msgDiv.innerHTML = `
         <div style="background:var(--black); color:var(--white); padding:12px 18px; border-radius:16px; font-size:0.9rem; line-height:1.5; word-break:break-word;">
-          ${msg.filePreview ? `<div style="font-size:0.75rem; opacity:0.8; margin-bottom:6px;">📎 ${msg.filePreview.name}</div>` : ''}
+          ${msg.filePreview ? `<div style="font-size:0.75rem; opacity:0.8; margin-bottom:6px;">${iconLabel('paperclip', msg.filePreview.name)}</div>` : ''}
           ${msg.content}
         </div>
       `;

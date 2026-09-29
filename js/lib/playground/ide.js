@@ -31,6 +31,7 @@ import { ensureSyncBridge, detectProject, findTestFiles, pythonTestFiles, cdn, w
 import { buildPreview, staticSource, dataUrl } from './preview.js';
 import { createZip, extractZip } from '../archive-engine.js';
 import { TEMPLATES } from './templates.js';
+import { icon as uiIcon } from '../icons.js';
 
 const PREFS_KEY = 'toolbox_cpg_prefs_v3';
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || '');
@@ -427,8 +428,8 @@ export class PlaygroundIDE {
                 <button type="button" class="cpg-dropdown-item" data-add="upload-folder"><span>Upload Folder…</span></button>
               </div>
             </div>
-            <button type="button" class="cpg-icon-btn" id="cpg-new-folder-btn" title="New folder">⊞</button>
-            <button type="button" class="cpg-icon-btn" id="cpg-collapse-btn" title="Collapse folders">⊟</button>
+            <button type="button" class="cpg-icon-btn" id="cpg-new-folder-btn" title="New folder" aria-label="New folder">${uiIcon('folder-plus')}</button>
+            <button type="button" class="cpg-icon-btn" id="cpg-collapse-btn" title="Collapse folders" aria-label="Collapse folders">${uiIcon('collapse')}</button>
           </span>
         </div>
         <div class="cpg-ws-title" id="cpg-project-badge" title="/workspace">/workspace</div>
@@ -460,9 +461,9 @@ export class PlaygroundIDE {
         <div class="cpg-splitter cpg-splitter-v" data-split="preview" aria-hidden="true"></div>
         <section id="cpg-preview-pane" class="cpg-preview-pane" hidden>
           <div class="cpg-preview-bar">
-            <button type="button" class="cpg-icon-btn" data-pv="back" title="Back">‹</button>
-            <button type="button" class="cpg-icon-btn" data-pv="forward" title="Forward">›</button>
-            <button type="button" class="cpg-icon-btn" data-pv="reload" title="Reload">⟳</button>
+            <button type="button" class="cpg-icon-btn" data-pv="back" title="Back" aria-label="Back">${uiIcon('chevron-left')}</button>
+            <button type="button" class="cpg-icon-btn" data-pv="forward" title="Forward" aria-label="Forward">${uiIcon('chevron-right')}</button>
+            <button type="button" class="cpg-icon-btn" data-pv="reload" title="Reload" aria-label="Reload">${uiIcon('refresh')}</button>
             <input type="text" class="cpg-preview-url" id="cpg-preview-url" spellcheck="false" aria-label="Preview address" placeholder="index.html or localhost:3000/">
             <select class="cpg-select-sm" id="cpg-preview-device" aria-label="Device size" title="Device size">
               <option value="full">Responsive</option>
@@ -470,8 +471,8 @@ export class PlaygroundIDE {
               <option value="820">Tablet</option>
               <option value="1280">Laptop</option>
             </select>
-            <button type="button" class="cpg-icon-btn" data-pv="popout" title="Open in a new tab">⧉</button>
-            <button type="button" class="cpg-icon-btn" data-pv="close" title="Close preview">✕</button>
+            <button type="button" class="cpg-icon-btn" data-pv="popout" title="Open in a new tab" aria-label="Open in a new tab">${uiIcon('external')}</button>
+            <button type="button" class="cpg-icon-btn" data-pv="close" title="Close preview">${uiIcon('x')}</button>
           </div>
           <div class="cpg-preview-stage" id="cpg-preview-stage">
             <iframe id="cpg-preview" title="Preview" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock" allow="clipboard-write; fullscreen; geolocation; microphone; camera; midi; gamepad"></iframe>
@@ -488,12 +489,12 @@ export class PlaygroundIDE {
           <div class="cpg-panel-tools">
             <span id="cpg-proc-status" class="cpg-proc-status" hidden>RUNNING</span>
             <span id="cpg-timing" class="cpg-dim"></span>
-            <button type="button" class="cpg-icon-btn" id="cpg-term-new" title="New terminal">＋</button>
-            <button type="button" class="cpg-icon-btn" id="cpg-proc-stop-btn" title="Stop (Ctrl+C)" hidden>■</button>
-            <button type="button" class="cpg-icon-btn" id="cpg-term-clear-btn" title="Clear">⌫</button>
-            <button type="button" class="cpg-icon-btn" id="cpg-term-kill" title="Kill this terminal">🗑</button>
-            <button type="button" class="cpg-icon-btn" id="cpg-term-max" title="Maximize panel">⤢</button>
-            <button type="button" class="cpg-icon-btn" id="cpg-term-close-btn" title="Hide panel (${MOD}+\`)">✕</button>
+            <button type="button" class="cpg-icon-btn" id="cpg-term-new" title="New terminal" aria-label="New terminal">${uiIcon('plus')}</button>
+            <button type="button" class="cpg-icon-btn" id="cpg-proc-stop-btn" title="Stop (Ctrl+C)" aria-label="Stop" hidden>${uiIcon('stop')}</button>
+            <button type="button" class="cpg-icon-btn" id="cpg-term-clear-btn" title="Clear" aria-label="Clear">${uiIcon('clear-all')}</button>
+            <button type="button" class="cpg-icon-btn" id="cpg-term-kill" title="Kill this terminal" aria-label="Kill this terminal">${uiIcon('trash')}</button>
+            <button type="button" class="cpg-icon-btn" id="cpg-term-max" title="Maximize panel" aria-label="Maximize panel">${uiIcon('maximize')}</button>
+            <button type="button" class="cpg-icon-btn" id="cpg-term-close-btn" title="Hide panel (${MOD}+\`)">${uiIcon('x')}</button>
           </div>
         </div>
         <div id="cpg-pane-terminal" class="cpg-drawer-pane cpg-term-stack"></div>
@@ -508,7 +509,7 @@ export class PlaygroundIDE {
   <footer id="cpg-status-bar" class="cpg-status">
     <div class="cpg-status-left">
       <button type="button" class="cpg-status-btn" id="cpg-status-branch" title="Source control" hidden></button>
-      <button type="button" class="cpg-status-btn" id="cpg-status-problems" title="Problems"><span class="cpg-err">⊗ 0</span> <span class="cpg-warn">⚠ 0</span></button>
+      <button type="button" class="cpg-status-btn" id="cpg-status-problems" title="Problems"><span class="cpg-err">${uiIcon('x-circle')} 0</span> <span class="cpg-warn">${uiIcon('alert')} 0</span></button>
       <button type="button" class="cpg-status-btn" id="cpg-status-term-toggle" title="Toggle terminal">Terminal</button>
       <span id="cpg-status-pos" class="cpg-hide-sm">Ln 1, Col 1</span>
       <span id="cpg-status-spaces" class="cpg-hide-sm">Spaces: 2</span>
@@ -862,7 +863,7 @@ export class PlaygroundIDE {
   }
 
   updateMenuChecks() {
-    const mark = (action, on) => { const b = this.$(`[data-action="${action}"] span`); if (b) b.textContent = `${on ? '✓ ' : ''}${b.textContent.replace(/^✓ /, '')}`; };
+    const mark = (action, on) => { const b = this.$(`[data-action="${action}"]`); if (!b) return; b.classList.toggle('is-checked', on); b.setAttribute('role', 'menuitemcheckbox'); b.setAttribute('aria-checked', String(on)); };
     mark('theme-dark', this.theme === 'dark');
     mark('theme-light', this.theme === 'light');
     mark('toggle-wrap', this.prefs.wrap);
@@ -933,8 +934,8 @@ export class PlaygroundIDE {
         const active = e.path === this.activePath;
         const selected = e.path === this.selectedTreePath;
         rows.push(`<div class="cpg-tree-row ide-tree-item${active ? ' active' : ''}${selected ? ' selected' : ''}${e.name.startsWith('.') ? ' is-hidden' : ''}" role="treeitem" draggable="true" data-path="${esc(e.path)}" data-id="${esc(e.path)}" data-type="${e.type}" style="--depth:${depth}" ${e.type === 'dir' ? `aria-expanded="${open}"` : ''} title="${esc(e.path)}">
-          <span class="cpg-twisty">${e.type === 'dir' ? (open ? '▾' : '▸') : ''}</span>${fileIcon(e.path, e.type, open)}<span class="cpg-tree-name">${esc(e.name)}</span>
-          <button type="button" class="cpg-tree-more" data-more="1" title="More actions" aria-label="More actions for ${esc(e.name)}">⋯</button>
+          <span class="cpg-twisty">${e.type === 'dir' ? uiIcon(open ? 'chevron-down' : 'chevron-right') : ''}</span>${fileIcon(e.path, e.type, open)}<span class="cpg-tree-name">${esc(e.name)}</span>
+          <button type="button" class="cpg-tree-more" data-more="1" title="More actions" aria-label="More actions for ${esc(e.name)}">${uiIcon('more')}</button>
         </div>`);
         if (e.type === 'dir' && open) walk(e.path, depth + 1);
       }
@@ -1284,7 +1285,7 @@ export class PlaygroundIDE {
       const hasErr = diag.some((d) => d.severity === 'error');
       return `<div class="cpg-tab ide-tab${active ? ' active' : ''}${hasErr ? ' has-error' : ''}" role="tab" aria-selected="${active}" data-path="${esc(p)}" data-id="${esc(p)}" title="${esc(p)}" draggable="true">
         ${fileIcon(p)}<span class="cpg-tab-name">${esc(basename(p))}</span>${dup ? `<span class="cpg-dim cpg-tab-dir">${esc(dirname(p) || '/')}</span>` : ''}
-        <button type="button" class="cpg-tab-close ide-tab-close" data-close="${esc(p)}" title="Close (${MOD}+W)" aria-label="Close ${esc(basename(p))}">×</button>
+        <button type="button" class="cpg-tab-close ide-tab-close" data-close="${esc(p)}" title="Close (${MOD}+W)" aria-label="Close ${esc(basename(p))}">${uiIcon('x')}</button>
       </div>`;
     }).join('');
     if (!bar.dataset.bound) {
@@ -1334,7 +1335,7 @@ export class PlaygroundIDE {
     const el = this.$('#cpg-breadcrumbs');
     if (!this.activePath) { el.innerHTML = ''; return; }
     const parts = this.activePath.split('/');
-    el.innerHTML = parts.map((p, i) => `<span class="${i === parts.length - 1 ? 'cpg-bc-file' : ''}">${esc(p)}</span>`).join('<span class="cpg-bc-sep">›</span>');
+    el.innerHTML = parts.map((p, i) => `<span class="${i === parts.length - 1 ? 'cpg-bc-file' : ''}">${esc(p)}</span>`).join(`<span class="cpg-bc-sep">${uiIcon('chevron-right')}</span>`);
   }
 
   onEditorChange(path, value) {
@@ -1418,7 +1419,7 @@ export class PlaygroundIDE {
   renderTermTabs() {
     const el = this.$('#cpg-term-tabs');
     if (!el) return;
-    el.innerHTML = this.sessions.length > 1 ? this.sessions.map((s) => `<button type="button" class="cpg-term-tab${s.id === this.activeSessionId ? ' active' : ''}" data-sid="${s.id}" title="${esc(s.current?.cmd || s.name)}">${s.current ? '● ' : ''}${esc(s.name)}</button>`).join('') : '';
+    el.innerHTML = this.sessions.length > 1 ? this.sessions.map((s) => `<button type="button" class="cpg-term-tab${s.id === this.activeSessionId ? ' active' : ''}" data-sid="${s.id}" title="${esc(s.current?.cmd || s.name)}">${s.current ? uiIcon('dot', { className: 'cpg-running-dot' }) : ''}${esc(s.name)}</button>`).join('') : '';
     el.onclick = (e) => {
       const b = e.target.closest('[data-sid]');
       if (!b) return;
@@ -1697,7 +1698,7 @@ export class PlaygroundIDE {
     const div = document.createElement('div');
     div.className = `cpg-console-line is-${entry.level || 'log'}`;
     const where = entry.file ? `<span class="cpg-dim cpg-console-src" data-file="${esc(entry.file.replace(/^\//, ''))}" data-line="${entry.line || 1}">${esc(entry.file.replace(/^\//, ''))}:${entry.line || ''}</span>` : '';
-    div.innerHTML = `<span class="cpg-console-level">${{ error: '⊗', warn: '⚠', info: 'ℹ' }[entry.level] || '›'}</span><span class="cpg-console-text">${esc(entry.text)}</span>${where}`;
+    div.innerHTML = `<span class="cpg-console-level">${uiIcon({ error: 'x-circle', warn: 'alert', info: 'info' }[entry.level] || 'chevron-right')}</span><span class="cpg-console-text">${esc(entry.text)}</span>${where}`;
     el.appendChild(div);
     while (el.children.length > 800) el.firstChild.remove();
     el.parentElement.scrollTop = el.parentElement.scrollHeight;
@@ -1744,12 +1745,12 @@ export class PlaygroundIDE {
     const badge = this.$('#cpg-problems-count');
     if (badge) { badge.hidden = !all.length; badge.textContent = String(all.length); }
     const st = this.$('#cpg-status-problems');
-    if (st) st.innerHTML = `<span class="cpg-err">⊗ ${errors}</span> <span class="cpg-warn">⚠ ${warns}</span>`;
+    if (st) st.innerHTML = `<span class="cpg-err">${uiIcon('x-circle')} ${errors}</span> <span class="cpg-warn">${uiIcon('alert')} ${warns}</span>`;
     const byFile = new Map();
     for (const d of all) { if (!byFile.has(d.file)) byFile.set(d.file, []); byFile.get(d.file).push(d); }
     const el = this.$('#cpg-problems-content');
     if (el) {
-      el.innerHTML = all.length ? [...byFile].map(([f, list]) => `<div class="cpg-prob-file">${fileIcon(f)}<b>${esc(basename(f))}</b> <span class="cpg-dim">${esc(dirname(f))}</span> <span class="cpg-badge">${list.length}</span></div>${list.sort((a, b) => a.line - b.line).map((d) => `<div class="cpg-prob-row is-${d.severity}" data-file="${esc(f)}" data-line="${d.line}" data-col="${d.column || 1}"><span class="cpg-prob-ico">${d.severity === 'error' ? '⊗' : '⚠'}</span><span class="cpg-prob-msg">${esc(d.message)}</span><span class="cpg-dim">${d.source && d.source !== 'run' ? `${esc(d.source)} ` : ''}[Ln ${d.line}, Col ${d.column || 1}]</span></div>`).join('')}`).join('') : 'No problems have been detected in the workspace.';
+      el.innerHTML = all.length ? [...byFile].map(([f, list]) => `<div class="cpg-prob-file">${fileIcon(f)}<b>${esc(basename(f))}</b> <span class="cpg-dim">${esc(dirname(f))}</span> <span class="cpg-badge">${list.length}</span></div>${list.sort((a, b) => a.line - b.line).map((d) => `<div class="cpg-prob-row is-${d.severity}" data-file="${esc(f)}" data-line="${d.line}" data-col="${d.column || 1}"><span class="cpg-prob-ico">${uiIcon(d.severity === 'error' ? 'x-circle' : 'alert')}</span><span class="cpg-prob-msg">${esc(d.message)}</span><span class="cpg-dim">${d.source && d.source !== 'run' ? `${esc(d.source)} ` : ''}[Ln ${d.line}, Col ${d.column || 1}]</span></div>`).join('')}`).join('') : 'No problems have been detected in the workspace.';
     }
     this.refreshEditorDiagnostics();
     this.renderTabs();
@@ -2075,7 +2076,7 @@ export class PlaygroundIDE {
   closeModal() { const m = this.$('#cpg-modal'); m.hidden = true; m.innerHTML = ''; }
 
   openDiff({ title, diff, path }) {
-    const card = this.openModal(`<div class="cpg-modal-head"><b>${esc(title)}</b><span>${path ? `<button type="button" class="cpg-btn-sm" data-open="${esc(path)}">Open file</button>` : ''}<button type="button" class="cpg-icon-btn" data-modal-close title="Close">✕</button></span></div><div class="cpg-diff">${diffHtml(diff)}</div>`, { wide: true });
+    const card = this.openModal(`<div class="cpg-modal-head"><b>${esc(title)}</b><span>${path ? `<button type="button" class="cpg-btn-sm" data-open="${esc(path)}">Open file</button>` : ''}<button type="button" class="cpg-icon-btn" data-modal-close title="Close">${uiIcon('x')}</button></span></div><div class="cpg-diff">${diffHtml(diff)}</div>`, { wide: true });
     card.querySelector('[data-open]')?.addEventListener('click', () => { this.closeModal(); if (this.vfs.isFile(path)) this.openFile(path); });
   }
 
@@ -2089,11 +2090,11 @@ export class PlaygroundIDE {
       [`${MOD}+\``, 'Toggle terminal'], [`${MOD}+Shift+\``, 'New terminal'], [`${MOD}+B`, 'Toggle sidebar'],
       ['Tab (terminal)', 'Complete command or file name'], ['↑/↓ (terminal)', 'Command history'],
     ];
-    this.openModal(`<div class="cpg-modal-head"><b>Keyboard shortcuts</b><button type="button" class="cpg-icon-btn" data-modal-close>✕</button></div><table class="cpg-kbd-table">${rows.map(([k, d]) => `<tr><td><kbd class="cpg-kbd">${esc(k)}</kbd></td><td>${esc(d)}</td></tr>`).join('')}</table>`);
+    this.openModal(`<div class="cpg-modal-head"><b>Keyboard shortcuts</b><button type="button" class="cpg-icon-btn" data-modal-close>${uiIcon('x')}</button></div><table class="cpg-kbd-table">${rows.map(([k, d]) => `<tr><td><kbd class="cpg-kbd">${esc(k)}</kbd></td><td>${esc(d)}</td></tr>`).join('')}</table>`);
   }
 
   showAbout() {
-    this.openModal(`<div class="cpg-modal-head"><b>About Code Playground</b><button type="button" class="cpg-icon-btn" data-modal-close>✕</button></div>
+    this.openModal(`<div class="cpg-modal-head"><b>About Code Playground</b><button type="button" class="cpg-icon-btn" data-modal-close>${uiIcon('x')}</button></div>
       <div class="cpg-modal-body">
         <p>A complete development environment that runs in your browser. Your workspaces are saved on this device (IndexedDB).</p>
         <ul>

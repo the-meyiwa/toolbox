@@ -252,6 +252,8 @@ body.is-scrolled #app-header, body.in-tool #app-header { border-bottom-color: va
 .home-task-icon svg { width: 100%; height: 100%; }
 .home-task-more { margin-top: auto; align-self: flex-start; font-size: 13px; font-weight: 500; color: var(--text-2); text-decoration: none; }
 .home-task-more:hover { color: var(--text); }
+.home-task-more .tb-i { width: 13px; height: 13px; vertical-align: -2px; transition: transform var(--dur-2) var(--ease-out); }
+.home-task-more:hover .tb-i { transform: translateX(2px); }
 
 .home-files {
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg);
@@ -281,6 +283,7 @@ body.is-scrolled #app-header, body.in-tool #app-header { border-bottom-color: va
 .home-footer-nav { display: flex; gap: var(--space-1); }
 .home-footer-link { padding: var(--space-1) var(--space-2); border-radius: var(--radius-pill); color: var(--text-2); text-decoration: none; }
 .home-footer-link:hover { color: var(--text); background: var(--tint); }
+.home-footer-ext { width: 12px; height: 12px; margin-left: 2px; vertical-align: -1px; }
 
 /* Reveal-on-scroll (home-scroll.js toggles .slide-active) */
 .home-story-slide { transition: opacity var(--dur-4) var(--ease-out), transform var(--dur-4) var(--ease-out); }

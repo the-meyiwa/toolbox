@@ -8,6 +8,7 @@
    ============================================================ */
 
 import { attachSegmentedSlider } from '../lib/segmented-slider.js';
+import { icon } from '../lib/icons.js';
 
 export default {
   keyListener: null,
@@ -59,7 +60,7 @@ export default {
                 <button type="button" class="calc-btn calc-btn-op" data-action="pct">%</button>
                 <button type="button" class="calc-btn calc-btn-op" data-action="ce">CE</button>
                 <button type="button" class="calc-btn calc-btn-op" data-action="c">C</button>
-                <button type="button" class="calc-btn calc-btn-op" data-action="back">⌫</button>
+                <button type="button" class="calc-btn calc-btn-op" data-action="back" aria-label="Backspace">${icon('backspace')}</button>
 
                 <button type="button" class="calc-btn calc-btn-fn" data-action="recip">¹/x</button>
                 <button type="button" class="calc-btn calc-btn-fn" data-action="sq">x²</button>
@@ -143,7 +144,7 @@ export default {
 
                 <button type="button" class="calc-btn calc-btn-op" data-sci="ce">CE</button>
                 <button type="button" class="calc-btn calc-btn-op" data-sci="c">C</button>
-                <button type="button" class="calc-btn calc-btn-op" data-sci="back">⌫</button>
+                <button type="button" class="calc-btn calc-btn-op" data-sci="back" aria-label="Backspace">${icon('backspace')}</button>
                 <button type="button" class="calc-btn calc-btn-fn" data-sci="exp">EXP</button>
                 <button type="button" class="calc-btn calc-btn-op" data-sci="div">÷</button>
 
@@ -277,7 +278,7 @@ export default {
                 <button type="button" class="calc-btn calc-btn-num" data-prog-num="8">8</button>
                 <button type="button" class="calc-btn calc-btn-num" data-prog-num="9">9</button>
                 <button type="button" class="calc-btn calc-btn-op" data-prog-action="c">C</button>
-                <button type="button" class="calc-btn calc-btn-op" data-prog-action="back">⌫</button>
+                <button type="button" class="calc-btn calc-btn-op" data-prog-action="back" aria-label="Backspace">${icon('backspace')}</button>
 
                 <button type="button" class="calc-btn calc-btn-num" data-prog-num="4">4</button>
                 <button type="button" class="calc-btn calc-btn-num" data-prog-num="5">5</button>
@@ -596,7 +597,7 @@ export default {
                 <button type="button" class="calc-btn calc-btn-fn" data-rpn="chs">CHS (±)</button>
                 <button type="button" class="calc-btn calc-btn-num" data-rpn-num="0">0</button>
                 <button type="button" class="calc-btn calc-btn-num" data-rpn-num=".">.</button>
-                <button type="button" class="calc-btn calc-btn-op" data-rpn="back">⌫</button>
+                <button type="button" class="calc-btn calc-btn-op" data-rpn="back" aria-label="Backspace">${icon('backspace')}</button>
               </div>
             </div>
           </div>

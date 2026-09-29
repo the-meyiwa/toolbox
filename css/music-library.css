@@ -265,3 +265,4 @@
 .astc-mail-msg + .astc-mail-msg { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .astc-mail-to { font-size: 12px; margin: 2px 0 6px; overflow-wrap: anywhere; }
 .astc-mail-body { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13.5px; line-height: 1.5; max-height: 420px; overflow: auto; }
+.astc-star { width: 13px; height: 13px; color: #eab308; vertical-align: -2px; }

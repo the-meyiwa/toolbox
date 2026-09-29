@@ -8,6 +8,7 @@ import { tbConfirm, tbPrompt, tbAlert } from './dialog.js';
 import * as store from './artifacts.js';
 import { kindLabel, kindExt } from '../registry/kinds.js';
 import { toolsAccepting } from '../registry/index.js';
+import { icon, iconLabel } from './icons.js';
 
 const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -134,7 +135,7 @@ export function mountDeskOverview(container, engine) {
                   <strong>Open a Tool</strong>
                   <p>Create work and click "Share to Space"</p>
                 </div>
-                <span class="sp-quick-arr">→</span>
+                <span class="sp-quick-arr">${icon('arrow-right')}</span>
               </a>
               <button class="sp-quick-link" data-go-tab="live">
                 <span class="sp-quick-icon">
@@ -144,7 +145,7 @@ export function mountDeskOverview(container, engine) {
                   <strong>Shared Notepad</strong>
                   <p>Real-time collaborative text editor</p>
                 </div>
-                <span class="sp-quick-arr">→</span>
+                <span class="sp-quick-arr">${icon('arrow-right')}</span>
               </button>
               <button class="sp-quick-link" data-go-tab="tasks">
                 <span class="sp-quick-icon">
@@ -154,7 +155,7 @@ export function mountDeskOverview(container, engine) {
                   <strong>Task Board</strong>
                   <p>Track team goals &amp; deliverables</p>
                 </div>
-                <span class="sp-quick-arr">→</span>
+                <span class="sp-quick-arr">${icon('arrow-right')}</span>
               </button>
             </div>
 
@@ -606,7 +607,7 @@ export function mountTasksView(container, engine) {
           ${tasks.map(t => `
             <div class="sp-task-card ${t.status === 'done' ? 'is-done' : ''}" data-task-id="${t.id}">
               <div class="sp-task-check is-${t.status}" data-act="cycle-status" data-id="${t.id}" title="Click to cycle status (Todo → Doing → Done)">
-                ${t.status === 'done' ? '✓' : (t.status === 'doing' ? '●' : '')}
+                ${t.status === 'done' ? icon('check') : (t.status === 'doing' ? icon('dot') : '')}
               </div>
               <div class="sp-task-info">
                 <div class="sp-task-title">${escapeHtml(t.title)}</div>
@@ -871,7 +872,7 @@ function mountPolls(container, engine) {
                       return `
                         <div class="sp-poll-bar ${isMyPick ? 'is-my-pick' : ''}">
                           <div class="sp-poll-bar-fill" style="width: ${pct}%"></div>
-                          <span class="sp-poll-bar-label">${escapeHtml(opt)} ${isMyPick ? '✓' : ''}</span>
+                          <span class="sp-poll-bar-label">${escapeHtml(opt)} ${isMyPick ? icon('check', { label: 'Your vote' }) : ''}</span>
                           <span class="sp-poll-bar-count">${count} (${pct}%)</span>
                         </div>`;
                     } else {
@@ -1018,7 +1019,7 @@ export function mountChallengesView(container, engine) {
                 <div class="sp-ch-submit-area">
                   ${mySubmission ? `
                     <div class="sp-ch-my-sub">
-                      <strong>✓ Your Submission</strong>
+                      <strong>${iconLabel('check', 'Your Submission')}</strong>
                       <p>${escapeHtml(mySubmission.text)}</p>
                     </div>
                   ` : `

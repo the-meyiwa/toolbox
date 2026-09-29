@@ -1,4 +1,5 @@
 import { copyText } from '../utils.js';
+import { setStatus } from '../lib/icons.js';
 
 function decodeJWT(token) {
   const parts = token.trim().split('.');
@@ -52,13 +53,13 @@ export default {
         const d = decodeJWT(token);
         headerEl.textContent = JSON.stringify(d.header, null, 2);
         payloadEl.textContent = JSON.stringify(d.payload, null, 2);
-        let info = '✓ Valid JWT';
+        let info = 'Valid JWT';
         if (d.payload.exp) { const exp = new Date(d.payload.exp * 1000); info += ' · ' + (exp < new Date() ? 'Expired' : 'Expires') + ': ' + exp.toLocaleString(); }
         if (d.payload.iat) { info += ' · Issued: ' + new Date(d.payload.iat * 1000).toLocaleString(); }
-        infoEl.textContent = info; infoEl.style.color = 'var(--black)';
+        setStatus(infoEl, 'ok', info); infoEl.style.color = 'var(--black)';
       } catch (e) {
         headerEl.innerHTML = payloadEl.innerHTML = '<span style="color:var(--g300);">—</span>';
-        infoEl.textContent = '✗ ' + e.message; infoEl.style.color = 'var(--g600)';
+        setStatus(infoEl, 'error', e.message); infoEl.style.color = 'var(--g600)';
       }
     }
 

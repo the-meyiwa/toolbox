@@ -10,6 +10,7 @@ import { makeFileTool, checkAbort } from '../lib/kit/file-tool.js';
 import { mountForm, esc, defaults } from '../lib/kit/form.js';
 import * as O from '../lib/pdf/ops.js';
 import { loadPdfLib, openPdfLib, savePdf, applyWatermark, applyHeaderFooter, compressPdfBytes, stripMetadata, baseName, parseRange } from '../lib/pdf/core.js';
+import { icon } from '../lib/icons.js';
 
 const pagesOf = async (bytes, spec) => (spec ? parseRange(spec, (await openPdfLib(bytes)).getPageCount()) : undefined);
 
@@ -82,9 +83,9 @@ function paintSteps(host) {
   host.innerHTML = chain.length ? chain.map((s, i) => `
     <div class="kit-step" data-i="${i}">
       <div class="kit-step-head"><span>${i + 1}. ${esc(STEPS[s.step].label)}</span>
-        <button type="button" class="btn btn-ghost btn-sm" data-step-move="-1" aria-label="Move up"${i ? '' : ' disabled'}>↑</button>
-        <button type="button" class="btn btn-ghost btn-sm" data-step-move="1" aria-label="Move down"${i < chain.length - 1 ? '' : ' disabled'}>↓</button>
-        <button type="button" class="btn btn-ghost btn-sm" data-step-remove aria-label="Remove step">✕</button></div>
+        <button type="button" class="btn btn-ghost btn-sm" data-step-move="-1" aria-label="Move up"${i ? '' : ' disabled'}>${icon('chevron-up')}</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-step-move="1" aria-label="Move down"${i < chain.length - 1 ? '' : ' disabled'}>${icon('chevron-down')}</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-step-remove aria-label="Remove step">${icon('x')}</button></div>
       <div class="kit-form" data-step-form></div>
     </div>`).join('') : '<p class="kit-note">Add steps below, or start from a preset.</p>';
   host.querySelectorAll('[data-step-form]').forEach((el, i) => {

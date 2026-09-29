@@ -29,6 +29,9 @@
 .vc-cap { fill: var(--vc-cap); font-size: 10.5px; }
 .vc-mark { fill: var(--vc-cap); font-size: 9.5px; font-weight: 600; letter-spacing: .02em; }
 .vc-mark-in { fill: var(--vc-ink); }
+.vc-mark-icon { fill: none; stroke: var(--vc-cap); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.vc-mark-cold { stroke: #3b82f6; }
+.vc-mark-hot { stroke: #ef4444; }
 .vc-mark-screen { fill: #8b949e; }
 .vc-chip rect { fill: var(--vc-bezel); stroke: var(--vc-key-edge); }
 .vc-chip { color: var(--vc-ink); }

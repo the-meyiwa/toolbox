@@ -1,3 +1,4 @@
+import { setStatus } from '../lib/icons.js';
 export default {
   render(container) {
     container.innerHTML = `
@@ -79,7 +80,7 @@ export default {
         info.style.color = matchCount > 0 ? 'var(--black)' : 'var(--g500)';
       } catch (e) {
         result.innerHTML = escapeHtml(testStr);
-        info.textContent = '✗ ' + e.message;
+        setStatus(info, 'error', e.message);
         info.style.color = 'var(--g600)';
       }
     }

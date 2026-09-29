@@ -10,17 +10,34 @@ import { TOOLS, categorised } from './registry/index.js';
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
+const escapeText = (t) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+
+/* Each word rises out of its own mask. Styled runs inside the headline (the gradient words)
+   keep their class on every word they contain. */
 function splitHeadlines(root) {
   root.querySelectorAll('[data-split]').forEach((el) => {
     if (el.dataset.splitDone) return;
     el.dataset.splitDone = '1';
-    const words = el.textContent.trim().split(/\s+/);
-    el.setAttribute('aria-label', el.textContent.trim());
-    el.innerHTML = words.map((w, i) => `<span class="w" aria-hidden="true"><span style="--wi:${i}">${w}</span></span>`).join(' ');
+    let i = 0;
+    const words = (node, cls) => [...node.childNodes].map((n) => {
+      if (n.nodeType === 3) {
+        return n.textContent.split(/(\s+)/).filter(Boolean).map((part) => (/^\s+$/.test(part) ? ' '
+          : `<span class="w" aria-hidden="true"><span${cls ? ` class="${cls}"` : ''} style="--wi:${i++}">${escapeText(part)}</span></span>`)).join('');
+      }
+      if (n.nodeType !== 1) return '';
+      return n.tagName === 'BR' ? '<br>' : words(n, [cls, n.getAttribute('class')].filter(Boolean).join(' '));
+    }).join('');
+    el.setAttribute('aria-label', el.textContent.replace(/\s+/g, ' ').trim());
+    el.innerHTML = words(el, '');
+    el.style.setProperty('--wn', i);
   });
-  // Stagger the paragraphs that follow each headline.
+  // Stagger what follows each headline.
   root.querySelectorAll('.about-copy').forEach((copy) => {
     [...copy.querySelectorAll('.about-lead, .about-text, .about-quote, .about-stats, :scope > .btn')]
+      .forEach((el, i) => el.style.setProperty('--li', i));
+  });
+  root.querySelectorAll('.about-show-head, .korelearn-card').forEach((head) => {
+    [...head.querySelectorAll('.about-show-lead, .korelearn-card > p, .korelearn-cta')]
       .forEach((el, i) => el.style.setProperty('--li', i));
   });
 }

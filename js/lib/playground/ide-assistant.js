@@ -7,6 +7,7 @@
 
 import { PlaygroundAgent } from './agent.js';
 import { esc, diffHtml, fileIcon } from './ide-panels.js';
+import { icon as uiIcon } from '../icons.js';
 
 const QUICK = {
   debug: 'Find and fix the bugs in this project. Run it (and its tests, if any) to reproduce the problem, fix the cause, and run it again to confirm it works.',
@@ -36,8 +37,8 @@ export class AssistantPanel {
             <option value="agent">Agent</option>
             <option value="ask">Ask</option>
           </select>
-          <button type="button" class="cpg-icon-btn" id="cpg-ast-new" title="New conversation">＋</button>
-          <button type="button" class="cpg-icon-btn" id="cpg-assistant-close-btn" title="Close assistant">✕</button>
+          <button type="button" class="cpg-icon-btn" id="cpg-ast-new" title="New conversation" aria-label="New conversation">${uiIcon('plus')}</button>
+          <button type="button" class="cpg-icon-btn" id="cpg-assistant-close-btn" title="Close assistant" aria-label="Close assistant">${uiIcon('x')}</button>
         </div>
       </div>
       <div class="cpg-ast-chips">
@@ -167,7 +168,7 @@ export class AssistantPanel {
           card.className = 'cpg-ast-plan';
           t.insertBefore(card, t.querySelector('.cpg-ast-status'));
         }
-        card.innerHTML = `<div class="cpg-ast-plan-head">Plan${e.note ? ` <span class="cpg-dim">· ${esc(e.note)}</span>` : ''}</div>${(e.steps || []).map((s) => `<div class="cpg-ast-step is-${esc(s.status)}"><span class="cpg-ast-step-box">${s.status === 'done' ? '✓' : s.status === 'in_progress' ? '●' : ''}</span>${esc(s.title)}</div>`).join('')}`;
+        card.innerHTML = `<div class="cpg-ast-plan-head">Plan${e.note ? ` <span class="cpg-dim">· ${esc(e.note)}</span>` : ''}</div>${(e.steps || []).map((s) => `<div class="cpg-ast-step is-${esc(s.status)}"><span class="cpg-ast-step-box">${s.status === 'done' ? uiIcon('check') : s.status === 'in_progress' ? uiIcon('dot') : ''}</span>${esc(s.title)}</div>`).join('')}`;
         break;
       }
       case 'tool-start': {
@@ -187,7 +188,7 @@ export class AssistantPanel {
         const failed = Boolean(r.error) || (e.name === 'run_command' && r.exit_code && r.exit_code !== 0);
         card.classList.remove('is-running');
         card.classList.add(failed ? 'is-failed' : 'is-ok');
-        card.querySelector('summary').innerHTML = `<span class="cpg-ast-tool-icon">${failed ? '✕' : '✓'}</span><span class="cpg-ast-tool-label">${toolLabel(e.name, e.args, r)}</span>`;
+        card.querySelector('summary').innerHTML = `<span class="cpg-ast-tool-icon">${uiIcon(failed ? 'x' : 'check')}</span><span class="cpg-ast-tool-label">${toolLabel(e.name, e.args, r)}</span>`;
         card.querySelector('.cpg-ast-tool-body').innerHTML = toolBody(e.name, e.args, r);
         break;
       }
@@ -316,7 +317,7 @@ function toolBody(name, a = {}, r = {}) {
     case 'open_preview': case 'interact_with_preview': {
       const parts = [];
       if (r.title) parts.push(`<div><b>${esc(r.title)}</b></div>`);
-      if (r.results) parts.push(`<div>${r.results.map((x) => `${x.ok ? '✓' : '✕'} ${esc(x.action)} ${esc(x.selector || x.key || '')}${x.error ? ` — ${esc(x.error)}` : ''}`).join('<br>')}</div>`);
+      if (r.results) parts.push(`<div>${r.results.map((x) => `${uiIcon(x.ok ? 'check' : 'x')} ${esc(x.action)} ${esc(x.selector || x.key || '')}${x.error ? ` — ${esc(x.error)}` : ''}`).join('<br>')}</div>`);
       if (r.console) parts.push(`<pre class="cpg-ast-out">${esc(r.console)}</pre>`);
       if (r.text) parts.push(`<pre class="cpg-ast-out">${esc(r.text.slice(0, 1500))}</pre>`);
       return parts.join('') || '<span class="cpg-dim">No output</span>';

@@ -35,6 +35,17 @@ svg { flex-shrink: 0; }
 .u-muted { color: var(--text-2); }
 .visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
+/* Interface icons (js/lib/icons.js): sized by the text around them unless given a size. */
+/* Decorative: clicks pass through to the button, so handlers that read e.target see the button. */
+.tb-i { display: inline-block; flex-shrink: 0; width: 1.05em; height: 1.05em; vertical-align: -0.16em; pointer-events: none; }
+.tb-i[width] { width: auto; height: auto; }
+.tb-status { display: inline-flex; align-items: center; gap: 6px; }
+.tb-il { display: inline-flex; align-items: center; gap: .4em; pointer-events: none; }
+.tb-status .tb-i { width: 1.1em; height: 1.1em; }
+.tb-status-ok .tb-i { color: var(--success, #16a34a); }
+.tb-status-error .tb-i { color: var(--danger, #dc2626); }
+.tb-status-warn .tb-i { color: var(--warning, #d97706); }
+
 /* ---------- Buttons ---------- */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);

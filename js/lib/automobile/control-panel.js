@@ -15,6 +15,18 @@ const SIZE = {
 const GAP = 14, PAD = 18, CAP = 30;
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+/* Symbol marks on dials, drawn as line icons rather than text glyphs (❄ and ☀ turn into colour
+   emoji on some systems). Cold is blue and hot red, as printed on the real climate knobs. */
+const MARK_ICONS = {
+  '❄': ['vc-mark-cold', '<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/><path d="m9.5 4.5 2.5 2 2.5-2M9.5 19.5l2.5-2 2.5 2"/>'],
+  '☀': ['vc-mark-hot', '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>'],
+};
+const markAt = (m, x, y) => {
+  const icon = MARK_ICONS[m];
+  if (!icon) return `<text class="vc-mark" x="${x}" y="${y}" text-anchor="middle">${esc(m)}</text>`;
+  return `<g class="vc-mark-icon ${icon[0]}" transform="translate(${x - 5.5} ${y - 9.5}) scale(0.46)">${icon[1]}</g>`;
+};
+
 /** Break a caption into at most two lines of about `n` characters. */
 function lines(text, n) {
   const w = String(text).split(/\s+/);
@@ -37,7 +49,7 @@ function drawControl(ctl, x, y, w, h) {
     case 'knob': {
       const marks = (ctl.marks || []).map((m, i, a) => {
         const ang = Math.PI * (1.15 + (a.length > 1 ? i / (a.length - 1) : 0.5) * 0.7);
-        return `<text class="vc-mark" x="${cx + Math.cos(ang) * (w / 2 + 2)}" y="${cy + Math.sin(ang) * (w / 2 + 2) + 3}" text-anchor="middle">${esc(m)}</text>`;
+        return markAt(m, cx + Math.cos(ang) * (w / 2 + 2), cy + Math.sin(ang) * (w / 2 + 2) + 3);
       }).join('');
       return `<circle class="vc-bezel" cx="${cx}" cy="${cy + 4}" r="${w / 2 - 6}"/><circle class="vc-key" cx="${cx}" cy="${cy + 4}" r="${w / 2 - 14}"/>${sym(ctl.sym, cx, cy + 4, 20)}${marks}`;
     }
@@ -46,7 +58,7 @@ function drawControl(ctl, x, y, w, h) {
       const marks = (ctl.marks || []).map((m, i, a) => {
         const ang = Math.PI * (0.75 + (a.length > 1 ? i / (a.length - 1) : 0.5) * 1.5);
         const lx = cx + Math.cos(ang) * (r - 9), ly = cy + Math.sin(ang) * (r - 9) + 3;
-        return m ? `<text class="vc-mark" x="${lx}" y="${ly}" text-anchor="middle">${esc(m)}</text>` : `<circle class="vc-tick" cx="${lx}" cy="${ly - 3}" r="1.5"/>`;
+        return m ? markAt(m, lx, ly) : `<circle class="vc-tick" cx="${lx}" cy="${ly - 3}" r="1.5"/>`;
       }).join('');
       return `<circle class="vc-bezel" cx="${cx}" cy="${cy}" r="${r}"/><circle class="vc-key" cx="${cx}" cy="${cy}" r="${r - 20}"/><path class="vc-pointer" d="M${cx} ${cy - (r - 22)}v8"/>${sym(ctl.sym, cx, cy + 2, 20)}${marks}`;
     }

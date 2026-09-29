@@ -4,6 +4,8 @@
    iTunes API with loop controls and favorites.
    ============================================================ */
 
+import { icon } from '../lib/icons.js';
+
 export default {
   activeAudios: [],
 
@@ -185,7 +187,7 @@ export default {
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
-              <button type="button" class="sfx-fav-btn" data-id="${s.id}" style="background:none; border:none; color:${isFav ? '#eab308' : 'var(--g300)'}; cursor:pointer; font-size:1.2rem; line-height:1; padding:4px;" title="Favorite">★</button>
+              <button type="button" class="sfx-fav-btn" data-id="${s.id}" style="background:none; border:none; color:${isFav ? '#eab308' : 'var(--g400)'}; cursor:pointer; line-height:0; padding:4px;" title="${isFav ? 'Remove from favorites' : 'Add to favorites'}" aria-pressed="${isFav}">${icon(isFav ? 'star-fill' : 'star', { size: 18 })}</button>
               <button type="button" class="sfx-play-btn" data-id="${s.id}" style="width:28px; height:28px; border-radius:50%; background:var(--g100); border:1px solid var(--g200); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--black);">
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
               </button>

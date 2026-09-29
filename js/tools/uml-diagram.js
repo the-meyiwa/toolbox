@@ -8,6 +8,8 @@
    because architecture diagrams tend to describe systems people would
    rather not paste into a stranger's website. */
 
+import { iconLabel } from '../lib/icons.js';
+
 const MERMAID_URL = 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
 
 const TEMPLATES = {
@@ -312,10 +314,12 @@ export default {
     container.querySelector('#uml-copy').addEventListener('click', async (e) => {
       try {
         await navigator.clipboard.writeText(codeEl.value);
-        const b = e.target;
-        const prev = b.textContent;
-        b.textContent = 'Copied ✓';
-        setTimeout(() => { b.textContent = prev; }, 1200);
+        const b = e.currentTarget;
+        if (b.dataset.flash) return;
+        const prev = b.innerHTML;
+        b.dataset.flash = '1';
+        b.innerHTML = iconLabel('check', 'Copied');
+        setTimeout(() => { b.innerHTML = prev; delete b.dataset.flash; }, 1200);
         analytics?.copied({ outputKind: 'text' });
       } catch { /* clipboard blocked — the text is already selectable */ }
     });

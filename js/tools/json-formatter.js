@@ -1,4 +1,5 @@
 import { copyText } from '../utils.js';
+import { setStatus } from '../lib/icons.js';
 
 export default {
   render(container) {
@@ -33,11 +34,11 @@ export default {
         const parsed = JSON.parse(input.value);
         const formatted = JSON.stringify(parsed, null, 2);
         result.textContent = formatted;
-        status.textContent = '✓ Valid JSON';
+        setStatus(status, 'ok', 'Valid JSON');
         status.style.color = 'var(--black)';
       } catch (e) {
         result.textContent = '';
-        status.textContent = '✗ ' + e.message;
+        setStatus(status, 'error', e.message);
         status.style.color = 'var(--g600)';
       }
     }
@@ -47,11 +48,11 @@ export default {
         const parsed = JSON.parse(input.value);
         const minified = JSON.stringify(parsed);
         result.textContent = minified;
-        status.textContent = `✓ Minified — ${minified.length} characters`;
+        setStatus(status, 'ok', `Minified — ${minified.length} characters`);
         status.style.color = 'var(--black)';
       } catch (e) {
         result.textContent = '';
-        status.textContent = '✗ ' + e.message;
+        setStatus(status, 'error', e.message);
         status.style.color = 'var(--g600)';
       }
     }
@@ -61,11 +62,11 @@ export default {
         const parsed = JSON.parse(input.value);
         const keys = countKeys(parsed);
         result.textContent = JSON.stringify(parsed, null, 2);
-        status.textContent = `✓ Valid JSON — ${keys} key${keys !== 1 ? 's' : ''}, ${JSON.stringify(parsed).length} characters`;
+        setStatus(status, 'ok', `Valid JSON — ${keys} key${keys !== 1 ? 's' : ''}, ${JSON.stringify(parsed).length} characters`);
         status.style.color = 'var(--black)';
       } catch (e) {
         result.textContent = '';
-        status.textContent = '✗ ' + e.message;
+        setStatus(status, 'error', e.message);
         status.style.color = 'var(--g600)';
       }
     }

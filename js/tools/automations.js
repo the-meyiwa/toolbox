@@ -15,6 +15,7 @@ import {
   describeTrigger, nextRunOf, cronFromPreset, TEMPLATES, ACTION_TYPES,
 } from '../lib/automations.js';
 import { parseCron, nextRuns, describeCron } from './cron-parser.js';
+import { icon } from '../lib/icons.js';
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 const pad = (n) => String(n).padStart(2, '0');
@@ -102,7 +103,7 @@ export default {
             <div class="au-card-copy">
               <h3 class="au-card-title">${esc(a.name)}</h3>
               <p class="au-card-when">${esc(describeTrigger(a.trigger))}</p>
-              <p class="au-steps">${a.actions.map(x => `<span class="au-step">${esc(ACTION_LABEL[x.type] || x.type)}</span>`).join('<span class="au-arrow" aria-hidden="true">→</span>')}</p>
+              <p class="au-steps">${a.actions.map(x => `<span class="au-step">${esc(ACTION_LABEL[x.type] || x.type)}</span>`).join(`<span class="au-arrow" aria-hidden="true">${icon('chevron-right')}</span>`)}</p>
               <p class="au-meta">${a.enabled ? (next ? `Next: ${esc(when(next))}` : a.trigger.type === 'app-open' ? 'Next: when Toolbox opens' : 'No upcoming run') : 'Paused'}${last ? ` · Last: ${esc(when(last.at))} <span class="au-dot ${last.ok ? 'is-ok' : 'is-bad'}" aria-label="${last.ok ? 'succeeded' : 'failed'}"></span>` : ''}</p>
             </div>
             <label class="au-switch" title="${a.enabled ? 'Pause' : 'Resume'}"><input type="checkbox" class="switch" data-act="toggle" ${a.enabled ? 'checked' : ''} aria-label="${a.enabled ? 'Pause' : 'Resume'} ${esc(a.name)}"></label>
@@ -185,8 +186,8 @@ export default {
               <span class="au-action-n">${i + 1}</span>
               <select class="tool-input au-action-type" data-i="${i}" aria-label="Step ${i + 1} type">${ACTION_TYPES.map(ty => `<option value="${ty}" ${a.type === ty ? 'selected' : ''}>${ACTION_LABEL[ty]}</option>`).join('')}</select>
               <span class="au-action-tools">
-                <button type="button" class="btn btn-ghost btn-sm" data-move="-1" data-i="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Move step ${i + 1} up">↑</button>
-                <button type="button" class="btn btn-ghost btn-sm" data-move="1" data-i="${i}" ${i === editing.actions.length - 1 ? 'disabled' : ''} aria-label="Move step ${i + 1} down">↓</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-move="-1" data-i="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Move step ${i + 1} up">${icon('chevron-up')}</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-move="1" data-i="${i}" ${i === editing.actions.length - 1 ? 'disabled' : ''} aria-label="Move step ${i + 1} down">${icon('chevron-down')}</button>
                 <button type="button" class="btn btn-ghost btn-sm" data-remove="${i}" ${editing.actions.length === 1 ? 'disabled' : ''} aria-label="Remove step ${i + 1}">Remove</button>
               </span>
             </div>

@@ -298,7 +298,7 @@ textarea.cpg-input { height: auto; resize: vertical; line-height: 1.4; }
 }
 .cpg-dropdown-item:hover, .cpg-dropdown-item:focus-visible { background: var(--cpg-accent) !important; color: #fff !important; outline: none; }
 .cpg-dropdown-item:hover kbd, .cpg-dropdown-item:focus-visible kbd { color: rgba(255, 255, 255, 0.8) !important; }
-.cpg-dropdown-item.is-checked > span::before { content: '✓ '; }
+.cpg-dropdown-item.is-checked > span::before { content: ''; display: inline-block; width: 12px; height: 12px; margin-right: 6px; vertical-align: -1px; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4.5 12.5 5 5 10-11'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4.5 12.5 5 5 10-11'/%3E%3C/svg%3E") center / contain no-repeat; }
 .cpg-dropdown-item.is-danger { color: var(--cpg-red) !important; }
 .cpg-dropdown-item.is-danger:hover { background: var(--cpg-red) !important; color: #fff !important; }
 .cpg-menu-sep { height: 1px; margin: 4px 6px; background: var(--cpg-border); }
@@ -546,7 +546,6 @@ textarea.cpg-input { height: auto; resize: vertical; line-height: 1.4; }
 .cpg-tab:hover { background: var(--cpg-bg-3); color: var(--cpg-text-2); }
 .cpg-tab.active { background: var(--cpg-editor-bg); color: var(--cpg-text); box-shadow: inset 0 2px 0 var(--cpg-accent); }
 .cpg-tab.has-error .cpg-tab-name { color: var(--cpg-red); }
-.cpg-tab.is-dirty .cpg-tab-close::before { content: '●'; }
 .cpg-tab-name { overflow: hidden; text-overflow: ellipsis; }
 .cpg-tab-dir { font-size: 11px; }
 .cpg-tab-close {
@@ -1484,3 +1483,18 @@ li.CodeMirror-hint-active { background: #2f5ea8 !important; color: #fff !importa
 @media (max-width: 760px) {
   .cpg-drawer-tab { margin-right: 4px; letter-spacing: 0.02em; }
 }
+
+/* Tab close: an icon; a tab with unsaved changes shows a dot that turns into the close icon on hover. */
+.cpg-tab-close { display: inline-grid; place-items: center; }
+.cpg-tab-close .tb-i { width: 13px; height: 13px; grid-area: 1 / 1; }
+.cpg-tab.is-dirty .cpg-tab-close { opacity: 1; }
+.cpg-tab.is-dirty .cpg-tab-close::before { content: ''; grid-area: 1 / 1; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.cpg-tab.is-dirty .cpg-tab-close .tb-i, .cpg-tab.is-dirty .cpg-tab-close:hover::before { opacity: 0; }
+.cpg-tab.is-dirty .cpg-tab-close:hover .tb-i { opacity: 1; }
+.cpg-icon-btn .tb-i { width: 15px; height: 15px; }
+.cpg-running-dot { width: 8px; height: 8px; margin-right: 6px; vertical-align: 0; color: var(--cpg-green, #22c55e); }
+.cpg-console-level .tb-i, .cpg-prob-ico .tb-i { width: 13px; height: 13px; }
+.cpg-twisty .tb-i { width: 11px; height: 11px; vertical-align: -1px; }
+.cpg-tree-more .tb-i { width: 15px; height: 15px; }
+.cpg-status-btn .tb-i { width: 12px; height: 12px; vertical-align: -2px; }
+.cpg-bc-sep .tb-i { width: 11px; height: 11px; vertical-align: -1px; }

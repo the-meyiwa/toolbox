@@ -5,6 +5,7 @@
    the "fix it" control does. */
 
 import { copyText } from '../utils.js';
+import { icon } from '../lib/icons.js';
 
 /* ---------------- colour maths ---------------- */
 
@@ -72,7 +73,7 @@ export default {
               <input type="text" class="tool-input" id="cc-fg" value="#767676" spellcheck="false">
             </div>
           </div>
-          <button class="btn btn-sm" id="cc-swap" title="Swap the two colours" aria-label="Swap colours">⇅</button>
+          <button class="btn btn-sm" id="cc-swap" title="Swap the two colours" aria-label="Swap colours">${icon('swap')}</button>
           <div class="cc-field">
             <label class="tool-label" for="cc-bg">Background</label>
             <div class="cc-input-row">
@@ -125,7 +126,7 @@ export default {
       levelsEl.innerHTML = LEVELS.map(l => {
         const pass = r >= l.need;
         return `<div class="cc-level ${pass ? 'is-pass' : 'is-fail'}">
-          <span class="cc-level-mark">${pass ? '✓' : '✕'}</span>
+          <span class="cc-level-mark">${icon(pass ? 'check' : 'x')}</span>
           <span class="cc-level-name">${l.label}</span>
           <span class="cc-level-need">${l.need}</span>
         </div>`;

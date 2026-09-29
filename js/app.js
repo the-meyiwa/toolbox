@@ -39,6 +39,7 @@ import { initMessageNotifications } from './lib/message-notifications.js';
 import { installSessionKeeper } from './lib/session-keeper.js';
 import { startReminderClock } from './lib/reminders.js';
 import { startAutomationClock } from './lib/automations.js';
+import { icon as uiIcon } from './lib/icons.js';
 
 installSessionKeeper();
 
@@ -1126,7 +1127,7 @@ if (taskGrid) {
             <span>${escapeHtml(t.name)}</span>
           </a>`).join('')}
       </div>
-      <a class="home-task-more" href="#tools">All ${task.tools.length} →</a>
+      <a class="home-task-more" href="#tools">All ${task.tools.length} ${uiIcon('chevron-right')}</a>
     </section>`).join('');
 }
 
