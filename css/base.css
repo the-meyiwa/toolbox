@@ -588,3 +588,11 @@ kbd {
 }
 .tool-controls .tool-select, .tool-row .tool-select, .tool-controls .tool-input:not([type="range"]) { width: auto; flex: 0 1 auto; }
 .tool-controls > .tool-label { margin: 0 !important; }
+
+/* Prevent UI text selection */
+:where(h1, h2, h3, h4, h5, h6, .logo, .app-title, .nav-item, button, .modal-title, .settings-title, label:not(.tb-text-popup-body label)) { -webkit-user-select: none; user-select: none; }
+[contenteditable] :where(h1, h2, h3, h4, h5, h6) { -webkit-user-select: text; user-select: text; }
+
+
+:where(.page-title, .home-title, .home-assistant-title, .home-section-title, #viewport-title, .tp-card-title, .tp-group-title, .finder-menu-label) { -webkit-user-select: none; user-select: none; }
+

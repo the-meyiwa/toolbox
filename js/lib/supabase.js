@@ -949,8 +949,8 @@ export async function saveAssistantConversationToCloud(conversation) {
         user_email: user.email,
         username: user.username || 'user',
         conversation_data: conversation,
-        updated_at: new Date().toISOString()
-      })
+          updated_at: new Date().toISOString()
+        }).replace(/\u0000/g, '')
     });
     if (res.status === 404) { assistantCloudMissing = true; return false; }   // table not created yet (supabase/assistant_conversations.sql)
     return res.ok;

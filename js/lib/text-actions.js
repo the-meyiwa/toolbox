@@ -213,7 +213,7 @@ export function installTextActions() {
     if (!snapshot) return;
     const rect = snapshot.rect;
     const notes = !!snapshot.target.closest('.nt-body, .nt-title');
-    openContextMenu({ x: rect.left, y: Math.min(window.innerHeight - 50, rect.bottom + 8), items: textSelectionItems(snapshot), presentation: notes ? 'reveal' : 'horizontal', label: 'Selected text actions', className: 'tb-selection-menu' });
+    openContextMenu({ x: rect.left, y: Math.min(window.innerHeight - 50, rect.bottom + 8), items: textSelectionItems(snapshot), presentation: 'horizontal', label: 'Selected text actions', className: 'tb-selection-menu' });
   };
   document.addEventListener('pointerdown', e => { pointerSelecting = !e.target.closest(MENUS); clearTimeout(timer); }, true);
   document.addEventListener('pointerup', e => { pointerSelecting = false; if (e.button !== 0 || e.target.closest(MENUS)) return; clearTimeout(timer); timer = setTimeout(() => openForSelection(e.target), 60); });
@@ -233,14 +233,14 @@ export function installTextActions() {
     snapshot ||= wordAtPoint(e);
     if (snapshot) {
       clearTimeout(timer); e.preventDefault(); e.stopPropagation();
-      openContextMenu({ x: e.clientX, y: e.clientY, items: textSelectionItems(snapshot), presentation: 'reveal', label: 'Text actions', className: 'tb-selection-menu', focusFirst: e.detail === 0 && !e.clientX && !e.clientY });
+      openContextMenu({ x: e.clientX, y: e.clientY, items: textSelectionItems(snapshot), presentation: 'horizontal', label: 'Text actions', className: 'tb-selection-menu', focusFirst: e.detail === 0 && !e.clientX && !e.clientY });
     } else {
       const field = e.target.closest(EDITABLE_SELECTOR);
       if (!field || field.tagName === 'SELECT' || field.closest('.monaco-editor, .cm-editor')) return;
       // Only empty fields need our standard menu; retain native spellcheck otherwise.
       if ((field.value ?? field.textContent).trim()) return;
       e.preventDefault(); e.stopPropagation();
-      openContextMenu({ x: e.clientX, y: e.clientY, items: emptyEditorItems(field), label: 'Text field actions' });
+      openContextMenu({ x: e.clientX, y: e.clientY, items: emptyEditorItems(field), presentation: 'reveal', label: 'Text field actions' });
     }
   }, true);
   const clear = () => { writingSample = ''; clearTimeout(timer); closeContextMenu(); };
