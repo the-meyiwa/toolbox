@@ -10,6 +10,7 @@ import QRCode from 'qrcode';
 import { sendP2PSignal, pollP2PSignals, getCurrentUser } from '../lib/supabase.js';
 import { isCompressible, packForTransfer, unpackTransfer } from '../lib/transfer-pack.js';
 import { fs } from '../lib/filesystem.js';
+import { markFile } from '../lib/file-surface.js';
 
 // Larger files stream as they are: packing holds the whole file in memory on both ends.
 const PACK_LIMIT = 96 * 1024 * 1024;
@@ -483,6 +484,7 @@ export default {
 
       if (files.length === 1) {
         selectedFile = files[0];
+        markFile(fileCard, { name: selectedFile.name, type: selectedFile.type, size: selectedFile.size, blob: selectedFile, from: 'file-drop', fromLabel: 'File Drop · sending' });
         fileNameEl.textContent = selectedFile.name;
         fileSizeEl.textContent = formatBytes(selectedFile.size);
         const ext = selectedFile.name.split('.').pop().toUpperCase();
@@ -623,6 +625,8 @@ export default {
         }
         const downloadUrl = URL.createObjectURL(blob);
         const fileName = self_.expectedFile.name;
+        // What arrived is a file like any other: drag it, Space to preview, the file menu.
+        markFile(incomingCard, { name: fileName, type: blob.type, size: blob.size, blob, from: 'file-drop', fromLabel: 'File Drop · received' });
 
         rxDownloadBtn.style.display = 'inline-flex';
         rxDownloadBtn.onclick = () => {

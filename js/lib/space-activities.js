@@ -9,6 +9,7 @@ import * as store from './artifacts.js';
 import { kindLabel, kindExt } from '../registry/kinds.js';
 import { toolsAccepting } from '../registry/index.js';
 import { icon, iconLabel } from './icons.js';
+import { fileAttrs } from './file-surface.js';
 
 const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -254,7 +255,7 @@ export function mountArtifactsView(container, engine) {
           ${artifacts.map(art => {
             const targets = toolsAccepting(art.kind);
             return `
-              <div class="sp-art-card" data-id="${art.id}">
+              <div class="sp-art-card" data-id="${art.id}" ${fileAttrs({ key: `space-art:${art.id}`, name: art.name, text: art.text, size: art.size, from: 'messaging', fromLabel: `Space · by ${art.createdBy}` })}>
                 <div class="sp-art-card-top">
                   <span class="sp-badge">${escapeHtml(kindLabel(art.kind))}</span>
                   <time class="sp-art-time">${formatDate(art.createdAt)}</time>
@@ -288,7 +289,7 @@ export function mountArtifactsView(container, engine) {
           }).join('')}
 
           ${rawFiles.map(f => `
-            <div class="sp-art-card sp-file-card" data-file-id="${f.id}">
+            <div class="sp-art-card sp-file-card" data-file-id="${f.id}" ${fileAttrs({ key: `space-file:${f.id}`, name: f.name, size: f.size, url: f.data || '', from: 'messaging', fromLabel: `Space · shared by ${f.createdBy}` })}>
               <div class="sp-art-card-top">
                 <span class="sp-badge is-file">File</span>
                 <time class="sp-art-time">${formatDate(f.createdAt)}</time>

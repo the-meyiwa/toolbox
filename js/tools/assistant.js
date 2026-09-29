@@ -28,6 +28,7 @@ import { renderMarkdown, patchHtml, handleMarkdownClick, cleanReplyText, renderS
 import { ConversationStore, newId } from '../lib/assistant/conversations.js';
 import '../lib/assistant/renderers.js';
 import { gatherLifeContext, introText, lifeSuggestions } from '../lib/assistant/life-context.js';
+import { fileAttrs } from '../lib/file-surface.js';
 
 /* Files from Toolbox Files arrive as raw bytes. */
 function bytesToBase64(bytes) {
@@ -333,9 +334,21 @@ function readAttachment(file) {
   });
 }
 
+/** An attachment as a Toolbox file (drag it out, Space to preview, the file menu), when its body is at hand. */
+function attachmentFile(a) {
+  const base = { key: a.id ? `ast:${a.id}` : undefined, name: a.name || 'file', type: a.type || '', size: a.size || 0, from: 'assistant', fromLabel: 'Assistant' };
+  if (a.text != null) return fileAttrs({ ...base, text: a.text });
+  if (a.base64 || a.dataUrl) {
+    const b64 = a.base64 || String(a.dataUrl).split(',')[1] || '';
+    return fileAttrs({ ...base, load: async () => { const bin = atob(b64); const bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i); return new Blob([bytes], { type: a.type || 'application/octet-stream' }); } });
+  }
+  if (a.path) return fileAttrs({ ...base, path: a.path });
+  return '';
+}
+
 function attachmentChip(a, { removable = false } = {}) {
   const thumb = a.thumb ? `<img src="${esc(a.thumb)}" alt="">` : `<span class="ast-file-ext">${esc(extOf(a.name))}</span>`;
-  return `<div class="ast-file ${a.thumb ? 'has-thumb' : ''}" data-id="${esc(a.id || '')}" title="${esc(a.name)}">
+  return `<div class="ast-file ${a.thumb ? 'has-thumb' : ''}" data-id="${esc(a.id || '')}" title="${esc(a.name)}" ${attachmentFile(a)}>
     <span class="ast-file-thumb">${thumb}</span>
     <span class="ast-file-meta"><span class="ast-file-name">${esc(a.name)}</span><span class="ast-file-size">${esc([extOf(a.name), fmtSize(a.size)].filter(Boolean).join(' · '))}</span></span>
     ${removable ? `<button type="button" class="ast-file-x" data-remove="${esc(a.id)}" aria-label="Remove ${esc(a.name)}">${icon('x', 12, 2.2)}</button>` : ''}
@@ -1339,7 +1352,7 @@ function mountAssistant(container, state) {
         const q = search.value.trim().toLowerCase();
         const shown = files.filter(f => !q || f.name?.toLowerCase().includes(q) || f.path?.toLowerCase().includes(q)).slice(0, 200);
         list.innerHTML = shown.length ? shown.map(f => `
-          <button type="button" class="ast-modal-row" data-path="${esc(f.path)}">
+          <button type="button" class="ast-modal-row" data-path="${esc(f.path)}" ${fileAttrs({ key: `files:${f.path}`, name: f.name, size: f.size || 0, path: f.path, from: 'assistant', fromLabel: f.path })}>
             <span class="ast-file-ext">${esc(extOf(f.name))}</span>
             <span class="ast-modal-row-meta"><strong>${esc(f.name)}</strong><small>${esc(f.path || '')} · ${esc(fmtSize(f.size || 0))}</small></span>
           </button>`).join('') : `<p class="ast-convs-empty">${q ? 'No files match.' : 'No saved files yet.'}</p>`;

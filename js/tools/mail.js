@@ -16,6 +16,7 @@
    ============================================================ */
 
 import { mailApi, takeMailIntent } from '../lib/mail-provider.js';
+import { fileAttrs } from '../lib/file-surface.js';
 import { createMailSetupUI, connectMailbox } from '../views/mail-setup.js';
 import { getCurrentUser } from '../lib/supabase.js';
 import { openSettings } from '../lib/settings-ui.js';
@@ -881,7 +882,7 @@ export default {
       <div class="ml-msg-banner" hidden></div>
       <div class="ml-msg-body"></div>
       ${files.length ? `<div class="ml-atts">${files.map(a => `
-        <button type="button" class="ml-att" data-act="download" data-mid="${esc(m.id)}" data-aid="${esc(a.id)}" title="Download ${esc(a.filename)}">
+        <button type="button" class="ml-att" data-act="download" data-mid="${esc(m.id)}" data-aid="${esc(a.id)}" title="Download ${esc(a.filename)}" ${this.attachmentFile(m, a)}>
           <span class="ml-att-icon">${icon(a.mimeType?.startsWith('image/') ? 'image' : 'file')}</span>
           <span class="ml-att-text"><strong>${esc(a.filename)}</strong><small>${esc(fmtSize(a.size) || a.mimeType || '')}</small></span>
           <span class="ml-att-dl">${icon('download')}</span>
@@ -1038,6 +1039,28 @@ export default {
     const starred = this.S.reader.messages.some(m => m.starred);
     const btn = bar.querySelector('[data-open-act="star"], [data-open-act="unstar"]');
     if (btn) { btn.dataset.openAct = starred ? 'unstar' : 'star'; btn.innerHTML = starIcon(starred); btn.classList.toggle('is-starred', starred); btn.setAttribute('aria-pressed', String(starred)); }
+  },
+
+  /** An attachment is a file like any other: draggable, Space to preview, the file menu. */
+  attachmentFile(m, a) {
+    const accountId = this.S.accountId;
+    return fileAttrs({ key: `mail:${accountId}:${m.id}:${a.id}`, name: a.filename || 'attachment', type: a.mimeType || '', size: a.size || 0, from: 'mail', fromLabel: `Mail · ${m.subject || '(no subject)'}`, date: m.date, load: () => mailApi.attachment(accountId, m.id, a) });
+  },
+
+  /** A draft's attachment: read from the draft itself, or from the message it forwards. */
+  composeFile(a) {
+    const accountId = this.S.accountId;
+    const load = async () => {
+      if (a.data) {
+        const bin = atob(a.data);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return new Blob([bytes], { type: a.mimeType || 'application/octet-stream' });
+      }
+      if (a.ref) return mailApi.attachment(accountId, a.ref.messageId, { id: a.ref.attachmentId, filename: a.filename, mimeType: a.mimeType, size: a.size });
+      throw new Error('This attachment is still being read.');
+    };
+    return fileAttrs({ name: a.filename || 'attachment', type: a.mimeType || '', size: a.size || 0, from: 'mail', fromLabel: 'Mail · draft', load });
   },
 
   async download(mid, aid) {
@@ -1547,7 +1570,7 @@ export default {
     const c = this.S.compose;
     const host = c.el.querySelector('.ml-compose-atts');
     host.innerHTML = c.attachments.map((a, i) => `
-      <span class="ml-att is-compose">
+      <span class="ml-att is-compose" ${a.loading ? '' : this.composeFile(a)}>
         <span class="ml-att-icon">${icon(a.mimeType?.startsWith('image/') ? 'image' : 'file')}</span>
         <span class="ml-att-text"><strong>${esc(a.filename)}</strong><small>${a.loading ? 'Reading…' : esc(fmtSize(a.size))}</small></span>
         <button type="button" class="ml-att-remove" data-remove="${i}" aria-label="Remove ${esc(a.filename)}">${icon('x')}</button>

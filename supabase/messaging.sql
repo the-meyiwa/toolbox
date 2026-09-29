@@ -42,12 +42,14 @@ create policy "Members see conversations" on public.toolbox_conversations for se
 drop policy if exists "Members see members" on public.toolbox_conversation_members;
 create policy "Members see own memberships" on public.toolbox_conversation_members for select to authenticated using (user_id=auth.uid());
 drop policy if exists "Members read live messages" on public.toolbox_messages;
-create policy "Members read live messages" on public.toolbox_messages for select to authenticated using (expires_at > now() and exists(select 1 from public.toolbox_conversation_members m where m.conversation_id=conversation_id and m.user_id=auth.uid()));
+-- Inside these subqueries an unqualified conversation_id means the member row's own column,
+-- which made every check true: always qualify it with the messages table.
+create policy "Members read live messages" on public.toolbox_messages for select to authenticated using (expires_at > now() and exists(select 1 from public.toolbox_conversation_members m where m.conversation_id=toolbox_messages.conversation_id and m.user_id=auth.uid()));
 drop policy if exists "Members send messages" on public.toolbox_messages;
-create policy "Members send messages" on public.toolbox_messages for insert to authenticated with check (sender_id=auth.uid() and exists(select 1 from public.toolbox_conversation_members m where m.conversation_id=conversation_id and m.user_id=auth.uid()));
+create policy "Members send messages" on public.toolbox_messages for insert to authenticated with check (sender_id=auth.uid() and exists(select 1 from public.toolbox_conversation_members m where m.conversation_id=toolbox_messages.conversation_id and m.user_id=auth.uid()));
 drop policy if exists "Members update interactive messages" on public.toolbox_messages;
 drop policy if exists "Members update game messages" on public.toolbox_messages;
-create policy "Members update interactive messages" on public.toolbox_messages for update to authenticated using (kind in ('game','poll') and expires_at > now() and exists(select 1 from public.toolbox_conversation_members m where m.conversation_id=conversation_id and m.user_id=auth.uid()));
+create policy "Members update interactive messages" on public.toolbox_messages for update to authenticated using (kind in ('game','poll') and expires_at > now() and exists(select 1 from public.toolbox_conversation_members m where m.conversation_id=toolbox_messages.conversation_id and m.user_id=auth.uid()));
 
 create or replace function public.get_or_create_direct_conversation(other_user_id uuid) returns uuid language plpgsql security definer set search_path=public as $$
 declare cid uuid;
@@ -96,3 +98,25 @@ begin
   return true;
 end $$;
 grant execute on function public.approve_conversation_participant(uuid) to authenticated;
+
+-- Poll votes are recorded here, one row lock at a time, so two people voting at once never
+-- overwrite each other (the page used to send back the whole poll). Voting for the option you
+-- already chose takes the vote back. Returns the poll as it now stands.
+create or replace function public.vote_poll(poll_message_id uuid, option_index int) returns jsonb language plpgsql security definer set search_path=public as $$
+declare msg toolbox_messages; opts jsonb; me jsonb := to_jsonb(auth.uid()::text); n int; i int; voters jsonb; had boolean; result jsonb;
+begin
+  select * into msg from toolbox_messages where id=poll_message_id and kind='poll' and expires_at>now() for update;
+  if msg.id is null or not exists(select 1 from toolbox_conversation_members where conversation_id=msg.conversation_id and user_id=auth.uid()) then raise exception 'This poll is no longer available'; end if;
+  opts := coalesce(msg.payload->'options','[]'::jsonb);
+  n := jsonb_array_length(opts);
+  if option_index is null or option_index < 0 or option_index >= n then raise exception 'That option does not exist'; end if;
+  had := coalesce(opts->option_index->'voters','[]'::jsonb) @> jsonb_build_array(me);
+  for i in 0..n-1 loop
+    select coalesce(jsonb_agg(v),'[]'::jsonb) into voters from jsonb_array_elements(coalesce(opts->i->'voters','[]'::jsonb)) v where v <> me;
+    if i = option_index and not had then voters := voters || jsonb_build_array(me); end if;
+    opts := jsonb_set(opts, array[i::text], jsonb_set(opts->i, '{voters}', voters, true));
+  end loop;
+  update toolbox_messages set payload=jsonb_set(msg.payload,'{options}',opts,true) where id=msg.id returning payload into result;
+  return result;
+end $$;
+grant execute on function public.vote_poll(uuid,int) to authenticated;

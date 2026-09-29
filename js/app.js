@@ -34,6 +34,7 @@ import { initHomeScrollNarrative } from './home-scroll.js';
 import { listJoinedSpaces } from './lib/space-engine.js';
 import { deliverToFileInput } from './lib/interop.js';
 import { installGlobalMenus, installLongPress } from './lib/global-menus.js';
+import { installFileSurface } from './lib/file-surface.js';
 import { installMotion } from './lib/motion.js';
 import { initMessageNotifications } from './lib/message-notifications.js';
 import { installSessionKeeper } from './lib/session-keeper.js';
@@ -1164,6 +1165,8 @@ reflectSavedWork();
 
 // Right-click menus for tool links, the open tool and the page (js/lib/global-menus.js).
 installLongPress();
+// Files behave the same everywhere: drag, Space to preview, the file menu (before the page menu).
+installFileSurface();
 installGlobalMenus({ getTool: () => (currentPage === 'tool' && currentToolObj ? { tool: currentToolObj, instance: currentToolInstance } : null) });
 
 initTheme();

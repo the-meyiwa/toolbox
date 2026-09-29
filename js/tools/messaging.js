@@ -1,11 +1,12 @@
 import { getCurrentUser } from '../lib/supabase.js';
 import { openSettings } from '../lib/settings-ui.js';
 import { searchToolboxUsers, avatarMarkup } from '../lib/user-directory.js';
-import { listConversations, listMessages, listConversationParticipants, startDirectConversation, sendMessage, updateMessagePayload, uploadMessageFile, listOnlineToolboxFiles, approveParticipantRequest, MESSAGE_MAX_LENGTH } from '../lib/messaging-service.js';
+import { listConversations, listMessages, listConversationParticipants, startDirectConversation, sendMessage, updateMessagePayload, votePoll, uploadMessageFile, listOnlineToolboxFiles, approveParticipantRequest, MESSAGE_MAX_LENGTH } from '../lib/messaging-service.js';
 import { list as listOfflineFiles, get as getOfflineFile } from '../lib/artifacts.js';
 import { tbPrompt } from '../lib/dialog.js';
 import { NotificationEngine } from '../lib/notifications.js';
 import { icon } from '../lib/icons.js';
+import { fileAttrs } from '../lib/file-surface.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const time = value => new Date(value).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
@@ -68,12 +69,17 @@ export default {
       const state = message.payload || {}; const board = state.board || Array(9).fill('');
       return `<div class="message-game" data-game="${message.id}"><div><strong>Tic-tac-toe</strong><small>${esc(state.winner ? `${state.winner} won` : `${state.turn || 'X'} to play`)}</small></div><div class="message-game-board">${board.map((cell,index)=>`<button data-cell="${index}" ${cell||state.winner?'disabled':''}>${cell}</button>`).join('')}</div></div>`;
     };
+    // Results show as bars: each option's share of the votes, my choice ticked. Tapping my choice again takes the vote back.
     const renderPoll = message => {
       const pollState = message.payload || {};
-      return `<div class="message-poll" data-poll="${message.id}"><strong>${esc(pollState.question || 'Poll')}</strong><div>${(pollState.options || []).map((option,index) => {
+      const options = pollState.options || [];
+      const total = options.reduce((n, o) => n + (o.voters || []).length, 0);
+      const mine = options.some(o => (o.voters || []).includes(user.id));
+      return `<div class="message-poll" data-poll="${message.id}"><span class="message-poll-kicker">${icon('chart')} Poll</span><strong>${esc(pollState.question || 'Poll')}</strong><div>${options.map((option,index) => {
         const voters = option.voters || []; const voted = voters.includes(user.id);
-        return `<button type="button" data-poll-option="${index}" class="${voted ? 'selected' : ''}"><span>${esc(option.text)}</span><small>${voters.length}</small></button>`;
-      }).join('')}</div></div>`;
+        const pct = total ? Math.round((voters.length / total) * 100) : 0;
+        return `<button type="button" data-poll-option="${index}" class="${voted ? 'selected' : ''}" aria-pressed="${voted}" style="--p:${pct}%"><span class="mp-fill"></span><span class="mp-text">${voted ? icon('check') : ''}${esc(option.text)}</span><small>${total ? `${pct}% · ` : ''}${voters.length}</small></button>`;
+      }).join('')}</div><small class="message-poll-foot">${total} vote${total === 1 ? '' : 's'} · ${mine ? 'tap your choice to take it back' : 'tap an option to vote'}</small></div>`;
     };
     const renderParticipantRequest = message => {
       const request = message.payload || {}; const approvals = request.approvals || []; const approved = approvals.includes(user.id);
@@ -85,12 +91,22 @@ export default {
       const previousHeight = stream.scrollHeight;
       const previousTop = stream.scrollTop;
       const wasNearBottom = previousHeight - previousTop - stream.clientHeight < 72;
-      stream.innerHTML = messages.length ? messages.map(message => { const mine=message.sender_id===user.id; const content=message.kind==='file' ? `<a class="message-file" href="${esc(message.payload?.url)}" target="_blank" rel="noopener"${message.payload?.packed ? ` data-packed="1" data-name="${esc(message.payload?.name)}" data-type="${esc(message.payload?.type || '')}"` : ''}><span>${icon('download')}</span><span><strong>${esc(message.payload?.name)}</strong><small>${fileSize(message.payload?.size||0)}</small></span></a>` : message.kind==='game' ? renderGame(message) : message.kind==='poll' ? renderPoll(message) : message.kind==='participant_request' ? renderParticipantRequest(message) : `<p>${esc(message.body).replace(/\n/g,'<br>')}</p>`; return `<div class="message-row ${mine?'mine':''}"><div class="message-bubble">${content}<time>${time(message.created_at)}</time></div></div>`; }).join('') : `<div class="messages-empty"><span>${icon('message')}</span><h3>Start the conversation</h3><p>Messages disappear 24 hours after they are sent.</p></div>`;
+      stream.innerHTML = messages.length ? messages.map(message => { const mine=message.sender_id===user.id; const content=message.kind==='file' ? `<a class="message-file" href="${esc(message.payload?.url)}" target="_blank" rel="noopener"${message.payload?.packed ? ` data-packed="1" data-name="${esc(message.payload?.name)}" data-type="${esc(message.payload?.type || '')}"` : ''} ${fileAttrs({ key: `msg:${message.id}`, name: message.payload?.name || message.body || 'file', type: message.payload?.type || '', size: message.payload?.size || 0, url: message.payload?.url, packed: !!message.payload?.packed, from: 'messaging', fromLabel: 'Messages', date: message.created_at })}><span>${icon('download')}</span><span><strong>${esc(message.payload?.name)}</strong><small>${fileSize(message.payload?.size||0)}</small></span></a>` : message.kind==='game' ? renderGame(message) : message.kind==='poll' ? renderPoll(message) : message.kind==='participant_request' ? renderParticipantRequest(message) : `<p>${esc(message.body).replace(/\n/g,'<br>')}</p>`; return `<div class="message-row ${mine?'mine':''}"><div class="message-bubble">${content}<time>${time(message.created_at)}</time></div></div>`; }).join('') : `<div class="messages-empty"><span>${icon('message')}</span><h3>Start the conversation</h3><p>Messages disappear 24 hours after they are sent.</p></div>`;
       stream.classList.toggle('messages-stream-settled', !initial);
       if (initial || (stickToBottom && wasNearBottom)) stream.scrollTop=stream.scrollHeight;
       else stream.scrollTop=previousTop + (stream.scrollHeight - previousHeight);
-      container.querySelectorAll('[data-game] [data-cell]').forEach(button => button.onclick=async()=>{ const card=button.closest('[data-game]'); const msg=messages.find(m=>m.id===card.dataset.game); const board=[...(msg.payload.board||Array(9).fill(''))]; if(board[button.dataset.cell]||msg.payload.winner)return; board[button.dataset.cell]=msg.payload.turn||'X'; const wins=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; const winner=wins.some(line=>line.every(i=>board[i]===board[button.dataset.cell]))?board[button.dataset.cell]:''; msg.payload={board,turn:board[button.dataset.cell]==='X'?'O':'X',winner}; renderMessages(); await updateMessagePayload(msg.id,msg.payload); });
-      container.querySelectorAll('[data-poll-option]').forEach(button => button.onclick=async()=>{ const card=button.closest('[data-poll]'); const msg=messages.find(m=>m.id===card.dataset.poll); const options=(msg.payload.options||[]).map(option=>({...option,voters:(option.voters||[]).filter(id=>id!==user.id)})); options[Number(button.dataset.pollOption)].voters.push(user.id); msg.payload={...msg.payload,options}; renderMessages(); await updateMessagePayload(msg.id,msg.payload); });
+      container.querySelectorAll('[data-game] [data-cell]').forEach(button => button.onclick=async()=>{ const card=button.closest('[data-game]'); const msg=messages.find(m=>m.id===card.dataset.game); const board=[...(msg.payload.board||Array(9).fill(''))]; if(board[button.dataset.cell]||msg.payload.winner)return; board[button.dataset.cell]=msg.payload.turn||'X'; const wins=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; const winner=wins.some(line=>line.every(i=>board[i]===board[button.dataset.cell]))?board[button.dataset.cell]:''; const before=msg.payload; msg.payload={board,turn:board[button.dataset.cell]==='X'?'O':'X',winner}; renderMessages(); try{await updateMessagePayload(msg.id,msg.payload);}catch(error){msg.payload=before;renderMessages();alert(error.message);} });
+      container.querySelectorAll('[data-poll-option]').forEach(button => button.onclick=async()=>{
+        const card=button.closest('[data-poll]'); const msg=messages.find(m=>m.id===card.dataset.poll); if(!msg||card.dataset.busy)return;
+        const index=Number(button.dataset.pollOption); const before=msg.payload;
+        const had=(before.options?.[index]?.voters||[]).includes(user.id);
+        // Show the vote at once; the server's answer (with everyone else's votes) replaces it.
+        msg.payload={...before,options:(before.options||[]).map((o,i)=>({...o,voters:[...(o.voters||[]).filter(id=>id!==user.id),...(i===index&&!had?[user.id]:[])]}))};
+        renderMessages({stickToBottom:false});
+        try{ msg.payload=await votePoll(msg.id,index,before); }
+        catch(error){ msg.payload=before; alert(error.message); }
+        renderMessages({stickToBottom:false});
+      });
       container.querySelectorAll('[data-participant-request] button').forEach(button => button.onclick=async()=>{ button.disabled=true; try{await approveParticipantRequest(button.closest('[data-participant-request]').dataset.participantRequest);await refreshMessages();await refreshConversations();}catch(error){button.disabled=false;alert(error.message);}});
     };
     const refreshMessages = async ({ initial = false } = {}) => { if(!active||stopped)return; const conversationId=active.conversation_id; try { const next=await listMessages(conversationId); if(!active||active.conversation_id!==conversationId)return; const fingerprint=JSON.stringify(next.map(item=>[item.id,item.kind,item.body,item.payload,item.created_at])); if(fingerprint===messagesFingerprint)return; messages=next;messagesFingerprint=fingerprint;renderMessages({initial,stickToBottom:true}); } catch(error){ if(initial)stream.innerHTML=`<div class="messages-error">${esc(error.message)}</div>`; } };
@@ -116,14 +132,41 @@ export default {
       try{
         const files=mode==='online' ? await listOnlineToolboxFiles() : listOfflineFiles();
         const listEl=picker.querySelector('.messages-picker-list');
-        listEl.innerHTML=files.length ? files.map(file=>`<button type="button" data-picker-file="${esc(file.id)}"><span>${icon('file')}</span><span><strong>${esc(file.name)}</strong><small>${esc(file.kind||'Toolbox file')}</small></span></button>`).join('') : `<p>No ${mode} Toolbox files are available.</p>`;
+        listEl.innerHTML=files.length ? files.map(file=>`<button type="button" data-picker-file="${esc(file.id)}" ${fileAttrs(mode==='online' ? { key: `online:${file.id}`, name: file.name, type: file.payload?.mimeType || '', size: file.payload?.size || file.payload?.bytes || 0, url: file.storage_url || file.payload?.url, packed: !!file.payload?.packed, from: 'messaging', fromLabel: 'Toolbox Files (online)' } : { key: `offline:${file.id}`, name: file.name, text: getOfflineFile(file.id)?.text ?? '', from: 'messaging', fromLabel: 'Toolbox Files' })}><span>${icon('file')}</span><span><strong>${esc(file.name)}</strong><small>${esc(file.kind||'Toolbox file')}</small></span></button>`).join('') : `<p>No ${mode} Toolbox files are available.</p>`;
         listEl.querySelectorAll('[data-picker-file]').forEach(button=>button.onclick=async()=>{const meta=files.find(file=>file.id===button.dataset.pickerFile);try{if(mode==='online'){const url=meta.storage_url||meta.payload?.url;if(!url)throw new Error('This online file has no downloadable copy.');messages.push(await sendMessage(active.conversation_id,meta.name,'file',{name:meta.name,size:meta.payload?.size||0,type:meta.payload?.mimeType||meta.kind,url,...(meta.payload?.packed?{packed:true}:{})}));}else{const saved=getOfflineFile(meta.id);const file=new File([saved?.text||''],meta.name,{type:'text/plain'});await sendSelectedFile(file);}picker.hidden=true;renderMessages();}catch(error){alert(error.message);}});
       }catch(error){picker.querySelector('.messages-picker-list').innerHTML=`<p>${esc(error.message)}</p>`;}
     };
     actionMenu.querySelector('[data-message-action="media"]').onclick=()=>{closeActions();$('#messages-media').click();};
     actionMenu.querySelector('[data-message-action="files"]').onclick=()=>{sourceMenu.hidden=!sourceMenu.hidden;};
     sourceMenu.querySelectorAll('[data-file-source]').forEach(button=>button.onclick=()=>{const mode=button.dataset.fileSource;closeActions();showFilePicker(mode);});
-    actionMenu.querySelector('[data-message-action="poll"]').onclick=async()=>{closeActions();if(!active)return;const question=await tbPrompt('What would you like to ask?', '', {title:'Create a poll',placeholder:'Poll question'});if(!question)return;const raw=await tbPrompt('Separate each option with a comma.', '', {title:'Poll options',placeholder:'Yes, No, Maybe'});const options=String(raw||'').split(',').map(value=>value.trim()).filter(Boolean).slice(0,6);if(options.length<2)return alert('Add at least two poll options.');messages.push(await sendMessage(active.conversation_id,question,'poll',{question,options:options.map(text=>({text,voters:[]}))}));renderMessages();};
+    // Polls: a composer with a question and 2 to 6 options.
+    actionMenu.querySelector('[data-message-action="poll"]').onclick=()=>{
+      closeActions(); if(!active)return;
+      picker.hidden=false;
+      picker.innerHTML=`<div class="messages-picker-card msg-poll-composer"><div class="messages-picker-head"><strong>Create a poll</strong><button type="button" data-close aria-label="Close">${icon('x')}</button></div>
+        <form class="msg-poll-form"><label class="msg-poll-q"><span>Question</span><input name="question" maxlength="200" required placeholder="Ask the group…" autocomplete="off"></label>
+        <div class="msg-poll-opts">${[1,2].map(n=>`<input name="option" maxlength="80" placeholder="Option ${n}" autocomplete="off">`).join('')}</div>
+        <button type="button" class="msg-poll-add" data-add-option>${icon('plus')}<span>Add option</span></button>
+        <p class="msg-poll-error" role="alert" hidden></p>
+        <div class="msg-poll-actions"><button type="button" class="btn btn-secondary" data-close>Cancel</button><button type="submit" class="btn btn-primary">Send poll</button></div></form></div>`;
+      const form=picker.querySelector('form'), opts=picker.querySelector('.msg-poll-opts'), err=picker.querySelector('.msg-poll-error'), add=picker.querySelector('[data-add-option]');
+      picker.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>{picker.hidden=true;});
+      form.question.focus();
+      add.onclick=()=>{ const n=opts.children.length; if(n>=6)return; opts.insertAdjacentHTML('beforeend',`<input name="option" maxlength="80" placeholder="Option ${n+1}" autocomplete="off">`); opts.lastElementChild.focus(); add.hidden=opts.children.length>=6; };
+      form.onsubmit=async event=>{
+        event.preventDefault();
+        const question=form.question.value.trim();
+        const options=[...opts.querySelectorAll('input')].map(i=>i.value.trim()).filter(Boolean);
+        const unique=[...new Set(options.map(o=>o.toLowerCase()))];
+        const fail=text=>{err.textContent=text;err.hidden=false;};
+        if(!question)return fail('Write the question first.');
+        if(options.length<2)return fail('Add at least two options.');
+        if(unique.length!==options.length)return fail('Each option needs to be different.');
+        const submit=form.querySelector('[type="submit"]'); submit.disabled=true;
+        try{ messages.push(await sendMessage(active.conversation_id,question,'poll',{question,options:options.map(text=>({text,voters:[]}))})); picker.hidden=true; renderMessages(); await refreshConversations(); }
+        catch(error){ submit.disabled=false; fail(/kind_check|violates check/i.test(error.message)?'Polls need the latest Messages database update (supabase/messaging.sql).':error.message); }
+      };
+    };
     actionMenu.querySelector('[data-message-action="participant"]').onclick=async()=>{
       closeActions();if(!active)return;
       picker.hidden=false;picker.innerHTML=`<div class="messages-picker-card"><div class="messages-picker-head"><div><strong>Add a participant</strong><small>Search Toolbox by name or username</small></div><button type="button" aria-label="Close">${icon('x')}</button></div><div class="messages-participant-search"><span>${icon('search')}</span><input type="search" placeholder="Search people" autocomplete="off" aria-label="Search Toolbox users"></div><div class="messages-picker-list"><p>Start typing to find someone.</p></div></div>`;

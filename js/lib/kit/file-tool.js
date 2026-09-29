@@ -25,6 +25,7 @@ import { createZip } from '../pdf/zip.js';
 import { copyText } from '../../utils.js';
 import { actionsFor, actionsButton, publish, pickWork, kindOf } from '../interop.js';
 import { icon } from '../icons.js';
+import { fileAttrs } from '../file-surface.js';
 
 export class Cancelled extends Error { constructor() { super('Cancelled'); this.name = 'AbortError'; this.cancelled = true; } }
 export const checkAbort = (signal) => { if (signal?.aborted) throw new Cancelled(); };
@@ -134,7 +135,7 @@ export function makeFileTool(def) {
         zone.hidden = has && max === 1;
         $('files').hidden = !has;
         $('files').innerHTML = files.map((f, i) => `
-          <div class="kit-file" data-id="${f.id}">
+          <div class="kit-file" data-id="${f.id}" ${fileAttrs({ key: `${def.id}:in:${f.id}`, name: f.name, type: f.file?.type || '', size: f.size, blob: f.file, from: def.id })}>
             <span class="kit-file-name" title="${esc(f.name)}">${max > 1 ? `${i + 1}. ` : ''}${esc(f.name)}</span>
             <span class="kit-file-meta">${humanBytes(f.size)}</span>
             ${max > 1 ? `<button type="button" class="btn btn-ghost btn-sm" data-move="-1" aria-label="Move up"${i === 0 ? ' disabled' : ''}>${icon('chevron-up')}</button>
@@ -165,7 +166,8 @@ export function makeFileTool(def) {
             <span class="kit-file-meta">${humanBytes(total)}</span>
             ${res.text ? '<button type="button" class="btn btn-secondary btn-sm" data-act="copy-text">Copy text</button>' : ''}
           </div>`;
-          if (out.length > 1 && out.length <= 60) html += `<div class="kit-files">${out.map((f, i) => `<div class="kit-file"><span class="kit-file-name">${esc(f.name)}</span><span class="kit-file-meta">${humanBytes(f.data?.size ?? f.data?.length ?? 0)}</span><button type="button" class="btn btn-ghost btn-sm" data-save="${i}">Download</button></div>`).join('')}</div>`;
+          // Every result is a file: drag it on, Space to preview, right-click for the file menu.
+          if (out.length <= 60) html += `<div class="kit-files">${out.map((f, i) => `<div class="kit-file is-result" ${fileAttrs({ name: f.name, type: f.type || '', size: f.data?.size ?? f.data?.length ?? 0, blob: toBlob(f), from: def.id })}><span class="kit-file-name">${esc(f.name)}</span><span class="kit-file-meta">${humanBytes(f.data?.size ?? f.data?.length ?? 0)}</span><button type="button" class="btn btn-ghost btn-sm" data-save="${i}">Download</button></div>`).join('')}</div>`;
         } else if (res.text) html += '<div class="kit-actions"><button type="button" class="btn btn-secondary btn-sm" data-act="copy-text">Copy text</button></div>';
         const kind = res.preview;
         if (kind === 'images') {

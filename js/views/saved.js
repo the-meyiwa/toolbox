@@ -167,7 +167,7 @@ const KIND_LABELS = {
   video: 'Video', archive: 'Archive', markdown: 'Markdown', text: 'Plain text', generic: 'File'
 };
 
-function kindOf(item) {
+export function kindOf(item) {
   if (!item) return '';
   if (item.isDirectory) return 'Folder';
   const category = detectFileCategory(item.name, item.kind);
@@ -179,7 +179,7 @@ function kindOf(item) {
 }
 
 /** How the preview pane can show a file. */
-function previewTypeOf(file) {
+export function previewTypeOf(file) {
   const ext = extOf(file?.name || '');
   const kind = file?.kind;
   if (['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'bmp', 'avif', 'ico'].includes(ext) || kind === 'image') return 'image';
@@ -995,7 +995,7 @@ function parseDelimited(text, sep = ',') {
   return rows.filter(r => r.some(cell => cell.trim() !== ''));
 }
 
-function renderCsvTable(csvText, sep = ',') {
+export function renderCsvTable(csvText, sep = ',') {
   const lines = parseDelimited(String(csvText || ''), sep);
   if (!lines.length) return '<div class="sv-no-preview"><p>This table is empty.</p></div>';
   const headers = lines[0];
@@ -1018,7 +1018,7 @@ function renderCsvTable(csvText, sep = ',') {
 }
 
 /** Small, safe Markdown: input is escaped first, then block and inline rules. */
-function renderMarkdown(md) {
+export function renderMarkdown(md) {
   const inline = (s) => s
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')

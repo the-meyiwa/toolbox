@@ -46,6 +46,15 @@ svg { flex-shrink: 0; }
 .tb-status-error .tb-i { color: var(--danger, #dc2626); }
 .tb-status-warn .tb-i { color: var(--warning, #d97706); }
 
+/* Files anywhere (js/lib/file-surface.js): selected, dragged, focused. */
+[data-tb-file] { -webkit-user-drag: element; }
+[data-tb-file].is-file-selected { outline: 2px solid color-mix(in srgb, var(--focus, #4f7cff) 55%, transparent); outline-offset: 2px; }
+[data-tb-file]:focus-visible { outline: 2px solid var(--focus, #4f7cff); outline-offset: 2px; }
+[data-tb-file].is-file-dragging { opacity: .5; }
+.tb-look .sv-modal-foot { flex-wrap: wrap; gap: 10px; }
+.tb-ql-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-left: auto; }
+.tb-ql-actions .btn { display: inline-flex; align-items: center; gap: 6px; }
+
 /* ---------- Buttons ---------- */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);

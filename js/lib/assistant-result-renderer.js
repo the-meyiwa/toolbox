@@ -16,6 +16,10 @@ import { AssistantAudioManager } from './assistant-audio.js';
 import { sanitizeUserFacingText } from '../utils.js';
 import { renderMapCard } from './maps/map-card.js';
 import { icon, iconLabel } from './icons.js';
+import { markFile } from './file-surface.js';
+
+/** A data: or blob: URL (or plain text) as a Blob, for the file surface. */
+const blobFromUrl = async (url, text = null, type = 'text/plain') => (url && url !== '#' ? (await fetch(url)).blob() : new Blob([text ?? ''], { type }));
 import { renderMath, renderMathInText } from './math-renderer.js';
 
 function escapeHtml(str) {
@@ -90,6 +94,8 @@ export class FileDownloadCardRenderer extends ResultRenderer {
 
     const card = document.createElement('div');
     card.className = 'assistant-result-file-card';
+    // The file itself: drag it out, Space to preview, right-click for the file menu.
+    markFile(card, { name: filename, type: data.mimeType || '', size: data.fileSize || 0, from: 'assistant', fromLabel: 'Made by the Assistant', load: () => blobFromUrl(data.dataUrl, data.content || data.csvText || '', data.mimeType || 'text/plain') });
     card.style.cssText = 'margin-top:10px; padding:14px 16px; border:1px solid var(--g200); border-radius:14px; background:var(--white); box-shadow:0 2px 8px rgba(0,0,0,.04); display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;';
 
     const left = document.createElement('div');
@@ -231,6 +237,7 @@ export class FileListResultRenderer extends ResultRenderer {
       for (const file of files) {
         const itemRow = document.createElement('div');
         itemRow.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid var(--g100); gap:12px; transition:background .15s;';
+        markFile(itemRow, { key: `saved:${file.id}`, name: file.name, size: file.bytes || 0, from: 'assistant', fromLabel: 'Saved files', load: async () => { const full = (await import('./artifacts.js')).get(file.id); if (!full) throw new Error('That file is no longer saved.'); return blobFromUrl(full.dataUrl, full.text, file.kind === 'csv' ? 'text/csv' : file.kind === 'json' ? 'application/json' : 'text/plain'); } });
         itemRow.onmouseover = () => { itemRow.style.background = 'var(--g50)'; };
         itemRow.onmouseout = () => { itemRow.style.background = 'transparent'; };
 
@@ -462,6 +469,7 @@ export class ImageResultRenderer extends ResultRenderer {
 
     const el = document.createElement('div');
     el.className = 'assistant-result-image-card';
+    markFile(el, { name: filename, type: 'image/png', from: 'assistant', fromLabel: 'Made by the Assistant', load: () => blobFromUrl(imgUrl) });
     el.style.cssText = 'margin-top:10px; padding:16px; border:1px solid var(--g200); border-radius:14px; background:var(--white); box-shadow:0 2px 8px rgba(0,0,0,.04); max-width:420px;';
 
     const imgWrapper = document.createElement('div');

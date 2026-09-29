@@ -23,6 +23,7 @@ import { mountControlPanel } from '../automobile/control-panel.js';
 import { safetyFor, INJURIES, DISCLAIMER } from '../automobile/injury-data.js';
 import { safetyHtml, injuryHtml, richText, installInjuryLinks } from '../automobile/injury-render.js';
 import { icon as uiIcon } from '../icons.js';
+import { fileAttrs } from '../file-surface.js';
 
 installInjuryLinks();
 
@@ -558,7 +559,7 @@ function renderIllustration(data, container) {
     actions: markup ? `${btn('SVG', I.download, 'data-act="svg" aria-label="Download SVG"')}${btn('PNG', I.download, 'data-act="png" aria-label="Download PNG"')}` : '',
   });
   el.querySelector('.astc-body').innerHTML = markup
-    ? `<figure class="astc-figure">${markup}</figure>`
+    ? `<figure class="astc-figure" ${fileAttrs({ name: `${slug(data.title)}.svg`, type: 'image/svg+xml', text: markup, from: 'assistant', fromLabel: 'Illustration by the Assistant' })}>${markup}</figure>`
     : `<p class="astc-muted">This drawing could not be displayed.</p>`;
   el.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-act]');

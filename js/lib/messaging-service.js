@@ -51,7 +51,28 @@ export async function sendMessage(conversationId, body, kind = 'text', payload =
 
 export async function updateMessagePayload(id, payload) {
   const rows = await request(`toolbox_messages?id=eq.${encodeURIComponent(id)}&select=*`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ payload }) });
+  // The database answers an update it refused with no rows, not an error: say so.
+  if (!rows?.[0]) throw new Error('That change could not be saved. The chat may have expired, or Messages needs its latest database update (supabase/messaging.sql).');
   return rows[0];
+}
+
+/**
+ * Records my vote on a poll (voting for my current choice takes it back). The server applies it
+ * atomically, so votes cast at the same moment never overwrite each other. Resolves to the poll payload.
+ */
+export async function votePoll(messageId, optionIndex, current = null) {
+  const { url, headers } = context();
+  const response = await fetch(`${url}/rest/v1/rpc/vote_poll`, { method: 'POST', headers, body: JSON.stringify({ poll_message_id: messageId, option_index: optionIndex }) });
+  if (response.ok) return response.json();
+  const error = await response.json().catch(() => ({}));
+  // Older databases without vote_poll: fall back to writing the poll back, checked.
+  const missing = response.status === 404 || error.code === 'PGRST202' || /vote_poll/.test(error.message || '');
+  if (!missing || !current) throw new Error(error.message || `Your vote could not be saved (${response.status}).`);
+  const { user } = context();
+  const had = (current.options?.[optionIndex]?.voters || []).includes(user.id);
+  const options = (current.options || []).map((o, i) => ({ ...o, voters: [...(o.voters || []).filter(v => v !== user.id), ...(i === optionIndex && !had ? [user.id] : [])] }));
+  const row = await updateMessagePayload(messageId, { ...current, options });
+  return row.payload;
 }
 
 export async function uploadMessageFile(file) {
