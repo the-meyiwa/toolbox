@@ -40,16 +40,20 @@ test('missing configuration fails closed without contacting providers', async ()
   assert.equal((await request(handler,'intent',{})).status,503);
 });
 
-test('invalid or mismatched Flutterwave keys keep checkout unavailable', async () => {
+test('missing Flutterwave keys keep checkout unavailable', async () => {
   for (const keys of [
-    { FLUTTERWAVE_PUBLIC_KEY:'invalid' },
-    { FLUTTERWAVE_SECRET_KEY:'FLWSECK-example-X' },
+    { FLUTTERWAVE_PUBLIC_KEY:'' },
     { FLUTTERWAVE_SECRET_KEY:'' },
   ]) {
     const handler=createSupporterHandler({ env:{ ...env,...keys }, fetcher:()=>assert.fail('must not call network') });
     assert.deepEqual((await request(handler,'configuration')).data,{ ready:false });
     assert.equal((await request(handler,'intent',{ amount:5000,currency:'NGN',email:'test@example.invalid' },null)).status,503);
   }
+});
+
+test('credential formats are left to Flutterwave to validate', async () => {
+  const handler=createSupporterHandler({ env:{ ...env, FLUTTERWAVE_PUBLIC_KEY:'new-public-format', FLUTTERWAVE_SECRET_KEY:'new-secret-format' }, fetcher:()=>assert.fail('must not call network') });
+  assert.deepEqual((await request(handler,'configuration')).data,{ ready:true });
 });
 
 test('guest contributions require a valid receipt email', async () => {

@@ -4,13 +4,8 @@ export const SUPPORTER_THRESHOLD_NGN = 5000;
 export const PROFILE_STYLES = ['classic', 'etched', 'halo', 'orbit'];
 const CURRENCIES = ['NGN', 'USD', 'CAD', 'GBP'];
 
-function flutterwaveKeysValid(env) {
-  const publicKey = env.FLUTTERWAVE_PUBLIC_KEY?.trim();
-  const secretKey = env.FLUTTERWAVE_SECRET_KEY?.trim();
-  const mode = publicKey?.match(/^FLWPUBK(_TEST)?-[A-Za-z0-9]+-X$/)?.[1] || '';
-  return !!publicKey && !!secretKey
-    && /^FLWPUBK(_TEST)?-[A-Za-z0-9]+-X$/.test(publicKey)
-    && new RegExp(`^FLWSECK${mode}-[A-Za-z0-9]+-X$`).test(secretKey);
+function flutterwaveKeysPresent(env) {
+  return !!(env.FLUTTERWAVE_PUBLIC_KEY?.trim() && env.FLUTTERWAVE_SECRET_KEY?.trim());
 }
 
 export function validateContribution(payment, intent) {
@@ -38,7 +33,7 @@ class RequestError extends Error {
 
 export function createSupporterHandler({ env = process.env, fetcher = fetch } = {}) {
   const base = () => (env.SUPABASE_URL || env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
-  const configured = () => !!(base() && env.SUPABASE_SERVICE_ROLE_KEY && flutterwaveKeysValid(env));
+  const configured = () => !!(base() && env.SUPABASE_SERVICE_ROLE_KEY && flutterwaveKeysPresent(env));
   async function jsonFetch(url, options = {}) {
     const response = await fetcher(url, { ...options, signal: AbortSignal.timeout(15000) });
     if (!response.ok) throw new RequestError(503, 'Contributions are temporarily unavailable. Please try again later.');
@@ -104,7 +99,7 @@ export function createSupporterHandler({ env = process.env, fetcher = fetch } = 
         send(200, { ready: !!configured() });
         return true;
       }
-      if (!configured()) throw new RequestError(503, 'Supporter checkout needs matching Flutterwave public and secret keys from the same account and mode.');
+      if (!configured()) throw new RequestError(503, 'Supporter checkout needs Supabase and Flutterwave credentials on this server.');
       if (route === 'quote' && request.method === 'GET') {
         const currency = url.searchParams.get('currency') || 'NGN';
         if (!CURRENCIES.includes(currency)) throw new RequestError(400, 'Unsupported currency.');
