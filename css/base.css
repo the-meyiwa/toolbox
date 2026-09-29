@@ -23,7 +23,7 @@ a { color: inherit; }
 /* Headings inherit the body's fixed 24px line; let large ones grow with their size so a wrapped title never overlaps itself. */
 :where(h1, h2, h3, h4) { line-height: max(24px, 1.2em); }
 svg { flex-shrink: 0; }
-::selection { background: var(--ink); color: var(--text-inverse); }
+::selection { background: var(--ink); color: var(--text-inverse); border-radius: 8px; text-shadow: 0 0 1px rgba(0,0,0,0.1); }
 
 :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
   outline: 2px solid var(--focus);

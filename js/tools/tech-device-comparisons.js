@@ -29,6 +29,19 @@ import {
 import { searchAllDevices, matchCategories, splitVsQuery, quickDeviceLookup } from '../lib/devices/quick-search.js';
 import IcecatPanel from '../lib/devices/icecat-panel.js';
 import { RevealMotion, flip, pointerLight } from '../lib/reveal-motion.js';
+const deviceImages = new Map();
+async function applyDeviceImages(root) {
+  for (const el of root.querySelectorAll('.dv-hero-glyph[data-image-query]:not(.has-image)')) {
+    const q = el.dataset.imageQuery;
+    if (deviceImages.get(q) === null) continue;
+    if (deviceImages.has(q)) { el.classList.add('has-image'); el.innerHTML = <img src="" style="width:100%;height:100%;object-fit:contain;animation:dv-fade-in 0.3s ease;">; continue; }
+    fetch("https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=&gsrlimit=1&prop=pageimages&pithumbsize=300&format=json&origin=*").then(r => r.json()).then(data => {
+      const p = data?.query?.pages; const src = p ? Object.values(p)[0]?.thumbnail?.source : null;
+      deviceImages.set(q, src || null);
+      if (src) { el.classList.add('has-image'); el.innerHTML = <img src="" style="width:100%;height:100%;object-fit:contain;animation:dv-fade-in 0.3s ease;">; }
+    }).catch(() => deviceImages.set(q, null));
+  }
+}
 import { getToolSettings, onToolSettings } from '../lib/tool-settings.js';
 import { getSetting } from '../lib/settings.js';
 import { openSettings } from '../lib/settings-ui.js';
@@ -611,7 +624,7 @@ export default {
     const hero = `
       <div class="dv-hero-card dv-hero-solo" data-side="a" data-flip="dev-${esc(A.id)}">
         <div class="dv-hero-main">
-          <span class="dv-hero-glyph">${glyph(cat, 56)}</span>
+          <span class="dv-hero-glyph" data-image-query="${esc(A.brand + ' ' + A.name)}">${glyph(cat, 56)}</span>
           <div class="dv-hero-meta">
             <span class="dv-brand">${esc(A.brand)}</span>
             <strong class="dv-hero-name">${esc(A.name)}</strong>
@@ -703,7 +716,7 @@ export default {
       ${specsHtml}
       ${def.note ? `<p class="dv-note dv-cat-note">${esc(def.note)}</p>` : ''}
       <p class="dv-note">Scores compare each device with the rest of its category from the listed specs and ignore price; they are not a review. Value weighs that score against the US launch price. Benchmark figures are typical published results and vary with software and cooling.${Object.keys(A._derived || {}).length ? ' <sup>*</sup> marks a value taken from the device’s chip or calculated from its other specs.' : ''}</p>`;
-    this.nameInside(this.el.body);
+    this.nameInside(this.el.body); applyDeviceImages(this.el.body);
   },
 
   renderCompare(A, B) {
@@ -719,7 +732,7 @@ export default {
       <div class="dv-hero-card${win ? ' win' : ''}" data-side="${side}" data-flip="dev-${esc(d.id)}">
         ${this.pickerHtml(d, side)}
         <div class="dv-hero-main">
-          <span class="dv-hero-glyph">${glyph(cat, 56)}</span>
+          <span class="dv-hero-glyph" data-image-query="${esc(d.brand + ' ' + d.name)}">${glyph(cat, 56)}</span>
           <div class="dv-hero-meta">
             <span class="dv-brand">${esc(d.brand)}</span>
             <strong class="dv-hero-name">${esc(d.name)}</strong>
@@ -802,6 +815,7 @@ export default {
       ${relatedHtml}
       ${def.note ? `<p class="dv-note dv-cat-note">${esc(def.note)}</p>` : ''}
       <p class="dv-note">Scores compare each device with the rest of its category from the listed specs and ignore price; they are not a review. Better buy weighs that score against the US launch price (street prices fall over time, especially for older models). Benchmark figures are typical published results and vary with software and cooling. <sup>*</sup> marks a value taken from the device's chip. Launch prices are US list prices for the base model.</p>`;
+    applyDeviceImages(this.el.body);
   },
 
   /** Both spec sheets side by side, the better value marked; redrawn alone when "Only differences" flips. */
