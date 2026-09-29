@@ -8,10 +8,13 @@ does not advertise an eligibility threshold; it presents a simple one-time contr
 ## Deployment
 
 1. Run `supabase/supporters.sql` in the same Supabase project used for Toolbox sign-in.
-2. On the API server, set `SUPABASE_URL` (or existing `VITE_SUPABASE_URL`),
-   `SUPABASE_SERVICE_ROLE_KEY`, `FLUTTERWAVE_PUBLIC_KEY`, and `FLUTTERWAVE_SECRET_KEY`.
+2. On the API server (e.g. Render), set `SUPABASE_URL` (or existing `VITE_SUPABASE_URL`)
+   and `SUPABASE_SERVICE_ROLE_KEY`.
+   For Flutterwave, provide either:
+   - **v4 Live API keys**: `FLUTTERWAVE_PUBLIC_KEY` (or `FLW_PUBLIC_KEY`) and `FLUTTERWAVE_SECRET_KEY` (or `FLW_SECRET_KEY`).
+   - **v4 OAuth credentials**: `FLW_CLIENT_ID` (or `FLUTTERWAVE_CLIENT_ID`) and `FLW_CLIENT_SECRET` (or `FLUTTERWAVE_CLIENT_SECRET`).
    Never expose the service role or secret payment key through a `VITE_` variable.
-   Both Flutterwave keys must belong to the same account and mode.
+   The server automatically normalizes public keys that omit the `FLWPUBK-` prefix.
 3. Deploy the API server as well as the frontend. The existing Vercel rewrite routes
    `/api/*` to the Render server; Vite handles the same API during development.
 4. Use Flutterwave test credentials first. Verify signed-in and guest payments,
@@ -19,7 +22,7 @@ does not advertise an eligibility threshold; it presents a simple one-time contr
    then switch both Flutterwave keys to live mode.
 
 Checkout stays unavailable until the backend is configured. No live payment was made
-as part of implementation. Use `node --test tests/supporters.test.js` for isolated
+as part of implementation. Use `node --test tests/supporters.test.js tests/flutterwave.test.js` for isolated
 request/verification tests; those do not contact a payment service.
 
 ## Currency equivalence and confirmation

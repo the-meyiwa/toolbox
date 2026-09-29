@@ -76,7 +76,7 @@ export function renderContributionSettings(container, onSignIn) {
         callback: async payment => {
           report('Confirming your contribution…');
           try {
-            await supporterRequest('verify', { reference:intent.tx_ref, transactionId:payment.transaction_id }, false);
+            await supporterRequest('verify', { reference:intent.tx_ref, transactionId:payment.transaction_id || payment.id }, false);
             if (user) {
               await supporterRequest('claim', { reference:intent.tx_ref });
               await refreshSupporterState();

@@ -1,20 +1,56 @@
 import { randomUUID } from 'node:crypto';
+import { createFlutterwaveClient } from './server-flutterwave.js';
 
 export const SUPPORTER_THRESHOLD_NGN = 5000;
 export const PROFILE_STYLES = ['classic', 'etched', 'halo', 'orbit'];
 const CURRENCIES = ['NGN', 'USD', 'CAD', 'GBP'];
 
+export function resolveFlutterwaveCredentials(env = {}) {
+  const publicKey = (env.FLUTTERWAVE_PUBLIC_KEY || env.FLW_PUBLIC_KEY || '').trim();
+  const secretKey = (env.FLUTTERWAVE_SECRET_KEY || env.FLW_SECRET_KEY || '').trim();
+  const clientId = (env.FLW_CLIENT_ID || env.FLUTTERWAVE_CLIENT_ID || '').trim();
+  const clientSecret = (env.FLW_CLIENT_SECRET || env.FLUTTERWAVE_CLIENT_SECRET || '').trim();
+  const mode = (env.FLW_ENVIRONMENT || 'production').trim().toLowerCase();
+
+  let clientPublicKey = publicKey || clientId;
+  if (clientPublicKey && !/^FLWPUBK(_TEST)?-/i.test(clientPublicKey) && /^[a-fA-F0-9]{32}-X$/i.test(clientPublicKey)) {
+    clientPublicKey = (mode === 'sandbox' ? 'FLWPUBK_TEST-' : 'FLWPUBK-') + clientPublicKey;
+  }
+
+  const hasOAuth = Boolean(clientId && clientSecret);
+  const hasApiKeys = Boolean(publicKey && secretKey);
+
+  return {
+    publicKey: clientPublicKey,
+    rawPublicKey: publicKey,
+    secretKey,
+    clientId,
+    clientSecret,
+    mode,
+    hasOAuth,
+    hasApiKeys,
+    configured: hasOAuth || hasApiKeys,
+  };
+}
+
 function flutterwaveKeysPresent(env) {
-  return !!(env.FLUTTERWAVE_PUBLIC_KEY?.trim() && env.FLUTTERWAVE_SECRET_KEY?.trim());
+  return resolveFlutterwaveCredentials(env).configured;
 }
 
 export function validateContribution(payment, intent) {
-  return payment?.status === 'successful'
-    && /^\d{1,24}$/.test(String(payment.id))
-    && payment.tx_ref === intent.tx_ref
-    && payment.currency === intent.currency
-    && Number.isFinite(Number(payment.amount))
-    && Number(payment.amount) >= Number(intent.amount);
+  const isStatusValid = payment?.status === 'successful'
+    || payment?.status === 'success'
+    || payment?.charge_status === 'succeeded'
+    || payment?.charge_status === 'successful';
+  const idStr = payment?.id != null ? String(payment.id) : (payment?.transaction_id != null ? String(payment.transaction_id) : '');
+  const isIdValid = /^[a-zA-Z0-9_-]{1,64}$/.test(idStr);
+  const paymentRef = payment?.tx_ref || payment?.reference;
+  const isRefValid = Boolean(paymentRef && paymentRef === intent?.tx_ref);
+  const isCurrencyValid = payment?.currency === intent?.currency;
+  const amount = Number(payment?.amount);
+  const isAmountValid = Number.isFinite(amount) && amount >= Number(intent?.amount);
+
+  return Boolean(isStatusValid && isIdValid && isRefValid && isCurrencyValid && isAmountValid);
 }
 
 export function supporterThreshold(quote, currency) {
@@ -31,9 +67,11 @@ class RequestError extends Error {
   constructor(status, message) { super(message); this.status = status; }
 }
 
-export function createSupporterHandler({ env = process.env, fetcher = fetch } = {}) {
+export function createSupporterHandler({ env = process.env, fetcher = fetch, now = Date.now } = {}) {
+  const creds = resolveFlutterwaveCredentials(env);
+  const v4Client = createFlutterwaveClient({ env, fetcher, now });
   const base = () => (env.SUPABASE_URL || env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
-  const configured = () => !!(base() && env.SUPABASE_SERVICE_ROLE_KEY && flutterwaveKeysPresent(env));
+  const configured = () => !!(base() && env.SUPABASE_SERVICE_ROLE_KEY && creds.configured);
   async function jsonFetch(url, options = {}) {
     const response = await fetcher(url, { ...options, signal: AbortSignal.timeout(15000) });
     if (!response.ok) throw new RequestError(503, 'Contributions are temporarily unavailable. Please try again later.');
@@ -45,8 +83,9 @@ export function createSupporterHandler({ env = process.env, fetcher = fetch } = 
       'Content-Type': 'application/json', Prefer: 'return=representation', ...options.headers },
   });
   const flw = async path => {
+    if (!creds.secretKey) throw new RequestError(503, 'Payment provider credentials are not configured.');
     const result = await jsonFetch(`https://api.flutterwave.com/v3/${path}`, {
-      headers: { Authorization: `Bearer ${env.FLUTTERWAVE_SECRET_KEY.trim()}` },
+      headers: { Authorization: `Bearer ${creds.secretKey}` },
     });
     if (result.status !== 'success') throw new RequestError(503, 'Payment confirmation is not available yet. Try checking again shortly.');
     return result.data;
@@ -74,18 +113,47 @@ export function createSupporterHandler({ env = process.env, fetcher = fetch } = 
     }
     try { return JSON.parse(text || '{}'); } catch { throw new RequestError(400, 'Invalid request.'); }
   }
-  const quote = async currency => supporterThreshold(currency === 'NGN' ? null : await flw(
-    `transfers/rates?amount=5000&destination_currency=NGN&source_currency=${currency}`), currency);
+  const quote = async currency => {
+    if (currency === 'NGN') return supporterThreshold(null, currency);
+    if (v4Client.configured()) {
+      try {
+        const v4Rate = await v4Client.getTransferRate({ sourceCurrency: currency, destinationCurrency: 'NGN', amount: 5000 });
+        if (v4Rate) return supporterThreshold(v4Rate, currency);
+      } catch (err) {
+        if (!creds.secretKey) throw err;
+      }
+    }
+    if (creds.secretKey) {
+      return supporterThreshold(await flw(
+        `transfers/rates?amount=5000&destination_currency=NGN&source_currency=${currency}`), currency);
+    }
+    throw new RequestError(503, 'Currency quote unavailable');
+  };
   async function verify(intent, transactionId) {
-    const payment = await flw(transactionId
-      ? `transactions/${transactionId}/verify`
-      : `transactions/verify_by_reference?tx_ref=${encodeURIComponent(intent.tx_ref)}`);
-    if (!validateContribution(payment, intent)) throw new RequestError(409, 'This contribution has not been confirmed. No perks have been unlocked.');
+    let payment = null;
+    const txIdStr = transactionId != null ? String(transactionId) : '';
+    if (v4Client.configured() && txIdStr && (txIdStr.startsWith('chg_') || !creds.secretKey)) {
+      try {
+        payment = await v4Client.getCharge(txIdStr);
+      } catch (err) {
+        if (!creds.secretKey) throw err;
+      }
+    }
+    if (!payment && creds.secretKey) {
+      payment = await flw(txIdStr
+        ? `transactions/${encodeURIComponent(txIdStr)}/verify`
+        : `transactions/verify_by_reference?tx_ref=${encodeURIComponent(intent.tx_ref)}`);
+    } else if (!payment && v4Client.configured() && txIdStr) {
+      payment = await v4Client.getCharge(txIdStr);
+    }
+    if (!payment || !validateContribution(payment, intent)) throw new RequestError(409, 'This contribution has not been confirmed. No perks have been unlocked.');
+    const resolvedId = String(payment.id || payment.transaction_id || txIdStr);
+    const paidAmount = Number(payment.amount);
     // The unique transaction ID and row lock make retries safe across workers.
     await db('rpc/confirm_toolbox_contribution', { method: 'POST', body: JSON.stringify({
-      p_reference: intent.tx_ref, p_transaction_id: String(payment.id), p_paid_amount: Number(payment.amount),
+      p_reference: intent.tx_ref, p_transaction_id: resolvedId, p_paid_amount: paidAmount,
     }) });
-    return { verified: true, supporter: Number(payment.amount) >= Number(intent.supporter_threshold) };
+    return { verified: true, supporter: paidAmount >= Number(intent.supporter_threshold) };
   }
   return async function handleSupporterRequest(request, response, url) {
     if (!url.pathname.startsWith('/api/supporter/')) return false;
@@ -130,11 +198,11 @@ export function createSupporterHandler({ env = process.env, fetcher = fetch } = 
         const intent = { tx_ref: `TBX-${randomUUID()}`, user_id: user?.id || null, currency: body.currency, amount, supporter_threshold: threshold };
         await db('toolbox_contributions', { method: 'POST', body: JSON.stringify(intent) });
         send(200, { tx_ref: intent.tx_ref, amount, currency: intent.currency, threshold,
-          public_key: env.FLUTTERWAVE_PUBLIC_KEY.trim(), customer: { email } });
+          public_key: creds.publicKey, customer: { email } });
       } else if (route === 'verify' && request.method === 'POST') {
         const body = await readBody(request);
         if (!/^TBX-[a-f0-9-]{36}$/.test(body.reference || '')
-          || (body.transactionId != null && !/^\d{1,24}$/.test(String(body.transactionId)))) throw new RequestError(400, 'Invalid contribution reference.');
+          || (body.transactionId != null && !/^[a-zA-Z0-9_-]{1,64}$/.test(String(body.transactionId)))) throw new RequestError(400, 'Invalid contribution reference.');
         const rows = await db(`toolbox_contributions?tx_ref=eq.${encodeURIComponent(body.reference)}&select=*`);
         if (!rows[0]) throw new RequestError(404, 'Contribution not found.');
         send(200, await verify(rows[0], body.transactionId));

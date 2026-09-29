@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Readable } from 'node:stream';
-import { createSupporterHandler, validateContribution, supporterThreshold } from '../server-supporters.js';
+import { createSupporterHandler, validateContribution, supporterThreshold, resolveFlutterwaveCredentials } from '../server-supporters.js';
 
 const reference = 'TBX-11111111-1111-4111-8111-111111111111';
 const intent = { tx_ref:reference, user_id:'account-a', amount:5000, currency:'NGN', supporter_threshold:5000 };
@@ -131,3 +131,115 @@ test('non-supporters cannot save styles or enroll in previews', async () => {
   } });
   assert.equal((await request(handler,'preferences',{ profileStyle:'halo',earlyAccess:true })).status,403);
 });
+
+test('resolveFlutterwaveCredentials supports v4 OAuth, v4 API keys, and normalizes public keys', () => {
+  // Live mode public key normalization
+  const creds1 = resolveFlutterwaveCredentials({ FLUTTERWAVE_PUBLIC_KEY: 'cb3d7945751843f1c06e13b27c4089e7-X', FLUTTERWAVE_SECRET_KEY: 'FLWSECK-xxx' });
+  assert.equal(creds1.publicKey, 'FLWPUBK-cb3d7945751843f1c06e13b27c4089e7-X');
+  assert.equal(creds1.configured, true);
+
+  // Sandbox mode public key normalization
+  const creds2 = resolveFlutterwaveCredentials({ FLW_PUBLIC_KEY: 'cb3d7945751843f1c06e13b27c4089e7-X', FLW_SECRET_KEY: 'FLWSECK-xxx', FLW_ENVIRONMENT: 'sandbox' });
+  assert.equal(creds2.publicKey, 'FLWPUBK_TEST-cb3d7945751843f1c06e13b27c4089e7-X');
+  assert.equal(creds2.configured, true);
+
+  // Already prefixed public keys remain unchanged
+  const creds3 = resolveFlutterwaveCredentials({ FLUTTERWAVE_PUBLIC_KEY: 'FLWPUBK-custom-key', FLUTTERWAVE_SECRET_KEY: 'FLWSECK-xxx' });
+  assert.equal(creds3.publicKey, 'FLWPUBK-custom-key');
+
+  // v4 OAuth variables (FLW_CLIENT_ID / FLW_CLIENT_SECRET)
+  const creds4 = resolveFlutterwaveCredentials({ FLW_CLIENT_ID: 'client-123', FLW_CLIENT_SECRET: 'secret-123' });
+  assert.equal(creds4.configured, true);
+  assert.equal(creds4.hasOAuth, true);
+  assert.equal(creds4.publicKey, 'client-123');
+});
+
+test('validateContribution verifies v4 charge schemas with string IDs and succeeded status', () => {
+  // v4 charge_status: succeeded
+  assert.equal(validateContribution({ id: 'chg_EFAHCzELJb', reference, amount: 5000, currency: 'NGN', charge_status: 'succeeded' }, intent), true);
+  // v4 status: success with reference
+  assert.equal(validateContribution({ id: 'chg_998877', reference, amount: 6000, currency: 'NGN', status: 'success' }, intent), true);
+  // v4 charge_status failed
+  assert.equal(validateContribution({ id: 'chg_bad', reference, amount: 5000, currency: 'NGN', charge_status: 'failed' }, intent), false);
+  // reference mismatch
+  assert.equal(validateContribution({ id: 'chg_bad_ref', reference: 'other-ref', amount: 5000, currency: 'NGN', charge_status: 'succeeded' }, intent), false);
+});
+
+test('v4 OAuth charge verification confirms contribution using GET /charges/:id', async () => {
+  const v4Env = {
+    SUPABASE_URL: 'https://test.supabase.co',
+    SUPABASE_SERVICE_ROLE_KEY: 'test-service',
+    FLW_CLIENT_ID: 'client-v4',
+    FLW_CLIENT_SECRET: 'secret-v4',
+  };
+  let confirmedId;
+  const handler = createSupporterHandler({
+    env: v4Env,
+    fetcher: async (url, options) => {
+      if (url.includes('protocol/openid-connect/token')) {
+        return json({ access_token: 'v4-token', expires_in: 600 });
+      }
+      if (url.includes('/charges/chg_live_abc123')) {
+        assert.equal(options.headers.Authorization, 'Bearer v4-token');
+        return json({
+          status: 'success',
+          data: {
+            id: 'chg_live_abc123',
+            reference,
+            amount: 5000,
+            currency: 'NGN',
+            charge_status: 'succeeded',
+          },
+        });
+      }
+      if (url.includes('toolbox_contributions?')) return json([intent]);
+      if (url.endsWith('/rpc/confirm_toolbox_contribution')) {
+        confirmedId = JSON.parse(options.body).p_transaction_id;
+        return json(null);
+      }
+      throw new Error(`Unexpected request to ${url}`);
+    },
+  });
+
+  const res = await request(handler, 'verify', { reference, transactionId: 'chg_live_abc123' }, null);
+  assert.equal(res.status, 200);
+  assert.equal(res.data.verified, true);
+  assert.equal(confirmedId, 'chg_live_abc123');
+});
+
+test('v4 transfer rate quote calculates threshold using POST /transfers/rates', async () => {
+  const v4Env = {
+    SUPABASE_URL: 'https://test.supabase.co',
+    SUPABASE_SERVICE_ROLE_KEY: 'test-service',
+    FLW_CLIENT_ID: 'client-v4',
+    FLW_CLIENT_SECRET: 'secret-v4',
+  };
+  const handler = createSupporterHandler({
+    env: v4Env,
+    fetcher: async (url, options) => {
+      if (url.includes('protocol/openid-connect/token')) {
+        return json({ access_token: 'v4-token', expires_in: 600 });
+      }
+      if (url.endsWith('/transfers/rates')) {
+        assert.equal(options.method, 'POST');
+        const reqBody = JSON.parse(options.body);
+        assert.equal(reqBody.source.currency, 'USD');
+        assert.equal(reqBody.destination.currency, 'NGN');
+        return json({
+          status: 'success',
+          data: {
+            source: { currency: 'USD', amount: 3.123 },
+            destination: { currency: 'NGN', amount: 5000 },
+          },
+        });
+      }
+      throw new Error(`Unexpected request to ${url}`);
+    },
+  });
+
+  const res = await request(handler, 'quote?currency=USD');
+  assert.equal(res.status, 200);
+  assert.equal(res.data.currency, 'USD');
+  assert.equal(res.data.threshold, 3.13);
+});
+
