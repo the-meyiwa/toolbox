@@ -68,12 +68,14 @@ export function playChord(midis, { dur = 1.6 } = {}) {
   midis.forEach(m => voice(m, t, dur, 0.7));
 }
 
-/** Play MIDI notes one after another (scale, arpeggio, melody). Returns total seconds. */
-export function playSequence(midis, { tempo = 132, gap = 1, hold = 0.9, then = null } = {}) {
+/** Play MIDI notes one after another (scale, arpeggio, melody). Returns total seconds.
+    onNote(i) is called as note i sounds, so the page can light it up in time. */
+export function playSequence(midis, { tempo = 132, gap = 1, hold = 0.9, then = null, onNote = null } = {}) {
   if (!audio()) return 0;
   const step = (60 / tempo) * gap;
   const t = ctx.currentTime + 0.03;
   midis.forEach((m, i) => (Array.isArray(m) ? m : [m]).forEach(n => voice(n, t + i * step, step * hold, 0.8)));
+  if (onNote) midis.forEach((_, i) => setTimeout(() => onNote(i, step), (0.03 + i * step) * 1000));
   if (then) setTimeout(then, (midis.length * step + 0.3) * 1000);
   return midis.length * step;
 }
@@ -112,15 +114,20 @@ function click(when, accent = false, pitch = null) {
  * Plays rhythm layers for `bars` bars. layers: [{ pulses, pitch, accents: Set of pulse indexes }]
  * each layer divides the bar evenly into `pulses` (3 against 2, clave patterns via `hits`).
  */
-export function playRhythm(layers, { tempo = 90, beatsPerBar = 4, bars = 2 } = {}) {
+export function playRhythm(layers, { tempo = 90, beatsPerBar = 4, bars = 2, onHit = null } = {}) {
   if (!audio()) return 0;
   const barSecs = (60 / tempo) * beatsPerBar;
   const t = ctx.currentTime + 0.05;
   for (let b = 0; b < bars; b++) {
-    for (const L of layers) {
+    layers.forEach((L, li) => {
       const hits = L.hits || Array.from({ length: L.pulses }, (_, i) => i);
-      for (const i of hits) click(t + b * barSecs + (i / L.pulses) * barSecs, L.accents?.has?.(i) ?? i === 0, L.pitch);
-    }
+      for (const i of hits) {
+        const at = b * barSecs + (i / L.pulses) * barSecs;
+        click(t + at, L.accents?.has?.(i) ?? i === 0, L.pitch);
+        // onHit(layer, pulse, bar) as each click sounds.
+        if (onHit) setTimeout(() => onHit(li, i, b), (0.05 + at) * 1000);
+      }
+    });
   }
   return bars * barSecs;
 }

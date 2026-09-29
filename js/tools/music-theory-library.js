@@ -13,6 +13,8 @@ import { SECTIONS, TOPICS, INSTRUMENTS, GLOSSARY, LEVELS, getTopic, getInstrumen
 import * as T from '../lib/music/theory.js';
 import { staffSvg, pianoSvg, fretboardSvg, circleSvg, FRET_TUNINGS } from '../lib/music/widgets.js';
 import * as A from '../lib/music/audio.js';
+import { icon } from '../lib/icons.js';
+import { LibraryMotion, movePill, pointerLight } from '../lib/music/library-motion.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 /** **bold**, *italic*, [[id|text]] → HTML. */
@@ -83,6 +85,13 @@ export default {
       </div>`;
 
     this.main = container.querySelector('#mtl-main');
+    this.motion = new LibraryMotion(this.main);
+    this._unlight = pointerLight(container);
+    const levelEl = container.querySelector('.mtl-level');
+    requestAnimationFrame(() => movePill(levelEl));
+    if (typeof ResizeObserver !== 'undefined') { this._pillRO = new ResizeObserver(() => movePill(levelEl)); this._pillRO.observe(levelEl); }
+    // "In depth" opening plays its content in, one piece after another.
+    container.addEventListener('toggle', this._onToggle = (e) => { if (e.target.matches?.('details.mtl-deep') && e.target.open) this.motion.replay(e.target.querySelector(':scope > div')); }, true);
     this._onClick = (e) => this.onClick(e);
     this._onChange = (e) => this.onChange(e);
     this._onInput = (e) => { if (e.target.id === 'mtl-q') { clearTimeout(this._qt); this._qt = setTimeout(() => this.search(e.target.value), 140); } };
@@ -108,7 +117,9 @@ export default {
   setTab(tab, render = true) {
     this.state.tab = tab;
     this.container.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
-    if (render) { this.state.history = []; this.state.view = { kind: 'home' }; this.renderView(); }
+    const btn = this.container.querySelector(`[data-tab="${tab}"]`);
+    if (btn && !this.motion?.off) { btn.classList.remove('is-picked'); void btn.offsetWidth; btn.classList.add('is-picked'); }
+    if (render) { this.state.history = []; this.state.view = { kind: 'home' }; this.renderView('tab'); }
   },
 
   go(view, push = true) {
@@ -116,7 +127,7 @@ export default {
     this.state.view = view;
     if (view.kind === 'instrument' && this.state.tab !== 'instruments') this.setTab('instruments', false);
     if (view.kind === 'topic' && !['learn', 'roadmaps'].includes(this.state.tab)) this.setTab(getTopic(view.id)?.section === 'roadmaps' ? 'roadmaps' : 'learn', false);
-    this.renderView();
+    this.renderView(push ? 'forward' : 'tab');
     // The tool card scrolls internally on desktop and the window scrolls on phones: reset whichever applies.
     const scroller = this.container.closest('#viewport-content');
     if (scroller && scroller.scrollHeight > scroller.clientHeight) scroller.scrollTop = 0;
@@ -126,13 +137,15 @@ export default {
 
   back() {
     this.state.view = this.state.history.pop() || { kind: 'home' };
-    this.renderView();
+    this.renderView('back');
   },
 
-  renderView() {
+  /** mode: how the new view arrives — 'forward' (opened), 'back', 'tab' or 'search'. */
+  renderView(mode = 'tab') {
     A.stopAll();
     this.stopFns.forEach(f => f()); this.stopFns.clear();
     this.demos.clear();
+    this.motion?.reset();
     const v = this.state.view;
     let html = '';
     if (v.kind === 'search') html = this.searchHtml(v.query);
@@ -142,15 +155,16 @@ export default {
     else if (v.kind === 'lab') html = this.labHtml(v.id, v.demo);
     else html = ({ learn: () => this.homeHtml(), instruments: () => this.instrumentsHtml(), roadmaps: () => this.roadmapsHtml(), labs: () => this.labsHtml(), glossary: () => this.glossaryHtml() })[this.state.tab]();
     this.main.innerHTML = html;
-    this.main.querySelectorAll('[data-demo]').forEach(el => this.paintDemo(el));
+    this.main.querySelectorAll('[data-demo]').forEach(el => this.paintDemo(el, { animate: false }));
+    this.motion?.enter(this.main, { mode });
   },
 
   search(q) {
     this.state.query = q;
-    if (!q.trim()) { this.state.view = this.state.history.pop() || { kind: 'home' }; this.renderView(); return; }
+    if (!q.trim()) { this.state.view = this.state.history.pop() || { kind: 'home' }; this.renderView('back'); return; }
     if (this.state.view.kind !== 'search') this.state.history.push(this.state.view);
     this.state.view = { kind: 'search', query: q };
-    this.renderView();
+    this.renderView('search');
   },
 
   backBar(label) {
@@ -162,8 +176,15 @@ export default {
   homeHtml() {
     return `
       <section class="mtl-hero">
+        ${this.heroArt()}
         <h2>Music theory, from your first note to expert analysis</h2>
-        <p>${TOPICS.length} topics, ${INSTRUMENTS.length} instrument guides, ${LABS.length} interactive labs and ${GLOSSARY.length} terms. Everything you can see, you can hear: tap the play buttons and the keyboard.</p>
+        <p>Everything you can see, you can hear: tap the play buttons and the keyboard.</p>
+        <div class="mtl-stats">
+          <div><strong data-count="${TOPICS.length}">${TOPICS.length}</strong><span>topics</span></div>
+          <div><strong data-count="${INSTRUMENTS.length}">${INSTRUMENTS.length}</strong><span>instrument guides</span></div>
+          <div><strong data-count="${LABS.length}">${LABS.length}</strong><span>interactive labs</span></div>
+          <div><strong data-count="${GLOSSARY.length}">${GLOSSARY.length}</strong><span>terms</span></div>
+        </div>
         <div class="mtl-hero-actions">
           <button type="button" class="mtl-btn mtl-btn-primary" data-go="theory-roadmap">Start here: the theory roadmap</button>
           <button type="button" class="mtl-btn" data-tab-go="labs">Open the labs</button>
@@ -177,6 +198,15 @@ export default {
           <span class="mtl-card-meta">${topicsIn(s.id).length} topics · ${this.levelSpread(topicsIn(s.id))}</span>
         </button>`).join('')}
       </div>`;
+  },
+
+  /** A staff that draws itself behind the hero, with a rising melody landing on it. */
+  heroArt() {
+    const lines = [0, 1, 2, 3, 4].map(i => `<path pathLength="1" style="--l:${i}" d="M8 ${56 + i * 18}H512"/>`).join('');
+    // C D E G A C' E' G' — the pentatonic climbing the staff.
+    const notes = [[70, 146], [128, 137], [186, 128], [244, 110], [302, 101], [360, 83], [418, 65], [476, 47]]
+      .map(([x, y], i) => `<g class="mha-note" style="--c:${i}"><ellipse cx="${x}" cy="${y}" rx="11" ry="8" transform="rotate(-20 ${x} ${y})"/><path d="M${x + 10} ${y - 2}V${y - 58}"/></g>`).join('');
+    return `<svg class="mtl-hero-art" viewBox="0 0 520 200" aria-hidden="true" focusable="false"><g class="mha-lines">${lines}</g>${notes}</svg>`;
   },
 
   levelSpread(list) {
@@ -210,16 +240,17 @@ export default {
         <header class="mtl-topic-head">
           <span class="mtl-lvl mtl-lvl-${t.level}">${LEVELS[t.level]}</span>
           <h2>${esc(t.title)}</h2>
+          <span class="mtl-staffline" aria-hidden="true"></span>
           <p class="mtl-lede">${esc(t.summary)}</p>
         </header>
         <section class="mtl-simple">${this.blocks(t.simple)}</section>
         ${t.deep?.length ? `<details class="mtl-deep"${expert ? ' open' : ''}>
-          <summary><span>In depth</span><small>${expert ? 'For advanced study' : 'Tap to go deeper'}</small></summary>
+          <summary><span class="mtl-pm" aria-hidden="true"></span><span>In depth</span><small>${expert ? 'For advanced study' : 'Tap to go deeper'}</small></summary>
           <div>${this.blocks(t.deep)}</div></details>` : ''}
         ${t.related?.length ? `<section class="mtl-related"><h3>Related</h3><div class="mtl-chips">${t.related.map(r => { const x = resolveId(r); return x ? `<button type="button" class="mtl-chip" data-go="${r}">${esc(x.item.title || x.item.name)}</button>` : ''; }).join('')}</div></section>` : ''}
         <nav class="mtl-pager">
-          ${i > 0 ? `<button type="button" class="mtl-btn" data-go="${peers[i - 1].id}">← ${esc(peers[i - 1].title)}</button>` : '<span></span>'}
-          ${i < peers.length - 1 ? `<button type="button" class="mtl-btn" data-go="${peers[i + 1].id}">${esc(peers[i + 1].title)} →</button>` : ''}
+          ${i > 0 ? `<button type="button" class="mtl-btn" data-go="${peers[i - 1].id}">${icon('arrow-left')}<span>${esc(peers[i - 1].title)}</span></button>` : '<span></span>'}
+          ${i < peers.length - 1 ? `<button type="button" class="mtl-btn" data-go="${peers[i + 1].id}"><span>${esc(peers[i + 1].title)}</span>${icon('arrow-right')}</button>` : ''}
         </nav>
       </article>`;
   },
@@ -253,7 +284,7 @@ export default {
     const sec = (title, body) => body ? `<section class="mtl-isec"><h3>${title}</h3>${body}</section>` : '';
     return `${this.backBar('<button type="button" class="mtl-crumb" data-tab-go="instruments">Instruments</button>')}
       <article class="mtl-topic">
-        <header class="mtl-topic-head"><span class="mtl-lvl">${esc(i.family)}</span><h2>${esc(i.name)}</h2><p class="mtl-lede">${md(i.overview)}</p></header>
+        <header class="mtl-topic-head"><span class="mtl-lvl">${esc(i.family)}</span><h2>${esc(i.name)}</h2><span class="mtl-staffline" aria-hidden="true"></span><p class="mtl-lede">${md(i.overview)}</p></header>
         ${i.demo ? this.demoSlot(i.demo) : ''}
         <div class="mtl-facts">
           <div><h4>How it makes sound</h4><p>${md(i.sound)}</p></div>
@@ -294,7 +325,7 @@ export default {
     const lab = LABS.find(l => l.id === id);
     if (!lab) return '';
     return `${this.backBar('<button type="button" class="mtl-crumb" data-tab-go="labs">Labs</button>')}
-      <article class="mtl-topic"><header class="mtl-topic-head"><h2>${esc(lab.title)}</h2><p class="mtl-lede">${esc(lab.blurb)}</p></header>${this.demoSlot({ ...lab.demo, ...(demo || {}) })}</article>`;
+      <article class="mtl-topic"><header class="mtl-topic-head"><h2>${esc(lab.title)}</h2><span class="mtl-staffline" aria-hidden="true"></span><p class="mtl-lede">${esc(lab.blurb)}</p></header>${this.demoSlot({ ...lab.demo, ...(demo || {}) })}</article>`;
   },
 
   glossaryHtml() {
@@ -320,11 +351,12 @@ export default {
     return `<div class="mtl-demo" data-demo="${key}"></div>`;
   },
 
-  paintDemo(el) {
+  paintDemo(el, { animate = true } = {}) {
     const d = this.demos.get(el.dataset.demo);
     if (!d) return;
     const painter = this.painters[d.type];
     el.innerHTML = painter ? painter.call(this, d) : '';
+    if (animate) this.motion?.repaint(el);
   },
 
   repaint(el) { this.paintDemo(el.closest('[data-demo]')); },
@@ -347,8 +379,8 @@ export default {
       return `<div class="mtl-demo-bar">
           ${this.rootSelect(d.tonic)}
           ${scales ? `<select class="mtl-select" data-k="scale" aria-label="Scale">${scales.map(([k, v]) => `<option value="${k}"${k === d.scale ? ' selected' : ''}>${esc(v.name)}</option>`).join('')}</select>` : `<strong>${esc(s.name)}</strong>`}
-          <button type="button" class="mtl-play" data-act="play-scale">▶ Play</button>
-          <button type="button" class="mtl-play mtl-play-soft" data-act="play-scale-updown">▲▼</button>
+          <button type="button" class="mtl-play" data-act="play-scale">${icon('play')}Play</button>
+          <button type="button" class="mtl-play mtl-play-soft" data-act="play-scale-updown" aria-label="Play up and down">${icon('arrow-up')}${icon('arrow-down')}</button>
         </div>
         ${d.compare ? `<div class="mtl-chips">${[d.scale, ...d.compare.filter(c => c !== d.scale), ...(d._orig && !d.compare.includes(d._orig) && d._orig !== d.scale ? [d._orig] : [])].map(k => `<button type="button" class="mtl-chip${k === d.scale ? ' is-on' : ''}" data-set="scale" data-v="${k}">${esc(T.SCALES[k].name)}</button>`).join('')}</div>` : ''}
         <div class="mtl-scroll">${staffSvg(notes, { labels: notes.map((n, i) => i < notes.length - 1 ? String(i + 1) : '8') })}</div>
@@ -371,7 +403,7 @@ export default {
       const lo = Math.min(...sorted.map(mid)), from = lo - (lo % 12);
       const symbol = `${nn(root)}${d.quality}${inv ? '/' + nn(sorted[0]) : ''}`;
       return `<div class="mtl-demo-bar">${this.rootSelect(d.root)}<strong class="mtl-sym">${esc(symbol)}</strong>
-          <button type="button" class="mtl-play" data-act="play-chord">▶ Play</button><button type="button" class="mtl-play mtl-play-soft" data-act="play-arp">Arpeggio</button></div>
+          <button type="button" class="mtl-play" data-act="play-chord">${icon('play')}Play</button><button type="button" class="mtl-play mtl-play-soft" data-act="play-arp">Arpeggio</button></div>
         ${d.choose ? `<div class="mtl-chips">${d.choose.map(q => `<button type="button" class="mtl-chip${q === d.quality ? ' is-on' : ''}" data-set="quality" data-v="${esc(q)}">${esc(nn(root) + q)}</button>`).join('')}</div>` : ''}
         ${d.inversions ? `<div class="mtl-seg">${['Root position', '1st inversion', '2nd inversion', '3rd inversion'].slice(0, base.length).map((l, i) => `<button type="button" data-set="inv" data-v="${i}" aria-pressed="${i === inv}">${l}</button>`).join('')}</div>` : ''}
         <div class="mtl-scroll">${staffSvg([sorted])}</div>
@@ -382,7 +414,7 @@ export default {
     staff(d) {
       const notes = d.notes.map(n => T.parseNote(n));
       return `<figure class="mtl-fig"><div class="mtl-scroll">${staffSvg(notes, { clef: d.clef, labels: d.labels || [] })}</div>
-        <figcaption><button type="button" class="mtl-play mtl-play-soft" data-act="play-seq" data-midis="${notes.map(mid).join(',')}">▶ Play</button> ${esc(d.caption || '')}</figcaption></figure>`;
+        <figcaption><button type="button" class="mtl-play mtl-play-soft" data-act="play-seq" data-midis="${notes.map(mid).join(',')}">${icon('play')}Play</button> ${esc(d.caption || '')}</figcaption></figure>`;
     },
 
     piano(d) {
@@ -399,13 +431,13 @@ export default {
 
     intervals() {
       return `<div class="mtl-table-wrap"><table class="mtl-table"><thead><tr><th></th><th>Interval</th><th>Half steps</th><th>From C</th><th>Sounds like</th></tr></thead><tbody>
-        ${T.INTERVALS.map(iv => { const top = T.transpose(T.parseNote('C4'), iv.id); return `<tr><td><button type="button" class="mtl-play mtl-play-sm" data-act="play-seq" data-midis="60,${mid(top)}" aria-label="Play ${esc(iv.name)}">▶</button></td><td><strong>${esc(iv.name)}</strong><br><small>${esc(iv.sound)}</small></td><td>${iv.semis}</td><td>C–${nn(top)}</td><td>${esc(iv.song)}</td></tr>`; }).join('')}
+        ${T.INTERVALS.map(iv => { const top = T.transpose(T.parseNote('C4'), iv.id); return `<tr><td><button type="button" class="mtl-play mtl-play-sm" data-act="play-seq" data-midis="60,${mid(top)}" aria-label="Play ${esc(iv.name)}">${icon('play')}</button></td><td><strong>${esc(iv.name)}</strong><br><small>${esc(iv.sound)}</small></td><td>${iv.semis}</td><td>C–${nn(top)}</td><td>${esc(iv.song)}</td></tr>`; }).join('')}
       </tbody></table></div>`;
     },
 
     harmonics(d) {
       const hs = T.harmonicSeries(d.fundamental, 16);
-      return `<div class="mtl-demo-bar"><button type="button" class="mtl-play" data-act="play-harmonics" data-f="${d.fundamental}">▶ Play the series</button></div>
+      return `<div class="mtl-demo-bar"><button type="button" class="mtl-play" data-act="play-harmonics" data-f="${d.fundamental}">${icon('play')}Play the series</button></div>
         <div class="mtl-table-wrap"><table class="mtl-table mtl-mini"><thead><tr><th>Harmonic</th><th>Hz</th><th>Nearest note</th><th>Cents off</th></tr></thead><tbody>${hs.map(h => `<tr><td>${h.harmonic}</td><td>${h.hz}</td><td>${h.note}</td><td>${h.centsOff > 0 ? '+' : ''}${h.centsOff}</td></tr>`).join('')}</tbody></table></div>`;
     },
 
@@ -425,7 +457,7 @@ export default {
           <div class="mtl-scroll">${staffSvg([], { keySig: sig.fifths, width: 120 })}</div>
           <p class="mtl-note">Chords in ${esc(k.major)} major (tap to hear):</p>
           <div class="mtl-chips">${chords.map(c => `<button type="button" class="mtl-chip" data-act="play-midis" data-midis="${c.notes.map(mid).join(',')}"><b>${c.numeral}</b> ${esc(c.symbol.replace(/b/g, '♭').replace(/#/g, '♯'))}</button>`).join('')}</div>
-          <button type="button" class="mtl-play" data-act="play-prog" data-prog="I IV V I" data-tonic="${tonicName}4">▶ I – IV – V – I</button>
+          <button type="button" class="mtl-play" data-act="play-prog" data-prog="I IV V I" data-tonic="${tonicName}4">${icon('play')}I – IV – V – I</button>
           <p class="mtl-note">Neighbours on the circle (${esc(T.circleOfFifths()[(sel + 11) % 12].major)} and ${esc(T.circleOfFifths()[(sel + 1) % 12].major)}) are the closest keys.</p>
         </div></div>`;
     },
@@ -445,7 +477,7 @@ export default {
       return `<div class="mtl-demo-bar">${this.rootSelect(d.tonic, 'tonic')}<select class="mtl-select" data-k="scale">${scales.map(k => `<option value="${k}"${k === d.scale ? ' selected' : ''}>${esc(T.SCALES[k].name)}</option>`).join('')}</select>
           <div class="mtl-seg"><button type="button" data-set="sevenths" data-v="" aria-pressed="${!d.sevenths}">Triads</button><button type="button" data-set="sevenths" data-v="1" aria-pressed="${Boolean(d.sevenths)}">Sevenths</button></div></div>
         <div class="mtl-scroll">${staffSvg(chords.map(c => c.notes), { labels: chords.map(c => c.numeral) })}</div>
-        <div class="mtl-table-wrap"><table class="mtl-table mtl-mini"><thead><tr><th></th><th>Numeral</th><th>Chord</th><th>Notes</th><th>Function</th></tr></thead><tbody>${chords.map(c => `<tr><td><button type="button" class="mtl-play mtl-play-sm" data-act="play-midis" data-midis="${c.notes.map(mid).join(',')}">▶</button></td><td><b>${c.numeral}</b></td><td>${esc(pretty(c.symbol.replace(/♯/g, '#').replace(/♭/g, 'b')))}</td><td>${c.notes.map(n => nn(n)).join(' ')}</td><td>${esc(c.function)}</td></tr>`).join('')}</tbody></table></div>`;
+        <div class="mtl-table-wrap"><table class="mtl-table mtl-mini"><thead><tr><th></th><th>Numeral</th><th>Chord</th><th>Notes</th><th>Function</th></tr></thead><tbody>${chords.map(c => `<tr><td><button type="button" class="mtl-play mtl-play-sm" data-act="play-midis" data-midis="${c.notes.map(mid).join(',')}">${icon('play')}</button></td><td><b>${c.numeral}</b></td><td>${esc(pretty(c.symbol.replace(/♯/g, '#').replace(/♭/g, 'b')))}</td><td>${c.notes.map(n => nn(n)).join(' ')}</td><td>${esc(c.function)}</td></tr>`).join('')}</tbody></table></div>`;
     },
 
     progression(d) {
@@ -453,7 +485,7 @@ export default {
       const prog = T.progression(tonic, d.numerals);
       const cmp = d.compare ? T.progression(tonic, d.compare) : null;
       const row = (p, which) => `<div class="mtl-prog" data-prog-row="${which}">${p.map((c, i) => `<button type="button" class="mtl-pchord" data-act="play-midis" data-midis="${c.error ? '' : this.voiceLead(p, i).join(',')}" data-i="${i}"><b>${esc(c.numeral)}</b><span>${c.error ? '?' : esc(pretty(c.symbol.replace(/♯/g, '#').replace(/♭/g, 'b')))}</span></button>`).join('')}</div>`;
-      return `<div class="mtl-demo-bar">${this.rootSelect(d.tonic, 'tonic')}<button type="button" class="mtl-play" data-act="play-progression" data-which="a">▶ Play</button>${cmp ? '<button type="button" class="mtl-play mtl-play-soft" data-act="play-progression" data-which="b">▶ Play the alternative</button>' : ''}
+      return `<div class="mtl-demo-bar">${this.rootSelect(d.tonic, 'tonic')}<button type="button" class="mtl-play" data-act="play-progression" data-which="a">${icon('play')}Play</button>${cmp ? `<button type="button" class="mtl-play mtl-play-soft" data-act="play-progression" data-which="b">${icon('play')}Play the alternative</button>` : ''}
           <label class="mtl-tempo">Tempo <input type="range" min="50" max="160" value="${d.tempo || 84}" data-k="tempo"></label></div>
         ${d.choose ? `<div class="mtl-chips">${d.choose.map(p => `<button type="button" class="mtl-chip${p === d.numerals ? ' is-on' : ''}" data-set="numerals" data-v="${esc(p)}">${esc(p.length > 22 ? '12-bar blues' : p.replace(/b/g, '♭'))}</button>`).join('')}</div>` : ''}
         ${d.free ? `<label class="mtl-free">Your own: <input class="mtl-input" data-k="numerals-free" value="${esc(d.numerals)}" placeholder="e.g. I vi ii V" aria-label="Your own progression in Roman numerals"></label>` : ''}
@@ -466,21 +498,21 @@ export default {
       const marks = new Map(sel.map(m => [m, { label: '', tone: 'on' }]));
       return `<p class="mtl-note">Tap keys to add or remove notes.</p>
         <div class="mtl-scroll">${pianoSvg({ from: 48, to: 83, marks })}</div>
-        <div class="mtl-demo-bar"><button type="button" class="mtl-play" data-act="play-midis" data-midis="${sel.join(',')}">▶ Play</button><button type="button" class="mtl-play mtl-play-soft" data-act="clear-notes">Clear</button></div>
+        <div class="mtl-demo-bar"><button type="button" class="mtl-play" data-act="play-midis" data-midis="${sel.join(',')}">${icon('play')}Play</button><button type="button" class="mtl-play mtl-play-soft" data-act="clear-notes">Clear</button></div>
         <div class="mtl-answer">${sel.length < 2 ? 'Choose at least two notes.' : names.length ? `<strong>${esc(pretty(names[0].symbol.replace(/♯/g, '#').replace(/♭/g, 'b')))}</strong> — ${esc(names[0].name)}${names.length > 1 ? `<br><small>Also: ${names.slice(1, 4).map(n => esc(n.symbol)).join(', ')}</small>` : ''}` : 'No standard chord name for this set of notes.'}</div>`;
     },
 
     eartrainer(d) {
       const pool = d.pool || ['m2', 'M2', 'm3', 'M3', 'P4', 'A4', 'P5', 'm6', 'M6', 'm7', 'M7', 'P8'];
       const q = d.q || null;
-      return `<div class="mtl-demo-bar"><button type="button" class="mtl-play" data-act="ear-new">${q ? '▶ Hear it again' : '▶ New interval'}</button>${q ? '<button type="button" class="mtl-play mtl-play-soft" data-act="ear-next">Next</button>' : ''}<span class="mtl-score">Score ${d.right || 0} / ${d.total || 0}</span>
+      return `<div class="mtl-demo-bar"><button type="button" class="mtl-play" data-act="ear-new">${q ? `${icon('play')}Hear it again` : `${icon('play')}New interval`}</button>${q ? '<button type="button" class="mtl-play mtl-play-soft" data-act="ear-next">Next</button>' : ''}<span class="mtl-score">Score ${d.right || 0} / ${d.total || 0}</span>
           <div class="mtl-seg"><button type="button" data-set="dir" data-v="up" aria-pressed="${(d.dir || 'up') === 'up'}">Up</button><button type="button" data-set="dir" data-v="down" aria-pressed="${d.dir === 'down'}">Down</button><button type="button" data-set="dir" data-v="together" aria-pressed="${d.dir === 'together'}">Together</button></div></div>
         <div class="mtl-ear">${pool.map(id => `<button type="button" class="mtl-ear-btn${d.answered && id === q?.id ? ' is-right' : d.answered === id && id !== q?.id ? ' is-wrong' : ''}" data-act="ear-answer" data-v="${id}"${!q || d.answered ? ' disabled' : ''}>${esc(T.intervalLongName(id))}</button>`).join('')}</div>
-        <p class="mtl-note">${q && d.answered ? (d.answered === q.id ? '✓ Correct!' : `✗ It was a ${esc(T.intervalLongName(q.id))}.`) + ` Reference: ${esc(T.INTERVALS.find(i => i.id === q.id)?.song || '')}` : 'Listen, then choose the interval.'}</p>`;
+        <p class="mtl-note">${q && d.answered ? (d.answered === q.id ? `${icon('check-circle')} Correct!` : `${icon('x-circle')} It was a ${esc(T.intervalLongName(q.id))}.`) + ` Reference: ${esc(T.INTERVALS.find(i => i.id === q.id)?.song || '')}` : 'Listen, then choose the interval.'}</p>`;
     },
 
     metronome(d) {
-      return `<div class="mtl-demo-bar"><button type="button" class="mtl-play" data-act="metro">${d.on ? '■ Stop' : '▶ Start'}</button>
+      return `<div class="mtl-demo-bar"><button type="button" class="mtl-play" data-act="metro">${d.on ? `${icon('stop')}Stop` : `${icon('play')}Start`}</button>
           <label class="mtl-tempo"><span data-bpm>${d.tempo}</span> BPM <input type="range" min="30" max="240" value="${d.tempo}" data-k="tempo"></label>
           <select class="mtl-select" data-k="beats">${[2, 3, 4, 5, 6, 7].map(b => `<option value="${b}"${b === d.beats ? ' selected' : ''}>${b} beats</option>`).join('')}</select></div>
         <div class="mtl-beats">${Array.from({ length: d.beats }, (_, i) => `<span data-beat="${i}"${i === 0 ? ' class="is-accent"' : ''}></span>`).join('')}</div>
@@ -492,7 +524,7 @@ export default {
       const m = T.describeMeter(cur);
       return `<div class="mtl-chips">${d.meters.map(x => `<button type="button" class="mtl-chip${x === cur ? ' is-on' : ''}" data-set="cur" data-v="${x}">${x}</button>`).join('')}</div>
         <p class="mtl-note"><strong>${cur}</strong> — ${esc(m.text)}</p>
-        <button type="button" class="mtl-play" data-act="play-meter" data-meter="${cur}">▶ Hear two bars</button>`;
+        <button type="button" class="mtl-play" data-act="play-meter" data-meter="${cur}">${icon('play')}Hear two bars</button>`;
     },
 
     polyrhythm(d) {
@@ -500,7 +532,7 @@ export default {
       const lane = (n, cls) => `<div class="mtl-lane ${cls}">${Array.from({ length: n }, (_, i) => `<span style="left:${(i / n) * 100}%"></span>`).join('')}</div>`;
       return `${d.choose ? `<div class="mtl-chips">${[[3, 2], [4, 3], [5, 4], [3, 4], [5, 3], [7, 4]].map(([x, y]) => `<button type="button" class="mtl-chip${x === a && y === b ? ' is-on' : ''}" data-set="ab" data-v="${x}:${y}">${x} : ${y}</button>`).join('')}</div>` : ''}
         <div class="mtl-poly">${lane(a, 'mtl-lane-a')}${lane(b, 'mtl-lane-b')}</div>
-        <button type="button" class="mtl-play" data-act="play-poly">▶ Play ${a} against ${b}</button>
+        <button type="button" class="mtl-play" data-act="play-poly">${icon('play')}Play ${a} against ${b}</button>
         <p class="mtl-note">High clicks: ${a} even beats. Low clicks: ${b} even beats, in the same time span.</p>`;
     },
 
@@ -509,13 +541,13 @@ export default {
       const p = d.pattern ? { pattern: d.pattern, pulses: d.pulses } : BELLS[name];
       return `${d.choose ? `<div class="mtl-chips">${Object.keys(BELLS).map(k => `<button type="button" class="mtl-chip${k === name ? ' is-on' : ''}" data-set="name" data-v="${esc(k)}">${esc(k)}</button>`).join('')}</div>` : ''}
         <div class="mtl-bell" style="--n:${p.pulses}">${[...p.pattern].map((c, i) => `<span class="${c === 'x' ? 'is-hit' : ''}">${i + 1}</span>`).join('')}</div>
-        <button type="button" class="mtl-play" data-act="play-bell" data-pattern="${p.pattern}">▶ Play with a steady beat</button>`;
+        <button type="button" class="mtl-play" data-act="play-bell" data-pattern="${p.pattern}">${icon('play')}Play with a steady beat</button>`;
     },
 
     groove() {
       const grid = { 'Hi-hat': [0, 1, 2, 3, 4, 5, 6, 7], Snare: [2, 6], Kick: [0, 4, 5] };
       return `<div class="mtl-grid8">${Object.entries(grid).map(([k, hits]) => `<div class="mtl-grid8-row"><span>${k}</span>${Array.from({ length: 8 }, (_, i) => `<i class="${hits.includes(i) ? 'is-hit' : ''}"></i>`).join('')}</div>`).join('')}</div>
-        <button type="button" class="mtl-play" data-act="play-groove">▶ Play a basic rock beat</button>
+        <button type="button" class="mtl-play" data-act="play-groove">${icon('play')}Play a basic rock beat</button>
         <p class="mtl-note">Eight eighth notes per bar: hi-hat on every eighth, snare on beats 2 and 4, kick on 1, 3 and the “and” of 3.</p>`;
     },
 
@@ -557,6 +589,7 @@ export default {
       }
       A.playChord([m], { dur: 1.1 });
       key.classList.add('is-pressed'); setTimeout(() => key.classList.remove('is-pressed'), 220);
+      this.motion.flash(key, 360);
       return;
     }
     const tab = t.closest('[data-tab]'); if (tab) { this.setTab(tab.dataset.tab); this.clearSearch(); return; }
@@ -611,6 +644,7 @@ export default {
     try { localStorage.setItem(PREF_KEY, level); } catch { /* ok */ }
     this.container.querySelector('.mtl-root').dataset.level = level;
     this.container.querySelectorAll('.mtl-level [data-level]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.level === level)));
+    movePill(this.container.querySelector('.mtl-level'));
     this.main.querySelectorAll('details.mtl-deep').forEach(det => { det.open = level === 'expert'; const sm = det.querySelector('summary small'); if (sm) sm.textContent = level === 'expert' ? 'For advanced study' : 'Tap to go deeper'; });
   },
 
@@ -622,28 +656,55 @@ export default {
     this.stopFns.add(this.metroStop);
   },
 
+  /* Playback lights what is sounding: keys and fret positions by pitch, staff notes by column. */
+  lightNotes(el, midis) { midis.forEach(m => el?.querySelectorAll(`[data-midi="${m}"]`).forEach(k => this.motion.flash(k, 340))); },
+  lightCol(el, i) { el?.querySelectorAll(`.ms-col[data-col="${i}"]`).forEach(c => this.motion.flash(c, 340)); },
+
   act(btn) {
     const el = btn.closest('[data-demo]');
     const d = el && this.demos.get(el.dataset.demo);
     const a = btn.dataset.act;
     const midis = (s) => String(s || '').split(',').filter(Boolean).map(Number);
-    if (a === 'play-midis') { A.playChord(midis(btn.dataset.midis)); return; }
-    if (a === 'play-seq') { A.playSequence(midis(btn.dataset.midis), { tempo: 110 }); return; }
+    if (a.startsWith('play') || a === 'metro' || a.startsWith('ear')) this.motion.flash(btn, 420);
+    if (a === 'play-midis') {
+      const ms = midis(btn.dataset.midis);
+      A.playChord(ms);
+      this.lightNotes(el, ms);
+      const row = btn.closest('tbody tr');
+      if (row) { this.motion.flash(row, 600); this.lightCol(el, [...row.parentElement.children].indexOf(row)); }
+      return;
+    }
+    if (a === 'play-seq') {
+      const ms = midis(btn.dataset.midis);
+      const row = btn.closest('tr');
+      if (row) this.motion.flash(row, ms.length * 560);
+      A.playSequence(ms, { tempo: 110, onNote: (i) => { this.lightNotes(el || btn.closest('.mtl-fig'), [ms[i]]); this.lightCol(btn.closest('.mtl-fig') || el, i); } });
+      return;
+    }
     if (!d) return;
     if (a === 'play-scale' || a === 'play-scale-updown') {
       const tonic = T.parseNote(d.tonic);
       const ms = T.scaleNotes(tonic, d.scale).concat([{ ...tonic, oct: tonic.oct + 1 }]).map(mid);
-      A.playSequence(a === 'play-scale' ? ms : ms.concat(ms.slice(0, -1).reverse()), { tempo: 150 });
+      const seq = a === 'play-scale' ? ms : ms.concat(ms.slice(0, -1).reverse());
+      A.playSequence(seq, { tempo: 150, onNote: (i) => { this.lightNotes(el, [seq[i]]); this.lightCol(el, i < ms.length ? i : 2 * ms.length - 2 - i); } });
     } else if (a === 'play-chord' || a === 'play-arp') {
       const root = T.parseNote(d.root);
       const ms = T.chordNotes(root, d.quality).map((n, i) => mid(i < (d.inv || 0) ? { ...n, oct: n.oct + 1 } : n)).sort((x, y) => x - y);
-      a === 'play-chord' ? A.playChord(ms) : A.playArpeggioChord(ms);
+      if (a === 'play-chord') { A.playChord(ms); this.lightNotes(el, ms); this.lightCol(el, 0); }
+      else {
+        A.playArpeggioChord(ms, { onNote: (i) => this.lightNotes(el, [ms[i]]) });
+        setTimeout(() => { this.lightNotes(el, ms); this.lightCol(el, 0); }, ms.length * (60 / 220) * 1000);
+      }
     } else if (a === 'play-harmonics') {
       const f = mid(T.parseNote(btn.dataset.f));
-      A.playSequence(T.harmonicSeries(btn.dataset.f, 12).map(h => Math.round(f + 12 * Math.log2(h.harmonic))), { tempo: 140 });
+      const rows = el.querySelectorAll('tbody tr');
+      A.playSequence(T.harmonicSeries(btn.dataset.f, 12).map(h => Math.round(f + 12 * Math.log2(h.harmonic))), { tempo: 140, onNote: (i) => this.motion.flash(rows[i], 420) });
     } else if (a === 'play-prog') {
       const p = T.progression(T.parseNote(btn.dataset.tonic), btn.dataset.prog);
-      A.playProgression(p.map((_, i) => this.voiceLead(p, i)), { tempo: 90 });
+      const chips = el.querySelectorAll('.mtl-circle-info .mtl-chip');
+      const at = { I: 0, ii: 1, iii: 2, IV: 3, V: 4, vi: 5 };
+      const order = btn.dataset.prog.split(/\s+/).map(n => at[n] ?? -1);
+      A.playProgression(p.map((_, i) => this.voiceLead(p, i)), { tempo: 90, onChord: (i) => { if (i >= 0) this.motion.flash(chips[order[i]], 600); } });
     } else if (a === 'play-progression') {
       const p = T.progression(T.parseNote(d.tonic), btn.dataset.which === 'b' ? d.compare : d.numerals).filter(c => !c.error);
       const row = el.querySelector(`[data-prog-row="${btn.dataset.which}"]`);
@@ -671,21 +732,28 @@ export default {
       const m = T.describeMeter(btn.dataset.meter);
       const [top] = btn.dataset.meter.split('/').map(Number);
       const groups = !m.simple ? Array.from({ length: m.beats }, (_, i) => i * 3) : m.kind.startsWith('irregular') ? ({ 5: [0, 3], 7: [0, 2, 4], 9: [0, 2, 4, 6], 11: [0, 2, 4, 7, 9] }[top] || [0]) : Array.from({ length: top }, (_, i) => i);
-      A.playRhythm([{ pulses: top, accents: new Set([0]) }, { pulses: top, hits: groups.filter(g => g > 0), pitch: 1480 }], { tempo: 60 * top / (m.simple && !m.kind.startsWith('irregular') ? 4 : 2) * (m.simple && !m.kind.startsWith('irregular') ? 1.6 : 1.1), beatsPerBar: top * (m.simple && !m.kind.startsWith('irregular') ? 1 : 0.5), bars: 2 });
+      A.playRhythm([{ pulses: top, accents: new Set([0]) }, { pulses: top, hits: groups.filter(g => g > 0), pitch: 1480 }], { tempo: 60 * top / (m.simple && !m.kind.startsWith('irregular') ? 4 : 2) * (m.simple && !m.kind.startsWith('irregular') ? 1.6 : 1.1), beatsPerBar: top * (m.simple && !m.kind.startsWith('irregular') ? 1 : 0.5), bars: 2, onHit: (li) => { if (li === 0) this.motion.flash(el.querySelector('.mtl-chip.is-on'), 160); } });
     } else if (a === 'play-poly') {
-      A.playRhythm([{ pulses: d.a, pitch: 1760 }, { pulses: d.b, pitch: 880 }], { tempo: 60, beatsPerBar: 2, bars: 3 });
+      const lanes = el.querySelectorAll('.mtl-lane');
+      A.playRhythm([{ pulses: d.a, pitch: 1760 }, { pulses: d.b, pitch: 880 }], { tempo: 60, beatsPerBar: 2, bars: 3, onHit: (li, i) => this.motion.flash(lanes[li]?.children[i], 220) });
     } else if (a === 'play-bell') {
       const p = btn.dataset.pattern;
       const hits = [...p].map((c, i) => (c === 'x' ? i : -1)).filter(i => i >= 0);
       const beats = p.length === 12 ? 4 : p.length === 8 ? 2 : 4;
-      A.playRhythm([{ pulses: p.length, hits, pitch: 2100, accents: new Set(hits) }, { pulses: beats, pitch: 520 }], { tempo: 100, beatsPerBar: beats, bars: 3 });
+      const cells = el.querySelectorAll('.mtl-bell span');
+      A.playRhythm([{ pulses: p.length, hits, pitch: 2100, accents: new Set(hits) }, { pulses: beats, pitch: 520 }], { tempo: 100, beatsPerBar: beats, bars: 3, onHit: (li, i) => { if (li === 0) this.motion.flash(cells[i], 200); } });
     } else if (a === 'play-groove') {
-      A.playRhythm([{ pulses: 8, pitch: 3200 }, { pulses: 8, hits: [2, 6], pitch: 900, accents: new Set([2, 6]) }, { pulses: 8, hits: [0, 4, 5], pitch: 180, accents: new Set([0, 4, 5]) }], { tempo: 100, beatsPerBar: 4, bars: 4 });
+      const rows = el.querySelectorAll('.mtl-grid8-row');
+      A.playRhythm([{ pulses: 8, pitch: 3200 }, { pulses: 8, hits: [2, 6], pitch: 900, accents: new Set([2, 6]) }, { pulses: 8, hits: [0, 4, 5], pitch: 180, accents: new Set([0, 4, 5]) }], { tempo: 100, beatsPerBar: 4, bars: 4, onHit: (li, i) => this.motion.flash(rows[li]?.querySelectorAll('i')[i], 180) });
     }
   },
 
   destroy() {
     A.stopAll();
+    this.motion?.reset();
+    this._unlight?.();
+    this._pillRO?.disconnect();
+    if (this.container && this._onToggle) this.container.removeEventListener('toggle', this._onToggle, true);
     this.stopFns?.forEach(f => f()); this.stopFns?.clear();
     clearTimeout(this._qt);
     if (this.container && this._onClick) {
