@@ -162,6 +162,9 @@ export default {
 
     const $ = (sel) => container.querySelector(sel);
     const root = $('.cal');
+    const initiallyNarrow = root.clientWidth < 760;
+    root.dataset.narrow = String(initiallyNarrow);
+    root.dataset.side = initiallyNarrow ? 'closed' : 'open';
     const monthTitle = $('#cal-month-title');
     const viewContainer = $('#cal-view-container');
     const viewBtns = container.querySelectorAll('.cal-view-btn');
@@ -213,7 +216,10 @@ export default {
       }
 
       if (currentView === 'month') renderMonthGrid();
-      else if (currentView === 'week') renderTimeGrid(weekDays(cursor));
+      else if (currentView === 'week') {
+        if (isNarrow()) renderMobileWeek();
+        else renderTimeGrid(weekDays(cursor));
+      }
       else if (currentView === 'day') renderTimeGrid([cursor]);
       else renderAgendaView();
 
@@ -274,7 +280,28 @@ export default {
         <div class="cal-month" role="grid" aria-label="${titleFor()}" style="--weeks:${weeks}">
           <div class="cal-weekdays" role="row">${WEEKDAY_NAMES.map(w => `<span role="columnheader">${w}</span>`).join('')}</div>
           <div class="cal-mgrid">${cells}</div>
-        </div>`;
+        </div><div class="cal-mobile-day"></div>`;
+      renderMobileDay();
+    }
+
+    function renderMobileDay() {
+      const panel = viewContainer.querySelector('.cal-mobile-day');
+      if (!panel) return;
+      const day = parseKey(cursor), events = eventsOn(cursor);
+      panel.innerHTML = `<div class="cal-mobile-day-head"><h3>${day.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</h3><button type="button" class="btn btn-primary btn-sm" data-new>New event</button></div>
+        <div class="cal-mobile-events">${events.length ? events.map(e => {
+          const cat = CATEGORIES[e.category] || CATEGORIES.personal;
+          return `<button type="button" class="cal-mobile-event" data-id="${e.id}" data-date="${cursor}" style="--c:${cat.color}"><i></i><span><strong>${escapeHtml(e.title)}</strong><small>${e.isAllDay ? 'All day' : `${fmtTime(e.startTime)} – ${fmtTime(e.endTime)}`}</small></span></button>`;
+        }).join('') : '<p>No events on this day.</p>'}</div>`;
+    }
+
+    function renderMobileWeek() {
+      renderTimeGrid([cursor]);
+      const days = weekDays(cursor);
+      viewContainer.insertAdjacentHTML('afterbegin', `<nav class="cal-mobile-week" aria-label="Days this week">${days.map(key => {
+        const d = parseKey(key);
+        return `<button type="button" data-goto="${key}" class="${key === cursor ? 'active' : ''}"><small>${WEEKDAY_NAMES[d.getDay()]}</small><b>${d.getDate()}</b><i>${eventsOn(key).length || ''}</i></button>`;
+      }).join('')}</nav>`);
     }
 
     // --- WEEK / DAY ---
@@ -465,7 +492,7 @@ export default {
       const before = cursor;
       cursor = key;
       const sameFrame = currentView === 'month' ? before.slice(0, 7) === key.slice(0, 7)
-        : currentView === 'week' ? weekDays(before)[0] === weekDays(key)[0]
+        : currentView === 'week' && !isNarrow() ? weekDays(before)[0] === weekDays(key)[0]
           : false;
       if (sameFrame) {
         // Stay put: only move the selection highlight.
@@ -473,6 +500,7 @@ export default {
         viewContainer.querySelectorAll(`[data-date="${key}"].cal-cell, [data-date="${key}"].cal-tg-col, [data-goto="${key}"].cal-tg-dayhead`).forEach(el => { el.classList.add('is-selected'); el.setAttribute('aria-selected', 'true'); });
         renderMini();
         renderStatus();
+        if (currentView === 'month') renderMobileDay();
       } else {
         renderCurrentView(key > before ? 'next' : 'prev');
       }
@@ -880,7 +908,7 @@ export default {
 
     function isNarrow() { return root.clientWidth < 760; }
     if (typeof ResizeObserver !== 'undefined') {
-      let wasNarrow = null;
+      let wasNarrow = initiallyNarrow;
       new ResizeObserver(() => {
         const narrow = isNarrow();
         if (narrow !== wasNarrow) {
@@ -888,6 +916,7 @@ export default {
           if (narrow) root.dataset.side = 'closed';
           else root.dataset.side = 'open';
           wasNarrow = narrow;
+          if (currentView === 'week') renderCurrentView();
         }
         updateCalSlider?.();
       }).observe(root);

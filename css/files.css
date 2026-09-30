@@ -1101,3 +1101,50 @@
 /* Documents rendered by lib/docs sit on their own paper-grey page. */
 .sv-doc-frame { background: #ecebe8; min-height: 480px; }
 .sv-ql-body .sv-doc-frame { min-height: 70vh; }
+
+/* Files uses the page canvas; the filesystem and all actions remain the same. */
+.sv { max-width: 1500px; gap: 14px; }
+.sv-window { border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+.sv-head { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 11px 0; }
+.sv-subbar { border-bottom: 1px solid var(--line); padding-left: 0; padding-right: 0; }
+.sv-status { border-top: 1px solid var(--line); background: transparent; }
+.sv-nav .sv-storage-switch { flex-shrink: 0; margin-right: 8px; background: transparent; border: 1px solid var(--line); }
+.sv-nav .sv-storage-btn { padding: 0 10px; font-size: 11px; }
+.sv-selection .sv-sel-actions [disabled] { display: none; }
+.sv-grid-scroll { padding: 20px 0; }
+.sv-grid-view { grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 18px; }
+.sv-grid-icon { align-items: stretch; padding: 0; text-align: left; background: transparent; border: 1px solid transparent; transition: transform .35s cubic-bezier(.2,.76,.22,1), background-color .35s, border-color .35s; }
+.sv-grid-icon:hover { transform: translateY(-3px); background: var(--surface-2); }
+.sv-grid-icon.is-selected { background: var(--surface-2); border-color: var(--line-strong); }
+.sv-grid-thumb { width: 100%; height: 120px; margin: 0 0 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.sv-grid-paper { width: 100%; height: 100%; box-sizing: border-box; padding: 13px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; }
+.sv-grid-paper-title { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-weight: 600; font-size: 14px; line-height: 1.18; color: var(--text); letter-spacing: -.02em; }
+.sv-grid-paper-type { font-size: 10px; letter-spacing: .13em; font-weight: 700; color: var(--text-3); }
+.sv-grid-thumb.is-folder { background: color-mix(in srgb, var(--accent) 8%, var(--surface)); border-color: color-mix(in srgb, var(--accent) 16%, var(--line)); }
+.sv-grid-thumb.is-folder .sv-grid-paper-title { font-size: 19px; }
+.sv-grid-thumb.has-thumb .sv-grid-paper { display: none; }
+.sv-thumb-img { width: 100%; height: 100%; border-radius: 8px; }
+.sv-grid-name, .sv-grid-meta, .sv-grid-icon .sv-tags-dots { margin-left: 9px; margin-right: 9px; }
+.sv-grid-name { -webkit-line-clamp: 2; font-size: 13px; }
+.sv-grid-meta { margin-bottom: 10px; }
+.sv-body { animation: sv-settle .32s cubic-bezier(.2,.76,.22,1); }
+@keyframes sv-settle { from { opacity: .65; transform: translateY(6px); } }
+@media (max-width: 720px) {
+  #saved-view:not(.hidden) { height: auto; max-height: none; overflow: visible; display: block; }
+  .sv { gap: 10px; }
+  .sv { height: auto; min-height: calc(100dvh - var(--header-h)); }
+  .sv-window { border-radius: 0; }
+  .sv-window { flex: none; min-height: 52dvh; }
+  .sv-body { flex: none; min-height: 36dvh; }
+  .sv-fade-wrapper { overflow: visible; }
+  .sv-fade-scroll { overflow-y: visible; }
+  .sv-fade-bottom { display: none; }
+  .sv-head { flex-wrap: wrap; padding: 8px 0; }
+  .sv-nav { flex-basis: 100%; }
+  .sv-nav .sv-storage-switch { margin-right: 4px; }
+  .sv-nav .sv-storage-btn { padding: 0 8px; }
+  .sv-grid-view { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+  .sv-grid-thumb { height: 105px; }
+  .sv-grid-paper-title { font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) { .sv-body { animation: none; } .sv-grid-icon { transition: none; } }

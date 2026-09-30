@@ -126,13 +126,13 @@ export const LONG_CONTENT_TOOL_IDS = new Set([
   'payroll-cost', 'timesheet', 'pto-accrual', 'unit-economics', 'runway-calculator',
   'subscription-analyzer', 'financial-analyzer', 'concrete-estimator', 'beam-calculator',
   'stoichiometry-calculator', 'chemical-equation-balancer', 'math-utility', 'chess', 'tech-device-comparisons',
-  'cosmetics-database',
+  'cosmetics-database', 'mind',
 ]);
 
 /* Tools that bring their own full-screen chrome: no panel around them. */
 const BARE_TOOL_IDS = new Set([
   'assistant', 'code-playground', 'container-planner', 'mail', 'messaging', 'calendar',
-  'notes', 'browser', 'automobile-guide', 'anatomy-explorer', 'interactive-map', 'spotify', '3d-lab',
+  'notes', 'browser', 'automobile-guide', 'anatomy-explorer', 'interactive-map', 'spotify', '3d-lab', 'mind',
 ]);
 /* Tools that need the whole width of the window. */
 const WIDE_TOOL_IDS = new Set([

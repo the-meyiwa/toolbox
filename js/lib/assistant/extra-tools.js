@@ -18,7 +18,7 @@ import { TOOLS } from '../../registry/index.js';
 import * as CE from '../construction/estimate.js';
 import { DOMAIN_TOOL_DECLARATIONS, executeDomainTool } from './domain-tools.js';
 import { CATEGORY_ORDER as DEVICE_CATEGORIES } from '../devices/schema.js';
-import { readMind, addMindItem, connectMindFiles, searchMind } from '../mind-store.js';
+import { readMind, addMindItem, compiledMind, recallMind, upsertMindEntity, addMindSource, forgetMindEntity, supersedeMindEntity, addMindSuggestion } from '../mind-store.js';
 
 const lower = (v) => String(v ?? '').toLowerCase().trim();
 
@@ -1241,10 +1241,13 @@ async function caseDigestTool(args) {
 EXTRA_TOOL_DECLARATIONS.push(...DOMAIN_TOOL_DECLARATIONS, ...LAB3D_TOOL_DECLARATIONS);
 EXTRA_TOOL_DECLARATIONS.push({
   name: 'mind',
-  description: 'Read or update the user’s Mind: rooms contain desks, desks contain files of information. Search and list are read only. Create and connect only when the user asks; never invent personal facts or connections.',
+  description: 'Use the user-controlled Mind knowledge graph for durable personal context. Recall only relevant memories. Remember concise durable facts, entities or preferences rather than raw conversation; label learned vs explicit memory. Never store secrets. Relationships inferred by AI should be suggested for user review, never silently asserted. Working context is not durable memory.',
   parameters: { type: 'object', properties: {
-    action: { type: 'string', enum: ['list', 'search', 'create_room', 'create_desk', 'create_file', 'connect_files'] },
+    action: { type: 'string', enum: ['list', 'search', 'recall', 'source', 'remember', 'update', 'relate', 'suggest_relation', 'forget', 'supersede', 'create_room', 'create_desk', 'create_file', 'connect_files'] },
     query: { type: 'string' }, name: { type: 'string' }, parentId: { type: 'string' }, content: { type: 'string' }, fileId: { type: 'string' }, otherFileId: { type: 'string' },
+    entityId: { type: 'string' }, otherEntityId: { type: 'string' }, type: { type: 'string' }, relation: { type: 'string' },
+    memoryType: { type: 'string', enum: ['explicit', 'learned', 'episodic'] }, confidence: { type: 'number' }, importance: { type: 'number' },
+    sourceRef: { type: 'string' }, sourceId: { type: 'string' }, reason: { type: 'string' }, properties: { type: 'object' },
   }, required: ['action'] },
 });
 export const EXTRA_TOOL_NAMES = new Set(EXTRA_TOOL_DECLARATIONS.map(d => d.name));
@@ -1253,9 +1256,25 @@ export async function executeExtraTool(name, args = {}, ctx = {}) {
   switch (name) {
     case 'mind': {
       const { action, query, parentId, content, fileId, otherFileId } = args;
-      if (action === 'list') return { status: 'success', mind: readMind(), openHash: '#mind' };
-      if (action === 'search') return { status: 'success', files: searchMind(query).slice(0, 50), openHash: '#mind' };
-      if (action === 'connect_files') { connectMindFiles(fileId, otherFileId); return { status: 'success', message: 'Files connected.', openHash: '#mind' }; }
+      if (action === 'list') { const c = compiledMind(); return { status: 'success', snapshot: c.global, rooms: Object.values(c.rooms).map(r => ({ id: r.id, summary: r.summary, count: r.entityIds.length })), openHash: '#mind' }; }
+      if (action === 'search' || action === 'recall') return { status: 'success', entities: recallMind(query, 8), openHash: '#mind' };
+      if (action === 'source') return { status: 'success', source: readMind().sources.find(s => s.id === args.sourceId) || null, openHash: '#mind' };
+      if (action === 'remember' || action === 'update') {
+        if (!args.name && !args.entityId) throw new Error('Name the durable fact or entity.');
+        if (/\b(password|passcode|pin|cvv|card number|account number|bvn|nin)\b|\b\d{10,19}\b/i.test(`${args.name || ''} ${content || ''}`)) throw new Error('Sensitive secrets cannot be stored in Mind.');
+        const source = addMindSource({ kind: 'assistant', ref: args.sourceRef || '', excerpt: '' });
+        const previous = args.entityId ? readMind().entities.find(e => e.id === args.entityId) : null;
+        const entity = upsertMindEntity({ id: args.entityId, name: args.name || previous?.name, type: args.type || previous?.type || 'Memory', content, properties: args.properties, memoryType: args.memoryType || previous?.memoryType || 'learned', confidence: args.confidence, importance: args.importance, sourceIds: [source.id] });
+        return { status: 'success', entity, openHash: '#mind' };
+      }
+      if (action === 'relate' || action === 'suggest_relation') {
+        const from = args.entityId || fileId, to = args.otherEntityId || otherFileId;
+        const edge = addMindSuggestion(from, to, args.relation || 'related', args.reason || 'Suggested by Assistant');
+        return { status: 'success', relationship: edge, reviewRequired: true, openHash: '#mind' };
+      }
+      if (action === 'forget') return { status: 'success', forgotten: forgetMindEntity(args.entityId), openHash: '#mind' };
+      if (action === 'supersede') return { status: 'success', memory: supersedeMindEntity(args.entityId, args.otherEntityId || null), openHash: '#mind' };
+      if (action === 'connect_files') { const suggestion = addMindSuggestion(fileId, otherFileId, 'related', 'Suggested by Assistant'); return { status: 'success', suggestion, reviewRequired: true, openHash: '#mind' }; }
       const kind = ({ create_room: 'room', create_desk: 'desk', create_file: 'file' })[action];
       if (kind) return { status: 'success', item: addMindItem(kind, args.name, parentId, content), openHash: '#mind' };
       throw new Error('Unknown Mind action.');

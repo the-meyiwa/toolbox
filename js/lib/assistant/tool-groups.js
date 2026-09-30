@@ -78,9 +78,9 @@ export const TOOL_GROUPS = {
     match: /\b(note|notes|jot|write (this|that) down|remember this|memo)\b/i,
   },
   mind: {
-    label: 'Mind: the user’s rooms, desks, files, interests, memories and explicit connections',
+    label: 'Mind: personal knowledge, durable memory and relationships',
     tools: ['mind'],
-    match: /\b(mind|mindspace|mind palace|rooms? of (my|the) mind|my interests|my memories|what (do|does) (you|toolbox) know about me|connect (these|my) ideas)\b/i,
+    match: /\b(mind|mindspace|mind palace|rooms? of (my|the) mind|my interests|my memories|remember|recall|forget|what (do|does) (you|toolbox) know about me|connect (these|my) ideas|my preferences)\b/i,
   },
   calendar: {
     label: 'Calendar: add, list and cancel events and reminders',

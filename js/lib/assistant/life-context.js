@@ -17,9 +17,9 @@
 
 import { loadEvents } from '../calendar-store.js';
 import { upcomingReminders } from '../reminders.js';
+import { readMind } from '../mind-store.js';
 
 export const STORAGE_LAST_PLACE = 'toolbox_assistant_last_place_v1';
-const MEMORY_KEY = 'toolbox_assistant_memory_v1';
 
 const read = (key, fallback) => { try { return JSON.parse(globalThis.localStorage?.getItem(key) || 'null') ?? fallback; } catch { return fallback; } };
 
@@ -112,7 +112,7 @@ export function relativeDay(dateStr, now = new Date()) {
 
 /** What the Assistant can see right now. Every field is optional; missing data just drops out. */
 export async function gatherLifeContext({ now = new Date(), fsImpl, artifacts, events, memory } = {}) {
-  const facts = memory || read(MEMORY_KEY, []);
+  const facts = memory || readMind().entities.filter(e => e.status === 'active' && e.type === 'Memory' && e.memoryType !== 'working').map(e => ({ text: e.content || e.name }));
   const { topics, fileCount } = await documentTopics(fsImpl, artifacts);
   let evs = events;
   if (!evs) { try { evs = loadEvents(); } catch { evs = []; } }

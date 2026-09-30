@@ -1871,7 +1871,7 @@ export const TOOLS = [
   {
     id: 'mind',
     name: 'Mind',
-    description: 'Explore your world through rooms, desks, files and connections',
+    description: 'Explore your people, ideas and memories through rooms and connections',
     category: 'everyday',
     secondary: ['reference'],
     keywords: ['mind', 'mind map', 'mindspace', 'rooms', 'desks', 'personal knowledge', 'memories', 'interests', 'connections'],

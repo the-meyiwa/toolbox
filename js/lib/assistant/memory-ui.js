@@ -5,17 +5,22 @@
    clear them.
    ============================================================ */
 
-// Same storage as ai-provider.js (not imported, so opening Preferences doesn't load the whole Assistant).
-const STORAGE_AI_MEMORY = 'toolbox_assistant_memory_v1';
+import { readMind, upsertMindEntity, forgetMindEntity } from '../mind-store.js';
 function getAssistantMemory() {
-  try { const v = JSON.parse(localStorage.getItem(STORAGE_AI_MEMORY) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; }
+  return readMind().entities.filter(e => e.status === 'active' && e.type === 'Memory' && e.memoryType !== 'working').map(e => ({ id: e.id, text: e.content || e.name, at: e.createdAt }));
 }
 function clearAssistantMemory() { save([]); }
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 function save(list) {
-  try { localStorage.setItem(STORAGE_AI_MEMORY, JSON.stringify(list)); } catch { /* storage blocked */ }
+  const keep = new Set(list.map(f => f.id).filter(Boolean));
+  for (const prior of getAssistantMemory()) if (!keep.has(prior.id)) forgetMindEntity(prior.id);
+  for (const fact of list) {
+    const current = fact.id && readMind().entities.find(e => e.id === fact.id);
+    if (!current || (current.content || current.name) !== fact.text)
+      upsertMindEntity({ id: fact.id, type: 'Memory', name: fact.text.slice(0, 100), content: fact.text, memoryType: 'explicit', importance: .7 });
+  }
   window.dispatchEvent(new CustomEvent('toolbox:assistant-memory', { detail: { memory: list } }));
 }
 
@@ -57,7 +62,7 @@ export function renderAssistantMemory(container) {
         <div class="amem-head">
           <div>
             <h3 class="amem-title">What the Assistant remembers</h3>
-            <p class="amem-hint">Facts it uses in every chat, like your company name or how you like quotes done. Stored on this device only. You can also just tell it "remember …" or "forget …".</p>
+            <p class="amem-hint">These memories live in Mind. The Assistant retrieves relevant ones when they help. You can edit them here or in Mind.</p>
           </div>
           ${list.length ? '<button type="button" class="btn btn-secondary btn-sm" data-act="clear">Clear all</button>' : ''}
         </div>

@@ -298,7 +298,7 @@ export function renderSaved(host, selectedId = null) {
 
   if (currentStorage === 'online' && !getCurrentUser()) currentStorage = 'offline';
 
-  const ui = { focusItem: false, keepSearchFocus: null };
+  const ui = { focusItem: false, keepSearchFocus: null, animateNext: false };
 
   const refresh = (selectPath = null) => {
     if (unmounted) return;
@@ -319,27 +319,32 @@ export function renderSaved(host, selectedId = null) {
     }
     if (active && host.contains?.(active) && active.matches?.('[data-context-target]')) ui.focusItem = true;
 
-    teardown();
-    teardown = paint(host, state, refresh, ui);
-
-    host.querySelectorAll('[data-scroll-key]').forEach(el => {
-      if (scrolls[el.dataset.scrollKey] != null) el.scrollTop = scrolls[el.dataset.scrollKey];
-    });
-    if (ui.keepSearchFocus) {
-      const box = host.querySelector('#sv-search-box');
-      if (box) {
-        box.focus();
-        try { box.setSelectionRange(...ui.keepSearchFocus); } catch {}
+    const update = () => {
+      teardown();
+      teardown = paint(host, state, refresh, ui);
+      host.querySelectorAll('[data-scroll-key]').forEach(el => {
+        if (scrolls[el.dataset.scrollKey] != null) el.scrollTop = scrolls[el.dataset.scrollKey];
+      });
+      if (ui.keepSearchFocus) {
+        const box = host.querySelector('#sv-search-box');
+        if (box) {
+          box.focus();
+          try { box.setSelectionRange(...ui.keepSearchFocus); } catch {}
+        }
+        ui.keepSearchFocus = null;
+      } else if (ui.focusItem && cursorPath) {
+        const el = [...host.querySelectorAll('[data-context-target]')].find(n => n.dataset.path === cursorPath);
+        if (el) {
+          el.focus?.({ preventScroll: true });
+          el.scrollIntoView?.({ block: 'nearest' });
+        }
       }
-      ui.keepSearchFocus = null;
-    } else if (ui.focusItem && cursorPath) {
-      const el = [...host.querySelectorAll('[data-context-target]')].find(n => n.dataset.path === cursorPath);
-      if (el) {
-        el.focus?.({ preventScroll: true });
-        el.scrollIntoView?.({ block: 'nearest' });
-      }
-    }
-    ui.focusItem = false;
+      ui.focusItem = false;
+    };
+    const animate = ui.animateNext && typeof document.startViewTransition === 'function' && !window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    ui.animateNext = false;
+    if (animate) document.startViewTransition(update);
+    else update();
   };
 
   const authHandler = () => {
@@ -437,14 +442,13 @@ function full(ctx) {
           <p class="sv-lede">${isOnline ? 'Synced to your account' : `${size(totalBytes)} stored in this browser`}</p>
         </div>
         <div class="sv-top-actions">
-          ${renderStorageSwitch(user)}
           <button type="button" class="btn btn-secondary btn-sm sv-top-btn" data-act="new-folder" title="New folder" aria-label="New folder">${ICONS.folderPlus}<span class="sv-btn-label">New folder</span></button>
           <button type="button" class="btn btn-secondary btn-sm sv-top-btn" data-act="new-file" title="New file" aria-label="New file">${ICONS.filePlus}<span class="sv-btn-label">New file</span></button>
           <button type="button" class="btn btn-primary btn-sm sv-top-btn" data-act="upload" title="Upload files" aria-label="Upload files">${ICONS.upload}<span class="sv-btn-label">Upload</span></button>
         </div>
       </header>
 
-      <section class="sv-window" aria-label="File browser">
+      <section class="sv-window" aria-label="Files">
         ${renderToolbar()}
         ${renderSubbar(items, selItems)}
         ${renderExplorerBody(ctx, driveIsEmpty)}
@@ -476,6 +480,7 @@ function renderToolbar() {
     <div class="sv-head">
       <div class="sv-nav">
         <button type="button" class="sv-icon-btn" data-act="nav-up" title="Enclosing folder (Backspace)" aria-label="Go to enclosing folder" ${atRoot ? 'disabled' : ''}>${ICONS.arrowUp}</button>
+        ${renderStorageSwitch(getCurrentUser())}
         <nav class="sv-breadcrumbs" aria-label="Folder path">
           ${crumbs.map((c, i) => {
             const last = i === crumbs.length - 1;
@@ -510,28 +515,33 @@ function renderSubbar(items, selItems) {
   const n = selItems.length;
   const none = n === 0;
   const clip = fileClipboard.paths.length;
+  const hasTags = Boolean(currentTagFilter || items.some(item => item.tags?.length));
   const label = none
     ? (currentSearch ? plural(items.length, 'result') : plural(items.length, 'item'))
     : `${n} of ${items.length} selected`;
 
   return `
     <div class="sv-subbar">
-      <div class="sv-tags-bar" role="group" aria-label="Filter by tag">
+      ${hasTags ? `<div class="sv-tags-bar" role="group" aria-label="Filter by tag">
         <button type="button" class="sv-tag-pill sv-tag-all ${!currentTagFilter ? 'active' : ''}" data-filter-tag="all" aria-pressed="${!currentTagFilter}" title="Show all files">All</button>
         ${Object.entries(TAG_COLORS).map(([tag, color]) => `
           <button type="button" class="sv-tag-chip ${currentTagFilter === tag ? 'active' : ''}" data-filter-tag="${tag}" aria-pressed="${currentTagFilter === tag}" title="Only ${tag} tags" aria-label="Only files tagged ${tag}">
             <span class="sv-tag-chip-dot" style="background:${color};"></span>
           </button>
         `).join('')}
-      </div>
+      </div>` : ''}
       <div class="sv-selection">
         <span class="sv-sel-label" aria-live="polite">${label}</span>
         <div class="sv-sel-actions" role="toolbar" aria-label="Selection actions">
+          ${none ? '' : `
           <button type="button" class="sv-icon-btn sv-tb-btn" data-act="cut" title="Cut (${modKey()}X)" aria-label="Cut" ${none ? 'disabled' : ''}>${ICONS.scissors}</button>
           <button type="button" class="sv-icon-btn sv-tb-btn" data-act="copy" title="Copy (${modKey()}C)" aria-label="Copy" ${none ? 'disabled' : ''}>${ICONS.copy}</button>
+          `}
           <button type="button" class="sv-icon-btn sv-tb-btn" data-act="paste" title="${clip ? `Paste ${plural(clip, 'item')} here (${modKey()}V)` : 'Nothing to paste'}" aria-label="Paste" ${clip ? '' : 'disabled'}>${ICONS.paste}${clip ? `<span class="sv-badge">${clip}</span>` : ''}</button>
+          ${none ? '' : `
           <button type="button" class="sv-icon-btn sv-tb-btn" data-act="multi-download" title="Download" aria-label="Download" ${none ? 'disabled' : ''}>${ICONS.download}</button>
           <button type="button" class="sv-icon-btn sv-tb-btn is-danger" data-act="delete-selected" title="Delete (Del)" aria-label="Delete" ${none ? 'disabled' : ''}>${ICONS.delete}</button>
+          `}
           <span class="sv-divider" aria-hidden="true"></span>
           <button type="button" class="sv-icon-btn sv-tb-btn" data-act="select-all" title="Select all (${modKey()}A)" aria-label="Select all">${ICONS.checkAll}</button>
           <button type="button" class="sv-icon-btn sv-tb-btn" data-act="folder-properties" title="Folder info" aria-label="Folder info">${ICONS.info}</button>
@@ -589,8 +599,6 @@ function renderEmptyBody(ctx, driveIsEmpty) {
   const actions = `
     <div class="sv-empty-actions">
       <button type="button" class="btn btn-primary btn-sm" data-act="upload">${ICONS.upload}<span>Upload files</span></button>
-      <button type="button" class="btn btn-secondary btn-sm" data-act="new-file">${ICONS.filePlus}<span>New file</span></button>
-      <button type="button" class="btn btn-secondary btn-sm" data-act="new-folder">${ICONS.folderPlus}<span>New folder</span></button>
     </div>
   `;
   if (driveIsEmpty) {
@@ -678,7 +686,8 @@ function renderExplorerBody(ctx, driveIsEmpty) {
 function itemAttrs(item) {
   const selected = selectedPaths.has(item.path);
   const isCut = fileClipboard.op === 'cut' && fileClipboard.paths.includes(item.path);
-  return `class="__CLS__ sv-item ${selected ? 'is-selected' : ''} ${isCut ? 'is-cut' : ''}"
+  const visualId = [...item.path].reduce((hash, char) => (Math.imul(hash, 33) ^ char.charCodeAt(0)) >>> 0, 5381).toString(36);
+  return `class="__CLS__ sv-item ${selected ? 'is-selected' : ''} ${isCut ? 'is-cut' : ''}" style="view-transition-name:sv-${visualId}"
     data-context-target="true" data-path="${escapeHtml(item.path)}" data-is-dir="${item.isDirectory ? 'true' : 'false'}"
     draggable="true" role="option" aria-selected="${selected}" tabindex="${item.path === cursorPath ? '0' : '-1'}"`;
 }
@@ -707,11 +716,13 @@ function renderGridIcon(item) {
   const thumb = !item.isDirectory && isImageName(item.name)
     ? `<img class="sv-thumb-img" alt="" data-thumb-path="${escapeHtml(item.path)}" hidden>`
     : '';
+  const marker = item.isDirectory ? 'FOLDER' : (extOf(item.name).toUpperCase() || kindOf(item).toUpperCase()).slice(0, 8);
+  const title = item.name.replace(/\.[^.]+$/, '').slice(0, 45);
   return `
     <div ${itemAttrs(item).replace('__CLS__', 'sv-grid-icon')} title="${escapeHtml(item.name)}">
-      <div class="sv-grid-thumb">${thumb}<span class="sv-grid-glyph">${getFileTypeIcon(item.name, item.isDirectory ? 'folder' : item.kind, 36)}</span></div>
+      <div class="sv-grid-thumb ${item.isDirectory ? 'is-folder' : ''}">${thumb}<span class="sv-grid-paper"><span class="sv-grid-paper-title">${escapeHtml(title)}</span><span class="sv-grid-paper-type">${escapeHtml(marker)}</span></span></div>
       <div class="sv-grid-name">${escapeHtml(item.name)}</div>
-      <div class="sv-grid-meta">${loc ? escapeHtml(loc) : itemMeta(item)}</div>
+      <div class="sv-grid-meta">${escapeHtml(kindOf(item))} · ${loc ? escapeHtml(loc) : itemMeta(item)}</div>
       ${renderTagDots(item.tags)}
     </div>
   `;
@@ -1262,6 +1273,7 @@ function wire(host, ctx, refresh, ui) {
     selectionAnchor = cursorPath = null;
     autoSelectedFor = null;
     if (/^#(files|saved)\//.test(window.location.hash || '')) history.replaceState(null, '', '#files');
+    ui.animateNext = true;
     refresh();
   }
 
@@ -1987,6 +1999,7 @@ function wire(host, ctx, refresh, ui) {
     if (layoutBtn) {
       currentLayout = layoutBtn.dataset.layout || 'split';
       writePref(STORAGE_FILES_VIEW_MODE, currentLayout);
+      ui.animateNext = true;
       refresh();
       return;
     }
