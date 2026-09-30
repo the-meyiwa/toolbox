@@ -208,11 +208,10 @@ export function installTextActions() {
   let timer;
   let pointerSelecting = false;
   const openForSelection = (target) => {
-    if (target?.closest?.(MENUS)) return;
+    if (target?.closest?.(`${MENUS}, [data-tb-file], .sv-window`)) return;
     const snapshot = captureTextSelection(target);
     if (!snapshot) return;
     const rect = snapshot.rect;
-    const notes = !!snapshot.target.closest('.nt-body, .nt-title');
     openContextMenu({ x: rect.left, y: Math.min(window.innerHeight - 50, rect.bottom + 8), items: textSelectionItems(snapshot), presentation: 'horizontal', label: 'Selected text actions', className: 'tb-selection-menu' });
   };
   document.addEventListener('pointerdown', e => { pointerSelecting = !e.target.closest(MENUS); clearTimeout(timer); }, true);
@@ -227,10 +226,12 @@ export function installTextActions() {
     if (navigator.maxTouchPoints > 0) timer = setTimeout(() => openForSelection(document.activeElement), 350);
   });
   document.addEventListener('contextmenu', e => {
-    if (e.defaultPrevented || !e.target.closest || e.target.closest(MENUS) || isPrivateTextTarget(e.target)) return;
+    if (e.defaultPrevented || !e.target.closest || e.target.closest(`${MENUS}, [data-tb-file], .sv-window`) || isPrivateTextTarget(e.target)) return;
     let snapshot = captureTextSelection(e.target);
+    // A right click does not create a selection. Keep native and Files menus
+    // available unless the gesture is actually inside selected text.
     if (snapshot?.range && !snapshot.range.intersectsNode(e.target)) snapshot = null;
-    snapshot ||= wordAtPoint(e);
+    if (snapshot?.rect && (e.clientX < snapshot.rect.left || e.clientX > snapshot.rect.right || e.clientY < snapshot.rect.top || e.clientY > snapshot.rect.bottom)) snapshot = null;
     if (snapshot) {
       clearTimeout(timer); e.preventDefault(); e.stopPropagation();
       openContextMenu({ x: e.clientX, y: e.clientY, items: textSelectionItems(snapshot), presentation: 'horizontal', label: 'Text actions', className: 'tb-selection-menu', focusFirst: e.detail === 0 && !e.clientX && !e.clientY });

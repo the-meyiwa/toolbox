@@ -18,6 +18,7 @@ import { TOOLS } from '../../registry/index.js';
 import * as CE from '../construction/estimate.js';
 import { DOMAIN_TOOL_DECLARATIONS, executeDomainTool } from './domain-tools.js';
 import { CATEGORY_ORDER as DEVICE_CATEGORIES } from '../devices/schema.js';
+import { readMind, addMindItem, connectMindFiles, searchMind } from '../mind-store.js';
 
 const lower = (v) => String(v ?? '').toLowerCase().trim();
 
@@ -1235,10 +1236,27 @@ async function caseDigestTool(args) {
 }
 
 EXTRA_TOOL_DECLARATIONS.push(...DOMAIN_TOOL_DECLARATIONS, ...LAB3D_TOOL_DECLARATIONS);
+EXTRA_TOOL_DECLARATIONS.push({
+  name: 'mind',
+  description: 'Read or update the user’s Mind: rooms contain desks, desks contain files of information. Search and list are read only. Create and connect only when the user asks; never invent personal facts or connections.',
+  parameters: { type: 'object', properties: {
+    action: { type: 'string', enum: ['list', 'search', 'create_room', 'create_desk', 'create_file', 'connect_files'] },
+    query: { type: 'string' }, name: { type: 'string' }, parentId: { type: 'string' }, content: { type: 'string' }, fileId: { type: 'string' }, otherFileId: { type: 'string' },
+  }, required: ['action'] },
+});
 export const EXTRA_TOOL_NAMES = new Set(EXTRA_TOOL_DECLARATIONS.map(d => d.name));
 
 export async function executeExtraTool(name, args = {}, ctx = {}) {
   switch (name) {
+    case 'mind': {
+      const { action, query, parentId, content, fileId, otherFileId } = args;
+      if (action === 'list') return { status: 'success', mind: readMind(), openHash: '#mind' };
+      if (action === 'search') return { status: 'success', files: searchMind(query).slice(0, 50), openHash: '#mind' };
+      if (action === 'connect_files') { connectMindFiles(fileId, otherFileId); return { status: 'success', message: 'Files connected.', openHash: '#mind' }; }
+      const kind = ({ create_room: 'room', create_desk: 'desk', create_file: 'file' })[action];
+      if (kind) return { status: 'success', item: addMindItem(kind, args.name, parentId, content), openHash: '#mind' };
+      throw new Error('Unknown Mind action.');
+    }
     case 'analyze_legal_document': return analyzeLegalDocument(args);
     case 'parse_citations': return parseCitationsTool(args);
     case 'case_digest': return caseDigestTool(args);

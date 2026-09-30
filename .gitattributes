@@ -1,2 +1,3 @@
 js/lib/compounds-dataset.js linguist-generated=true
 public/data/compounds-extended.json linguist-generated=true -diff
+public/images/devices/*.jpg binary

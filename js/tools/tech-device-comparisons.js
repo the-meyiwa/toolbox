@@ -29,14 +29,20 @@ import {
 import { searchAllDevices, matchCategories, splitVsQuery, quickDeviceLookup } from '../lib/devices/quick-search.js';
 import IcecatPanel from '../lib/devices/icecat-panel.js';
 import { RevealMotion, flip, pointerLight } from '../lib/reveal-motion.js';
-const deviceImages = new Map();
-async function applyDeviceImages(root) {
+function applyDeviceImages(root) {
   for (const el of root.querySelectorAll('.dv-hero-glyph[data-image-id]:not(.has-image)')) {
     const id = el.dataset.imageId;
     const img = new Image();
-    img.src = '/images/devices/' + id + '.jpg';
-    img.onload = () => { el.classList.add('has-image'); el.innerHTML = <img src="" style="width:100%;height:100%;object-fit:contain;animation:dv-fade-in 0.3s ease;">; };
-    img.onerror = () => { el.classList.add('has-image'); /* Fallback to placeholder */ };
+    img.alt = '';
+    img.decoding = 'async';
+    img.onload = () => {
+      if (!el.isConnected) return;
+      img.className = 'dv-device-photo';
+      el.replaceChildren(img);
+      el.classList.add('has-image');
+    };
+    img.onerror = () => { el.dataset.imageMissing = 'true'; };
+    img.src = '/images/devices/' + encodeURIComponent(id) + '.jpg';
   }
 }
 import { getToolSettings, onToolSettings } from '../lib/tool-settings.js';
