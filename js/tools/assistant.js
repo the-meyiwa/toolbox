@@ -365,6 +365,9 @@ let active = null;
 
 export default {
   render(container, state = {}) {
+    // The full-page view can adopt the popup's live DOM and controller. A
+    // request may still be streaming, so remounting here would abandon it.
+    if (!state.compact && active?.isInPopup?.() && active.moveTo(container)) return;
     active?.teardown?.();
     active = mountAssistant(container, state);
   },
@@ -1750,6 +1753,20 @@ function mountAssistant(container, state) {
   setTimeout(() => { if (!dead && window.innerWidth >= 768) input.focus({ preventScroll: true }); }, 60);
 
   return {
+    isInPopup() { return root.closest('.asp-body') !== null; },
+    moveTo(destination) {
+      if (dead) return false;
+      state.compact = false;
+      root.classList.remove('is-compact');
+      destination.replaceChildren(root);
+      root.dataset.side = initialSidebar();
+      lastWide = !isDrawer();
+      placeholder();
+      renderConvList();
+      if (stick) scrollToBottom(true);
+      input.focus({ preventScroll: true });
+      return true;
+    },
     teardown() {
       dead = true;
       // A reply that is still streaming keeps going and is saved when it ends.

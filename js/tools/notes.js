@@ -989,9 +989,16 @@ export default {
     }
 
     function openNote(id, { focus = false, pane = true } = {}) {
-      if (id !== st.activeId) { saveNow(); discardFresh(id); }
+      const changed = id !== st.activeId;
+      if (changed) { saveNow(); discardFresh(id); }
       st.activeId = id;
       renderEditor();
+      if (changed && id) {
+        const page = root.querySelector('.nt-page');
+        page.classList.remove('is-turning');
+        void page.offsetWidth;
+        page.classList.add('is-turning');
+      }
       renderSidebar(); renderList();
       if (st.layout === 1 && pane && id) setPane('editor');
       if (focus) focusEnd();
@@ -1038,6 +1045,7 @@ export default {
       st.query = ''; el.search.value = '';
       st.activeId = n.id;
       renderAll();
+      root.querySelector('.nt-page')?.classList.add('is-turning');
       st.freshId = n.id;
       setSide(false);
       if (st.layout === 1) setPane('editor');
@@ -2050,6 +2058,8 @@ export default {
     root.dataset.layout = String(st.layout);
     if (st.layout !== 1) selectFirst();
     renderAll();
+    const settleTimer = setTimeout(() => root.classList.add('is-settled'), 1100);
+    cleanups.push(() => clearTimeout(settleTimer));
 
     this._flush = () => { saveNow(); discardFresh(); };
     this._api = { refresh: refreshFromStorage, mdToHtml, htmlToMd };

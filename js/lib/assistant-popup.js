@@ -53,9 +53,13 @@ function build() {
     const act = e.target.closest('[data-asp]')?.dataset.asp;
     if (act === 'close') closeAssistant();
     if (act === 'expand') {
-      // The active chat is saved, so the new tab picks up this same conversation.
-      closeAssistant({ restoreFocus: false });
-      if (!getSetting('assistantNewTab') || !openAssistantTab()) window.location.hash = '#assistant';
+      // Keep the live request attached to this tab. The full page adopts its
+      // existing chat view when the route opens.
+      if (getSetting('assistantNewTab') && openAssistantTab()) {
+        closeAssistant({ restoreFocus: false });
+      } else {
+        window.location.hash = '#assistant';
+      }
     }
   });
   panel.addEventListener('keydown', (e) => {
@@ -162,6 +166,8 @@ export async function openAssistant({ prompt = '', artifact = null, send = true 
     return;
   }
   if (!panel) build();
+  // A prior popup chat may have moved into the full-page viewport.
+  if (mounted && !body.querySelector('.ast')) mounted = false;
   const wasOpen = isAssistantOpen();
   if (!wasOpen) lastFocus = document.activeElement;
   panel.hidden = false;
@@ -187,10 +193,8 @@ export function closeAssistant({ restoreFocus = true } = {}) {
   panel.classList.remove('is-open');
   panel.hidden = true;
   document.body.classList.remove('has-assistant-popup');
-  // Only tear down our own instance: the page may already have mounted its own.
-  if (mounted && !onAssistantPage()) { try { mod?.destroy?.(); } catch { /* ignore */ } }
-  mounted = false;
-  body.innerHTML = '';
+  // Keep the mounted chat alive while hidden. Streaming work and tool calls
+  // remain attached, and reopening the popup shows the same live request.
   if (restoreFocus && lastFocus?.isConnected) lastFocus.focus?.({ preventScroll: true });
 }
 
