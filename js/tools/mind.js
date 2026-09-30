@@ -61,7 +61,7 @@ export default {
     const roomCard = r => `<button class="mind-card mind-room" data-room="${r.id}"><span class="mind-card-top"><small>ROOM</small><i aria-hidden="true">↗</i></span><strong>${esc(r.name)}</strong><span class="mind-card-foot">${count(m.desks.filter(d => d.parentId === r.id).length, 'desk')}</span></button>`;
     const deskCard = d => `<button class="mind-card mind-desk" data-desk="${d.id}"><span class="mind-card-top"><small>DESK</small><i aria-hidden="true">↗</i></span><strong>${esc(d.name)}</strong><span class="mind-card-foot">${count(m.files.filter(f => f.parentId === d.id).length, 'file')}</span></button>`;
     const content = results ? results.map(f => `<div class="mind-result-path">${esc(f.room)} / ${esc(f.desk)}</div>${fileCard(f)}`).join('') || '<p class="mind-empty">No matching files yet.</p>'
-      : desk ? `<div class="mind-stage-title"><div><small>INSIDE THE DESK</small><h2>${esc(desk.name)}</h2></div><button class="btn" data-action="add-file">New file</button></div>${m.files.filter(f => f.parentId === desk.id).map(fileCard).join('') || '<p class="mind-empty">Give this desk its first file.</p>'}`
+      : desk ? `<div class="mind-stage-title"><div><small>INSIDE THE DESK</small><h2>${esc(desk.name)}</h2></div><div class="mind-stage-actions"><button class="btn" data-action="add-desk">New desk</button><button class="btn" data-action="add-file">New file</button></div></div>${m.files.filter(f => f.parentId === desk.id).map(fileCard).join('') || '<p class="mind-empty">Give this desk its first file.</p>'}`
       : room ? `<div class="mind-stage-title"><div><small>INSIDE THE ROOM</small><h2>${esc(room.name)}</h2></div><button class="btn" data-action="add-desk">New desk</button></div>${m.desks.filter(d => d.parentId === room.id).map(deskCard).join('') || '<p class="mind-empty">Add a desk for a person, project, artist, or idea.</p>'}`
       : m.rooms.map(roomCard).join('') || '<p class="mind-empty">Start with a room for a part of your world.</p>';
     return content;
@@ -78,8 +78,9 @@ export default {
     const name = await showDialog({ type: 'prompt', title: `New ${kind}`, message: kind === 'room' ? 'What part of your world belongs here?' : kind === 'desk' ? 'Who or what belongs at this desk?' : 'What will you remember here?', placeholder: `${kind[0].toUpperCase()}${kind.slice(1)} name`, confirmText: 'Create' });
     if (!name?.trim()) return;
     const item = addMindItem(kind, name, kind === 'desk' ? this.room : kind === 'file' ? this.desk : undefined);
-    if (kind === 'room') this.room = item.id;
-    if (kind === 'desk') this.desk = item.id;
+    if (kind === 'room') { this.room = item.id; this.desk = null; }
+    if (kind === 'desk') this.desk = null;
+    this.query = '';
     this.paint();
     if (kind === 'file') this.open('file', item.id);
   },
