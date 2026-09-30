@@ -77,6 +77,11 @@ export const TOOL_GROUPS = {
     tools: ['create_note', 'list_notes', 'get_note', 'update_note'],
     match: /\b(note|notes|jot|write (this|that) down|remember this|memo)\b/i,
   },
+  mind: {
+    label: 'Mind: the user’s rooms, desks, files, interests, memories and explicit connections',
+    tools: ['mind'],
+    match: /\b(mind|mindspace|mind palace|rooms? of (my|the) mind|my interests|my memories|what (do|does) (you|toolbox) know about me|connect (these|my) ideas)\b/i,
+  },
   calendar: {
     label: 'Calendar: add, list and cancel events and reminders',
     tools: ['calendar_add_event', 'calendar_get_events', 'calendar_cancel_event'],

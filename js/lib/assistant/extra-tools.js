@@ -957,8 +957,11 @@ async function fileResult(tool, res, ctx) {
 }
 
 async function runTool({ tool_id: id, input = '', options = {} }, ctx = {}) {
+  // Models occasionally pass the discovery function name instead of a result id.
+  // Recover in place so a single malformed call cannot derail a whole task.
+  if (id === 'find_toolbox_tools') return input || options?.query ? findTools(input || options.query) : { status: 'success', message: 'find_toolbox_tools is a discovery function, not a Toolbox tool id. Call search_places_nearby for nearby businesses, get_directions for routes, or call find_toolbox_tools with the task as query to get a real id.' };
   const tool = TOOLS.find(t => t.id === id || t.id === String(id).replace(/_/g, '-'));
-  if (!tool) return { status: 'error', message: `No tool "${id}". Use find_toolbox_tools.` };
+  if (!tool) return { ...findTools(input || id), note: `"${id}" is not a Toolbox tool id. Choose an id from these results, or use a dedicated Assistant capability such as search_places_nearby and get_directions.` };
   try {
     const modules = import.meta.glob('../../tools/*.js');
     const loader = modules[`../../tools/${tool.id}.js`];

@@ -4721,6 +4721,20 @@ export async function renderToolResult(result, container) {
 
     const el = Renderer.render(result, container);
 
+    // Many domain tools return a destination without a dedicated card renderer.
+    // Preserve that navigation in both fresh and restored conversations.
+    const data = result?.data && typeof result.data === 'object' ? result.data : result;
+    const destination = data?.openHash || (data?.openedToolId ? `#${data.openedToolId}` : '');
+    if (destination && /^#[a-z0-9][a-z0-9-]*$/i.test(destination) && !container.querySelector(`[data-open-hash="${destination}"]`)) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn btn-secondary btn-sm';
+      button.dataset.openHash = destination;
+      button.textContent = `Open in ${destination.slice(1).replace(/-/g, ' ')}`;
+      button.addEventListener('click', () => { window.location.hash = destination; });
+      (el || container).appendChild(button);
+    }
+
     if (result.type === 'interactive') {
       Renderer.bindInteractions(result, container);
     }

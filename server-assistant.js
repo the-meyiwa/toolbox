@@ -360,10 +360,11 @@ function candidatesFor(payload, bytes) {
   const needsVision = hasImages(payload.messages);
   const tools = Boolean(payload.tools?.length);
   let ids = ORDER[mode].slice();
-  // Explicit provider choice is a data boundary, not just a speed preference.
-  // Cross-provider fallback must be explicitly enabled on the server.
+  // A user-selected provider stays fixed. The provider that answered an earlier
+  // step is only an affinity hint: tool follow-ups still need working fallbacks.
   if (payload.provider && ids.includes(payload.provider)) ids = [payload.provider];
-  else if (process.env.ASSISTANT_ALLOW_CROSS_PROVIDER_FALLBACK !== '1') ids = ids.filter(id => PROVIDERS.find(p => p.id === id)?.key()).slice(0, 1);
+  else if (process.env.ASSISTANT_ALLOW_CROSS_PROVIDER_FALLBACK === '0') ids = ids.filter(id => PROVIDERS.find(p => p.id === id)?.key()).slice(0, 1);
+  else if (payload.preferredProvider && ids.includes(payload.preferredProvider)) ids = [payload.preferredProvider, ...ids.filter(id => id !== payload.preferredProvider)];
   const all = [];
   const skipped = [];
   for (const id of ids) {

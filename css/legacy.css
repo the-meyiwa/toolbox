@@ -2096,7 +2096,7 @@ input[type="date"] {
   .inv-grid-2 { grid-template-columns: 1fr 1fr; }
   /* Mobile Full-Screen Tool Viewport Architecture */
   /* Finder context menu as mobile bottom action sheet */
-  .finder-context-menu:not(.tb-menu-reveal, .tb-menu-horizontal) {
+  .finder-context-menu:not(.tb-menu-horizontal) {
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
@@ -2109,7 +2109,7 @@ input[type="date"] {
     box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.35) !important;
     animation: sheetSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
   }
-  .finder-context-menu:not(.tb-menu-reveal, .tb-menu-horizontal) .finder-menu-item {
+  .finder-context-menu:not(.tb-menu-horizontal) .finder-menu-item {
       min-height: 44px !important;
     padding: 10px 14px !important;
     font-size: 0.9rem !important;
@@ -8059,11 +8059,6 @@ body[data-tool-id="notes"] .notes-editor-col {
 .messages-compose > button, .messages-action-wrap > button {width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--surface-secondary);color:var(--text);cursor:pointer}
 .messages-compose .messages-send {background:var(--accent);color:var(--accent-contrast,var(--surface));border-color:transparent}
 .messages-compose textarea, .messages-compose .messages-input {flex:1;min-height:36px;max-height:110px;resize:none;border:1px solid var(--border);border-radius:18px;padding:8px 13px;background:var(--background);color:var(--text);outline:0;min-width:0;}
-.message-game {min-width:210px}
-.message-game>div:first-child {display:flex;justify-content:space-between;margin-bottom:8px}
-.message-game small {opacity:.68}
-.message-game-board {display:grid;grid-template-columns:repeat(3,42px);gap:4px}
-.message-game-board button {width:42px;height:42px;border:1px solid currentColor;border-radius:7px;background:transparent;color:inherit;font-weight:800;font-size:1rem}
 .mail-recipient-profile {display:none;align-items:center;gap:7px;padding-right:8px}
 .mail-recipient-profile.visible {display:flex}
 .mail-recipient-profile>span {display:flex;flex-direction:column;font-size:.72rem;font-weight:700}

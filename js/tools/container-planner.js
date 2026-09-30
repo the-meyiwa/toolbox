@@ -259,9 +259,7 @@ export default {
       state.spec = { ...DEFAULT_SPEC, ...state.spec };
       state.spec.shell = state.spec.shell === 'client' ? 'client' : String(state.spec.shell).startsWith('new-') ? 'new-20' : 'buy-20';
       state.commercial = { ...COMMERCIAL_DEFAULTS, discount: 0, ...state.commercial };
-    } else {
-      loadPreset(PRESET.studio20);
-    }
+    } // A new project starts on the empty ground plane; designs remain available from the library.
 
     /* ---------------- markup ---------------- */
 
@@ -1441,7 +1439,7 @@ export default {
         x: r.right - 240, y: r.bottom + 6, title: 'Build', label: 'Build menu', className: 'cb-menu',
         items: [
           { label: 'Start from a design…', icon: ic(I.grid, 14), action: openPresets },
-          { label: 'New empty build', icon: ic(I.plus, 14), action: async () => { if (await tbConfirm?.('Start a new build? The current one can be brought back with Undo.') === false) return; checkpoint(); state.units = [mkUnit('20ft')]; state.site = []; state.name = 'Untitled build'; $('#cb-name').value = state.name; state.sel = null; commit(); frameAll(); } },
+          { label: 'New empty build', icon: ic(I.plus, 14), action: async () => { if (await tbConfirm?.('Start a new build? The current one can be brought back with Undo.') === false) return; checkpoint(); state.units = []; state.site = []; state.name = 'Untitled build'; $('#cb-name').value = state.name; state.sel = null; commit(); frameAll(); } },
           { separator: true },
           { label: state.unit === 'ft' ? 'Measure in metres' : 'Measure in feet', action: () => { state.unit = state.unit === 'ft' ? 'm' : 'ft'; commit({ geometry: false }); } },
           { label: state.showRoof ? 'Hide roofs' : 'Show roofs', icon: ic(I.roof, 14), action: toggleRoof },

@@ -3,6 +3,8 @@
    ========================================================================== */
 .dv { --a: var(--ink); --b: #9a9a96; display: flex; flex-direction: column; gap: var(--space-5); }
 .dv-device-photo { width: 100%; height: 100%; object-fit: contain; animation: dv-fade-in .3s ease; }
+.dv-hero-glyph:has(.dv-photo-credit) { position: relative; }
+.dv-photo-credit { position: absolute; right: 2px; bottom: 2px; padding: 2px 5px; border-radius: 8px; background: var(--surface); color: var(--text-2); font-size: 10px; text-decoration: none; }
 [data-theme="dark"] .dv { --b: #6f6f6c; }
 .dv h3 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -.01em; color: var(--text); }
 .dv-muted { color: var(--text-3); font-size: 13px; }

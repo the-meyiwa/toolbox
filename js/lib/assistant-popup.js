@@ -13,6 +13,7 @@
    ============================================================ */
 
 import { getCurrentUser } from './supabase.js';
+import { getSetting } from './settings.js';
 
 let panel = null;
 let body = null;
@@ -54,7 +55,7 @@ function build() {
     if (act === 'expand') {
       // The active chat is saved, so the new tab picks up this same conversation.
       closeAssistant({ restoreFocus: false });
-      if (!openAssistantTab()) window.location.hash = '#assistant';
+      if (!getSetting('assistantNewTab') || !openAssistantTab()) window.location.hash = '#assistant';
     }
   });
   panel.addEventListener('keydown', (e) => {
@@ -147,13 +148,14 @@ export async function openAssistant({ prompt = '', artifact = null, send = true 
     window.dispatchEvent(new CustomEvent('toolbox:assistant-ask', { detail: { prompt, artifact, send } }));
     return;
   }
-  // Settings → Assistant → pop-up off: the full Assistant takes the question instead, in its
-  // own tab like every other way in (or this tab, if the browser blocks the new one).
+  // Settings → Assistant → pop-up off: use this tab unless the person chose a new tab.
   if (!popupEnabled()) {
     if (getCurrentUser()) {
-      const handoff = prompt || artifact ? handOff({ prompt, artifact, send }) : null;
-      if (openAssistantTab()) return;
-      handoff?.cancel();
+      if (getSetting('assistantNewTab')) {
+        const handoff = prompt || artifact ? handOff({ prompt, artifact, send }) : null;
+        if (openAssistantTab()) return;
+        handoff?.cancel();
+      }
     }
     window.__toolboxQueuedAsk = { prompt, artifact, send, at: Date.now() };
     window.location.hash = '#assistant';

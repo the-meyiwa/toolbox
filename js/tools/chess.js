@@ -18,6 +18,7 @@ import {
   sqName, sqFromName, sqFile, sqRank, toPgn, parsePgn,
 } from '../lib/chess/engine.js';
 import { pieceSvg, PIECE_NAMES } from '../lib/chess/pieces.js';
+import { StockfishBridge } from '../lib/chess/stockfish-bridge.js';
 import { getToolSettings, onToolSettings } from '../lib/tool-settings.js';
 import { openSettings } from '../lib/settings-ui.js';
 import { copyText, showToast } from '../utils.js';
@@ -101,7 +102,7 @@ function tick(kind) {
 
 /* ---------- engine worker wrapper ---------- */
 class Engine {
-  constructor() { this.worker = null; this.seq = 0; this.pending = new Map(); }
+  constructor() { this.worker = null; this.seq = 0; this.pending = new Map(); this.stockfish = new StockfishBridge(); }
   spawn() {
     this.worker = new Worker(new URL('../lib/chess/worker.js', import.meta.url), { type: 'module' });
     this.worker.onmessage = (e) => {
@@ -113,12 +114,23 @@ class Engine {
     this.worker.onerror = (e) => { for (const p of this.pending.values()) p.reject(new Error(e.message || 'Engine error')); this.pending.clear(); };
   }
   ask(msg) {
+    if (msg.type === 'play' || msg.type === 'analyse' || msg.type === 'review') {
+      return this.stockfish.ask(msg).catch(err => {
+        if (err.cancelled) throw err;
+        console.warn('Stockfish unavailable; using built-in engine', err);
+        return this.askBuiltIn(msg);
+      });
+    }
+    return this.askBuiltIn(msg);
+  }
+  askBuiltIn(msg) {
     if (!this.worker) this.spawn();
     const id = ++this.seq;
     return new Promise((resolve, reject) => { this.pending.set(id, { resolve, reject }); this.worker.postMessage({ ...msg, id }); });
   }
   /** Stop whatever it is doing (terminate; a fresh worker starts on the next request). */
   cancel() {
+    this.stockfish.cancel();
     if (!this.worker) return;
     this.worker.terminate(); this.worker = null;
     for (const p of this.pending.values()) p.reject(Object.assign(new Error('cancelled'), { cancelled: true }));
@@ -1020,7 +1032,7 @@ export default {
   },
   pgn() {
     const g = this.game;
-    const name = (c) => g.mode === 'computer' ? (c === g.human ? 'You' : `Toolbox engine (level ${this.prefs.strength})`) : c === 'w' ? 'White' : 'Black';
+    const name = (c) => g.mode === 'computer' ? (c === g.human ? 'You' : `Stockfish (level ${this.prefs.strength})`) : c === 'w' ? 'White' : 'Black';
     return toPgn({ sans: g.moves.map(m => m.san), result: g.result?.result || '*', white: name('w'), black: name('b'), startFen: g.startFen });
   },
   takeBack() {

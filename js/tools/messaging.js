@@ -19,7 +19,7 @@ export default {
     this.destroy();
     const user = getCurrentUser();
     if (!user) {
-      container.innerHTML = `<div class="msg-setup-gate"><div class="msg-setup-icon">${icon('message')}</div><h2>Messages needs your Toolbox account</h2><p>Sign in and finish your profile to become searchable, message other Toolbox users, share files and play games.</p><button class="btn btn-primary" id="msg-setup">Set up Messages in Settings</button></div>`;
+      container.innerHTML = `<div class="msg-setup-gate"><div class="msg-setup-icon">${icon('message')}</div><h2>Messages needs your Toolbox account</h2><p>Sign in and finish your profile to become searchable, message other Toolbox users, and share files.</p><button class="btn btn-primary" id="msg-setup">Set up Messages in Settings</button></div>`;
       container.querySelector('#msg-setup').onclick = () => openSettings('profile');
       return;
     }
@@ -55,7 +55,7 @@ export default {
             </div>
             <div class="messages-file-source" id="messages-file-source" role="menu" hidden><button type="button" data-file-source="online">Online files</button><button type="button" data-file-source="offline">Offline files</button></div>
           </div>
-          <button type="button" id="messages-game" aria-label="Start a tic-tac-toe game">${icon('grid')}</button><textarea id="messages-input" rows="1" maxlength="${MESSAGE_MAX_LENGTH}" placeholder="Message"></textarea><button class="messages-send" type="submit" aria-label="Send">${icon('arrow-up')}</button>
+          <textarea id="messages-input" rows="1" maxlength="${MESSAGE_MAX_LENGTH}" placeholder="Message"></textarea><button class="messages-send" type="submit" aria-label="Send">${icon('arrow-up')}</button>
         </form>
         <div class="messages-picker" id="messages-picker" hidden></div>
       </section>
@@ -83,10 +83,6 @@ export default {
       $('#messages-conversations').innerHTML = conversations.length ? conversations.map(item => { const p=person(item); return `<button class="messages-person ${active?.conversation_id===item.conversation_id?'active':''}" data-conversation="${item.conversation_id}">${avatarMarkup(p,42)}<span><strong>${esc(p.name || p.username)}</strong><small>@${esc(p.username || 'toolbox-user')}</small></span></button>`; }).join('') : `<div class="messages-list-empty">No conversations yet.<br>Search above to find someone.</div>`;
       container.querySelectorAll('[data-conversation]').forEach(button => button.onclick=()=>openConversation(conversations.find(item=>item.conversation_id===button.dataset.conversation)));
     };
-    const renderGame = message => {
-      const state = message.payload || {}; const board = Array.from({ length: 9 }, (_, i) => ['X', 'O'].includes(state.board?.[i]) ? state.board[i] : '');
-      return `<div class="message-game" data-game="${message.id}"><div><strong>Tic-tac-toe</strong><small>${esc(state.winner ? `${state.winner} won` : `${state.turn || 'X'} to play`)}</small></div><div class="message-game-board">${board.map((cell,index)=>`<button data-cell="${index}" ${cell||state.winner?'disabled':''}>${cell}</button>`).join('')}</div></div>`;
-    };
     // Results show as bars: each option's share of the votes, my choice ticked. Tapping my choice again takes the vote back.
     const renderPoll = message => {
       const pollState = message.payload || {};
@@ -109,11 +105,11 @@ export default {
       const previousHeight = stream.scrollHeight;
       const previousTop = stream.scrollTop;
       const wasNearBottom = previousHeight - previousTop - stream.clientHeight < 72;
-      stream.innerHTML = messages.length ? messages.map(message => { const mine=message.sender_id===user.id; const content=message.kind==='file' ? `<a class="message-file" href="${esc(message.payload?.url)}" target="_blank" rel="noopener"${message.payload?.packed ? ` data-packed="1" data-name="${esc(message.payload?.name)}" data-type="${esc(message.payload?.type || '')}"` : ''} ${fileAttrs({ key: `msg:${message.id}`, name: message.payload?.name || message.body || 'file', type: message.payload?.type || '', size: message.payload?.size || 0, url: message.payload?.url, packed: !!message.payload?.packed, from: 'messaging', fromLabel: 'Messages', date: message.created_at })}><span>${icon('download')}</span><span><strong>${esc(message.payload?.name)}</strong><small>${fileSize(message.payload?.size||0)}</small></span></a>` : message.kind==='game' ? renderGame(message) : message.kind==='poll' ? renderPoll(message) : message.kind==='participant_request' ? renderParticipantRequest(message) : `<p>${esc(message.body).replace(/\n/g,'<br>')}</p>`; return `<div class="message-row ${mine?'mine':''}"><div class="message-bubble">${content}<time>${time(message.created_at)}</time></div></div>`; }).join('') : `<div class="messages-empty"><span>${icon('message')}</span><h3>Start the conversation</h3><p>Messages disappear 24 hours after they are sent.</p></div>`;
+      const visibleMessages = messages.filter(message => message.kind !== 'game');
+      stream.innerHTML = visibleMessages.length ? visibleMessages.map(message => { const mine=message.sender_id===user.id; const content=message.kind==='file' ? `<a class="message-file" href="${esc(message.payload?.url)}" target="_blank" rel="noopener"${message.payload?.packed ? ` data-packed="1" data-name="${esc(message.payload?.name)}" data-type="${esc(message.payload?.type || '')}"` : ''} ${fileAttrs({ key: `msg:${message.id}`, name: message.payload?.name || message.body || 'file', type: message.payload?.type || '', size: message.payload?.size || 0, url: message.payload?.url, packed: !!message.payload?.packed, from: 'messaging', fromLabel: 'Messages', date: message.created_at })}><span>${icon('download')}</span><span><strong>${esc(message.payload?.name)}</strong><small>${fileSize(message.payload?.size||0)}</small></span></a>` : message.kind==='poll' ? renderPoll(message) : message.kind==='participant_request' ? renderParticipantRequest(message) : `<p>${esc(message.body).replace(/\n/g,'<br>')}</p>`; return `<div class="message-row ${mine?'mine':''}"><div class="message-bubble">${content}<time>${time(message.created_at)}</time></div></div>`; }).join('') : `<div class="messages-empty"><span>${icon('message')}</span><h3>Start the conversation</h3><p>Messages disappear 24 hours after they are sent.</p></div>`;
       stream.classList.toggle('messages-stream-settled', !initial);
       if (initial || (stickToBottom && wasNearBottom)) stream.scrollTop=stream.scrollHeight;
       else stream.scrollTop=previousTop + (stream.scrollHeight - previousHeight);
-      container.querySelectorAll('[data-game] [data-cell]').forEach(button => button.onclick=async()=>{ const card=button.closest('[data-game]'); const msg=messages.find(m=>m.id===card.dataset.game); const board=[...(msg.payload.board||Array(9).fill(''))]; if(board[button.dataset.cell]||msg.payload.winner)return; board[button.dataset.cell]=msg.payload.turn||'X'; const wins=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; const winner=wins.some(line=>line.every(i=>board[i]===board[button.dataset.cell]))?board[button.dataset.cell]:''; const before=msg.payload; msg.payload={board,turn:board[button.dataset.cell]==='X'?'O':'X',winner}; renderMessages(); try{await updateMessagePayload(msg.id,msg.payload);}catch(error){msg.payload=before;renderMessages();alert(error.message);} });
       container.querySelectorAll('[data-poll-option]').forEach(button => button.onclick=async()=>{
         const card=button.closest('[data-poll]'); const msg=messages.find(m=>m.id===card.dataset.poll); if(!msg||card.dataset.busy)return;
         const index=Number(button.dataset.pollOption); const before=msg.payload;
@@ -198,7 +194,6 @@ export default {
     };
     const outsideHandler=event=>{if(!event.target.closest('.messages-action-wrap'))closeActions();};document.addEventListener('pointerdown',outsideHandler);
     actionMenu.onkeydown=event=>{const items=[...actionMenu.querySelectorAll('[role="menuitem"]')];const index=items.indexOf(document.activeElement);if(event.key==='Escape'){closeActions();plusButton.focus();}if(event.key==='ArrowDown'){event.preventDefault();items[(index+1)%items.length].focus();}if(event.key==='ArrowUp'){event.preventDefault();items[(index-1+items.length)%items.length].focus();}};
-    $('#messages-game').onclick=async()=>{if(!active)return;try{messages.push(await sendMessage(active.conversation_id,'Tic-tac-toe','game',{board:Array(9).fill(''),turn:'X',winner:''}));renderMessages();}catch(error){alert(error.message);}};
     refreshConversations().then(()=>{if(conversationId){const target=conversations.find(item=>item.conversation_id===conversationId);if(target)openConversation(target);}}); poll=setInterval(()=>{refreshConversations();refreshMessages();},5000);
     this._cleanup=()=>{stopped=true;clearInterval(poll);clearTimeout(searchTimer);document.removeEventListener('pointerdown',outsideHandler);};
   },

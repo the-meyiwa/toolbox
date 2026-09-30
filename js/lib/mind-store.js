@@ -1,12 +1,40 @@
+import { getCurrentUser } from './supabase.js';
+
 const KEY = 'toolbox_mind_v1';
+const CLAIM = `${KEY}_owner`;
 const empty = () => ({ rooms: [], desks: [], files: [], links: [] });
+function storageKey() {
+  const id = getCurrentUser()?.id;
+  if (!id) return localStorage.getItem(CLAIM) ? `${KEY}:anonymous` : KEY;
+  const scoped = `${KEY}:${id}`;
+  if (!localStorage.getItem(scoped) && !localStorage.getItem(CLAIM) && localStorage.getItem(KEY)) {
+    localStorage.setItem(scoped, localStorage.getItem(KEY));
+    localStorage.setItem(CLAIM, id);
+  }
+  return scoped;
+}
 export function readMind() {
   try {
-    const value = JSON.parse(localStorage.getItem(KEY) || 'null');
+    const value = JSON.parse(localStorage.getItem(storageKey()) || 'null');
     return value && ['rooms', 'desks', 'files', 'links'].every(k => Array.isArray(value[k])) ? value : empty();
   } catch { return empty(); }
 }
-export function writeMind(mind) { localStorage.setItem(KEY, JSON.stringify(mind)); window.dispatchEvent(new Event('toolbox:mindchange')); }
+export function writeMind(mind) { localStorage.setItem(storageKey(), JSON.stringify(mind)); window.dispatchEvent(new Event('toolbox:mindchange')); }
+/** A small, bounded profile gives the Assistant context without loading every file. */
+export function mindProfile() {
+  const mind = readMind();
+  if (!mind.rooms.length) return '';
+  const lines = [];
+  for (const room of mind.rooms.slice(0, 12)) {
+    lines.push(`Room: ${room.name}`);
+    for (const desk of mind.desks.filter(d => d.parentId === room.id).slice(0, 6)) {
+      lines.push(`  Desk: ${desk.name}`);
+      for (const file of mind.files.filter(f => f.parentId === desk.id).slice(0, 3))
+        lines.push(`    File: ${file.name}${file.content ? ` — ${file.content.replace(/\s+/g, ' ').slice(0, 140)}` : ''}`);
+    }
+  }
+  return lines.join('\n').slice(0, 2200);
+}
 export function addMindItem(kind, name, parentId, content = '') {
   if (!['room', 'desk', 'file'].includes(kind) || !String(name).trim()) throw new Error('Choose a type and name.');
   const mind = readMind();

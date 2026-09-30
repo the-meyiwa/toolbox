@@ -13,6 +13,7 @@ import * as artifacts from './lib/artifacts.js';
 import { mountArtifactStrip, incomingBanner } from './lib/artifact-ui.js';
 import { installPalette, openPalette, openSearch, detectAiIntent } from './lib/palette.js';
 import { openAssistant, openAssistantTab } from './lib/assistant-popup.js';
+import { getSetting } from './lib/settings.js';
 import { quickDeviceLookup, openQuickResult, quickResultHint, quickResultTitle } from './lib/devices/quick-search.js';
 import { renderSaved } from './views/saved.js';
 import { kindLabel } from './registry/kinds.js';
@@ -88,6 +89,16 @@ const donateView = $('donate-view');
 const VIEWS = { home: homeView, tools: toolsView, about: supportView, support: supportView, saved: savedView, files: savedView, donate: supportView, tool: viewport };
 
 const toolModules = import.meta.glob('./tools/*.js');
+// Warm the large 3D modules only when someone approaches Container Builder.
+// The blank initial canvas then needs no unit mesh on its first frame.
+let containerWarmup = null;
+document.addEventListener('pointerover', e => {
+  if (containerWarmup || !e.target.closest?.('a[href="#container-planner"], [data-tool="container-planner"]')) return;
+  containerWarmup = Promise.allSettled([
+    import('./lib/viewer3d.js'), import('./lib/container-mesh.js'),
+    import('./lib/render-materials.js'), import('./lib/container-structure.js'), import('./lib/container-parts.js'),
+  ]);
+}, { passive: true });
 
 /* --------------- helpers --------------- */
 
@@ -650,7 +661,7 @@ function handleHash() {
   lastRoutedHash = window.location.hash || '#home';
 
   // The Assistant always gets its own tab. A tab opened straight onto #assistant keeps it.
-  if (raw === 'assistant' && cameFrom !== null && cameFrom !== '#assistant' && getCurrentUser() && openAssistantTab()) {
+  if (raw === 'assistant' && cameFrom !== null && cameFrom !== '#assistant' && getCurrentUser() && getSetting('assistantNewTab') && openAssistantTab()) {
     lastRoutedHash = cameFrom;
     try { window.history.replaceState(null, '', cameFrom); } catch { /* ignore */ }
     return;
@@ -850,7 +861,7 @@ window.addEventListener('hashchange', handleHash);
 document.addEventListener('click', (e) => {
   if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
   const a = e.target.closest?.('a[href="#assistant"]');
-  if (!a || window.location.hash === '#assistant' || !getCurrentUser()) return;
+  if (!a || window.location.hash === '#assistant' || !getCurrentUser() || !getSetting('assistantNewTab')) return;
   if (!openAssistantTab()) return;
   e.preventDefault();
 }, true);

@@ -69,7 +69,7 @@ export function openContextMenu({ x, y, title = '', items = [], className = '', 
   closeContextMenu();
 
   // A menu tree shares a lifetime, focus handling and outside-click boundary.
-  // Existing callers keep the regular menu; text actions opt into compact modes.
+  // Existing callers keep the regular menu; selected text uses the horizontal bar.
   const panels = [];
   let hoverTimer;
   const previousFocus = document.activeElement;
@@ -94,7 +94,7 @@ export function openContextMenu({ x, y, title = '', items = [], className = '', 
 
   const menu = document.createElement('div');
   if (!level) menu.id = 'toolbox-context-menu';
-  const mode = level && presentation === 'horizontal' ? 'reveal' : presentation;
+  const mode = level && presentation === 'horizontal' ? 'regular' : presentation;
   menu.className = `finder-context-menu ${className} ${mode !== 'regular' ? `tb-menu-${mode}` : ''}`.trim();
   menu.setAttribute('role', 'menu');
   menu.setAttribute('aria-label', parent?.getAttribute('aria-label') || label || title || 'Actions');
@@ -142,8 +142,7 @@ export function openContextMenu({ x, y, title = '', items = [], className = '', 
   const box = menu.getBoundingClientRect();
   const rect = { width: menu.offsetWidth || box.width, height: menu.offsetHeight || box.height };
   const margin = 10;
-  // Reserve room for the hovered label without making every row wide.
-  const width = mode === 'reveal' ? Math.max(rect.width, 230) : rect.width;
+  const width = rect.width;
   let left = px;
   let top = py;
 

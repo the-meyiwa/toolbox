@@ -241,7 +241,7 @@ export function installTextActions() {
       // Only empty fields need our standard menu; retain native spellcheck otherwise.
       if ((field.value ?? field.textContent).trim()) return;
       e.preventDefault(); e.stopPropagation();
-      openContextMenu({ x: e.clientX, y: e.clientY, items: emptyEditorItems(field), presentation: 'reveal', label: 'Text field actions' });
+      openContextMenu({ x: e.clientX, y: e.clientY, items: emptyEditorItems(field), label: 'Text field actions' });
     }
   }, true);
   const clear = () => { writingSample = ''; clearTimeout(timer); closeContextMenu(); };

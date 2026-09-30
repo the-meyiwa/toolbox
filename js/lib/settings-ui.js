@@ -618,6 +618,7 @@ function renderAiSettings() {
         <img class="stg-persona-img" src="${escapeHtml(p.src)}" alt="" loading="lazy" width="44" height="44"><span class="stg-persona-name">${escapeHtml(p.name)}</span><span class="stg-persona-tag">${escapeHtml(p.tagline)}</span></button>`).join('')}
     </div></div>`) + section('Pop-up', '', `<div class="stg-card">
     ${row({ title: 'Open the Assistant as a pop-up', hint: 'On: “Ask Assistant” opens a floating panel over what you are doing. Off: it opens the full Assistant page.', forId: 'ai-popup', control: switchInput('ai-popup', getSettings().assistantPopup !== false) })}
+    ${row({ title: 'Open full Assistant in a new tab', hint: 'Off: the full Assistant opens here. On: open a separate browser tab.', forId: 'ai-new-tab', control: switchInput('ai-new-tab', getSettings().assistantNewTab === true) })}
   </div>`) + section('Conversations', '', `<div class="stg-card">
     ${row({ title: 'When the Assistant opens', hint: 'Start fresh each time, or pick up the chat you had open last. Past chats are always in the list.', tag: 'div', control: `
       <span class="stg-seg" role="radiogroup" aria-label="When the Assistant opens">
@@ -642,6 +643,7 @@ function renderAiSettings() {
     flashSaved();
   });
   container.querySelector('#ai-popup')?.addEventListener('change', (e) => { updateSettings({ assistantPopup: e.target.checked }); flashSaved(); });
+  container.querySelector('#ai-new-tab')?.addEventListener('change', (e) => { updateSettings({ assistantNewTab: e.target.checked }); flashSaved(); });
   container.querySelectorAll('input[name="ai-open-to"]').forEach((r) => r.addEventListener('change', (e) => { if (e.target.checked) { updateSettings({ assistantOpenTo: e.target.value }); flashSaved(); } }));
   container.querySelector('#btn-reset-quota-modal')?.addEventListener('click', () => {
     try { QuotaManager.resetQuotas(); renderAiSettings(); flashSaved(); } catch (err) { tbAlert(err.message, 'Settings error'); }

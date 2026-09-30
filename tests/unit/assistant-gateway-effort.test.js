@@ -27,7 +27,7 @@ const { handleAssistantGateway } = await import('../../server-assistant.js');
 
 async function chat(mode) {
   const payload = JSON.stringify({ messages: [{ role: 'user', content: 'hello' }], mode });
-  const request = { method: 'POST', headers: {}, async *[Symbol.asyncIterator]() { yield payload; } };
+  const request = { method: 'POST', headers: { host: 'localhost' }, socket: { remoteAddress: '127.0.0.1' }, async *[Symbol.asyncIterator]() { yield payload; } };
   let out = '';
   const response = { headersSent: false, writeHead() { this.headersSent = true; }, write(c) { out += c; return true; }, end(c) { if (c) out += c; }, on() {} };
   await handleAssistantGateway(request, response, new URL('http://localhost/api/assistant/v2/chat'));

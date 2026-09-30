@@ -29,7 +29,8 @@ export function showDialog(options = {}) {
     cancelText = 'Cancel',
     destructive = false,
     defaultValue = '',
-    placeholder = ''
+    placeholder = '',
+    multiline = false
   } = options;
 
   if (activeDialog) {
@@ -56,7 +57,7 @@ export function showDialog(options = {}) {
           <p class="custom-dialog-message">${escapeHtml(message)}</p>
           ${type === 'prompt' ? `
             <div class="custom-dialog-input-wrap">
-              <input type="text" class="custom-dialog-input tool-input" value="${escapeHtml(defaultValue)}" placeholder="${escapeHtml(placeholder)}" autocomplete="off" spellcheck="false">
+              ${multiline ? `<textarea class="custom-dialog-input tool-input" rows="8" placeholder="${escapeHtml(placeholder)}">${escapeHtml(defaultValue)}</textarea>` : `<input type="text" class="custom-dialog-input tool-input" value="${escapeHtml(defaultValue)}" placeholder="${escapeHtml(placeholder)}" autocomplete="off" spellcheck="false">`}
             </div>
           ` : ''}
         </div>
