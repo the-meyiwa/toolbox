@@ -15,22 +15,34 @@ import {
 const ACTION_SCHEMA = {
   type: 'object',
   properties: {
-    type: { type: 'string', enum: ['notify', 'assistant', 'tool', 'note', 'open'], description: 'notify (bell + system alert), assistant (ask the Assistant; its answer feeds the next step), tool (run a Toolbox tool), note (save a note), open (a notification that opens a tool).' },
-    title: { type: 'string', description: 'notify/note title.' },
-    message: { type: 'string', description: 'notify text; {{previous}} is the previous step\'s output.' },
+    type: { type: 'string', enum: ['notify', 'assistant', 'tool', 'note', 'open', 'mind', 'calendar', 'clipboard', 'fetch', 'transform', 'calc', 'variable', 'condition', 'delay', 'speak', 'sound'], description: 'The step type: notify, assistant, tool, note, open, mind, calendar, clipboard, fetch, transform, calc, variable, condition, delay, speak, sound.' },
+    title: { type: 'string', description: 'notify/note/calendar title.' },
+    message: { type: 'string', description: 'notify/open text; {{previous}} is the previous step\'s output.' },
     prompt: { type: 'string', description: 'assistant: what to ask.' },
     toolId: { type: 'string', description: 'tool/open: the Toolbox tool id (find_toolbox_tools).' },
-    input: { type: 'string', description: 'tool: input text; {{previous}} allowed.' },
-    content: { type: 'string', description: 'note: body; {{previous}} allowed (default).' },
+    input: { type: 'string', description: 'tool/transform: input text; {{previous}} allowed.' },
+    content: { type: 'string', description: 'note/mind: body; {{previous}} allowed.' },
+    name: { type: 'string', description: 'mind entity name.' },
+    mindType: { type: 'string', enum: ['Idea', 'Memory', 'Note', 'Project', 'Task', 'Person'], description: 'Type of entity to save in Mind.' },
+    calAction: { type: 'string', enum: ['today', 'add'], description: 'calendar action: today (get events) or add (create event).' },
+    clipAction: { type: 'string', enum: ['copy', 'read'], description: 'clipboard action: copy or read.' },
+    text: { type: 'string', description: 'clipboard copy / speak text.' },
+    url: { type: 'string', description: 'fetch URL.' },
+    op: { type: 'string', description: 'transform op: uppercase, lowercase, titlecase, trim, slug, length, replace.' },
+    expression: { type: 'string', description: 'calc math expression.' },
+    varName: { type: 'string', description: 'variable name to store.' },
+    value: { type: 'string', description: 'variable value to store.' },
+    seconds: { type: 'number', description: 'delay in seconds (1-30).' },
+    chime: { type: 'string', enum: ['bell', 'ping', 'success', 'alert'], description: 'sound chime.' },
   },
   required: ['type'],
 };
 
 const TRIGGER_SCHEMA = {
   type: 'object',
-  description: 'When it runs. Either cron (five-field, local time) or a preset: every = minutes | hour | day | weekday | week | month with time "HH:MM", weekday 0–6 (0 = Sunday), monthDay, minutes. Or type "once" with at (ISO date-time), or type "app-open".',
+  description: 'When it runs: manual (on demand / button tap), cron (five-field, local time), preset (every = minutes | hour | day | weekday | week | month with time "HH:MM"), once with at (ISO date-time), or app-open.',
   properties: {
-    type: { type: 'string', enum: ['cron', 'once', 'app-open'] },
+    type: { type: 'string', enum: ['cron', 'once', 'app-open', 'manual'] },
     cron: { type: 'string' },
     every: { type: 'string', enum: ['minutes', 'hour', 'day', 'weekday', 'week', 'month'] },
     time: { type: 'string' },
@@ -87,15 +99,21 @@ export const AUTOMATION_DECLARATIONS = [
   },
 ];
 
-/** Accepts a cron trigger, a preset ({every, time…}), a bare cron string or a once/app-open trigger. */
+/** Accepts a cron trigger, a preset ({every, time…}), a bare cron string, manual, or a once/app-open trigger. */
 export function triggerFrom(raw) {
-  if (typeof raw === 'string') return raw.trim().toLowerCase() === 'app-open' ? { type: 'app-open' } : { type: 'cron', cron: raw };
+  if (typeof raw === 'string') {
+    const s = raw.trim().toLowerCase();
+    if (s === 'app-open') return { type: 'app-open' };
+    if (s === 'manual') return { type: 'manual' };
+    return { type: 'cron', cron: raw };
+  }
   const t = raw && typeof raw === 'object' ? raw : {};
+  if (t.type === 'manual') return { type: 'manual' };
   if (t.type === 'once' || (t.at && !t.cron && !t.every)) return { type: 'once', at: t.at };
   if (t.type === 'app-open') return { type: 'app-open' };
   if (t.cron) return { type: 'cron', cron: t.cron };
   if (t.every) return { type: 'cron', cron: cronFromPreset(t) };
-  throw new Error('Say when it should run: a schedule (e.g. every day at 08:00), a date and time, or when Toolbox opens.');
+  throw new Error('Say when it should run: on demand (manual), a schedule (e.g. every day at 08:00), a date and time, or when Toolbox opens.');
 }
 
 const when = (ms) => (ms ? new Date(ms).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : null);

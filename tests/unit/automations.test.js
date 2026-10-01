@@ -153,3 +153,71 @@ test('Assistant: create, list, pause, run and delete automations by name', async
   assert.equal(del.status, 'success');
   assert.equal(A.loadAutomations().length, 0);
 });
+
+test('Automations: dynamic variable resolution handles today, time, clipboard and custom vars', () => {
+  const ctx = {
+    previous: 'world',
+    clipboard: 'clipped text',
+    vars: { myName: 'Alice', counter: '42' },
+  };
+  const filled = A.fill('Hello {{previous}}! Your name is {{vars.myName}} with {{counter}}. Copied: {{clipboard}}. Date: {{today}}', 'world', ctx);
+  assert.match(filled, /Hello world! Your name is Alice with 42\. Copied: clipped text\. Date: \d{4}-\d{2}-\d{2}/);
+});
+
+test('Automations: manual trigger, duplication, and step disabling work as expected', async () => {
+  const manual = A.createAutomation({
+    name: 'Quick Action',
+    icon: 'bolt',
+    color: 'emerald',
+    trigger: { type: 'manual' },
+    actions: [
+      { type: 'notify', title: 'Hello', message: 'First' },
+      { type: 'notify', title: 'Skipped', message: 'Second', disabled: true },
+    ],
+  });
+
+  assert.equal(manual.trigger.type, 'manual');
+  assert.equal(A.describeTrigger(manual.trigger), 'On demand (tap to run)');
+  assert.equal(A.nextRunOf(manual), null, 'manual triggers do not have a scheduled next run');
+
+  // Duplication
+  const copy = A.duplicateAutomation(manual.id);
+  assert.equal(copy.name, 'Quick Action (Copy)');
+  assert.equal(copy.color, 'emerald');
+  assert.equal(copy.actions.length, 2);
+
+  // Run with step callbacks
+  const events = [];
+  const entry = await A.runAutomation(manual.id, {
+    onStepStart: (idx) => events.push(`start-${idx}`),
+    onStepComplete: (idx, action, res) => events.push(`complete-${idx}-${res.ok}`),
+  });
+
+  assert.equal(entry.ok, true);
+  assert.equal(entry.steps.length, 2);
+  assert.equal(entry.steps[1].skipped, true);
+  assert.ok(events.includes('start-0'));
+  assert.ok(events.includes('complete-0-true'));
+});
+
+test('Automations: default action runners execute math, text transforms, variables, and conditions', async () => {
+  // Temporarily reset runners to default
+  A.setActionRunners(null);
+
+  const calcAuto = A.createAutomation({
+    name: 'Math and Transform',
+    trigger: { type: 'manual' },
+    actions: [
+      { type: 'calc', expression: '10 * 5 + 2' },
+      { type: 'variable', varName: 'resultNum', value: '{{previous}}' },
+      { type: 'transform', op: 'uppercase', input: 'result is {{vars.resultNum}}' },
+      { type: 'condition', left: '{{previous}}', op: 'contains', right: '52', ifFalse: 'stop' },
+    ],
+  });
+
+  const entry = await A.runAutomation(calcAuto.id);
+  assert.equal(entry.ok, true);
+  assert.equal(entry.steps[0].output, '52');
+  assert.equal(entry.steps[2].output, 'RESULT IS 52');
+});
+
