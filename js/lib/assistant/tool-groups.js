@@ -75,7 +75,7 @@ export const TOOL_GROUPS = {
   notes: {
     label: 'Notes: create, list, read and edit notes',
     tools: ['create_note', 'list_notes', 'get_note', 'update_note'],
-    match: /\b(note|notes|jot|write (this|that) down|remember this|memo)\b/i,
+    match: /\b(note|notes|jot|write (this|that) down|remember this|memo|to-?dos?|task list|action items|meeting minutes)\b/i,
   },
   mind: {
     label: 'Mind: personal knowledge, durable memory and relationships',
@@ -85,7 +85,7 @@ export const TOOL_GROUPS = {
   calendar: {
     label: 'Calendar: add, list and cancel events and reminders',
     tools: ['calendar_add_event', 'calendar_get_events', 'calendar_cancel_event'],
-    match: /\b(calendar|schedule|meeting|appointment|remind|reminder|event|tomorrow|next week|on (mon|tues|wednes|thurs|fri|satur|sun)day|agenda)\b/i,
+    match: /\b(calendar|schedule|meeting|appointment|remind|reminder|event|tomorrow|next week|this week|coming week|my week|my day|upcoming (?:events?|meetings?|appointments?|plans?)|on (mon|tues|wednes|thurs|fri|satur|sun)day|agenda)\b/i,
   },
   places: {
     label: 'Places: maps, directions (car, foot, bike, local transport), nearby places, location, weather',

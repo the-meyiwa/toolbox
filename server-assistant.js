@@ -32,6 +32,7 @@
    ============================================================ */
 
 import { isLocalDevelopmentRequest, sessionCacheKey, safeProviderError } from './server-security.js';
+import { assistantQuotaSummary, reserveAssistantTurn, releaseAssistantTurn } from './server-assistant-quota.js';
 
 const PROVIDERS = [
   {
@@ -93,7 +94,7 @@ const HEDGE_MAX_BYTES = 24_000;
 const FIRST_TOKEN_TIMEOUT_MS = { fast: 25_000, auto: 40_000, reasoning: 90_000, code: 90_000 };
 
 const MAX_BODY = 12_000_000;           // images arrive as data URLs
-const authCache = new Map();           // token → expiry, so each turn does not re-hit Supabase
+const authCache = new Map();           // hashed token → verified user and expiry
 
 /* ---------------- memory of what works ---------------- */
 
@@ -164,25 +165,28 @@ export function assistantProviders() {
   return PROVIDERS.filter(p => p.key()).map(p => ({ id: p.id, label: p.label, model: p.models()[0], vision: p.vision }));
 }
 
-export async function authorised(request) {
+export async function authenticatedUser(request) {
   const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
   const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !supabaseKey) return isLocalDevelopmentRequest(request);
+  if (!supabaseUrl || !supabaseKey) return isLocalDevelopmentRequest(request) ? { id: 'local-development', email: '' } : null;
   const header = request.headers.authorization || '';
-  if (!/^Bearer [\w.-]+$/.test(header)) return false;
+  if (!/^Bearer [\w.-]+$/.test(header)) return null;
   const now = Date.now();
   const cacheKey = sessionCacheKey(header);
   const cached = authCache.get(cacheKey);
-  if (cached && cached > now) return true;
+  if (cached && cached.until > now) return cached.user;
   const who = await fetch(`${supabaseUrl}/auth/v1/user`, { headers: { apikey: supabaseKey, Authorization: header }, signal: AbortSignal.timeout(12000) });
-  if (!who.ok) return false;
+  if (!who.ok) return null;
   const user = await who.json();
-  if (!user?.id) return false;
+  if (!user?.id) return null;
   const expiry = (() => { try { return JSON.parse(Buffer.from(header.slice(7).split('.')[1], 'base64url')).exp * 1000; } catch { return 0; } })();
-  authCache.set(cacheKey, Math.min(now + 60_000, expiry || now));
+  const verified = { id: String(user.id), email: String(user.email || '').toLowerCase().trim() };
+  authCache.set(cacheKey, { user: verified, until: Math.min(now + 60_000, expiry || now) });
   if (authCache.size > 500) authCache.delete(authCache.keys().next().value);
-  return true;
+  return verified;
 }
+
+export async function authorised(request) { return Boolean(await authenticatedUser(request)); }
 
 const hasImages = (messages) => messages.some(m => Array.isArray(m.content) && m.content.some(c => c?.type === 'image_url'));
 
@@ -307,11 +311,13 @@ async function attempt(c, payload, signal, timeoutMs) {
  * Failures start the next candidate immediately.
  */
 function race(candidates, payload, { signal, hedgeMs, timeoutMs, bytes, onError }) {
+  if (signal.aborted) return Promise.resolve(null);
   const queue = candidates.slice();
   const running = new Set();
   let winner = null;
   return new Promise((resolve) => {
-    const settleIfDone = () => { if (!winner && !running.size && !queue.length) resolve(null); };
+    signal.addEventListener('abort', () => resolve(null), { once: true });
+    const settleIfDone = () => { if (!winner && (signal.aborted || !running.size && !queue.length)) resolve(null); };
     const launch = (hedging = false) => {
       if (winner || signal.aborted) return;
       // A hedge goes to a different provider: another model from a slow provider is usually slow too.
@@ -324,13 +330,14 @@ function race(candidates, payload, { signal, hedgeMs, timeoutMs, bytes, onError 
       const [c] = queue.splice(idx, 1);
       if (!c) { settleIfDone(); return; }
       const ctrl = new AbortController();
-      const onAbort = () => ctrl.abort();
+      let hedge = null;
+      const onAbort = () => { clearTimeout(hedge); ctrl.abort(); };
       signal.addEventListener('abort', onAbort, { once: true });
       const entry = { c, ctrl, started: Date.now() };
       running.add(entry);
       // A hedge bills the whole prompt a second time, so only small requests are hedged;
       // big ones (long chats, documents, code) wait for the first model or its failure.
-      const hedge = bytes > HEDGE_MAX_BYTES ? null : setTimeout(() => { if (!winner && running.size < 2) launch(true); }, hedgeMs);
+      hedge = bytes > HEDGE_MAX_BYTES ? null : setTimeout(() => { if (!winner && running.size < 2) launch(true); }, hedgeMs);
       attempt(c, payload, ctrl.signal, timeoutMs).then((won) => {
         clearTimeout(hedge);
         running.delete(entry);
@@ -447,6 +454,13 @@ async function diagnose(request, response) {
 /* ---------------- chat ---------------- */
 
 export async function handleAssistantGateway(request, response, url) {
+  if (url.pathname === '/api/assistant/v2/quota' && request.method === 'GET') {
+    let user;
+    try { user = await authenticatedUser(request); } catch { /* fail closed */ }
+    response.writeHead(user ? 200 : 401, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    response.end(JSON.stringify(user ? assistantQuotaSummary(user) : { error: 'Sign in to Toolbox first.' }));
+    return true;
+  }
   if (url.pathname === '/api/assistant/v2/providers' && request.method === 'GET') {
     response.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
     response.end(JSON.stringify({ providers: assistantProviders() }));
@@ -482,24 +496,37 @@ export async function handleAssistantGateway(request, response, url) {
   const received = Date.now();
   let raw = '';
   // Read the body and check the session at the same time.
-  const authing = authorised(request).catch(() => null);
+  const authing = authenticatedUser(request).catch(() => undefined);
   for await (const chunk of request) {
     raw += chunk;
     if (raw.length > MAX_BODY) return fail(413, 'That conversation is too large to send. Start a new chat or remove attachments.');
   }
-  const ok = await authing;
-  if (ok === null) return fail(503, 'Could not verify your Toolbox session. Try again.');
-  if (!ok) return fail(401, 'Sign in to Toolbox to use the Assistant.');
+  const user = await authing;
+  if (user === undefined) return fail(503, 'Could not verify your Toolbox session. Try again.');
+  if (!user) return fail(401, 'Sign in to Toolbox to use the Assistant.');
 
   let payload;
   try { payload = JSON.parse(raw || '{}'); } catch { return fail(400, 'Invalid request.'); }
   if (!Array.isArray(payload.messages) || !payload.messages.length) return fail(400, 'No messages to answer.');
+  if (payload.messages.length > 240 || payload.messages.some(message =>
+    !message || typeof message !== 'object' || !['system', 'user', 'assistant', 'tool'].includes(message.role) ||
+    !(message.content == null || typeof message.content === 'string' || Array.isArray(message.content)))) {
+    return fail(400, 'The conversation contains an invalid message.');
+  }
+  if (payload.tools !== undefined && (!Array.isArray(payload.tools) || payload.tools.length > 128)) {
+    return fail(400, 'The tool list is invalid or too large.');
+  }
   if (!PROVIDERS.some(p => p.key())) return fail(503, 'No Assistant model provider is configured on this server.');
+  const reservation = reserveAssistantTurn(user, payload);
+  if (!reservation.allowed) {
+    response.setHeader?.('Retry-After', String(Math.max(0, reservation.retryAfter || 0)));
+    return fail(reservation.status, reservation.reason);
+  }
 
   const mode = ORDER[payload.mode] ? payload.mode : 'auto';
   const bytes = raw.length;
   const { list, skipped } = candidatesFor(payload, bytes);
-  if (!list.length) return fail(503, 'No model that can read images is configured on this server.');
+  if (!list.length) { releaseAssistantTurn(user, reservation); return fail(503, 'No model that can read images is configured on this server.'); }
 
   const controller = new AbortController();
   response.on('close', () => { clearInterval(heartbeat); controller.abort(); });
@@ -523,8 +550,8 @@ export async function handleAssistantGateway(request, response, url) {
     bytes,
     onError: (err) => { const message = safeProviderError('Assistant provider', err); errors.push(message); console.warn('[assistant]', message); },
   });
-  if (controller.signal.aborted) return true;
-  if (!winner) return fail(502, `No model provider could answer. ${errors.slice(-3).join(' · ')}`);
+  if (controller.signal.aborted) { releaseAssistantTurn(user, reservation); return true; }
+  if (!winner) { releaseAssistantTurn(user, reservation); return fail(502, `No model provider could answer. ${errors.slice(-3).join(' · ')}`); }
 
   clearInterval(heartbeat);
   const { c, reader, held } = winner;

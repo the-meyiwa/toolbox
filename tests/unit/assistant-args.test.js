@@ -53,6 +53,7 @@ test('Args: missing required arguments are reported, unless an alias may cover t
   assert.deepEqual(miss.missing, ['name']);
   assert.deepEqual(coerceArgs({ name: '   ' }, schema).missing, ['name']);
   assert.deepEqual(coerceArgs({ project_name: 'alias' }, schema).missing, [], 'an undeclared key may be the tool\'s alias');
+  assert.deepEqual(coerceArgs({ irrelevant: 'noise' }, schema).missing, ['name'], 'unrelated extras cannot hide missing arguments');
   const res = missingArgsResult('ide_create_project', ['name'], schema);
   assert.equal(res.status, 'error');
   assert.match(res.message, /needs name \(Project name\)/);

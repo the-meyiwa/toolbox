@@ -90,46 +90,25 @@ test('AI Provider: testAiProviderConnection validates key requirements', async (
   assert.equal(missingRes.success, false);
 });
 
-test('QuotaManager: unlimited accounts verification and quota rules', () => {
-  // 1. Direct email verification
-  assert.equal(QuotaManager.isUserUnlimited('meyigbenee@gmail.com'), true);
-  assert.equal(QuotaManager.isUserUnlimited('meyigbenee@icloud.com'), true);
-  assert.equal(QuotaManager.isUserUnlimited('MEYIGBENEE@GMAIL.COM'), true);
-  assert.equal(QuotaManager.isUserUnlimited('guest@example.com'), false);
-  assert.equal(QuotaManager.isUserUnlimited('randomuser@gmail.com'), false);
-
-  // 2. Free tier behavior (no unlimited email set)
-  localStorage.removeItem('toolbox_user_email');
-  localStorage.removeItem('toolbox_supabase_session');
-  localStorage.removeItem('supabase_auth_session');
-  
-  assert.equal(QuotaManager.isUserUnlimited(), false);
-  const freeSummary = QuotaManager.getQuotaSummary();
-  assert.equal(freeSummary.isUnlimited, false);
-  assert.equal(freeSummary.messagesLimit, QuotaManager.LIMITS.DAILY_MESSAGES);
-  assert.throws(() => {
-    QuotaManager.resetQuotas();
-  }, /Permission denied/);
-
-  // 3. Unlimited tier behavior (logged in with meyigbenee@gmail.com)
+test('QuotaManager: browser storage cannot grant unlimited access; verified server quota can', async () => {
+  localStorage.clear();
   localStorage.setItem('toolbox_user_email', 'meyigbenee@gmail.com');
-  assert.equal(QuotaManager.isUserUnlimited(), true);
-  const unlimitedSummary = QuotaManager.getQuotaSummary();
-  assert.equal(unlimitedSummary.isUnlimited, true);
-  assert.equal(unlimitedSummary.messagesLimit, 'Unlimited');
-
-  QuotaManager.recordMessage();
-  QuotaManager.recordHeavyTask();
-  let q = QuotaManager.getQuotaSummary();
-  assert.ok(q.messagesUsed >= 1);
-  assert.ok(q.heavyTasksUsed >= 1);
-
-  QuotaManager.resetQuotas();
-  q = QuotaManager.getQuotaSummary();
-  assert.equal(q.messagesUsed, 0);
-  assert.equal(q.heavyTasksUsed, 0);
-  assert.equal(q.messagesRemaining, 'Unlimited');
-
-  // Clean up
-  localStorage.removeItem('toolbox_user_email');
+  localStorage.setItem('toolbox_supabase_session', JSON.stringify({ id: 'quota-user', email: 'meyigbenee@gmail.com', token: 'valid-token' }));
+  assert.equal(QuotaManager.isUserUnlimited(), false);
+  assert.equal(QuotaManager.getQuotaSummary().messagesLimit, QuotaManager.LIMITS.DAILY_MESSAGES);
+  assert.throws(() => QuotaManager.resetQuotas(), /managed by the server/);
+  const original = globalThis.fetch;
+  globalThis.fetch = async url => {
+    assert.equal(url, '/api/assistant/v2/quota');
+    return new Response(JSON.stringify({ isUnlimited: true, messagesUsed: 2, messagesRemaining: null, burstRemaining: null }), { status: 200 });
+  };
+  try {
+    await QuotaManager.refreshServerQuota({ force: true });
+    assert.equal(QuotaManager.isUserUnlimited(), true);
+    assert.equal(QuotaManager.getQuotaSummary().messagesLimit, 'Unlimited');
+  } finally {
+    globalThis.fetch = original;
+    localStorage.removeItem('toolbox_supabase_session');
+    localStorage.removeItem('toolbox_user_email');
+  }
 });

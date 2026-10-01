@@ -528,23 +528,11 @@ function renderModalContent() {
           <div style="display:flex; flex-direction:column; gap:8px; font-size:0.78rem;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <span style="color:var(--g700);">Daily Messages</span>
-              <span style="font-weight:700; font-family:monospace;">${quota.messagesUsed} / ${quota.messagesLimit} (${quota.messagesRemaining} remaining)</span>
+              <span id="account-assistant-quota" style="font-weight:700; font-family:monospace;">${quota.isUnlimited ? 'Unlimited' : `${quota.messagesUsed} / ${quota.messagesLimit} (${quota.messagesRemaining} remaining)`}</span>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <span style="color:var(--g700);">Burst Rate Limit</span>
               <span style="font-weight:700; font-family:monospace;">${quota.burstLimit} msgs / min</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="color:var(--g700);">Max Tokens per Request</span>
-              <span style="font-weight:700; font-family:monospace;">${quota.maxOutputTokens} tokens</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="color:var(--g700);">Heavy Tool Tasks</span>
-              <span style="font-weight:700; font-family:monospace;">${quota.heavyTasksUsed} / ${quota.heavyTasksLimit} today</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="color:var(--g700);">Large File Analyses</span>
-              <span style="font-weight:700; font-family:monospace;">${quota.largeFilesUsed} / ${quota.largeFilesLimit} today</span>
             </div>
           </div>
         </div>
@@ -553,6 +541,14 @@ function renderModalContent() {
       </div>
     </div>
   `;
+
+  if (user) QuotaManager.refreshServerQuota().then(() => {
+    const current = QuotaManager.getQuotaSummary();
+    const label = modalEl?.querySelector('#account-assistant-quota');
+    if (label) label.textContent = current.isUnlimited
+      ? 'Unlimited'
+      : `${current.messagesUsed} / ${current.messagesLimit} (${current.messagesRemaining} remaining)`;
+  }).catch(() => {});
 
   // Attach handlers
   modalEl.querySelector('#close-account-modal').addEventListener('click', closeAccountModal);

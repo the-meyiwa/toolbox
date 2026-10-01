@@ -9,7 +9,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { handleSupporterRequest } from './server-supporters.js';
 import { handleDeviceRequest } from './server-device-specs.js';
-import { handleAssistantGateway, authorised } from './server-assistant.js';
+import { handleAssistantGateway, authenticatedUser } from './server-assistant.js';
+import { reserveAssistantTurn, releaseAssistantTurn } from './server-assistant-quota.js';
 import { handleMail } from './server-mail.js';
 import { handleMaps, searchNearby, searchPlaces } from './server-maps.js';
 import { isBlockedHost, parseWebPage } from './js/lib/web-scraper-engine.js';
@@ -621,9 +622,9 @@ export async function handleApiRequest(request, response) {
     }
 
     if (url.pathname === '/api/assistant/chat' && request.method === 'POST') {
-      let allowed = false;
-      try { allowed = await authorised(request); } catch { /* fail closed */ }
-      if (!allowed) {
+      let user = null;
+      try { user = await authenticatedUser(request); } catch { /* fail closed */ }
+      if (!user) {
         response.writeHead(401, { 'Content-Type': 'application/json' });
         response.end(JSON.stringify({ success: false, error: 'Sign in to Toolbox to use the Assistant.' }));
         return true;
@@ -637,12 +638,24 @@ export async function handleApiRequest(request, response) {
           return true;
         }
       }
+      let reservation = null;
       try {
         const { history = [], systemInstruction = '' } = rawBody ? JSON.parse(rawBody) : {};
+        if (!Array.isArray(history) || !history.length) {
+          response.writeHead(400, { 'Content-Type': 'application/json' });
+          response.end(JSON.stringify({ success: false, error: 'A conversation is required.' }));
+          return true;
+        }
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
           response.writeHead(503, { 'Content-Type': 'application/json' });
           response.end(JSON.stringify({ success: false, error: 'The Assistant provider is not configured on this deployment.' }));
+          return true;
+        }
+        reservation = reserveAssistantTurn(user, { messages: history });
+        if (!reservation.allowed) {
+          response.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': String(Math.max(0, reservation.retryAfter || 0)) });
+          response.end(JSON.stringify({ success: false, error: reservation.reason }));
           return true;
         }
         const contents = history.filter(message => message?.content).map(message => ({
@@ -661,6 +674,7 @@ export async function handleApiRequest(request, response) {
         response.writeHead(200, { 'Content-Type': 'application/json' });
         response.end(JSON.stringify({ success: true, text }));
       } catch (error) {
+        if (reservation?.allowed) releaseAssistantTurn(user, reservation);
         response.writeHead(500, { 'Content-Type': 'application/json' });
         response.end(JSON.stringify({ success: false, error: 'The Assistant request could not be completed.' }));
       }

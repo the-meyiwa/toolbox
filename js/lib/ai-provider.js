@@ -178,7 +178,6 @@ const CONFIRM_TOOLS = {
   mail_reply: (a) => `${a.mode === 'forward' ? `Forward this email to ${[].concat(a.to || []).join(', ')}` : a.mode === 'replyAll' ? 'Send this reply to everyone on the thread' : 'Send this reply'}?\n\n${String(a.body || '').slice(0, 600)}`,
   mail_action: (a) => (a.action === 'trash' ? `Move ${[].concat(a.ids || []).length} email(s) to the trash?` : null),
   delete_file: (a) => `Delete ${a.path || a.name || 'this file'} from Files? This cannot be undone.`,
-  request_file_deletion: (a) => `Delete ${a.path || a.name || 'this file'} from Files?`,
   delete_artifact: (a) => `Delete the saved item ${a.id || a.name || ''}? This cannot be undone.`,
   calendar_cancel_event: (a) => `Cancel the calendar event ${a.title || a.id || ''}?`,
   mind: (a) => a.action === 'forget' ? `Permanently forget this Mind item (${a.entityId || 'unknown'})?` : a.action === 'supersede' ? `Supersede this Mind item (${a.entityId || 'unknown'})?` : null,
@@ -795,8 +794,6 @@ export async function streamChatCompletion({
   maxSteps = null,
   provider = null,
 }) {
-  QuotaManager.recordMessage?.();
-
   const selectedMode = AI_MODES[mode] ? mode : getActiveAiMode();
   const isRealBrowser = typeof window !== 'undefined' && Boolean(window.location?.hostname);
   if (!isRealBrowser) {
@@ -862,6 +859,13 @@ export async function streamChatCompletion({
   const runTool = async (name, args, id) => {
     const key = `${name}:${JSON.stringify(args || {})}`;
     if (cache.has(key)) return cache.get(key);
+    if (!byName.has(name)) {
+      const res = { status: 'error', success: false, error: 'unknown_tool', message: `The tool "${name}" is unavailable. Choose one of the available tools or load its group.`, toolName: name };
+      onToolCallStart(name, args, id);
+      onToolCallResult(name, res, id);
+      executed.push(res);
+      return res;
+    }
     if (name === 'render_map' && executed.some(r => r?.renderer === 'map-view')) {
       const ref = { status: 'success', type: 'map-view-ref', message: 'The map is already shown above.' };
       cache.set(key, ref);
@@ -870,12 +874,6 @@ export async function streamChatCompletion({
     if (name === 'update_memory') {
       const res = applyMemory(args || {});
       cache.set(key, res);
-      return res;
-    }
-    if (CONFIRM_TOOLS[name] && !(await confirmAction(name, args))) {
-      const res = { status: 'cancelled', success: false, message: 'The person did not allow this action. Do not retry it; ask what they would like instead.' };
-      onToolCallStart(name, args, id);
-      onToolCallResult(name, { ...res, toolName: name }, id);
       return res;
     }
     if (name === 'load_tools') {
@@ -897,11 +895,19 @@ export async function streamChatCompletion({
         const res = { ...missingArgsResult(name, fixed.missing, schema), toolName: name };
         onToolCallStart(name, args, id);
         onToolCallResult(name, res, id);
-        cache.set(key, res);
         return res;
       }
       args = fixed.args;
     }
+    if (CONFIRM_TOOLS[name] && !(await confirmAction(name, args))) {
+      const res = { status: 'cancelled', success: false, message: 'The person did not allow this action. Do not retry it; ask what they would like instead.', toolName: name };
+      onToolCallStart(name, args, id);
+      onToolCallResult(name, res, id);
+      executed.push(res);
+      cache.set(key, res);
+      return res;
+    }
+    if (name === 'delete_file') args = { ...args, confirmed: true };
     onToolCallStart(name, args, id);
     let result;
     try {
@@ -918,7 +924,7 @@ export async function streamChatCompletion({
     // Any file the Assistant makes is put in Recent, so the next tool can take it.
     if (name !== 'run_toolbox_tool' && typeof result.dataUrl === 'string' && result.dataUrl.startsWith('data:') && result.filename) publishDataUrl(result).catch(() => {});
     if ((name === 'get_current_location' || name === 'request_user_location') && result.status !== 'error') rememberPlace(result.area || taskState?.userLocation?.area);
-    cache.set(key, result);
+    if (result.status !== 'error' && result.success !== false) cache.set(key, result);
     executed.push(result);
     onToolCallResult(name, result, id);
     return result;
@@ -938,6 +944,7 @@ export async function streamChatCompletion({
       preferredProvider: sticky,
       turnId, idempotencyKey,
     }, signal);
+    if (step === 0) QuotaManager.recordMessage?.();
 
     const turn = await readTurn(res, {
       signal,
@@ -969,7 +976,7 @@ export async function streamChatCompletion({
     if (step === limit - 1 && !signal?.aborted) {
       // Out of steps: ask for a final answer without tools.
       messages.push({ role: 'user', content: 'You have used the available tool steps. Summarise what you did and give your final answer now, without calling more tools.' });
-      const last = await openGateway({ messages, mode: MODE_EFFORT[selectedMode] || 'auto', provider: chosenProvider, preferredProvider: providerInfo?.provider }, signal);
+      const last = await openGateway({ messages, mode: MODE_EFFORT[selectedMode] || 'auto', provider: chosenProvider, preferredProvider: providerInfo?.provider, turnId, idempotencyKey }, signal);
       await readTurn(last, {
         signal,
         onText: (t) => { fullText += t; onToken(t); },

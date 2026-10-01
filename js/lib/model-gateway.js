@@ -173,8 +173,8 @@ function partialTagTail(s, tag) {
  * `messages` and `tools` use the OpenAI chat format.
  * Resolves to { text, thinking, toolCalls, finish, provider }.
  */
-export async function gatewayTurn({ messages, tools, mode = 'auto', provider, signal }) {
-  const res = await openGateway({ messages, tools, mode, provider }, signal);
+export async function gatewayTurn({ messages, tools, mode = 'auto', provider, turnId, signal }) {
+  const res = await openGateway({ messages, tools, mode, provider, turnId }, signal);
   const noop = () => {};
   return readTurn(res, { onText: noop, onThinking: noop, onProvider: noop, signal });
 }

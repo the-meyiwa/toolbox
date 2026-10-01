@@ -437,11 +437,15 @@ export async function signInWithEmail(email, password) {
         const errorMsg = data.error_description || data.message || data.msg || (data.error === 'invalid_grant' ? 'Invalid email or password.' : 'Login failed');
         throw new Error(errorMsg);
       }
+      if (!data.access_token || !data.user?.id || !data.user?.email) {
+        throw new Error('The sign-in response was incomplete. Please try again.');
+      }
 
-      const isOwner = MADSELKIE_EMAILS.includes(cleanEmail);
+      const verifiedEmail = String(data.user.email).toLowerCase().trim();
+      const isOwner = MADSELKIE_EMAILS.includes(verifiedEmail);
       const userSession = {
-        id: data.user?.id || `usr_${Date.now()}`,
-        email: data.user?.email || cleanEmail,
+        id: data.user.id,
+        email: verifiedEmail,
         token: data.access_token,
         refreshToken: data.refresh_token,
         username: isOwner ? 'madselkie' : (data.user?.user_metadata?.username || cleanEmail.split('@')[0].replace(/[^a-z0-9_-]/gi, '').toLowerCase()),
@@ -477,7 +481,14 @@ export async function signInWithEmail(email, password) {
 /**
  * Refresh current user session using refresh token
  */
-export async function refreshUserSession() {
+let refreshInFlight = null;
+export function refreshUserSession() {
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = refreshUserSessionOnce().finally(() => { refreshInFlight = null; });
+  return refreshInFlight;
+}
+
+async function refreshUserSessionOnce() {
   const config = getSupabaseConfig();
   const current = getCurrentUser();
   if (!current || !current.refreshToken || !config.url || !config.anonKey) {
@@ -494,10 +505,20 @@ export async function refreshUserSession() {
       body: JSON.stringify({ refresh_token: current.refreshToken })
     });
 
-    if (!res.ok) return current;
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        const latest = getCurrentUser();
+        if (!latest || latest.id !== current.id || latest.refreshToken !== current.refreshToken) return latest;
+        signOut();
+        return null;
+      }
+      return current;
+    }
 
     const data = await res.json();
     if (data.access_token) {
+      const latest = getCurrentUser();
+      if (!latest || latest.id !== current.id || latest.refreshToken !== current.refreshToken) return latest;
       const updated = {
         ...current,
         token: data.access_token,
@@ -583,14 +604,18 @@ export async function signUpWithEmail(email, password) {
 
       // If Supabase returned an access_token directly (instant confirmation or email confirmation disabled)
       if (data.access_token) {
-        const isOwner = MADSELKIE_EMAILS.includes(cleanEmail);
+        if (!data.user?.id || !data.user?.email) {
+          throw new Error('The sign-up response was incomplete. Please try again.');
+        }
+        const verifiedEmail = String(data.user.email).toLowerCase().trim();
+        const isOwner = MADSELKIE_EMAILS.includes(verifiedEmail);
         const userSession = {
-          id: data.user?.id || `usr_${Date.now()}`,
-          email: cleanEmail,
+          id: data.user.id,
+          email: verifiedEmail,
           token: data.access_token,
           refreshToken: data.refresh_token || '',
-          username: isOwner ? 'madselkie' : (data.user?.user_metadata?.username || cleanEmail.split('@')[0].replace(/[^a-z0-9_-]/gi, '').toLowerCase()),
-          displayName: isOwner ? 'madselkie' : (data.user?.user_metadata?.display_name || cleanEmail.split('@')[0]),
+          username: isOwner ? 'madselkie' : (data.user?.user_metadata?.username || verifiedEmail.split('@')[0].replace(/[^a-z0-9_-]/gi, '').toLowerCase()),
+          displayName: isOwner ? 'madselkie' : (data.user?.user_metadata?.display_name || verifiedEmail.split('@')[0]),
           createdAt: data.user?.created_at || new Date().toISOString()
         };
         localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));

@@ -457,6 +457,7 @@ function mountAssistant(container, state) {
   // Wake the model service while the person is still typing, and load the lookup tables the
   // first message would otherwise wait for.
   warmGateway();
+  QuotaManager.refreshServerQuota().catch(() => {});
   (window.requestIdleCallback || ((f) => setTimeout(f, 800)))(() => prewarmAssistant());
   input.addEventListener('focus', warmGateway);
   input.addEventListener('input', warmGateway, { passive: true });
@@ -1509,6 +1510,7 @@ function mountAssistant(container, state) {
         msg.error = 'The reply stopped responding. Try again.';
       }
     } finally {
+      QuotaManager.refreshServerQuota({ force: true }).catch(() => {});
       clearInterval(idle);
       msg.ms = Date.now() - started;
       msg.content = cleanReplyText(msg.content || '');

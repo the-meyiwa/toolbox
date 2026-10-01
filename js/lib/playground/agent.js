@@ -215,7 +215,7 @@ export function fromChatTurn(turn) {
  * Groq, OpenAI, DeepSeek) answers, failing over when one is out of quota or silent.
  * A step that breaks mid-answer is retried; the server skips the model that failed.
  */
-async function generateWithGateway({ system, contents, tools, signal }) {
+async function generateWithGateway({ system, contents, tools, signal, turnId }) {
   const { gatewayTurn } = await import('../model-gateway.js');
   const messages = toChatMessages(system, contents);
   const chatTools = tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } }));
@@ -223,7 +223,7 @@ async function generateWithGateway({ system, contents, tools, signal }) {
   for (let attempt = 0; attempt < 3; attempt++) {
     const step = stepSignal(signal);
     try {
-      const turn = await gatewayTurn({ messages, tools: chatTools.length ? chatTools : undefined, mode: 'code', signal: step.signal });
+      const turn = await gatewayTurn({ messages, tools: chatTools.length ? chatTools : undefined, mode: 'code', turnId, signal: step.signal });
       if (step.timedOut()) throw Object.assign(new Error('The model stopped responding'), { status: 0 });
       const who = turn.provider || {};
       return { data: fromChatTurn(turn), model: who.label ? `${who.label}${who.model ? ` · ${who.model}` : ''}` : 'Toolbox models' };
@@ -261,7 +261,8 @@ export async function generate({ system, contents, tools, signal, run }) {
       run.onSwitch?.('Gemini', err.message);
     }
   }
-  return generateWithGateway({ system, contents, tools, signal });
+  run.assistantQuotaTurnId ||= `turn_code_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  return generateWithGateway({ system, contents, tools, signal, turnId: run.assistantQuotaTurnId });
 }
 
 /* ---------------- the agent ---------------- */

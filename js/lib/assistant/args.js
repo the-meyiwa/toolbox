@@ -103,21 +103,27 @@ function coerceValue(v, schema, depth) {
 function coerceObject(args, schema, depth) {
   const props = schema?.properties || {};
   const out = {};
-  let aliases = 0;
+  const extraKeys = [];
   for (const [k, v] of Object.entries(args)) {
     if (k in props) {
       const c = coerceValue(v, props[k], depth);
       if (c !== undefined) out[k] = c;
     } else if (v !== null && v !== undefined && !(typeof v === 'number' && !Number.isFinite(v))) {
       out[k] = v;   // aliases tools accept but do not declare (e.g. "project" for "projectName")
-      aliases++;
+      if (typeof v !== 'string' || v.trim()) extraKeys.push(k);
     }
   }
-  // With undeclared keys present the tool may take an alias for the required one: let it decide.
-  if (aliases) return { args: out, missing: [] };
+  // A plausible alternate spelling can cover a required field. An unrelated
+  // extra property must not hide a missing argument from the model.
+  const similar = (a, b) => {
+    const x = a.replace(/[^a-z0-9]/gi, '').toLowerCase();
+    const y = b.replace(/[^a-z0-9]/gi, '').toLowerCase();
+    return Math.min(x.length, y.length) >= 3 && (x === y || x.startsWith(y) || x.endsWith(y) || y.startsWith(x) || y.endsWith(x));
+  };
   const missing = (Array.isArray(schema?.required) ? schema.required : []).filter(k => {
     const v = out[k];
-    return v === undefined || (typeof v === 'string' && !v.trim()) || (Array.isArray(v) && !v.length);
+    const absent = v === undefined || (typeof v === 'string' && !v.trim()) || (Array.isArray(v) && !v.length);
+    return absent && !extraKeys.some(other => similar(k, other));
   });
   return { args: out, missing };
 }

@@ -123,6 +123,9 @@ test('Efficiency: groups come from the person\'s words, not the Assistant\'s rep
   const groups = selectGroups({ history });
   for (const g of ['code', 'data', 'documents', 'building']) assert.ok(!groups.has(g), `${g} was loaded from the Assistant's own text`);
   assert.ok(selectGroups({ history: [{ role: 'user', content: 'every weekday at 8 send me a briefing' }] }).has('automation'));
+  const vaguePlanning = selectGroups({ history: [{ role: 'user', content: 'What should I focus on this week? Turn my action items into a note.' }] });
+  assert.ok(vaguePlanning.has('calendar') && vaguePlanning.has('notes'), 'vague personal planning needs calendar and notes tools');
+  assert.ok(selectGroups({ history: [{ role: 'user', content: 'Help me make sense of my day.' }] }).has('calendar'));
 });
 
 test('Efficiency: tool schemas are trimmed', async () => {

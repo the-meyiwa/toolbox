@@ -598,13 +598,16 @@ function renderPreferencesSettings() {
   container.querySelector('#pref-opt-audio')?.addEventListener('change', (e) => updateSettings({ hapticAudio: e.target.checked }));
 }
 
-function renderAiSettings() {
+function renderAiSettings(refreshQuota = true) {
   const container = modalEl.querySelector('#ai-settings-container');
   if (!container) return;
   import('./assistant/memory-ui.js').then(m => m.renderAssistantMemory(modalEl.querySelector('#ai-memory-container'))).catch(() => {});
   const user = getCurrentUser();
   const quota = user ? QuotaManager.getQuotaSummary() : null;
   const isUnlimited = user ? QuotaManager.isUserUnlimited() : false;
+  if (user && refreshQuota && quota?.source === 'local-estimate') {
+    QuotaManager.refreshServerQuota().then(() => renderAiSettings(false)).catch(() => {});
+  }
   const pct = quota && quota.messagesLimit ? Math.min(100, Math.round((quota.messagesUsed / quota.messagesLimit) * 100)) : 0;
 
   const openTo = getSettings().assistantOpenTo === 'last' ? 'last' : 'new';
@@ -629,9 +632,8 @@ function renderAiSettings() {
     ${row({ title: 'Conversation sync', hint: user ? 'Your chats are saved to your account and restored when you sign in.' : 'Sign in to keep your chats on every device.', tag: 'div',
       control: `<span class="stg-pill ${user ? 'is-on' : ''}">${user ? 'On' : 'Off'}</span>` })}
     ${user && quota ? `<div class="stg-row stg-row-stack">
-      <span class="stg-row-copy"><span class="stg-row-title">Messages today</span><span class="stg-row-hint">${quota.messagesUsed.toLocaleString()} of ${quota.messagesLimit.toLocaleString()} used · resets at midnight</span></span>
-      <span class="stg-meter" role="meter" aria-valuemin="0" aria-valuemax="${quota.messagesLimit}" aria-valuenow="${quota.messagesUsed}" aria-label="Messages used today"><i style="--p:${pct}%"></i></span>
-      ${isUnlimited ? '<button type="button" class="stg-btn stg-btn-quiet" id="btn-reset-quota-modal">Reset count</button>' : ''}
+      <span class="stg-row-copy"><span class="stg-row-title">Messages today</span><span class="stg-row-hint">${isUnlimited ? 'Unlimited access' : `${quota.messagesUsed.toLocaleString()} of ${quota.messagesLimit.toLocaleString()} used`}${quota.source === 'local-estimate' ? ' · updating' : ''} · resets at midnight UTC</span></span>
+      ${isUnlimited ? '' : `<span class="stg-meter" role="meter" aria-valuemin="0" aria-valuemax="${quota.messagesLimit}" aria-valuenow="${quota.messagesUsed}" aria-label="Messages used today"><i style="--p:${pct}%"></i></span>`}
     </div>` : ''}
   </div>`);
 
@@ -645,9 +647,6 @@ function renderAiSettings() {
   container.querySelector('#ai-popup')?.addEventListener('change', (e) => { updateSettings({ assistantPopup: e.target.checked }); flashSaved(); });
   container.querySelector('#ai-new-tab')?.addEventListener('change', (e) => { updateSettings({ assistantNewTab: e.target.checked }); flashSaved(); });
   container.querySelectorAll('input[name="ai-open-to"]').forEach((r) => r.addEventListener('change', (e) => { if (e.target.checked) { updateSettings({ assistantOpenTo: e.target.value }); flashSaved(); } }));
-  container.querySelector('#btn-reset-quota-modal')?.addEventListener('click', () => {
-    try { QuotaManager.resetQuotas(); renderAiSettings(); flashSaved(); } catch (err) { tbAlert(err.message, 'Settings error'); }
-  });
 }
 
 function renderStorageSettings() {

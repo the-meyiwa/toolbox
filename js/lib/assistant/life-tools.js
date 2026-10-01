@@ -391,7 +391,7 @@ registerToolPack({
     calendar: {
       label: 'Calendar: add, list, move, edit and cancel events; set, list and cancel reminders',
       tools: CALENDAR_DECLARATIONS.map(d => d.name),
-      match: /\b(calendar|schedule|reschedule|meeting|appointment|remind|reminders?|event|tomorrow|tonight|this week|next week|weekend|move (my|the)|push (my|the)|postpone|what'?s on|agenda|on (mon|tues|wednes|thurs|fri|satur|sun)day)\b/i,
+      match: /\b(calendar|schedule|reschedule|meeting|appointment|remind|reminders?|event|tomorrow|tonight|my day|my week|this week|next week|coming week|upcoming (?:events?|meetings?|appointments?|plans?)|weekend|move (my|the)|push (my|the)|postpone|what'?s on|agenda|on (mon|tues|wednes|thurs|fri|satur|sun)day)\b/i,
     },
   },
 });
