@@ -10,10 +10,13 @@ import {
   setActiveAiMode,
   getGeminiApiKey,
   setGeminiApiKey,
+  getAssistantMemory,
+  clearAssistantMemory,
   streamChatCompletion,
   testAiProviderConnection
 } from '../../js/lib/ai-provider.js';
 import { QuotaManager } from '../../js/lib/quota-manager.js';
+import { addMindSource, readMind, upsertMindEntity } from '../../js/lib/mind-store.js';
 
 // Polyfill localStorage and window for Node test environment
 if (typeof globalThis.localStorage === 'undefined') {
@@ -56,6 +59,19 @@ test('AI Provider: API key getter and setter persist key', () => {
 
   setGeminiApiKey('');
   assert.equal(getGeminiApiKey(), '');
+});
+
+test('AI Provider: clearing Assistant memory preserves user-created Mind memories', () => {
+  localStorage.clear();
+  localStorage.setItem('toolbox_mind_v1:memory-migrated', '1');
+  const manual = upsertMindEntity({ type: 'Memory', name: 'Family story', content: 'A memory added in Mind' });
+  const source = addMindSource({ kind: 'assistant' });
+  upsertMindEntity({ id: manual.id, name: manual.name, type: 'Memory', sourceIds: [source.id] });
+  const assistant = upsertMindEntity({ type: 'Memory', name: 'Assistant fact', content: 'A remembered preference', sourceIds: [source.id], properties: { origin: 'assistant' } });
+  assert.deepEqual(getAssistantMemory().map(f => f.id), [assistant.id]);
+  clearAssistantMemory();
+  assert.ok(readMind().entities.some(e => e.id === manual.id));
+  assert.ok(!readMind().entities.some(e => e.id === assistant.id));
 });
 
 test('AI Provider: streamChatCompletion handles tokens in test mock environment', async () => {

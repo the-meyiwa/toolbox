@@ -16,11 +16,23 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { setupDOMEnvironment } from '../helpers/dom-env.js';
 import { queryDns, ipToArpa, DNS_TYPE_MAP } from '../../js/lib/dns-resolver.js';
 import { executeAssistantTool } from '../../js/lib/assistant-tools.js';
 import { setExecutionAdapter } from '../../js/lib/ide-execution-client.js';
-import * as serverEngine from '../../server-execution-engine.js';
+const testTempRoot = fs.realpathSync(os.tmpdir());
+const testWorkspaceRoot = fs.mkdtempSync(path.join(testTempRoot, 'toolbox-execution-test-'));
+process.env.TOOLBOX_WORKSPACES_ROOT = testWorkspaceRoot;
+const serverEngine = await import('../../server-execution-engine.js');
+process.on('exit', () => {
+  try {
+    const resolved = fs.realpathSync(testWorkspaceRoot);
+    if (path.dirname(resolved) === testTempRoot && path.basename(resolved).startsWith('toolbox-execution-test-')) fs.rmSync(resolved, { recursive: true, force: true });
+  } catch { /* temp directory was already removed */ }
+});
 const {
   executionManager,
   resolveWorkspacePath,
@@ -231,10 +243,8 @@ test('Execution Engine: Path containment prevents directory traversal out of wor
   assert.ok(safePath.includes('ws_security_test'));
   assert.ok(safePath.includes('src'));
 
-  // Attempting to escape with ../../ must be normalized and contained inside the workspace
-  const traversalPath = resolveWorkspacePath('ws_security_test', '../../etc/passwd');
-  assert.ok(traversalPath.includes('ws_security_test'));
-  assert.ok(!traversalPath.startsWith('C:\\etc') && !traversalPath.startsWith('/etc'));
+  assert.throws(() => resolveWorkspacePath('ws_security_test', '../../etc/passwd'), /escapes workspace/);
+  assert.ok(resolveWorkspacePath('ws_security_test', 'src/../README.md').includes('ws_security_test'));
 });
 
 test('Execution Engine: Workspace archival export and import preserves project state', async () => {

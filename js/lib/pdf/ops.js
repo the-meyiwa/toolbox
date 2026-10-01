@@ -508,7 +508,7 @@ export async function runQpdf(bytes, args) {
   // Vite serves the wasm as an asset; Node (the tests) reads it from node_modules.
   qpdfUrl ??= import.meta.env
     ? (await import('@neslinesli93/qpdf-wasm/dist/qpdf.wasm?url')).default
-    : new URL('../../../node_modules/@neslinesli93/qpdf-wasm/dist/qpdf.wasm', import.meta.url).pathname;
+    : decodeURIComponent(new URL('../../../node_modules/@neslinesli93/qpdf-wasm/dist/qpdf.wasm', import.meta.url).pathname.replace(/^\/([A-Za-z]:\/)/, '$1'));
   const log = [];
   const q = await createModule({ locateFile: () => qpdfUrl, noInitialRun: true, print: (s) => log.push(s), printErr: (s) => log.push(s) });
   q.FS.writeFile('/in.pdf', bytes);

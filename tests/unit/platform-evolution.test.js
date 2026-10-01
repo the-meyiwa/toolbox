@@ -101,6 +101,26 @@ test('ToolboxFilesystem: file rename, copy, and move operations', async () => {
   assert.equal(await fs.stat('/Documents/TestDocs/renamed.txt'), null, 'File should be null after delete');
 });
 
+test('ToolboxFilesystem: copy refuses self nesting and existing destinations without changing source', async () => {
+  await fs.mkdir('/Documents/CopySafety');
+  await fs.writeFile('/Documents/CopySafety/original.txt', 'Keep this');
+  await assert.rejects(fs.copy('/Documents/CopySafety', '/Documents/CopySafety/inside'));
+  await assert.rejects(fs.copy('/Documents/CopySafety/original.txt', '/Documents/CopySafety/original.txt'));
+  await fs.writeFile('/Documents/CopySafety/existing.txt', 'Existing data');
+  await assert.rejects(fs.copy('/Documents/CopySafety/original.txt', '/Documents/CopySafety/existing.txt'));
+  assert.equal(await fs.readFile('/Documents/CopySafety/original.txt', 'text'), 'Keep this');
+  assert.equal(await fs.readFile('/Documents/CopySafety/existing.txt', 'text'), 'Existing data');
+  assert.equal(await fs.stat('/Documents/CopySafety/inside'), null);
+});
+
+test('ToolboxFilesystem: files cannot contain child files or folders', async () => {
+  await fs.writeFile('/Documents/ParentFile.txt', 'parent content');
+  await assert.rejects(fs.writeFile('/Documents/ParentFile.txt/child.txt', 'child'), /Folder not found/);
+  await assert.rejects(fs.mkdir('/Documents/ParentFile.txt/child'), /Folder not found/);
+  assert.equal(await fs.readFile('/Documents/ParentFile.txt', 'text'), 'parent content');
+  assert.equal(await fs.stat('/Documents/ParentFile.txt/child.txt'), null);
+});
+
 test('ToolboxFilesystem: compressDirectory and extractArchive in filesystem', async () => {
   await fs.mkdir('/Projects/ZipTest');
   await fs.writeFile('/Projects/ZipTest/file1.txt', 'Content 1');

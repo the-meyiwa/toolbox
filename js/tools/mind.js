@@ -62,7 +62,7 @@ export default {
       ${!n ? '<p class="mind-empty">Begin with a room for an area of your life.</p>' : ''}</div>`;
   },
   roomView(graph, room) {
-    const members = roomEntities(graph, room).filter(e => room.mode === 'smart' || !graph.memberships.some(m => m.roomId === room.id && m.entityId === e.id && m.parentId));
+    const members = roomEntities(graph, room).filter(e => room.mode === 'smart' || graph.memberships.some(m => m.roomId === room.id && m.entityId === e.id && !m.parentId));
     const desks = members.filter(e => e.type === 'Desk'), others = members.filter(e => e.type !== 'Desk');
     return `<div class="mind-room-scene"><div class="mind-scene-heading" style="view-transition-name:mind-${room.id}"><small>${room.mode === 'smart' ? 'A LIVING COLLECTION' : 'A ROOM IN YOUR MIND'}</small><h2>${esc(room.name)}</h2><p>${members.length} things live here</p></div>
       <div class="mind-scene-actions">${room.mode === 'manual' ? '<button class="btn" data-action="new-entity">Add something</button><button class="btn" data-action="place-existing">Place existing</button><button class="btn btn-ghost" data-action="new-desk">New desk</button>' : ''}<button class="btn btn-ghost" data-action="rename-room">Rename</button><button class="btn btn-ghost" data-action="delete-room">Delete room</button></div>

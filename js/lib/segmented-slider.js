@@ -82,10 +82,11 @@ export function attachSegmentedSlider(container, buttonSelector = 'button', acti
     });
   });
 
+  let resizeObserver = null;
   if (typeof ResizeObserver !== 'undefined') {
     try {
-      const ro = new ResizeObserver(update);
-      ro.observe(container);
+      resizeObserver = new ResizeObserver(update);
+      resizeObserver.observe(container);
     } catch {}
   }
 
@@ -94,5 +95,6 @@ export function attachSegmentedSlider(container, buttonSelector = 'button', acti
   }
   setTimeout(update, 50);
 
+  update.dispose = () => resizeObserver?.disconnect();
   return update;
 }

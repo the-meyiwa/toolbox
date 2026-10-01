@@ -126,11 +126,13 @@ export const productsOfBrand = (brandId) => PRODUCTS.filter(p => p.brandId === b
 /* ---------------- ingredients ---------------- */
 
 const INCI_LOWER = new Map(Object.keys(INCI).map(k => [k.toLowerCase(), k]));
+const INCI_UNPUNCTUATED = new Map(Object.keys(INCI).map(k => [k.toLowerCase().replace(/[.*]+$/, ''), k]));
 
 /** The dictionary entry for an ingredient as printed (case-insensitive; "Aqua/Water/Eau" tries each part). */
 export function ingredientInfo(name) {
-  const n = String(name || '').trim().replace(/[.*]+$/, '').replace(/\s*\d+(?:\.\d+)?\s*%$/, '').trim();
-  const key = INCI_LOWER.get(n.toLowerCase());
+  const raw = String(name || '').trim().replace(/\s*\d+(?:\.\d+)?\s*%$/, '').trim();
+  const n = raw.replace(/[.*]+$/, '');
+  const key = INCI_LOWER.get(raw.toLowerCase()) || INCI_UNPUNCTUATED.get(n.toLowerCase());
   if (key) return { inci: key, ...INCI[key] };
   for (const part of n.split(/\s*\/\s*|\s*\(\s*|\s*\)\s*/).filter(Boolean)) {
     const k = INCI_LOWER.get(part.toLowerCase());

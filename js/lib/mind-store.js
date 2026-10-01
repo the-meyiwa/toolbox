@@ -40,27 +40,52 @@ function migrate(old) {
   return graph;
 }
 
+function backfillAssistantOrigin(graph, key) {
+  const marker = key + ':assistant-origin-v2';
+  if (localStorage.getItem(marker)) return graph;
+  const owner = localStorage.getItem('toolbox_assistant_memory_v1_owner');
+  if (!owner || owner === key) {
+    let legacy = [];
+    try { legacy = JSON.parse(localStorage.getItem('toolbox_assistant_memory_v1') || '[]'); } catch { /* ignore invalid legacy data */ }
+    let changed = false;
+    if (Array.isArray(legacy)) for (const fact of legacy) {
+      if (!fact?.at || !fact?.text) continue;
+      const entity = graph.entities.find(e => e.type === 'Memory' && e.content === clean(fact.text, 240) && e.createdAt === fact.at && !(e.sourceIds || []).length && !graph.memberships.some(m => m.entityId === e.id));
+      if (entity && entity.properties?.origin !== 'assistant') {
+        entity.properties = { ...entity.properties, origin: 'assistant' };
+        changed = true;
+      }
+    }
+    if (changed) {
+      graph.revision++;
+      try { localStorage.setItem(key, JSON.stringify(graph)); } catch { /* Keep the graph readable if storage is full. */ }
+    }
+  }
+  try { localStorage.setItem(marker, '1'); } catch { /* Retry provenance backfill on the next read. */ }
+  return graph;
+}
+
 function absorbLegacyMemory(graph, key) {
   const marker = key + ':memory-migrated';
-  if (localStorage.getItem(marker)) return graph;
+  if (localStorage.getItem(marker)) return backfillAssistantOrigin(graph, key);
   const legacyOwnerKey = 'toolbox_assistant_memory_v1_owner';
   const legacyOwner = localStorage.getItem(legacyOwnerKey);
   if (legacyOwner && legacyOwner !== key) {
     localStorage.setItem(marker, '1');
-    return graph;
+    return backfillAssistantOrigin(graph, key);
   }
   let old = [];
   try { old = JSON.parse(localStorage.getItem('toolbox_assistant_memory_v1') || '[]'); } catch { /* ignore */ }
   if (Array.isArray(old)) for (const fact of old) {
     const text = clean(fact?.text, 240);
     if (!text || graph.entities.some(e => e.type === 'Memory' && e.content === text)) continue;
-    graph.entities.push({ id: uid(), type: 'Memory', name: text.slice(0, 100), content: text, properties: {}, createdAt: fact.at || Date.now(), updatedAt: fact.at || Date.now(), confidence: 1, importance: .7, access: 'private', memoryType: 'explicit', status: 'active', sourceIds: [] });
+    graph.entities.push({ id: uid(), type: 'Memory', name: text.slice(0, 100), content: text, properties: { origin: 'assistant' }, createdAt: fact.at || Date.now(), updatedAt: fact.at || Date.now(), confidence: 1, importance: .7, access: 'private', memoryType: 'explicit', status: 'active', sourceIds: [] });
   }
   graph.revision++;
   localStorage.setItem(key, JSON.stringify(graph));
   if (!legacyOwner) localStorage.setItem(legacyOwnerKey, key);
   localStorage.setItem(marker, '1');
-  return graph;
+  return backfillAssistantOrigin(graph, key);
 }
 
 export function readMind() {
@@ -75,6 +100,10 @@ export function readMind() {
     }
   } catch { /* Keep the UI usable if storage is unavailable. */ }
   return empty();
+}
+export function isAssistantMemoryEntity(entity) {
+  return entity?.status === 'active' && entity.type === 'Memory' && entity.memoryType !== 'working' &&
+    entity.properties?.origin === 'assistant';
 }
 export function writeMind(graph) {
   if (!fields.every(k => Array.isArray(graph[k]))) throw new Error('Invalid Mind graph.');
@@ -115,8 +144,9 @@ export function upsertMindEntity(input = {}) {
   const graph = readMind(), name = clean(input.name, 120);
   if (!name) throw new Error('Name the thing to remember.');
   const existingById = input.id ? graph.entities.find(e => e.id === input.id) : null;
+  if (input.id && !existingById) throw new Error('Mind entity not found.');
   const type = TYPES.has(input.type) ? input.type : (existingById?.type || 'Custom');
-  const existing = existingById || (!input.id && graph.entities.find(e => e.status === 'active' && e.type === type && e.name.toLowerCase() === name.toLowerCase()));
+  const existing = existingById || (!input.id && input.deduplicate !== false && graph.entities.find(e => e.status === 'active' && e.type === type && e.name.toLowerCase() === name.toLowerCase()));
   const stamp = Date.now(), entity = existing || { id: uid(), createdAt: stamp, sourceIds: [] };
   Object.assign(entity, {
     name, type, content: input.content == null ? (entity.content || '') : clean(input.content),
@@ -131,8 +161,9 @@ export function upsertMindEntity(input = {}) {
 }
 export function addMindMembership(roomId, entityId, parentId = null) {
   const graph = readMind(), room = graph.rooms.find(r => r.id === roomId);
-  if (!room || !graph.entities.some(e => e.id === entityId)) throw new Error('Room or entity not found.');
+  if (!room || !graph.entities.some(e => e.id === entityId && e.status === 'active')) throw new Error('Room or entity not found.');
   if (room.mode !== 'manual') throw new Error('Smart rooms derive their contents from rules.');
+  if (parentId && (!graph.entities.some(e => e.id === parentId && e.type === 'Desk' && e.status === 'active') || !graph.memberships.some(m => m.roomId === roomId && m.entityId === parentId))) throw new Error('The parent desk is not in this room.');
   const found = graph.memberships.find(m => m.roomId === roomId && m.entityId === entityId && m.parentId === parentId);
   if (found) return found;
   const item = { id: uid(), roomId, entityId, parentId, createdAt: Date.now() };
@@ -158,30 +189,42 @@ export function relateMindEntities(from, to, type = 'related', options = {}) {
 export function supersedeMindEntity(oldId, replacementId = null) {
   const graph = readMind(), old = graph.entities.find(e => e.id === oldId);
   if (!old) throw new Error('Memory not found.');
-  if (replacementId && !graph.entities.some(e => e.id === replacementId)) throw new Error('Replacement not found.');
+  if (replacementId === oldId) throw new Error('A memory cannot replace itself.');
+  if (replacementId && !graph.entities.some(e => e.id === replacementId && e.status === 'active')) throw new Error('Active replacement not found.');
   old.status = 'superseded'; old.supersededBy = replacementId; old.updatedAt = Date.now();
   writeMind(graph); return old;
 }
 export function forgetMindEntity(entityId) {
   const graph = readMind();
-  if (!graph.entities.some(e => e.id === entityId)) return false;
+  const entity = graph.entities.find(e => e.id === entityId);
+  if (!entity) return false;
+  const removedEdges = graph.relationships.filter(r => r.from === entityId || r.to === entityId);
+  const candidateSources = new Set([...(entity.sourceIds || []), ...removedEdges.flatMap(r => r.sourceIds || [])]);
   graph.entities = graph.entities.filter(e => e.id !== entityId);
   graph.relationships = graph.relationships.filter(r => r.from !== entityId && r.to !== entityId);
   graph.memberships = graph.memberships.filter(m => m.entityId !== entityId && m.parentId !== entityId);
+  graph.suggestions = graph.suggestions.filter(s => s.from !== entityId && s.to !== entityId);
+  const stillReferenced = new Set([...graph.entities.flatMap(e => e.sourceIds || []), ...graph.relationships.flatMap(r => r.sourceIds || [])]);
+  graph.sources = graph.sources.filter(s => !candidateSources.has(s.id) || stillReferenced.has(s.id));
   writeMind(graph); return true;
 }
 export function addMindSuggestion(from, to, type = 'related', reason = '') {
-  const graph = readMind();
-  if (from === to || !graph.entities.some(e => e.id === from) || !graph.entities.some(e => e.id === to)) throw new Error('Choose two different entities.');
+  const graph = readMind(); type = clean(type, 80) || 'related';
+  if (from === to || !graph.entities.some(e => e.id === from && e.status === 'active') || !graph.entities.some(e => e.id === to && e.status === 'active')) throw new Error('Choose two active entities.');
+  const found = graph.suggestions.find(s => s.status === 'pending' && s.from === from && s.to === to && s.type === type);
+  if (found) return found;
   const item = { id: uid(), from, to, type: clean(type, 80), reason: clean(reason, 500), status: 'pending', createdAt: Date.now() };
   graph.suggestions.push(item); writeMind(graph); return item;
 }
 export function reviewMindSuggestion(suggestionId, accept) {
   const graph = readMind(), item = graph.suggestions.find(s => s.id === suggestionId);
   if (!item) throw new Error('Suggestion not found.');
-  item.status = accept ? 'accepted' : 'rejected'; item.reviewedAt = Date.now(); writeMind(graph);
+  if (item.status !== 'pending') throw new Error('Suggestion has already been reviewed.');
+  if (accept && (!graph.entities.some(e => e.id === item.from && e.status === 'active') || !graph.entities.some(e => e.id === item.to && e.status === 'active'))) throw new Error('Suggested entities are no longer active.');
   if (accept) relateMindEntities(item.from, item.to, item.type);
-  return item;
+  const current = readMind(), reviewed = current.suggestions.find(s => s.id === suggestionId);
+  reviewed.status = accept ? 'accepted' : 'rejected'; reviewed.reviewedAt = Date.now(); writeMind(current);
+  return reviewed;
 }
 export function recallMind(query, limit = 8) { return retrieveMind(readMind(), compiledMind(), query, limit); }
 export function mindProfile(query = '') {

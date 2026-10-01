@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { Group, Mesh, BoxGeometry, MeshBasicMaterial, Texture } from 'three';
 import { ComponentRegistry } from '../../js/lib/automobile/component-registry.js';
 import { VehicleLoader, disposeObject } from '../../js/lib/automobile/vehicle-loader.js';
@@ -193,6 +194,6 @@ test('articulation validation rejects malformed or dangling definitions', () => 
 });
 
 test('procedural generator is deterministic and committed packages are current (2013)', () => {
-  const output = execFileSync(process.execPath, [new URL('../../scripts/build-procedural-vehicle.mjs', import.meta.url).pathname, '--check'], { encoding: 'utf8' });
+  const output = execFileSync(process.execPath, [fileURLToPath(new URL('../../scripts/build-procedural-vehicle.mjs', import.meta.url)), '--check'], { encoding: 'utf8' });
   assert.match(output, /up to date/);
 });

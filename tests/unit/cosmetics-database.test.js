@@ -33,7 +33,8 @@ test('catalogue: brands from around the world, products tied to real brand recor
 
 test('every ingredient of every product is a record in the Compound Database', () => {
   const byName = new Map(COMPOUNDS_DATA.map(c => [c.name, c]));
-  for (const p of db.PRODUCTS) {
+  // Curated labels are dictionary-backed; community labels retain unknown entries visibly.
+  for (const p of db.PRODUCTS.filter(p => p.source === 'catalogue')) {
     for (const name of p.inci) {
       const info = db.ingredientInfo(name);
       assert.ok(info, `${p.brand} ${p.name}: "${name}" is not in the ingredient dictionary`);
@@ -46,6 +47,9 @@ test('every ingredient of every product is a record in the Compound Database', (
   // and the dictionary is exactly the build script's list
   const rows = fs.readFileSync('scripts/compounds/cosmetic-inci.txt', 'utf8').split('\n').filter(l => l.includes(' | ') && !l.startsWith('#')).map(l => l.split(' | ')[0]);
   assert.deepEqual(new Set(rows), new Set(Object.keys(db.INCI)));
+  const community = db.PRODUCTS.find(p => p.source === 'openbeautyfacts' && db.analyse(p).unknown.length);
+  assert.ok(community, 'community labels may contain unknown ingredients');
+  assert.ok(db.analyse(community).notes.some(n => n.title === 'Label coverage'));
 });
 
 test('Compound Database: label names are searchable and identifiers are right', () => {
@@ -72,7 +76,7 @@ test('reading a label: fragrance allergens, alcohol, silicones, composition', ()
   assert.ok(cerave.silicones.some(s => s.name === 'Dimethicone'));
   assert.equal(Object.values(cerave.groups).reduce((x, y) => x + y, 0), 24);
   assert.ok(!cerave.groups.other, 'every ingredient has a job group');
-  for (const p of db.PRODUCTS) assert.ok(!db.analyse(p).groups.other, `${p.name} has ungrouped ingredients`);
+  for (const p of db.PRODUCTS.filter(p => p.source === 'catalogue')) assert.ok(!db.analyse(p).groups.other, `${p.name} has ungrouped ingredients`);
 });
 
 test('search, similar formulas and label parsing', () => {

@@ -6,6 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { setupDOMEnvironment } from '../../helpers/dom-env.js';
 import {
   CANONICAL_SYSTEMS,
@@ -176,12 +177,13 @@ test('Tier 1 - F2.2: Manifest loader produces non-empty upstream structure list 
 });
 
 test('Tier 1 - F2.3: Pipeline ensures output and source directories are created recursively without throwing ENOENT', () => {
-  const tempDir = path.resolve('public', 'anatomy', '.test-tmp-dir');
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'toolbox-anatomy-'));
+  const tempDir = path.join(tempRoot, 'nested', 'source');
   try {
     fs.mkdirSync(tempDir, { recursive: true });
     assert.ok(fs.existsSync(tempDir), 'Directory was created recursively');
   } finally {
-    if (fs.existsSync(tempDir)) fs.rmdirSync(tempDir);
+    fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 });
 

@@ -110,6 +110,7 @@ export function normalizeEventTime(value, fallback = '09:00') {
   if (!m) throw new Error(`"${String(value).slice(0, 20)}" is not a time. Use HH:MM, e.g. 14:30.`);
   let h = Number(m[1]);
   const min = Number(m[2] || 0);
+  if (m[3] && (h < 1 || h > 12)) throw new Error(`"${String(value).slice(0, 20)}" is not a time. Use HH:MM, e.g. 14:30.`);
   if (m[3] === 'pm' && h < 12) h += 12;
   if (m[3] === 'am' && h === 12) h = 0;
   if (h > 23 || min > 59) throw new Error(`"${String(value).slice(0, 20)}" is not a time. Use HH:MM, e.g. 14:30.`);
@@ -142,6 +143,7 @@ export function addEvent({
   if (!isAllDay) {
     startTime = normalizeEventTime(startTime, '09:00');
     endTime = normalizeEventTime(endTime, startTime);
+    if (endTime <= startTime) throw new Error('Event end time must be after its start time.');
   }
 
   const events = loadEvents();
@@ -178,11 +180,14 @@ export function updateEvent(id, updates) {
   if ('date' in clean && clean.date) clean.date = normalizeEventDate(clean.date);
   if ('startTime' in clean && clean.startTime) clean.startTime = normalizeEventTime(clean.startTime, existing.startTime || '09:00');
   if ('endTime' in clean && clean.endTime) clean.endTime = normalizeEventTime(clean.endTime, clean.startTime || existing.endTime || '10:00');
+  delete clean.id;
+  delete clean.createdAt;
   const updated = {
     ...existing,
     ...clean,
     updatedAt: Date.now()
   };
+  if (!updated.isAllDay && updated.endTime <= updated.startTime) throw new Error('Event end time must be after its start time.');
   events[idx] = updated;
   saveEvents(events);
   return updated;
@@ -202,54 +207,47 @@ export function deleteEvent(id) {
 /**
  * Get all events for a given YYYY-MM-DD date string
  */
-export function getEventsForDate(dateStr) {
-  const events = loadEvents();
-  const targetDate = new Date(dateStr + 'T00:00:00');
-  
-  return events.filter(e => {
-    if (e.date === dateStr) return true;
-    if (!e.recurrence || e.recurrence === 'none') return false;
+function occursOn(e, dateStr, targetDate) {
+  if (e.date === dateStr) return true;
+  if (!e.recurrence || e.recurrence === 'none') return false;
+  const eventDate = new Date(e.date + 'T00:00:00');
+  if (targetDate < eventDate) return false;
+  if (e.recurrence === 'daily') return true;
+  if (e.recurrence === 'weekly') return targetDate.getDay() === eventDate.getDay();
+  if (e.recurrence === 'monthly') return targetDate.getDate() === eventDate.getDate();
+  if (e.recurrence === 'yearly') return targetDate.getMonth() === eventDate.getMonth() && targetDate.getDate() === eventDate.getDate();
+  return false;
+}
 
-    const eventDate = new Date(e.date + 'T00:00:00');
-    if (targetDate < eventDate) return false;
-
-    if (e.recurrence === 'daily') return true;
-    if (e.recurrence === 'weekly') {
-      return targetDate.getDay() === eventDate.getDay();
-    }
-    if (e.recurrence === 'monthly') {
-      return targetDate.getDate() === eventDate.getDate();
-    }
-    if (e.recurrence === 'yearly') {
-      return targetDate.getMonth() === eventDate.getMonth() && targetDate.getDate() === eventDate.getDate();
-    }
-    return false;
-  }).sort((a, b) => {
+function sortDayEvents(events) {
+  return events.sort((a, b) => {
     if (a.isAllDay && !b.isAllDay) return -1;
     if (!a.isAllDay && b.isAllDay) return 1;
     return (a.startTime || '').localeCompare(b.startTime || '');
   });
 }
 
+export function getEventsForDate(dateStr) {
+  const targetDate = new Date(dateStr + 'T00:00:00');
+  return sortDayEvents(loadEvents().filter(e => occursOn(e, dateStr, targetDate)));
+}
+
 /**
  * Get events in a date range [startDateStr, endDateStr]
  */
 export function getEventsInRange(startDateStr, endDateStr) {
-  const start = new Date(startDateStr + 'T00:00:00');
-  const end = new Date(endDateStr + 'T23:59:59');
+  const startKey = normalizeEventDate(startDateStr);
+  const endKey = normalizeEventDate(endDateStr);
+  if (endKey < startKey) return [];
+  const start = new Date(startKey + 'T00:00:00');
+  const end = new Date(endKey + 'T00:00:00');
+  const dayCount = Math.round((Date.UTC(end.getFullYear(), end.getMonth(), end.getDate()) - Date.UTC(start.getFullYear(), start.getMonth(), start.getDate())) / 86400000) + 1;
+  if (dayCount > 3660) throw new Error('Choose a date range of ten years or less.');
   const results = [];
   const events = loadEvents();
-
-  for (const e of events) {
-    const eDate = new Date(e.date + 'T00:00:00');
-    if (eDate >= start && eDate <= end) {
-      results.push(e);
-      continue;
-    }
-    // Handle recurring occurrences
-    if (e.recurrence && e.recurrence !== 'none' && eDate <= end) {
-      results.push(e);
-    }
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const day = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    for (const event of events) if (occursOn(event, day, d)) results.push(event.date === day ? event : { ...event, date: day, occurrenceDate: day });
   }
 
   return results.sort((a, b) => a.date.localeCompare(b.date) || (a.startTime || '').localeCompare(b.startTime || ''));
@@ -297,7 +295,8 @@ export function exportToICS(events) {
 
     if (e.isAllDay) {
       lines.push(`DTSTART;VALUE=DATE:${dt}`);
-      lines.push(`DTEND;VALUE=DATE:${dt}`);
+      const next = new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]) + 1);
+      lines.push(`DTEND;VALUE=DATE:${next.getFullYear()}${pad(next.getMonth() + 1)}${pad(next.getDate())}`);
     } else {
       const sParts = (e.startTime || '09:00').split(':');
       const eParts = (e.endTime || '10:00').split(':');
@@ -325,11 +324,15 @@ function escapeICS(str) {
     .replace(/\n/g, '\\n');
 }
 
+function unescapeICS(str) {
+  return String(str).replace(/\\([nN,;\\])/g, (_, c) => c.toLowerCase() === 'n' ? '\n' : c);
+}
+
 /**
  * Parse standard iCalendar (.ics) content into events
  */
 export function importFromICS(icsContent) {
-  const lines = icsContent.split(/\r\n|\n|\r/);
+  const lines = String(icsContent).replace(/(?:\r\n|\n|\r)[ \t]/g, '').split(/\r\n|\n|\r/);
   const events = [];
   let inEvent = false;
   let current = null;
@@ -352,9 +355,7 @@ export function importFromICS(icsContent) {
       continue;
     }
     if (line === 'END:VEVENT') {
-      if (current && current.date) {
-        events.push(current);
-      }
+      try { if (current?.date) { normalizeEventDate(current.date); events.push(current); } } catch { /* skip invalid imported date */ }
       inEvent = false;
       current = null;
       continue;
@@ -363,11 +364,13 @@ export function importFromICS(icsContent) {
     if (!inEvent || !current) continue;
 
     if (line.startsWith('SUMMARY:')) {
-      current.title = line.substring(8).replace(/\\,/g, ',').replace(/\\;/g, ';');
+      current.title = unescapeICS(line.substring(8));
     } else if (line.startsWith('DESCRIPTION:')) {
-      current.description = line.substring(12).replace(/\\n/g, '\n').replace(/\\,/g, ',');
+      current.description = unescapeICS(line.substring(12));
     } else if (line.startsWith('LOCATION:')) {
-      current.location = line.substring(9).replace(/\\,/g, ',');
+      current.location = unescapeICS(line.substring(9));
+    } else if (line.startsWith('UID:')) {
+      current.externalUid = line.substring(4).slice(0, 500);
     } else if (line.startsWith('DTSTART')) {
       const val = line.split(':')[1] || '';
       if (val.length >= 8) {
@@ -398,14 +401,17 @@ export function importFromICS(icsContent) {
 
   // Persist imported events
   let existing = loadEvents();
+  const imported = [];
   for (const e of events) {
+    if (e.externalUid && existing.some(saved => saved.externalUid === e.externalUid || `${saved.id}@toolbox.app` === e.externalUid)) continue;
     existing.push({
       id: 'evt-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
       ...e,
       createdAt: Date.now(),
       updatedAt: Date.now()
     });
+    imported.push(e);
   }
   saveEvents(existing);
-  return events;
+  return imported;
 }

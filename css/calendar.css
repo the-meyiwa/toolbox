@@ -882,3 +882,27 @@ body.in-tool.tool-fit-screen .cal { height: auto; }
   .cal-mgrid { grid-template-rows: repeat(var(--weeks), 43px); }
   .cal-mobile-week button { min-height: 54px; }
 }
+
+/* The tool can be narrow inside a wider browser window. Match the measured
+   layout mode so the focused week/day views remain navigable there too. */
+@media (min-width: 761px) {
+  .cal[data-narrow="true"] { height: auto; overflow: visible; }
+  .cal[data-narrow="true"] .cal-main { min-height: 0; overflow: visible; }
+  .cal[data-narrow="true"] .cal-body { flex: none; min-height: 0; overflow: visible; }
+  .cal[data-narrow="true"] .cal-month { flex: none; display: block; }
+  .cal[data-narrow="true"] .cal-mgrid { grid-template-rows: repeat(var(--weeks), 48px); }
+  .cal[data-narrow="true"] .cal-mobile-day { display: block; min-height: 180px; padding: 18px 12px 30px; }
+  .cal[data-narrow="true"] .cal-mobile-day-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .cal[data-narrow="true"] .cal-mobile-day-head h3 { margin: 0; font-size: 17px; }
+  .cal[data-narrow="true"] .cal-mobile-events { margin-top: 12px; display: grid; gap: 7px; }
+  .cal[data-narrow="true"] .cal-mobile-event { display: flex; align-items: stretch; gap: 12px; width: 100%; min-height: 58px; padding: 9px 10px; text-align: left; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); }
+  .cal[data-narrow="true"] .cal-mobile-event i { width: 3px; border-radius: 3px; background: var(--c); }
+  .cal[data-narrow="true"] .cal-mobile-event span { display: flex; flex-direction: column; gap: 4px; }
+  .cal[data-narrow="true"] .cal-mobile-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); padding: 0 8px 10px; gap: 2px; }
+  .cal[data-narrow="true"] .cal-mobile-week button { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60px; border: 0; border-radius: 10px; background: transparent; color: var(--text); }
+  .cal[data-narrow="true"] .cal-mobile-week button.active { background: var(--tint); }
+  .cal[data-narrow="true"] .cal-mobile-week small { color: var(--text-3); font-size: 10px; }
+  .cal[data-narrow="true"] .cal-mobile-week b { font-size: 17px; }
+  .cal[data-narrow="true"] .cal-mobile-week i { font-style: normal; font-size: 9px; color: var(--accent); min-height: 11px; }
+  .cal[data-narrow="true"][data-view="week"] .cal-tg-head { display: none; }
+}

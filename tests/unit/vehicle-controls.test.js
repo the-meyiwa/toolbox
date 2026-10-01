@@ -7,6 +7,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { setupDOMEnvironment } from '../helpers/dom-env.js';
 
 setupDOMEnvironment();
@@ -144,7 +145,7 @@ test('Corolla engine bay: photo-checked corrections are applied once and the pac
 
 test('Corolla moving parts carry only their own pieces', async () => {
   const { readGLB, islands } = await import('../../scripts/vehicle-sources/glb-reader.mjs');
-  const { json, primitives } = readGLB(new URL(`../../public/automobile/packages/${VEHICLE_ID}/vehicle.glb`, import.meta.url).pathname);
+  const { json, primitives } = readGLB(fileURLToPath(new URL(`../../public/automobile/packages/${VEHICLE_ID}/vehicle.glb`, import.meta.url)));
   const moving = new Set();
   const mark = (i, under) => { const n = json.nodes[i]; const u = under || /^tbx_pivot_/.test(n.name || ''); if (u && n.mesh !== undefined) moving.add(n.name); for (const c of n.children || []) mark(c, u); };
   for (const r of json.scenes[0].nodes) mark(r, false);

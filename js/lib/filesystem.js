@@ -142,10 +142,8 @@ class IndexedDBDriver {
   }
 
   async put(fileRecord) {
-    // Keep in-memory and local fallback synchronized so listSync & statSync always have immediate data
-    this.putFallback(fileRecord);
     const db = await this.getDB();
-    if (!db) return true;
+    if (!db) return this.putFallback(fileRecord);
 
     return new Promise((resolve, reject) => {
       try {
@@ -153,8 +151,9 @@ class IndexedDBDriver {
         const { content, binaryData, ...meta } = fileRecord;
         tx.objectStore(STORE_FILES).put(fileRecord);
         tx.objectStore(STORE_META).put(meta);
-        tx.oncomplete = () => resolve(true);
-        tx.onerror = () => reject(tx.error);
+        tx.oncomplete = () => { this.putFallback(fileRecord); resolve(true); };
+        tx.onerror = () => reject(tx.error || new Error('File write failed.'));
+        tx.onabort = () => reject(tx.error || new Error('File write was cancelled.'));
       } catch (err) {
         reject(err);
       }
@@ -162,19 +161,19 @@ class IndexedDBDriver {
   }
 
   async delete(path) {
-    this.deleteFallback(path);
     const db = await this.getDB();
-    if (!db) return true;
+    if (!db) return this.deleteFallback(path);
 
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       try {
         const tx = db.transaction([STORE_FILES, STORE_META], 'readwrite');
         tx.objectStore(STORE_FILES).delete(path);
         tx.objectStore(STORE_META).delete(path);
-        tx.oncomplete = () => resolve(true);
-        tx.onerror = () => resolve(false);
-      } catch {
-        resolve(false);
+        tx.oncomplete = () => { this.deleteFallback(path); resolve(true); };
+        tx.onerror = () => reject(tx.error || new Error('File deletion failed.'));
+        tx.onabort = () => reject(tx.error || new Error('File deletion was cancelled.'));
+      } catch (err) {
+        reject(err);
       }
     });
   }
@@ -608,8 +607,10 @@ export class ToolboxFilesystem {
     const parentPath = getParentPath(norm);
 
     // Auto-create parent directory recursively if it does not exist
-    if (parentPath !== '/' && !(await this.stat(parentPath))) {
-      await this.mkdir(parentPath, { storage });
+    if (parentPath !== '/') {
+      const parent = await this.stat(parentPath);
+      if (!parent) await this.mkdir(parentPath, { storage });
+      else if (!parent.isDirectory) throw new Error(`Folder not found: ${parentPath}`);
     }
 
     const existing = await dbDriver.get(norm);
@@ -717,8 +718,10 @@ export class ToolboxFilesystem {
     }
 
     const parentPath = getParentPath(norm);
-    if (parentPath !== '/' && !(await this.stat(parentPath))) {
-      await this.mkdir(parentPath, { storage });
+    if (parentPath !== '/') {
+      const parent = await this.stat(parentPath);
+      if (!parent) await this.mkdir(parentPath, { storage });
+      else if (!parent.isDirectory) throw new Error(`Folder not found: ${parentPath}`);
     }
 
     const now = Date.now();
@@ -768,13 +771,14 @@ export class ToolboxFilesystem {
       const all = await dbDriver.listAllMeta();
       const descendants = all.filter(m => m.path === src || m.path.startsWith(src + '/'));
 
+      // Write the destination before removing anything from the source. A
+      // failed write must leave the original folder intact.
       for (const item of descendants) {
         const full = await dbDriver.get(item.path);
         const subSuffix = item.path.slice(src.length);
         const nextSubPath = normalizePath(dst + subSuffix);
         const nextSubParent = getParentPath(nextSubPath);
 
-        await dbDriver.delete(item.path);
         await dbDriver.put({
           ...full,
           path: nextSubPath,
@@ -783,8 +787,8 @@ export class ToolboxFilesystem {
           updatedAt: Date.now()
         });
       }
+      for (const item of descendants) await dbDriver.delete(item.path);
     } else {
-      await dbDriver.delete(src);
       const updated = {
         ...record,
         path: dst,
@@ -793,6 +797,7 @@ export class ToolboxFilesystem {
         updatedAt: Date.now()
       };
       await dbDriver.put(updated);
+      await dbDriver.delete(src);
     }
 
     this._notify();
@@ -814,10 +819,13 @@ export class ToolboxFilesystem {
    * @param {string} dstPath
    */
   async copy(srcPath, dstPath) {
+    await this.init();
     const src = normalizePath(srcPath);
     const dst = normalizePath(dstPath);
     const record = await dbDriver.get(src);
     if (!record) throw new Error(`Source not found: ${src}`);
+    if (src === dst || (record.isDirectory && dst.startsWith(src + '/'))) throw new Error('A folder cannot be copied into itself.');
+    if (await dbDriver.get(dst)) throw new Error(`Something already exists at ${dst}`);
 
     if (record.isDirectory) {
       await this.mkdir(dst);

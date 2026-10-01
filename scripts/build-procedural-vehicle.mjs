@@ -144,7 +144,10 @@ if (check) {
   const stale = [];
   for (const [file, content] of files) {
     const current = await readFile(file).catch(() => null);
-    if (!current || !current.equals(Buffer.from(content))) stale.push(path.relative(ROOT, file));
+    const matches = typeof content === 'string'
+      ? current?.toString('utf8').replace(/\r\n/g, '\n') === content
+      : current?.equals(Buffer.from(content));
+    if (!matches) stale.push(path.relative(ROOT, file));
   }
   if (stale.length) { console.error('Out of date:\n  ' + stale.join('\n  ')); process.exitCode = 1; }
   else console.log('Procedural vehicle packages are up to date.');

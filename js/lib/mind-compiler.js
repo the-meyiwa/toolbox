@@ -56,8 +56,9 @@ export function retrieveMind(graph, compiled, query, limit = 8) {
     const semantic = queryConcepts.filter(key => entry.concepts?.includes(key)).length;
     const names = terms.filter(t => entry.name.toLowerCase().includes(t)).length;
     const recent = Math.max(0, 1 - (Date.now() - entry.updatedAt) / (365 * 86400000));
-    return { entry, score: overlap * 3 + semantic * 1.4 + names * 2 + similarity(entry.name) * 2 + (roomMatches.has(entry.id) ? 2 : 0) + entry.importance * .7 + entry.confidence * .4 + recent * .3 };
-  }).filter(x => x.score > 1).sort((a, b) => b.score - a.score);
+    const relevance = overlap * 3 + semantic * 1.4 + names * 2 + similarity(entry.name) * 2 + (roomMatches.has(entry.id) ? 2 : 0);
+    return { entry, relevance, score: relevance + entry.importance * .7 + entry.confidence * .4 + recent * .3 };
+  }).filter(x => x.relevance > .45).sort((a, b) => b.score - a.score);
   const candidate = new Map(scored.map(x => [x.entry.id, x]));
   for (const seed of scored.slice(0, 4)) for (const link of compiled.adjacency[seed.entry.id] || []) {
     const entry = compiled.entries[link.other];

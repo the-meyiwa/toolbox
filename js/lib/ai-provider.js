@@ -38,7 +38,7 @@ import { QuotaManager } from './quota-manager.js';
 import { tbConfirm } from './dialog.js';
 import { authHeader, openGateway, readTurn } from './model-gateway.js';
 import { TOOLS } from '../registry/index.js';
-import { mindProfile, readMind, upsertMindEntity, forgetMindEntity, addMindSource } from './mind-store.js';
+import { mindProfile, readMind, upsertMindEntity, forgetMindEntity, addMindSource, isAssistantMemoryEntity } from './mind-store.js';
 
 export const STORAGE_GEMINI_KEY = 'toolbox_assistant_api_key';
 export const STORAGE_AI_MODE = 'toolbox_ai_mode';
@@ -125,14 +125,16 @@ export const STORAGE_AI_MEMORY = 'toolbox_assistant_memory_v1';
 const MEMORY_LIMIT = 100;
 
 export function getAssistantMemory() {
-  try { return readMind().entities.filter(e => e.status === 'active' && e.type === 'Memory' && e.memoryType !== 'working').map(e => ({ id: e.id, text: e.content || e.name, at: e.createdAt })); } catch { return []; }
+  try { const graph = readMind(); return graph.entities.filter(isAssistantMemoryEntity).map(e => ({ id: e.id, text: e.content || e.name, at: e.createdAt })); } catch { return []; }
 }
 function saveAssistantMemory(list) {
   const wanted = new Set(list.map(f => f.id).filter(Boolean));
   for (const fact of getAssistantMemory()) if (!wanted.has(fact.id)) forgetMindEntity(fact.id);
   for (const fact of list) if (!fact.id) {
+    const graph = readMind();
+    if (graph.entities.some(e => e.status === 'active' && e.type === 'Memory' && (e.content || e.name).toLowerCase() === fact.text.toLowerCase())) continue;
     const source = addMindSource({ kind: 'assistant' });
-    upsertMindEntity({ type: 'Memory', name: fact.text.slice(0, 100), content: fact.text, memoryType: 'explicit', importance: .7, sourceIds: [source.id] });
+    upsertMindEntity({ type: 'Memory', name: fact.text.slice(0, 100), content: fact.text, memoryType: 'explicit', importance: .7, properties: { origin: 'assistant' }, sourceIds: [source.id], deduplicate: false });
   }
   try { window.dispatchEvent(new CustomEvent('toolbox:assistant-memory', { detail: { memory: list } })); } catch { /* no window */ }
 }
@@ -179,6 +181,7 @@ const CONFIRM_TOOLS = {
   request_file_deletion: (a) => `Delete ${a.path || a.name || 'this file'} from Files?`,
   delete_artifact: (a) => `Delete the saved item ${a.id || a.name || ''}? This cannot be undone.`,
   calendar_cancel_event: (a) => `Cancel the calendar event ${a.title || a.id || ''}?`,
+  mind: (a) => a.action === 'forget' ? `Permanently forget this Mind item (${a.entityId || 'unknown'})?` : a.action === 'supersede' ? `Supersede this Mind item (${a.entityId || 'unknown'})?` : null,
   ide_git_push: (a) => `Push the Code Playground project to ${a.repo || a.remote || 'the remote repository'}?`,
   move_file: (a) => `Move ${a.from || a.source || a.path || 'the file'} to ${a.to || a.destination || 'the new location'}?`,
   rename_file: (a) => `Rename ${a.path || a.from || 'the file'} to ${a.newName || a.to || 'the new name'}?`,

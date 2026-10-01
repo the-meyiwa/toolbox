@@ -75,6 +75,17 @@ test('calendar-store: getEventsForDate retrieves matching and recurring events',
   assert.equal(sep11Events[0].title, 'Daily Standup');
 });
 
+test('calendar-store: range returns actual recurring occurrences within the requested dates', () => {
+  addEvent({ title: 'Weekly review', date: '2026-09-01', recurrence: 'weekly' });
+  addEvent({ title: 'One-time call', date: '2026-09-09' });
+  const events = getEventsInRange('2026-09-08', '2026-09-10');
+  assert.deepEqual(events.map(e => [e.title, e.date]), [
+    ['Weekly review', '2026-09-08'],
+    ['One-time call', '2026-09-09']
+  ]);
+  assert.deepEqual(getEventsInRange('2026-09-10', '2026-09-08'), []);
+});
+
 test('calendar-store: updateEvent and deleteEvent mutate persisted state', () => {
   const evt = addEvent({
     title: 'Initial Title',
@@ -137,4 +148,36 @@ test('calendar-store: exportToICS and importFromICS roundtrip events correctly',
   assert.equal(imported[0].title, 'Team Offsite');
   assert.equal(imported[0].date, '2026-10-05');
   assert.equal(imported[0].location, 'Lagoon Retreat');
+});
+
+test('calendar-store: rejects invalid time order and keeps event IDs stable', () => {
+  assert.throws(() => addEvent({ title: 'Invalid', date: '2026-09-20', startTime: '14:00', endTime: '13:00' }), /end time/);
+  assert.throws(() => addEvent({ title: 'Invalid', date: '2026-09-20', startTime: '13pm' }), /not a time/);
+  const event = addEvent({ title: 'Valid', date: '2026-09-20', startTime: '14:00', endTime: '15:00' });
+  assert.throws(() => updateEvent(event.id, { endTime: '13:00' }), /end time/);
+  const updated = updateEvent(event.id, { id: 'replacement-id', title: 'Still valid' });
+  assert.equal(updated.id, event.id);
+  assert.equal(loadEvents().length, 1);
+});
+
+test('calendar-store: all-day export uses exclusive next-day end including month boundaries', () => {
+  const event = addEvent({ title: 'All day', date: '2026-09-30', isAllDay: true });
+  const ics = exportToICS([event]);
+  assert.match(ics, /DTSTART;VALUE=DATE:20260930/);
+  assert.match(ics, /DTEND;VALUE=DATE:20261001/);
+});
+
+test('calendar-store: import unfolds lines and does not duplicate the same UID', () => {
+  const ics = 'BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:unique-event@example.com\r\nSUMMARY:Planning\r\nDESCRIPTION:First part \r\n continued\\nNext line\r\nDTSTART;VALUE=DATE:20261012\r\nEND:VEVENT\r\nEND:VCALENDAR';
+  assert.equal(importFromICS(ics).length, 1);
+  assert.equal(importFromICS(ics).length, 0);
+  const [event] = loadEvents();
+  assert.equal(event.description, 'First part continued\nNext line');
+  assert.equal(event.date, '2026-10-12');
+});
+
+test('calendar-store: importing an export of an existing event does not duplicate it', () => {
+  const event = addEvent({ title: 'Existing', date: '2026-10-12' });
+  assert.equal(importFromICS(exportToICS([event])).length, 0);
+  assert.equal(loadEvents().length, 1);
 });

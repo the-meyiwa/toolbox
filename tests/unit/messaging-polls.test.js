@@ -18,7 +18,7 @@ test('Messages SQL: poll votes are recorded atomically on the server', () => {
   assert.match(sql, /grant execute on function public\.vote_poll\(uuid,int\) to authenticated/);
 });
 
-test('Messages: a vote goes through vote_poll, and falls back safely on older databases', async () => {
+test('Messages: a vote uses the atomic vote_poll RPC and refuses databases without it', async () => {
   const store = new Map([['toolbox_supabase_session', JSON.stringify({ id: 'me', token: 't', email: 'me@x.io' })]]);
   globalThis.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) };
   const { votePoll } = await import('../../js/lib/messaging-service.js');
@@ -30,10 +30,9 @@ test('Messages: a vote goes through vote_poll, and falls back safely on older da
     const body = JSON.parse(init.body);
     return new Response(JSON.stringify([{ id: 'm1', payload: body.payload }]), { status: 200 });
   };
+  await assert.rejects(() => votePoll('m1', 1, poll), /latest Messages database update/);
+  assert.deepEqual(calls, ['POST rpc/vote_poll'], 'a client-side patch could overwrite concurrent votes');
+  globalThis.fetch = async () => new Response(JSON.stringify({ options: [{ text: 'Pizza', voters: ['you'] }, { text: 'Rice', voters: ['me'] }] }), { status: 200 });
   const next = await votePoll('m1', 1, poll);
-  assert.deepEqual(calls, ['POST rpc/vote_poll', 'PATCH toolbox_messages?id=eq.m1&select=*']);
-  assert.deepEqual(next.options.map((o) => o.voters), [['you'], ['me']], 'my vote added, theirs kept');
-  // A refused update (no rows back) is an error, not a silent no-op.
-  globalThis.fetch = async (url) => (String(url).includes('rpc/') ? new Response('{}', { status: 404 }) : new Response('[]', { status: 200 }));
-  await assert.rejects(() => votePoll('m1', 0, poll), /could not be saved/);
+  assert.deepEqual(next.options.map(o => o.voters), [['you'], ['me']]);
 });

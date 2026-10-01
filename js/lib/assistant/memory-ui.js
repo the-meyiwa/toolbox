@@ -5,9 +5,10 @@
    clear them.
    ============================================================ */
 
-import { readMind, upsertMindEntity, forgetMindEntity } from '../mind-store.js';
+import { readMind, upsertMindEntity, forgetMindEntity, addMindSource, isAssistantMemoryEntity } from '../mind-store.js';
 function getAssistantMemory() {
-  return readMind().entities.filter(e => e.status === 'active' && e.type === 'Memory' && e.memoryType !== 'working').map(e => ({ id: e.id, text: e.content || e.name, at: e.createdAt }));
+  const graph = readMind();
+  return graph.entities.filter(isAssistantMemoryEntity).map(e => ({ id: e.id, text: e.content || e.name, at: e.createdAt }));
 }
 function clearAssistantMemory() { save([]); }
 
@@ -18,8 +19,10 @@ function save(list) {
   for (const prior of getAssistantMemory()) if (!keep.has(prior.id)) forgetMindEntity(prior.id);
   for (const fact of list) {
     const current = fact.id && readMind().entities.find(e => e.id === fact.id);
-    if (!current || (current.content || current.name) !== fact.text)
-      upsertMindEntity({ id: fact.id, type: 'Memory', name: fact.text.slice(0, 100), content: fact.text, memoryType: 'explicit', importance: .7 });
+    if (current && (current.content || current.name) === fact.text) continue;
+    if (!current && readMind().entities.some(e => e.status === 'active' && e.type === 'Memory' && (e.content || e.name).toLowerCase() === fact.text.toLowerCase())) continue;
+    const sourceIds = current ? [] : [addMindSource({ kind: 'assistant' }).id];
+    upsertMindEntity({ id: fact.id, type: 'Memory', name: fact.text.slice(0, 100), content: fact.text, memoryType: 'explicit', importance: .7, properties: { origin: 'assistant' }, sourceIds, deduplicate: false });
   }
   window.dispatchEvent(new CustomEvent('toolbox:assistant-memory', { detail: { memory: list } }));
 }

@@ -32,6 +32,7 @@ const HOUR_PX = 48;
 const AGENDA_DAYS = 90;
 const HIDDEN_KEY = 'toolbox_calendar_hidden_v1';
 const REPEAT_LABELS = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' };
+let calendarCleanup = null;
 
 const ICON = {
   prev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
@@ -50,6 +51,7 @@ const ICON = {
 
 export default {
   render(container) {
+    calendarCleanup?.();
     let cursor = formatDateKey(new Date()); // the selected day; every view is anchored on it
     let currentView = 'month';
     let searchQuery = '';
@@ -907,9 +909,10 @@ export default {
     /* ---------- layout ---------- */
 
     function isNarrow() { return root.clientWidth < 760; }
+    let resizeObserver = null;
     if (typeof ResizeObserver !== 'undefined') {
       let wasNarrow = initiallyNarrow;
-      new ResizeObserver(() => {
+      resizeObserver = new ResizeObserver(() => {
         const narrow = isNarrow();
         if (narrow !== wasNarrow) {
           root.dataset.narrow = String(narrow);
@@ -919,11 +922,22 @@ export default {
           if (currentView === 'week') renderCurrentView();
         }
         updateCalSlider?.();
-      }).observe(root);
+      });
+      resizeObserver.observe(root);
     }
 
+    calendarCleanup = () => {
+      resizeObserver?.disconnect();
+      updateCalSlider?.dispose?.();
+      clearInterval(clock);
+      window.removeEventListener('keydown', onKey, true);
+    };
     renderCurrentView();
-  }
+  },
+  destroy() {
+    calendarCleanup?.();
+    calendarCleanup = null;
+  },
 };
 
 /* ---------- helpers ---------- */

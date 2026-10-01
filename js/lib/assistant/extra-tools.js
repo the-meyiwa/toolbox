@@ -1262,8 +1262,10 @@ export async function executeExtraTool(name, args = {}, ctx = {}) {
       if (action === 'remember' || action === 'update') {
         if (!args.name && !args.entityId) throw new Error('Name the durable fact or entity.');
         if (/\b(password|passcode|pin|cvv|card number|account number|bvn|nin)\b|\b\d{10,19}\b/i.test(`${args.name || ''} ${content || ''}`)) throw new Error('Sensitive secrets cannot be stored in Mind.');
-        const source = addMindSource({ kind: 'assistant', ref: args.sourceRef || '', excerpt: '' });
         const previous = args.entityId ? readMind().entities.find(e => e.id === args.entityId) : null;
+        if (args.entityId && !previous) throw new Error('Mind entity not found.');
+        if (!String(args.name || previous?.name || '').trim()) throw new Error('Name the durable fact or entity.');
+        const source = addMindSource({ kind: 'assistant', ref: args.sourceRef || '', excerpt: '' });
         const entity = upsertMindEntity({ id: args.entityId, name: args.name || previous?.name, type: args.type || previous?.type || 'Memory', content, properties: args.properties, memoryType: args.memoryType || previous?.memoryType || 'learned', confidence: args.confidence, importance: args.importance, sourceIds: [source.id] });
         return { status: 'success', entity, openHash: '#mind' };
       }

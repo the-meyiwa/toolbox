@@ -1289,12 +1289,13 @@ function wire(host, ctx, refresh, ui) {
     if (!fileClipboard.paths.length || !fileClipboard.op) return;
     const isCut = fileClipboard.op === 'cut';
     const pasted = [];
+    const failed = [];
     let skipped = 0;
     for (const src of fileClipboard.paths) {
       try {
-        if (targetDir === src || targetDir.startsWith(src + '/')) { skipped++; continue; }
+        if (targetDir === src || targetDir.startsWith(src + '/')) { skipped++; failed.push(src); continue; }
         const name = getBaseName(src);
-        if (isCut && getParentPath(src) === targetDir) continue;
+        if (isCut && getParentPath(src) === targetDir) { failed.push(src); continue; }
         let dest = uniquePath(targetDir, name);
         if (!isCut && getParentPath(src) === targetDir) {
           const dot = name.lastIndexOf('.');
@@ -1306,21 +1307,23 @@ function wire(host, ctx, refresh, ui) {
       } catch (err) {
         console.warn('Paste error:', err);
         skipped++;
+        failed.push(src);
       }
     }
-    if (isCut) fileClipboard = { op: null, paths: [] };
+    if (isCut) fileClipboard = failed.length ? { op: 'cut', paths: failed } : { op: null, paths: [] };
     selectedPaths = new Set(pasted);
     cursorPath = pasted[0] || null;
     flash(pasted.length
       ? `${isCut ? 'Moved' : 'Pasted'} ${plural(pasted.length, 'item')}${skipped ? `, skipped ${skipped}` : ''}.`
-      : 'Nothing was pasted. A folder can\'t go inside itself.', pasted.length ? 'good' : 'bad');
+      : 'Nothing was pasted. Choose another folder or try again.', pasted.length ? 'good' : 'bad');
     refresh();
   }
 
   async function removePath(path) {
     const item = lookup(path);
     const removed = await fs.delete(path);
-    if (!removed && item?.id && store.get(item.id)) store.remove(item.id);
+    if (!removed && item?.id && store.get(item.id)) { store.remove(item.id); return true; }
+    return removed;
   }
 
   async function executeDelete(paths) {
@@ -1334,7 +1337,7 @@ function wire(host, ctx, refresh, ui) {
     let deleted = 0;
     for (const p of paths) {
       try {
-        await removePath(p);
+        if (!(await removePath(p))) continue;
         deleted++;
         selectedPaths.delete(p);
         textCache.delete(p);
@@ -2316,11 +2319,11 @@ function wire(host, ctx, refresh, ui) {
   /* ---------- Segmented controls and scroll fades ---------- */
 
   const storageSwitch = host.querySelector('.sv-storage-switch');
-  if (storageSwitch) attachSegmentedSlider(storageSwitch, '.sv-storage-btn');
+  if (storageSwitch) cleanups.push(attachSegmentedSlider(storageSwitch, '.sv-storage-btn').dispose);
   const viewSwitcher = host.querySelector('.sv-view-switcher');
-  if (viewSwitcher) attachSegmentedSlider(viewSwitcher, '.sv-layout-btn');
+  if (viewSwitcher) cleanups.push(attachSegmentedSlider(viewSwitcher, '.sv-layout-btn').dispose);
   const cviewSwitcher = host.querySelector('.sv-content-view-switcher');
-  if (cviewSwitcher) attachSegmentedSlider(cviewSwitcher, '.sv-cview-btn');
+  if (cviewSwitcher) cleanups.push(attachSegmentedSlider(cviewSwitcher, '.sv-cview-btn').dispose);
 
   const fadeWrappers = host.querySelectorAll('.sv-fade-wrapper');
   const updateFade = (wrapper) => {

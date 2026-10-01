@@ -6,7 +6,7 @@ import { setupDOMEnvironment } from '../helpers/dom-env.js';
 
 test('Messaging Features: uses authenticated directory rather than dummy profiles', async () => {
   const source = fs.readFileSync(path.resolve('js/lib/user-directory.js'), 'utf8');
-  assert.ok(source.includes('/rest/v1/profiles'));
+  assert.ok(source.includes('/rest/v1/rpc/search_message_profiles'), 'directory search must use the access-controlled RPC');
   assert.ok(!source.includes('Alice Smith'));
   assert.ok(!source.includes('DEFAULT_MOCK_PROFILES'));
 });
@@ -22,7 +22,7 @@ test('Messaging Features: Super-expanded Messaging Tool elements', async () => {
 
   assert.ok(container.querySelector('#messages-search'), 'Must have account directory search');
   assert.ok(container.querySelector('#messages-attach'), 'Must have file sharing');
-  assert.ok(container.querySelector('#messages-game'), 'Must have a game action');
+  assert.equal(container.querySelector('#messages-game'), null, 'removed game action must not reappear');
   assert.ok(container.querySelector('#messages-compose'), 'Must have the conversation composer');
   assert.deepEqual(
     [...container.querySelectorAll('[data-message-action]')].map(button => button.dataset.messageAction),
