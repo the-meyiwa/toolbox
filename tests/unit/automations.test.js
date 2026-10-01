@@ -200,24 +200,89 @@ test('Automations: manual trigger, duplication, and step disabling work as expec
   assert.ok(events.includes('complete-0-true'));
 });
 
-test('Automations: default action runners execute math, text transforms, variables, and conditions', async () => {
-  // Temporarily reset runners to default
-  A.setActionRunners(null);
+test('Automations: evaluateMath handles pure arithmetic, exponentiation, unary minus, and safe syntax', () => {
+  assert.equal(A.evaluateMath('2 + 3 * 4'), 14);
+  assert.equal(A.evaluateMath('(2 + 3) * 4'), 20);
+  assert.equal(A.evaluateMath('2^3'), 8, 'caret is power, not bitwise XOR');
+  assert.equal(A.evaluateMath('2^3^2'), 512, 'power is right-associative (2^(3^2) = 2^9 = 512)');
+  assert.equal(A.evaluateMath('-5 + 10'), 5);
+  assert.equal(A.evaluateMath('-(2 + 3) * 2'), -10);
+  assert.equal(A.evaluateMath('10 % 3'), 1);
+  assert.equal(A.evaluateMath('1.5 * 2'), 3);
+  assert.equal(A.evaluateMath('1e3 * 2'), 2000);
+  assert.throws(() => A.evaluateMath('10 / 0'), /Division by zero/);
+  assert.throws(() => A.evaluateMath('eval("bad")'), /Unexpected character/);
+  assert.throws(() => A.evaluateMath(''), /Empty calculation/);
+});
 
-  const calcAuto = A.createAutomation({
-    name: 'Math and Transform',
+test('Automations: variable interpolation prevents prototype property leaks', () => {
+  const filled = A.fill('test {{constructor}} and {{toString}}', '', {});
+  assert.equal(filled, 'test {{constructor}} and {{toString}}', 'object prototypes are not leaked');
+});
+
+test('Automations: condition skip correctly skips the next step and continues following steps', async () => {
+  A.setActionRunners(null);
+  const auto = A.createAutomation({
+    name: 'Skip Step Test',
     trigger: { type: 'manual' },
     actions: [
-      { type: 'calc', expression: '10 * 5 + 2' },
-      { type: 'variable', varName: 'resultNum', value: '{{previous}}' },
-      { type: 'transform', op: 'uppercase', input: 'result is {{vars.resultNum}}' },
-      { type: 'condition', left: '{{previous}}', op: 'contains', right: '52', ifFalse: 'stop' },
+      { type: 'condition', left: '10', op: 'greater', right: '100', ifFalse: 'skip' }, // false -> skip next step
+      { type: 'transform', op: 'uppercase', input: 'should be skipped' },               // should be skipped!
+      { type: 'transform', op: 'lowercase', input: 'MUST RUN' },                        // should run!
     ],
   });
 
-  const entry = await A.runAutomation(calcAuto.id);
+  const entry = await A.runAutomation(auto.id);
   assert.equal(entry.ok, true);
-  assert.equal(entry.steps[0].output, '52');
-  assert.equal(entry.steps[2].output, 'RESULT IS 52');
+  assert.equal(entry.steps.length, 3);
+  assert.equal(entry.steps[0].type, 'condition');
+  assert.equal(entry.steps[1].skipped, true, 'step 2 was skipped by condition');
+  assert.equal(entry.steps[2].output, 'must run', 'step 3 ran successfully');
 });
+
+test('Automations: mind runner rejects sensitive personal secrets', async () => {
+  A.setActionRunners(null);
+  const auto = A.createAutomation({
+    name: 'Secret Leak Test',
+    trigger: { type: 'manual' },
+    actions: [
+      { type: 'mind', name: 'My Passwords', content: 'my secret password is 12345' },
+    ],
+  });
+
+  const entry = await A.runAutomation(auto.id);
+  assert.equal(entry.ok, false);
+  assert.match(entry.summary, /Sensitive secrets cannot be stored in Mind/);
+});
+
+test('Automations: fetch runner enforces HTTP/HTTPS protocols', async () => {
+  A.setActionRunners(null);
+  const auto = A.createAutomation({
+    name: 'Invalid Protocol Test',
+    trigger: { type: 'manual' },
+    actions: [
+      { type: 'fetch', url: 'javascript:alert(1)' },
+    ],
+  });
+
+  const entry = await A.runAutomation(auto.id);
+  assert.equal(entry.ok, false);
+  assert.match(entry.summary, /Only HTTP and HTTPS URLs are allowed/);
+});
+
+test('Automations: calendar today query executes without crashing', async () => {
+  A.setActionRunners(null);
+  const auto = A.createAutomation({
+    name: 'Calendar Today Test',
+    trigger: { type: 'manual' },
+    actions: [
+      { type: 'calendar', calAction: 'today' },
+    ],
+  });
+
+  const entry = await A.runAutomation(auto.id);
+  assert.equal(entry.ok, true);
+  assert.ok(typeof entry.steps[0].output === 'string');
+});
+
 

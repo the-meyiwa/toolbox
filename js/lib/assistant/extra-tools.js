@@ -963,9 +963,9 @@ async function runTool({ tool_id: id, input = '', options = {} }, ctx = {}) {
   const tool = TOOLS.find(t => t.id === id || t.id === String(id).replace(/_/g, '-'));
   if (!tool) return { ...findTools(input || id), note: `"${id}" is not a Toolbox tool id. Choose an id from these results, or use a dedicated Assistant capability such as search_places_nearby and get_directions.` };
   try {
-    const modules = import.meta.glob('../../tools/*.js');
+    const modules = typeof import.meta.glob === 'function' ? import.meta.glob('../../tools/*.js') : {};
     const loader = modules[`../../tools/${tool.id}.js`];
-    const instance = loader ? (await loader()).default : null;
+    const instance = loader ? (await loader()).default : (await import(`../../tools/${tool.id}.js`).catch(() => null))?.default;
 
     /* Tools built on the shared shells run directly: same code, no UI. */
     if (options?.help || options?.describe) {
@@ -1000,7 +1000,9 @@ async function runTool({ tool_id: id, input = '', options = {} }, ctx = {}) {
       } finally { try { instance.destroy?.(); } catch { /* ignore */ } host.remove(); }
     }
   } catch (e) { /* fall through to opening the tool */ console.warn('Headless run failed', e); }
-  window.location.hash = `#${tool.id}`;
+  if (typeof window !== 'undefined' && window.location) {
+    window.location.hash = `#${tool.id}`;
+  }
   return { status: 'success', openedToolId: tool.id, message: `${tool.name} can't run inside chat, so it was opened for the user.` };
 }
 

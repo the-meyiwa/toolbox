@@ -15,6 +15,7 @@ import {
 import { parseCron, nextRuns, describeCron } from './cron-parser.js';
 import { TOOLS } from '../registry/index.js';
 import { icon } from '../lib/icons.js';
+import { tbAlert, tbConfirm } from '../lib/dialog.js';
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 const pad = (n) => String(n).padStart(2, '0');
@@ -1231,7 +1232,6 @@ export default {
         a.click();
         URL.revokeObjectURL(url);
       } else if (act === 'delete') {
-        const { tbConfirm } = await import('../lib/dialog.js');
         if (await tbConfirm(`Delete automation “${auto.name}”?`, { title: 'Delete automation', confirmText: 'Delete', destructive: true })) {
           deleteAutomation(id);
           renderActiveView();
@@ -1316,7 +1316,7 @@ export default {
           }
           renderActiveView();
         } catch (err) {
-          alert('Could not import automation: invalid JSON.');
+          tbAlert('Could not import automation: invalid JSON.', 'Import Error');
         }
       };
       reader.readAsText(file);

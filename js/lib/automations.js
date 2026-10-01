@@ -120,7 +120,7 @@ export function fill(text, previous = '', context = {}) {
 
   // Custom variables: {{vars.foo}} or {{foo}}
   s = s.replace(/\{\{\s*(?:vars\.)?([a-zA-Z0-9_]+)\s*\}\}/gi, (match, key) => {
-    if (key in vars) return String(vars[key] ?? '');
+    if (Object.prototype.hasOwnProperty.call(vars, key)) return String(vars[key] ?? '');
     return match;
   });
 
@@ -420,6 +420,120 @@ const textOf = (result) => {
   return String(result.text ?? result.output ?? result.content ?? result.result ?? result.message ?? '');
 };
 
+export function evaluateMath(expr) {
+  const str = String(expr || '').trim();
+  if (!str) throw new Error('Empty calculation expression.');
+
+  const tokens = [];
+  let i = 0;
+  while (i < str.length) {
+    const ch = str[i];
+    if (/\s/.test(ch)) { i++; continue; }
+    if (/[0-9.]/.test(ch)) {
+      let numStr = '';
+      while (i < str.length && /[0-9.]/.test(str[i])) {
+        numStr += str[i++];
+      }
+      if (i < str.length && (str[i] === 'e' || str[i] === 'E')) {
+        let expStr = str[i++];
+        if (i < str.length && (str[i] === '+' || str[i] === '-')) {
+          expStr += str[i++];
+        }
+        while (i < str.length && /[0-9]/.test(str[i])) {
+          expStr += str[i++];
+        }
+        numStr += expStr;
+      }
+      const val = Number(numStr);
+      if (Number.isNaN(val)) throw new Error(`Invalid number "${numStr}".`);
+      tokens.push({ type: 'num', val });
+      continue;
+    }
+    if ('+-*/%^()'.includes(ch)) {
+      tokens.push({ type: 'op', val: ch });
+      i++;
+      continue;
+    }
+    throw new Error(`Unexpected character "${ch}" in calculation.`);
+  }
+
+  let pos = 0;
+  const peek = () => tokens[pos];
+  const consume = (expected) => {
+    const tok = tokens[pos];
+    if (expected && (!tok || tok.val !== expected)) {
+      throw new Error(`Expected "${expected}"`);
+    }
+    pos++;
+    return tok;
+  };
+
+  function parseExpression() {
+    return parseAdditive();
+  }
+
+  function parseAdditive() {
+    let left = parseMultiplicative();
+    while (pos < tokens.length && (peek()?.val === '+' || peek()?.val === '-')) {
+      const op = consume().val;
+      const right = parseMultiplicative();
+      left = op === '+' ? left + right : left - right;
+    }
+    return left;
+  }
+
+  function parseMultiplicative() {
+    let left = parsePower();
+    while (pos < tokens.length && (peek()?.val === '*' || peek()?.val === '/' || peek()?.val === '%')) {
+      const op = consume().val;
+      const right = parsePower();
+      if ((op === '/' || op === '%') && right === 0) throw new Error('Division by zero.');
+      left = op === '*' ? left * right : op === '/' ? left / right : left % right;
+    }
+    return left;
+  }
+
+  function parsePower() {
+    let left = parseUnary();
+    if (pos < tokens.length && peek()?.val === '^') {
+      consume('^');
+      const right = parsePower();
+      left = Math.pow(left, right);
+    }
+    return left;
+  }
+
+  function parseUnary() {
+    if (pos < tokens.length && (peek()?.val === '+' || peek()?.val === '-')) {
+      const op = consume().val;
+      const factor = parseUnary();
+      return op === '-' ? -factor : factor;
+    }
+    return parsePrimary();
+  }
+
+  function parsePrimary() {
+    const tok = peek();
+    if (!tok) throw new Error('Unexpected end of expression.');
+    if (tok.type === 'num') {
+      consume();
+      return tok.val;
+    }
+    if (tok.val === '(') {
+      consume('(');
+      const val = parseExpression();
+      consume(')');
+      return val;
+    }
+    throw new Error(`Unexpected token "${tok.val}".`);
+  }
+
+  const result = parseExpression();
+  if (pos < tokens.length) throw new Error(`Unexpected extra token "${peek().val}".`);
+  if (!Number.isFinite(result)) throw new Error('Calculation did not produce a finite number.');
+  return result;
+}
+
 const defaultRunners = {
   async notify(action, previous, auto, ctx) {
     const { NotificationEngine } = await import('./notifications.js');
@@ -461,13 +575,18 @@ const defaultRunners = {
   },
   async open(action, previous, auto, ctx) {
     const { NotificationEngine } = await import('./notifications.js');
-    await NotificationEngine.addNotification(auto.name, fill(action.message, previous, ctx) || `Tap to open ${action.toolId}.`, 'automation', `#${action.toolId}`, null, { automationId: auto.id });
+    const safeToolId = String(action.toolId || '').replace(/[^a-zA-Z0-9_-]/g, '');
+    if (!safeToolId) throw new Error('Valid tool id is required.');
+    await NotificationEngine.addNotification(auto.name, fill(action.message, previous, ctx) || `Tap to open ${safeToolId}.`, 'automation', `#${safeToolId}`, null, { automationId: auto.id });
     return previous;
   },
   async mind(action, previous, auto, ctx) {
     const { upsertMindEntity } = await import('./mind-store.js');
     const name = fill(action.name, previous, ctx) || 'Thought from Automation';
     const content = fill(action.content, previous, ctx) || previous;
+    if (/\b(password|passcode|pin|cvv|card number|account number|bvn|nin)\b|\b\d{10,19}\b/i.test(`${name} ${content}`)) {
+      throw new Error('Sensitive secrets cannot be stored in Mind.');
+    }
     const entity = upsertMindEntity({
       name,
       type: action.mindType || 'Idea',
@@ -478,9 +597,13 @@ const defaultRunners = {
   },
   async calendar(action, previous, auto, ctx) {
     if (action.calAction === 'today') {
-      const { loadStoredEvents, isEventOnDate } = await import('./calendar-store.js');
+      const { getEventsForDate } = await import('./calendar-store.js');
       const now = new Date();
-      const events = loadStoredEvents().filter(e => isEventOnDate(e, now));
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const todayStr = `${yyyy}-${mm}-${dd}`;
+      const events = getEventsForDate(todayStr);
       if (!events.length) return 'No events scheduled for today.';
       return events.map(e => `• ${e.startTime || 'All day'}: ${e.title}`).join('\n');
     }
@@ -516,9 +639,10 @@ const defaultRunners = {
     return val;
   },
   async fetch(action, previous, auto, ctx) {
-    const url = fill(action.url, previous, ctx);
+    const url = fill(action.url, previous, ctx).trim();
     if (!url) throw new Error('URL is required for web request.');
-    const method = action.method || 'GET';
+    if (!/^https?:\/\//i.test(url)) throw new Error('Only HTTP and HTTPS URLs are allowed.');
+    const method = action.method === 'POST' ? 'POST' : 'GET';
     const headers = { ...action.headers };
     let body = undefined;
     if (method === 'POST' && action.body) {
@@ -549,6 +673,7 @@ const defaultRunners = {
       case 'replace': {
         const find = fill(action.find, previous, ctx);
         const rep = fill(action.replaceWith, previous, ctx);
+        if (!find) return input;
         return input.split(find).join(rep);
       }
       default: return input;
@@ -556,10 +681,7 @@ const defaultRunners = {
   },
   async calc(action, previous, auto, ctx) {
     const expr = fill(action.expression, previous, ctx);
-    const sanitized = expr.replace(/[^0-9+\-*/().%^ eE]/g, '');
-    if (!sanitized.trim()) throw new Error('Invalid calculation expression.');
-    const res = Function(`"use strict"; return (${sanitized});`)();
-    if (!Number.isFinite(res)) throw new Error('Calculation did not produce a number.');
+    const res = evaluateMath(expr);
     return String(res);
   },
   async variable(action, previous, auto, ctx) {
@@ -647,8 +769,14 @@ export async function runAutomation(id, { reason = 'manual', now = Date.now(), o
           break;
         }
         if (out === '__SKIP__') {
-          entry.steps.push({ type: action.type, ok: true, ms: Date.now() - started, output: 'Condition skipped' });
-          onStepComplete?.(idx, action, { ok: true, ms: Date.now() - started, output: 'Condition skipped' });
+          entry.steps.push({ type: action.type, ok: true, ms: Date.now() - started, output: 'Condition skipped next step' });
+          onStepComplete?.(idx, action, { ok: true, ms: Date.now() - started, output: 'Condition skipped next step' });
+          if (idx + 1 < auto.actions.length) {
+            idx++;
+            const skippedAction = auto.actions[idx];
+            entry.steps.push({ type: skippedAction.type, ok: true, skipped: true, ms: 0, output: 'Skipped by previous condition' });
+            onStepComplete?.(idx, skippedAction, { ok: true, skipped: true, ms: 0, output: 'Skipped by previous condition' });
+          }
           continue;
         }
 

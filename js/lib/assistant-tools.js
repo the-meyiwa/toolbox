@@ -1915,7 +1915,9 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
       window.open(`/?standalone=true#${toolId}`, '_blank');
       return { status: 'success', openedToolId: toolId, message: `Opened tool: #${toolId} in standalone fullscreen mode.` };
     } else {
-      window.location.hash = `#${toolId}`;
+      if (typeof window !== 'undefined' && window.location) {
+        window.location.hash = `#${toolId}`;
+      }
       return { status: 'success', openedToolId: toolId, message: `Navigated to tool: #${toolId}. The user is now viewing it.` };
     }
   }
@@ -1925,13 +1927,22 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
   if (dynamicMatchedTool && !name.startsWith('open_tool_') && name !== 'search_images' && name !== 'generate_flowchart' && name !== 'generate_csv' && name !== 'save_file' && name !== 'run_speed_test') {
     const toolId = dynamicMatchedTool.id;
     try {
-      const toolModules = import.meta.glob('../tools/*.js');
-      const loader = toolModules[`../tools/${toolId}.js`];
-      if (loader) {
-        const module = await loader();
-        const instance = module.default;
-        
-        if (instance.setArtifact && instance.getArtifact) {
+      let instance = null;
+      if (typeof import.meta.glob === 'function') {
+        const toolModules = import.meta.glob('../tools/*.js');
+        const loader = toolModules[`../tools/${toolId}.js`];
+        if (loader) {
+          const module = await loader();
+          instance = module.default;
+        }
+      } else {
+        try {
+          const module = await import(`../tools/${toolId}.js`);
+          instance = module.default;
+        } catch {}
+      }
+
+      if (instance && instance.setArtifact && instance.getArtifact) {
           const dummyContainer = document.createElement('div');
           instance.render(dummyContainer);
           // Pass the entire args object in case the tool accepts more than just text
@@ -1952,7 +1963,6 @@ export async function executeAssistantTool(name, args, { currentFile, taskState 
             };
           }
         }
-      }
     } catch (e) {
       console.warn(`Headless execution attempt failed for dynamic tool ${toolId}:`, e);
     }
