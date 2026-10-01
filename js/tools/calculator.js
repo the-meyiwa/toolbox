@@ -9,9 +9,12 @@
 
 import { attachSegmentedSlider } from '../lib/segmented-slider.js';
 import { icon } from '../lib/icons.js';
+import { evaluateExpression, solveCubic } from '../lib/math-engine.js';
+import { copyText } from '../utils.js';
 
 export default {
   keyListener: null,
+  themeListener: null,
 
   render(container, { analytics, tool, artifact }) {
     container.innerHTML = `
@@ -522,7 +525,7 @@ export default {
             <div class="calc-graph-layout">
               <div class="calc-graph-controls">
                 <div class="calc-graph-fn-row">
-                  <span class="calc-fn-color-dot" style="background:var(--text);"></span>
+                  <span class="calc-fn-color-dot" style="background:#3b82f6;"></span>
                   <label class="calc-fn-lbl">f₁(x) =</label>
                   <input type="text" id="graph-f1" class="tool-input" value="sin(x)" placeholder="e.g. sin(x) or x^2 - 4">
                 </div>
@@ -657,7 +660,7 @@ export default {
     initFinancialEngine(container);
     initEngineeringEngine(container);
     initStatisticsEngine(container);
-    initGraphingEngine(container);
+    this.themeListener = initGraphingEngine(container);
     initRPNEngine(container);
     initConstantsEngine(container);
   },
@@ -666,6 +669,10 @@ export default {
     if (this.keyListener) {
       document.removeEventListener('keydown', this.keyListener);
       this.keyListener = null;
+    }
+    if (this.themeListener) {
+      window.removeEventListener('toolbox:themechange', this.themeListener);
+      this.themeListener = null;
     }
   }
 };
@@ -1140,8 +1147,20 @@ function initScientificEngine(container) {
     } else if (type === 'linear') {
       const a = parseFloat(container.querySelector('#eq-a').value);
       const b = parseFloat(container.querySelector('#eq-b').value);
-      if (a === 0) eqResultDiv.textContent = 'No solution (a = 0)';
+      if (isNaN(a) || isNaN(b) || a === 0) eqResultDiv.textContent = 'Invalid linear coefficient (a ≠ 0).';
       else eqResultDiv.innerHTML = `x = <strong>${(-b / a).toFixed(6)}</strong>`;
+    } else if (type === 'cubic') {
+      const a = parseFloat(container.querySelector('#eq-a').value);
+      const b = parseFloat(container.querySelector('#eq-b').value);
+      const c = parseFloat(container.querySelector('#eq-c').value);
+      const d = parseFloat(container.querySelector('#eq-d').value);
+      if (isNaN(a) || isNaN(b) || isNaN(c) || isNaN(d) || a === 0) {
+        eqResultDiv.textContent = 'Invalid cubic coefficients (a ≠ 0).';
+        return;
+      }
+      const sol = solveCubic(a, b, c, d);
+      const rootStr = (sol.roots || []).map((r, i) => `x<sub>${i + 1}</sub> = <strong>${typeof r === 'number' ? r.toFixed(6) : r}</strong>`).join('<br>');
+      eqResultDiv.innerHTML = `<strong>${sol.nature}</strong>:<br>${rootStr}`;
     } else if (type === 'sys2') {
       const a1 = parseFloat(container.querySelector('#sys-a1').value);
       const b1 = parseFloat(container.querySelector('#sys-b1').value);
@@ -1162,23 +1181,65 @@ function initScientificEngine(container) {
 
   // Simpson's 1/3 Numerical Definite Integral
   container.querySelector('#sci-int-calc')?.addEventListener('click', () => {
-    const expr = container.querySelector('#sci-int-expr').value;
-    const a = parseFloat(container.querySelector('#sci-int-a').value);
-    const b = parseFloat(container.querySelector('#sci-int-b').value);
+    const expr = container.querySelector('#sci-int-expr')?.value;
+    const a = parseFloat(container.querySelector('#sci-int-a')?.value);
+    const b = parseFloat(container.querySelector('#sci-int-b')?.value);
     const out = container.querySelector('#sci-int-result');
+    if (!out) return;
+
+    if (!expr || !expr.trim()) {
+      out.textContent = 'Please enter a valid mathematical expression.';
+      return;
+    }
+
+    if (Number.isNaN(a) || !Number.isFinite(a) || Number.isNaN(b) || !Number.isFinite(b)) {
+      out.textContent = 'Please enter valid numerical lower and upper bounds.';
+      return;
+    }
+
+    if (a === b) {
+      out.innerHTML = `∫ f(x)dx [${a} → ${b}] = <strong>0.00000000</strong>`;
+      return;
+    }
 
     try {
       const fn = createMathFunction(expr);
+      const fa = fn(a);
+      const fb = fn(b);
+
+      if (Number.isNaN(fa) || !Number.isFinite(fa) || Number.isNaN(fb) || !Number.isFinite(fb)) {
+        out.textContent = 'Evaluation error: expression is undefined or singular at the integration bounds.';
+        return;
+      }
+
       const n = 1000;
       const h = (b - a) / n;
-      let sum = fn(a) + fn(b);
+      let sum = fa + fb;
+      let hasSingularity = false;
+
       for (let i = 1; i < n; i++) {
         const x = a + i * h;
-        sum += (i % 2 === 0 ? 2 : 4) * fn(x);
+        const y = fn(x);
+        if (Number.isNaN(y) || !Number.isFinite(y)) {
+          hasSingularity = true;
+          break;
+        }
+        sum += (i % 2 === 0 ? 2 : 4) * y;
       }
+
+      if (hasSingularity) {
+        out.textContent = 'Evaluation error: function is undefined or contains a singularity in this interval.';
+        return;
+      }
+
       const integral = (h / 3) * sum;
+      if (Number.isNaN(integral) || !Number.isFinite(integral)) {
+        out.textContent = 'Evaluation error: unable to evaluate integral in this interval.';
+        return;
+      }
+
       out.innerHTML = `∫ f(x)dx [${a} → ${b}] = <strong>${integral.toFixed(8)}</strong>`;
-    } catch (err) {
+    } catch {
       out.textContent = 'Evaluation error. Check expression syntax.';
     }
   });
@@ -1339,18 +1400,34 @@ function initFinancialEngine(container) {
 
       if (solveTarget === 'PMT') {
         const pmtRes = -(pv * Math.pow(1 + r, n) + fv) * r / ((1 + r * type) * (Math.pow(1 + r, n) - 1));
+        if (Number.isNaN(pmtRes) || !Number.isFinite(pmtRes)) {
+          resultBox.textContent = 'Invalid financial parameters. Please verify interest rate and periods.';
+          return;
+        }
         container.querySelector('#tvm-pmt').value = pmtRes.toFixed(2);
         resultBox.innerHTML = `Periodic Payment PMT = <strong>$${Math.abs(pmtRes).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</strong> / period`;
       } else if (solveTarget === 'FV') {
         const fvRes = -(pv * Math.pow(1 + r, n) + pmt * (1 + r * type) * (Math.pow(1 + r, n) - 1) / r);
+        if (Number.isNaN(fvRes) || !Number.isFinite(fvRes)) {
+          resultBox.textContent = 'Invalid financial parameters. Please verify interest rate and periods.';
+          return;
+        }
         container.querySelector('#tvm-fv').value = fvRes.toFixed(2);
         resultBox.innerHTML = `Future Value FV = <strong>$${fvRes.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</strong>`;
       } else if (solveTarget === 'PV') {
         const pvRes = -(fv + pmt * (1 + r * type) * (Math.pow(1 + r, n) - 1) / r) / Math.pow(1 + r, n);
+        if (Number.isNaN(pvRes) || !Number.isFinite(pvRes)) {
+          resultBox.textContent = 'Invalid financial parameters. Please verify interest rate and periods.';
+          return;
+        }
         container.querySelector('#tvm-pv').value = pvRes.toFixed(2);
         resultBox.innerHTML = `Present Value PV = <strong>$${pvRes.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</strong>`;
       } else if (solveTarget === 'N') {
         const nRes = Math.log((-fv * r + pmt * (1 + r * type)) / (pv * r + pmt * (1 + r * type))) / Math.log(1 + r);
+        if (Number.isNaN(nRes) || !Number.isFinite(nRes) || nRes <= 0) {
+          resultBox.textContent = 'Could not determine a valid period count N for the given inputs.';
+          return;
+        }
         container.querySelector('#tvm-n').value = Math.ceil(nRes);
         resultBox.innerHTML = `Number of Periods N = <strong>${nRes.toFixed(2)}</strong> periods (${(nRes / py).toFixed(2)} years)`;
       }
@@ -1376,6 +1453,7 @@ function initFinancialEngine(container) {
 
     // IRR estimation (Newton-Raphson approximation)
     let irr = 0.1;
+    let converged = false;
     for (let iter = 0; iter < 100; iter++) {
       let f = -initial;
       let df = 0;
@@ -1384,12 +1462,22 @@ function initFinancialEngine(container) {
         f += flows[t] / Math.pow(1 + irr, periods);
         df -= periods * flows[t] / Math.pow(1 + irr, periods + 1);
       }
+      if (Math.abs(df) < 1e-12) break;
       const newIrr = irr - f / df;
       if (Math.abs(newIrr - irr) < 1e-6) {
         irr = newIrr;
+        converged = true;
         break;
       }
       irr = newIrr;
+    }
+
+    if (!converged || Number.isNaN(irr) || !Number.isFinite(irr)) {
+      resBox.innerHTML = `
+        Net Present Value (NPV): <strong>$${npv.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</strong><br>
+        Internal Rate of Return (IRR): <em>Could not determine a unique real IRR</em>
+      `;
+      return;
     }
 
     resBox.innerHTML = `
@@ -1509,6 +1597,10 @@ function initEngineeringEngine(container) {
         const cz = (u[0] || 0) * (v[1] || 0) - (u[1] || 0) * (v[0] || 0);
         resEl.innerHTML = `Cross Product u × v = <strong>⟨${cx.toFixed(4)}, ${cy.toFixed(4)}, ${cz.toFixed(4)}⟩</strong>`;
       } else if (op === 'angle') {
+        if (uMag === 0 || vMag === 0) {
+          resEl.textContent = 'Cannot compute angle with a zero-magnitude vector.';
+          return;
+        }
         const dot = u.reduce((s, x, idx) => s + x * (v[idx] || 0), 0);
         const cosTheta = dot / (uMag * vMag);
         const deg = (Math.acos(Math.max(-1, Math.min(1, cosTheta))) * 180) / Math.PI;
@@ -1524,6 +1616,11 @@ function initEngineeringEngine(container) {
     const L = parseFloat(container.querySelector('#eng-rlc-l').value);
     const C = parseFloat(container.querySelector('#eng-rlc-c').value);
     const resBox = container.querySelector('#eng-rlc-res');
+
+    if (isNaN(R) || isNaN(L) || isNaN(C) || R <= 0 || L <= 0 || C <= 0) {
+      resBox.textContent = 'Please enter positive non-zero values for R, L, and C.';
+      return;
+    }
 
     const f0 = 1 / (2 * Math.PI * Math.sqrt(L * C));
     const omega0 = 2 * Math.PI * f0;
@@ -1573,16 +1670,18 @@ function initStatisticsEngine(container) {
         ssYY += Math.pow(y[i] - meanY, 2);
         ssXY += (x[i] - meanX) * (y[i] - meanY);
       }
-      const slope = ssXY / ssXX;
-      const intercept = meanY - slope * meanX;
-      const r = ssXY / Math.sqrt(ssXX * ssYY);
-      regHtml = `
-        <div style="margin-top:10px; padding-top:8px; border-top:1px solid var(--g200);">
-          <strong>Linear Regression (y = mx + b):</strong><br>
-          Line of Best Fit: <strong>y = ${slope.toFixed(4)}x + ${intercept.toFixed(4)}</strong><br>
-          Pearson Correlation (r): <strong>${r.toFixed(4)}</strong> (R² = ${(r * r).toFixed(4)})
-        </div>
-      `;
+      if (ssXX > 1e-12 && ssYY > 1e-12) {
+        const slope = ssXY / ssXX;
+        const intercept = meanY - slope * meanX;
+        const r = ssXY / Math.sqrt(ssXX * ssYY);
+        regHtml = `
+          <div style="margin-top:10px; padding-top:8px; border-top:1px solid var(--g200);">
+            <strong>Linear Regression (y = mx + b):</strong><br>
+            Line of Best Fit: <strong>y = ${slope.toFixed(4)}x + ${intercept.toFixed(4)}</strong><br>
+            Pearson Correlation (r): <strong>${r.toFixed(4)}</strong> (R² = ${(r * r).toFixed(4)})
+          </div>
+        `;
+      }
     }
 
     out.innerHTML = `
@@ -1624,7 +1723,7 @@ function initStatisticsEngine(container) {
    ============================================================ */
 function initGraphingEngine(container) {
   const canvas = container.querySelector('#calc-graph-canvas');
-  if (!canvas) return;
+  if (!canvas) return null;
   const ctx = canvas.getContext('2d');
 
   let xMin = -10, xMax = 10;
@@ -1635,7 +1734,12 @@ function initGraphingEngine(container) {
     const width = canvas.width;
     const height = canvas.height;
 
-    ctx.strokeStyle = '#e5e7eb';
+    const isDark = typeof document !== 'undefined' && (
+      document.documentElement.getAttribute('data-theme') === 'dark' ||
+      window.matchMedia?.('(prefers-color-scheme: dark)').matches
+    );
+
+    ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)';
     ctx.lineWidth = 1;
 
     for (let x = Math.ceil(xMin); x <= Math.floor(xMax); x++) {
@@ -1653,7 +1757,7 @@ function initGraphingEngine(container) {
       ctx.stroke();
     }
 
-    ctx.strokeStyle = '#6b7280';
+    ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.65)' : 'rgba(0, 0, 0, 0.55)';
     ctx.lineWidth = 1.5;
     const originX = ((0 - xMin) / (xMax - xMin)) * width;
     const originY = height - ((0 - yMin) / (yMax - yMin)) * height;
@@ -1668,9 +1772,9 @@ function initGraphingEngine(container) {
     ctx.lineTo(width, originY);
     ctx.stroke();
 
-    const f1Str = container.querySelector('#graph-f1').value;
-    const f2Str = container.querySelector('#graph-f2').value;
-    const f3Str = container.querySelector('#graph-f3').value;
+    const f1Str = container.querySelector('#graph-f1')?.value;
+    const f2Str = container.querySelector('#graph-f2')?.value;
+    const f3Str = container.querySelector('#graph-f3')?.value;
 
     if (f1Str) plotFunction(f1Str, '#3b82f6');
     if (f2Str) plotFunction(f2Str, '#ef4444');
@@ -1719,7 +1823,11 @@ function initGraphingEngine(container) {
     renderGraph();
   });
 
+  const themeListener = () => renderGraph();
+  window.addEventListener('toolbox:themechange', themeListener);
+
   renderGraph();
+  return themeListener;
 }
 
 /* ============================================================
@@ -1861,9 +1969,7 @@ function initConstantsEngine(container) {
 
     listEl.querySelectorAll('.calc-copy-const').forEach(btn => {
       btn.addEventListener('click', () => {
-        navigator.clipboard.writeText(btn.dataset.val);
-        btn.textContent = 'Copied!';
-        setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+        copyText(String(btn.dataset.val), btn);
       });
     });
   }
@@ -1925,24 +2031,31 @@ function initConstantsEngine(container) {
 }
 
 /* ============================================================
-   MATH HELPER: Expression evaluator for graphing / calculus
+   MATH HELPER: Deterministic, zero-eval evaluator for graphing & calculus
+   Authoritative Shunting-Yard evaluator complying with strict CSP
    ============================================================ */
-function createMathFunction(expr) {
-  let cleaned = expr
-    .replace(/\^/g, '**')
-    .replace(/sin/g, 'Math.sin')
-    .replace(/cos/g, 'Math.cos')
-    .replace(/tan/g, 'Math.tan')
-    .replace(/sqrt/g, 'Math.sqrt')
-    .replace(/cbrt/g, 'Math.cbrt')
-    .replace(/abs/g, 'Math.abs')
-    .replace(/log/g, 'Math.log10')
-    .replace(/ln/g, 'Math.log')
-    .replace(/exp/g, 'Math.exp')
-    .replace(/pi|PI/g, 'Math.PI')
-    .replace(/\be\b/g, 'Math.E');
+export function createMathFunction(expr) {
+  if (!expr || typeof expr !== 'string') {
+    return () => NaN;
+  }
+  // Prepare expression for shunting-yard evaluator:
+  // 1. Convert ** to ^
+  // 2. Insert implicit multiplication between numbers and variables/functions/parens: e.g. 2x -> 2*x, 2sin(x) -> 2*sin(x), 2(x+1) -> 2*(x+1)
+  //    (protecting scientific notation like 1e-5 or 2e3)
+  // 3. Insert multiplication after closing parenthesis: e.g. (x+1)(x-1) -> (x+1)*(x-1)
+  const prepared = expr
+    .trim()
+    .replace(/\*\*/g, '^')
+    .replace(/(\d)(?!(?:e[+-]?\d))\s*([a-zA-Z(])/gi, '$1*$2')
+    .replace(/\)\s*([0-9a-zA-Z(])/g, ')*$1');
 
-  cleaned = cleaned.replace(/(\d)([a-zA-Z(])/g, '$1*$2');
-
-  return new Function('x', `try { return ${cleaned}; } catch { return NaN; }`);
+  return function (x) {
+    if (typeof x !== 'number' || !Number.isFinite(x)) return NaN;
+    try {
+      const val = evaluateExpression(prepared, { x, X: x });
+      return (typeof val === 'number' && Number.isFinite(val)) ? val : NaN;
+    } catch {
+      return NaN;
+    }
+  };
 }

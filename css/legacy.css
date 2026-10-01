@@ -4203,6 +4203,23 @@ input[type="date"] {
   line-height: 1.5;
   color: var(--black);
 }
+.calc-fin-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.calc-fin-row {
+  display: grid;
+  grid-template-columns: 1fr 120px 90px;
+  gap: 8px;
+  align-items: center;
+}
+.calc-fin-settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 6px;
+}
 .calc-table-box {
   overflow-x: auto;
 }
@@ -4285,6 +4302,13 @@ input[type="date"] {
   border: 1px solid var(--border);
   border-radius: 9999px;
   padding: 3px;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.calc-chip-group::-webkit-scrollbar {
+  display: none;
 }
 .calc-chip-btn {
   display: inline-flex;
@@ -4479,20 +4503,33 @@ input[type="date"] {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
   padding: 8px 12px;
   background: var(--g50);
   border: 1px solid var(--g150);
   border-radius: 8px;
 }
+.calc-const-item > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 .calc-const-name {
   display: block;
   font-size: 0.8rem;
   font-weight: 600;
+  word-break: break-word;
 }
 .calc-const-val {
   font-family: var(--mono);
   font-size: 0.74rem;
   color: var(--g600);
+  word-break: break-all;
+}
+.calc-const-item .calc-copy-const {
+  flex-shrink: 0;
 }
 /* ============================================================
    NEW TOOLS STYLES (Compressor, Decompressor, Audio Tag, Player, Data Bot, Speaker Cleaner, Notes)
@@ -7574,8 +7611,43 @@ body[data-tool-id="mail"] #viewport-content {
     display: flex !important;
     flex-direction: column !important;
   }
-  .calc-grid-standard {
+  .calc-grid-standard,
+  .calc-grid-scientific,
+  .calc-grid-programmer,
+  .calc-grid-rpn {
     gap: 6px !important;
+  }
+  .calc-grid-scientific .calc-btn {
+    min-height: 42px !important;
+    font-size: 0.8rem !important;
+    padding: 2px !important;
+  }
+  .calc-chip-btn {
+    padding: 5px 10px !important;
+    font-size: 0.74rem !important;
+    flex-shrink: 0 !important;
+  }
+  .calc-side-tools,
+  .calc-fin-grid,
+  .calc-eng-grid,
+  .calc-stat-grid,
+  .calc-const-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .calc-fin-row {
+    grid-template-columns: 1fr !important;
+    gap: 4px !important;
+  }
+  .calc-fin-row .calc-solve-btn {
+    width: 100% !important;
+  }
+  .calc-fin-settings {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  .calc-tool-card {
+    padding: 14px 12px !important;
   }
   .calc-btn {
     min-height: 48px !important;

@@ -248,6 +248,18 @@ const SANITIZE_DISALLOWED_TAGS = new Set([
   'script', 'style', 'iframe', 'object', 'embed', 'link', 'meta', 'base', 'form', 'svg', 'math', 'template'
 ]);
 
+export function isDangerousUri(value) {
+  if (!value || typeof value !== 'string') return false;
+  // Strip control characters, null bytes, and whitespace before evaluating scheme
+  const normalized = value.replace(/[\u0000-\u001f\u007f\s]+/g, '').toLowerCase();
+  return (
+    normalized.startsWith('javascript:') ||
+    normalized.startsWith('vbscript:') ||
+    normalized.startsWith('data:text/html') ||
+    normalized.startsWith('data:application/xhtml+xml')
+  );
+}
+
 /**
  * Strips dangerous tags/attributes from markdown-rendered HTML before it is
  * assigned to innerHTML. Uses an inert <template> so scripts/styles/images
@@ -260,6 +272,7 @@ export function sanitizeRenderedHtml(html) {
   template.innerHTML = html;
 
   const clean = (root) => {
+    if (!root || !root.childNodes) return;
     Array.from(root.childNodes).forEach((node) => {
       if (node.nodeType !== 1) return;
       const tag = node.tagName.toLowerCase();
@@ -267,14 +280,15 @@ export function sanitizeRenderedHtml(html) {
         node.remove();
         return;
       }
-      Array.from(node.attributes).forEach((attr) => {
+      const attrs = node.attributes || (node._attributes ? Array.from(node._attributes.entries()).map(([name, value]) => ({ name, value })) : []);
+      Array.from(attrs).forEach((attr) => {
         const name = attr.name.toLowerCase();
         const value = attr.value || '';
         if (name.startsWith('on')) {
           node.removeAttribute(attr.name);
-        } else if ((name === 'href' || name === 'src' || name === 'xlink:href') && /^\s*javascript:/i.test(value)) {
+        } else if ((name === 'href' || name === 'src' || name === 'xlink:href') && isDangerousUri(value)) {
           node.removeAttribute(attr.name);
-        } else if (name === 'style' && /expression\s*\(|javascript:/i.test(value)) {
+        } else if (name === 'style' && (/expression\s*\(|javascript:/i.test(value) || isDangerousUri(value))) {
           node.removeAttribute(attr.name);
         }
       });
@@ -284,7 +298,7 @@ export function sanitizeRenderedHtml(html) {
       clean(node);
     });
   };
-  clean(template.content);
+  clean(template.content || template);
   return template.innerHTML;
 }
 
