@@ -24,7 +24,7 @@ function turn({ text, calls = [] }) {
   return new Response(events.join(''), { headers: { 'content-type': 'text/event-stream' } });
 }
 
-async function scenario({ prompt, declarations, turns, executor, verify }) {
+async function scenario({ prompt, declarations, turns, executor, verify, maxSteps = 12 }) {
   const original = globalThis.fetch;
   const requests = [];
   let count = 0;
@@ -40,7 +40,7 @@ async function scenario({ prompt, declarations, turns, executor, verify }) {
     const result = await streamChatCompletion({
       scope: 'test', history: [{ role: 'user', content: prompt }],
       toolDeclarations: declarations, toolExecutor: executor,
-      turnId: 'turn_offline_stress', maxSteps: 12,
+      turnId: 'turn_offline_stress', maxSteps,
       onToolCallResult: (name, value) => events.push([name, value]),
     });
     assert.equal(count, turns.length);
@@ -181,5 +181,20 @@ test('easiest: simple chat does not call a tool', async () => {
     turns: [{ text: 'You are welcome.' }],
     executor: async () => { throw new Error('No tool should run'); },
     verify: ({ result }) => { assert.equal(result.toolResults.length, 0); assert.match(result.text, /welcome/i); },
+  });
+});
+
+test('Reaching the tool step limit keeps the final answer in the original quota turn', async () => {
+  await scenario({
+    prompt:'Do what you can and give a summary.',maxSteps:1,
+    declarations:[declaration('find_work')],
+    turns:[{ calls:[['find_work',{}]] },{ text:'I found the work and reached the step limit.' }],
+    executor:async () => ({ status:'success',message:'Work found' }),
+    verify:({ requests,result }) => {
+      assert.equal(requests[0].turnId,requests[1].turnId);
+      assert.deepEqual(requests[0].messages.filter(m => m.role==='user'),requests[1].messages.filter(m => m.role==='user'));
+      assert.match(requests[1].messages[0].content,/available tool steps/);
+      assert.match(result.text,/step limit/);
+    },
   });
 });

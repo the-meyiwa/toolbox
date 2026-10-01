@@ -10,7 +10,7 @@ import path from 'node:path';
 import { handleSupporterRequest } from './server-supporters.js';
 import { handleDeviceRequest } from './server-device-specs.js';
 import { handleAssistantGateway, authenticatedUser } from './server-assistant.js';
-import { reserveAssistantTurn, releaseAssistantTurn } from './server-assistant-quota.js';
+import { reserveAssistantTurn, releaseAssistantTurn, commitAssistantTurn } from './server-assistant-quota.js';
 import { handleMail } from './server-mail.js';
 import { handleMaps, searchNearby, searchPlaces } from './server-maps.js';
 import { isBlockedHost, parseWebPage } from './js/lib/web-scraper-engine.js';
@@ -623,7 +623,11 @@ export async function handleApiRequest(request, response) {
 
     if (url.pathname === '/api/assistant/chat' && request.method === 'POST') {
       let user = null;
-      try { user = await authenticatedUser(request); } catch { /* fail closed */ }
+      try { user = await authenticatedUser(request); } catch {
+        response.writeHead(503, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ success: false, error: 'Could not verify your Toolbox session. Try again.' }));
+        return true;
+      }
       if (!user) {
         response.writeHead(401, { 'Content-Type': 'application/json' });
         response.end(JSON.stringify({ success: false, error: 'Sign in to Toolbox to use the Assistant.' }));
@@ -640,8 +644,12 @@ export async function handleApiRequest(request, response) {
       }
       let reservation = null;
       try {
-        const { history = [], systemInstruction = '' } = rawBody ? JSON.parse(rawBody) : {};
-        if (!Array.isArray(history) || !history.length) {
+        let payload;
+        try { payload = rawBody ? JSON.parse(rawBody) : {}; }
+        catch { throw Object.assign(new Error('Invalid request'), { status: 400 }); }
+        if (!payload || typeof payload!=='object' || Array.isArray(payload)) throw Object.assign(new Error('Invalid request'), { status: 400 });
+        const { history = [], systemInstruction = '' } = payload;
+        if (!Array.isArray(history) || !history.length || history.length>240 || history.some(message => !message || !['user','assistant'].includes(message.role) || typeof message.content!=='string' || !message.content.trim()) || !history.some(message => message.role==='user') || typeof systemInstruction!=='string') {
           response.writeHead(400, { 'Content-Type': 'application/json' });
           response.end(JSON.stringify({ success: false, error: 'A conversation is required.' }));
           return true;
@@ -652,7 +660,7 @@ export async function handleApiRequest(request, response) {
           response.end(JSON.stringify({ success: false, error: 'The Assistant provider is not configured on this deployment.' }));
           return true;
         }
-        reservation = reserveAssistantTurn(user, { messages: history });
+        reservation = await reserveAssistantTurn(user, { messages: history }, request);
         if (!reservation.allowed) {
           response.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': String(Math.max(0, reservation.retryAfter || 0)) });
           response.end(JSON.stringify({ success: false, error: reservation.reason }));
@@ -671,11 +679,12 @@ export async function handleApiRequest(request, response) {
         const result = await geminiResponse.json();
         const text = result.candidates?.[0]?.content?.parts?.map(part => part.text || '').join('') || '';
         if (!geminiResponse.ok || !text) throw new Error(result.error?.message || 'The Assistant provider returned an empty response.');
+        await commitAssistantTurn(user, reservation, request);
         response.writeHead(200, { 'Content-Type': 'application/json' });
         response.end(JSON.stringify({ success: true, text }));
       } catch (error) {
-        if (reservation?.allowed) releaseAssistantTurn(user, reservation);
-        response.writeHead(500, { 'Content-Type': 'application/json' });
+        if (reservation?.allowed) await releaseAssistantTurn(user, reservation, request);
+        response.writeHead(error.status || 500, { 'Content-Type': 'application/json' });
         response.end(JSON.stringify({ success: false, error: 'The Assistant request could not be completed.' }));
       }
       return true;

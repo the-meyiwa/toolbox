@@ -83,6 +83,7 @@ Server-only secrets must never carry the `VITE_` prefix, because Vite ships thos
 1. Create a Supabase project and copy its URL and anon key into `.env`.
 2. In the SQL Editor, run [`supabase/setup.sql`](supabase/setup.sql). It is idempotent and creates the core tables and policies.
 3. Run the feature scripts you need: `assistant_conversations.sql`, `messaging.sql`, `mail_accounts.sql` and `supporters.sql`.
+4. Before deploying the Assistant gateway, run [`supabase/assistant-quotas.sql`](supabase/assistant-quotas.sql) to enable shared quotas that survive restarts ([accounting and rollout](docs/assistant-quotas.md)).
 4. Optionally paste the templates in [`supabase/email-templates/`](supabase/email-templates) into Authentication → Email Templates, and enable Google or GitHub under Authentication → Providers for social sign-in.
 
 ## Deploying

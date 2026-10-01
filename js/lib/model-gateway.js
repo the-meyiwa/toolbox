@@ -70,6 +70,7 @@ export async function readTurn(res, { onText, onThinking, onProvider, signal }) 
   let buffer = '';
   let event = 'message';
   let text = '', thinking = '', finish = null, provider = null;
+  let completed = false;
   const calls = [];
   let inThought = false, pending = '';   // Gemini wraps thoughts in <thought>…</thought> inside content
 
@@ -108,7 +109,7 @@ export async function readTurn(res, { onText, onThinking, onProvider, signal }) 
   };
 
   const handle = (evt, data) => {
-    if (data === '[DONE]') return;
+    if (data === '[DONE]') { completed = true; return; }
     let json;
     try { json = JSON.parse(data); } catch { return; }
     if (evt === 'provider') { provider = json; onProvider(json); return; }
@@ -131,6 +132,13 @@ export async function readTurn(res, { onText, onThinking, onProvider, signal }) 
     }
     if (choice.finish_reason) finish = choice.finish_reason;
   };
+  const lineReceived = raw => {
+    const line = raw.replace(/\r$/, '');
+    if (!line) { event = 'message'; return; }
+    if (line.startsWith(':')) return;
+    if (line.startsWith('event:')) { event = line.slice(6).trim(); return; }
+    if (line.startsWith('data:')) handle(event, line.slice(5).trim());
+  };
 
   try {
     for (;;) {
@@ -140,14 +148,12 @@ export async function readTurn(res, { onText, onThinking, onProvider, signal }) 
       buffer += decoder.decode(value, { stream: true });
       let nl;
       while ((nl = buffer.indexOf('\n')) !== -1) {
-        const line = buffer.slice(0, nl).replace(/\r$/, '');
+        const line = buffer.slice(0, nl);
         buffer = buffer.slice(nl + 1);
-        if (!line) { event = 'message'; continue; }
-        if (line.startsWith(':')) continue;
-        if (line.startsWith('event:')) { event = line.slice(6).trim(); continue; }
-        if (line.startsWith('data:')) handle(event, line.slice(5).trim());
+        lineReceived(line);
       }
     }
+    if (buffer) lineReceived(buffer + decoder.decode());
   } finally {
     try { reader.releaseLock(); } catch { /* already released */ }
   }
@@ -156,6 +162,9 @@ export async function readTurn(res, { onText, onThinking, onProvider, signal }) 
   }
   if (!provider && !text && !thinking && !calls.length && !signal?.aborted) {
     throw new GatewayError('The model service closed the connection without answering. Try again in a moment.', 502);
+  }
+  if (!signal?.aborted && (!text && !thinking && !calls.some(c => c?.function.name) || !completed && !finish)) {
+    throw new GatewayError('The model connection ended before completing its reply. Please try again.', 502);
   }
   const toolCalls = calls.filter(c => c && c.function.name).map((c, i) => ({ ...c, id: c.id || `call_${Date.now().toString(36)}_${i}` }));
   return { text, thinking, toolCalls, finish, provider };

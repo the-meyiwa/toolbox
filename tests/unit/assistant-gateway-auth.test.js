@@ -34,6 +34,9 @@ async function chat(payload) {
 test('Assistant quota identity comes from the authenticated server response', async () => {
   const original = globalThis.fetch;
   globalThis.fetch = async (url, options) => {
+    if (url === 'https://auth.example.test/rest/v1/rpc/toolbox_assistant_quota') {
+      return Response.json({ isUnlimited: options.headers.Authorization === 'Bearer verified-owner', messagesUsed: 0 });
+    }
     assert.equal(url, 'https://auth.example.test/auth/v1/user');
     if (options.headers.Authorization === 'Bearer verified-owner') return new Response(JSON.stringify({ id: 'owner-1', email: 'meyigbenee@gmail.com' }), { status: 200 });
     if (options.headers.Authorization === 'Bearer ordinary-user') return new Response(JSON.stringify({ id: 'regular-1', email: 'regular@example.com' }), { status: 200 });
@@ -59,6 +62,21 @@ test('Malformed Assistant messages and oversized tool lists fail before reaching
   };
   try {
     assert.equal((await chat({ messages: [null] })).status, 400);
+    assert.equal((await chat(null)).status, 400);
+    assert.equal((await chat({ messages: [{ role: 'assistant', content: 'No user request' }] })).status, 400);
     assert.equal((await chat({ messages: [{ role: 'user', content: 'hello' }], tools: Array(129).fill({}) })).status, 400);
   } finally { globalThis.fetch = original; }
+});
+
+test('A shared quota outage stops the gateway before any AI call and reports service failure', async () => {
+  const original=globalThis.fetch;
+  globalThis.fetch=async url => {
+    if (url==='https://auth.example.test/auth/v1/user') return Response.json({ id:'regular-3',email:'regular@example.com' });
+    assert.equal(url,'https://auth.example.test/rest/v1/rpc/toolbox_assistant_quota');
+    return new Response('Unavailable',{ status:503 });
+  };
+  try {
+    assert.equal((await quota('ordinary-user')).status,503);
+    assert.equal((await chat({ messages:[{ role:'user',content:'Hello' }] })).status,503);
+  } finally { globalThis.fetch=original; }
 });

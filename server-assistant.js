@@ -32,7 +32,7 @@
    ============================================================ */
 
 import { isLocalDevelopmentRequest, sessionCacheKey, safeProviderError } from './server-security.js';
-import { assistantQuotaSummary, reserveAssistantTurn, releaseAssistantTurn } from './server-assistant-quota.js';
+import { assistantQuotaSummary, reserveAssistantTurn, releaseAssistantTurn, commitAssistantTurn } from './server-assistant-quota.js';
 
 const PROVIDERS = [
   {
@@ -278,28 +278,34 @@ function inspect(text) {
  * Opens a model and reads until it has clearly started answering.
  * Resolves { reader, held } (the chunks read so far) or throws.
  */
-async function attempt(c, payload, signal, timeoutMs) {
-  const timer = AbortSignal.timeout(timeoutMs);
-  const both = AbortSignal.any ? AbortSignal.any([signal, timer]) : signal;
-  const res = await open(c.provider, c.model, payload, both);
-  const reader = res.body.getReader();
+export async function startAssistantProviderStream(c, payload, signal, timeoutMs) {
+  const deadline = new AbortController();
+  const timer = setTimeout(() => deadline.abort(), timeoutMs);
+  const both = AbortSignal.any([signal, deadline.signal]);
+  let reader;
   const decoder = new TextDecoder();
   const held = [];
   let text = '';
   let verdict = null;
   try {
+    const res = await open(c.provider, c.model, payload, both);
+    reader = res.body.getReader();
     while (!verdict) {
       const { value, done } = await reader.read();
       if (done) break;
       held.push(value);
       text += decoder.decode(value, { stream: true });
+      if (text.length > 1_000_000) throw new Error('The model did not provide a usable reply.');
       verdict = inspect(text);
     }
   } catch (err) {
-    verdict = timer.aborted ? new Error(`no answer within ${Math.round(timeoutMs / 1000)}s`) : err;
+    verdict = deadline.signal.aborted ? new Error(`no answer within ${Math.round(timeoutMs / 1000)}s`) : err;
+  } finally {
+    // This timeout governs startup only; it must not truncate an accepted reply.
+    clearTimeout(timer);
   }
   if (verdict === 'ok') return { reader, held };
-  try { reader.cancel(); } catch { /* closed */ }
+  try { await reader?.cancel(); } catch { /* closed */ }
   const err = verdict instanceof Error ? verdict : new Error('returned an empty answer');
   if (!/^\w+ \(/.test(err.message)) err.message = `${c.provider.label} (${c.model}): ${err.message}`;
   throw err;
@@ -338,12 +344,12 @@ function race(candidates, payload, { signal, hedgeMs, timeoutMs, bytes, onError 
       // A hedge bills the whole prompt a second time, so only small requests are hedged;
       // big ones (long chats, documents, code) wait for the first model or its failure.
       hedge = bytes > HEDGE_MAX_BYTES ? null : setTimeout(() => { if (!winner && running.size < 2) launch(true); }, hedgeMs);
-      attempt(c, payload, ctrl.signal, timeoutMs).then((won) => {
+      startAssistantProviderStream(c, payload, ctrl.signal, timeoutMs).then((won) => {
         clearTimeout(hedge);
         running.delete(entry);
         signal.removeEventListener('abort', onAbort);
-        if (winner) { try { won.reader.cancel(); } catch { /* closed */ } return; }
-        winner = { ...won, c, ms: Date.now() - entry.started };
+        if (winner || signal.aborted) { won.reader.cancel().catch(() => {}); ctrl.abort(); return; }
+        winner = { ...won, c, abort: () => ctrl.abort(), ms: Date.now() - entry.started };
         for (const other of running) other.ctrl.abort();
         running.clear();
         resolve(winner);
@@ -456,9 +462,17 @@ async function diagnose(request, response) {
 export async function handleAssistantGateway(request, response, url) {
   if (url.pathname === '/api/assistant/v2/quota' && request.method === 'GET') {
     let user;
-    try { user = await authenticatedUser(request); } catch { /* fail closed */ }
-    response.writeHead(user ? 200 : 401, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-    response.end(JSON.stringify(user ? assistantQuotaSummary(user) : { error: 'Sign in to Toolbox first.' }));
+    let status = 200; let body;
+    try {
+      user = await authenticatedUser(request);
+      status = user ? 200 : 401;
+      body = user ? await assistantQuotaSummary(user, request) : { error: 'Sign in to Toolbox first.' };
+    } catch (error) {
+      status = error.status || 503;
+      body = { error: status === 401 ? 'Your Toolbox session expired. Sign in again.' : 'Assistant usage could not be checked. Please try again shortly.' };
+    }
+    response.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    response.end(JSON.stringify(body));
     return true;
   }
   if (url.pathname === '/api/assistant/v2/providers' && request.method === 'GET') {
@@ -507,6 +521,7 @@ export async function handleAssistantGateway(request, response, url) {
 
   let payload;
   try { payload = JSON.parse(raw || '{}'); } catch { return fail(400, 'Invalid request.'); }
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return fail(400, 'Invalid request.');
   if (!Array.isArray(payload.messages) || !payload.messages.length) return fail(400, 'No messages to answer.');
   if (payload.messages.length > 240 || payload.messages.some(message =>
     !message || typeof message !== 'object' || !['system', 'user', 'assistant', 'tool'].includes(message.role) ||
@@ -516,20 +531,32 @@ export async function handleAssistantGateway(request, response, url) {
   if (payload.tools !== undefined && (!Array.isArray(payload.tools) || payload.tools.length > 128)) {
     return fail(400, 'The tool list is invalid or too large.');
   }
+  if (!payload.messages.some(message => message.role === 'user' && (typeof message.content === 'string' ? message.content.trim() : Array.isArray(message.content) && message.content.length))) return fail(400, 'A user message is required.');
   if (!PROVIDERS.some(p => p.key())) return fail(503, 'No Assistant model provider is configured on this server.');
-  const reservation = reserveAssistantTurn(user, payload);
-  if (!reservation.allowed) {
-    response.setHeader?.('Retry-After', String(Math.max(0, reservation.retryAfter || 0)));
-    return fail(reservation.status, reservation.reason);
-  }
-
   const mode = ORDER[payload.mode] ? payload.mode : 'auto';
   const bytes = raw.length;
   const { list, skipped } = candidatesFor(payload, bytes);
-  if (!list.length) { releaseAssistantTurn(user, reservation); return fail(503, 'No model that can read images is configured on this server.'); }
-
+  if (!list.length) return fail(503, 'No model that can read images is configured on this server.');
   const controller = new AbortController();
-  response.on('close', () => { clearInterval(heartbeat); controller.abort(); });
+  let replyTimeout = null;
+  const onClose = () => { clearInterval(heartbeat); clearTimeout(replyTimeout); controller.abort(); };
+  response.on?.('close', onClose);
+  let reservation;
+  try { reservation = await reserveAssistantTurn(user, payload, request); }
+  catch (error) { response.off?.('close', onClose); return fail(error.status || 503, error.message); }
+  if (!reservation.allowed) {
+    response.off?.('close', onClose);
+    response.setHeader?.('Retry-After', String(Math.max(0, reservation.retryAfter || 0)));
+    return fail(reservation.status, reservation.reason);
+  }
+  if (controller.signal.aborted) { await releaseAssistantTurn(user, reservation, request); response.off?.('close', onClose); return true; }
+  // A bounded reply finishes before the database's 15-minute crash-recovery lease.
+  replyTimeout = setTimeout(() => controller.abort(new Error('Reply timed out')), 10 * 60_000);
+  const refund = async () => {
+    clearInterval(heartbeat); clearTimeout(replyTimeout);
+    await releaseAssistantTurn(user, reservation, request);
+    response.off?.('close', onClose);
+  };
 
   // Open the stream now and keep it alive while models think or fail over,
   // so proxies (Cloudflare, Render) never see an idle connection.
@@ -550,24 +577,53 @@ export async function handleAssistantGateway(request, response, url) {
     bytes,
     onError: (err) => { const message = safeProviderError('Assistant provider', err); errors.push(message); console.warn('[assistant]', message); },
   });
-  if (controller.signal.aborted) { releaseAssistantTurn(user, reservation); return true; }
-  if (!winner) { releaseAssistantTurn(user, reservation); return fail(502, `No model provider could answer. ${errors.slice(-3).join(' · ')}`); }
+  if (controller.signal.aborted) { winner?.abort(); await refund(); if (!response.destroyed) return fail(504, 'The Assistant reply was stopped or timed out.'); return true; }
+  if (!winner) { await refund(); return fail(502, `No model provider could answer. ${errors.slice(-3).join(' · ')}`); }
 
   clearInterval(heartbeat);
   const { c, reader, held } = winner;
+  const abortUpstream = () => { winner.abort(); reader.cancel().catch(() => {}); };
+  controller.signal.addEventListener('abort', abortUpstream, { once: true });
   const failed = [...skipped.map(s => `${s.provider.label}: temporarily unavailable.`), ...errors].slice(-8);
   if (failed.length) response.write(`event: attempts\ndata: ${JSON.stringify({ failed })}\n\n`);
   response.write(`event: provider\ndata: ${JSON.stringify({ provider: c.provider.id, label: c.provider.label, model: c.model, firstTokenMs: Date.now() - received })}\n\n`);
-  for (const chunk of held) response.write(Buffer.from(chunk));
+  let completed = false; let streamFailed = false; let pending = '';
+  const decoder = new TextDecoder();
+  const observe = chunk => {
+    pending += decoder.decode(chunk, { stream: true });
+    const lines = pending.split('\n'); pending = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith('data:')) continue;
+      const data = line.slice(5).trim();
+      if (data === '[DONE]') { completed = true; continue; }
+      try {
+        const event = JSON.parse(data);
+        if (event.error) streamFailed = true;
+        if (event.choices?.some(choice => choice.finish_reason != null)) completed = true;
+      } catch { /* A provider heartbeat is not JSON. */ }
+    }
+    if (pending.length > 1_000_000) { pending = ''; streamFailed = true; }
+  };
+  for (const chunk of held) { observe(chunk); response.write(Buffer.from(chunk)); }
   try {
     for (;;) {
       const { value, done } = await reader.read();
       if (done) break;
+      observe(value);
       response.write(Buffer.from(value));
     }
+    observe(new TextEncoder().encode('\n'));
   } catch (err) {
-    if (!controller.signal.aborted) response.write(`event: error\ndata: ${JSON.stringify({ error: 'The model connection dropped. Please try again.' })}\n\n`);
+    streamFailed = true;
   }
-  response.end();
+  clearTimeout(replyTimeout);
+  controller.signal.removeEventListener('abort', abortUpstream);
+  if (completed && !streamFailed && !controller.signal.aborted) await commitAssistantTurn(user, reservation, request);
+  else {
+    await refund();
+    if (!controller.signal.aborted && !response.destroyed) response.write(`event: error\ndata: ${JSON.stringify({ error: 'The model connection dropped. Please try again.' })}\n\n`);
+  }
+  response.off?.('close', onClose);
+  if (!response.destroyed) response.end();
   return true;
 }

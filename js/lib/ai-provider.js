@@ -975,7 +975,7 @@ export async function streamChatCompletion({
 
     if (step === limit - 1 && !signal?.aborted) {
       // Out of steps: ask for a final answer without tools.
-      messages.push({ role: 'user', content: 'You have used the available tool steps. Summarise what you did and give your final answer now, without calling more tools.' });
+      messages[0].content += '\nYou have used the available tool steps. Summarise what you did and give your final answer now, without calling more tools.';
       const last = await openGateway({ messages, mode: MODE_EFFORT[selectedMode] || 'auto', provider: chosenProvider, preferredProvider: providerInfo?.provider, turnId, idempotencyKey }, signal);
       await readTurn(last, {
         signal,
