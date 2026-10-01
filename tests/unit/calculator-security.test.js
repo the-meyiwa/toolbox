@@ -13,6 +13,9 @@ import assert from 'node:assert/strict';
 import { setupDOMEnvironment } from '../helpers/dom-env.js';
 import calculatorModule, { createMathFunction } from '../../js/tools/calculator.js';
 import { sanitizeRenderedHtml, isDangerousUri } from '../../js/utils.js';
+import watermarkRemover from '../../js/tools/watermark-remover.js';
+import financialAnalyzer from '../../js/tools/financial-analyzer.js';
+import diseasesDatabase from '../../js/tools/diseases-database.js';
 
 test('Security: createMathFunction uses zero eval and complies with strict CSP', () => {
   // 1. Basic operations and variable evaluation
@@ -54,6 +57,28 @@ test('Security: createMathFunction uses zero eval and complies with strict CSP',
   // 7. Power with ** converted to ^
   const fn10 = createMathFunction('x**2');
   assert.equal(fn10(4), 16);
+
+  // 8. Variable juxtaposition with parentheses: x(x+1) and 3x(x+1)
+  const fn11 = createMathFunction('x(x+1)');
+  assert.equal(fn11(2), 6);
+
+  const fn12 = createMathFunction('3x(x+1)');
+  assert.equal(fn12(2), 18);
+
+  // 9. Unary plus operator handling: +x and 10 * +x
+  const fn13 = createMathFunction('+x');
+  assert.equal(fn13(5), 5);
+
+  const fn14 = createMathFunction('10 * +x');
+  assert.equal(fn14(3), 30);
+
+  // 10. Variable juxtaposition with function: x sin(x)
+  const fn15 = createMathFunction('x sin(x)');
+  assert.ok(Math.abs(fn15(Math.PI / 2) - Math.PI / 2) < 1e-6);
+
+  // 11. Juxtaposition after closing paren: (x+1)x
+  const fn16 = createMathFunction('(x+1)x');
+  assert.equal(fn16(3), 12);
 });
 
 test('Security & Stability: createMathFunction handles errors and exploits safely', () => {
@@ -102,6 +127,12 @@ test('Security: sanitizeRenderedHtml and isDangerousUri block malicious schemes'
   assert.equal(isDangerousUri('data:application/xhtml+xml;base64,PHhzaC8+'), true);
   assert.equal(isDangerousUri('DATA:APPLICATION/XHTML+XML,<html/>'), true);
 
+  // Encoded bypasses (URL percent encoding and HTML numeric/hex character entities)
+  assert.equal(isDangerousUri('javascript%3Aalert(1)'), true);
+  assert.equal(isDangerousUri('&#106;avascript:alert(1)'), true);
+  assert.equal(isDangerousUri('&#x6A;avascript:alert(1)'), true);
+  assert.equal(isDangerousUri('data%3Atext/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg=='), true);
+
   // Safe URIs should not be blocked
   assert.equal(isDangerousUri('https://example.com'), false);
   assert.equal(isDangerousUri('http://example.com/path?arg=1'), false);
@@ -121,7 +152,8 @@ test('Security: sanitizeRenderedHtml and isDangerousUri block malicious schemes'
       <a href="https://example.com" target="_blank" id="link-safe">Safe Link</a>
       <img src="javascript:alert(2)" alt="bad img">
       <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAE=" alt="safe img">
-      <div style="background-image:url(javascript:alert(3)); color:red;">Styled</div>
+      <video poster="javascript:alert(3)"></video>
+      <div style="background-image:url(javascript:alert(4)); color:red;">Styled</div>
     </div>
   `;
 
@@ -130,6 +162,7 @@ test('Security: sanitizeRenderedHtml and isDangerousUri block malicious schemes'
   assert.ok(!clean.includes('vbscript:'), 'Must strip vbscript: attributes');
   assert.ok(!clean.includes('data:text/html'), 'Must strip data:text/html attributes');
   assert.ok(!clean.includes('data:application/xhtml+xml'), 'Must strip data:application/xhtml+xml');
+  assert.ok(!clean.includes('poster='), 'Must strip dangerous video poster attribute');
   assert.ok(clean.includes('href="https://example.com"'), 'Must preserve safe HTTPS links');
   assert.ok(clean.includes('rel="noopener noreferrer"'), 'Must add noopener noreferrer to target=_blank links');
   assert.ok(clean.includes('data:image/png;base64'), 'Must preserve safe inline image data URIs');
@@ -260,9 +293,107 @@ test('Stability: Calculator component renders all modes and validates integratio
   copyButtons[0].click();
   assert.ok(copyButtons[0].textContent === 'Copied' || copyButtons[0].textContent === 'Copy', 'Copy button should handle click');
 
-  // Clean up
+  // 11. Test SYD (Sum-of-the-Years'-Digits) Depreciation Schedule
+  finBtn.click();
+  const depCost = container.querySelector('#dep-cost');
+  const depSalvage = container.querySelector('#dep-salvage');
+  const depLife = container.querySelector('#dep-life');
+  const depMethod = container.querySelector('#dep-method');
+  const depCalcBtn = container.querySelector('#dep-calc-btn');
+  const depTable = container.querySelector('#dep-schedule-table');
+
+  depCost.value = '50000';
+  depSalvage.value = '5000';
+  depLife.value = '5';
+  depMethod.value = 'syd';
+  depCalcBtn.click();
+  assert.ok(depTable.querySelectorAll('tbody tr').length === 5, 'SYD depreciation must produce 5 schedule rows');
+  assert.ok(depTable.textContent.includes('$15000.00'), 'Year 1 SYD depreciation should be 15000');
+  assert.ok(depTable.textContent.includes('$5000.00'), 'Ending book value should reach salvage value');
+
+  // 12. Test Engineering Mode: Complex Modulus & Polar Angle (|Z₁| & ∠θ)
+  const engBtn = container.querySelector('.calc-mode-btn[data-mode="engineering"]');
+  engBtn.click();
+
+  const engZ1 = container.querySelector('#eng-z1');
+  const engModBtn = container.querySelector('.calc-z-btn[data-op="mod"]');
+  const engRes = container.querySelector('#eng-z-result');
+
+  engZ1.value = '3 + 4i';
+  engModBtn.click();
+  assert.ok(engRes.textContent.includes('|Z₁| = 5.0000'), 'Modulus of 3 + 4i should be 5.0000');
+  assert.ok(engRes.textContent.includes('53.13°'), 'Polar angle should be 53.13°');
+
+  // 13. Test Statistics Mode: Normal Distribution Sigma Validation
+  const statBtn = container.querySelector('.calc-mode-btn[data-mode="statistics"]');
+  statBtn.click();
+
+  const distSigma = container.querySelector('#dist-norm-sigma');
+  const distCalcBtn = container.querySelector('#stat-dist-calc-btn');
+  const distRes = container.querySelector('#stat-dist-result');
+
+  distSigma.value = '-2';
+  distCalcBtn.click();
+  assert.ok(distRes.textContent.includes('positive non-zero standard deviation'), 'Must reject negative standard deviation');
+
+  distSigma.value = '1';
+  distCalcBtn.click();
+  assert.ok(distRes.textContent.includes('Z-Score:'), 'Must compute valid distribution with sigma = 1');
+
+  // 14. Test Graphing Mode: Zoom updates domain/range labels
+  const graphBtn = container.querySelector('.calc-mode-btn[data-mode="graphing"]');
+  graphBtn.click();
+
+  const domainLbl = container.querySelector('#graph-domain-lbl');
+  const rangeLbl = container.querySelector('#graph-range-lbl');
+  assert.equal(domainLbl.textContent, '[-10.0, 10.0]');
+  assert.equal(rangeLbl.textContent, '[-6.0, 6.0]');
+
+  const zoomInBtn = container.querySelector('#graph-zoom-in');
+  zoomInBtn.click();
+  assert.equal(domainLbl.textContent, '[-7.0, 7.0]');
+  assert.equal(rangeLbl.textContent, '[-4.2, 4.2]');
+
+  const resetBtn = container.querySelector('#graph-reset');
+  resetBtn.click();
+  assert.equal(domainLbl.textContent, '[-10.0, 10.0]');
+  assert.equal(rangeLbl.textContent, '[-6.0, 6.0]');
+
+  // Clean up calculator
   calculatorModule.destroy();
   assert.equal(calculatorModule.keyListener, null, 'Key listener must be null after destroy');
   assert.equal(calculatorModule.themeListener, null, 'Theme listener must be null after destroy');
   container.remove();
+});
+
+test('Stability: Lifecycle cleanup on unmount across audited tools', async () => {
+  const { document, window } = setupDOMEnvironment();
+
+  // 1. Watermark Remover cleanup
+  const wmContainer = document.createElement('div');
+  document.body.appendChild(wmContainer);
+  await watermarkRemover.render(wmContainer, { analytics: {} });
+  assert.ok(Array.isArray(watermarkRemover._cleanup), 'Watermark remover must initialize _cleanup array');
+  assert.ok(watermarkRemover._cleanup.length > 0, 'Watermark remover must register window listener cleanups');
+  watermarkRemover.destroy();
+  assert.equal(watermarkRemover._cleanup.length, 0, '_cleanup array must be cleared on destroy');
+  wmContainer.remove();
+
+  // 2. Financial Analyzer cleanup
+  const finContainer = document.createElement('div');
+  document.body.appendChild(finContainer);
+  financialAnalyzer.render(finContainer, { analytics: {} });
+  assert.equal(typeof financialAnalyzer._cleanup, 'function', 'Financial analyzer must register _cleanup function');
+  financialAnalyzer.destroy();
+  assert.equal(financialAnalyzer._cleanup, null, 'Financial analyzer must clear _cleanup on destroy');
+  finContainer.remove();
+
+  // 3. Diseases Database cleanup
+  const disContainer = document.createElement('div');
+  document.body.appendChild(disContainer);
+  diseasesDatabase.render(disContainer, { analytics: {} });
+  assert.equal(typeof diseasesDatabase._onResize, 'function', 'Diseases database must register _onResize handler');
+  diseasesDatabase.destroy();
+  assert.equal(diseasesDatabase._onResize, null, 'Diseases database must clear _onResize on destroy');
+  disContainer.remove();
 });

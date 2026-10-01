@@ -233,10 +233,16 @@ export default {
 
   pillsEl?.addEventListener('scroll', updateEdgeFades, { passive: true });
   window.addEventListener('resize', updateEdgeFades, { passive: true });
+  this._onResize = updateEdgeFades;
   setTimeout(updateEdgeFades, 40);
 
     // Initial render
     renderList();
   },
-  destroy() {}
+  destroy() {
+    if (this._onResize) {
+      window.removeEventListener('resize', this._onResize);
+      this._onResize = null;
+    }
+  }
 };

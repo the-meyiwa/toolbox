@@ -207,6 +207,9 @@ export function evaluateExpression(expr, vars = {}) {
     } else if (token === '-' && (prevToken === null || prevToken === '(' || prevToken in ops)) {
       outputQueue.push(0);
       operatorStack.push('-');
+    } else if (token === '+' && (prevToken === null || prevToken === '(' || prevToken in ops)) {
+      // Unary plus is a mathematical no-op; skip pushing operator or dummy operand
+      continue;
     } else if (token in ops) {
       while (operatorStack.length > 0) {
         const top = operatorStack[operatorStack.length - 1];

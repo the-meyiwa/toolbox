@@ -338,11 +338,12 @@ export default {
       }
     });
 
-    document.addEventListener('click', (e) => {
+    const onDocClick = (e) => {
       if (!opMenu.contains(e.target)) {
         opMenu.classList.remove('active');
       }
-    });
+    };
+    document.addEventListener('click', onDocClick);
 
     // Operation selection
     opMenu.addEventListener('click', (e) => {
@@ -416,11 +417,12 @@ export default {
       }
     });
 
-    document.addEventListener('mouseup', () => {
+    const onDocMouseUp = () => {
       if (isDragging) {
         isDragging = false;
       }
-    });
+    };
+    document.addEventListener('mouseup', onDocMouseUp);
 
     container.querySelector('#btn-cancel-sel').addEventListener('click', () => {
       isSelecting = false;
@@ -569,6 +571,14 @@ export default {
         closeModal();
       }
     });
+
+    this._cleanup = () => {
+      document.removeEventListener('click', onDocClick);
+      document.removeEventListener('mouseup', onDocMouseUp);
+    };
   },
-  destroy() {}
+  destroy() {
+    this._cleanup?.();
+    this._cleanup = null;
+  }
 };

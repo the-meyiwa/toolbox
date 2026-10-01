@@ -1180,7 +1180,7 @@ function initScientificEngine(container) {
   });
 
   // Simpson's 1/3 Numerical Definite Integral
-  container.querySelector('#sci-int-calc')?.addEventListener('click', () => {
+  const calcDefiniteIntegral = () => {
     const expr = container.querySelector('#sci-int-expr')?.value;
     const a = parseFloat(container.querySelector('#sci-int-a')?.value);
     const b = parseFloat(container.querySelector('#sci-int-b')?.value);
@@ -1242,6 +1242,16 @@ function initScientificEngine(container) {
     } catch {
       out.textContent = 'Evaluation error. Check expression syntax.';
     }
+  };
+
+  container.querySelector('#sci-int-calc')?.addEventListener('click', calcDefiniteIntegral);
+  ['#sci-int-expr', '#sci-int-a', '#sci-int-b'].forEach(sel => {
+    container.querySelector(sel)?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        calcDefiniteIntegral();
+      }
+    });
   });
 }
 
@@ -1464,6 +1474,7 @@ function initFinancialEngine(container) {
       }
       if (Math.abs(df) < 1e-12) break;
       const newIrr = irr - f / df;
+      if (newIrr <= -1) break;
       if (Math.abs(newIrr - irr) < 1e-6) {
         irr = newIrr;
         converged = true;
@@ -1490,7 +1501,8 @@ function initFinancialEngine(container) {
   container.querySelector('#dep-calc-btn')?.addEventListener('click', () => {
     const cost = parseFloat(container.querySelector('#dep-cost').value) || 0;
     const salvage = parseFloat(container.querySelector('#dep-salvage').value) || 0;
-    const life = parseInt(container.querySelector('#dep-life').value, 10) || 5;
+    const rawLife = parseInt(container.querySelector('#dep-life').value, 10);
+    const life = (!isNaN(rawLife) && rawLife > 0) ? rawLife : 5;
     const method = container.querySelector('#dep-method').value;
     const tableDiv = container.querySelector('#dep-schedule-table');
 
@@ -1511,6 +1523,15 @@ function initFinancialEngine(container) {
         if (bookValue - dep < salvage) dep = bookValue - salvage;
         bookValue -= dep;
         schedule.push({ year: y, dep: dep, book: Math.max(salvage, bookValue) });
+      }
+    } else if (method === 'syd') {
+      const syd = (life * (life + 1)) / 2;
+      for (let y = 1; y <= life; y++) {
+        const fraction = (life - y + 1) / syd;
+        let dep = depreciableBase * fraction;
+        if (bookValue - dep < salvage) dep = bookValue - salvage;
+        bookValue -= dep;
+        schedule.push({ year: y, dep: Math.max(0, dep), book: Math.max(salvage, bookValue) });
       }
     }
 
@@ -1569,6 +1590,12 @@ function initEngineeringEngine(container) {
         const denom = z2.r * z2.r + z2.i * z2.i;
         if (denom === 0) resEl.textContent = 'Division by zero';
         else resEl.innerHTML = formatComplex({ r: (z1.r * z2.r + z1.i * z2.i) / denom, i: (z1.i * z2.r - z1.r * z2.i) / denom });
+      }
+      if (op === 'mod') {
+        const mag = Math.sqrt(z1.r * z1.r + z1.i * z1.i);
+        const deg = (Math.atan2(z1.i, z1.r) * 180) / Math.PI;
+        const rad = (deg * Math.PI) / 180;
+        resEl.innerHTML = `|Z₁| = <strong>${mag.toFixed(4)}</strong> &nbsp;|&nbsp; ∠θ = <strong>${deg.toFixed(2)}°</strong> (${rad.toFixed(4)} rad)`;
       }
       if (op === 'conj') resEl.innerHTML = formatComplex({ r: z1.r, i: -z1.i });
     });
@@ -1699,9 +1726,14 @@ function initStatisticsEngine(container) {
 
   container.querySelector('#stat-dist-calc-btn')?.addEventListener('click', () => {
     const mu = parseFloat(container.querySelector('#dist-norm-mu').value) || 0;
-    const sigma = parseFloat(container.querySelector('#dist-norm-sigma').value) || 1;
+    const sigma = parseFloat(container.querySelector('#dist-norm-sigma').value);
     const x = parseFloat(container.querySelector('#dist-norm-x').value) || 0;
     const resBox = container.querySelector('#stat-dist-result');
+
+    if (isNaN(sigma) || sigma <= 0) {
+      resBox.textContent = 'Please enter a positive non-zero standard deviation (σ > 0).';
+      return;
+    }
 
     const z = (x - mu) / sigma;
     const pdf = (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * z * z);
@@ -1779,6 +1811,11 @@ function initGraphingEngine(container) {
     if (f1Str) plotFunction(f1Str, '#3b82f6');
     if (f2Str) plotFunction(f2Str, '#ef4444');
     if (f3Str) plotFunction(f3Str, '#10b981');
+
+    const domainLbl = container.querySelector('#graph-domain-lbl');
+    const rangeLbl = container.querySelector('#graph-range-lbl');
+    if (domainLbl) domainLbl.textContent = `[${xMin.toFixed(1)}, ${xMax.toFixed(1)}]`;
+    if (rangeLbl) rangeLbl.textContent = `[${yMin.toFixed(1)}, ${yMax.toFixed(1)}]`;
   }
 
   function plotFunction(expr, color) {
@@ -1789,27 +1826,42 @@ function initGraphingEngine(container) {
       ctx.beginPath();
 
       let started = false;
+      let lastY = null;
       const step = 2;
       for (let px = 0; px <= canvas.width; px += step) {
         const x = xMin + (px / canvas.width) * (xMax - xMin);
         const y = fn(x);
         if (isNaN(y) || !isFinite(y)) {
           started = false;
+          lastY = null;
           continue;
         }
         const py = canvas.height - ((y - yMin) / (yMax - yMin)) * canvas.height;
-        if (!started) {
+        // Asymptote discontinuity guard: if sign changes and jump is massive, do not connect
+        if (started && lastY !== null && Math.abs(y - lastY) > (yMax - yMin) * 2 && ((y > 0 && lastY < 0) || (y < 0 && lastY > 0))) {
+          ctx.moveTo(px, py);
+        } else if (!started) {
           ctx.moveTo(px, py);
           started = true;
         } else {
           ctx.lineTo(px, py);
         }
+        lastY = y;
       }
       ctx.stroke();
     } catch {}
   }
 
   container.querySelector('#graph-plot-btn')?.addEventListener('click', renderGraph);
+  ['#graph-f1', '#graph-f2', '#graph-f3'].forEach(sel => {
+    container.querySelector(sel)?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        renderGraph();
+      }
+    });
+  });
+
   container.querySelector('#graph-zoom-in')?.addEventListener('click', () => {
     xMin *= 0.7; xMax *= 0.7; yMin *= 0.7; yMax *= 0.7;
     renderGraph();
@@ -1909,17 +1961,17 @@ function initRPNEngine(container) {
           stack[1] = stack[2]; stack[2] = stack[3];
           break;
         case 'div':
-          stack[0] = stack[0] !== 0 ? stack[1] / stack[0] : 0;
+          stack[0] = (stack[0] !== 0 && isFinite(stack[0])) ? stack[1] / stack[0] : 0;
           stack[1] = stack[2]; stack[2] = stack[3];
           break;
         case 'sqrt':
-          stack[0] = Math.sqrt(stack[0]);
+          stack[0] = stack[0] >= 0 ? Math.sqrt(stack[0]) : 0;
           break;
         case 'sq':
           stack[0] = Math.pow(stack[0], 2);
           break;
         case 'inv':
-          stack[0] = 1 / stack[0];
+          stack[0] = (stack[0] !== 0 && isFinite(stack[0])) ? 1 / stack[0] : 0;
           break;
         case 'chs':
           stack[0] = -stack[0];
@@ -2042,11 +2094,14 @@ export function createMathFunction(expr) {
   // 1. Convert ** to ^
   // 2. Insert implicit multiplication between numbers and variables/functions/parens: e.g. 2x -> 2*x, 2sin(x) -> 2*sin(x), 2(x+1) -> 2*(x+1)
   //    (protecting scientific notation like 1e-5 or 2e3)
-  // 3. Insert multiplication after closing parenthesis: e.g. (x+1)(x-1) -> (x+1)*(x-1)
+  // 3. Insert implicit multiplication between variable x/X and parens/functions: e.g. x(x+1) -> x*(x+1), x sin(x) -> x*sin(x)
+  // 4. Insert multiplication after closing parenthesis: e.g. (x+1)(x-1) -> (x+1)*(x-1), (x+1)x -> (x+1)*x
   const prepared = expr
     .trim()
     .replace(/\*\*/g, '^')
     .replace(/(\d)(?!(?:e[+-]?\d))\s*([a-zA-Z(])/gi, '$1*$2')
+    .replace(/\b([xX])\s*\(/g, '$1*(')
+    .replace(/\b([xX])\s+([a-zA-Z(])/g, '$1*$2')
     .replace(/\)\s*([0-9a-zA-Z(])/g, ')*$1');
 
   return function (x) {

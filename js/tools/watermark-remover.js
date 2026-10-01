@@ -23,6 +23,7 @@ export default {
     this._cleanup = [];
     const urls = [];
     this._urls = urls;
+    const self = this;
 
     container.innerHTML = `
       ${dropZone('wm-zone', { label: 'Drop an image to remove text or watermarks', accept: 'image/*' })}
@@ -92,6 +93,8 @@ export default {
       </div>
     `;
 
+    this._cleanup = [];
+
     const zone         = container.querySelector('#wm-zone');
     const input        = container.querySelector('#wm-zone-input');
     const work         = container.querySelector('#wm-work');
@@ -128,6 +131,7 @@ export default {
 
     function initCanvases(decoded) {
       originalBitmap = decoded.bitmap;
+      self._originalBitmap = decoded.bitmap;
       mainCanvas.width = decoded.width;
       mainCanvas.height = decoded.height;
       maskCanvas.width = decoded.width;
@@ -232,6 +236,13 @@ export default {
     maskCanvas.addEventListener('touchstart', onPointerDown, { passive: true });
     window.addEventListener('touchmove', onPointerMove, { passive: true });
     window.addEventListener('touchend', onPointerUp);
+
+    this._cleanup.push(() => {
+      window.removeEventListener('mousemove', onPointerMove);
+      window.removeEventListener('mouseup', onPointerUp);
+      window.removeEventListener('touchmove', onPointerMove);
+      window.removeEventListener('touchend', onPointerUp);
+    });
 
     brushSizeIn.addEventListener('input', () => {
       brushOut.textContent = `${brushSizeIn.value}px`;
@@ -761,17 +772,27 @@ export default {
     sliderHandle.addEventListener('mousedown', () => { isSliding = true; });
     sliderHandle.addEventListener('touchstart', () => { isSliding = true; }, { passive: true });
 
-    window.addEventListener('mousemove', (e) => {
+    const onSplitMove = (e) => {
       if (!isSliding) return;
       updateSplit(e.clientX);
-    });
-    window.addEventListener('touchmove', (e) => {
+    };
+    const onSplitTouch = (e) => {
       if (!isSliding || !e.touches[0]) return;
       updateSplit(e.touches[0].clientX);
-    }, { passive: true });
+    };
+    const onSplitEnd = () => { isSliding = false; };
 
-    window.addEventListener('mouseup', () => { isSliding = false; });
-    window.addEventListener('touchend', () => { isSliding = false; });
+    window.addEventListener('mousemove', onSplitMove);
+    window.addEventListener('touchmove', onSplitTouch, { passive: true });
+    window.addEventListener('mouseup', onSplitEnd);
+    window.addEventListener('touchend', onSplitEnd);
+
+    this._cleanup.push(() => {
+      window.removeEventListener('mousemove', onSplitMove);
+      window.removeEventListener('touchmove', onSplitTouch);
+      window.removeEventListener('mouseup', onSplitEnd);
+      window.removeEventListener('touchend', onSplitEnd);
+    });
 
     editAgainBtn.addEventListener('click', () => {
       splitWrap.hidden = true;
@@ -788,9 +809,10 @@ export default {
 
     clearAllBtn.addEventListener('click', () => {
       revokeAll();
-      if (originalBitmap?.close) originalBitmap.close();
+      if (this._originalBitmap?.close) this._originalBitmap.close();
       currentFile = null;
       originalBitmap = null;
+      this._originalBitmap = null;
       processedBlob = null;
       work.hidden = true;
       input.value = '';

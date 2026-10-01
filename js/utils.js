@@ -250,14 +250,37 @@ const SANITIZE_DISALLOWED_TAGS = new Set([
 
 export function isDangerousUri(value) {
   if (!value || typeof value !== 'string') return false;
-  // Strip control characters, null bytes, and whitespace before evaluating scheme
-  const normalized = value.replace(/[\u0000-\u001f\u007f\s]+/g, '').toLowerCase();
-  return (
-    normalized.startsWith('javascript:') ||
-    normalized.startsWith('vbscript:') ||
-    normalized.startsWith('data:text/html') ||
-    normalized.startsWith('data:application/xhtml+xml')
-  );
+
+  const check = (str) => {
+    const s = str.replace(/[\u0000-\u001f\u007f\s]+/g, '').toLowerCase();
+    return (
+      s.startsWith('javascript:') ||
+      s.startsWith('vbscript:') ||
+      s.startsWith('data:text/html') ||
+      s.startsWith('data:application/xhtml+xml')
+    );
+  };
+
+  if (check(value)) return true;
+
+  // Decode HTML numeric and hex character entities (e.g. &#106; or &#x6A;)
+  const entityDecoded = value.replace(/&#(x[0-9a-fA-F]+|[0-9]+);?/gi, (_, code) => {
+    try {
+      const num = code.startsWith('x') || code.startsWith('X') ? parseInt(code.slice(1), 16) : parseInt(code, 10);
+      return String.fromCharCode(num);
+    } catch {
+      return _;
+    }
+  });
+  if (check(entityDecoded)) return true;
+
+  // Decode URL percent-encoding (e.g. javascript%3A, %6Aavascript:)
+  try {
+    const uriDecoded = decodeURIComponent(entityDecoded);
+    if (check(uriDecoded)) return true;
+  } catch {}
+
+  return false;
 }
 
 /**
@@ -286,7 +309,7 @@ export function sanitizeRenderedHtml(html) {
         const value = attr.value || '';
         if (name.startsWith('on')) {
           node.removeAttribute(attr.name);
-        } else if ((name === 'href' || name === 'src' || name === 'xlink:href') && isDangerousUri(value)) {
+        } else if ((name === 'href' || name === 'src' || name === 'xlink:href' || name === 'poster') && isDangerousUri(value)) {
           node.removeAttribute(attr.name);
         } else if (name === 'style' && (/expression\s*\(|javascript:/i.test(value) || isDangerousUri(value))) {
           node.removeAttribute(attr.name);
