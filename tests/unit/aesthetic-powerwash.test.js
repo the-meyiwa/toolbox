@@ -319,18 +319,7 @@ test('Mobile: .mobile-nav includes iOS safe-area-inset-bottom padding', () => {
   );
 });
 
-test('Mobile: Pro Tips modal layout does not amputate bottom border on centered window', () => {
-  const tipsModalMatch = indexHtml.match(/<div[^>]*id=["']tips-modal["'][^>]*>/i);
-  assert.ok(tipsModalMatch, 'index.html must contain #tips-modal');
-
-  const styleStr = tipsModalMatch[0];
-  const isCentered = styleStr.includes('align-items:center') || styleStr.includes('align-items: center');
-
-  if (isCentered) {
-    const amputated = styleCss.includes('#tips-modal .settings-modal-window') && styleCss.includes('border-bottom: none');
-    assert.ok(!amputated, '#tips-modal .settings-modal-window must not have border-bottom: none while floating centered');
-  }
-});
+// The Tips window was removed: the Assistant is now Toolbox's help (js/lib/assistant/toolbox-guide.js).
 
 test('Mobile: .ct-row-3 media query at <=900px defines 4 columns to match 4 child elements', () => {
   const mediaBlocks = extractAllBlocks(styleCss, /@media\s*\(max-width\s*:\s*900px\)\s*\{/g);

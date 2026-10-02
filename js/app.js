@@ -379,6 +379,13 @@ function animateToolHeader(viewport) {
 }
 function animateToolBody(el) {
   if (!motionOk() || !el?.isConnected) return;
+  // A tool made of the shared parts (sections, controls, drop zones, outputs) arrives part by
+  // part; any other tool rises in as one piece.
+  const parts = [...el.children].filter(c => c.matches?.('.tool-section, .tool-controls, .tool-split, .tool-row, .fz, .tool-output, .tool-stats-grid, .stat-grid, .result-hero, .kit-note'));
+  if (parts.length >= 2 && parts.length === el.children.length) {
+    parts.slice(0, 10).forEach((c, i) => c.animate([{ opacity: 0, transform: 'translateY(12px)' }, { opacity: 1, transform: 'none' }], { duration: 480, delay: i * 45, easing: TOOL_GLIDE, fill: 'backwards' }));
+    return;
+  }
   el.animate([{ opacity: 0, transform: 'translateY(14px) scale(.992)' }, { opacity: 1, transform: 'none' }], { duration: 520, easing: TOOL_GLIDE });
 }
 
@@ -792,69 +799,6 @@ function runSearch() {
   }, 700);
 }
 
-/* --------------- tips --------------- */
-
-const CATEGORY_TIPS = {
-  'images-files': ['Files are processed on your device — nothing is uploaded.', 'Drag a file straight onto the drop zone, or paste from the clipboard.'],
-  'pdf': ['PDFs are processed on your device — nothing is uploaded.', 'Chain several jobs at once with PDF Workflow.'],
-  'media': ['Video and audio are processed on your device.', 'The first job downloads the video engine once; after that it is cached.'],
-  'text': ['Type or paste into the main box.', 'Results update as you type; the copy button takes the lot.'],
-  'developer': ['Paste your code or data into the input.', 'Output updates live, and everything runs locally.'],
-  'numbers': ['Enter a value and the conversions appear immediately.'],
-  'business': ['Fill in what you know — results recalculate as you type.', 'Figures stay on your device.'],
-  'law': ['Paste or upload legal judgments, contracts or statutes — everything stays private on your device.', 'Export structured briefs, digests, or Bates-numbered PDF bundles.'],
-  'design': ['Adjust the inputs and the preview updates live.'],
-  'security': ['Generated secrets never leave your browser and are never logged.'],
-  'networking': ['Enter the IP, domain or URL to look up.', 'These tools query a public service, so they need a connection.'],
-  'modeling': ['Drag to rotate, scroll to zoom.', 'Use the left panel to show or hide parts, then click one to read about it.'],
-  'everyday': ['Enter a place or value to get started.'],
-};
-
-const PAGE_TIPS = {
-  home: [
-    'Press <kbd>/</kbd> or <kbd>Ctrl</kbd> <kbd>K</kbd> anywhere to search every tool and anything you have saved.',
-    'Describe the job rather than the tool — “compress photo”, “format json”.',
-  ],
-  tools: [
-    'Search by <em>what you want to do</em>, not the tool name — “compress photo”, “png to webp”, “format json” all work.',
-    'Typos are fine.',
-    'Press <kbd>/</kbd> to search from anywhere.',
-  ],
-  saved: [
-    'Everything here lives in this browser only. <strong>Export</strong> anything you would be sorry to lose.',
-    '<strong>Open in</strong> hands a file straight to another tool that can take it.',
-    '<strong>Export all</strong> writes one file you can import again later, or on another machine.',
-  ],
-  support: ['Found a bug? Use <strong>Complain about a tool</strong>.', 'Want something built? Use <strong>Ask for a tool</strong>.'],
-  };
-
-function showTips() {
-  const tipsModal = $('tips-modal');
-  const tipsContent = $('tips-content');
-  const title = $('tips-title');
-  tipsContent.innerHTML = '';
-
-  const inTool = currentPage === 'tool' && currentToolObj;
-  if (title) title.textContent = inTool ? `Tips · ${currentToolObj.name}` : 'Tips';
-  const tips = inTool
-    ? [`${escapeHtml(currentToolObj.description)}.`,
-       ...(CATEGORY_TIPS[currentToolObj.category] ?? ['Everything runs in your browser.'])]
-    : (PAGE_TIPS[currentPage] ?? PAGE_TIPS.tools);
-
-  for (const tip of tips) {
-    const li = document.createElement('li');
-    li.innerHTML = tip;
-    tipsContent.appendChild(li);
-  }
-  tipsModal.classList.add('is-open');
-  $('close-tips')?.focus();
-}
-
-function hideTips() {
-  $('tips-modal')?.classList.remove('is-open');
-  $('tips-fab')?.focus({ preventScroll: true });
-}
-
 /* --------------- bindings --------------- */
 
 /* `/` and ⌘K both open the palette, which is the one way in from anywhere.
@@ -1196,21 +1140,6 @@ if (homeHeroInput && homeHeroDropdown) {
     const now = webSuits();
     if (now !== wasWeb) { wasWeb = now; if (homeHeroInput.value.trim() && document.activeElement === homeHeroInput) paintSuggestions(); else closeSuggestions(); }
   });
-}
-
-const tipsFab = $('tips-fab');
-if (tipsFab) {
-  tipsFab.addEventListener('click', showTips);
-  $('close-tips')?.addEventListener('click', hideTips);
-  $('tips-modal')?.addEventListener('click', (e) => { if (e.target === $('tips-modal')) hideTips(); });
-
-  let scrollTimeout = null;
-  window.addEventListener('scroll', () => {
-    tipsFab.classList.add('is-visible');
-    clearTimeout(scrollTimeout);
-    scrollTimeout = setTimeout(() => tipsFab.classList.remove('is-visible'), 1800);
-  }, { passive: true });
-  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('tips-modal')?.classList.contains('is-open')) hideTips(); });
 }
 
 /* Mailto link reliability on desktop & mobile */

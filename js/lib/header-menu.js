@@ -304,7 +304,7 @@ async function renderNotificationPanel() {
     notifPanelEl.setAttribute('aria-label', 'Notifications');
     notifPanelEl.className = 'header-dropdown-menu header-notif-panel';
     notifPanelEl.classList.add('notif-panel');
-    notifPanelEl.style.cssText = 'top: calc(var(--header-h) - 4px); right: 16px; width: 360px; max-width: calc(100vw - 32px); max-height: min(520px, calc(100dvh - 88px));';
+    notifPanelEl.style.cssText = 'top: calc(var(--header-h) - 2px); right: 16px; width: 384px; max-width: calc(100vw - 32px); max-height: min(560px, calc(100dvh - 88px));';
     document.body.appendChild(notifPanelEl);
 
     // Close on outside click
@@ -315,43 +315,58 @@ async function renderNotificationPanel() {
     });
   }
 
-  const notifications = await NotificationEngine.getNotifications();
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const all = await NotificationEngine.getNotifications();
+  const unreadCount = all.filter(n => !n.read).length;
+  if (notifFilter === 'unread' && !unreadCount) notifFilter = 'all';
+  const notifications = notifFilter === 'unread' ? all.filter(n => !n.read) : all;
+  const arriving = !notifPanelEl.classList.contains('is-open') || notifPanelEl.dataset.fresh === '1';
 
   let html = `
     <div class="notif-head">
-      <h3>Notifications</h3>
+      <div class="notif-head-title"><h3>Notifications</h3>${unreadCount ? `<span class="notif-count">${unreadCount}</span>` : ''}</div>
       <div class="notif-head-actions">
-        ${unreadCount > 0 ? `<button type="button" class="btn btn-ghost btn-sm" id="notif-mark-read">Mark all read</button>` : ''}
-        ${notifications.length ? `<button type="button" class="btn btn-ghost btn-sm" id="notif-clear-all">Clear</button>` : ''}
+        ${unreadCount > 0 ? `<button type="button" class="notif-text-btn" id="notif-mark-read">Mark all read</button>` : ''}
+        ${all.length ? `<button type="button" class="notif-text-btn" id="notif-clear-all">Clear</button>` : ''}
       </div>
     </div>
-    <div class="notif-list" id="notif-list-container">
+    ${all.length ? `<div class="notif-tabs" role="tablist" aria-label="Show">
+      <button type="button" role="tab" class="notif-tab${notifFilter === 'all' ? ' is-on' : ''}" data-filter="all" aria-selected="${notifFilter === 'all'}">All</button>
+      <button type="button" role="tab" class="notif-tab${notifFilter === 'unread' ? ' is-on' : ''}" data-filter="unread" aria-selected="${notifFilter === 'unread'}" ${unreadCount ? '' : 'disabled'}>Unread</button>
+    </div>` : ''}
+    <div class="notif-list${arriving ? ' is-arriving' : ''}" id="notif-list-container">
   `;
 
   if (notifications.length === 0) {
     html += `
       <div class="notif-empty">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="notif-empty-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
         <strong>You're all caught up</strong>
+        <span>Reminders, messages and updates will show up here.</span>
       </div>`;
   } else {
-    notifications.forEach(n => {
+    let group = null;
+    notifications.forEach((n, i) => {
       const isUnread = !n.read;
-      const timeStr = new Date(n.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const g = dayGroup(n.date);
+      if (g !== group) { html += `<p class="notif-group">${g}</p>`; group = g; }
       html += `
-        <div class="notif-item${isUnread ? ' is-unread' : ''}" data-id="${escapeHtml(n.id)}" role="button" tabindex="0" aria-label="${escapeHtml(`${isUnread ? 'Unread: ' : ''}${n.title}`)}">
-          <div class="notif-item-top">
-            <span class="notif-item-title">${escapeHtml(n.title)}</span>
-            <span class="notif-item-time">${timeStr}</span>
-          </div>
-          <div class="notif-item-msg">${escapeHtml(n.message)}</div>
-          ${n.type === 'message' && n.data?.conversationId ? `<button type="button" class="notif-reply-action" data-reply-id="${escapeHtml(n.id)}">Reply</button>` : ''}
+        <div class="notif-item${isUnread ? ' is-unread' : ''}" data-id="${escapeHtml(n.id)}" data-kind="${escapeHtml(n.type || 'info')}" role="button" tabindex="0" style="--i:${Math.min(i, 12)}" aria-label="${escapeHtml(`${isUnread ? 'Unread: ' : ''}${n.title}`)}">
+          <span class="notif-icon" aria-hidden="true">${NOTIF_ICONS[n.type] || NOTIF_ICONS.info}</span>
+          <span class="notif-body">
+            <span class="notif-item-top">
+              <span class="notif-item-title">${escapeHtml(n.title)}</span>
+              <span class="notif-item-time" title="${escapeHtml(new Date(n.date).toLocaleString())}">${relativeTime(n.date)}</span>
+            </span>
+            <span class="notif-item-msg">${escapeHtml(n.message)}</span>
+            ${n.type === 'message' && n.data?.conversationId ? `<button type="button" class="notif-reply-action" data-reply-id="${escapeHtml(n.id)}">Reply</button>` : ''}
+          </span>
+          <button type="button" class="notif-dismiss" data-dismiss="${escapeHtml(n.id)}" aria-label="Dismiss ${escapeHtml(n.title)}"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
         </div>`;
     });
   }
 
-  html += `</div><div class="notif-preferences-link"><button type="button" id="notif-open-preferences">Notification preferences</button></div>`;
+  html += `</div><div class="notif-preferences-link"><button type="button" id="notif-open-preferences"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Notification preferences</span></button></div>`;
+  delete notifPanelEl.dataset.fresh;
   notifPanelEl.innerHTML = html;
   notifPanelEl.querySelector('#notif-open-preferences')?.addEventListener('click', () => {
     closeNotificationPanel();
@@ -361,6 +376,15 @@ async function renderNotificationPanel() {
   const listContainer = notifPanelEl.querySelector('#notif-list-container');
   listContainer.addEventListener('click', async (e) => {
     if (e.target.closest('.notif-inline-reply')) return;
+    const dismiss = e.target.closest('.notif-dismiss');
+    if (dismiss) {
+      e.stopPropagation();
+      const id = dismiss.dataset.dismiss;
+      await leave(dismiss.closest('.notif-item'));
+      await NotificationEngine.clearWhere(n => n.id === id);
+      renderNotificationPanel();
+      return;
+    }
     const replyAction = e.target.closest('.notif-reply-action');
     if (replyAction) {
       e.stopPropagation();
@@ -411,9 +435,59 @@ async function renderNotificationPanel() {
 
   const btnClear = notifPanelEl.querySelector('#notif-clear-all');
   if (btnClear) btnClear.addEventListener('click', async () => {
+    // Everything sweeps away together, then the empty state settles in.
+    const items = [...notifPanelEl.querySelectorAll('.notif-item')];
+    await Promise.all(items.slice(0, 12).map((el, i) => leave(el, i * 18)));
     await NotificationEngine.clearAll();
     renderNotificationPanel();
   });
+
+  notifPanelEl.querySelectorAll('.notif-tab').forEach(tab => tab.addEventListener('click', () => {
+    if (tab.disabled || tab.dataset.filter === notifFilter) return;
+    notifFilter = tab.dataset.filter;
+    notifPanelEl.dataset.fresh = '1';
+    renderNotificationPanel();
+  }));
+}
+
+/* ---------- notification center helpers ---------- */
+let notifFilter = 'all';
+const NOTIF_ICON = (d) => `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const NOTIF_ICONS = {
+  message: NOTIF_ICON('<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>'),
+  reminder: NOTIF_ICON('<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M5 3 2 6M19 3l3 3"/>'),
+  automation: NOTIF_ICON('<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'),
+  error: NOTIF_ICON('<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5M12 16.5h.01"/>'),
+  success: NOTIF_ICON('<circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.7 2.7L16 9.8"/>'),
+  space: NOTIF_ICON('<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M14.5 18.5a4 4 0 0 1 6.5-3"/>'),
+  info: NOTIF_ICON('<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>'),
+};
+function relativeTime(date) {
+  const t = new Date(date).getTime();
+  const s = Math.max(0, (Date.now() - t) / 1000);
+  if (s < 60) return 'now';
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  if (s < 7 * 86400) return new Date(t).toLocaleDateString([], { weekday: 'short' });
+  return new Date(t).toLocaleDateString([], { day: 'numeric', month: 'short' });
+}
+function dayGroup(date) {
+  const d = new Date(date); const today = new Date();
+  const start = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((start(today) - start(d)) / 86400000);
+  return diff <= 0 ? 'Today' : diff === 1 ? 'Yesterday' : 'Earlier';
+}
+/** An item slides out and its space closes up. */
+function leave(el, delay = 0) {
+  const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce || !el.animate) return Promise.resolve();
+  const h = el.offsetHeight;
+  el.style.overflow = 'hidden';
+  return el.animate([
+    { opacity: 1, transform: 'none', height: `${h}px` },
+    { opacity: 0, transform: 'translateX(24px)', height: `${h}px`, offset: 0.55 },
+    { opacity: 0, transform: 'translateX(24px)', height: '0px', paddingTop: '0px', paddingBottom: '0px' },
+  ], { duration: 340, delay, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'forwards' }).finished.catch(() => {});
 }
 
 function toggleNotificationPanel() {

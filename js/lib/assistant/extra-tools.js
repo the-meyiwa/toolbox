@@ -12,6 +12,7 @@
    plus plain fields the model reads back.
    ============================================================ */
 
+import { toolboxHelp, TOOLBOX_HELP_DECLARATION } from './toolbox-guide.js';
 import { GENERATORS as STRUCTURE_GENERATORS } from '../structure-model.js';
 import { LAB3D_TOOL_DECLARATIONS, create3dObject, search3dModels } from '../lab3d/assistant-tools.js';
 import { TOOLS } from '../../registry/index.js';
@@ -25,6 +26,7 @@ const lower = (v) => String(v ?? '').toLowerCase().trim();
 /* ---------------- declarations (JSON Schema, lowercase types) ---------------- */
 
 export const EXTRA_TOOL_DECLARATIONS = [
+  TOOLBOX_HELP_DECLARATION,
   {
     name: 'update_plan',
     description: 'Show the user a live checklist for a multi-step task. Call it at the start of any task that needs 3+ steps or several tools, then again as steps finish (mark them done), so the user can follow progress. Keep step titles short.',
@@ -1256,6 +1258,7 @@ export const EXTRA_TOOL_NAMES = new Set(EXTRA_TOOL_DECLARATIONS.map(d => d.name)
 
 export async function executeExtraTool(name, args = {}, ctx = {}) {
   switch (name) {
+    case 'toolbox_help': return toolboxHelp(args.topic || '');
     case 'mind': {
       const { action, query, parentId, content, fileId, otherFileId } = args;
       if (action === 'list') { const c = compiledMind(); return { status: 'success', snapshot: c.global, rooms: Object.values(c.rooms).map(r => ({ id: r.id, summary: r.summary, count: r.entityIds.length })), openHash: '#mind' }; }

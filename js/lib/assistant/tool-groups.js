@@ -13,7 +13,7 @@
 
 export const CORE_TOOLS = [
   'update_plan', 'load_tools', 'update_memory', 'browse_web',
-  'find_toolbox_tools', 'run_toolbox_tool', 'open_toolbox_tool',
+  'find_toolbox_tools', 'run_toolbox_tool', 'open_toolbox_tool', 'toolbox_help',
 ];
 
 export const TOOL_GROUPS = {

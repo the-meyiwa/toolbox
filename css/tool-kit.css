@@ -1,0 +1,123 @@
+/* ==========================================================================
+   TOOLBOX — Tool workspaces (the shared kit, in Home's language)
+
+   Most tools are built from the same parts: labelled sections, fields,
+   buttons, drop zones, output panes and stat tiles. Restyling those parts
+   here gives every standard tool the same calm, connected look as Home
+   and the Tools page: soft 14–22px corners, hairlines instead of boxes,
+   monochrome, a gentle focus glow, buttons that press, and sections that
+   arrive in a short cascade when the tool opens (js/app.js).
+
+   Scoped to tool workspaces (#viewport-content). Tools with their own
+   full interfaces (Assistant, Files, Mind, Notes, Mail, Code Playground…)
+   style themselves and are unaffected where they do not use these parts.
+   ========================================================================== */
+
+#viewport-content {
+  --tk-glide: cubic-bezier(.22, 1, .36, 1);
+  --tk-glow: 0 0 0 5px color-mix(in srgb, var(--ink) 7%, transparent);
+}
+
+/* ---------- fields ---------- */
+#viewport-content :is(.tool-input, .tool-select, .tool-textarea) {
+  border-color: var(--line-strong);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px #0000000a;
+  transition: border-color .2s ease, box-shadow .35s var(--tk-glide), background-color .2s ease;
+}
+#viewport-content .tool-textarea { border-radius: 18px; padding: 14px 16px; }
+#viewport-content :is(.tool-input, .tool-select, .tool-textarea):hover { border-color: var(--line-control); }
+#viewport-content :is(.tool-input, .tool-select, .tool-textarea):focus {
+  border-color: var(--line-control);
+  box-shadow: var(--tk-glow), 0 1px 2px #0000000a;
+}
+#viewport-content :is(.tool-input, .tool-textarea)[readonly] { background: color-mix(in srgb, var(--surface-2) 70%, var(--surface)); box-shadow: none; }
+#viewport-content .tool-label { font-size: 13px; font-weight: 600; color: var(--text-2); letter-spacing: -.005em; }
+#viewport-content :is(input[type="checkbox"], input[type="radio"], input[type="range"], .tool-range, .tool-checkbox) { accent-color: var(--ink); }
+
+/* ---------- buttons ---------- */
+#viewport-content .btn {
+  border-radius: 12px;
+  transition: background-color .18s ease, border-color .18s ease, color .18s ease, box-shadow .25s var(--tk-glide), transform .12s ease;
+}
+#viewport-content .btn:active:not(:disabled) { transform: scale(.97); }
+#viewport-content .btn-primary:hover:not(:disabled) { box-shadow: 0 10px 22px -14px #00000080; }
+#viewport-content .btn-secondary { background: transparent; border-color: var(--line-strong); }
+#viewport-content .btn-secondary:hover:not(:disabled) { background: var(--tint); border-color: var(--line-control); }
+#viewport-content .btn-sm { border-radius: 10px; }
+#viewport-content .btn-icon { border-radius: 11px; }
+#viewport-content .btn-group { gap: 4px; }
+#viewport-content .btn-preset { border-radius: 10px; }
+#viewport-content .copy-btn { border-radius: 10px; transition: background-color .18s ease, color .18s ease, border-color .18s ease, transform .12s ease; }
+#viewport-content .copy-btn:active { transform: scale(.96); }
+#viewport-content .copy-btn.copied { animation: tk-pop .35s cubic-bezier(.34, 1.5, .64, 1); }
+
+/* ---------- sections and output ---------- */
+#viewport-content .tool-section { gap: 10px; }
+#viewport-content .tool-output, #viewport-content .result-hero {
+  background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+#viewport-content .tool-output { padding: 16px 18px; }
+#viewport-content .result-hero { padding: 22px; }
+#viewport-content .tool-output:not(:empty) { animation: tk-settle .45s var(--tk-glide); }
+
+/* ---------- stat tiles ---------- */
+#viewport-content .tool-stats-grid { gap: 8px; }
+#viewport-content .tool-stat {
+  align-items: flex-start; padding: 14px 16px;
+  background: transparent; border: 1px solid var(--line); border-radius: 16px; box-shadow: none;
+  transition: border-color .2s ease, background-color .2s ease;
+}
+#viewport-content .tool-stat:hover { border-color: var(--line-strong); background: color-mix(in srgb, var(--surface-2) 50%, transparent); }
+#viewport-content .tool-stat-value { font-family: var(--font-sans); font-size: 24px; font-weight: 650; letter-spacing: -.03em; font-variant-numeric: tabular-nums; color: var(--text); }
+#viewport-content .tool-stat-label { font-size: 12px; letter-spacing: 0; text-transform: none; color: var(--text-3); margin-top: 2px; }
+#viewport-content .stat-grid { border-radius: 16px; }
+
+/* ---------- drop zones and file rows ---------- */
+#viewport-content .fz {
+  background: transparent;
+  border: 1.5px dashed var(--line-strong);
+  border-radius: 22px;
+  transition: border-color .2s ease, background-color .25s ease, transform .3s var(--tk-glide);
+}
+#viewport-content .fz:hover, #viewport-content .fz:is(.dragover, .is-drag, .drag) { background: color-mix(in srgb, var(--surface-2) 70%, transparent); border-color: var(--ink); }
+#viewport-content .fz > svg { width: 22px; height: 22px; padding: 12px; box-sizing: content-box; border-radius: 15px; background: var(--ink); color: var(--text-inverse); margin-bottom: 10px; }
+#viewport-content :is(.fz-row, .fz-list > *) { border-radius: 14px; }
+#viewport-content .fz-row { animation: tk-settle .4s var(--tk-glide) both; }
+
+/* ---------- small parts ---------- */
+#viewport-content :is(.kit-note) { border-radius: 14px; }
+#viewport-content :is(.kit-pre) { border-radius: 16px; }
+#viewport-content .kit-table-wrap { border-radius: 16px; }
+#viewport-content .kit-badge { border-radius: 8px; }
+#viewport-content .tool-split { gap: 20px; }
+
+@keyframes tk-settle { from { opacity: .4; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes tk-pop { 0% { transform: scale(.92); } 60% { transform: scale(1.04); } 100% { transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  #viewport-content .tool-output, #viewport-content .fz-row, #viewport-content .copy-btn.copied { animation: none !important; }
+}
+
+/* ---------- the workspace itself: open, not a boxed card ----------
+   Standard tools sit straight on the page, like Home: their fields and drop zones carry the
+   structure. Full-screen and bare tools (their own surfaces) are left as they are. */
+@media (min-width: 769px) {
+  body.in-tool:not(.tool-bare):not(.tool-fill) #viewport-content {
+    background: transparent; border-color: transparent; box-shadow: none; padding: 8px 0 4px;
+  }
+  /* The save strip no longer bleeds to a card edge: it is a quiet bar of its own. */
+  body.in-tool:not(.tool-bare):not(.tool-fill) #viewport-content .art-strip {
+    margin: 28px 0 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 18px;
+    background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+  }
+}
+
+/* Related tools under a tool: the same open cards as the Tools page. */
+.related-list .tool-card { background: transparent; border-color: transparent; box-shadow: none; border-radius: 18px; transition: background-color .2s ease, border-color .2s ease, box-shadow .3s ease, transform .3s cubic-bezier(.22, 1, .36, 1); }
+.related-list .tool-card:hover { background: var(--surface); border-color: var(--line); box-shadow: 0 16px 34px -26px #00000059; transform: translateY(-2px); }
+.related-list .tool-card-icon { background: transparent; border: 1px solid var(--line-strong); border-radius: 12px; }
+.related-list .tool-card:hover .tool-card-icon { background: var(--ink); border-color: var(--ink); color: var(--text-inverse); }

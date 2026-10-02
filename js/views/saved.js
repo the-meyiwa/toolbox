@@ -1773,6 +1773,11 @@ function wire(host, ctx, refresh, ui) {
     const top = !multi && !isDir ? getToolsForFile(item)[0] : null;
     const clip = fileClipboard.paths.length;
     const commonTags = Object.keys(TAG_COLORS).filter(t => paths.every(p => lookup(p)?.tags?.includes(t)));
+    // Files move to the other drive from where you are: Offline Files offers the account,
+    // Online Files offers this browser. Built-in folders stay where they are.
+    const movable = paths.filter(p => !['/', '/Home', '/Online', '/Projects', '/Documents', '/Images', '/Downloads'].includes(p));
+    const toOnline = currentStorage !== 'online';
+    const moveItem = movable.length ? [{ label: toOnline ? 'Move to Online Files' : 'Move to Offline Files', icon: toOnline ? ICONS.upload : ICONS.download, action: () => moveAcross(movable, toOnline ? 'online' : 'offline') }] : [];
 
     const menuItems = multi ? [
       { label: `Download ${paths.length} items as ZIP`, icon: ICONS.download, action: () => downloadPaths(paths) },
@@ -1780,6 +1785,7 @@ function wire(host, ctx, refresh, ui) {
       { separator: true },
       { label: 'Cut', icon: ICONS.scissors, shortcut: `${modKey()}X`, action: () => setClipboard('cut') },
       { label: 'Copy', icon: ICONS.copy, shortcut: `${modKey()}C`, action: () => setClipboard('copy') },
+      ...moveItem,
       { separator: true },
       tagRow(commonTags, 'Tag all'),
       { separator: true },
@@ -1797,6 +1803,7 @@ function wire(host, ctx, refresh, ui) {
       { label: 'Cut', icon: ICONS.scissors, shortcut: `${modKey()}X`, action: () => setClipboard('cut') },
       { label: 'Copy', icon: ICONS.copy, shortcut: `${modKey()}C`, action: () => setClipboard('copy') },
       ...(isDir && clip ? [{ label: `Paste ${plural(clip, 'item')} into folder`, icon: ICONS.paste, action: () => executePaste(path) }] : []),
+      ...moveItem,
       { label: isDir ? 'Download as ZIP' : 'Download', icon: ICONS.download, action: () => downloadPaths([path]) },
       { label: 'Get info', icon: ICONS.info, action: () => openProperties([path]) },
       { separator: true },
@@ -1807,6 +1814,25 @@ function wire(host, ctx, refresh, ui) {
 
     openContextMenu({ x, y, title: multi ? `${paths.length} items selected` : item.name, items: menuItems, label: 'Item actions' });
     bindTagClicks(paths);
+  }
+
+  /** Moves items to the other drive, then confirms where they went. */
+  async function moveAcross(paths, to) {
+    if (to === 'online' && !getCurrentUser()) {
+      flash('Sign in to keep files in your account.');
+      try { openAccountModal(false); } catch {}
+      return;
+    }
+    flash(to === 'online' ? 'Moving to Online Files…' : 'Moving to Offline Files…');
+    try {
+      const { moved, failed } = await fs.transfer(paths, to);
+      selectedPaths.clear();
+      refresh();
+      if (failed.length) flash(`Moved ${plural(moved, 'file')}; could not move ${failed.slice(0, 3).join(', ')}${failed.length > 3 ? '…' : ''}.`, 'bad');
+      else flash(`Moved ${plural(moved, 'file')} to ${to === 'online' ? 'Online Files' : 'Offline Files'}.`);
+    } catch (err) {
+      flash(err.message || 'Could not move those files.', 'bad');
+    }
   }
 
   function openCanvasContextMenu(x, y) {

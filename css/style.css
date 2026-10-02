@@ -41,6 +41,8 @@
 @import url("./landing.css");
 @import url("./suggestion-web.css");
 @import url("./tools-page.css");
+@import url("./notification-center.css");
+@import url("./tool-kit.css");
 
 .messages-typing { display: flex; align-items: center; gap: 8px; padding: 4px 16px 12px; color: var(--text-secondary); font-size: 0.8rem; }
 .messages-typing[hidden] { display: none !important; }

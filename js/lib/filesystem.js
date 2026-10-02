@@ -1085,6 +1085,72 @@ export class ToolboxFilesystem {
     };
   }
 
+  /**
+   * Moves files between this browser (Offline Files, under /Home and the other local folders)
+   * and the account (Online Files, a flat /Online folder synced to Supabase). Folders move
+   * their files. Names that already exist on the other side get " (2)", " (3)"…. The source is
+   * removed only after its copy is written, so nothing is lost if a step fails.
+   * @param {string[]} paths
+   * @param {'online'|'offline'} to
+   * @returns {Promise<{moved: number, failed: string[]}>}
+   */
+  async transfer(paths, to) {
+    await this.init();
+    if (to === 'online' && !getCurrentUser()) throw new Error('Sign in to keep files in your account.');
+    const destRoot = to === 'online' ? '/Online' : '/Home';
+    const files = [];
+    const all = await dbDriver.listAllMeta();
+    for (const raw of paths) {
+      const p = normalizePath(raw);
+      const rec = await dbDriver.get(p);
+      if (!rec) continue;
+      if (rec.isDirectory) files.push(...all.filter(m => !m.isDirectory && m.path.startsWith(p + '/')).map(m => m.path));
+      else files.push(p);
+    }
+    const taken = new Set(all.filter(m => normalizePath(m.parentPath || getParentPath(m.path)) === destRoot).map(m => m.name.toLowerCase()));
+    const freeName = (name) => {
+      if (!taken.has(name.toLowerCase())) { taken.add(name.toLowerCase()); return name; }
+      const dot = name.lastIndexOf('.');
+      const stem = dot > 0 ? name.slice(0, dot) : name, ext = dot > 0 ? name.slice(dot) : '';
+      for (let i = 2; ; i++) { const n = `${stem} (${i})${ext}`; if (!taken.has(n.toLowerCase())) { taken.add(n.toLowerCase()); return n; } }
+    };
+    let moved = 0;
+    const failed = [];
+    for (const path of files) {
+      try {
+        const rec = await dbDriver.get(path);
+        const data = rec.binaryData ? await this.readFile(path, { encoding: 'blob' }) : (rec.content || '');
+        await this.writeFile(`${destRoot}/${freeName(rec.name)}`, data, { mimeType: rec.mimeType, storage: to });
+        if (to === 'offline' && rec.id) await this._deleteOnline(rec.id);
+        await this.delete(path);
+        moved++;
+      } catch (err) {
+        failed.push(getBaseName(path));
+        console.warn('[ToolboxFilesystem] Transfer failed:', path, err);
+      }
+    }
+    // Folders that were emptied by a move to the account go too (not the built-in ones).
+    for (const raw of paths) {
+      const p = normalizePath(raw);
+      const rec = await dbDriver.get(p);
+      if (rec?.isDirectory && !DEFAULT_FOLDERS.some(f => f.path === p) && !failed.length) await this.delete(p).catch(() => {});
+    }
+    this._notify();
+    return { moved, failed };
+  }
+
+  /** Removes a file's copy from the account (Online Files). */
+  async _deleteOnline(id) {
+    const user = getCurrentUser();
+    const config = getSupabaseConfig();
+    if (!user || !config.url || !config.anonKey || !id) return;
+    const res = await fetch(`${config.url}/rest/v1/saved_artifacts?id=eq.${encodeURIComponent(id)}&user_id=eq.${encodeURIComponent(user.id)}`, {
+      method: 'DELETE',
+      headers: { apikey: config.anonKey, Authorization: `Bearer ${user.token}` },
+    });
+    if (!res.ok && res.status !== 404) throw new Error(`Could not remove the online copy (${res.status}).`);
+  }
+
   /* ---------------- Supabase Online Support ---------------- */
 
   async _listOnline(dirPath) {
