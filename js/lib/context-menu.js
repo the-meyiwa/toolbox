@@ -278,13 +278,24 @@ export function openContextMenu({ x, y, title = '', items = [], className = '', 
   };
 }
 
-export function closeContextMenu() {
+export function closeContextMenu({ instant = false } = {}) {
   if (activeMenu) {
     activeMenu.cleanup();
     activeMenu = null;
   }
   const existing = document.getElementById('toolbox-context-menu');
-  if (existing) existing.remove();
+  if (existing) {
+    // Fade out rather than vanish. The id goes at once, so a menu opened next never collides.
+    existing.removeAttribute('id');
+    existing.setAttribute('aria-hidden', 'true');
+    existing.style.pointerEvents = 'none';
+    const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (instant || reduce || typeof existing.animate !== 'function') existing.remove();
+    else {
+      const gone = () => existing.remove();
+      existing.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-2px) scale(.98)' }], { duration: 130, easing: 'cubic-bezier(.4, 0, 1, 1)', fill: 'forwards' }).finished.then(gone, gone);
+    }
+  }
   const legacy = document.getElementById('sv-finder-menu');
   if (legacy) removeMenu(legacy);
 }

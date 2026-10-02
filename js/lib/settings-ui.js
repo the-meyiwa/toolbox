@@ -29,6 +29,9 @@ import { renderContributionSettings } from './flutterwave-contribution.js';
 import { paintSupporterProfile } from './supporter.js';
 import { renderToolPreferences } from './tool-settings-ui.js';
 import { animateSettingsPanel } from './settings-motion.js';
+import { TOOLS } from '../registry/tools.js';
+import { search as searchTools } from './search.js';
+import { MAX_SHORTCUTS, isCustomShortcuts, editableShortcutIds, setShortcutIds } from './home-shortcuts.js';
 
 let modalEl = null;
 let isOpen = false;
@@ -589,13 +592,77 @@ function renderPreferencesSettings() {
     </div>`)}
     ${section('Feedback', '', `<div class="stg-card">
       ${row({ title: 'Haptics', hint: 'A light vibration on phones when you tap controls and switch views', forId: 'pref-opt-audio', control: switchInput('pref-opt-audio', s.hapticAudio !== false) })}
-    </div>`)}`;
+    </div>`)}
+    ${section('Home shortcuts', `The tools under the search on Home. Pick up to ${MAX_SHORTCUTS}, in your order.`, '<div class="stg-card stg-shortcuts" id="stg-home-shortcuts"></div>', ' id="stg-shortcuts-section"')}`;
+  renderShortcutEditor(container.querySelector('#stg-home-shortcuts'));
 
   container.querySelector('#pref-opt-autosave')?.addEventListener('change', (e) => updateSettings({ autoSave: e.target.checked }));
   container.querySelectorAll('input[name="pref-units"]').forEach(r => r.addEventListener('change', (e) => { if (e.target.checked) updateSettings({ unitSystem: e.target.value }); }));
   container.querySelector('#pref-opt-wrap')?.addEventListener('change', (e) => updateSettings({ editorWrap: e.target.checked }));
   container.querySelector('#pref-opt-fontsize')?.addEventListener('change', (e) => updateSettings({ editorFontSize: parseInt(e.target.value, 10) }));
   container.querySelector('#pref-opt-audio')?.addEventListener('change', (e) => updateSettings({ hapticAudio: e.target.checked }));
+}
+
+/** Home shortcuts: the chosen tools in order (move, remove), a finder to add more, and a way back to automatic. */
+function renderShortcutEditor(host) {
+  if (!host) return;
+  const tools = TOOLS.filter(t => !t.hidden && t.id !== 'assistant');
+  const byId = new Map(tools.map(t => [t.id, t]));
+  const ids = editableShortcutIds(tools).filter(id => byId.has(id));
+  const custom = isCustomShortcuts();
+  const full = ids.length >= MAX_SHORTCUTS;
+  host.innerHTML = `
+    <ol class="stg-sc-list" aria-label="Home shortcuts">
+      ${ids.map((id, i) => { const t = byId.get(id); return `<li class="stg-sc-item" data-id="${escapeHtml(id)}">
+        <span class="stg-sc-icon" aria-hidden="true">${t.icon}</span>
+        <span class="stg-sc-name">${escapeHtml(t.name)}</span>
+        <span class="stg-sc-acts">
+          <button type="button" class="stg-sc-btn" data-sc="up" aria-label="Move ${escapeHtml(t.name)} earlier" ${i === 0 ? 'disabled' : ''}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg></button>
+          <button type="button" class="stg-sc-btn" data-sc="down" aria-label="Move ${escapeHtml(t.name)} later" ${i === ids.length - 1 ? 'disabled' : ''}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+          <button type="button" class="stg-sc-btn" data-sc="remove" aria-label="Remove ${escapeHtml(t.name)}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        </span>
+      </li>`; }).join('')}
+    </ol>
+    ${ids.length ? '' : '<p class="stg-sc-empty">No shortcuts. Home will show just the search.</p>'}
+    <div class="stg-sc-add">
+      <input type="search" class="stg-sc-input" placeholder="${full ? `You have ${MAX_SHORTCUTS}. Remove one to add another.` : 'Add a tool…'}" aria-label="Add a tool to Home shortcuts" autocomplete="off" ${full ? 'disabled' : ''}>
+      <div class="stg-sc-results" role="listbox" hidden></div>
+    </div>
+    <div class="stg-sc-foot">
+      <span class="stg-row-hint">${custom ? 'Your own selection.' : 'Automatic: the tools you use most.'}</span>
+      ${custom ? '<button type="button" class="stg-sc-reset" data-sc="reset">Back to automatic</button>' : ''}
+    </div>`;
+
+  const commit = (next) => { setShortcutIds(next); renderShortcutEditor(host); };
+  host.onclick = (e) => {
+    const b = e.target.closest('[data-sc]');
+    if (!b) return;
+    const act = b.dataset.sc;
+    if (act === 'reset') { updateSettings({ homeShortcuts: [] }); renderShortcutEditor(host); return; }
+    if (act === 'add') { commit([...ids, b.dataset.id]); requestAnimationFrame(() => host.querySelector('.stg-sc-input')?.focus()); return; }
+    const id = b.closest('.stg-sc-item')?.dataset.id;
+    const i = ids.indexOf(id);
+    if (i < 0) return;
+    const next = ids.slice();
+    if (act === 'remove') next.splice(i, 1);
+    if (act === 'up' && i > 0) [next[i - 1], next[i]] = [next[i], next[i - 1]];
+    if (act === 'down' && i < next.length - 1) [next[i + 1], next[i]] = [next[i], next[i + 1]];
+    commit(next);
+    host.querySelector(`.stg-sc-item[data-id="${CSS.escape(id)}"] [data-sc="${act}"]:not(:disabled)`)?.focus();
+  };
+  const input = host.querySelector('.stg-sc-input');
+  const results = host.querySelector('.stg-sc-results');
+  input?.addEventListener('input', () => {
+    const q = input.value.trim();
+    const pool = tools.filter(t => !ids.includes(t.id));
+    const found = q ? searchTools(q, pool).results.map(r => r.tool).slice(0, 6) : [];
+    results.hidden = !found.length;
+    results.innerHTML = found.map(t => `<button type="button" class="stg-sc-result" role="option" data-sc="add" data-id="${escapeHtml(t.id)}"><span class="stg-sc-icon" aria-hidden="true">${t.icon}</span><span>${escapeHtml(t.name)}</span></button>`).join('');
+  });
+  input?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); results.querySelector('.stg-sc-result')?.click(); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); results.querySelector('.stg-sc-result')?.focus(); }
+  });
 }
 
 function renderAiSettings(refreshQuota = true) {
@@ -775,13 +842,14 @@ export function openSettings(targetSection = null) {
   runSearch('');
   delete modalEl.querySelector('.stg').dataset.sub;
 
-  const alias = { preferences: 'general', storage: 'general', ai: 'assistant', contribution: 'support' };
+  const alias = { preferences: 'general', storage: 'general', ai: 'assistant', contribution: 'support', shortcuts: 'general' };
   const target = toolFocus ? 'tools' : targetSection ? (alias[targetSection] || targetSection) : null;
   currentPage = null;
   if (target === 'avatars') showAvatarView();
   else if (target && PAGE_BY_ID.has(target)) showPage(target, { instant: true });
   else if (isNarrow()) goHome();
   else showPage(sessionPage() || 'profile', { instant: true });
+  if (targetSection === 'shortcuts') requestAnimationFrame(() => modalEl.querySelector('#stg-shortcuts-section')?.scrollIntoView?.({ block: 'start' }));
   if (toolFocus) requestAnimationFrame(() => modalEl.querySelector(`[data-tool-card="${toolFocus.replace(/[^a-z0-9-]/gi, '')}"]`)?.scrollIntoView?.({ block: 'start' }));
 
   clearTimeout(closeTimer);

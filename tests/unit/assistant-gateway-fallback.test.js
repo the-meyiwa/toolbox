@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 for (const key of ['OPENAI_API_KEY', 'DEEPSEEK_API_KEY', 'OPENROUTER_API_KEY', 'SUPABASE_URL', 'VITE_SUPABASE_URL']) delete process.env[key];
+process.env.TOOLBOX_LOCAL_DEV_USER = '1'; // the explicit local stand-in account
 process.env.GROQ_API_KEY = 'test-groq';
 process.env.GEMINI_API_KEY = 'test-gemini';
 process.env.ASSISTANT_GROQ_MODEL = 'groq-test';

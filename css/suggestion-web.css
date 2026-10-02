@@ -1,0 +1,138 @@
+/* ==========================================================================
+   TOOLBOX — Suggestion web (js/lib/suggestion-web.js)
+
+   Bubbles tied to the search field by faint traces. Positions and the
+   entrance, spiral and fold motion are set from JS; this file gives
+   them their look, hover and focus states, and the details bubble.
+   ========================================================================== */
+
+.sw { position: absolute; inset: 0; z-index: 40; pointer-events: none; }
+.sw-traces { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; }
+.sw-trace {
+  fill: none; stroke: color-mix(in srgb, var(--ink) 20%, transparent); stroke-width: 1; stroke-linecap: round;
+  transition: stroke .2s ease;
+}
+.sw-trace.is-hot { stroke: color-mix(in srgb, var(--ink) 55%, transparent); }
+
+.sw-b {
+  position: absolute; box-sizing: border-box; pointer-events: auto;
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 36px; max-width: 220px; padding: 0 14px 0 5px;
+  border: 1px solid var(--line-strong); border-radius: 18px;
+  background: var(--surface); color: var(--text);
+  box-shadow: 0 1px 2px #0000000d, 0 12px 26px -18px #00000052;
+  font: 500 13.5px/1 var(--font-sans); white-space: nowrap; text-decoration: none; cursor: pointer;
+  transition: border-color .18s ease, box-shadow .25s ease, scale .3s cubic-bezier(.34, 1.4, .64, 1), background-color .18s ease;
+}
+.sw-b:hover, .sw-b.is-cursor { border-color: var(--line-control); scale: 1.04; box-shadow: 0 1px 2px #0000000d, 0 16px 30px -16px #00000066; }
+.sw-b.is-cursor { box-shadow: 0 0 0 4px color-mix(in srgb, var(--ink) 9%, transparent), 0 16px 30px -16px #00000066; }
+.sw-b:active { scale: .97; }
+.sw-b:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.sw-ico { display: grid; place-items: center; width: 26px; height: 26px; flex: none; border-radius: 13px; background: var(--surface-2); color: var(--text); }
+[data-theme="dark"] .sw-ico { background: var(--surface-3); }
+.sw-ico svg { width: 14px; height: 14px; }
+.sw-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sw-ai { background: var(--ink); border-color: var(--ink); color: var(--text-inverse); }
+.sw-ai .sw-ico { background: color-mix(in srgb, var(--text-inverse) 16%, transparent); color: var(--text-inverse); }
+.sw-ai:hover, .sw-ai.is-cursor { border-color: var(--ink); }
+.sw-b.is-measuring { visibility: hidden; left: 0; top: 0; }
+.sw-b.is-leaving { pointer-events: none; }
+
+/* The details bubble: only on hover or when the arrow keys reach a suggestion. */
+.sw-tip {
+  position: absolute; left: 0; top: 0; z-index: 2; max-width: 260px; box-sizing: border-box;
+  padding: 8px 11px 9px; border-radius: 12px;
+  background: var(--ink); color: var(--text-inverse);
+  font: 12.5px/1.4 var(--font-sans); text-align: left; pointer-events: none;
+  opacity: 0; transform: translate(var(--tx, 0), var(--ty, 0)) scale(.94);
+  transform-origin: 50% 0;
+  transition: opacity .16s ease, transform .26s cubic-bezier(.34, 1.3, .64, 1);
+}
+.sw-tip[data-side="above"] { transform-origin: 50% 100%; }
+.sw-tip.is-on { opacity: 1; transform: translate(var(--tx, 0), var(--ty, 0)) scale(1); }
+.sw-tip.is-moving { transition: opacity .16s ease, transform .3s cubic-bezier(.22, 1, .36, 1); }
+.sw-tip strong { display: block; font-weight: 600; }
+.sw-tip span { display: block; margin-top: 1px; opacity: .78; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sw-b, .sw-tip, .sw-trace { transition-duration: 1ms !important; }
+}
+
+/* ---------- Spotlight (js/lib/palette.js) ---------- */
+.pal-hint { display: none; }
+/* Desktop: no panel. The page steps back behind a soft veil and the field floats on it;
+   results grow out of the field in every direction. */
+.pal.pal-web .pal-scrim {
+  background: color-mix(in srgb, var(--bg, var(--surface)) 70%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.1); backdrop-filter: blur(16px) saturate(1.1);
+}
+.pal.pal-web .pal-panel {
+  width: min(620px, calc(100vw - 96px)); margin-top: 34vh;
+  background: transparent; border: 0; box-shadow: none; overflow: visible;
+}
+.pal.pal-web .pal-field {
+  height: 58px; padding: 0 18px; gap: 12px;
+  border: 1px solid var(--line-strong); border-radius: 20px;
+  background: var(--surface); color: var(--text-3);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--ink) 5%, transparent), 0 24px 50px -30px #00000073;
+}
+.pal.pal-web .pal-field input { font-size: 17px; color: var(--text); }
+.pal.pal-web .pal-field kbd { border-color: var(--line-strong); background: var(--surface-2); color: var(--text-3); }
+.pal.pal-web .pal-list { display: none; }
+.pal.pal-web:not(.has-query) .pal-hint {
+  display: block; margin: 16px 0 0; text-align: center;
+  font-size: 12.5px; color: var(--text-3);
+  animation: motion-fade .4s ease .1s both;
+}
+.pal-hint kbd { margin: 0 1px; padding: 1px 5px; border: 1px solid var(--line-strong); border-radius: 5px; font: 11px var(--font-mono, monospace); }
+
+/* Phones: the list, in the current tokens. */
+.pal:not(.pal-web) .pal-panel { border-color: var(--line-strong); border-radius: 20px; background: var(--overlay, var(--surface)); }
+.pal:not(.pal-web) .pal-field, .pal:not(.pal-web) .pal-list { background: transparent; }
+.pal:not(.pal-web) .pal-field { border-bottom-color: var(--line); color: var(--text-3); }
+.pal:not(.pal-web) .pal-field input { color: var(--text); }
+.pal:not(.pal-web) .pal-row { align-items: center; border-radius: 12px; color: var(--text); }
+.pal:not(.pal-web) .pal-row:hover { background: var(--surface-2); }
+.pal:not(.pal-web) .pal-row.is-cursor { background: var(--tint); }
+.pal:not(.pal-web) .pal-icon { display: grid; place-items: center; width: 30px; height: 30px; margin: 0; border-radius: 10px; background: var(--surface-2); color: var(--text); }
+.pal:not(.pal-web) .pal-icon svg { width: 15px; height: 15px; }
+.pal:not(.pal-web) .pal-icon:empty { background: transparent; }
+.pal:not(.pal-web) .pal-text strong { color: var(--text); }
+.pal:not(.pal-web) .pal-text em { color: var(--text-3); }
+.pal:not(.pal-web) .pal-group { color: var(--text-3); }
+
+/* ---------- Header search (js/lib/header-search.js) ---------- */
+.hs {
+  position: fixed; z-index: 1150; top: var(--hs-top, 12px); right: var(--hs-right, 16px);
+  width: var(--hs-from, 200px); max-width: calc(100vw - 32px);
+  transition: width .34s cubic-bezier(.22, 1, .36, 1);
+}
+.hs.is-open { width: min(400px, calc(100vw - 32px)); }
+.hs-field {
+  display: flex; align-items: center; gap: 8px; height: var(--hs-h, 40px); padding: 0 8px 0 12px;
+  border: 1px solid var(--line-control); border-radius: 999px; background: var(--surface); color: var(--text-3);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ink) 6%, transparent), var(--shadow-2);
+}
+.hs-field svg { width: 16px; height: 16px; flex: none; }
+.hs-input { flex: 1; min-width: 0; height: 100%; margin: 0; padding: 0; border: 0; outline: 0; box-shadow: none; background: transparent; color: var(--text); font: 14px var(--font-sans); }
+.hs-field kbd { flex: none; padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 6px; font: 11px var(--font-mono, monospace); color: var(--text-3); opacity: 0; transition: opacity .2s ease .12s; }
+.hs.is-open .hs-field kbd { opacity: 1; }
+.hs-panel {
+  margin-top: 8px; padding: 6px; overflow: hidden; box-sizing: border-box;
+  background: var(--overlay, var(--surface)); border: 1px solid var(--line-strong); border-radius: 16px;
+  box-shadow: var(--shadow-3);
+}
+.hs-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 8px;
+  border: 0; border-radius: 11px; background: transparent; color: var(--text); text-align: left; cursor: pointer; font-family: var(--font-sans);
+  transition: background-color .14s ease;
+}
+.hs-row.is-cursor { background: var(--surface-2); }
+[data-theme="dark"] .hs-row.is-cursor { background: var(--surface-3); }
+.hs-icon { display: grid; place-items: center; width: 28px; height: 28px; flex: none; border-radius: 9px; background: var(--surface-2); color: var(--text); }
+.hs-icon:empty { background: transparent; }
+.hs-icon svg { width: 14px; height: 14px; }
+.hs-text { display: flex; flex-direction: column; min-width: 0; }
+.hs-text strong { font-size: 13.5px; font-weight: 500; }
+.hs-text em { font-style: normal; font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hs-empty { margin: 0; padding: 10px 10px; font-size: 13px; color: var(--text-3); }

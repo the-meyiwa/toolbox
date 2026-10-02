@@ -75,68 +75,32 @@
     <main id="main">
       <!-- HOME -->
       <div id="home-view" class="page-view lp">
-        <!-- The landing page shares Mind's language: the job you describe sits at the centre,
-             the areas of Toolbox orbit it, and everything below arrives as you scroll
-             (js/home-scroll.js). Every id the search and Assistant logic uses is unchanged. -->
+        <!-- Home is one quiet column that reads as a single piece: the question, the search,
+             your shortcuts and the Assistant, joined by one faint thread. Suggestions grow out
+             of the search as a web (js/lib/suggestion-web.js); motion lives in js/home-scroll.js. -->
         <section class="lp-hero" id="home-slide-1" aria-labelledby="lp-title">
-          <div class="lp-space">
-            <svg class="lp-tethers" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
-            <div class="lp-orbit" aria-label="Areas of Toolbox"></div>
-            <div class="lp-core">
-              <span class="lp-badge" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M8 9V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3M3 14h18M10 14v2h4v-2"/></svg></span>
-              <p class="lp-kicker"><i aria-hidden="true"></i>Everything runs in your browser</p>
-              <h1 class="lp-title" id="lp-title">What do you need to do?</h1>
-              <p class="lp-sub">Describe the job, not the tool.</p>
+          <p class="lp-kicker">Everything runs in your browser</p>
+          <h1 class="lp-title" id="lp-title">What do you need to do?</h1>
+          <p class="lp-sub">Describe the job, not the tool.</p>
 
-              <div class="home-search-wrap lp-search" id="home-search-wrap">
-                <div class="home-search-field">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-                  <input type="text" id="home-hero-input" class="home-search-input" placeholder="Compress a photo, merge PDFs, format JSON…" autocomplete="off" spellcheck="false" aria-label="Describe what you need to do" aria-controls="home-hero-dropdown" aria-autocomplete="list">
-                  <button type="button" id="home-hero-submit-btn" class="btn-icon btn-primary home-search-submit" aria-label="Ask Assistant" title="Ask Assistant (Enter)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-                  </button>
-                </div>
-                <div id="home-hero-dropdown" class="home-hero-dropdown" role="listbox" hidden></div>
-                <p class="home-search-keys" id="home-search-keys"><span><kbd>Enter</kbd> ask Assistant</span><span><kbd class="k-mod">Ctrl</kbd><kbd>Enter</kbd> open the first tool</span><span><kbd>/</kbd> jump here</span></p>
-              </div>
+          <div class="home-search-wrap lp-search" id="home-search-wrap">
+            <div class="home-search-field">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <input type="text" id="home-hero-input" class="home-search-input" placeholder="Compress a photo, merge PDFs, format JSON…" autocomplete="off" spellcheck="false" aria-label="Describe what you need to do" role="combobox" aria-expanded="false" aria-controls="home-hero-dropdown" aria-autocomplete="list">
+              <button type="button" id="home-hero-submit-btn" class="btn-icon btn-primary home-search-submit" aria-label="Ask Assistant" title="Ask Assistant (Enter)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </button>
             </div>
+            <div id="home-hero-dropdown" class="home-hero-dropdown" role="listbox" aria-label="Suggestions" hidden></div>
+            <p class="home-search-keys" id="home-search-keys"><span><kbd>Enter</kbd> ask Assistant</span><span><kbd>↓</kbd> choose a suggestion</span><span><kbd>/</kbd> jump here</span></p>
           </div>
 
-          <div class="home-quick" id="home-quick" aria-label="Popular tools"></div>
-
-          <div class="lp-band">
+          <div class="lp-below" id="home-below">
+            <div class="home-quick" id="home-quick" aria-label="Your shortcuts"></div>
             <div class="home-assistant lp-assistant" id="home-assistant-banner-wrap">
               <div id="home-assistant-banner"></div>
             </div>
-            <div class="lp-stats" aria-label="Toolbox at a glance"></div>
           </div>
-
-          <a href="#home-slide-2" class="lp-scroll-hint">
-            <span>Browse by task</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </a>
-        </section>
-
-        <section class="home-section lp-section" id="home-slide-2" aria-labelledby="home-tasks-title">
-          <div class="lp-section-head">
-            <div>
-              <h2 class="lp-section-title" id="home-tasks-title">Start with a task</h2>
-              <p class="lp-section-desc">The quickest way in when you know the job but not the tool.</p>
-            </div>
-            <a href="#tools" class="lp-btn">All tools</a>
-          </div>
-          <div class="lp-tasks" id="home-tasks"></div>
-        </section>
-
-        <section class="home-section lp-section" id="home-slide-3" aria-labelledby="home-files-title">
-          <div class="lp-section-head">
-            <div>
-              <h2 class="lp-section-title" id="home-files-title">Your files</h2>
-              <p class="lp-section-desc">Saved documents and exports. They stay in this browser.</p>
-            </div>
-            <a href="#saved" class="lp-btn">Open Files</a>
-          </div>
-          <div class="lp-files" id="home-saved-list"></div>
         </section>
 
         <footer class="home-footer">

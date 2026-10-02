@@ -8,6 +8,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 for (const k of ['OPENAI_API_KEY', 'DEEPSEEK_API_KEY', 'GROQ_API_KEY', 'OPENROUTER_API_KEY', 'SUPABASE_URL', 'VITE_SUPABASE_URL']) delete process.env[k];
+process.env.TOOLBOX_LOCAL_DEV_USER = '1'; // the explicit local stand-in account
 process.env.GEMINI_API_KEY = 'test-key';
 process.env.ASSISTANT_GEMINI_MODEL = 'gemini-test';
 

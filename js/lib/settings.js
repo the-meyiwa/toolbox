@@ -25,6 +25,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   assistantNewTab: false,       // Full Assistant opens in this tab unless explicitly requested
   assistantResponseAnimation: true,
   assistantAnimationStyle: 'color rave', // 'color rave' | 'glow' | 'Plain Fade' | 'Pop In'
+  homeShortcuts: [],    // tool ids under the Home search, in order ([] = automatic: most used)
   displayName: '',
   profilePicture: 'default', // 'default' | '<image_file_name>'
   tools: {},            // per-tool preferences, see lib/tool-settings.js

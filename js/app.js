@@ -6,18 +6,21 @@
    js/lib/search.js, so adding a tool never means editing the shell.
    ============================================================ */
 
-import { TOOLS, CATEGORY_LABELS, OFFLINE_TOOLS, categorised, byTask, popular, resolveRoute, BY_ID } from './registry/index.js';
+import { TOOLS, CATEGORY_LABELS, OFFLINE_TOOLS, categorised, popular, resolveRoute, BY_ID } from './registry/index.js';
 import { search, relatedTools } from './lib/search.js';
 import { track, toolSession } from './lib/analytics.js';
 import * as artifacts from './lib/artifacts.js';
 import { mountArtifactStrip, incomingBanner } from './lib/artifact-ui.js';
 import { installPalette, openPalette, openSearch, detectAiIntent } from './lib/palette.js';
 import { openAssistant, openAssistantTab } from './lib/assistant-popup.js';
-import { getSetting } from './lib/settings.js';
+import { getSetting, onSettingsChange } from './lib/settings.js';
 import { quickDeviceLookup, openQuickResult, quickResultHint, quickResultTitle } from './lib/devices/quick-search.js';
 import { renderSaved } from './views/saved.js';
-import { kindLabel } from './registry/kinds.js';
-import { getFileTypeIcon, getFileTypeColor } from './lib/file-icons.js';
+import { homeShortcutTools } from './lib/home-shortcuts.js';
+import { createSuggestionWeb, webSuits } from './lib/suggestion-web.js';
+import { openHeaderSearch } from './lib/header-search.js';
+import { installSquircleSelection } from './lib/squircle-selection.js';
+import { animateToolGrid, installChipIndicator, installToolCardLight } from './tools-motion.js';
 import { copyText, showToast } from './utils.js';
 import { initTheme } from './lib/theme.js';
 import { installSettingsUI, openSettings } from './lib/settings-ui.js';
@@ -45,7 +48,6 @@ import { initMessageNotifications } from './lib/message-notifications.js';
 import { installSessionKeeper } from './lib/session-keeper.js';
 import { startReminderClock } from './lib/reminders.js';
 import { startAutomationClock } from './lib/automations.js';
-import { icon as uiIcon } from './lib/icons.js';
 
 installSessionKeeper();
 // Check the stored session with the auth provider once the page has settled. Sessions it never
@@ -203,6 +205,7 @@ function renderGrid(originalList, { query = '', noResult = false } = {}) {
           <div class="grid-category-head"><h2 class="category-label">Closest matches</h2></div>
           <div class="category-tools">${list.slice(0, 6).map((t, i) => toolCard(t, { index: i })).join('')}</div>
         </section>` : ''}`;
+    animateToolGrid(grid, { query });
     return;
   }
 
@@ -213,6 +216,7 @@ function renderGrid(originalList, { query = '', noResult = false } = {}) {
         <div class="grid-category-head"><h2 class="category-label">Results</h2><span class="category-count">${list.length}</span></div>
         <div class="category-tools">${list.map((t, i) => toolCard(t, { index: i })).join('')}</div>
       </section>`;
+    animateToolGrid(grid, { query });
     return;
   }
 
@@ -233,6 +237,8 @@ function renderGrid(originalList, { query = '', noResult = false } = {}) {
   ];
   grid.innerHTML = sections.join('');
   renderCategoryChips(groups);
+  animateToolGrid(grid);
+  installToolCardLight(grid);
   const count = $('tools-count');
   if (count) count.textContent = String(list.length);
 }
@@ -260,6 +266,7 @@ function renderCategoryChips(groups) {
     ...groups.map(c => `<button type="button" class="chip category-chip" data-cat="${c.id}">${escapeHtml(c.label)}</button>`),
   ].join('');
   installCategoryChips();
+  installChipIndicator(bar);
 }
 
 function installCategoryChips() {
@@ -851,7 +858,12 @@ grid.addEventListener('click', (e) => {
 });
 backBtn.addEventListener('click', () => { window.location.hash = '#tools'; });
 $('back-btn-mobile')?.addEventListener('click', () => { window.location.hash = '#tools'; });
-$('header-search-btn')?.addEventListener('click', () => openSearch());
+$('header-search-btn')?.addEventListener('click', (e) => {
+  // Desktop away from Home: search right there in the corner. Home and phones: the usual search.
+  const onHome = !$('home-view')?.classList.contains('hidden');
+  if (window.innerWidth > 768 && !onHome) openHeaderSearch(e.currentTarget);
+  else openSearch();
+});
 $('viewport-category')?.addEventListener('click', (e) => {
   const cat = e.currentTarget.dataset.cat;
   if (!cat) return;
@@ -906,16 +918,16 @@ export function renderHomeAssistantBanner() {
   const btnText = user ? 'Open Assistant' : 'Sign in';
 
   bannerEl.innerHTML = `
-    <div class="lp-head" style="--hue:262">
-      <span class="lp-head-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 3v4M21 5h-4"/></svg></span>
-      <div class="lp-head-text">
-        <small>Assistant</small>
+    <div class="lp-ask">
+      <span class="lp-ask-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 3v4M21 5h-4"/></svg></span>
+      <div class="lp-ask-text">
         <h3 class="home-assistant-title">${titleText}</h3>
         <p class="home-assistant-desc">${descText}</p>
       </div>
-      <button type="button" class="lp-btn lp-btn-primary" id="btn-open-assistant">${btnText}</button>
+      <button type="button" class="lp-btn" id="btn-open-assistant">${btnText}</button>
     </div>
   `;
+
 
   bannerEl.querySelector('#btn-open-assistant')?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -943,53 +955,62 @@ window.addEventListener('toolbox:authchange', () => {
 if (homeHeroInput && homeHeroDropdown) {
   const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
   const firstKey = isMac ? '⌘ Enter' : 'Ctrl Enter';
+  const homeView = $('home-view');
+  const ASK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 3v4M21 5h-4"/></svg>';
+  const DEVICE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="7" height="12" rx="1.5"/><rect x="13" y="8" width="7" height="12" rx="1.5"/><path d="M7.5 16v2M16.5 20v2"/></svg>';
   let heroTools = [];
   let heroDevice = null;   // quick device/compare match for the current query, once resolved
   let heroGen = 0;
 
+  // Desktop: suggestions grow out of the search as a web. Phones and touch: a simple thread
+  // of rows under the field, which the on-screen keyboard cannot push out of place.
+  const web = createSuggestionWeb({
+    host: $('home-slide-1'),
+    field: homeHeroInput.closest('.home-search-field'),
+    input: homeHeroInput,
+    avoid: () => [...document.querySelectorAll('#home-slide-1 .lp-kicker, #home-slide-1 .lp-title, #home-slide-1 .lp-sub')],
+    onPick: (item) => pick(item),
+  });
+  const setWebbing = (on) => homeView?.classList.toggle('is-webbing', on);
+
+  function suggestionItems(q) {
+    const items = [];
+    if (heroDevice) items.push({ key: `device:${quickResultTitle(heroDevice)}`, title: quickResultTitle(heroDevice), hint: quickResultHint(heroDevice), icon: DEVICE_ICON, kind: 'device', device: heroDevice });
+    for (const t of heroTools) items.push({ key: `tool:${t.id}`, title: t.name, hint: t.description, icon: t.icon, href: `#${t.id}`, tool: t });
+    const ask = { key: 'ask', title: 'Ask Assistant', hint: `“${q.length > 60 ? `${q.slice(0, 60)}…` : q}”: answered here, over this page`, icon: ASK_ICON, kind: 'ai' };
+    // A question goes to the Assistant first; a job description finds tools first.
+    if (detectAiIntent(q) || !heroTools.length) items.unshift(ask); else items.push(ask);
+    return items;
+  }
+
+  function pick(item) {
+    if (!item) return;
+    if (item.kind === 'ai') { askFromHome(homeHeroInput.value.trim()); return; }
+    if (item.kind === 'device') { openDevice(item.device); return; }
+    if (item.tool) {
+      track('search_selected', { query: homeHeroInput.value.trim(), resultTop: item.tool.id });
+      closeSuggestions();
+      window.location.hash = `#${item.tool.id}`;
+    }
+  }
+
   function deviceRowHtml(hit) {
     return `
       <div class="hero-dd-row hero-dd-device" role="option" tabindex="-1">
-        <span class="hero-dd-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="7" height="12" rx="1.5"/><rect x="13" y="8" width="7" height="12" rx="1.5"/><path d="M7.5 16v2M16.5 20v2"/></svg></span>
+        <span class="hero-dd-icon">${DEVICE_ICON}</span>
         <span class="hero-dd-text">
           <span class="hero-dd-name">${escapeHtml(quickResultTitle(hit))}</span>
           <span class="hero-dd-desc">${escapeHtml(quickResultHint(hit))}</span>
         </span>
-        <kbd>Enter</kbd>
       </div>`;
   }
 
-  function renderHomeHeroResults() {
-    const q = homeHeroInput.value.trim();
-    const gen = ++heroGen;
-    if (!q) {
-      homeHeroDropdown.hidden = true;
-      heroTools = [];
-      heroDevice = null;
-      return;
-    }
-
-    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-    const availableTools = getVisibleTools({ isMobile });
-    heroTools = search(q, availableTools, { labels: CATEGORY_LABELS }).results.map(r => r.tool).slice(0, 6);
-    heroDevice = null;
-
-    // Enter opens a confident device/comparison match directly; otherwise it
-    // asks the Assistant. Ctrl/Cmd+Enter opens the first suggestion either way.
-    const aiHtml = `
-      <div class="hero-dd-row hero-dd-ai" role="option" tabindex="-1" data-ai-prompt="${escapeHtml(q)}">
-        <span class="hero-dd-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 3v4M21 5h-4"/></svg></span>
-        <span class="hero-dd-text">
-          <span class="hero-dd-name">Ask Assistant: “${escapeHtml(q)}”</span>
-          <span class="hero-dd-desc">Answers here, over this page</span>
-        </span>
-        <kbd>Enter</kbd>
-      </div>`;
-    let html = aiHtml;
-    if (heroTools.length) {
-      html += `<div class="hero-dd-label">Tools</div>`;
-      html += heroTools.map((t, i) => `
-        <a href="#${t.id}" class="hero-dd-row" role="option">
+  /** Phones: rows on a thread under the field. */
+  function paintThread(q) {
+    const isMobile = window.innerWidth <= 768;
+    let html = heroDevice ? deviceRowHtml(heroDevice) : '';
+    html += heroTools.map((t, i) => `
+        <a href="#${t.id}" class="hero-dd-row" role="option" style="--i:${i + (heroDevice ? 1 : 0)}">
           <span class="hero-dd-icon">${t.icon}</span>
           <span class="hero-dd-text">
             <span class="hero-dd-name">${escapeHtml(t.name)}</span>
@@ -997,36 +1018,72 @@ if (homeHeroInput && homeHeroDropdown) {
           </span>
           ${i === 0 && !isMobile ? `<kbd>${firstKey}</kbd>` : ''}
         </a>`).join('');
-    } else {
-      html += `<div class="hero-dd-empty">No tool matches. Press Enter to ask the Assistant.</div>`;
-    }
-
+    html += `
+      <div class="hero-dd-row hero-dd-ai" role="option" tabindex="-1" data-ai-prompt="${escapeHtml(q)}" style="--i:${heroTools.length + (heroDevice ? 1 : 0)}">
+        <span class="hero-dd-icon">${ASK_ICON}</span>
+        <span class="hero-dd-text">
+          <span class="hero-dd-name">Ask Assistant</span>
+          <span class="hero-dd-desc">“${escapeHtml(q)}”</span>
+        </span>
+      </div>`;
+    const wasOpen = !homeHeroDropdown.hidden;
     homeHeroDropdown.innerHTML = html;
+    homeHeroDropdown.classList.toggle('is-fresh', !wasOpen);
     homeHeroDropdown.hidden = false;
+    homeHeroInput.setAttribute('aria-expanded', 'true');
+  }
 
+  function paintSuggestions() {
+    const q = homeHeroInput.value.trim();
+    if (!q) { closeSuggestions(); return; }
+    if (webSuits()) {
+      homeHeroDropdown.hidden = true;
+      setWebbing(true);
+      web.update(suggestionItems(q));
+    } else {
+      web.clear();
+      setWebbing(false);
+      paintThread(q);
+    }
+  }
+
+  function renderHomeHeroResults() {
+    const q = homeHeroInput.value.trim();
+    const gen = ++heroGen;
+    heroDevice = null;
+    if (!q) { heroTools = []; closeSuggestions(); return; }
+    const isMobile = window.innerWidth <= 768;
+    heroTools = search(q, getVisibleTools({ isMobile }), { labels: CATEGORY_LABELS }).results.map(r => r.tool).slice(0, 6);
+    paintSuggestions();
     if (q.length >= 3) {
       setTimeout(() => {
         if (gen !== heroGen) return;
         quickDeviceLookup(q).then(hit => {
           if (gen !== heroGen || !hit) return;
           heroDevice = hit;
-          // The device match takes Enter; demote the Assistant row's own hint accordingly.
-          homeHeroDropdown.innerHTML = deviceRowHtml(hit) + html.replace(aiHtml, aiHtml.replace('<kbd>Enter</kbd>', ''));
+          paintSuggestions();
         }).catch(() => {});
       }, 150);
     }
   }
 
+  function closeSuggestions() {
+    web.clear();
+    setWebbing(false);
+    homeHeroDropdown.hidden = true;
+    homeHeroInput.setAttribute('aria-expanded', 'false');
+  }
+
   function askFromHome(q) {
     if (!q) return;
-    homeHeroDropdown.hidden = true;
+    closeSuggestions();
     homeHeroInput.value = '';
     homeHeroInput.blur();
     openAssistant({ prompt: q });
   }
 
   function openDevice(hit) {
-    homeHeroDropdown.hidden = true;
+    closeSuggestions();
     homeHeroInput.value = '';
     homeHeroInput.blur();
     openQuickResult(hit);
@@ -1037,23 +1094,29 @@ if (homeHeroInput && homeHeroDropdown) {
     if (heroDevice) { openDevice(heroDevice); return true; }
     const first = heroTools[0];
     if (!first) return false;
-    homeHeroDropdown.hidden = true;
+    closeSuggestions();
     window.location.hash = `#${first.id}`;
     return true;
   }
 
   function submitHomeHero() {
+    const chosen = web.active();
+    if (chosen) { pick(chosen); return; }
     if (heroDevice) { openDevice(heroDevice); return; }
     askFromHome(homeHeroInput.value.trim());
   }
 
   homeHeroInput.addEventListener('input', renderHomeHeroResults);
-  homeHeroInput.addEventListener('focus', renderHomeHeroResults);
+  homeHeroInput.addEventListener('focus', () => { if (homeHeroInput.value.trim()) renderHomeHeroResults(); });
   homeHeroInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { homeHeroDropdown.hidden = true; return; }
-    if (e.key === 'ArrowDown') {
+    if (e.key === 'Escape') {
+      if (web.isOpen() || !homeHeroDropdown.hidden) { e.preventDefault(); closeSuggestions(); }
+      return;
+    }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (web.isOpen()) { e.preventDefault(); web.move(e.key === 'ArrowDown' ? 1 : -1); return; }
       const first = homeHeroDropdown.querySelector('.hero-dd-row');
-      if (first) { e.preventDefault(); first.focus(); }
+      if (e.key === 'ArrowDown' && first && !homeHeroDropdown.hidden) { e.preventDefault(); first.focus(); }
       return;
     }
     if (e.key === 'Enter') {
@@ -1061,6 +1124,14 @@ if (homeHeroInput && homeHeroDropdown) {
       if (e.ctrlKey || e.metaKey) { if (!openFirstSuggestion()) submitHomeHero(); }
       else submitHomeHero();
     }
+  });
+  // Leaving the field (tabbing away, clicking elsewhere) folds the web back in.
+  homeHeroInput.addEventListener('blur', () => {
+    setTimeout(() => {
+      const a = document.activeElement;
+      if (a === homeHeroInput || homeHeroDropdown.contains(a)) return;
+      closeSuggestions();
+    }, 120);
   });
 
   homeHeroSubmitBtn?.addEventListener('click', submitHomeHero);
@@ -1071,7 +1142,7 @@ if (homeHeroInput && homeHeroDropdown) {
     if (e.key === 'ArrowUp' && i > -1) { e.preventDefault(); (i === 0 ? homeHeroInput : rows[i - 1]).focus(); }
     if (e.key === 'Enter' && document.activeElement?.classList.contains('hero-dd-row') && document.activeElement.tagName !== 'A') { e.preventDefault(); document.activeElement.click(); }
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); openFirstSuggestion(); }
-    if (e.key === 'Escape') { homeHeroDropdown.hidden = true; homeHeroInput.focus(); }
+    if (e.key === 'Escape') { closeSuggestions(); homeHeroInput.focus(); }
   });
 
   homeHeroDropdown.addEventListener('click', (e) => {
@@ -1082,12 +1153,16 @@ if (homeHeroInput && homeHeroDropdown) {
   });
 
   document.addEventListener('click', (e) => {
-    if (!e.target.closest('#home-search-wrap')) {
-      homeHeroDropdown.hidden = true;
-    }
+    if (!e.target.closest('#home-search-wrap') && !e.target.closest('.sw')) closeSuggestions();
+  });
+  // Leaving Home folds the web away; resizing across the desktop/phone line switches style.
+  window.addEventListener('hashchange', () => closeSuggestions());
+  let wasWeb = webSuits();
+  window.addEventListener('resize', () => {
+    const now = webSuits();
+    if (now !== wasWeb) { wasWeb = now; if (homeHeroInput.value.trim() && document.activeElement === homeHeroInput) paintSuggestions(); else closeSuggestions(); }
   });
 }
-
 
 const tipsFab = $('tips-fab');
 if (tipsFab) {
@@ -1126,121 +1201,34 @@ for (const id of ['home-tool-count']) {
 const onlineCount = $('home-online-count');
 if (onlineCount) onlineCount.textContent = `${TOOLS.length - OFFLINE_TOOLS.length}`;
 
+/* Shortcuts under the Home search: the person's own choice from Settings, or the most used. */
 function renderQuickRow() {
   const quickRow = $('home-quick');
   if (!quickRow) return;
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-  const visible = getVisibleTools({ isMobile });
-  quickRow.innerHTML = popular(8)
-    .filter(t => t.id !== 'assistant' && visible.some(v => v.id === t.id))
-    .slice(0, 6)
-    .map((t, i) => `
+  const tools = homeShortcutTools(getVisibleTools({ isMobile }));
+  quickRow.innerHTML = tools.map((t, i) => `
       <a class="home-quick-item lp-chip" href="#${t.id}" style="--k:${i}">
         <span class="home-quick-icon">${t.icon}</span>
         <span>${escapeHtml(t.name)}</span>
-      </a>`).join('');
+      </a>`).join('')
+    + `<button type="button" class="lp-chip lp-chip-edit" id="home-quick-edit" style="--k:${tools.length}" aria-label="Choose your shortcuts" title="Choose your shortcuts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>
+        <span>${tools.length ? 'Edit' : 'Add shortcuts'}</span>
+      </button>`;
 }
 renderQuickRow();
+$('home-quick')?.addEventListener('click', (e) => {
+  if (e.target.closest('#home-quick-edit')) openSettings('shortcuts');
+});
+onSettingsChange((next, prev) => { if (next.homeShortcuts !== prev?.homeShortcuts) renderQuickRow(); });
 
-/* Each area of Toolbox has its own colour and emblem, used on its orbit tile and its card. */
-const TASK_LOOK = {
-  files: [214, '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-9 9"/>'],
-  numbers: [152, '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'],
-  writing: [32, '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>'],
-  lookup: [188, '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>'],
-  everyday: [42, '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'],
-  design: [292, '<circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.3"/><circle cx="12" cy="7.5" r="1.3"/><circle cx="15.5" cy="10" r="1.3"/><path d="M12 21a3 3 0 0 1 0-6h1.5a2.5 2.5 0 0 0 0-5"/>'],
-  law: [6, '<path d="M12 3v18M5 21h14M6 7h12M6 7l-3 7a3 3 0 0 0 6 0zM18 7l-3 7a3 3 0 0 0 6 0z"/>'],
-  science: [262, '<path d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7.5 15h9"/>'],
-  code: [230, '<path d="m8 8-5 4 5 4M16 8l5 4-5 4M13.5 5l-3 14"/>'],
-};
-const taskLook = (id) => TASK_LOOK[id] || [214, '<circle cx="12" cy="12" r="8"/>'];
-const taskIcon = (id, size = 18) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${taskLook(id)[1]}</svg>`;
-const homeTasks = byTask(TOOLS);
-
-/* Hero: the areas orbit the question, joined to it by tethers (motion in js/home-scroll.js). */
-(function renderHomeOrbit() {
-  const orbit = document.querySelector('.lp-orbit');
-  const tethers = document.querySelector('.lp-tethers');
-  if (!orbit || !tethers) return;
-  const n = homeTasks.length;
-  const spots = homeTasks.map((task, i) => {
-    // Start just right of the top and go round; the ellipse keeps tiles clear of the centre.
-    const theta = (i / n) * Math.PI * 2 - Math.PI / 2 + Math.PI / n;
-    return { task, x: +(Math.cos(theta) * 41).toFixed(2), y: +(Math.sin(theta) * 40).toFixed(2) };
-  });
-  tethers.innerHTML = spots.map(({ task, x, y }) => `<line x1="50" y1="50" x2="${50 + x}" y2="${50 + y}" style="--hue:${taskLook(task.id)[0]}"/>`).join('');
-  orbit.innerHTML = spots.map(({ task, x, y }, i) => `
-    <a class="lp-tile" href="#home-task-${task.id}" data-task="${task.id}" style="--x:${x}%;--y:${y}%;--hue:${taskLook(task.id)[0]};--order:${i}">
-      <span class="lp-ico">${taskIcon(task.id, 16)}</span>
-      <strong>${escapeHtml(task.label)}</strong>
-      <span class="lp-meta"><b class="lp-count" data-count="${task.tools.length}">${task.tools.length}</b> tools</span>
-    </a>`).join('');
-})();
-
-/* The task lens. Categories answer "what subject is this?"; the home page
-   has to answer "what am I trying to do?", which is a different question
-   and the only one a first-time visitor is actually asking. */
-const taskGrid = $('home-tasks');
-if (taskGrid) {
-  taskGrid.innerHTML = homeTasks.map((task, i) => `
-    <section class="lp-card" id="home-task-${task.id}" style="--hue:${taskLook(task.id)[0]};--order:${i}">
-      <div class="lp-card-top"><span class="lp-ico">${taskIcon(task.id, 17)}</span><h3 class="lp-card-label">${escapeHtml(task.label)}</h3><span class="lp-pill"><b class="lp-count" data-count="${task.tools.length}">${task.tools.length}</b></span></div>
-      <p class="lp-card-blurb">${escapeHtml(task.blurb)}</p>
-      <div class="lp-card-tools">
-        ${task.tools.slice(0, 6).map(t => `
-          <a class="lp-tool" href="#${t.id}">
-            <span class="lp-tool-icon">${t.icon}</span>
-            <span>${escapeHtml(t.name)}</span>
-          </a>`).join('')}
-      </div>
-      <a class="lp-card-more" href="#tools">All ${task.tools.length} ${uiIcon('chevron-right')}</a>
-    </section>`).join('');
-}
-
-/* Saved work is surfaced only once it exists. Until then the home page and
-   the navigation carry no trace of it, which is the whole point: the
-   product must not look like a workspace to somebody who does not want one. */
-
+/* Files stay reachable from the primary navigation at all times. */
 function reflectSavedWork() {
-  const items = artifacts.list();
-  // Primary navigation for Files must always remain visible
-  document.querySelectorAll('.nav-link[data-page="saved"]').forEach(el => {
-    el.hidden = false;
-  });
-
-  const list = $('home-saved-list');
-  if (list) {
-    list.innerHTML = items.length
-      ? items.slice(0, 6).map((m, i) => `
-          <a class="lp-file" href="#saved/${m.id}" style="--tint:${getFileTypeColor(m.name, m.kind)};--order:${i}">
-            <span class="lp-file-icon">${getFileTypeIcon(m.name, m.kind, 40)}</span>
-            <span class="lp-file-text"><strong>${escapeHtml(m.name)}</strong><small>${escapeHtml(kindLabel(m.kind))}</small></span>
-          </a>`).join('')
-      : `<div class="empty-state lp-empty">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
-          <strong>Nothing saved yet</strong>
-          <span>Converted files and exports you keep will show up here.</span>
-        </div>`;
-  }
+  document.querySelectorAll('.nav-link[data-page="saved"]').forEach(el => { el.hidden = false; });
 }
-
 artifacts.onChange(reflectSavedWork);
 reflectSavedWork();
-
-/* At a glance: counted from the registry and storage, never typed in. */
-function renderHomeStats() {
-  const el = document.querySelector('.lp-stats');
-  if (!el) return;
-  const stat = (n, label, hint, hue) => `<div class="lp-stat" style="--hue:${hue}"><strong class="lp-count" data-count="${n}">${n}</strong><span>${label}</span><small>${hint}</small></div>`;
-  el.innerHTML = stat(TOOLS.length, 'Tools', 'One place for the small jobs', 214)
-    + stat(OFFLINE_TOOLS.length, 'Work offline', 'Nothing leaves your browser', 152)
-    + stat(homeTasks.length, 'Areas', 'From files to law to code', 262)
-    + stat(artifacts.list().length, 'Saved files', 'Kept in this browser', 32);
-}
-renderHomeStats();
-artifacts.onChange(renderHomeStats);
-
 
 // Right-click menus for tool links, the open tool and the page (js/lib/global-menus.js).
 installLongPress();
@@ -1248,6 +1236,7 @@ installLongPress();
 installFileSurface();
 installGlobalMenus({ getTool: () => (currentPage === 'tool' && currentToolObj ? { tool: currentToolObj, instance: currentToolInstance } : null) });
 installTextActions();
+installSquircleSelection();
 installAssistantShortcut();
 
 initTheme();

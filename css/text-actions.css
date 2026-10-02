@@ -26,3 +26,33 @@
 @keyframes tb-text-arrive { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }
 @media (max-width: 600px) { .tb-text-popup { right: 12px; bottom: 12px; max-height: calc(100dvh - 24px); } }
 @media (prefers-reduced-motion: reduce) { .tb-text-popup { animation: none; } }
+
+/* ---------- Squircle selection (js/lib/squircle-selection.js) ----------
+   On desktop the native highlight is hidden and drawn as soft shapes instead. Fields,
+   code editors and anything the overlay cannot measure keep the native highlight. */
+:where(html.sq-sel-on:not(.sq-native)) ::selection { background: transparent; text-shadow: none; }
+:where(html.sq-sel-on) :is(input, textarea)::selection { background: var(--ink); color: var(--text-inverse); }
+.sq-sel { position: fixed; inset: 0; pointer-events: none; mix-blend-mode: difference; contain: strict; }
+.sq-sel-line {
+  position: absolute; left: 0; top: 0; display: none;
+  background: #fff; corner-shape: squircle;
+  will-change: transform;
+}
+@supports (corner-shape: squircle) { .sq-sel-line { border-radius: 14px !important; } }
+
+/* Selection bar labels on desktop: a small caption floats under the button you point at, instead
+   of the button widening and pushing its neighbours along (only transform and opacity move). */
+@media (hover: hover) and (pointer: fine) {
+  .tb-menu-horizontal { overflow: visible; }
+  .tb-menu-horizontal .finder-menu-item { position: relative; overflow: visible; }
+  .tb-menu-horizontal .finder-menu-label {
+    position: absolute; left: 50%; top: calc(100% + 9px); z-index: 2;
+    max-width: none; padding: 4px 8px; border-radius: 8px;
+    background: var(--ink, #111); color: var(--text-inverse, #fff);
+    font-size: 12px; line-height: 16px; font-weight: 500;
+    opacity: 0; transform: translate(-50%, -3px) scale(.96); pointer-events: none;
+    transition: opacity 140ms ease, transform 200ms cubic-bezier(.22, 1, .36, 1);
+  }
+  .tb-menu-horizontal .finder-menu-item:hover .finder-menu-label,
+  .tb-menu-horizontal .finder-menu-item:focus-visible .finder-menu-label { max-width: none; padding: 4px 8px; opacity: 1; transform: translate(-50%, 0) scale(1); }
+}

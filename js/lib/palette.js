@@ -17,6 +17,8 @@ import { kindLabel } from '../registry/kinds.js';
 import { getCurrentUser } from './supabase.js';
 import { openAssistant } from './assistant-popup.js';
 import { detect, looksLikeData } from './smart-detect.js';
+import { createSuggestionWeb, webSuits } from './suggestion-web.js';
+import { morph } from './morph.js';
 
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -39,6 +41,7 @@ let open = false;
 let pasted = null;
 let pastedShown = null;   // what the field showed for it
 let pasteNext = false;
+let web = null;          // the suggestion web, on desktop
 
 function build() {
   root = document.createElement('div');
@@ -54,12 +57,21 @@ function build() {
         <input type="text" id="pal-input" placeholder="What do you need to do?" autocomplete="off" spellcheck="false" aria-label="Search tools and saved work">
         <kbd>Esc</kbd>
       </div>
+      <p class="pal-hint">Type to find tools, saved work and places in Toolbox. <kbd>↑</kbd><kbd>↓</kbd> to choose, <kbd>Enter</kbd> to open.</p>
       <div class="pal-list" id="pal-list" role="listbox"></div>
     </div>`;
   document.body.appendChild(root);
 
   input = root.querySelector('#pal-input');
   listEl = root.querySelector('#pal-list');
+  // On desktop, results grow out of the field as a web; phones keep a list.
+  web = createSuggestionWeb({
+    host: root,
+    field: root.querySelector('.pal-field'),
+    input,
+    above: true,
+    onPick: (item) => run(rows.indexOf(item.row)),
+  });
 
   input.addEventListener('input', () => {
     if (pasteNext) { pastedShown = input.value; pasteNext = false; }
@@ -119,6 +131,7 @@ function detectedRows(text) {
       if (!tool || tool.hidden || seen.has(id)) continue;
       seen.add(id);
       out.push({
+        key: `data:${id}`,
         group: `Looks like ${h.label}`,
         title: `Open in ${tool.name}`,
         hint: tool.description,
@@ -138,6 +151,7 @@ function collect(query) {
     ? saved.filter(m => m.name.toLowerCase().includes(q.toLowerCase()))
     : saved.slice(0, 3)
   ).slice(0, 6).map(m => ({
+    key: `saved:${m.id}`,
     group: 'Saved work',
     title: m.name,
     hint: `${kindLabel(m.kind)}${m.from && BY_ID.has(m.from) ? ` · from ${BY_ID.get(m.from).name}` : ''}`,
@@ -164,6 +178,7 @@ function collect(query) {
         return true;
       })
   ).slice(0, 8).map(t => ({
+    key: `tool:${t.id}`,
     group: q ? 'Tools' : 'Most used',
     title: t.name,
     badge: t.badge || '',
@@ -174,10 +189,12 @@ function collect(query) {
 
   const cmdRows = COMMANDS
     .filter(c => !q || c.label.toLowerCase().includes(q.toLowerCase()))
-    .map(c => ({ group: 'Go to', title: c.label, hint: c.hint, icon: '', go: c.go }));
+    .map(c => ({ key: c.id, group: 'Go to', title: c.label, hint: c.hint, icon: '', go: c.go }));
 
   const isAi = user ? detectAiIntent(q) : false;
   const aiRow = (user && q) ? {
+    key: 'ai',
+    kind: 'ai',
     group: isAi ? 'Assistant (Recommended)' : 'Assistant',
     title: `Ask Assistant: “${q}”`,
     hint: 'Let Assistant process files, generate code, or execute tools for you',
@@ -194,11 +211,15 @@ function collect(query) {
   return [...savedRows, ...toolRows, ...(aiRow ? [aiRow] : []), ...cmdRows];
 }
 
+/** The same results Spotlight shows, for other search surfaces (the header search). */
+export function searchRows(query) { return collect(query); }
+
 /** Device/comparison row for a query that resolves to something in the device
     database (a specific product, or "A vs B"). Resolved async and spliced
     into `rows` once ready, without blocking the rest of the results. */
 function deviceRow(hit) {
   return {
+    key: `device:${quickResultTitle(hit)}`,
     group: hit.kind === 'compare' ? 'Compare' : 'Specs',
     title: quickResultTitle(hit),
     hint: quickResultHint(hit),
@@ -229,7 +250,24 @@ function render() {
   }
 }
 
+/** Desktop: the web shows the best few, nearest first; the field stays the focus. */
+function paintWeb() {
+  const q = input.value.trim();
+  root.classList.toggle('has-query', !!q);
+  if (!q) { web.clear(); return; }
+  web.update(rows.slice(0, 9).map(row => ({ key: row.key || row.title, title: row.title, hint: row.hint, icon: row.icon, kind: row.kind, row })));
+}
+
 function paint() {
+  const useWeb = webSuits();
+  root.classList.toggle('pal-web', useWeb);
+  if (useWeb) { listEl.innerHTML = ''; paintWeb(); return; }
+  web?.clear();
+  // Phones: the list changes size and shape with its results instead of jumping.
+  morph(listEl, paintList, { rows: '.pal-row, .pal-empty', shape: false });
+}
+
+function paintList() {
   if (!rows.length) {
     listEl.innerHTML = `<p class="pal-empty">Nothing matches “${escapeHtml(input.value.trim())}”. Try the job rather than the name — “format json”, “compress photo”.</p>`;
     return;
@@ -253,6 +291,7 @@ function paint() {
 }
 
 function paintCursor() {
+  if (webSuits()) return;
   for (const el of listEl.querySelectorAll('.pal-row')) {
     const on = Number(el.dataset.idx) === cursor;
     el.classList.toggle('is-cursor', on);
@@ -269,6 +308,20 @@ function run(index) {
 }
 
 function onKeys(e) {
+  if (webSuits()) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); web.move(e.key === 'ArrowDown' ? 1 : -1); return; }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const chosen = web.active();
+      // Nothing chosen with the arrows: the closest suggestion is the answer.
+      if (chosen) run(rows.indexOf(chosen.row));
+      else if (input.value.trim()) run(0);
+      return;
+    }
+    // Escape clears what was typed first (the web folds away), then closes.
+    if (e.key === 'Escape') { e.preventDefault(); if (input.value) { input.value = ''; pasted = null; render(); } else close(); return; }
+    return;
+  }
   if (e.key === 'ArrowDown') { e.preventDefault(); cursor = Math.min(cursor + 1, rows.length - 1); paintCursor(); }
   else if (e.key === 'ArrowUp') { e.preventDefault(); cursor = Math.max(cursor - 1, 0); paintCursor(); }
   else if (e.key === 'Enter') { e.preventDefault(); run(cursor); }
@@ -293,6 +346,7 @@ export function openPalette(prefill = '', { data = null } = {}) {
 export function close() {
   if (!root || !open) return;
   open = false;
+  web?.clear();
   // Fade out, then hide; reopening during the fade cancels it.
   root.classList.add('is-closing');
   clearTimeout(root._closeTimer);

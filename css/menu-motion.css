@@ -27,9 +27,14 @@
   animation: menu-row-in 220ms var(--menu-ease) both;
   animation-delay: calc(var(--i, 0) * 14ms + 30ms);
 }
-.tb-menu-horizontal .finder-menu-item { animation: menu-chip-in 260ms cubic-bezier(.34, 1.4, .64, 1) both; animation-delay: calc(var(--i, 0) * 24ms); }
+/* The selection bar: a flat slide-up (no 3D unfold on a pill), then its buttons fade up in a
+   short cascade. When it moves to a new selection it glides there instead (.is-moved). */
+#toolbox-context-menu.tb-menu-horizontal { animation: menu-bar-in 220ms cubic-bezier(.22, 1, .36, 1) both; transform-origin: 50% 0; }
+.tb-menu-horizontal .finder-menu-item { animation: menu-chip-in 240ms cubic-bezier(.22, 1, .36, 1) both; animation-delay: calc(var(--i, 0) * 18ms + 40ms); }
+#toolbox-context-menu.tb-menu-horizontal.is-moved, .tb-menu-horizontal.is-moved .finder-menu-item { animation: none; }
+@keyframes menu-bar-in { from { opacity: 0; transform: translateY(5px) scale(.97); } to { opacity: 1; transform: none; } }
 @keyframes menu-row-in { from { opacity: 0; transform: translateX(-5px); } to { opacity: 1; transform: none; } }
-@keyframes menu-chip-in { from { opacity: 0; transform: scale(.72); } to { opacity: 1; transform: none; } }
+@keyframes menu-chip-in { from { opacity: 0; transform: translateY(3px) scale(.9); } to { opacity: 1; transform: none; } }
 .finder-menu-item { transition: background-color 120ms ease, color 120ms ease, transform 120ms var(--menu-ease); }
 .finder-menu-item:active:not([aria-disabled="true"]) { transform: scale(.98); }
 .finder-menu-icon, .finder-menu-chevron { transition: transform 200ms var(--menu-ease); }

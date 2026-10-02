@@ -228,6 +228,7 @@ export function installTextActions() {
   window.__toolboxTextActions = true;
   let timer;
   let pointerSelecting = false;
+  let lastBar = null;   // where the selection bar last stood, so a new one can glide from there
   const openForSelection = (target) => {
     if (target?.closest?.(`${MENUS}, [data-tb-file], .sv-window`)) return;
     // A menu someone just opened on an item (long-press, right-click) is not replaced by the
@@ -237,7 +238,20 @@ export function installTextActions() {
     const snapshot = captureTextSelection(target);
     if (!snapshot) return;
     const rect = snapshot.rect;
+    // A bar showing (or just dismissed by the click that started this selection) glides to the
+    // new selection instead of replaying its entrance.
+    let from = open?.classList.contains('tb-selection-menu') ? open.getBoundingClientRect() : null;
+    if (!from && lastBar && Date.now() - lastBar.at < 1500) from = lastBar.rect;
+    if (open) closeContextMenu({ instant: true });
+    document.querySelectorAll('.tb-selection-menu:not([id])').forEach(el => el.remove());
     openContextMenu({ x: rect.left, y: Math.min(window.innerHeight - 50, rect.bottom + 8), items: textSelectionItems(snapshot), presentation: 'horizontal', label: 'Selected text actions', className: 'tb-selection-menu' });
+    const bar = document.getElementById('toolbox-context-menu');
+    if (from && bar?.animate && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      bar.classList.add('is-moved');
+      const to = bar.getBoundingClientRect();
+      bar.animate([{ transform: `translate(${from.left - to.left}px, ${from.top - to.top}px)` }, { transform: 'none' }], { duration: 300, easing: 'cubic-bezier(.22, 1, .36, 1)' });
+    }
+    if (bar) lastBar = { rect: bar.getBoundingClientRect(), at: Date.now() };
   };
   document.addEventListener('pointerdown', e => { pointerSelecting = !e.target.closest(MENUS); clearTimeout(timer); }, true);
   document.addEventListener('pointerup', e => { pointerSelecting = false; if (e.button !== 0 || e.target.closest(MENUS)) return; clearTimeout(timer); timer = setTimeout(() => openForSelection(e.target), 60); });
@@ -247,8 +261,9 @@ export function installTextActions() {
   // Touch selection handles do not consistently emit pointerup on the document.
   document.addEventListener('selectionchange', () => {
     if (pointerSelecting || document.activeElement?.closest(MENUS)) return;
-    clearTimeout(timer);
-    if (navigator.maxTouchPoints > 0) timer = setTimeout(() => openForSelection(document.activeElement), 350);
+    // Only touch selection is driven from here. With a mouse, pointerup already scheduled the bar,
+    // and the selectionchange a double-click queues after it must not cancel that.
+    if (navigator.maxTouchPoints > 0) { clearTimeout(timer); timer = setTimeout(() => openForSelection(document.activeElement), 350); }
   });
   document.addEventListener('contextmenu', e => {
     if (e.defaultPrevented || !e.target.closest || e.target.closest(`${MENUS}, [data-tb-file], .sv-window`) || isPrivateTextTarget(e.target)) return;

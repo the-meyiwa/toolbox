@@ -1,0 +1,83 @@
+/* ==========================================================================
+   TOOLBOX — Tools page
+
+   Same layout, lighter hand, in Home's language: cards without boxes
+   until you reach for them, monochrome icon tiles, a quiet filter field,
+   one sliding indicator in the category bar, and cards that cascade in
+   (js/tools-motion.js).
+   ========================================================================== */
+
+.tools-page { --tp-glide: cubic-bezier(.22, 1, .36, 1); }
+.tools-page .page-title { font-size: clamp(30px, 3.6vw, 40px); line-height: 1.1; font-weight: 650; letter-spacing: -.035em; }
+.tools-page .page-desc { margin-top: 6px; color: var(--text-2); }
+
+/* Filter field: the Home search, smaller. */
+.tools-head .search-wrapper input {
+  height: 44px; border-radius: 14px; border: 1px solid var(--line-strong); background: var(--surface);
+  box-shadow: 0 1px 2px #0000000a; transition: border-color .2s ease, box-shadow .35s var(--tp-glide);
+}
+.tools-head .search-wrapper input:hover { border-color: var(--line-control); }
+.tools-head .search-wrapper input:focus { outline: 0; border-color: var(--line-control); box-shadow: 0 0 0 5px color-mix(in srgb, var(--ink) 6%, transparent); }
+
+/* Category bar: plain labels and one indicator that slides between them. */
+.category-chip-bar { position: sticky; isolation: isolate; }
+.category-chip-bar .category-chip {
+  position: relative; z-index: 1; height: 34px; padding: 0 14px;
+  border: 0; border-radius: 11px; background: transparent; color: var(--text-2);
+  font-size: 13.5px; font-weight: 500; box-shadow: none;
+  transition: color .2s ease, transform .12s ease;
+}
+.category-chip-bar .category-chip:hover { color: var(--text); background: transparent; }
+.category-chip-bar .category-chip:active { transform: scale(.96); }
+.category-chip-bar .category-chip.active { color: var(--text-inverse); background: transparent; }
+.chip-ind {
+  position: absolute; z-index: 0; left: 0; top: 50%; height: 34px; margin-top: -17px; border-radius: 11px;
+  background: var(--ink); pointer-events: none; opacity: 0;
+  transition: transform .42s var(--tp-glide), width .42s var(--tp-glide), opacity .2s ease;
+}
+
+/* Category heads: the title, its count, and a hairline that runs on to the edge. */
+.grid-category-head { align-items: center; }
+.grid-category-head::after { content: ''; flex: 1; height: 1px; margin-left: 4px; background: linear-gradient(90deg, var(--line), transparent); }
+.category-label { font-size: 21px; font-weight: 650; letter-spacing: -.02em; }
+
+/* Cards: open, until you reach for them. */
+.tools-page .category-tools { gap: 6px; align-items: start; }
+.tools-page .tool-card:has(.tool-card-flag, .tool-card-badge) .tool-card-info { padding-right: 52px; }
+.tools-page .tool-card {
+  isolation: isolate; overflow: hidden;
+  padding: 14px; border: 1px solid transparent; border-radius: 18px;
+  background: transparent; box-shadow: none;
+  transition: background-color .2s ease, border-color .2s ease, box-shadow .3s ease, transform .3s var(--tp-glide);
+}
+.tools-page .tool-card::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; opacity: 0; pointer-events: none;
+  background: radial-gradient(240px circle at var(--gx, 50%) var(--gy, 50%), color-mix(in srgb, var(--ink) 6%, transparent), transparent 70%);
+  transition: opacity .3s ease;
+}
+.tools-page .tool-card:hover { background: var(--surface); border-color: var(--line); box-shadow: 0 1px 2px #0000000a, 0 16px 34px -26px #00000059; transform: translateY(-2px); }
+.tools-page .tool-card:hover::before { opacity: 1; }
+.tools-page .tool-card:active { transform: scale(.985); transition-duration: .1s; }
+.tools-page .tool-card:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.tools-page .tool-card-icon {
+  width: 42px; height: 42px; border-radius: 13px;
+  background: transparent; border: 1px solid var(--line-strong); color: var(--text);
+  transition: background-color .2s ease, color .2s ease, border-color .2s ease, transform .35s cubic-bezier(.34, 1.4, .64, 1);
+}
+.tools-page .tool-card:hover .tool-card-icon { background: var(--ink); border-color: var(--ink); color: var(--text-inverse); transform: scale(1.06); }
+.tools-page .tool-card-name { font-size: 15px; font-weight: 600; }
+.tools-page .tool-card-desc { color: var(--text-3); transition: color .2s ease; }
+.tools-page .tool-card:hover .tool-card-desc { color: var(--text-2); }
+
+/* Arrival: each category's cards cascade in when it scrolls into view. */
+@media (prefers-reduced-motion: no-preference) {
+  .tools-page .grid-category:not(.is-in) .tool-card, .tools-page .grid-category:not(.is-in) .grid-category-head, .tools-page .grid-category:not(.is-in) .category-blurb { opacity: 0; }
+  .tools-page .grid-category.is-in .grid-category-head { animation: tp-rise .6s var(--tp-glide) both; }
+  .tools-page .grid-category.is-in .grid-category-head::after { animation: tp-rule .9s var(--tp-glide) .1s both; transform-origin: 0 50%; }
+  .tools-page .grid-category.is-in .category-blurb { animation: tp-rise .6s var(--tp-glide) .05s both; }
+  .tools-page .grid-category.is-in .tool-card { animation: tp-card .62s var(--tp-glide) both; animation-delay: calc(min(var(--i, 0), 14) * 32ms + 80ms); }
+  .tools-page #tool-grid.is-searching .grid-category.is-in .tool-card { animation-duration: .42s; animation-delay: calc(min(var(--i, 0), 14) * 22ms); }
+}
+@keyframes tp-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes tp-rule { from { transform: scaleX(0); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes tp-card { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }

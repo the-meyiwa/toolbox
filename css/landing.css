@@ -1,272 +1,136 @@
 /* ==========================================================================
-   TOOLBOX — Landing page (#home-view)
+   TOOLBOX — Home (#home-view)
 
-   The same language as Mind: a calm canvas, colour by kind (--hue), the
-   question at the centre with the areas of Toolbox in orbit around it,
-   tinted head cards, cards with a coloured edge and an icon tile, stat
-   tiles, and quiet pill controls. Motion lives in js/home-scroll.js and
-   the shared reveal kinds in css/motion.css.
+   One quiet column that reads as a single piece: the question, the
+   search, your shortcuts and the Assistant, joined by one faint thread
+   instead of sitting in boxes. No colour of its own; the ink and the
+   page are enough. Suggestions grow out of the search as a web on
+   desktop (css/suggestion-web.css) and as a thread of rows on phones.
+   Motion lives in js/home-scroll.js.
    ========================================================================== */
 
 .lp {
   --lp-glide: cubic-bezier(.22, 1, .36, 1);
   --lp-ease: cubic-bezier(.25, .1, .25, 1);
-  --lp-spring: cubic-bezier(.34, 1.4, .64, 1);
-  --lp-l: 46%;
-}
-[data-theme="dark"] .lp { --lp-l: 64%; }
-.lp [style*="--hue"] {
-  --c: hsl(var(--hue) 62% var(--lp-l));
-  --c-soft: color-mix(in srgb, hsl(var(--hue) 62% var(--lp-l)) 13%, var(--surface));
-  --c-line: color-mix(in srgb, hsl(var(--hue) 62% var(--lp-l)) 30%, var(--line));
+  --lp-thread: color-mix(in srgb, var(--ink) 16%, transparent);
 }
 .lp h1, .lp h2, .lp h3, .lp p { margin: 0; }
 
 /* ---------- buttons ---------- */
 .lp-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: none;
-  height: 38px; padding: 0 15px; border-radius: 12px;
-  border: 1px solid var(--line-strong); background: var(--surface); color: var(--text);
+  height: 38px; padding: 0 16px; border-radius: 12px;
+  border: 1px solid var(--line-strong); background: transparent; color: var(--text);
   font-size: 14px; font-weight: 500; text-decoration: none; white-space: nowrap; cursor: pointer;
-  transition: background-color .18s ease, border-color .18s ease, box-shadow .25s var(--lp-glide), transform .12s ease;
+  transition: background-color .18s ease, border-color .18s ease, transform .12s ease;
 }
-.lp-btn:hover { background: var(--surface-2); border-color: var(--line-control); }
+.lp-btn:hover { background: var(--tint); border-color: var(--line-control); }
 .lp-btn:active { transform: scale(.97); }
-.lp-btn-primary { background: var(--ink); border-color: var(--ink); color: var(--text-inverse); }
-.lp-btn-primary:hover { background: var(--ink-hover, var(--ink)); border-color: var(--ink); box-shadow: var(--shadow-2); }
 
-/* ---------- hero: the question at the centre, the areas in orbit ---------- */
+/* ---------- the column ---------- */
 .lp-hero {
-  display: flex; flex-direction: column; align-items: center; gap: 22px;
-  max-width: 1240px; margin: 0 auto;
-  padding: clamp(18px, 3vw, 36px) clamp(16px, 3vw, 40px) 24px;
-}
-.lp-space {
-  position: relative; width: 100%; min-height: clamp(560px, 62vw, 680px);
-  border: 1px solid var(--line); border-radius: 32px; overflow: hidden; isolation: isolate;
-  background:
-    radial-gradient(color-mix(in srgb, var(--ink) 8%, transparent) 1px, transparent 1.4px) 0 0 / 24px 24px,
-    radial-gradient(ellipse at 50% 50%, var(--surface), var(--surface-2) 78%);
-}
-/* Orbit rings draw in once the centre has arrived. */
-.lp-space::before, .lp-space::after {
-  content: ''; position: absolute; z-index: -1; pointer-events: none; border-radius: 50%;
-  border: 1px dashed color-mix(in srgb, var(--ink) 13%, transparent);
-  inset: 9% 7%; transform: scale(.2); opacity: 0;
-  transition: transform 1.4s var(--lp-glide), opacity 1s var(--lp-ease);
-}
-.lp-space::after { inset: 25% 24%; transition-delay: .18s; border-style: solid; border-color: color-mix(in srgb, var(--ink) 7%, transparent); }
-.lp-space.is-drawn::before, .lp-space.is-drawn::after { transform: scale(1); opacity: 1; }
-.lp-tethers { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; }
-.lp-tethers line {
-  stroke: hsl(var(--hue) 62% var(--lp-l)); stroke-width: 1.4; stroke-dasharray: 4 5; vector-effect: non-scaling-stroke;
-  opacity: 0; transition: opacity .9s var(--lp-ease);
-}
-.lp-tethers line.drawn { opacity: .55; }
-
-.lp-core {
-  position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 2;
-  width: min(560px, 52%);
+  position: relative; isolation: isolate;
   display: flex; flex-direction: column; align-items: center; text-align: center;
+  max-width: 1240px; margin: 0 auto;
+  min-height: calc(100dvh - 64px - 120px);
+  padding: clamp(56px, 13vh, 150px) clamp(16px, 3vw, 40px) 64px;
 }
-/* A soft halo behind the centre: the tethers seem to start at its edge, and text stays clean. */
-.lp-core::before {
-  content: ''; position: absolute; z-index: -1; inset: -14% -12%; pointer-events: none;
-  background: radial-gradient(closest-side, var(--surface) 62%, color-mix(in srgb, var(--surface) 70%, transparent) 80%, transparent);
-}
-.lp-badge {
-  display: grid; place-items: center; width: 54px; height: 54px; border-radius: 17px;
-  background: var(--ink); color: var(--text-inverse); box-shadow: 0 0 0 10px color-mix(in srgb, var(--ink) 5%, transparent), var(--shadow-2);
-}
-.lp-kicker {
-  display: inline-flex; align-items: center; gap: 8px; margin-top: 18px;
-  font-size: 12px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--text-2);
-}
-.lp-kicker i { width: 7px; height: 7px; border-radius: 50%; background: var(--success, #1f9d55); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success, #1f9d55) 22%, transparent); }
-.lp-title { margin-top: 8px; font-size: clamp(32px, 4.2vw, 52px); line-height: 1.06; font-weight: 650; letter-spacing: -.035em; text-wrap: balance; }
-.lp-sub { margin-top: 8px; font-size: 16px; line-height: 24px; color: var(--text-2); }
+.lp-kicker { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); }
+.lp-title { margin-top: 12px; font-size: clamp(34px, 4.6vw, 56px); line-height: 1.04; font-weight: 650; letter-spacing: -.04em; text-wrap: balance; }
+.lp-sub { margin-top: 12px; font-size: 17px; line-height: 26px; color: var(--text-2); }
 
-/* Search: the capture bar from Mind. */
-.lp-search.home-search-wrap { margin-top: 22px; }
+/* ---------- search ---------- */
+.lp-search.home-search-wrap { width: min(680px, 100%); margin-top: 36px; }
 .lp .home-search-input {
-  height: 56px !important; border-radius: 18px !important;
+  height: 58px !important; border-radius: 20px !important;
   background: var(--surface) !important; border: 1px solid var(--line-strong) !important;
-  box-shadow: 0 1px 2px #0000000a, 0 18px 40px -28px #0000004d !important;
-  transition: border-color .2s ease, box-shadow .35s var(--lp-glide) !important;
+  box-shadow: 0 1px 2px #0000000a, 0 22px 44px -32px #00000059 !important;
+  transition: border-color .2s ease, box-shadow .4s var(--lp-glide) !important;
 }
 .lp .home-search-input:hover { border-color: var(--line-control) !important; }
-.lp .home-search-input:focus { border-color: var(--line-control) !important; box-shadow: 0 0 0 5px color-mix(in srgb, var(--ink) 7%, transparent), var(--shadow-2) !important; }
-.lp .home-search-submit { border-radius: 12px; transition: transform .3s var(--lp-spring); }
+.lp .home-search-input:focus { border-color: var(--line-control) !important; box-shadow: 0 0 0 6px color-mix(in srgb, var(--ink) 6%, transparent), 0 22px 44px -30px #00000066 !important; }
+.lp .home-search-submit { border-radius: 14px; transition: transform .3s cubic-bezier(.34, 1.4, .64, 1); }
 .lp .home-search-submit:hover { transform: translateX(2px); }
-.lp .home-search-keys { margin-top: 10px; }
+.lp .home-search-keys { margin-top: 12px; transition: opacity .3s ease; }
 
-/* Areas on the orbit. */
-.lp-orbit { position: absolute; inset: 0; z-index: 1; }
-.lp-tile {
-  position: absolute; width: clamp(150px, 15vw, 186px); min-height: 104px; box-sizing: border-box;
-  left: calc(50% + var(--x) - clamp(75px, 7.5vw, 93px)); top: calc(50% + var(--y) - 52px);
-  display: flex; flex-direction: column; gap: 6px; padding: 13px 14px 12px;
-  border: 1px solid var(--line); border-radius: 18px; overflow: hidden;
-  background: linear-gradient(160deg, var(--c-soft), var(--surface) 72%);
-  color: var(--text); text-decoration: none; box-shadow: 0 1px 2px #0000000a;
-  transform: perspective(800px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
-  transition: transform .25s ease-out, border-color .2s ease, box-shadow .3s var(--lp-ease);
+/* ---------- below the search: one thread through shortcuts and the Assistant ---------- */
+.lp-below { display: flex; flex-direction: column; align-items: center; width: min(680px, 100%); transition: opacity .35s var(--lp-ease), filter .35s var(--lp-ease); }
+.lp .home-quick, .lp .lp-assistant { position: relative; }
+.lp .home-quick { justify-content: center; gap: 4px; margin-top: 40px; }
+.lp .lp-assistant { width: 100%; max-width: none; margin: 52px 0 0; animation: none; }
+.lp .home-quick::before, .lp .lp-assistant::before {
+  content: ''; position: absolute; left: 50%; width: 1px; pointer-events: none;
+  background: linear-gradient(var(--lp-thread), color-mix(in srgb, var(--ink) 4%, transparent));
+  transform-origin: 50% 0;
+  transition: transform .6s var(--lp-glide);
 }
-.lp-tile::after { content: ''; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px; border-radius: 0 3px 3px 0; background: var(--c); }
-.lp-tile:hover { border-color: var(--c-line); box-shadow: 0 18px 40px -24px #00000066; transform: perspective(800px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(-3px); }
-.lp-tile:active { transform: scale(.97); transition-duration: .1s; }
-.lp-tile strong { font-size: 14.5px; line-height: 1.25; font-weight: 650; letter-spacing: -.01em; }
-.lp-meta { font-size: 12.5px; color: var(--text-2); }
-.lp-meta b { font-weight: 650; color: var(--text); font-variant-numeric: tabular-nums; }
+.lp .lp-undrawn::before { transform: scaleY(0); transition: none; }
+.lp .home-quick::before { top: -34px; height: 26px; }
+.lp .lp-assistant::before { top: -46px; height: 34px; }
+.lp .home-quick:empty::before { display: none; }
 
-/* Shared: icon tile, light that follows the pointer. */
-.lp-ico { display: grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 10px; background: var(--c-soft); color: var(--c); }
-.lp-tile::before, .lp-card::before, .lp-file::before, .lp-stat::before, .lp-head::before {
-  content: ''; position: absolute; inset: 0; z-index: 0; border-radius: inherit; pointer-events: none; opacity: 0;
-  background: radial-gradient(260px circle at var(--gx, 50%) var(--gy, 50%), var(--c-soft, var(--tint)), transparent 65%);
-  transition: opacity .4s var(--lp-ease);
+.lp-chip.home-quick-item, .lp-chip-edit {
+  height: 34px; padding: 0 12px 0 10px; gap: 8px;
+  border: 1px solid transparent; border-radius: 12px; background: transparent;
+  font-size: 13.5px; font-weight: 500; color: var(--text-2);
+  transition: color .18s ease, background-color .18s ease, transform .12s ease;
 }
-.lp-tile:hover::before, .lp-card:hover::before, .lp-file:hover::before, .lp-stat:hover::before, .lp-head:hover::before { opacity: 1; }
-.lp-tile > *, .lp-card > *, .lp-file > *, .lp-stat > *, .lp-head > * { position: relative; z-index: 1; }
+.lp-chip.home-quick-item:hover { color: var(--text); background: var(--tint); transform: none; }
+.lp-chip.home-quick-item:active, .lp-chip-edit:active { transform: scale(.96); }
+.lp-chip-edit { display: inline-flex; align-items: center; cursor: pointer; color: var(--text-3); border-style: dashed; border-color: var(--line-strong); font-family: inherit; }
+.lp-chip-edit svg { width: 14px; height: 14px; }
+.lp-chip-edit:hover { color: var(--text); border-color: var(--line-control); }
 
-/* Popular tools: chips, as Mind's filters. */
-.lp .home-quick { gap: 8px; margin-top: 0; }
-.lp .lp-chip {
-  display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px 0 8px;
-  border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text-2);
-  font-size: 13.5px; font-weight: 500; text-decoration: none;
-  transition: border-color .18s ease, color .18s ease, transform .3s var(--lp-spring), box-shadow .3s var(--lp-ease);
+.lp-ask { display: flex; align-items: center; gap: 16px; text-align: left; padding: 6px 0; }
+.lp-ask-mark {
+  display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 13px;
+  border: 1px solid var(--line-strong); color: var(--text);
 }
-.lp .lp-chip .home-quick-icon { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--surface-2); color: var(--text); }
-.lp .lp-chip .home-quick-icon svg { width: 14px; height: 14px; }
-.lp .lp-chip:hover { border-color: var(--line-control); color: var(--text); transform: translateY(-2px); box-shadow: var(--shadow-1); }
+.lp-ask-mark svg { width: 19px; height: 19px; }
+.lp-ask-text { flex: 1; min-width: 0; }
+.lp-ask .home-assistant-title { font-size: 15px; line-height: 22px; font-weight: 600; }
+.lp-ask .home-assistant-desc { font-size: 13.5px; line-height: 20px; color: var(--text-2); }
 
-/* Assistant + stats. */
-.lp-band { width: 100%; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; align-items: stretch; }
-.lp .lp-assistant { width: auto; max-width: none; margin: 0; animation: none; }
-.lp-assistant, .lp-assistant > div { height: 100%; }
-.lp-head {
-  position: relative; isolation: isolate; height: 100%; box-sizing: border-box;
-  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 16px;
-  padding: 20px; border: 1px solid var(--c-line); border-radius: 22px; overflow: hidden;
-  background: linear-gradient(135deg, var(--c-soft), var(--surface) 70%);
-}
-.lp-head-badge { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px; background: var(--c); color: #fff; box-shadow: 0 10px 24px -12px var(--c); }
-.lp-head-badge svg { width: 24px; height: 24px; }
-.lp-head-text small { display: block; font-size: 11.5px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--c); }
-.lp-head-text h3 { margin: 2px 0; font-size: 20px; line-height: 1.2; font-weight: 650; letter-spacing: -.02em; }
-.lp-head-text p { font-size: 14px; line-height: 1.45; color: var(--text-2); }
-.lp-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.lp-stat {
-  position: relative; isolation: isolate; overflow: hidden;
-  display: flex; flex-direction: column; gap: 1px; padding: 13px 15px;
-  border: 1px solid var(--line); border-radius: 16px; background: var(--surface);
-}
-.lp-stat::after { content: ''; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px; border-radius: 0 3px 3px 0; background: var(--c); }
-.lp-stat strong { font-size: 26px; line-height: 1.1; font-weight: 650; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
-.lp-stat span { font-size: 13.5px; font-weight: 550; }
-.lp-stat small { font-size: 12px; color: var(--text-3); }
+/* While the web of suggestions is out, the rest of the column steps back. */
+.lp.is-webbing .lp-below { opacity: .1; filter: blur(2px); pointer-events: none; }
+.lp.is-webbing .home-search-keys { opacity: 0; }
 
-.lp-scroll-hint {
-  display: inline-flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 4px;
-  font-size: 13px; color: var(--text-3); text-decoration: none;
+/* ---------- phones: suggestions as a thread of rows under the field ---------- */
+.lp .home-hero-dropdown {
+  position: relative; top: auto; left: auto; right: auto; z-index: 1;
+  margin-top: 10px; padding: 0 0 4px; background: transparent; border: 0; border-radius: 0; box-shadow: none;
+  animation: none;
 }
-.lp-scroll-hint svg { width: 18px; height: 18px; animation: lp-nudge 2.4s var(--lp-ease) 1.6s 3; }
-@keyframes lp-nudge { 0%, 100% { transform: none; } 50% { transform: translateY(4px); } }
-.lp-scroll-hint:hover { color: var(--text); }
+.lp .home-hero-dropdown::before {
+  content: ''; position: absolute; left: 27px; top: -10px; bottom: 22px; width: 1px;
+  background: linear-gradient(var(--lp-thread), color-mix(in srgb, var(--ink) 5%, transparent));
+}
+.lp .home-hero-dropdown.is-fresh::before { animation: lp-thread-draw .5s var(--lp-glide) both; transform-origin: 50% 0; }
+.lp .hero-dd-row { position: relative; gap: 12px; padding: 8px 10px; border-radius: 14px; }
+.lp .hero-dd-icon { position: relative; z-index: 1; width: 34px; height: 34px; border-radius: 11px; background: var(--surface); border: 1px solid var(--line-strong); }
+.lp .hero-dd-ai .hero-dd-icon { background: var(--ink); border-color: var(--ink); }
+.lp .hero-dd-device .hero-dd-icon { background: var(--surface); color: var(--text); }
+.lp .home-hero-dropdown.is-fresh .hero-dd-row { animation: lp-row-in .42s var(--lp-glide) both; animation-delay: calc(var(--i, 0) * 38ms + 60ms); }
+.lp .home-search-wrap:has(.home-hero-dropdown:not([hidden])) .home-search-keys { display: none; }
+.lp .home-search-wrap:has(.home-hero-dropdown:not([hidden])) ~ .lp-below { display: none; }
+@keyframes lp-thread-draw { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes lp-row-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
-/* ---------- sections ---------- */
-.lp-section { max-width: 1240px; margin: 0 auto; padding: 40px clamp(16px, 3vw, 40px); }
-.lp-section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
-.lp-section-title { font-size: clamp(24px, 2.6vw, 30px); line-height: 1.15; font-weight: 650; letter-spacing: -.03em; }
-.lp-section-desc { margin-top: 4px; font-size: 14.5px; color: var(--text-2); }
-
-/* Task cards: Mind's card, coloured edge and icon tile. */
-.lp-tasks { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; perspective: 1400px; }
-.lp-card {
-  position: relative; isolation: isolate; overflow: hidden;
-  display: flex; flex-direction: column; gap: 10px; padding: 18px;
-  border: 1px solid var(--line); border-radius: 20px; background: var(--surface);
-  scroll-margin: 120px;
-}
-.lp-card::after { content: ''; position: absolute; left: 0; top: 16px; bottom: 16px; width: 3px; border-radius: 0 3px 3px 0; background: var(--c); }
-.lp-card.rv-arrived { transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .25s ease-out, border-color .2s ease, box-shadow .3s var(--lp-ease); }
-.lp-card:hover { border-color: var(--c-line); box-shadow: 0 18px 44px -28px #00000059; }
-.lp-card-top { display: flex; align-items: center; gap: 10px; }
-.lp-card-label { font-size: 16.5px; font-weight: 650; letter-spacing: -.01em; flex: 1; min-width: 0; }
-.lp-pill { padding: 2px 9px; border-radius: 999px; background: var(--surface-2); font-size: 12px; font-weight: 650; color: var(--text-2); font-variant-numeric: tabular-nums; }
-.lp-card-blurb { font-size: 13.5px; line-height: 1.5; color: var(--text-2); }
-.lp-card-tools { display: flex; flex-wrap: wrap; gap: 6px; }
-.lp-tool {
-  display: inline-flex; align-items: center; gap: 6px; max-width: 100%; height: 32px; padding: 0 11px 0 6px;
-  border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text);
-  font-size: 13px; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  transition: border-color .15s ease, background-color .15s ease, transform .25s var(--lp-spring);
-}
-.lp-tool:hover, .lp-tool:focus-visible { border-color: var(--c-line); background: var(--c-soft); transform: translateY(-1px); outline: none; }
-.lp-tool-icon { display: grid; place-items: center; width: 22px; height: 22px; flex: none; border-radius: 50%; background: var(--c-soft); color: var(--c); }
-.lp-tool-icon svg { width: 13px; height: 13px; }
-.lp-card-more { display: inline-flex; align-items: center; gap: 4px; margin-top: auto; font-size: 13px; font-weight: 550; color: var(--c); text-decoration: none; }
-.lp-card-more .tb-i, .lp-card-more svg { width: 14px; height: 14px; transition: transform .3s var(--lp-spring); }
-.lp-card-more:hover svg, .lp-card-more:hover .tb-i { transform: translateX(3px); }
-/* Chosen from the orbit: the card lights up once. */
-.lp-card.is-spotlit { animation: lp-spot 1.6s var(--lp-ease) .35s both; }
-@keyframes lp-spot { 0% { box-shadow: 0 0 0 0 var(--c); border-color: var(--c); } 35% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--c) 22%, transparent); border-color: var(--c); } 100% { box-shadow: 0 0 0 0 transparent; } }
-
-/* Files: the Files tiles, tinted by type. */
-.lp-files { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-.lp-file {
-  position: relative; isolation: isolate; overflow: hidden;
-  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
-  border: 1px solid color-mix(in srgb, var(--tint) 18%, var(--line)); border-radius: 16px;
-  background: linear-gradient(120deg, color-mix(in srgb, var(--tint) 9%, var(--surface)), var(--surface) 70%);
-  color: var(--text); text-decoration: none;
-  --c-soft: color-mix(in srgb, var(--tint) 12%, transparent);
-  transition: border-color .2s ease, box-shadow .3s var(--lp-ease), transform .3s var(--lp-glide);
-}
-.lp-file:hover { transform: translateY(-2px); box-shadow: 0 14px 34px -24px #00000066; }
-.lp-file-icon { display: grid; transition: transform .45s var(--lp-spring); }
-.lp-file:hover .lp-file-icon { transform: rotate(-4deg) scale(1.06); }
-.lp-file-text { display: flex; flex-direction: column; min-width: 0; }
-.lp-file-text strong { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lp-file-text small { font-size: 12.5px; color: var(--text-3); }
-.lp-empty { grid-column: 1 / -1; border: 1px dashed var(--line-strong); border-radius: 20px; }
-
-/* ==========================================================================
-   Responsive
-   ========================================================================== */
-@media (max-width: 1100px) {
-  .lp-core { width: min(500px, 58%); }
-  .lp-tile { width: 142px; min-height: 96px; padding: 11px 12px; left: calc(50% + var(--x) - 71px); }
-  .lp-tile strong { font-size: 13.5px; }
-}
-@media (max-width: 900px) {
-  .lp-band { grid-template-columns: 1fr; }
-  .lp-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
-/* Phone and small tablet: the centre stands on its own, the areas follow as a grid. */
+/* ---------- responsive ---------- */
 @media (max-width: 760px) {
-  .lp-core::before { display: none; }
-  .lp-hero { padding: 14px 14px 10px; gap: 16px; }
-  .lp-space { min-height: 0; padding: 26px 16px 16px; border-radius: 24px; display: flex; flex-direction: column; gap: 22px; }
-  .lp-space::before, .lp-space::after, .lp-tethers { display: none; }
-  .lp-core { position: static; translate: none; width: 100%; }
-  .lp-badge { width: 46px; height: 46px; border-radius: 14px; }
-  .lp-title { font-size: 31px; }
-  .lp-sub { font-size: 15px; }
+  .lp-hero { min-height: auto; padding: 40px 16px 40px; }
+  .lp-title { font-size: 32px; }
+  .lp-sub { font-size: 15px; line-height: 22px; }
+  .lp-search.home-search-wrap { margin-top: 26px; }
   .lp .home-search-keys { display: none; }
-  .lp-orbit { position: static; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; order: 2; }
-  .lp-tile { position: relative; left: auto; top: auto; width: auto; min-height: 92px; }
-  .lp-stats { grid-template-columns: 1fr 1fr; }
-  .lp-head { grid-template-columns: auto 1fr; padding: 16px; }
-  .lp-head .lp-btn { grid-column: 1 / -1; width: 100%; }
-  .lp-section { padding: 26px 14px; }
-  .lp-section-head { align-items: flex-start; }
-  .lp-tasks { grid-template-columns: 1fr; }
+  .lp .home-quick { margin-top: 30px; }
+  .lp .lp-assistant { margin-top: 40px; }
+  .lp .lp-assistant::before { top: -32px; height: 24px; }
+  .lp .home-quick::before { top: -26px; height: 20px; }
+  .lp-ask { flex-wrap: wrap; }
+  .lp-ask .lp-btn { width: 100%; }
 }
+
 @media (prefers-reduced-motion: reduce) {
-  .lp *, .lp *::before, .lp *::after { animation: none !important; transition: none !important; }
-  .lp-space::before, .lp-space::after { transform: none !important; opacity: 1 !important; }
-  .lp-tethers line { opacity: .55 !important; }
-  .lp-tile, .lp-card.rv-arrived { transform: none !important; }
+  .lp *, .lp *::before, .lp *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
 }

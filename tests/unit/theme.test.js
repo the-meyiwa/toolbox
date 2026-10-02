@@ -125,11 +125,12 @@ test('Home Page Suggested Tools: excludes Assistant from #home-quick row and is 
   const fs = await import('fs');
   const path = await import('path');
   const appJs = fs.readFileSync(path.resolve('js/app.js'), 'utf8');
+  const shortcutsJs = fs.readFileSync(path.resolve('js/lib/home-shortcuts.js'), 'utf8');
   const css = readStylesheet();
 
   assert.ok(
-    appJs.includes("t.id !== 'assistant'") && appJs.includes('popular(8)'),
-    'renderQuickRow in js/app.js must query popular tools and explicitly filter out assistant'
+    appJs.includes('homeShortcutTools(') && shortcutsJs.includes("t.id !== 'assistant'") && shortcutsJs.includes('popular('),
+    'the Home shortcuts must default to popular tools and explicitly filter out assistant'
   );
   assert.ok(
     /\.home-quick\s*\{[^}]*justify-content:\s*center/.test(css),
