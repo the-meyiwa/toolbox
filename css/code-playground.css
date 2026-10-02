@@ -149,7 +149,7 @@ body.standalone-mode #cpg-root { height: 100%; min-height: 0; border-radius: 0; 
   font-size: 12.5px;
   font-weight: 500;
   white-space: nowrap;
-  transition: background 0.12s, border-color 0.12s;
+  transition: background .12s, border-color .12s;
 }
 .cpg-btn:hover { background: var(--cpg-bg-hover) !important; }
 .cpg-btn:disabled { opacity: 0.5; cursor: default; }
@@ -633,7 +633,7 @@ textarea.cpg-input { height: auto; resize: vertical; line-height: 1.4; }
 .cm-s-toolbox .CodeMirror-foldmarker { color: var(--cpg-accent); text-shadow: none; font-family: inherit; }
 .cm-s-toolbox .CodeMirror-foldgutter-open, .cm-s-toolbox .CodeMirror-foldgutter-folded { color: var(--cpg-muted); }
 .cm-s-toolbox .CodeMirror-guttermarker-subtle { color: var(--cpg-muted); }
-.pge-flash { background: rgba(227, 179, 65, 0.22) !important; transition: background 0.6s; }
+.pge-flash { background: rgba(227, 179, 65, 0.22) !important; transition: background .298s; }
 .cm-s-toolbox .cm-searching { background: rgba(227, 179, 65, 0.35); }
 
 /* dark tokens (One Dark–like) */
@@ -1424,7 +1424,7 @@ li.CodeMirror-hint-active { background: #2f5ea8 !important; color: #fff !importa
   border: 1px solid var(--cpg-border) !important;
   background: var(--cpg-bg-2) !important;
   text-align: left;
-  transition: border-color 0.12s, transform 0.12s, background 0.12s;
+  transition: border-color .12s, transform .12s, background .12s;
   color: var(--cpg-text) !important;
   height: auto;
 }

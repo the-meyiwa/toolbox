@@ -46,13 +46,13 @@ body.is-scrolled #app-header, body.in-tool #app-header { border-bottom-color: va
 }
 @media (prefers-reduced-motion: no-preference) {
   .logo.is-entering .logo-mark rect {
-    animation: logo-px-in 360ms cubic-bezier(.2,.8,.2,1) both;
-    animation-delay: calc(var(--i) * 22ms + 80ms);
+    animation: logo-px-in 230ms cubic-bezier(.2,.8,.2,1) both;
+    animation-delay: calc(var(--i) * 8ms + 28ms);
   }
   @media (hover: hover) and (pointer: fine) {
     .logo:hover .logo-mark rect {
-      animation: logo-px-wave 420ms cubic-bezier(.4,0,.2,1) both;
-      animation-delay: calc(var(--i) * 22ms);
+      animation: logo-px-wave 247ms cubic-bezier(.4,0,.2,1) both;
+      animation-delay: calc(var(--i) * 8ms);
     }
   }
 }
@@ -497,7 +497,7 @@ body.standalone-mode .viewport-crumbs { display: none !important; }
 
 /* ---------- Theme switching ---------- */
 html.theme-transition, html.theme-transition *, html.theme-transition *::before, html.theme-transition *::after {
-  transition: background-color 280ms ease, border-color 280ms ease, color 200ms ease, fill 280ms ease, box-shadow 280ms ease !important;
+  transition: background-color 208ms ease, border-color 208ms ease, color 186ms ease, fill 208ms ease, box-shadow 208ms ease !important;
 }
 .theme-choice { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
 .theme-option {
@@ -532,7 +532,7 @@ html.theme-transition, html.theme-transition *, html.theme-transition *::before,
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md);
   padding: var(--space-4) var(--space-5) var(--space-2);
   scroll-margin-top: var(--space-4);
-  transition: box-shadow .3s ease, border-color .3s ease;
+  transition: box-shadow .214s ease, border-color .214s ease;
 }
 .tp-card.is-focused { border-color: var(--line-control); box-shadow: 0 0 0 4px var(--tint); }
 .tp-card-head { display: flex; align-items: center; gap: var(--space-3); padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); }

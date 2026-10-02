@@ -24,7 +24,7 @@
   border-radius: 14px;
   background: var(--surface);
   box-shadow: 0 1px 2px #0000000a;
-  transition: border-color .2s ease, box-shadow .35s var(--tk-glide), background-color .2s ease;
+  transition: border-color .186s ease, box-shadow .228s var(--tk-glide), background-color .186s ease;
 }
 #viewport-content .tool-textarea { border-radius: 18px; padding: 14px 16px; }
 #viewport-content :is(.tool-input, .tool-select, .tool-textarea):hover { border-color: var(--line-control); }
@@ -39,7 +39,7 @@
 /* ---------- buttons ---------- */
 #viewport-content .btn {
   border-radius: 12px;
-  transition: background-color .18s ease, border-color .18s ease, color .18s ease, box-shadow .25s var(--tk-glide), transform .12s ease;
+  transition: background-color .18s ease, border-color .18s ease, color .18s ease, box-shadow .2s var(--tk-glide), transform .12s ease;
 }
 #viewport-content .btn:active:not(:disabled) { transform: scale(.97); }
 #viewport-content .btn-primary:hover:not(:disabled) { box-shadow: 0 10px 22px -14px #00000080; }
@@ -51,7 +51,7 @@
 #viewport-content .btn-preset { border-radius: 10px; }
 #viewport-content .copy-btn { border-radius: 10px; transition: background-color .18s ease, color .18s ease, border-color .18s ease, transform .12s ease; }
 #viewport-content .copy-btn:active { transform: scale(.96); }
-#viewport-content .copy-btn.copied { animation: tk-pop .35s cubic-bezier(.34, 1.5, .64, 1); }
+#viewport-content .copy-btn.copied { animation: tk-pop .228s cubic-bezier(.34, 1.5, .64, 1); }
 
 /* ---------- sections and output ---------- */
 #viewport-content .tool-section { gap: 10px; }
@@ -62,14 +62,14 @@
 }
 #viewport-content .tool-output { padding: 16px 18px; }
 #viewport-content .result-hero { padding: 22px; }
-#viewport-content .tool-output:not(:empty) { animation: tk-settle .45s var(--tk-glide); }
+#viewport-content .tool-output:not(:empty) { animation: tk-settle .256s var(--tk-glide); }
 
 /* ---------- stat tiles ---------- */
 #viewport-content .tool-stats-grid { gap: 8px; }
 #viewport-content .tool-stat {
   align-items: flex-start; padding: 14px 16px;
   background: transparent; border: 1px solid var(--line); border-radius: 16px; box-shadow: none;
-  transition: border-color .2s ease, background-color .2s ease;
+  transition: border-color .186s ease, background-color .186s ease;
 }
 #viewport-content .tool-stat:hover { border-color: var(--line-strong); background: color-mix(in srgb, var(--surface-2) 50%, transparent); }
 #viewport-content .tool-stat-value { font-family: var(--font-sans); font-size: 24px; font-weight: 650; letter-spacing: -.03em; font-variant-numeric: tabular-nums; color: var(--text); }
@@ -81,12 +81,12 @@
   background: transparent;
   border: 1.5px dashed var(--line-strong);
   border-radius: 22px;
-  transition: border-color .2s ease, background-color .25s ease, transform .3s var(--tk-glide);
+  transition: border-color .186s ease, background-color .2s ease, transform .214s var(--tk-glide);
 }
 #viewport-content .fz:hover, #viewport-content .fz:is(.dragover, .is-drag, .drag) { background: color-mix(in srgb, var(--surface-2) 70%, transparent); border-color: var(--ink); }
 #viewport-content .fz > svg { width: 22px; height: 22px; padding: 12px; box-sizing: content-box; border-radius: 15px; background: var(--ink); color: var(--text-inverse); margin-bottom: 10px; }
 #viewport-content :is(.fz-row, .fz-list > *) { border-radius: 14px; }
-#viewport-content .fz-row { animation: tk-settle .4s var(--tk-glide) both; }
+#viewport-content .fz-row { animation: tk-settle .242s var(--tk-glide) both; }
 
 /* ---------- small parts ---------- */
 #viewport-content :is(.kit-note) { border-radius: 14px; }
@@ -117,7 +117,7 @@
 }
 
 /* Related tools under a tool: the same open cards as the Tools page. */
-.related-list .tool-card { background: transparent; border-color: transparent; box-shadow: none; border-radius: 18px; transition: background-color .2s ease, border-color .2s ease, box-shadow .3s ease, transform .3s cubic-bezier(.22, 1, .36, 1); }
+.related-list .tool-card { background: transparent; border-color: transparent; box-shadow: none; border-radius: 18px; transition: background-color .186s ease, border-color .186s ease, box-shadow .214s ease, transform .214s cubic-bezier(.22, 1, .36, 1); }
 .related-list .tool-card:hover { background: var(--surface); border-color: var(--line); box-shadow: 0 16px 34px -26px #00000059; transform: translateY(-2px); }
 .related-list .tool-card-icon { background: transparent; border: 1px solid var(--line-strong); border-radius: 12px; }
 .related-list .tool-card:hover .tool-card-icon { background: var(--ink); border-color: var(--ink); color: var(--text-inverse); }

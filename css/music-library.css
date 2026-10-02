@@ -66,7 +66,7 @@
 .mtl-deep > summary { align-items: center; }
 /* A drawn plus whose upright turns flat as the section opens. */
 .mtl-pm { position: relative; flex-shrink: 0; width: 14px; height: 14px; color: var(--mtl-accent); }
-.mtl-pm::before, .mtl-pm::after { content: ''; position: absolute; left: 0; top: 6px; width: 14px; height: 2px; border-radius: 2px; background: currentColor; transition: transform .35s cubic-bezier(.3, 1.4, .5, 1); }
+.mtl-pm::before, .mtl-pm::after { content: ''; position: absolute; left: 0; top: 6px; width: 14px; height: 2px; border-radius: 2px; background: currentColor; transition: transform .228s cubic-bezier(.3, 1.4, .5, 1); }
 .mtl-pm::after { transform: rotate(90deg); }
 .mtl-deep[open] .mtl-pm::after { transform: rotate(0deg); }
 .mtl-deep > summary small { font-weight: 500; color: var(--text-3); }
@@ -90,7 +90,7 @@
 .mtl-chip.is-on b { color: inherit; }
 .mtl-pager { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .mtl-pager .mtl-btn { display: inline-flex; align-items: center; gap: 8px; }
-.mtl-pager .tb-i { width: 16px; height: 16px; color: var(--mtl-accent); transition: transform .2s var(--ease-out); }
+.mtl-pager .tb-i { width: 16px; height: 16px; color: var(--mtl-accent); transition: transform .186s var(--ease-out); }
 .mtl-pager .mtl-btn:hover .tb-i:first-child { transform: translateX(-3px); }
 .mtl-pager .mtl-btn:hover .tb-i:last-child { transform: translateX(3px); }
 .mtl-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
@@ -110,7 +110,7 @@
 .mtl-demo { display: flex; flex-direction: column; gap: 10px; padding: 14px; margin: 4px 0 10px; border-radius: 16px; border: 1px solid var(--line); background: var(--bg); min-width: 0; }
 .mtl-demo-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .mtl-select, .mtl-input { min-height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); font: inherit; font-size: 14px; max-width: 100%; }
-.mtl-play { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 0 16px; border-radius: 999px; border: 0; background: var(--mtl-accent); color: #fff; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: transform .15s var(--ease-out), box-shadow .25s; }
+.mtl-play { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 0 16px; border-radius: 999px; border: 0; background: var(--mtl-accent); color: #fff; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: transform .15s var(--ease-out), box-shadow .2s; }
 .mtl-play .tb-i { width: 14px; height: 14px; }
 .mtl-play:active { transform: scale(.95); }
 :root[data-theme="dark"] .mtl-play { color: #111827; }
@@ -286,27 +286,27 @@
 .mtl-root { --mtl-spring: cubic-bezier(.34, 1.56, .64, 1); --mtl-glide: cubic-bezier(.16, 1, .3, 1); }
 
 /* Pages slide in the way you travelled: forward, back, or up for a new tab. */
-.mtl-main[data-enter="forward"] { animation: mtl-in-fwd .55s var(--mtl-glide); }
-.mtl-main[data-enter="back"] { animation: mtl-in-back .55s var(--mtl-glide); }
-.mtl-main[data-enter="tab"] { animation: mtl-in-tab .5s var(--mtl-glide); }
+.mtl-main[data-enter="forward"] { animation: mtl-in-fwd .284s var(--mtl-glide); }
+.mtl-main[data-enter="back"] { animation: mtl-in-back .284s var(--mtl-glide); }
+.mtl-main[data-enter="tab"] { animation: mtl-in-tab .27s var(--mtl-glide); }
 @keyframes mtl-in-fwd { from { transform: translateX(36px); } }
 @keyframes mtl-in-back { from { transform: translateX(-36px); } }
 @keyframes mtl-in-tab { from { transform: translateY(16px); } }
 
 /* ---- units ---- */
 .mtl-root .mtl-rv {
-  transition: opacity .65s var(--ease-out), transform .85s var(--mtl-glide), clip-path .9s var(--mtl-glide);
+  transition: opacity .312s var(--ease-out), transform .368s var(--mtl-glide), clip-path .382s var(--mtl-glide);
   transition-delay: var(--rv-d, 0ms);
 }
 .mtl-root .mtl-rv:not(.is-in) { opacity: 0; }
-.mtl-root .mtl-rv[data-rv="fade"] { transition-duration: .9s, 0s, 0s; }
+.mtl-root .mtl-rv[data-rv="fade"] { transition-duration: .382s, 0s, 0s; }
 .mtl-root .mtl-rv[data-rv="up"]:not(.is-in) { transform: translateY(18px); }
 .mtl-root .mtl-rv[data-rv="li"]:not(.is-in) { transform: translateX(-16px); }
 .mtl-root .mtl-rv[data-rv="row"]:not(.is-in) { transform: translateX(30px); }
 .mtl-root .mtl-rv[data-rv="card"]:not(.is-in) { transform: translateY(30px) scale(.94) rotateX(12deg); }
 .mtl-root .mtl-rv[data-rv="panel"]:not(.is-in) { transform: translateY(24px) scale(.97); }
 .mtl-root .mtl-rv[data-rv="stage"]:not(.is-in) { transform: translateY(22px); }
-.mtl-root .mtl-rv[data-rv="pop"] { transition-timing-function: var(--ease-out), var(--mtl-spring), linear; transition-duration: .5s, .6s, 0s; }
+.mtl-root .mtl-rv[data-rv="pop"] { transition-timing-function: var(--ease-out), var(--mtl-spring), linear; transition-duration: .27s, .298s, 0s; }
 .mtl-root .mtl-rv[data-rv="pop"]:not(.is-in) { transform: scale(.82); }
 .mtl-root .mtl-rv[data-rv="flip"] { transform-origin: 50% 0; }
 .mtl-root .mtl-rv[data-rv="flip"]:not(.is-in) { transform: perspective(700px) rotateX(-42deg) translateY(10px); }
@@ -320,14 +320,14 @@
 .mtl-root .mtl-rv[data-rv="widget"]:not(.is-in),
 .mtl-root .mtl-rv[data-rv="art"]:not(.is-in) { opacity: 1; }
 .mtl-w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .16em; margin-bottom: -.16em; }
-.mtl-w > span { display: inline-block; transition: transform 1s var(--mtl-glide); transition-delay: calc(var(--rv-d, 0ms) + var(--wi, 0) * 55ms); }
+.mtl-w > span { display: inline-block; transition: transform .41s var(--mtl-glide); transition-delay: calc(var(--rv-d, 0ms) + var(--wi, 0) * 19ms); }
 .mtl-rv[data-rv="title"]:not(.is-in) .mtl-w > span { transform: translateY(112%) rotate(6deg); }
 .mtl-grid { perspective: 1400px; }
 
 /* Roadmap stages: the step number pops and the line to the next step draws down. */
-.mtl-road > li::before { transform-origin: 50% 0; transition: transform 1s var(--mtl-glide) calc(var(--rv-d, 0ms) + 320ms); }
+.mtl-road > li::before { transform-origin: 50% 0; transition: transform .41s var(--mtl-glide) calc(var(--rv-d, 0ms) + 112ms); }
 .mtl-road > li.mtl-rv:not(.is-in)::before { transform: scaleY(0); }
-.mtl-road-dot { transition: transform .6s var(--mtl-spring) calc(var(--rv-d, 0ms) + 120ms); }
+.mtl-road-dot { transition: transform .298s var(--mtl-spring) calc(var(--rv-d, 0ms) + 42ms); }
 .mtl-road > li.mtl-rv:not(.is-in) .mtl-road-dot { transform: scale(0) rotate(-90deg); }
 
 /* A demo panel arrives with a sweep of light. */
@@ -335,18 +335,18 @@
 .mtl-demo.mtl-rv { overflow: clip; }
 .mtl-demo.mtl-rv.is-in::after { content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; transform: translateX(-110%);
   background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--mtl-accent) 16%, transparent) 50%, transparent 70%);
-  animation: mtl-sweep 1.3s var(--ease-out) forwards; animation-delay: calc(var(--rv-d, 0ms) + 250ms); }
+  animation: mtl-sweep .494s var(--ease-out) forwards; animation-delay: calc(var(--rv-d, 0ms) + 88ms); }
 @keyframes mtl-sweep { to { transform: translateX(110%); } }
 
 /* ---- instruments ---- */
 /* Piano: keys drop in across the keyboard, then the marked keys light up in order. */
 .mk-piano.mtl-rv:not(.is-in) .mk-key { opacity: 0; }
-.mk-piano.is-in .mk-key { animation: mk-drop .6s cubic-bezier(.2, .9, .3, 1.25) backwards; animation-delay: calc(var(--rv-d, 0ms) + var(--k, 0) * 24ms); }
-.mk-piano.is-in .mk-white:is(.is-on, .is-root) rect { animation: mk-light-w .8s ease-out backwards; animation-delay: calc(var(--rv-d, 0ms) + 560ms + var(--k, 0) * 45ms); }
-.mk-piano.is-in .mk-black:is(.is-on, .is-root) rect { animation: mk-light-b .8s ease-out backwards; animation-delay: calc(var(--rv-d, 0ms) + 560ms + var(--k, 0) * 45ms); }
-.mk-piano.is-in .mk-key text { animation: mtl-fade .5s ease-out backwards; animation-delay: calc(var(--rv-d, 0ms) + 700ms + var(--k, 0) * 40ms); }
+.mk-piano.is-in .mk-key { animation: mk-drop .298s cubic-bezier(.2, .9, .3, 1.25) backwards; animation-delay: calc(var(--rv-d, 0ms) + var(--k, 0) * 8ms); }
+.mk-piano.is-in .mk-white:is(.is-on, .is-root) rect { animation: mk-light-w .354s ease-out backwards; animation-delay: calc(var(--rv-d, 0ms) + 196ms + var(--k, 0) * 16ms); }
+.mk-piano.is-in .mk-black:is(.is-on, .is-root) rect { animation: mk-light-b .354s ease-out backwards; animation-delay: calc(var(--rv-d, 0ms) + 196ms + var(--k, 0) * 16ms); }
+.mk-piano.is-in .mk-key text { animation: mtl-fade .27s ease-out backwards; animation-delay: calc(var(--rv-d, 0ms) + 220ms + var(--k, 0) * 14ms); }
 .mk-piano.is-quick .mk-key { animation: none; }
-.mk-piano.is-quick .mk-key:is(.is-on, .is-root) rect, .mk-piano.is-quick .mk-key text { animation-delay: calc(var(--k, 0) * 26ms); }
+.mk-piano.is-quick .mk-key:is(.is-on, .is-root) rect, .mk-piano.is-quick .mk-key text { animation-delay: calc(var(--k, 0) * 9ms); }
 @keyframes mk-drop { from { opacity: 0; transform: translateY(-16px); } }
 @keyframes mk-light-w { 0% { fill: var(--mtl-key); } 55% { fill: var(--mtl-accent); } }
 @keyframes mk-light-b { 0% { fill: var(--mtl-key-black); } 55% { fill: var(--mtl-accent); } }
@@ -355,37 +355,37 @@
 
 /* Staff: the five lines draw, the clef writes itself, the notes drop onto the staff one by one. */
 .ms-staff.mtl-rv:not(.is-in) :is(.ms-line, .ms-clef, .ms-sig, .ms-col) { opacity: 0; }
-.ms-staff.is-in .ms-line { stroke-dasharray: 1; animation: mtl-draw .9s cubic-bezier(.6, 0, .2, 1) backwards; animation-delay: calc(var(--rv-d, 0ms) + var(--l, 0) * 60ms); }
-.ms-staff.is-in .ms-bar { animation-delay: calc(var(--rv-d, 0ms) + 320ms); }
-.ms-staff.is-in path.ms-clef, .ms-staff.is-in g.ms-clef path { stroke-dasharray: 1; animation: mtl-draw 1.3s cubic-bezier(.5, 0, .2, 1) backwards; animation-delay: calc(var(--rv-d, 0ms) + 220ms); }
-.ms-staff.is-in g.ms-clef circle { animation: mtl-fade .5s backwards; animation-delay: calc(var(--rv-d, 0ms) + 900ms); }
+.ms-staff.is-in .ms-line { stroke-dasharray: 1; animation: mtl-draw .382s cubic-bezier(.6, 0, .2, 1) backwards; animation-delay: calc(var(--rv-d, 0ms) + var(--l, 0) * 21ms); }
+.ms-staff.is-in .ms-bar { animation-delay: calc(var(--rv-d, 0ms) + 112ms); }
+.ms-staff.is-in path.ms-clef, .ms-staff.is-in g.ms-clef path { stroke-dasharray: 1; animation: mtl-draw .494s cubic-bezier(.5, 0, .2, 1) backwards; animation-delay: calc(var(--rv-d, 0ms) + 77ms); }
+.ms-staff.is-in g.ms-clef circle { animation: mtl-fade .27s backwards; animation-delay: calc(var(--rv-d, 0ms) + 220ms); }
 .ms-sig-i { transform-box: fill-box; transform-origin: center; }
-.ms-staff.is-in .ms-sig-i { animation: mtl-pop .5s var(--mtl-spring) backwards; animation-delay: calc(var(--rv-d, 0ms) + 420ms + var(--c, 0) * 65ms); }
-.ms-staff.is-in .ms-col { animation: ms-note .65s cubic-bezier(.3, 1.5, .5, 1) backwards; animation-delay: calc(var(--rv-d, 0ms) + 560ms + var(--c, 0) * 85ms); }
+.ms-staff.is-in .ms-sig-i { animation: mtl-pop .27s var(--mtl-spring) backwards; animation-delay: calc(var(--rv-d, 0ms) + 147ms + var(--c, 0) * 23ms); }
+.ms-staff.is-in .ms-col { animation: ms-note .312s cubic-bezier(.3, 1.5, .5, 1) backwards; animation-delay: calc(var(--rv-d, 0ms) + 196ms + var(--c, 0) * 30ms); }
 .ms-staff.is-quick :is(.ms-line, .ms-clef, .ms-clef path, .ms-clef circle, .ms-sig-i) { animation: none; }
-.ms-staff.is-quick .ms-col { animation-duration: .45s; animation-delay: calc(var(--c, 0) * 50ms); }
+.ms-staff.is-quick .ms-col { animation-duration: .256s; animation-delay: calc(var(--c, 0) * 18ms); }
 @keyframes mtl-draw { from { stroke-dashoffset: 1; } }
 @keyframes ms-note { from { opacity: 0; transform: translateY(-18px); } }
 
 /* Fretboard: frets and strings draw, then every position pops along the neck. */
 .mk-fret.mtl-rv:not(.is-in) :is(.fb-board, .fb-fret, .fb-nut, .fb-string, .fb-note, .fb-dot, .fb-num) { opacity: 0; }
-.mk-fret.is-in .fb-board { animation: mtl-fade .6s ease-out backwards; animation-delay: var(--rv-d, 0ms); }
-.mk-fret.is-in :is(.fb-fret, .fb-nut) { stroke-dasharray: 1; animation: mtl-draw .5s ease-out backwards; animation-delay: calc(var(--rv-d, 0ms) + 150ms + var(--f, 0) * 32ms); }
-.mk-fret.is-in .fb-string { stroke-dasharray: 1; animation: mtl-draw .9s cubic-bezier(.6, 0, .2, 1) backwards; animation-delay: calc(var(--rv-d, 0ms) + 260ms + var(--s, 0) * 70ms); }
-.mk-fret.is-in :is(.fb-dot, .fb-num) { animation: mtl-fade .6s ease-out backwards; animation-delay: calc(var(--rv-d, 0ms) + 620ms); }
+.mk-fret.is-in .fb-board { animation: mtl-fade .298s ease-out backwards; animation-delay: var(--rv-d, 0ms); }
+.mk-fret.is-in :is(.fb-fret, .fb-nut) { stroke-dasharray: 1; animation: mtl-draw .27s ease-out backwards; animation-delay: calc(var(--rv-d, 0ms) + 52ms + var(--f, 0) * 11ms); }
+.mk-fret.is-in .fb-string { stroke-dasharray: 1; animation: mtl-draw .382s cubic-bezier(.6, 0, .2, 1) backwards; animation-delay: calc(var(--rv-d, 0ms) + 91ms + var(--s, 0) * 24ms); }
+.mk-fret.is-in :is(.fb-dot, .fb-num) { animation: mtl-fade .298s ease-out backwards; animation-delay: calc(var(--rv-d, 0ms) + 217ms); }
 .mk-fret .fb-note { transform-box: fill-box; transform-origin: center; }
-.mk-fret.is-in .fb-note { animation: mtl-pop .5s var(--mtl-spring) backwards; animation-delay: calc(var(--rv-d, 0ms) + 760ms + var(--n, 0) * 28ms); }
+.mk-fret.is-in .fb-note { animation: mtl-pop .27s var(--mtl-spring) backwards; animation-delay: calc(var(--rv-d, 0ms) + 220ms + var(--n, 0) * 10ms); }
 .mk-fret.is-quick :is(.fb-board, .fb-fret, .fb-nut, .fb-string, .fb-dot, .fb-num) { animation: none; }
-.mk-fret.is-quick .fb-note { animation-delay: calc(var(--n, 0) * 18ms); }
+.mk-fret.is-quick .fb-note { animation-delay: calc(var(--n, 0) * 6ms); }
 
 /* Circle of fifths: the keys fan out around the circle, then the centre pops. */
 .mtl-circle.mtl-rv:not(.is-in) :is(.cf-seg, .cf-hub, .cf-hub-t, .cf-hub-s) { opacity: 0; }
-.mtl-circle.is-in .cf-seg { transform-origin: 160px 160px; animation: cf-in .7s cubic-bezier(.2, .9, .3, 1.15) backwards; animation-delay: calc(var(--rv-d, 0ms) + var(--i, 0) * 55ms); }
+.mtl-circle.is-in .cf-seg { transform-origin: 160px 160px; animation: cf-in .326s cubic-bezier(.2, .9, .3, 1.15) backwards; animation-delay: calc(var(--rv-d, 0ms) + var(--i, 0) * 19ms); }
 .mtl-circle :is(.cf-hub, .cf-hub-t, .cf-hub-s) { transform-box: fill-box; transform-origin: center; }
-.mtl-circle.is-in :is(.cf-hub, .cf-hub-t, .cf-hub-s) { animation: mtl-pop .6s var(--mtl-spring) backwards; animation-delay: calc(var(--rv-d, 0ms) + 720ms); }
+.mtl-circle.is-in :is(.cf-hub, .cf-hub-t, .cf-hub-s) { animation: mtl-pop .298s var(--mtl-spring) backwards; animation-delay: calc(var(--rv-d, 0ms) + 220ms); }
 .mtl-circle.is-quick .cf-seg { animation: none; }
-.mtl-circle.is-quick .cf-seg.is-sel { animation: cf-sel .5s var(--mtl-spring); }
-.mtl-circle.is-quick :is(.cf-hub, .cf-hub-t, .cf-hub-s) { animation-delay: 0ms; animation-duration: .45s; }
+.mtl-circle.is-quick .cf-seg.is-sel { animation: cf-sel .27s var(--mtl-spring); }
+.mtl-circle.is-quick :is(.cf-hub, .cf-hub-t, .cf-hub-s) { animation-delay: 0ms; animation-duration: .256s; }
 @keyframes cf-in { from { opacity: 0; transform: rotate(-26deg) scale(.7); } }
 @keyframes cf-sel { from { transform: scale(.9); } }
 
@@ -395,34 +395,34 @@
 .mtl-poly.mtl-rv:not(.is-in) .mtl-lane > span { opacity: 0; }
 :is(.mtl-beats, .mtl-bell).is-in > *,
 .mtl-grid8.is-in .mtl-grid8-row > *,
-.mtl-poly.is-in .mtl-lane > span { animation: mtl-pop .5s var(--mtl-spring) backwards; animation-delay: calc(var(--rv-d, 0ms) + var(--k, 0) * 26ms); }
-:is(.mtl-beats, .mtl-bell, .mtl-grid8, .mtl-poly).is-quick :is(span, i) { animation-delay: calc(var(--k, 0) * 14ms); }
+.mtl-poly.is-in .mtl-lane > span { animation: mtl-pop .27s var(--mtl-spring) backwards; animation-delay: calc(var(--rv-d, 0ms) + var(--k, 0) * 9ms); }
+:is(.mtl-beats, .mtl-bell, .mtl-grid8, .mtl-poly).is-quick :is(span, i) { animation-delay: calc(var(--k, 0) * 5ms); }
 
 /* ---- sound: what is playing lights up ---- */
 .mk-piano .mk-key { transition: transform .14s ease-out; }
-.mk-piano .mk-key rect { transition: fill .3s ease-out; }
+.mk-piano .mk-key rect { transition: fill .214s ease-out; }
 .mk-piano .mk-key.is-sounding { transform: translateY(2px); }
 .mk-piano .mk-key.is-sounding rect { fill: var(--mtl-accent); transition-duration: .04s; }
-.ms-staff .ms-col { transition: transform .2s var(--mtl-spring); }
-.ms-staff .ms-head { transition: fill .3s ease-out; }
+.ms-staff .ms-col { transition: transform .186s var(--mtl-spring); }
+.ms-staff .ms-head { transition: fill .214s ease-out; }
 .ms-staff .ms-col.is-sounding { transform: translateY(-4px); }
 .ms-staff .ms-col.is-sounding .ms-head { fill: var(--mtl-accent); transition-duration: .04s; }
-.mk-fret .fb-note { transition: transform .2s var(--mtl-spring); }
+.mk-fret .fb-note { transition: transform .186s var(--mtl-spring); }
 .mk-fret .fb-note.is-sounding { transform: scale(1.3); }
 .mk-fret .fb-note.is-sounding circle { fill: var(--mtl-accent); }
-.mtl-bell span, .mtl-grid8-row i, .mtl-lane span { transition: transform .18s var(--mtl-spring), box-shadow .25s, background .2s; }
+.mtl-bell span, .mtl-grid8-row i, .mtl-lane span { transition: transform .18s var(--mtl-spring), box-shadow .2s, background .186s; }
 .mtl-bell span.is-sounding, .mtl-grid8-row i.is-sounding, .mtl-lane span.is-sounding { transform: scale(1.28); box-shadow: 0 0 0 5px var(--mtl-accent-soft); }
 .mtl-grid8-row i.is-sounding:not(.is-hit) { background: var(--mtl-accent-soft); }
-.mtl-table tbody tr td { transition: background .35s ease-out; }
+.mtl-table tbody tr td { transition: background .228s ease-out; }
 .mtl-table tbody tr.is-sounding td { background: var(--mtl-accent-soft); transition-duration: .06s; }
-:is(.mtl-play, .mtl-chip, .mtl-ear-btn).is-sounding { animation: mtl-ring .6s ease-out; }
+:is(.mtl-play, .mtl-chip, .mtl-ear-btn).is-sounding { animation: mtl-ring .298s ease-out; }
 @keyframes mtl-ring { from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--mtl-accent) 45%, transparent); } to { box-shadow: 0 0 0 12px transparent; } }
-.mtl-pchord { transition: transform .3s var(--mtl-spring), background .2s, color .2s, border-color .2s; }
+.mtl-pchord { transition: transform .214s var(--mtl-spring), background .186s, color .186s, border-color .186s; }
 .mtl-pchord.is-now { transform: translateY(-4px) scale(1.06); box-shadow: 0 10px 24px -14px rgb(0 0 0 / .45); }
 .mtl-beats span { transition: background .05s, transform .16s var(--mtl-spring); }
 .mtl-beats span.is-now { transform: scale(1.35); }
-.mtl-ear-btn.is-right { animation: mtl-bounce .55s var(--mtl-spring); }
-.mtl-ear-btn.is-wrong { animation: mtl-shake .45s ease-in-out; }
+.mtl-ear-btn.is-right { animation: mtl-bounce .284s var(--mtl-spring); }
+.mtl-ear-btn.is-wrong { animation: mtl-shake .256s ease-in-out; }
 @keyframes mtl-bounce { 40% { transform: scale(1.08); } }
 @keyframes mtl-shake { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
 .mtl-note .tb-i { width: 16px; height: 16px; vertical-align: -3px; }
@@ -434,8 +434,8 @@
 .mtl-hero-art .mha-note ellipse { fill: currentColor; }
 .mtl-hero-art .mha-note path { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
 .mtl-hero-art.mtl-rv:not(.is-in) :is(.mha-lines path, .mha-note) { opacity: 0; }
-.mtl-hero-art.is-in .mha-lines path { stroke-dasharray: 1; animation: mtl-draw 1.4s cubic-bezier(.6, 0, .2, 1) backwards; animation-delay: calc(var(--rv-d, 0ms) + var(--l, 0) * 90ms); }
-.mtl-hero-art.is-in .mha-note { animation: ms-note .75s cubic-bezier(.3, 1.5, .5, 1) backwards; animation-delay: calc(var(--rv-d, 0ms) + 700ms + var(--c, 0) * 110ms); }
+.mtl-hero-art.is-in .mha-lines path { stroke-dasharray: 1; animation: mtl-draw .522s cubic-bezier(.6, 0, .2, 1) backwards; animation-delay: calc(var(--rv-d, 0ms) + var(--l, 0) * 31ms); }
+.mtl-hero-art.is-in .mha-note { animation: ms-note .34s cubic-bezier(.3, 1.5, .5, 1) backwards; animation-delay: calc(var(--rv-d, 0ms) + 220ms + var(--c, 0) * 38ms); }
 .mtl-hero h2, .mtl-hero p, .mtl-hero-actions, .mtl-stats { position: relative; }
 /* On wide screens the words keep the left side and the staff the right. */
 @media (min-width: 760px) {
@@ -454,35 +454,35 @@
 /* ---- pointer: a light follows it; cards lean toward it ---- */
 .mtl-card, .mtl-hero { --gx: 50%; --gy: 0%; }
 .mtl-card { position: relative; overflow: hidden; isolation: isolate; }
-.mtl-card::before, .mtl-demo::before { content: ''; position: absolute; inset: 0; z-index: -1; opacity: 0; pointer-events: none; transition: opacity .3s;
+.mtl-card::before, .mtl-demo::before { content: ''; position: absolute; inset: 0; z-index: -1; opacity: 0; pointer-events: none; transition: opacity .214s;
   background: radial-gradient(280px circle at var(--gx, 50%) var(--gy, 0%), var(--mtl-accent-soft), transparent 65%); }
 .mtl-card:hover::before, .mtl-demo:hover::before { opacity: 1; }
-.mtl-card.mtl-arrived { transform: perspective(800px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .2s ease-out, border-color .15s, box-shadow .25s; }
+.mtl-card.mtl-arrived { transform: perspective(800px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .186s ease-out, border-color .15s, box-shadow .2s; }
 .mtl-card.mtl-arrived:hover { transform: perspective(800px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(-3px); box-shadow: 0 18px 40px -26px rgb(0 0 0 / .4); }
-.mtl-card .mtl-card-title { transition: color .2s; }
+.mtl-card .mtl-card-title { transition: color .186s; }
 .mtl-card:hover .mtl-card-title { color: var(--mtl-accent); }
-.mtl-row { transition: border-color .15s, transform .2s var(--ease-out), background .2s; }
+.mtl-row { transition: border-color .15s, transform .186s var(--ease-out), background .186s; }
 .mtl-row:hover { transform: translateX(3px); }
-.mtl-row .mtl-chev { transition: transform .2s var(--ease-out), color .2s; }
+.mtl-row .mtl-chev { transition: transform .186s var(--ease-out), color .186s; }
 .mtl-row:hover .mtl-chev { transform: translateX(3px); color: var(--mtl-accent); }
-.mtl-chip { transition: transform .16s var(--ease-out), background .2s, border-color .2s, color .2s; }
+.mtl-chip { transition: transform .16s var(--ease-out), background .186s, border-color .186s, color .186s; }
 .mtl-chip:hover { transform: translateY(-1px); border-color: var(--mtl-accent); }
 .mtl-chip:active, .mtl-btn:active, .mtl-pchord:active, .mtl-ear-btn:active { transform: scale(.95); }
-.mtl-btn { transition: transform .15s var(--ease-out), border-color .2s, background .2s; }
+.mtl-btn { transition: transform .15s var(--ease-out), border-color .186s, background .186s; }
 .mtl-btn:hover { border-color: var(--mtl-accent); }
-.mtl-gloss > div { transition: background .2s; }
+.mtl-gloss > div { transition: background .186s; }
 .mtl-gloss > div:hover { background: var(--mtl-accent-soft); }
-.mtl-az a { transition: transform .15s var(--mtl-spring), background .2s, color .2s; }
+.mtl-az a { transition: transform .15s var(--mtl-spring), background .186s, color .186s; }
 .mtl-az a:hover { transform: translateY(-2px); color: var(--mtl-accent); }
 
 /* ---- tabs and the depth switch ---- */
-.mtl-tabs button { transition: background .25s, color .25s, border-color .25s, transform .15s; }
-.mtl-tabs button.is-picked { animation: mtl-pick .5s var(--mtl-spring); }
+.mtl-tabs button { transition: background .2s, color .2s, border-color .2s, transform .15s; }
+.mtl-tabs button.is-picked { animation: mtl-pick .27s var(--mtl-spring); }
 @keyframes mtl-pick { from { transform: scale(.88); } }
 .mtl-level { position: relative; }
-.mtl-level button { position: relative; z-index: 1; transition: color .3s; }
+.mtl-level button { position: relative; z-index: 1; transition: color .214s; }
 .mtl-level .mtl-pill { position: absolute; left: 0; top: 0; z-index: 0; border-radius: 999px; background: var(--ink); pointer-events: none;
-  transition: transform .5s cubic-bezier(.3, 1.3, .5, 1), width .5s cubic-bezier(.3, 1.3, .5, 1), opacity .2s; }
+  transition: transform .27s cubic-bezier(.3, 1.3, .5, 1), width .27s cubic-bezier(.3, 1.3, .5, 1), opacity .186s; }
 .mtl-level:has(.mtl-pill) button[aria-pressed="true"] { background: transparent; }
 
 /* ---- reading progress, drawn by the scroll itself ---- */

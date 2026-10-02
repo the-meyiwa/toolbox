@@ -10,6 +10,8 @@
    The suggestion web has its own motion (js/lib/suggestion-web.js).
    ============================================================ */
 
+import { tempoDelay } from './lib/tempo.js';
+
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const GLIDE = 'cubic-bezier(.22, 1, .36, 1)';
 
@@ -59,7 +61,7 @@ export function initHomeScrollNarrative() {
       if (!el) return;
       el.classList.add('lp-undrawn');
       void el.offsetWidth;
-      setTimeout(() => el.classList.remove('lp-undrawn'), delay * k);
+      setTimeout(() => el.classList.remove('lp-undrawn'), tempoDelay(delay * k));
     };
     thread(quickRow, 700);
     [...(quickRow?.children || [])].forEach((chip, i) => go(chip, rise(8), 820 + i * 55, 560));

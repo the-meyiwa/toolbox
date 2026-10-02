@@ -11,20 +11,20 @@
   border-radius: 22px; padding: 6px 0 0;
   transform-origin: calc(100% - 64px) 0;
   transform: translateY(-8px) scale(.96);
-  transition: opacity .18s ease, transform .34s cubic-bezier(.22, 1, .36, 1);
+  transition: opacity .18s ease, transform .225s cubic-bezier(.22, 1, .36, 1);
 }
 .header-notif-panel.notif-panel.is-open { transform: none; }
 
 .notif-panel .notif-head { border-bottom: 0; padding: 10px 14px 6px 18px; }
 .notif-head-title { display: flex; align-items: center; gap: 8px; }
 .notif-panel .notif-head h3 { font-size: 16px; font-weight: 650; letter-spacing: -.01em; }
-.notif-count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; display: inline-grid; place-items: center; background: var(--ink); color: var(--text-inverse); font: 600 11.5px/1 var(--font-sans); font-variant-numeric: tabular-nums; animation: notif-pop .4s cubic-bezier(.34, 1.5, .64, 1) both; }
+.notif-count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; display: inline-grid; place-items: center; background: var(--ink); color: var(--text-inverse); font: 600 11.5px/1 var(--font-sans); font-variant-numeric: tabular-nums; animation: notif-pop .242s cubic-bezier(.34, 1.5, .64, 1) both; }
 .notif-text-btn { height: 30px; padding: 0 10px; border: 0; border-radius: 10px; background: transparent; color: var(--text-2); font: 500 12.5px var(--font-sans); cursor: pointer; transition: background-color .15s ease, color .15s ease; }
 .notif-text-btn:hover { background: var(--tint); color: var(--text); }
 
 .notif-tabs { display: flex; gap: 2px; margin: 2px 14px 6px; padding: 3px; border-radius: 12px; background: var(--surface-2); width: max-content; }
 [data-theme="dark"] .notif-tabs { background: var(--surface-3); }
-.notif-tab { height: 26px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: var(--text-2); font: 500 12.5px var(--font-sans); cursor: pointer; transition: background-color .2s ease, color .2s ease, box-shadow .2s ease; }
+.notif-tab { height: 26px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: var(--text-2); font: 500 12.5px var(--font-sans); cursor: pointer; transition: background-color .186s ease, color .186s ease, box-shadow .186s ease; }
 .notif-tab.is-on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px #00000014; }
 .notif-tab:disabled { opacity: .45; cursor: default; }
 
@@ -52,7 +52,7 @@
 @media (hover: none) { .notif-dismiss { opacity: .7; } }
 
 .notif-panel .notif-empty { padding: 36px 24px 40px; gap: 6px; }
-.notif-empty-mark { display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: 6px; border-radius: 17px; border: 1px solid var(--line-strong); color: var(--text-2); animation: notif-ring 2.6s cubic-bezier(.36, 0, .2, 1) .3s both; }
+.notif-empty-mark { display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: 6px; border-radius: 17px; border: 1px solid var(--line-strong); color: var(--text-2); animation: notif-ring 2.6s cubic-bezier(.36, 0, .2, 1) .105s both; }
 .notif-panel .notif-empty strong { color: var(--text); font-size: 14.5px; }
 .notif-panel .notif-empty span:last-child { font-size: 13px; color: var(--text-3); }
 
@@ -60,7 +60,7 @@
 .notif-panel .notif-preferences-link button { display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; }
 
 /* Items cascade in when the panel opens or the filter changes. */
-.notif-list.is-arriving .notif-item, .notif-list.is-arriving .notif-group, .notif-list.is-arriving .notif-empty { animation: notif-in .42s cubic-bezier(.22, 1, .36, 1) both; animation-delay: calc(var(--i, 0) * 28ms + 60ms); }
+.notif-list.is-arriving .notif-item, .notif-list.is-arriving .notif-group, .notif-list.is-arriving .notif-empty { animation: notif-in .247s cubic-bezier(.22, 1, .36, 1) both; animation-delay: calc(var(--i, 0) * 10ms + 21ms); }
 @keyframes notif-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes notif-pop { from { transform: scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes notif-ring { 0%, 60%, 100% { transform: rotate(0); } 10% { transform: rotate(-12deg); } 20% { transform: rotate(10deg); } 30% { transform: rotate(-6deg); } 40% { transform: rotate(3deg); } }

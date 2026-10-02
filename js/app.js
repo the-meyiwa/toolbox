@@ -6,6 +6,7 @@
    js/lib/search.js, so adding a tool never means editing the shell.
    ============================================================ */
 
+import './lib/tempo.js';   // one animation speed for the whole app (first, before anything animates)
 import { TOOLS, CATEGORY_LABELS, OFFLINE_TOOLS, categorised, popular, resolveRoute, BY_ID } from './registry/index.js';
 import { search, relatedTools } from './lib/search.js';
 import { track, toolSession } from './lib/analytics.js';

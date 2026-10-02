@@ -30,6 +30,7 @@ import { ConversationStore, newId } from '../lib/assistant/conversations.js';
 import '../lib/assistant/renderers.js';
 import { gatherLifeContext, introText, lifeSuggestions } from '../lib/assistant/life-context.js';
 import { fileAttrs } from '../lib/file-surface.js';
+import { tempoDelay } from '../lib/tempo.js';
 import { pointerLight } from '../lib/reveal-motion.js';
 
 /* Files from Toolbox Files arrive as raw bytes. */
@@ -865,7 +866,7 @@ function mountAssistant(container, state) {
         } else {
           tile.animate([{ opacity: 0, transform: 'translateY(14px) scale(.96)' }, { opacity: 1, transform: 'none' }], { duration: 520, delay: 160 + i * 45, easing: GLIDE, fill: 'backwards' });
         }
-        setTimeout(() => lines[i]?.classList.add('drawn'), delay + 140);
+        setTimeout(() => lines[i]?.classList.add('drawn'), tempoDelay(delay + 140));
       });
     }));
   }

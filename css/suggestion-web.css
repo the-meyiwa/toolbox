@@ -10,7 +10,7 @@
 .sw-traces { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; }
 .sw-trace {
   fill: none; stroke: color-mix(in srgb, var(--ink) 20%, transparent); stroke-width: 1; stroke-linecap: round;
-  transition: stroke .2s ease;
+  transition: stroke .186s ease;
 }
 .sw-trace.is-hot { stroke: color-mix(in srgb, var(--ink) 55%, transparent); }
 
@@ -22,7 +22,7 @@
   background: var(--surface); color: var(--text);
   box-shadow: 0 1px 2px #0000000d, 0 12px 26px -18px #00000052;
   font: 500 13.5px/1 var(--font-sans); white-space: nowrap; text-decoration: none; cursor: pointer;
-  transition: border-color .18s ease, box-shadow .25s ease, scale .3s cubic-bezier(.34, 1.4, .64, 1), background-color .18s ease;
+  transition: border-color .18s ease, box-shadow .2s ease, scale .214s cubic-bezier(.34, 1.4, .64, 1), background-color .18s ease;
 }
 .sw-b:hover, .sw-b.is-cursor { border-color: var(--line-control); scale: 1.04; box-shadow: 0 1px 2px #0000000d, 0 16px 30px -16px #00000066; }
 .sw-b.is-cursor { box-shadow: 0 0 0 4px color-mix(in srgb, var(--ink) 9%, transparent), 0 16px 30px -16px #00000066; }
@@ -46,11 +46,11 @@
   font: 12.5px/1.4 var(--font-sans); text-align: left; pointer-events: none;
   opacity: 0; transform: translate(var(--tx, 0), var(--ty, 0)) scale(.94);
   transform-origin: 50% 0;
-  transition: opacity .16s ease, transform .26s cubic-bezier(.34, 1.3, .64, 1);
+  transition: opacity .16s ease, transform .202s cubic-bezier(.34, 1.3, .64, 1);
 }
 .sw-tip[data-side="above"] { transform-origin: 50% 100%; }
 .sw-tip.is-on { opacity: 1; transform: translate(var(--tx, 0), var(--ty, 0)) scale(1); }
-.sw-tip.is-moving { transition: opacity .16s ease, transform .3s cubic-bezier(.22, 1, .36, 1); }
+.sw-tip.is-moving { transition: opacity .16s ease, transform .214s cubic-bezier(.22, 1, .36, 1); }
 .sw-tip strong { display: block; font-weight: 600; }
 .sw-tip span { display: block; margin-top: 1px; opacity: .78; }
 
@@ -82,7 +82,7 @@
 .pal.pal-web:not(.has-query) .pal-hint {
   display: block; margin: 16px 0 0; text-align: center;
   font-size: 12.5px; color: var(--text-3);
-  animation: motion-fade .4s ease .1s both;
+  animation: motion-fade .242s ease .035s both;
 }
 .pal-hint kbd { margin: 0 1px; padding: 1px 5px; border: 1px solid var(--line-strong); border-radius: 5px; font: 11px var(--font-mono, monospace); }
 
@@ -105,7 +105,7 @@
 .hs {
   position: fixed; z-index: 1150; top: var(--hs-top, 12px); right: var(--hs-right, 16px);
   width: var(--hs-from, 200px); max-width: calc(100vw - 32px);
-  transition: width .34s cubic-bezier(.22, 1, .36, 1);
+  transition: width .225s cubic-bezier(.22, 1, .36, 1);
 }
 .hs.is-open { width: min(400px, calc(100vw - 32px)); }
 .hs-field {
@@ -115,7 +115,7 @@
 }
 .hs-field svg { width: 16px; height: 16px; flex: none; }
 .hs-input { flex: 1; min-width: 0; height: 100%; margin: 0; padding: 0; border: 0; outline: 0; box-shadow: none; background: transparent; color: var(--text); font: 14px var(--font-sans); }
-.hs-field kbd { flex: none; padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 6px; font: 11px var(--font-mono, monospace); color: var(--text-3); opacity: 0; transition: opacity .2s ease .12s; }
+.hs-field kbd { flex: none; padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 6px; font: 11px var(--font-mono, monospace); color: var(--text-3); opacity: 0; transition: opacity .186s ease .042s; }
 .hs.is-open .hs-field kbd { opacity: 1; }
 .hs-panel {
   margin-top: 8px; padding: 6px; overflow: hidden; box-sizing: border-box;

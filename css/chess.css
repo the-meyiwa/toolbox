@@ -54,7 +54,7 @@
 .chs-pieces { position: absolute; inset: 0; pointer-events: none; }
 .chs-piece {
   position: absolute; left: 0; top: 0; width: 12.5%; height: 12.5%;
-  transition: transform .2s cubic-bezier(.2, .8, .2, 1);
+  transition: transform .186s cubic-bezier(.2, .8, .2, 1);
   will-change: transform;
 }
 .chs-piece svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .18)); }
@@ -84,11 +84,11 @@
 @keyframes chs-pop { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: none; } }
 
 /* result banner */
-.chs-banner { position: absolute; inset: 0; z-index: 9; display: grid; place-items: center; background: rgba(10, 10, 10, .28); animation: chs-fade .25s ease-out; }
+.chs-banner { position: absolute; inset: 0; z-index: 9; display: grid; place-items: center; background: rgba(10, 10, 10, .28); animation: chs-fade .2s ease-out; }
 .chs-banner-card {
   background: var(--surface); color: var(--text); border-radius: var(--radius-md); box-shadow: var(--shadow-3);
   padding: var(--space-5) var(--space-6); max-width: 78%; text-align: center; display: flex; flex-direction: column; gap: 4px;
-  animation: chs-pop .25s cubic-bezier(.2, .8, .2, 1);
+  animation: chs-pop .2s cubic-bezier(.2, .8, .2, 1);
 }
 .chs-banner-card strong { font-size: 18px; letter-spacing: -.01em; }
 .chs-banner-card span { font-size: 13px; color: var(--text-2); }
@@ -98,7 +98,7 @@
 /* evaluation bar */
 .chs-evalbar { position: relative; width: 18px; height: var(--bsz, 480px); flex: none; border-radius: var(--radius-xs); overflow: hidden; background: #262626; box-shadow: 0 0 0 1px var(--line-strong); display: none; }
 .chs.has-eval .chs-evalbar { display: block; }
-.chs-evalfill { position: absolute; left: 0; right: 0; bottom: 0; height: 50%; background: #f5f5f3; transition: height .45s cubic-bezier(.2, .8, .2, 1); }
+.chs-evalfill { position: absolute; left: 0; right: 0; bottom: 0; height: 50%; background: #f5f5f3; transition: height .256s cubic-bezier(.2, .8, .2, 1); }
 .chs-evalbar.flipped .chs-evalfill { bottom: auto; top: 0; }
 .chs-evaltext { position: absolute; left: 0; right: 0; bottom: 4px; font: 700 8.5px/1 var(--font-sans); text-align: center; color: #262626; writing-mode: horizontal-tb; letter-spacing: -.02em; }
 .chs-evaltext:not(.on-white) { top: 4px; bottom: auto; color: #f5f5f3; }
@@ -149,7 +149,7 @@
 .chs-judge.tone-warn .chs-judge-badge { background: var(--warning-soft, rgba(146, 64, 14, .12)); color: var(--warning); }
 .chs-judge.tone-bad .chs-judge-badge { background: var(--danger-soft, rgba(220, 38, 38, .12)); color: var(--danger); }
 .chs-judge .chs-judge-badge span { color: inherit; }
-.chs-coach.pulse { animation: chs-shake .45s ease; }
+.chs-coach.pulse { animation: chs-shake .256s ease; }
 @keyframes chs-shake { 0%, 100% { transform: none; } 20% { transform: translateX(-4px); } 40% { transform: translateX(4px); } 60% { transform: translateX(-2px); } 80% { transform: translateX(2px); } }
 
 .chs-moves-card { padding: var(--space-3) var(--space-3) var(--space-3); }

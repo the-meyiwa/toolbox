@@ -5,7 +5,7 @@
 .lg { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
 .lg * { min-width: 0; }
 .lg-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-5); }
-.lg-out { display: flex; flex-direction: column; gap: var(--space-4); animation: lg-rise .35s var(--ease-out) both; }
+.lg-out { display: flex; flex-direction: column; gap: var(--space-4); animation: lg-rise .228s var(--ease-out) both; }
 .lg-out[hidden], .lg-panel[hidden] { display: none; }
 @keyframes lg-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .lg-muted { color: var(--text-3); }
@@ -336,7 +336,7 @@
 .lg-switch input:focus-visible + i { outline: 2px solid var(--focus); outline-offset: 2px; }
 .lg-progress { display: flex; flex-direction: column; gap: 6px; }
 .lg-progress-bar { height: 6px; border-radius: var(--radius-pill); background: var(--surface-2); overflow: hidden; }
-.lg-progress-bar i { display: block; height: 100%; width: 0; background: var(--ink); border-radius: inherit; transition: width .2s ease; }
+.lg-progress-bar i { display: block; height: 100%; width: 0; background: var(--ink); border-radius: inherit; transition: width .186s ease; }
 .lg-progress span { font-size: 12.5px; color: var(--text-2); font-variant-numeric: tabular-nums; }
 .lg-result { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; padding: 14px 16px; border-radius: var(--radius-md); background: var(--surface-2); }
 .lg-result strong { font-size: 15px; font-weight: 600; color: var(--text); }
