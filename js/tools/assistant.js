@@ -30,6 +30,7 @@ import { ConversationStore, newId } from '../lib/assistant/conversations.js';
 import '../lib/assistant/renderers.js';
 import { gatherLifeContext, introText, lifeSuggestions } from '../lib/assistant/life-context.js';
 import { fileAttrs } from '../lib/file-surface.js';
+import { pointerLight } from '../lib/reveal-motion.js';
 
 /* Files from Toolbox Files arrive as raw bytes. */
 function bytesToBase64(bytes) {
@@ -46,6 +47,15 @@ function mimeFromName(name = '') { return MIME_BY_EXT[String(name).split('.').po
 /* ---------------- helpers ---------------- */
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+// Colour by kind, as in Mind and on the landing page: each icon belongs to an area of Toolbox.
+const HUE = {
+  file: 214, folder: 214, image: 292, pen: 292, beauty: 330, music: 320,
+  sigma: 152, chart: 152, table: 152, calendar: 42, pin: 168, cloud: 200, car: 24,
+  globe: 188, search: 188, device: 188, note: 32, book: 6, chess: 30,
+  body: 262, flask: 262, plan: 262, spark: 262, code: 230, tool: 220,
+};
+const hueOf = (name) => HUE[name] ?? 220;
+const GLIDE = 'cubic-bezier(.16, 1, .3, 1)';
 const reduceMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const ICON = {
@@ -797,40 +807,136 @@ function mountAssistant(container, state) {
   // Starter chips: the person's own things first (from the live snapshot), then a few general ones.
   let chips = SUGGESTIONS.slice(0, 6);
 
+  /** Where the i-th of `n` tiles sits, as offsets from the centre (in %): two arcs, one each
+      side of the greeting, so the centre column stays clear however long the intro runs. */
+  const orbitAt = (i, n) => {
+    const right = Math.ceil(n / 2), side = i < right ? 0 : 1;
+    const m = side ? n - right : right, k = side ? i - right : i;
+    const a = ((k - (m - 1) / 2) * 42) * (Math.PI / 180);
+    const t = side ? Math.PI - a : a;
+    return { x: +(Math.cos(t) * 38).toFixed(2), y: +(Math.sin(t) * 36).toFixed(2) };
+  };
+
+  function sugTile(s, i, n) {
+    const { x, y } = orbitAt(i, n);
+    return `<button type="button" class="ast-sug" data-sug="${i}" style="--hue:${hueOf(s.icon)};--x:${x}%;--y:${y}%;--i:${i}">
+      <span class="ast-sug-icon">${icon(s.icon, 17)}</span>
+      <span class="ast-sug-text"><strong>${esc(s.title)}</strong><small>${esc(s.sub)}</small></span>
+    </button>`;
+  }
+
+  /** The stage both empty views share: the dotted canvas, the rings, and a core at the centre. */
+  function stage(core, tiles = []) {
+    const lines = tiles.map((s, i) => { const { x, y } = orbitAt(i, tiles.length); return `<line x1="50" y1="50" x2="${50 + x}" y2="${50 + y}" style="--hue:${hueOf(s.icon)}"/>`; }).join('');
+    return `<div class="ast-stage ${tiles.length ? 'has-orbit' : ''}">
+      ${tiles.length ? `<svg class="ast-tethers" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${lines}</svg>` : ''}
+      <div class="ast-core">${core}</div>
+      ${tiles.length ? `<div class="ast-orbit" role="group" aria-label="Suggestions">${tiles.map((s, i) => sugTile(s, i, tiles.length)).join('')}</div>` : ''}
+    </div>`;
+  }
+
+  /** The stage arrives the way Mind's does: rings draw in, then each tile leaves the centre for its place while its tether draws out. */
+  function emerge(el) {
+    const st = el.querySelector('.ast-stage');
+    if (!st) return;
+    // A fresh start opens at the top of the stage, never part-way down it.
+    requestAnimationFrame(() => { if (el.isConnected) scroller.scrollTop = 0; });
+    const tiles = [...st.querySelectorAll('.ast-sug')];
+    const lines = [...st.querySelectorAll('.ast-tethers line')];
+    if (reduceMotion() || typeof Element.prototype.animate !== 'function') {
+      st.classList.add('is-drawn'); lines.forEach(l => l.classList.add('drawn'));
+      return;
+    }
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (!el.isConnected) return;
+      st.classList.add('is-drawn');
+      const orbiting = tiles[0] && getComputedStyle(tiles[0]).position === 'absolute';
+      const o = st.getBoundingClientRect();
+      const cx = o.left + o.width / 2, cy = o.top + o.height / 2;
+      tiles.forEach((tile, i) => {
+        const delay = 300 + i * 60;
+        if (orbiting) {
+          const r = tile.getBoundingClientRect();
+          tile.animate([
+            { opacity: 0, transform: `translate(${cx - (r.left + r.width / 2)}px, ${cy - (r.top + r.height / 2)}px) scale(.35)` },
+            { opacity: 1, transform: 'none' },
+          ], { duration: 900, delay, easing: GLIDE, fill: 'backwards' });
+        } else {
+          tile.animate([{ opacity: 0, transform: 'translateY(14px) scale(.96)' }, { opacity: 1, transform: 'none' }], { duration: 520, delay: 160 + i * 45, easing: GLIDE, fill: 'backwards' });
+        }
+        setTimeout(() => lines[i]?.classList.add('drawn'), delay + 140);
+      });
+    }));
+  }
+
   function emptyView() {
     const el = document.createElement('div');
     el.className = 'ast-empty';
-    const paint = (intro) => {
-      el.innerHTML = `
+    el.innerHTML = stage(`
       <div class="ast-empty-mark" aria-hidden="true">${icon('spark', 22, 1.6)}</div>
+      <p class="ast-empty-kicker"><i></i>Assistant</p>
       <h2 class="ast-empty-title">${esc(greeting())}</h2>
-      <p class="ast-empty-sub">${esc(intro)}</p>
-      <div class="ast-sugs">
-        ${chips.map((s, i) => `<button type="button" class="ast-sug" data-sug="${i}" style="--i:${i}">
-          <span class="ast-sug-icon">${icon(s.icon, 17)}</span>
-          <span class="ast-sug-text"><strong>${esc(s.title)}</strong><small>${esc(s.sub)}</small></span>
-        </button>`).join('')}
-      </div>`;
-    };
-    paint('Give me a second to look around…');
-    gatherLifeContext().then((ctx) => {
+      <p class="ast-empty-sub">Give me a second to look around…</p>`, chips);
+    emerge(el);
+    // Once the live snapshot is in, the intro and any tiles that changed are swapped in place.
+    const settle = (intro, next) => {
       if (!el.isConnected) return;
+      const sub = el.querySelector('.ast-empty-sub');
+      if (sub.textContent !== intro) {
+        sub.textContent = intro;
+        if (!reduceMotion()) sub.animate?.([{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }], { duration: 380, easing: GLIDE });
+      }
+      if (!next) return;
+      const old = chips;
+      chips = next;
+      el.querySelectorAll('.ast-sug').forEach((tile, i) => {
+        const s = chips[i];
+        if (!s || old[i] === s) return;
+        const fresh = document.createRange().createContextualFragment(sugTile(s, i, chips.length)).firstElementChild;
+        tile.replaceWith(fresh);
+        el.querySelectorAll('.ast-tethers line')[i]?.style.setProperty('--hue', hueOf(s.icon));
+        if (!reduceMotion()) fresh.animate?.([{ opacity: 0, transform: 'scale(.94)' }, { opacity: 1, transform: 'none' }], { duration: 420, easing: GLIDE });
+      });
+    };
+    gatherLifeContext().then((ctx) => {
       const own = lifeSuggestions(ctx);
-      chips = [...own, ...SUGGESTIONS.filter(s => !own.some(o => o.icon === s.icon))].slice(0, 6);
-      paint(introText(ctx));
-    }).catch(() => paint("I could read your documents, run your calendar, do some math or find places near you. Tokens cost money, so just let me know exactly what you want to do."));
+      settle(introText(ctx), [...own, ...SUGGESTIONS.filter(s => !own.some(o => o.icon === s.icon))].slice(0, 6));
+    }).catch(() => settle("I could read your documents, run your calendar, do some math or find places near you. Tokens cost money, so just let me know exactly what you want to do."));
     return el;
   }
 
   function signInView() {
     const el = document.createElement('div');
     el.className = 'ast-empty ast-signin';
-    el.innerHTML = `
+    el.innerHTML = stage(`
       <div class="ast-empty-mark" aria-hidden="true">${icon('lock', 22, 1.6)}</div>
+      <p class="ast-empty-kicker"><i></i>Assistant</p>
       <h2 class="ast-empty-title">Sign in to use Assistant</h2>
       <p class="ast-empty-sub">Assistant runs on Toolbox's servers, so there is no API key to set up. Sign in and your chats sync across your devices.</p>
-      <button type="button" class="btn btn-primary" data-act="sign-in">Sign in</button>`;
+      <button type="button" class="btn btn-primary" data-act="sign-in">Sign in</button>`);
+    emerge(el);
     return el;
+  }
+
+  /** A chosen suggestion travels from its tile down into the composer. */
+  function beamToComposer(tile) {
+    if (reduceMotion() || !tile.animate) return;
+    const box = root.getBoundingClientRect();
+    const a = tile.getBoundingClientRect(), b = form.getBoundingClientRect();
+    const ghost = tile.cloneNode(true);
+    ghost.removeAttribute('data-sug');
+    ghost.classList.add('ast-sug-ghost');
+    ghost.setAttribute('aria-hidden', 'true');
+    Object.assign(ghost.style, { left: `${a.left - box.left}px`, top: `${a.top - box.top}px`, width: `${a.width}px`, height: `${a.height}px` });
+    root.appendChild(ghost);
+    const dx = (b.left + 24) - a.left, dy = (b.top + 12) - a.top;
+    ghost.animate([
+      { transform: 'none', opacity: 1 },
+      { transform: `translate(${dx}px, ${dy}px) scale(.42)`, opacity: 0 },
+    ], { duration: 560, easing: GLIDE }).finished.then(() => ghost.remove(), () => ghost.remove());
+    form.style.setProperty('--hue', tile.style.getPropertyValue('--hue'));
+    form.classList.remove('is-receiving'); void form.offsetWidth; form.classList.add('is-receiving');
+    setTimeout(() => form.classList.remove('is-receiving'), 1100);
   }
 
   function userView(m) {
@@ -1072,6 +1178,7 @@ function mountAssistant(container, state) {
       const result = run.r != null ? this.msg.toolResults[run.r] : null;
       const errText = run.status === 'error' ? (result?.error || result?.message || 'Failed') : '';
       li.dataset.status = run.status;
+      li.style.setProperty('--hue', hueOf(meta.icon));
       const wasOpen = li.classList.contains('is-open');
       li.innerHTML = `
         <button type="button" class="ast-step-head" aria-expanded="${wasOpen}">
@@ -1306,21 +1413,23 @@ function mountAssistant(container, state) {
   function nearBottom() { return scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 96; }
   function scrollToBottom(force = false) {
     if (force) stick = true;
-    if (!stick) return;
+    if (!stick || !messages.length) return;
     scroller.scrollTop = scroller.scrollHeight;
   }
   function onContent() {
-    if (stick) scroller.scrollTop = scroller.scrollHeight;
+    if (stick && messages.length) scroller.scrollTop = scroller.scrollHeight;
     jumpBtn.hidden = stick || nearBottom();
   }
   on(scroller, 'scroll', () => {
     stick = nearBottom();
     jumpBtn.hidden = stick;
   }, { passive: true });
-  const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(() => { if (stick) scroller.scrollTop = scroller.scrollHeight; }) : null;
+  const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(() => { if (stick && messages.length) scroller.scrollTop = scroller.scrollHeight; }) : null;
   ro?.observe(thread);
   disposers.push(() => ro?.disconnect());
   disposers.push(() => threadGuard?.disconnect());
+  // A soft light follows the pointer over suggestions; tiles on the orbit lean toward it.
+  disposers.push(pointerLight(root, '.ast-sug', '.ast-orbit .ast-sug'));
 
   /* ---------------- composer ---------------- */
 
@@ -1722,6 +1831,7 @@ function mountAssistant(container, state) {
     if (t.dataset.sug != null) {
       const s = chips[Number(t.dataset.sug)];
       if (!s) return;
+      beamToComposer(t);
       input.value = s.prompt;
       grow();
       updateComposerState();
