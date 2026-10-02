@@ -140,24 +140,45 @@ export function openRewrite(snapshot, action, tone = '') {
   } else { void run(); panel.element.querySelector('button').focus(); }
 }
 
+/**
+ * What you can do with selected text depends on where it is: editing actions only where the
+ * text can be replaced, and inside the Assistant a quote into the reply instead of asking it.
+ */
 export function textSelectionItems(snapshot) {
   const word = singleWord(snapshot.text);
+  const assistantRoot = snapshot.target?.closest?.('.ast');
+  const quoteIn = assistantRoot?.querySelector('.ast-input');
   const ask = () => import('./assistant-popup.js').then(m => m.openAssistant({ prompt: `Help me with this selected text:\n\n${snapshot.text.slice(0, 20000)}`, send: false }));
+  const quote = () => {
+    const lines = snapshot.text.trim().split('\n').slice(0, 20).map(l => `> ${l}`).join('\n');
+    quoteIn.value = `${lines}\n\n${quoteIn.value}`.trimStart();
+    quoteIn.dispatchEvent(new Event('input', { bubbles: true }));
+    quoteIn.focus();
+    quoteIn.setSelectionRange(quoteIn.value.length, quoteIn.value.length);
+  };
+  const askItem = quoteIn && !snapshot.writable
+    ? { label: 'Quote in reply', icon: TEXT_ICONS.assistant, action: quote }
+    : { label: 'Ask assistant', icon: TEXT_ICONS.assistant, action: ask };
+  const editing = snapshot.writable;
   return [
+    ...(editing ? [{ label: 'Cut', icon: TEXT_ICONS.cut, action: async () => { try { await navigator.clipboard.writeText(snapshot.text); replaceSelectedText(snapshot, ''); } catch { showToast('Clipboard unavailable'); } } }] : []),
     { label: 'Copy', icon: TEXT_ICONS.copy, action: () => copy(snapshot.text) },
-    ...(snapshot.writable ? [{ label: 'Cut', icon: TEXT_ICONS.cut, action: async () => { try { await navigator.clipboard.writeText(snapshot.text); replaceSelectedText(snapshot, ''); } catch { showToast('Clipboard unavailable'); } } }] : []),
     ...(word ? [
       { label: 'Search Dictionary', icon: TEXT_ICONS.dictionary, action: () => import('./dictionary-popup.js').then(m => m.openDictionaryPopup(word)) },
-      { label: 'Correct spelling', icon: TEXT_ICONS.spelling, action: () => openRewrite(snapshot, 'spelling') },
+      ...(editing ? [{ label: 'Correct spelling', icon: TEXT_ICONS.spelling, action: () => openRewrite(snapshot, 'spelling') }] : [askItem]),
     ] : [
-      { label: 'Ask assistant', icon: TEXT_ICONS.assistant, action: ask },
-      { label: 'Punctuation', icon: TEXT_ICONS.punctuation, action: () => openRewrite(snapshot, 'punctuation') },
-      { label: 'Rewrite', icon: TEXT_ICONS.rewrite, children: [
-        { label: 'Improve clarity', icon: TEXT_ICONS.rewrite, action: () => openRewrite(snapshot, 'rewrite') },
-        { label: 'Tone', icon: TEXT_ICONS.tone, children: TEXT_TONES.map(tone => ({ label: tone, icon: TEXT_ICONS.tone, action: () => openRewrite(snapshot, 'tone', tone) })) },
-        { label: 'Custom style', icon: TEXT_ICONS.style, action: () => openRewrite(snapshot, 'style') },
-      ] },
-      { label: 'Use as writing style', icon: TEXT_ICONS.style, action: () => { writingSample = snapshot.text.slice(0, 12000); showToast('Writing sample ready in Custom style'); } },
+      askItem,
+      ...(editing ? [
+        { label: 'Rewrite', icon: TEXT_ICONS.rewrite, children: [
+          { label: 'Improve clarity', icon: TEXT_ICONS.rewrite, action: () => openRewrite(snapshot, 'rewrite') },
+          { label: 'Tone', icon: TEXT_ICONS.tone, children: TEXT_TONES.map(tone => ({ label: tone, icon: TEXT_ICONS.tone, action: () => openRewrite(snapshot, 'tone', tone) })) },
+          { label: 'Custom style', icon: TEXT_ICONS.style, action: () => openRewrite(snapshot, 'style') },
+        ] },
+        { label: 'Correct spelling', icon: TEXT_ICONS.spelling, action: () => openRewrite(snapshot, 'spelling') },
+        { label: 'Punctuation', icon: TEXT_ICONS.punctuation, action: () => openRewrite(snapshot, 'punctuation') },
+      ] : [
+        { label: 'Use as writing style', icon: TEXT_ICONS.style, action: () => { writingSample = snapshot.text.slice(0, 12000); showToast('Writing sample ready in Custom style'); } },
+      ]),
     ]),
   ];
 }
@@ -209,6 +230,10 @@ export function installTextActions() {
   let pointerSelecting = false;
   const openForSelection = (target) => {
     if (target?.closest?.(`${MENUS}, [data-tb-file], .sv-window`)) return;
+    // A menu someone just opened on an item (long-press, right-click) is not replaced by the
+    // selection bar that the same press may have produced.
+    const open = document.getElementById('toolbox-context-menu');
+    if (open && !open.classList.contains('tb-selection-menu')) return;
     const snapshot = captureTextSelection(target);
     if (!snapshot) return;
     const rect = snapshot.rect;

@@ -21,6 +21,7 @@ import {
 } from '../lib/mind-store.js';
 import { showDialog } from '../lib/dialog.js';
 import { MindMotion, movePill, mindPointerLight } from '../lib/mind-motion.js';
+import { openContextMenu } from '../lib/context-menu.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const MODES = [['space', 'Space'], ['map', 'Map'], ['sense', 'Sense']];
@@ -138,6 +139,8 @@ export default {
     container.addEventListener('input', this.onInput);
     container.addEventListener('submit', this.onSubmit);
     container.addEventListener('keydown', this.onKey);
+    this.onMenu = e => this.contextMenu(e);
+    container.addEventListener('contextmenu', this.onMenu);
     this.unlight = mindPointerLight(container);
     if (typeof ResizeObserver === 'function') { this.modesRO = new ResizeObserver(() => movePill(this.el.modes)); this.modesRO.observe(this.el.modes); }
     this.draw('first');
@@ -662,7 +665,7 @@ export default {
     if (d.action === 'new-entity' || d.action === 'new-desk') return this.createEntity(d.action === 'new-desk' ? 'Desk' : null);
     if (d.action === 'edit-desk') return this.go(() => { this.editDesk = true; }, 'in');
     if (d.action === 'place-existing') return this.placeExisting();
-    if (d.action === 'connect') return this.connect();
+    if (d.action === 'connect') return this.connect(this.focusId);
     if (d.action === 'add-to-room') return this.addToRoom();
     if (d.action === 'add-prop') { const list = button.parentElement.querySelector('.mind-props'); list.insertAdjacentHTML('beforeend', this.propRow()); list.lastElementChild.querySelector('input').focus(); return this.markDirty(button.closest('form')); }
     if (d.action === 'remove-prop') { const form = button.closest('form'); button.closest('.mind-prop').remove(); return this.markDirty(form); }
@@ -735,13 +738,13 @@ export default {
     if (parent) relateMindEntities(parent, id, 'contains');
     this.draw('update');
   },
-  async connect() {
+  async connect(fromId = this.focusId) {
     const graph = readMind();
-    const linked = new Set([this.focusId, ...graph.relationships.filter(r => r.status === 'active' && (r.from === this.focusId || r.to === this.focusId)).flatMap(r => [r.from, r.to])]);
+    const linked = new Set([fromId, ...graph.relationships.filter(r => r.status === 'active' && (r.from === fromId || r.to === fromId)).flatMap(r => [r.from, r.to])]);
     const picked = await this.pick({ title: 'Connect to…', hint: 'Choose how they are related, then the thing.', items: this.thingItems(graph, linked), relations: RELATIONS, placeholder: 'Find a person, idea, memory…', create: true });
     if (!picked) return;
     const id = picked.create ? upsertMindEntity({ name: picked.create, type: 'Note', memoryType: 'explicit' }).id : picked.id;
-    relateMindEntities(this.focusId, id, picked.relation || 'related');
+    relateMindEntities(fromId, id, picked.relation || 'related');
     this.draw('update');
   },
   async addToRoom() {
@@ -795,5 +798,58 @@ export default {
     this.container?.removeEventListener('input', this.onInput);
     this.container?.removeEventListener('submit', this.onSubmit);
     this.container?.removeEventListener('keydown', this.onKey);
+    this.container?.removeEventListener('contextmenu', this.onMenu);
+  },
+
+  /** Right-click (or long-press) on a thing, a room, a map node or a connection: what you can do with it. */
+  contextMenu(e) {
+    if (e.defaultPrevented || e.target.closest('input, textarea, select, .mind-sheet-wrap')) return;
+    const graph = readMind();
+    const unlink = e.target.closest('.mind-link-row');
+    const node = e.target.closest('[data-map-focus]');
+    const roomEl = e.target.closest('[data-open-room]');
+    const thingEl = unlink?.querySelector('[data-open-entity]') || e.target.closest('[data-open-entity]');
+    const ico = (name) => icon(name, 16, 1.9);
+    let title = '', items = [];
+    if (node || thingEl) {
+      const id = node ? node.dataset.mapFocus : thingEl.dataset.openEntity;
+      const entity = graph.entities.find(x => x.id === id);
+      if (!entity) return;
+      title = entity.name;
+      const open = () => this.go(() => { this.leaveFor(id); this.focusId = id; }, 'in', node || thingEl);
+      items = [
+        { label: 'Open', icon: ico('open'), action: open },
+        ...(this.view === 'map' ? [{ label: 'Centre the map here', icon: ico('map'), action: () => this.focusMap(id, node) }]
+          : [{ label: 'Show on the map', icon: ico('map'), action: () => this.go(() => { this.view = 'map'; this.focusId = id; this.trail = []; this.query = ''; this.returnTo = null; }, 'next') }]),
+        { label: 'Connect to…', icon: ico('connect'), action: () => this.connect(id) },
+        ...(unlink ? [{ label: 'Remove this connection', icon: ico('x'), action: () => { removeMindRelationship(unlink.dataset.key.replace(/^rel:/, '')); this.draw('update'); } }] : []),
+        { separator: true },
+        { label: 'Mark as outdated', icon: ico('archive'), action: () => { supersedeMindEntity(id); if (this.focusId === id && this.view === 'space') this.go(() => { this.focusId = this.trail.pop() || null; }, 'out'); else this.draw('update'); } },
+        { label: 'Delete', icon: ico('trash'), destructive: true, action: async () => {
+          const yes = await showDialog({ type: 'confirm', destructive: true, title: 'Delete from Mind?', message: `Delete ${entity.name} and its connections everywhere? This cannot be undone.`, confirmText: 'Delete' });
+          if (yes) { forgetMindEntity(id); if (this.focusId === id) this.go(() => { this.focusId = this.trail.pop() || null; }, 'out'); else this.draw('update'); }
+        } },
+      ];
+    } else if (roomEl && !roomEl.closest('.mind-chip')) {
+      const room = graph.rooms.find(r => r.id === roomEl.dataset.openRoom);
+      if (!room) return;
+      title = room.name;
+      items = [
+        { label: 'Open', icon: ico('open'), action: () => this.go(() => { this.leaveFor(room.id); this.roomId = room.id; this.focusId = null; this.trail = []; }, 'in', roomEl) },
+        { label: 'Rename', icon: ico('edit'), action: async () => {
+          const name = await showDialog({ type: 'prompt', title: 'Rename room', defaultValue: room.name, confirmText: 'Save' });
+          if (!name?.trim()) return;
+          const g = readMind(), r = g.rooms.find(x => x.id === room.id); if (!r) return;
+          r.name = name.trim().slice(0, 120); r.updatedAt = Date.now(); writeMind(g); this.draw('update');
+        } },
+        { separator: true },
+        { label: 'Delete room', icon: ico('trash'), destructive: true, action: async () => {
+          const yes = await showDialog({ type: 'confirm', destructive: true, title: 'Delete room?', message: `Remove ${room.name} from Mind? Its things stay in Mind and in their other rooms.`, confirmText: 'Delete room' });
+          if (yes) { removeMindRoom(room.id); this.draw('update'); }
+        } },
+      ];
+    } else return;
+    e.preventDefault();
+    openContextMenu({ x: e.clientX, y: e.clientY, title, items, label: `Actions for ${title}` });
   },
 };

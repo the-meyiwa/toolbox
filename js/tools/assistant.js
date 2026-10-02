@@ -15,6 +15,7 @@
 import { getSetting } from '../lib/settings.js';
 import { tbConfirm, tbPrompt, tbAlert } from '../lib/dialog.js';
 import { showToast, isDangerousUri } from '../utils.js';
+import { openContextMenu, openMenuFromButton } from '../lib/context-menu.js';
 import { streamChatCompletion, getActiveAiMode, setActiveAiMode, AI_MODES, prewarmAssistant } from '../lib/ai-provider.js';
 import { warmGateway } from '../lib/model-gateway.js';
 import { QuotaManager } from '../lib/quota-manager.js';
@@ -617,9 +618,9 @@ function mountAssistant(container, state) {
     { act: 'delete', label: 'Delete', icon: 'trash', danger: true },
   ];
 
-  function convMenuHtml(c) {
-    return CONV_ACTIONS(c).map(a => (a.sep ? '<hr class="ast-pop-sep">'
-      : `<button type="button" role="menuitem" data-conv-act="${a.act}" ${a.danger ? 'class="is-danger"' : ''}>${icon(a.icon, 16)}<span><strong>${esc(a.label)}</strong></span></button>`)).join('');
+  /** The chat menu as shared-menu items (the same list for right-click, long-press and the … button). */
+  function convMenuItems(c) {
+    return CONV_ACTIONS(c).map(a => (a.sep ? { separator: true } : { label: a.label, icon: icon(a.icon, 16), destructive: Boolean(a.danger), action: () => runConvAction(a.act, c.id) }));
   }
 
   function convAsMarkdown(c) {
@@ -661,34 +662,11 @@ function mountAssistant(container, state) {
     }
   }
 
-  function wireMenu(menu, id, onClose) {
-    menu.addEventListener('click', (e) => {
-      const act = e.target.closest('[data-conv-act]')?.dataset.convAct;
-      if (!act) return;
-      menu.remove(); onClose?.();
-      runConvAction(act, id);
-    });
-    menu.addEventListener('keydown', (e) => {
-      const items = [...menu.querySelectorAll('[data-conv-act]')];
-      const i = items.indexOf(document.activeElement);
-      if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
-      else if (e.key === 'Escape' || e.key === 'Tab') { e.preventDefault(); menu.remove(); onClose?.(); }
-    });
-    menu.querySelector('button')?.focus();
-  }
-
   function openConvMenu(button, id) {
     closePops();
     const c = store.conversations.find(x => x.id === id);
     if (!c) return;
-    const menu = document.createElement('div');
-    menu.className = 'ast-pop ast-conv-pop';
-    menu.setAttribute('role', 'menu');
-    menu.innerHTML = convMenuHtml(c);
-    button.closest('.ast-conv').appendChild(menu);
-    button.setAttribute('aria-expanded', 'true');
-    wireMenu(menu, id, () => button.setAttribute('aria-expanded', 'false'));
+    openMenuFromButton(button, { title: c.title || 'Chat', items: convMenuItems(c), label: `Options for ${c.title || 'chat'}` });
   }
 
   /** Right-click / long-press menu at the pointer. */
@@ -696,32 +674,44 @@ function mountAssistant(container, state) {
     closePops();
     const c = store.conversations.find(x2 => x2.id === id);
     if (!c) return;
-    const menu = document.createElement('div');
-    menu.className = 'ast-pop ast-conv-pop ast-ctx';
-    menu.setAttribute('role', 'menu');
-    menu.setAttribute('aria-label', `Options for ${c.title || 'chat'}`);
-    menu.innerHTML = convMenuHtml(c);
-    document.body.appendChild(menu);
-    menu.hidden = false;
-    const r = menu.getBoundingClientRect();
-    menu.style.left = `${Math.max(8, Math.min(x, window.innerWidth - r.width - 8))}px`;
-    menu.style.top = `${Math.max(8, Math.min(y, window.innerHeight - r.height - 8))}px`;
-    convList.querySelector(`.ast-conv[data-id="${CSS.escape(id)}"]`)?.classList.add('is-menu');
-    const close = () => {
-      menu.remove();
-      convList.querySelectorAll('.is-menu').forEach(n => n.classList.remove('is-menu'));
-      document.removeEventListener('pointerdown', outside, true);
-      window.removeEventListener('blur', close);
-      window.removeEventListener('resize', close);
+    const row = convList.querySelector(`.ast-conv[data-id="${CSS.escape(id)}"]`);
+    row?.classList.add('is-menu');
+    openContextMenu({ x, y, title: c.title || 'Chat', items: convMenuItems(c), label: `Options for ${c.title || 'chat'}` });
+    // The row stays marked while its menu is open.
+    const menu = document.getElementById('toolbox-context-menu');
+    if (menu && row) {
+      const watch = new MutationObserver(() => { if (!menu.isConnected || !menu.id) { row.classList.remove('is-menu'); watch.disconnect(); } });
+      watch.observe(document.body, { childList: true });
+    }
+  }
+
+  /** Right-click on a message: what you can do with that message. */
+  function messageMenu(turnEl, x, y) {
+    const m = messages.find(msg => msg.id === turnEl.dataset.id);
+    if (!m) return false;
+    const copy = (text) => navigator.clipboard?.writeText(text).then(() => showToast('Copied')).catch(() => showToast('Could not copy'));
+    const quote = (text) => {
+      const lines = String(text || '').trim().split('\n').slice(0, 12).map(l => `> ${l}`).join('\n');
+      input.value = `${lines}\n\n${input.value}`.trimStart();
+      grow(); updateComposerState();
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
     };
-    const outside = (e) => { if (!menu.contains(e.target)) close(); };
-    setTimeout(() => {
-      document.addEventListener('pointerdown', outside, true);
-      window.addEventListener('blur', close);
-      window.addEventListener('resize', close);
-    }, 0);
-    disposers.push(close);
-    wireMenu(menu, id, close);
+    const isUser = m.role === 'user';
+    const text = isUser ? (m.displayText ?? m.content ?? '') : (m.content || '');
+    const busy = Boolean(running);
+    const items = isUser ? [
+      { label: 'Copy message', icon: icon('copy', 16), disabled: !text, action: () => copy(text) },
+      { label: 'Edit and resend', icon: icon('edit', 16), disabled: busy, action: () => beginEdit(turnEl, m) },
+      { label: 'Quote in reply', icon: icon('chev', 16), disabled: !text, action: () => quote(text) },
+    ] : [
+      { label: 'Copy reply', icon: icon('copy', 16), disabled: !text, action: () => copy(text) },
+      { label: 'Quote in reply', icon: icon('chev', 16), disabled: !text, action: () => quote(text) },
+      { separator: true },
+      { label: 'Regenerate', icon: icon('retry', 16), disabled: busy, action: () => regenerate(m.id) },
+    ];
+    openContextMenu({ x, y, title: isUser ? 'Your message' : 'Assistant reply', items, label: 'Message actions' });
+    return true;
   }
 
   /* ---------------- conversations ---------------- */
@@ -1493,8 +1483,7 @@ function mountAssistant(container, state) {
   }
 
   function closePops() {
-    document.querySelectorAll('body > .ast-ctx').forEach(m => m.remove());
-    root.querySelectorAll('.ast-pop').forEach(p => { if (p.classList.contains('ast-conv-pop')) p.remove(); else p.hidden = true; });
+    root.querySelectorAll('.ast-pop').forEach(p => { p.hidden = true; });
     root.querySelectorAll('[aria-expanded="true"][aria-haspopup]').forEach(b => b.setAttribute('aria-expanded', 'false'));
   }
   function togglePop(pop, button) {
@@ -1680,6 +1669,13 @@ function mountAssistant(container, state) {
   /* ---------------- events ---------------- */
 
   // Right-click, long-press (touch) and the keyboard context-menu key open the chat menu.
+  // Messages: their own menu, except over links, images and result cards (which have theirs).
+  on(thread, 'contextmenu', (e) => {
+    const turnEl = e.target.closest('.ast-turn');
+    if (!turnEl || e.defaultPrevented || e.target.closest('a, img, video, canvas, iframe, .ast-card, .ast-edit, input, textarea, .md-code')) return;
+    if (messageMenu(turnEl, e.clientX, e.clientY)) e.preventDefault();
+  });
+
   on(convList, 'contextmenu', (e) => {
     const row = e.target.closest('.ast-conv');
     if (!row) return;

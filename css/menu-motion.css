@@ -20,6 +20,24 @@
 .header-dropdown-menu:not(.is-open) { visibility: hidden; transition: opacity 120ms ease, transform 160ms var(--menu-ease), visibility 0s linear 160ms !important; }
 .header-dropdown-menu.is-open { visibility: visible; transition: opacity 120ms ease, transform 160ms var(--menu-ease), visibility 0s !important; }
 
+/* Inside a menu: rows arrive in a quick cascade as the panel unfolds; on the selection bar the
+   actions pop in one after another. Rows respond to the pointer, and the one you choose flashes
+   while the menu fades, so the click visibly landed. */
+.finder-context-menu:not(.tb-menu-horizontal) :is(.finder-menu-item, .finder-menu-heading) {
+  animation: menu-row-in 220ms var(--menu-ease) both;
+  animation-delay: calc(var(--i, 0) * 14ms + 30ms);
+}
+.tb-menu-horizontal .finder-menu-item { animation: menu-chip-in 260ms cubic-bezier(.34, 1.4, .64, 1) both; animation-delay: calc(var(--i, 0) * 24ms); }
+@keyframes menu-row-in { from { opacity: 0; transform: translateX(-5px); } to { opacity: 1; transform: none; } }
+@keyframes menu-chip-in { from { opacity: 0; transform: scale(.72); } to { opacity: 1; transform: none; } }
+.finder-menu-item { transition: background-color 120ms ease, color 120ms ease, transform 120ms var(--menu-ease); }
+.finder-menu-item:active:not([aria-disabled="true"]) { transform: scale(.98); }
+.finder-menu-icon, .finder-menu-chevron { transition: transform 200ms var(--menu-ease); }
+.finder-menu-item:is(:hover, :focus-visible):not([aria-disabled="true"]) .finder-menu-icon { transform: scale(1.1); }
+.finder-menu-item:is(:hover, [aria-expanded="true"]) .finder-menu-chevron { transform: translateX(2px); }
+.finder-menu-item.is-chosen { background: var(--ink, #111) !important; color: var(--text-inverse, #fff) !important; }
+.finder-menu-item.is-chosen :is(.finder-menu-icon, .finder-menu-shortcut, .finder-menu-chevron) { color: inherit; }
+
 @keyframes menu-unfold {
   from { opacity:0; transform:perspective(900px) rotateX(-7deg) scale(.97); }
   to { opacity:1; transform:perspective(900px) rotateX(0deg) scale(1); }
@@ -65,7 +83,8 @@
   :is(.finder-context-menu,.cpg-context-menu,#cpg-context-menu,.sv-open-dropdown-menu,
       .art-menu,.cpg-dropdown-menu,.ast-attach-popup,.ag-search-dropdown,
       .header-dropdown-menu,[role="menu"],.settings-modal-window,.custom-dialog-window,
-      .settings-modal-backdrop,.custom-dialog-backdrop,.header-notif-panel) {
+      .settings-modal-backdrop,.custom-dialog-backdrop,.header-notif-panel,
+      .finder-menu-item,.finder-menu-heading,.finder-menu-icon,.finder-menu-chevron) {
     animation:none !important;
     transition:none !important;
     transform:none !important;

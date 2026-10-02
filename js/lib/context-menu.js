@@ -23,6 +23,12 @@ let activeMenu = null;
 const TOOLBOX_MENU_SELECTOR = '#toolbox-context-menu, #sv-finder-menu, #cpg-ctx-menu, .finder-context-menu';
 const SAME_GESTURE_MS = 600;
 let lastMenuOpenedAt = -Infinity;
+let lastOpenPoint = null;
+
+/** True while a menu opened by the current gesture is on screen (long-press handlers use it). */
+export function menuOpenedRecently(ms = SAME_GESTURE_MS) {
+  return performance.now() - lastMenuOpenedAt < ms && Boolean(document.querySelector(TOOLBOX_MENU_SELECTOR));
+}
 
 function isEditableTarget(el) {
   return Boolean(el?.closest?.('input, textarea, select, [contenteditable=""], [contenteditable="true"], [contenteditable="plaintext-only"]'));
@@ -66,6 +72,12 @@ if (typeof window !== 'undefined' && !window.__toolboxNativeMenuGuard) {
  * @param {Array<Object>} options.items - Menu action items
  */
 export function openContextMenu({ x, y, title = '', items = [], className = '', focusFirst = false, label = '', presentation = 'regular' }) {
+  // One gesture, one menu. A long press can reach here twice (a tool's own touch timer, then
+  // the system's contextmenu event) and a right-click can bubble to two listeners: the second
+  // request at the same spot keeps the menu that is already open instead of flickering it.
+  const now = performance.now();
+  if (activeMenu && lastOpenPoint && now - lastOpenPoint.at < 700 && Math.hypot(x - lastOpenPoint.x, y - lastOpenPoint.y) < 24) return;
+  lastOpenPoint = { x, y, at: now };
   closeContextMenu();
 
   // A menu tree shares a lifetime, focus handling and outside-click boundary.
@@ -120,7 +132,7 @@ export function openContextMenu({ x, y, title = '', items = [], className = '', 
     }
 
     html += `
-      <div class="finder-menu-item ${item.destructive ? 'destructive' : ''}" data-item-index="${index}" role="menuitem" tabindex="-1" aria-label="${escapeHtml(item.label || '')}"${item.disabled ? ' aria-disabled="true"' : ''} title="${escapeHtml(item.hint || item.label || '')}"${item.children?.length ? ' aria-haspopup="menu" aria-expanded="false"' : ''}>
+      <div class="finder-menu-item ${item.destructive ? 'destructive' : ''}" style="--i:${Math.min(index, 14)}" data-item-index="${index}" role="menuitem" tabindex="-1" aria-label="${escapeHtml(item.label || '')}"${item.disabled ? ' aria-disabled="true"' : ''} title="${escapeHtml(item.hint || item.label || '')}"${item.children?.length ? ' aria-haspopup="menu" aria-expanded="false"' : ''}>
         <div class="finder-menu-item-left">
           ${item.icon ? `<span class="finder-menu-icon">${item.icon}</span>` : ''}
           <span class="finder-menu-label">${escapeHtml(item.label || '')}</span>
@@ -172,6 +184,8 @@ export function openContextMenu({ x, y, title = '', items = [], className = '', 
       const item = entries[idx];
       if (item?.children?.length && !item.disabled) { showChildren(itemEl, item, level, true); return; }
       if (item && !item.disabled && typeof item.action === 'function') {
+        // The chosen row flashes while the menu fades, so the click visibly landed.
+        itemEl.classList.add('is-chosen');
         closeContextMenu();
         item.action();
       }
@@ -273,6 +287,20 @@ export function closeContextMenu() {
   if (existing) existing.remove();
   const legacy = document.getElementById('sv-finder-menu');
   if (legacy) removeMenu(legacy);
+}
+
+/** Opens a menu under a button (an overflow "…" button), aligned to its edge. */
+export function openMenuFromButton(button, options) {
+  const r = button.getBoundingClientRect();
+  button.setAttribute('aria-expanded', 'true');
+  openContextMenu({ ...options, x: r.left, y: r.bottom + 6, focusFirst: true });
+  const menu = document.getElementById('toolbox-context-menu');
+  if (!menu) return;
+  // Right-align when the button sits at the right of its row.
+  if (r.left + menu.offsetWidth > window.innerWidth - 10) menu.style.left = `${Math.max(10, r.right - menu.offsetWidth)}px`;
+  menu.style.transformOrigin = r.left + menu.offsetWidth > window.innerWidth - 10 ? '100% 0' : '0 0';
+  const done = new MutationObserver(() => { if (!menu.isConnected || !menu.id) { button.setAttribute('aria-expanded', 'false'); done.disconnect(); } });
+  done.observe(document.body, { childList: true });
 }
 
 function escapeHtml(str) {

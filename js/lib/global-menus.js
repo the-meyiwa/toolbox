@@ -97,8 +97,10 @@ export function installGlobalMenus({ getTool }) {
     const el = e.target instanceof Element ? e.target : e.target?.parentElement;
     if (!el || el.closest(EDITABLE)) return;
     if (el.closest('#toolbox-context-menu, .finder-context-menu, #sv-finder-menu, #cpg-ctx-menu')) return;
-    // Text the person selected: let the browser's menu (copy, look up) handle it.
-    if (window.getSelection()?.toString().trim()) return;
+    // Right-clicking inside selected text belongs to the text menu (or the browser's). A
+    // selection left somewhere else on the page must not take this menu away.
+    const sel = window.getSelection();
+    if (sel && !sel.isCollapsed && sel.rangeCount && sel.toString().trim() && sel.getRangeAt(0).intersectsNode(el)) return;
     window.__lastMenuPoint = { x: e.clientX, y: e.clientY };
 
     const link = el.closest('a[href^="#"], [data-tool]');

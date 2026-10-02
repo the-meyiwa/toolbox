@@ -14,6 +14,7 @@
 
 import { marked } from 'marked';
 import { cleanHtml } from '../safe-html.js';
+import { openContextMenu, closeContextMenu } from '../context-menu.js';
 import { WorkspaceFS } from './vfs.js';
 import { AutoSaver, putWorkspace, putObjects, getObject } from './store.js';
 import { Shell, StringInput } from './shell.js';
@@ -356,7 +357,7 @@ export class PlaygroundIDE {
     this.preview?.dispose();
     this.ts.dispose();
     this.assistant?.agent?.stop();
-    document.getElementById('cpg-ctx-menu')?.remove();
+    closeContextMenu();
   }
 
   $(sel) { return this.container.querySelector(sel); }
@@ -792,7 +793,7 @@ export class PlaygroundIDE {
     if (e.altKey && kl === 'z') { stop(); this.action('toggle-wrap'); return; }
     if (mod && (k === '=' || k === '+')) { stop(); this.action('zoom-in'); return; }
     if (mod && k === '-') { stop(); this.action('zoom-out'); return; }
-    if (k === 'Escape') { this.closeMenus?.(); document.getElementById('cpg-ctx-menu')?.remove(); }
+    if (k === 'Escape') { this.closeMenus?.(); closeContextMenu(); }
   }
 
   /* ---------------- actions (menus / palette) ---------------- */
@@ -1053,33 +1054,12 @@ export class PlaygroundIDE {
     this.contextMenu(x, y, items, path || 'Workspace');
   }
 
+  /** Right-click menus go through the shared Toolbox menu, so they never stack with another one. */
   contextMenu(x, y, items, title = '') {
-    document.getElementById('cpg-ctx-menu')?.remove();
-    const m = document.createElement('div');
-    m.id = 'cpg-ctx-menu';
-    m.className = `cpg-dropdown-menu cpg-ctx cpg-mode-${this.theme}`;
-    m.setAttribute('role', 'menu');
-    m.innerHTML = `${title ? `<div class="cpg-ctx-title">${esc(title)}</div>` : ''}${items.map((it, i) => (it === '-' ? '<div class="cpg-menu-sep"></div>' : `<button type="button" class="cpg-dropdown-item${it.danger ? ' is-danger' : ''}" data-i="${i}"><span>${esc(it.label)}</span>${it.kbd ? `<kbd class="cpg-kbd">${esc(it.kbd)}</kbd>` : ''}</button>`)).join('')}`;
-    document.body.appendChild(m);
-    const r = m.getBoundingClientRect();
-    m.style.left = `${Math.max(6, Math.min(x, window.innerWidth - r.width - 6))}px`;
-    m.style.top = `${Math.max(6, Math.min(y, window.innerHeight - r.height - 6))}px`;
-    const close = () => { m.remove(); document.removeEventListener('mousedown', outside, true); };
-    const outside = (e) => { if (!m.contains(e.target)) close(); };
-    setTimeout(() => document.addEventListener('mousedown', outside, true), 0);
-    m.addEventListener('click', (e) => {
-      const b = e.target.closest('[data-i]');
-      if (!b) return;
-      close();
-      items[Number(b.dataset.i)].run();
-    });
-    m.querySelector('button')?.focus();
-    m.addEventListener('keydown', (e) => {
-      const btns = [...m.querySelectorAll('button')];
-      const i = btns.indexOf(document.activeElement);
-      if (e.key === 'ArrowDown') { e.preventDefault(); btns[(i + 1) % btns.length]?.focus(); }
-      if (e.key === 'ArrowUp') { e.preventDefault(); btns[(i - 1 + btns.length) % btns.length]?.focus(); }
-      if (e.key === 'Escape') close();
+    openContextMenu({
+      x, y, title,
+      className: `cpg-menu cpg-mode-${this.theme}`,
+      items: items.map((it) => (it === '-' ? { separator: true } : { label: it.label, shortcut: it.kbd || '', destructive: Boolean(it.danger), action: () => it.run() })),
     });
   }
 
