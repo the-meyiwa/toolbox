@@ -17,6 +17,7 @@ import { sanitizeUserFacingText } from '../utils.js';
 import { renderMapCard } from './maps/map-card.js';
 import { icon, iconLabel } from './icons.js';
 import { markFile } from './file-surface.js';
+import { proxyFetch } from './model-gateway.js';
 
 /** A data: or blob: URL (or plain text) as a Blob, for the file surface. */
 const blobFromUrl = async (url, text = null, type = 'text/plain') => (url && url !== '#' ? (await fetch(url)).blob() : new Blob([text ?? ''], { type }));
@@ -4518,7 +4519,7 @@ export class ImageGalleryResultRenderer extends ResultRenderer {
           else if (img.url.endsWith('.webp')) ext = 'webp';
           const imgName = `scraped_${String(i + 1).padStart(2, '0')}.${ext}`;
           try {
-            const res = await fetch(`/api/assistant/browser/fetch-binary?url=${encodeURIComponent(img.url)}`);
+            const res = await proxyFetch(`/api/assistant/browser/fetch-binary?url=${encodeURIComponent(img.url)}`);
             if (res.ok) {
               const blob = await res.blob();
               await fs.writeFile(`${folder}/${imgName}`, blob);

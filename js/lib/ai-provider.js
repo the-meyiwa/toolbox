@@ -184,7 +184,30 @@ const CONFIRM_TOOLS = {
   ide_git_push: (a) => `Push the Code Playground project to ${a.repo || a.remote || 'the remote repository'}?`,
   move_file: (a) => `Move ${a.from || a.source || a.path || 'the file'} to ${a.to || a.destination || 'the new location'}?`,
   rename_file: (a) => `Rename ${a.path || a.from || 'the file'} to ${a.newName || a.to || 'the new name'}?`,
+  // Automations keep running after the chat ends and can fetch, open and ask on their own, so
+  // text from a web page or an email must never be able to set one up unseen.
+  create_automation: (a) => `Create the automation "${a.name || 'Untitled'}"?\n\nRuns: ${describeTrigger(a.trigger)}\nSteps: ${describeSteps(a.actions)}`,
+  update_automation: (a) => (a.trigger || a.actions ? `Change the automation "${a.automation || a.name || ''}"?${a.trigger ? `\n\nRuns: ${describeTrigger(a.trigger)}` : ''}${a.actions ? `\nSteps: ${describeSteps(a.actions)}` : ''}` : null),
+  delete_automation: (a) => `Delete the automation "${a.automation || a.id || a.name || ''}"?`,
 };
+
+function describeTrigger(t = {}) {
+  if (!t || typeof t !== 'object') return 'on demand';
+  if (t.type === 'once') return `once, at ${t.at || 'a set time'}`;
+  if (t.type === 'app-open') return 'whenever Toolbox opens';
+  if (t.type === 'manual') return 'when you run it';
+  if (t.cron) return `on the schedule "${t.cron}"`;
+  if (t.every) return `every ${t.every === 'minutes' ? `${t.minutes || ''} minutes` : t.every}${t.time ? ` at ${t.time}` : ''}`;
+  return 'on a schedule';
+}
+function describeSteps(actions) {
+  const list = Array.isArray(actions) ? actions : [];
+  if (!list.length) return 'none';
+  return list.slice(0, 8).map((s) => {
+    const what = String(s?.url || s?.prompt || s?.message || s?.toolId || s?.title || s?.content || '').replace(/\s+/g, ' ').slice(0, 90);
+    return `${s?.type || 'step'}${what ? ` (${what})` : ''}`;
+  }).join(' → ') + (list.length > 8 ? ` → … ${list.length - 8} more` : '');
+}
 
 // Evaluation harness hook: when set, decides confirmations instead of showing the dialog.
 let confirmOverride = null;
@@ -535,6 +558,11 @@ function buildMessages(history, currentFile, system) {
       const file = msg.fileData?.base64 ? msg.fileData : (isLatest ? currentFile : null);
       if (file && fileTurns.has(i)) parts.push(...fileParts(file));
       else if (file) parts.push({ type: 'text', text: `[Earlier attachment: ${file.name || 'file'} (${file.type || 'file'})]` });
+      // Further images and documents sent with the same message.
+      for (const extra of Array.isArray(msg.moreFiles) ? msg.moreFiles : []) {
+        if (extra?.base64 && fileTurns.has(i)) parts.push(...fileParts(extra));
+        else if (extra) parts.push({ type: 'text', text: `[Earlier attachment: ${extra.name || 'file'} (${extra.type || 'file'})]` });
+      }
       if (msg.content) parts.push({ type: 'text', text: old ? shorten(msg.content, OLD_MESSAGE_CHARS) : String(msg.content) });
       if (!parts.length) return;
       out.push({ role: 'user', content: parts.length === 1 && parts[0].type === 'text' ? parts[0].text : parts });
@@ -843,12 +871,39 @@ export async function streamChatCompletion({
   const systemFor = () => (scope === 'global' ? `${systemPromptFor(activeGroups || [])}${tail}` : `${systemInstruction || ''}\n${environment}`);
   const system = systemFor();
   // Read attached PDFs (last two user messages) before building the request.
-  const recentFiles = [currentFile, ...history.filter(m => m.role === 'user').slice(-2).map(m => m.fileData)].filter(Boolean);
+  const recentFiles = [currentFile, ...history.filter(m => m.role === 'user').slice(-2).flatMap(m => [m.fileData, ...(Array.isArray(m.moreFiles) ? m.moreFiles : [])])].filter(Boolean);
   await Promise.all(recentFiles.flatMap(f => [preparePdf(f).catch(() => {}), prepareOffice(f).catch(() => {})]));
   const messages = buildMessages(history, currentFile, system);
   const chosenProvider = provider || getPreferredProvider() || undefined;
   let sticky = undefined;
-  const limit = maxSteps || (selectedMode === 'fast' ? 6 : selectedMode === 'auto' || selectedMode === 'files' ? 16 : 24);
+  // Steps per reply. These guard against a model looping, not against real work: accounts
+  // without limits get room for long jobs; everyone else stays inside the server's per-task cap.
+  const unlimited = QuotaManager.isUserUnlimited?.() === true;
+  const limit = maxSteps || (unlimited ? 60 : selectedMode === 'fast' ? 8 : selectedMode === 'auto' || selectedMode === 'files' ? 20 : 30);
+
+  // A dropped connection or a briefly unavailable model should not end the reply. A step is
+  // retried only while nothing from it has been shown, so text is never repeated.
+  const transient = (err) => !signal?.aborted && err?.name !== 'AbortError' && (err?.name === 'TypeError' || [502, 503, 504].includes(err?.status)
+    || /connection|network|closed|ended before/i.test(err?.message || ''));
+  const modelStep = async (body, { onText, onThinking, onProvider: onProv }) => {
+    for (let attempt = 0; ; attempt++) {
+      let shown = false;
+      try {
+        const res = await openGateway(body, signal);
+        return await readTurn(res, {
+          signal,
+          onText: (t) => { shown = true; onText(t); },
+          onThinking: (t) => { shown = true; onThinking(t); },
+          onProvider: onProv,
+        });
+      } catch (err) {
+        if (attempt >= 2 || shown || !transient(err)) throw err;
+        onStatus({ type: 'retrying', attempt: attempt + 1 });
+        await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+        if (signal?.aborted) throw err;
+      }
+    }
+  };
 
   let fullText = '';
   let fullThinking = '';
@@ -936,22 +991,19 @@ export async function streamChatCompletion({
     const tools = toolsForStep();
     messages[0].content = systemFor();
     if (step > 0) compactEarlierSteps(messages);
-    const res = await openGateway({
+    const turn = await modelStep({
       messages,
       tools: tools.length ? tools : undefined,
       mode: MODE_EFFORT[selectedMode] || 'auto',
       provider: chosenProvider,
       preferredProvider: sticky,
       turnId, idempotencyKey,
-    }, signal);
-    if (step === 0) QuotaManager.recordMessage?.();
-
-    const turn = await readTurn(res, {
-      signal,
+    }, {
       onText: (t) => { fullText += t; onToken(t); },
       onThinking: (t) => { fullThinking += t; onThinking(t); },
       onProvider: (p) => { providerInfo = p; onProvider(p); },
     });
+    if (step === 0) QuotaManager.recordMessage?.();
     // Later steps of this reply stay with the model that answered (keeps its context and signatures).
     if (providerInfo?.provider) sticky = providerInfo.provider;
 
@@ -976,9 +1028,7 @@ export async function streamChatCompletion({
     if (step === limit - 1 && !signal?.aborted) {
       // Out of steps: ask for a final answer without tools.
       messages[0].content += '\nYou have used the available tool steps. Summarise what you did and give your final answer now, without calling more tools.';
-      const last = await openGateway({ messages, mode: MODE_EFFORT[selectedMode] || 'auto', provider: chosenProvider, preferredProvider: providerInfo?.provider, turnId, idempotencyKey }, signal);
-      await readTurn(last, {
-        signal,
+      await modelStep({ messages, mode: MODE_EFFORT[selectedMode] || 'auto', provider: chosenProvider, preferredProvider: providerInfo?.provider, turnId, idempotencyKey }, {
         onText: (t) => { fullText += t; onToken(t); },
         onThinking: (t) => { fullThinking += t; onThinking(t); },
         onProvider: () => {},

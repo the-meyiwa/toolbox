@@ -53,8 +53,9 @@ function compactFile(file) {
 }
 
 export function compactMessage(msg) {
-  const out = compactValue({ ...msg, fileData: undefined });
+  const out = compactValue({ ...msg, fileData: undefined, moreFiles: undefined });
   if (msg.fileData) out.fileData = compactFile(msg.fileData);
+  if (Array.isArray(msg.moreFiles) && msg.moreFiles.length) out.moreFiles = msg.moreFiles.map(compactFile);
   return out;
 }
 
@@ -231,7 +232,11 @@ export class ConversationStore {
     const conversations = this.conversations.filter(c => c.messages?.length).slice(0, 40).map(c => ({
       ...c,
       // Attachment bytes stay on this device; the cloud copy keeps names and text.
-      messages: c.messages.map(m => (m.fileData ? { ...m, fileData: { ...m.fileData, base64: null } } : m)),
+      messages: c.messages.map(m => (m.fileData || m.moreFiles?.length ? {
+        ...m,
+        fileData: m.fileData ? { ...m.fileData, base64: null } : m.fileData,
+        ...(m.moreFiles?.length ? { moreFiles: m.moreFiles.map(f => ({ ...f, base64: null })) } : {}),
+      } : m)),
     }));
     const ok = await saveAssistantConversationToCloud({ version: 2, updatedAt: Date.now(), conversations, deleted: this.deleted || [] }).catch(() => false);
     if (this.key !== key || storageKey() !== key) return;
@@ -276,7 +281,10 @@ function mergeFiles(localMsgs = [], remoteMsgs = []) {
   const local = new Map(localMsgs.map(m => [m.id, m]));
   return remoteMsgs.map(m => {
     const l = local.get(m.id);
-    if (m.fileData && !m.fileData.base64 && l?.fileData?.base64) return { ...m, fileData: l.fileData };
-    return m;
+    if (!l) return m;
+    let out = m;
+    if (m.fileData && !m.fileData.base64 && l.fileData?.base64) out = { ...out, fileData: l.fileData };
+    if (m.moreFiles?.length && l.moreFiles?.some(f => f?.base64)) out = { ...out, moreFiles: l.moreFiles };
+    return out;
   });
 }

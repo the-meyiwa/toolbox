@@ -70,6 +70,14 @@ test('A single turn cannot run indefinitely under one quota charge', () => {
   assert.equal(reserveAssistantTurn(user, prompt('turn_steps_1'), base + 100).status, 429);
 });
 
+test('The owner can run one task for as many steps as it needs', () => {
+  clearAssistantQuotaForTests();
+  const owner = { id: 'verified-owner', email: 'meyigbenee@icloud.com' };
+  for (let i = 0; i < ASSISTANT_QUOTA_LIMITS.maxStepsPerTurn * 3; i++) {
+    assert.equal(reserveAssistantTurn(owner, prompt('turn_owner_long'), base + i * 2000).allowed, true);
+  }
+});
+
 test('Many model steps still have an account-wide work budget', () => {
   clearAssistantQuotaForTests();
   for (let i = 0; i < ASSISTANT_QUOTA_LIMITS.requestsDaily; i++) {

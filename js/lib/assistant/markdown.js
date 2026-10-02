@@ -14,10 +14,36 @@
    ============================================================ */
 
 import { Marked } from 'marked';
+import createDOMPurify from 'dompurify';
 import { sanitizeUserFacingText, sanitizeRenderedHtml } from '../../utils.js';
 import { renderMath } from '../math-renderer.js';
 
 const md = new Marked({ gfm: true, breaks: false });
+
+/* Replies can quote web pages, emails and files, so their HTML is cleaned with an allowlist
+   (DOMPurify, its own instance so other tools' settings are untouched): no styles that could
+   draw over the app, no forms or buttons, no frames, no event handlers or script URLs. */
+const PURIFY_OPTIONS = {
+  USE_PROFILES: { html: true },
+  FORBID_TAGS: ['style', 'form', 'button', 'textarea', 'select', 'option', 'iframe', 'frame', 'frameset', 'object', 'embed', 'base', 'link', 'meta', 'dialog', 'template', 'slot', 'video', 'audio', 'source', 'picture'],
+  FORBID_ATTR: ['style', 'formaction', 'action', 'srcdoc', 'ping', 'srcset', 'id', 'name', 'autofocus', 'tabindex'],
+  ALLOW_DATA_ATTR: false,
+  ALLOW_UNKNOWN_PROTOCOLS: false,
+};
+let purifier;
+function cleanReplyHtml(html) {
+  if (purifier === undefined) {
+    try { purifier = typeof window !== 'undefined' ? createDOMPurify(window) : null; } catch { purifier = null; }
+  }
+  if (purifier?.isSupported) return purifier.sanitize(html, PURIFY_OPTIONS);
+  return sanitizeRenderedHtml(html);
+}
+
+/** Images on other sites load only when asked: an image URL can carry data out of the chat. */
+function sameOriginOrInline(src) {
+  if (/^(data:image\/|blob:)/i.test(src)) return true;
+  try { return new URL(src, window.location.href).origin === window.location.origin; } catch { return false; }
+}
 
 const KATEX_VERSION = '0.16.22';
 const KATEX_BASE = `https://cdn.jsdelivr.net/npm/katex@${KATEX_VERSION}/dist`;
@@ -188,10 +214,25 @@ function decorate(html) {
     if (!href.startsWith('#')) { a.target = '_blank'; a.rel = 'noopener noreferrer'; }
   });
   root.querySelectorAll('img').forEach((img) => {
+    const src = img.getAttribute('src') || '';
+    if (src && !sameOriginOrInline(src)) {
+      let host = '';
+      try { host = new URL(src).hostname.replace(/^www\./, ''); } catch { host = ''; }
+      const hold = document.createElement('span');
+      hold.className = 'md-img-hold';
+      hold.setAttribute('role', 'button');
+      hold.setAttribute('tabindex', '0');
+      hold.dataset.mdImg = src;
+      if (img.getAttribute('alt')) hold.dataset.mdAlt = img.getAttribute('alt');
+      hold.innerHTML = `<span class="md-img-hold-ico" aria-hidden="true"></span><span>Show image${host ? ` from ${escapeHtml(host)}` : ''}</span>`;
+      img.replaceWith(hold);
+      return;
+    }
     img.loading = 'lazy';
     img.decoding = 'async';
     img.referrerPolicy = 'no-referrer';
   });
+  root.querySelectorAll('input:not([type="checkbox"])').forEach(n => n.remove());
   root.querySelectorAll('li > input[type="checkbox"]').forEach((box) => {
     box.disabled = true;
     box.parentElement.classList.add('md-task');
@@ -219,7 +260,7 @@ export function renderMarkdown(text, { streaming = false } = {}) {
   } catch {
     html = `<p>${escapeHtml(body).replace(/\n/g, '<br>')}</p>`;
   }
-  html = sanitizeRenderedHtml(html);
+  html = cleanReplyHtml(html);
   html = decorate(html);
   if (math.hasMath) {
     html = html
@@ -320,17 +361,39 @@ export function renderStreamingInto(el, text) {
     const p = prev[i];
     if (p && p.nodeType === n.nodeType && (p.nodeType === 3 ? p.textContent === n.textContent : p.outerHTML === n.outerHTML)) continue;
     if (p) el.replaceChild(n, p);
-    else el.insertBefore(n, caret);
+    else { el.insertBefore(n, caret); arrive(n); }
   }
   for (; i < prev.length; i++) prev[i].remove();
   return { hasMath: state.hasMath || tail.hasMath };
 }
 
+/** A block that just started streaming fades up; the class goes once it has, so the final
+    render (which compares markup) keeps the node instead of replacing it. */
+function arrive(node) {
+  if (node.nodeType !== 1 || typeof node.addEventListener !== 'function') return;
+  node.classList.add('md-enter');
+  const done = () => { node.classList.remove('md-enter'); if (!node.classList.length) node.removeAttribute('class'); };
+  node.addEventListener('animationend', done, { once: true });
+  setTimeout(done, 700);
+}
+
 /** Forgets streaming state, so the next render is a complete one. */
 export function resetStreaming(el) { if (el) delete el._stream; }
 
-/** Delegated handler for code-block copy buttons. */
+/** Delegated handler for code-block copy buttons and held-back images. */
 export function handleMarkdownClick(event) {
+  const hold = event.target.closest?.('[data-md-img]');
+  if (hold) {
+    const img = document.createElement('img');
+    img.src = hold.dataset.mdImg;
+    img.alt = hold.dataset.mdAlt || '';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.referrerPolicy = 'no-referrer';
+    img.className = 'md-img-shown';
+    hold.replaceWith(img);
+    return true;
+  }
   const btn = event.target.closest?.('[data-md-copy]');
   if (!btn) return false;
   const code = btn.closest('.md-code')?.querySelector('pre code');

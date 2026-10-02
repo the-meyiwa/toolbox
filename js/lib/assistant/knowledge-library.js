@@ -17,6 +17,8 @@
    it is stripped of markup, kept short and always carries its source.
    ============================================================ */
 
+import { proxyFetch } from '../model-gateway.js';
+
 const KEY = 'toolbox_knowledge_library_v1';
 const MAX = 500;
 const memoryStore = { list: [] };   // fallback when localStorage is unavailable (node, private mode)
@@ -135,7 +137,7 @@ export function extractConcepts(text, topic = '', source = '') {
 }
 
 async function getJson(url) {
-  const res = await fetch(url, { signal: AbortSignal.timeout ? AbortSignal.timeout(20000) : undefined });
+  const res = await proxyFetch(url, { signal: AbortSignal.timeout ? AbortSignal.timeout(20000) : undefined });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }

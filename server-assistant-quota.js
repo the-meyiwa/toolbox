@@ -68,7 +68,8 @@ export function createMemoryAssistantQuotaStore() {
       const denied = (reason, retryAfter = 0) => ({ allowed: false, status: 429, reason, retryAfter });
       if (!free && state.requests >= limits.requestsDaily) return denied('Daily Assistant work limit reached. It resets at midnight UTC.', untilMidnight);
       if (!free && requests.length >= limits.requestsPerMinute) return denied('The Assistant is handling too many steps. Please wait a minute and try again.', Math.ceil((Math.min(...requests.map(r => r.at)) + limits.burstWindowMs - now) / 1000));
-      if (previous && previous.steps >= limits.maxStepsPerTurn) return denied('This Assistant task has used its available steps. Start a new message.');
+      // The owner has no limits at all; for everyone else one task cannot run forever on one charge.
+      if (!free && previous && previous.steps >= limits.maxStepsPerTurn) return denied('This Assistant task has used its available steps. Start a new message.');
       if (!previous && !free && state.count >= limits.daily) return denied('Daily Assistant message limit reached. It resets at midnight UTC.', untilMidnight);
       if (!previous && !free && recent.length >= limits.burst) return denied('Too many Assistant messages in one minute. Please wait and try again.', Math.ceil((Math.min(...recent.map(t => t.at)) + limits.burstWindowMs - now) / 1000));
       const turn = previous || { id: crypto.randomUUID(), day: state.day, key, at: now, lastAt: now, steps: 0, counted: true };

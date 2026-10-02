@@ -17,6 +17,13 @@ export async function authHeader(forceRefresh = false) {
   return user?.token ? { Authorization: `Bearer ${user.token}` } : {};
 }
 
+/** Fetch for Toolbox's own page-reading routes: sends the session so signed-in use is unlimited. */
+export async function proxyFetch(url, init = {}) {
+  let headers = {};
+  try { headers = await authHeader(); } catch { headers = {}; }
+  return fetch(url, { ...init, headers: { ...(init.headers || {}), ...headers } });
+}
+
 export class GatewayError extends Error {
   constructor(message, status) { super(message); this.status = status; }
 }

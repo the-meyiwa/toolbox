@@ -542,7 +542,16 @@ export async function handleAssistantGateway(request, response, url) {
   const onClose = () => { clearInterval(heartbeat); clearTimeout(replyTimeout); controller.abort(); };
   response.on?.('close', onClose);
   let reservation;
-  try { reservation = await reserveAssistantTurn(user, payload, request); }
+  try {
+    reservation = await reserveAssistantTurn(user, payload, request);
+    // Unlimited accounts are never stopped mid-task. A database that still applies the
+    // per-task step cap to them (its SQL predates the exemption) gets a continuation key.
+    if (!reservation.allowed && /used its available steps/.test(reservation.reason || '') && typeof payload.turnId === 'string'
+      && (await assistantQuotaSummary(user, request).catch(() => null))?.isUnlimited === true) {
+      payload.turnId = `${payload.turnId.replace(/-k[0-9a-z]+$/, '')}-k${Date.now().toString(36)}`.slice(-128);
+      reservation = await reserveAssistantTurn(user, payload, request);
+    }
+  }
   catch (error) { response.off?.('close', onClose); return fail(error.status || 503, error.message); }
   if (!reservation.allowed) {
     response.off?.('close', onClose);

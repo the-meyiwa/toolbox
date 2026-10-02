@@ -14,7 +14,7 @@
 
 import { getSetting } from '../lib/settings.js';
 import { tbConfirm, tbPrompt, tbAlert } from '../lib/dialog.js';
-import { showToast } from '../utils.js';
+import { showToast, isDangerousUri } from '../utils.js';
 import { streamChatCompletion, getActiveAiMode, setActiveAiMode, AI_MODES, prewarmAssistant } from '../lib/ai-provider.js';
 import { warmGateway } from '../lib/model-gateway.js';
 import { QuotaManager } from '../lib/quota-manager.js';
@@ -281,6 +281,31 @@ const SUGGESTIONS = [
 const TEXT_EXT = /\.(txt|md|markdown|csv|tsv|json|js|mjs|ts|tsx|jsx|py|html|css|xml|yml|yaml|sql|log|ini|toml|sh|c|cpp|h|java|go|rs|rb|php|swift|kt)$/i;
 const isTextFile = (file) => /^text\//.test(file.type) || /json|xml|javascript|yaml|csv|sql/.test(file.type) || TEXT_EXT.test(file.name);
 const MAX_ATTACH = 20 * 1024 * 1024;
+const MAX_BINARY_FILES = 4;        // images and documents per message; text files are inlined
+const MAX_IMAGE_SIDE = 2048;       // models read detail well at this size; bigger only slows the request
+
+/** Large photos are scaled down before sending: a 12 MB phone photo would exceed the request limit. */
+function shrinkImage(dataUrl, type) {
+  return new Promise((resolve) => {
+    if (typeof document === 'undefined' || /svg|gif/.test(type)) { resolve(null); return; }
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, MAX_IMAGE_SIDE / Math.max(img.width, img.height));
+      if (k === 1 && dataUrl.length < 1_600_000) { resolve(null); return; }
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(img.width * k)); c.height = Math.max(1, Math.round(img.height * k));
+      const ctx = c.getContext('2d');
+      if (type !== 'image/png') { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); }
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      try {
+        const out = type === 'image/png' && k === 1 ? null : c.toDataURL(type === 'image/png' ? 'image/png' : 'image/jpeg', 0.86);
+        resolve(out && out.length < dataUrl.length ? out : null);
+      } catch { resolve(null); }
+    };
+    img.onerror = () => resolve(null);
+    img.src = dataUrl;
+  });
+}
 
 function b64FromText(text) {
   const bytes = new TextEncoder().encode(text);
@@ -327,6 +352,14 @@ function readAttachment(file) {
         att.isText = true;
       } else {
         att.dataUrl = String(raw);
+        if (/^image\//.test(att.type)) {
+          const small = await shrinkImage(att.dataUrl, att.type);
+          if (small) {
+            att.dataUrl = small;
+            att.type = small.slice(5, small.indexOf(';'));
+            att.size = Math.round((small.length - small.indexOf(',') - 1) * 0.75);
+          }
+        }
         att.base64 = att.dataUrl.includes(',') ? att.dataUrl.split(',')[1] : null;
         if (/^image\//.test(att.type)) att.thumb = await makeThumb(att.dataUrl);
       }
@@ -355,6 +388,45 @@ function attachmentChip(a, { removable = false } = {}) {
     <span class="ast-file-meta"><span class="ast-file-name">${esc(a.name)}</span><span class="ast-file-size">${esc([extOf(a.name), fmtSize(a.size)].filter(Boolean).join(' · '))}</span></span>
     ${removable ? `<button type="button" class="ast-file-x" data-remove="${esc(a.id)}" aria-label="Remove ${esc(a.name)}">${icon('x', 12, 2.2)}</button>` : ''}
   </div>`;
+}
+
+/* Result cards are drawn by many renderers from tool data: web pages, emails, files. Whatever
+   they produce, nothing in the thread may run script: inline handlers, script URLs and frames
+   that could run with Toolbox's origin are removed the moment they appear (a MutationObserver
+   callback runs before any image error or frame load could fire). */
+function defang(el) {
+  if (el.nodeType !== 1) return;
+  const tag = el.tagName;
+  if (tag === 'SCRIPT') { el.remove(); return; }
+  for (const { name, value } of [...el.attributes]) {
+    const n = name.toLowerCase();
+    if (n.startsWith('on')) el.removeAttribute(name);
+    else if ((n === 'href' || n === 'src' || n === 'xlink:href' || n === 'action' || n === 'formaction' || n === 'data') && isDangerousUri(value)) el.removeAttribute(name);
+  }
+  if (tag === 'IFRAME' || tag === 'FRAME') {
+    const sandbox = el.getAttribute('sandbox');
+    const tokens = sandbox == null ? null : sandbox.split(/\s+/);
+    if (!tokens || (tokens.includes('allow-scripts') && tokens.includes('allow-same-origin'))) {
+      el.removeAttribute('srcdoc');
+      if (/^\s*(javascript|data):/i.test(el.getAttribute('src') || '')) el.removeAttribute('src');
+    }
+  }
+  if (tag === 'OBJECT' || tag === 'EMBED') el.remove();
+}
+function watchThread(node) {
+  if (typeof MutationObserver !== 'function') return null;
+  const observer = new MutationObserver((records) => {
+    for (const r of records) {
+      if (r.type === 'attributes') { defang(r.target); continue; }
+      for (const n of r.addedNodes) {
+        if (n.nodeType !== 1) continue;
+        defang(n);
+        n.querySelectorAll?.('*').forEach(defang);
+      }
+    }
+  });
+  observer.observe(node, { childList: true, subtree: true, attributes: true, attributeFilter: ['href', 'src', 'srcdoc', 'sandbox', 'action', 'formaction', 'onclick', 'onerror', 'onload', 'onmouseover', 'onfocus', 'onanimationstart', 'onpointerdown', 'ontoggle'] });
+  return observer;
 }
 
 /* ============================================================
@@ -451,6 +523,7 @@ function mountAssistant(container, state) {
   const topTitle = $('.ast-top-title');
   const scroller = $('.ast-scroll');
   const thread = $('.ast-thread');
+  const threadGuard = watchThread(thread);
   const jumpBtn = $('.ast-jump');
   const form = $('.ast-composer');
   const input = $('.ast-input');
@@ -498,6 +571,7 @@ function mountAssistant(container, state) {
     return d.toLocaleDateString(undefined, { month: 'long', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric' });
   }
 
+  const knownConvs = new Set();
   function renderConvList() {
     const q = searchInput.value.trim().toLowerCase();
     const list = store.conversations.filter(c => c.messages?.length).filter(c => !q
@@ -519,6 +593,11 @@ function mountAssistant(container, state) {
         </div>`;
       }
       convList.innerHTML = html;
+      // A chat that just appeared slides into the list.
+      convList.querySelectorAll('.ast-conv').forEach((row) => {
+        if (knownConvs.size && !knownConvs.has(row.dataset.id)) row.classList.add('is-new');
+        knownConvs.add(row.dataset.id);
+      });
     }
     const user = getCurrentUser();
     const sync = { syncing: 'Syncing…', synced: 'Synced to your account', offline: 'Saved on this device', idle: user ? 'Saved to your account' : 'Saved on this device' }[store.syncState] || '';
@@ -651,6 +730,12 @@ function mountAssistant(container, state) {
     topTitle.textContent = conv && messages.length ? (conv.title || 'New chat') : 'New chat';
   }
 
+  /** Changing chats: the thread settles in, so it reads as a new page rather than a jump. */
+  function settleThread() {
+    if (reduceMotion() || typeof thread.animate !== 'function') return;
+    thread.animate([{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], { duration: 320, easing: 'cubic-bezier(.16, 1, .3, 1)' });
+  }
+
   function startNewChat() {
     if (!guardSwitch()) return;
     taskState = { activeToolId: state.tool?.id || null, attachedFiles: [] };
@@ -658,6 +743,7 @@ function mountAssistant(container, state) {
     store.activeId = conv.id;
     messages = [];
     renderThread();
+    settleThread();
     renderConvList();
     renderTitle();
     if (isDrawer()) setSidebar(false);
@@ -674,6 +760,7 @@ function mountAssistant(container, state) {
     messages = (c.messages || []).map(m => ({ ...m }));
     store.select(c.id);
     renderThread();
+    settleThread();
     renderConvList();
     renderTitle();
     if (isDrawer()) setSidebar(false);
@@ -800,6 +887,7 @@ function mountAssistant(container, state) {
       m.displayText = text;
       m.content = `${text}${extra}`;
       m.timestamp = Date.now();
+      m.turnId = `turn_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
       messages.length = idx + 1;
       persist();
       renderThread();
@@ -833,7 +921,7 @@ function mountAssistant(container, state) {
       if (!msg.segments) msg.segments = legacySegments(msg);
       if (!msg.toolResults) msg.toolResults = [];
       msg.segments.forEach((seg, i) => this.mountSegment(seg, i));
-      if (live) this.setWaiting(true);
+      if (live) { this.el.classList.add('is-live', 'is-arriving'); this.setWaiting(true); }
       else this.finish();
     }
 
@@ -971,7 +1059,7 @@ function mountAssistant(container, state) {
     }
     addStepEl(groupEl, run) {
       const li = document.createElement('li');
-      li.className = 'ast-step';
+      li.className = this.live ? 'ast-step is-new' : 'ast-step';
       li.dataset.run = run.id;
       groupEl.querySelector('.ast-steps').appendChild(li);
       this.paintStep(li, run);
@@ -1020,7 +1108,7 @@ function mountAssistant(container, state) {
       try { normalized = integration.normalizeToolResult(result, run.name); } catch { return; }
       if (normalized.renderer === 'task-plan' || isPlainTextResult(normalized)) return;
       const host = document.createElement('div');
-      host.className = 'ast-card';
+      host.className = this.live ? 'ast-card is-new' : 'ast-card';
       host.dataset.run = run.id;
       groupEl.querySelector('.ast-cards').appendChild(host);
       Promise.resolve(integration.renderToolResult(result, host, run.name)).then(() => {
@@ -1046,7 +1134,8 @@ function mountAssistant(container, state) {
       for (let i = this.msg.segments.length - 1; i >= 0 && !run; i--) {
         const s = this.msg.segments[i];
         if (s.k !== 'tools') continue;
-        run = s.runs.find(x => (id && x.id === id) || (!id && x.name === name && x.status === 'running'));
+        // Some models reuse call ids between steps: a running call with this id wins over a finished one.
+        run = s.runs.find(x => x.status === 'running' && ((id && x.id === id) || (!id && x.name === name)));
         if (run) seg = s;
       }
       if (!run) {   // result without a start event
@@ -1074,7 +1163,7 @@ function mountAssistant(container, state) {
     /* plan */
     planEl(seg) {
       const el = document.createElement('div');
-      el.className = 'ast-plan';
+      el.className = this.live ? 'ast-plan is-new' : 'ast-plan';
       this.paintPlan(el, seg);
       return el;
     }
@@ -1101,12 +1190,16 @@ function mountAssistant(container, state) {
     }
 
     /* waiting indicator */
-    setWaiting(on) {
+    setWaiting(on, override = '') {
       if (!this.live) { this.liveEl.hidden = true; return; }
       if (on) {
-        if (!this.liveEl.hidden) return;
+        if (!this.liveEl.hidden) {
+          const shimmer = this.liveEl.querySelector('.ast-shimmer');
+          if (override && shimmer) shimmer.textContent = override;
+          return;
+        }
         this.waitStart = Date.now();
-        const label = this.msg.segments.length ? 'Working' : 'Thinking';
+        const label = override || (this.msg.segments.length ? 'Working' : 'Thinking');
         this.liveEl.innerHTML = `${GLYPH}<span class="ast-shimmer">${label}</span><span class="ast-live-time u-num"></span>`;
         this.liveEl.hidden = false;
         const t = this.liveEl.querySelector('.ast-live-time');
@@ -1123,7 +1216,10 @@ function mountAssistant(container, state) {
 
     /* done */
     finish() {
+      const wasLive = this.live;
       this.live = false;
+      this.el.classList.remove('is-live', 'is-arriving');
+      if (wasLive) this.foot.classList.add('is-revealed');
       this.endThinking();
       this.setWaiting(false);
       this.timers.forEach(clearInterval);
@@ -1234,6 +1330,7 @@ function mountAssistant(container, state) {
   const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(() => { if (stick) scroller.scrollTop = scroller.scrollHeight; }) : null;
   ro?.observe(thread);
   disposers.push(() => ro?.disconnect());
+  disposers.push(() => threadGuard?.disconnect());
 
   /* ---------------- composer ---------------- */
 
@@ -1273,9 +1370,14 @@ function mountAssistant(container, state) {
       </button>`).join('')}`;
   }
 
+  const shownChips = new Set();
   function renderFiles() {
     filesRow.hidden = !attachments.length;
     filesRow.innerHTML = attachments.map(a => attachmentChip(a, { removable: true })).join('');
+    // Only chips that just arrived pop in; the rest stay put.
+    filesRow.querySelectorAll('.ast-file[data-id]').forEach((chip) => { if (!shownChips.has(chip.dataset.id)) chip.classList.add('is-new'); });
+    shownChips.clear();
+    attachments.forEach(a => shownChips.add(a.id));
     updateComposerState();
   }
 
@@ -1285,13 +1387,12 @@ function mountAssistant(container, state) {
       if (file.size > MAX_ATTACH) { tbAlert(`${file.name} is larger than 20 MB.`, 'File too large'); continue; }
       try {
         const att = await readAttachment(file);
-        if (!att.isText) {
-          // The engine sends one image or document per message; text files are inlined.
-          const prev = attachments.find(a => !a.isText);
-          if (prev) attachments = attachments.filter(a => a !== prev);
+        if (!att.isText && attachments.filter(a => !a.isText).length >= MAX_BINARY_FILES) {
+          tbAlert(`You can send up to ${MAX_BINARY_FILES} images or documents in one message. Text and code files can be added on top.`, 'Attachment');
+          continue;
         }
         attachments.push(att);
-        if (attachments.length > 6) attachments = attachments.slice(-6);
+        if (attachments.length > 10) attachments = attachments.slice(-10);
       } catch (err) {
         tbAlert(err?.message || 'Could not read that file.', 'Attachment');
       }
@@ -1313,9 +1414,12 @@ function mountAssistant(container, state) {
       const base64 = bytesToBase64(bytes);
       const dataUrl = `data:${type};base64,${base64}`;
       att = { id: newId('f'), ...pseudo, size: pseudo.size || bytes.length, dataUrl, base64, path: f.path };
-      if (/^image\//.test(type)) att.thumb = await makeThumb(dataUrl);
-      const prev = attachments.find(a => !a.isText);
-      if (prev) attachments = attachments.filter(a => a !== prev);
+      if (/^image\//.test(type)) {
+        const small = await shrinkImage(dataUrl, type);
+        if (small) { att.dataUrl = small; att.base64 = small.split(',')[1]; att.type = small.slice(5, small.indexOf(';')); }
+        att.thumb = await makeThumb(att.dataUrl);
+      }
+      if (attachments.filter(a => !a.isText).length >= MAX_BINARY_FILES) throw new Error(`up to ${MAX_BINARY_FILES} images or documents per message`);
     }
     attachments.push(att);
     renderFiles();
@@ -1411,22 +1515,27 @@ function mountAssistant(container, state) {
     const quota = QuotaManager.canSendMessage();
     if (!quota.allowed) { tbAlert(quota.reason || 'You have reached your message limit.', 'Assistant'); return; }
 
-    const primary = attachments.find(a => !a.isText) || attachments[0] || null;
+    const binaries = attachments.filter(a => !a.isText);
+    const primary = binaries[0] || attachments[0] || null;
     const inlined = attachments.filter(a => a !== primary && a.isText);
-    let modelContent = text || (primary ? `Please look at the attached file "${primary.name}".` : '');
+    const asFile = (a) => ({ name: a.name, type: a.type, size: a.size, base64: a.base64, text: a.text || null });
+    let modelContent = text || (binaries.length > 1 ? `Please look at the attached files: ${binaries.map(a => `"${a.name}"`).join(', ')}.` : primary ? `Please look at the attached file "${primary.name}".` : '');
     for (const a of inlined) modelContent += `\n\nAttached file "${a.name}":\n\`\`\`\n${String(a.text || '').slice(0, 60000)}\n\`\`\``;
 
     if (!conv) startNewChat();
     const turnId = `turn_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const msg = {
       id: newId('m'), turnId, role: 'user', content: modelContent, displayText: text,
-      fileData: primary ? { name: primary.name, type: primary.type, size: primary.size, base64: primary.base64, text: primary.text || null } : null,
+      fileData: primary ? asFile(primary) : null,
+      moreFiles: binaries.slice(1).map(asFile),
       attachments: attachments.map(a => ({ name: a.name, size: a.size, type: a.type, thumb: a.thumb || null })),
       timestamp: Date.now(),
     };
+    const from = form.getBoundingClientRect();
     if (!messages.length) thread.innerHTML = '';
     messages.push(msg);
-    thread.appendChild(userView(msg));
+    const sentEl = userView(msg);
+    thread.appendChild(sentEl);
     input.value = '';
     attachments = [];
     renderFiles();
@@ -1434,7 +1543,23 @@ function mountAssistant(container, state) {
     persist();
     renderConvList();
     scrollToBottom(true);
+    liftFromComposer(sentEl, from);
     runTurn();
+  }
+
+  /** The message rises out of the composer into its place in the thread. */
+  function liftFromComposer(turnEl, from) {
+    const box = turnEl.querySelector('.ast-user');
+    if (!box || reduceMotion() || typeof box.animate !== 'function') return;
+    const to = box.getBoundingClientRect();
+    if (!to.width) return;
+    const dx = from.right - 16 - to.right, dy = from.top + 12 - to.top;
+    box.animate([
+      { transform: `translate(${dx}px, ${dy}px) scale(.94)`, opacity: 0.35, transformOrigin: '100% 100%' },
+      { opacity: 1, offset: 0.45 },
+      { transform: 'none', opacity: 1, transformOrigin: '100% 100%' },
+    ], { duration: 460, easing: 'cubic-bezier(.16, 1, .3, 1)' });
+    sendBtn.animate?.([{ transform: 'translateY(0)' }, { transform: 'translateY(-4px) scale(.94)' }, { transform: 'none' }], { duration: 320, easing: 'cubic-bezier(.34, 1.4, .64, 1)' });
   }
 
   async function runTurn() {
@@ -1486,7 +1611,11 @@ function mountAssistant(container, state) {
         onThinking: (t) => { bump(); view.thinking(t); },
         onToolCallStart: (name, args, id) => { bump(); prewarmForTool(name); view.toolStart(name, args, id); },
         onToolCallResult: (name, res, id) => { bump(); view.toolResult(name, res, id); },
-        onStatus: (s) => { bump(); if (s?.type === 'continuing') { view.endThinking(); view.setWaiting(true); } },
+        onStatus: (s) => {
+          bump();
+          if (s?.type === 'continuing') { view.endThinking(); view.setWaiting(true); }
+          else if (s?.type === 'retrying') { view.endThinking(); view.setWaiting(true, 'Reconnecting'); }
+        },
         onProvider: (p) => { bump(); msg.provider = p?.provider || null; msg.providerLabel = p?.label || p?.provider || null; msg.model = p?.model || null; },
       });
       if (!String(msg.content || '').trim() && result?.text) view.text(result.text);
@@ -1540,6 +1669,8 @@ function mountAssistant(container, state) {
     let u = idx - 1;
     while (u >= 0 && messages[u].role !== 'user') u--;
     if (u < 0) return;
+    // A regenerated reply is a new task with its own step budget, not more steps of the old one.
+    messages[u].turnId = `turn_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     messages.length = u + 1;
     persist();
     renderThread();
@@ -1638,6 +1769,7 @@ function mountAssistant(container, state) {
   }
 
   on(root, 'keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('[data-md-img]')) { e.preventDefault(); handleMarkdownClick(e); return; }
     if (e.key === 'Escape') {
       if (root.querySelector('.ast-pop:not([hidden])')) { closePops(); return; }
       if (isDrawer() && root.dataset.side === 'open') { setSidebar(false); return; }

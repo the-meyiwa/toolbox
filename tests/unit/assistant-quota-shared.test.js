@@ -127,6 +127,16 @@ test('Daily, turn and work limits remain enforced across gateway instances', asy
   assert.match((await another.reserve(daily,prompt('daily_49'))).reason,/work limit/);
 });
 
+test('The confirmed owner can run one task past the per-task step cap', async () => {
+  const owner=await createQuotaUser(db,'meyigbenee@gmail.com'); const client=quotaClient(db,owner);
+  for(let i=0;i<45;i++) {
+    const receipt=await client.reserve(owner,prompt('owner_long_task'));
+    assert.equal(receipt.allowed,true);
+    await client.commit(owner,receipt);
+  }
+  assert.equal((await client.summary()).messagesUsed,1);
+});
+
 test('Failed provider attempts refund messages but cannot bypass the work rate limit', async () => {
   const user=await createQuotaUser(db); const client=quotaClient(db,user);
   for(let i=0;i<40;i++) await client.release(user,await client.reserve(user,prompt(`failed_${i}`)));

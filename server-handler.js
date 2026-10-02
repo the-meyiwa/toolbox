@@ -69,6 +69,41 @@ function isAllowedOrigin(origin, request) {
   return isAllowedRequestOrigin(origin, request);
 }
 
+// The page-reading routes fetch the open web for the Assistant and the Browser tool. Signed-in
+// people use them freely; anonymous callers get a small allowance per address and in total,
+// so a deployment is never an open, unlimited proxy for anyone on the internet.
+const ANON_PROXY = { perAddress: 30, total: 300, windowMs: 60_000 };
+const anonByAddress = new Map();
+let anonTotal = [];
+const PROXY_ROUTES = new Set(['/api/assistant/search', '/api/assistant/browser/search', '/api/assistant/browser/fetch', '/api/assistant/browser/scrape', '/api/assistant/browser/images', '/api/assistant/browser/fetch-binary']);
+
+function callerAddress(request) {
+  const forwarded = String(request.headers['cf-connecting-ip'] || request.headers['x-real-ip'] || String(request.headers['x-forwarded-for'] || '').split(',')[0] || '').trim();
+  return forwarded || request.socket?.remoteAddress || 'unknown';
+}
+
+async function proxyAllowed(request, response) {
+  if (isLocalDevelopmentRequest(request)) return true;
+  let user = null;
+  try { user = await authenticatedUser(request); } catch { user = null; }
+  if (user) return true;
+  const now = Date.now();
+  anonTotal = anonTotal.filter(at => now - at < ANON_PROXY.windowMs);
+  const address = callerAddress(request);
+  const hits = (anonByAddress.get(address) || []).filter(at => now - at < ANON_PROXY.windowMs);
+  if (hits.length >= ANON_PROXY.perAddress || anonTotal.length >= ANON_PROXY.total) {
+    const oldest = Math.min(...(hits.length >= ANON_PROXY.perAddress ? hits : anonTotal));
+    response.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': String(Math.max(1, Math.ceil((oldest + ANON_PROXY.windowMs - now) / 1000))) });
+    response.end(JSON.stringify({ success: false, error: 'Too many web requests. Sign in to Toolbox or wait a minute.' }));
+    return false;
+  }
+  hits.push(now);
+  anonByAddress.set(address, hits);
+  anonTotal.push(now);
+  if (anonByAddress.size > 5000) for (const [key, list] of anonByAddress) if (!list.some(at => now - at < ANON_PROXY.windowMs)) anonByAddress.delete(key);
+  return true;
+}
+
 function safeEqualHex(a, b) {
   const x = Buffer.from(String(a || ''), 'utf8');
   const y = Buffer.from(String(b || ''), 'utf8');
@@ -552,6 +587,8 @@ export async function handleApiRequest(request, response) {
   if (url.pathname.startsWith('/api/mail/')) return handleMail(request, response, url);
   if (url.pathname.startsWith('/api/maps/')) return handleMaps(request, response, url);
 
+  if (PROXY_ROUTES.has(url.pathname) && !(await proxyAllowed(request, response))) return true;
+
   // --- Assistant Binary Proxy ---
   if (url.pathname === '/api/assistant/browser/fetch-binary' && request.method === 'GET') {
     const targetUrl = (url.searchParams.get('url') || '').trim();
@@ -670,9 +707,10 @@ export async function handleApiRequest(request, response) {
           role: message.role === 'assistant' ? 'model' : 'user',
           parts: [{ text: String(message.content) }]
         }));
-        const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
+        // The key travels in a header: URLs end up in proxy and provider logs.
+        const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
           body: JSON.stringify({ contents, systemInstruction: { parts: [{ text: systemInstruction }] } }),
           signal: AbortSignal.timeout(45000)
         });

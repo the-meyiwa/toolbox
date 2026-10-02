@@ -127,7 +127,7 @@ begin
     if not v_unlimited and v_recent>=40 then
       v_reason := 'The Assistant is handling too many steps. Please wait a minute and try again.';
       v_retry := ceil(extract(epoch from v_oldest+interval '1 minute'-v_now));
-    elsif v_turn.id is not null and v_turn.steps>=32 then
+    elsif not v_unlimited and v_turn.id is not null and v_turn.steps>=32 then
       v_reason := 'This Assistant task has used its available steps. Start a new message.';
     elsif v_turn.id is null and not v_unlimited and v_account.messages_count>=50 then
       v_reason := 'Daily Assistant message limit reached. It resets at midnight UTC.';

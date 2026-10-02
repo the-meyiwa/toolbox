@@ -894,6 +894,63 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
 @keyframes ast-spin { to { transform: rotate(360deg); } }
 @keyframes ast-breathe { 0%, 100% { opacity: .35; transform: scale(.85); } 50% { opacity: 1; transform: scale(1); } }
 
+/* ---------- arrival: what is new moves, what was already there stays still ----------
+   Live activity only (a reply being written, a file just attached, a chat just made);
+   reopening an old chat shows it at rest. */
+.ast { --ast-glide: cubic-bezier(.16, 1, .3, 1); --ast-spring: cubic-bezier(.34, 1.4, .64, 1); }
+@keyframes ast-in-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes ast-in-left { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+@keyframes ast-card-in { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }
+@keyframes ast-line-draw { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes ast-chip-in { from { opacity: 0; transform: scale(.8) translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes ast-glyph-in { from { opacity: 0; transform: scale(.4) rotate(-90deg); } to { opacity: 1; transform: none; } }
+
+/* The reply's first sign of life: the glyph spins up, the label slides in beside it. */
+.ast-turn-ai.is-arriving .ast-live .ast-glyph { animation: ast-glyph-in .5s var(--ast-spring) both; }
+.ast-turn-ai.is-arriving .ast-live .ast-shimmer { animation: ast-shimmer 2.4s linear infinite, ast-in-left .4s var(--ast-glide) both; }
+/* Streamed Markdown: each new block fades up as it begins. */
+.ast-md > .md-enter { animation: ast-in-up .42s var(--ast-glide) both; }
+/* Thinking, the plan and errors arrive like the text around them. */
+.ast-turn-ai.is-live .ast-think { animation: ast-in-up .36s var(--ast-glide) both; }
+.ast-plan.is-new, .ast-turn-ai .ast-error { animation: ast-card-in .48s var(--ast-glide) both; }
+/* Tool steps: each one slides in on the timeline, and the line to it draws down. */
+.ast-step.is-new { animation: ast-in-left .38s var(--ast-glide) both; }
+.ast-step.is-new .ast-step-node { animation: ast-chip-in .44s var(--ast-spring) both; }
+.ast-turn-ai.is-live .ast-step:not(:last-child)::before { transform-origin: 50% 0; animation: ast-line-draw .36s var(--ast-glide) both; }
+.ast-step[data-status="done"] .ast-step-node, .ast-step[data-status="error"] .ast-step-node { transition: border-color var(--dur-2) ease, color var(--dur-2) ease, transform .3s var(--ast-spring); }
+/* Result cards rise into place under their step. */
+.ast-card.is-new { animation: ast-card-in .55s var(--ast-glide) both; }
+/* The reply's actions appear once it is finished. */
+.ast-foot.is-revealed > * { animation: ast-in-up .36s var(--ast-glide) both; }
+.ast-foot.is-revealed > :nth-child(2) { animation-delay: 40ms; }
+.ast-foot.is-revealed > :nth-child(3) { animation-delay: 80ms; }
+.ast-foot.is-revealed > :nth-child(4) { animation-delay: 120ms; }
+/* Composer: attachments pop in; the send button turns into stop with a small spring. */
+.ast-file.is-new { animation: ast-chip-in .4s var(--ast-spring) both; }
+.ast-composer { transition: box-shadow .3s var(--ast-glide), border-color .2s ease; }
+.ast-composer:focus-within { box-shadow: 0 0 0 4px color-mix(in srgb, var(--ink) 6%, transparent), var(--shadow-2); }
+.ast-jump:not([hidden]) { animation: ast-chip-in .32s var(--ast-spring) both; }
+/* Chats list: a new chat slides into its group. */
+.ast-conv.is-new { animation: ast-in-left .42s var(--ast-glide) both; }
+/* Empty state: the mark lands, the greeting rises, suggestions follow one after another. */
+.ast-empty-mark { animation: ast-glyph-in .6s var(--ast-spring) both; }
+.ast-empty-title { animation: ast-in-up .5s var(--ast-glide) .08s both; }
+.ast-empty-sub { animation: ast-in-up .5s var(--ast-glide) .14s both; }
+.ast-sug { animation: ast-card-in .5s var(--ast-glide) both; animation-delay: calc(.18s + var(--i, 0) * 45ms); }
+.ast-sug-icon { transition: transform .35s var(--ast-spring), background-color var(--dur-1) ease; }
+.ast-sug:hover .ast-sug-icon { transform: scale(1.08) rotate(-4deg); }
+/* Images in replies wait for a tap when they come from another site. */
+.ast-md .md-img-hold {
+  display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; margin: 2px 0;
+  border: 1px dashed var(--line-control); border-radius: var(--radius-sm);
+  font-size: 13px; color: var(--text-2); cursor: pointer;
+  transition: background-color var(--dur-1) ease, color var(--dur-1) ease, border-color var(--dur-1) ease;
+}
+.ast-md .md-img-hold:hover, .ast-md .md-img-hold:focus-visible { background: var(--tint); color: var(--text); border-style: solid; }
+.ast-md .md-img-hold-ico { width: 14px; height: 11px; border: 1.5px solid currentColor; border-radius: 3px; position: relative; }
+.ast-md .md-img-hold-ico::after { content: ""; position: absolute; left: 2px; right: 2px; bottom: 2px; height: 4px; background: linear-gradient(135deg, transparent 45%, currentColor 46% 54%, transparent 55%); }
+.ast-md img.md-img-shown { max-width: 100%; border-radius: var(--radius-sm); animation: ast-card-in .45s var(--ast-glide) both; }
+
 @media (prefers-reduced-motion: reduce) {
   .ast *, .ast *::before, .ast *::after, .astc, .ast-modal, .ast-modal-card { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
   .ast-glyph-ring { display: none; }

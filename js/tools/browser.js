@@ -4,6 +4,7 @@
    reserved for the Assistant and advanced research tasks.
    Strictly uses minimal vector SVG icons with zero emojis.
    ============================================================ */
+import { proxyFetch } from '../lib/model-gateway.js';
 
 const ICONS = {
   lock: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
@@ -299,7 +300,7 @@ export default {
 
             // 1. First try Toolbox Assistant Browser fetch proxy to bypass CORS cleanly
             try {
-              const proxyResp = await fetch(`/api/assistant/browser/fetch?url=${encodeURIComponent(url)}`);
+              const proxyResp = await proxyFetch(`/api/assistant/browser/fetch?url=${encodeURIComponent(url)}`);
               if (proxyResp.ok) {
                 const pData = await proxyResp.json();
                 htmlText = pData.html || '';
