@@ -1,13 +1,13 @@
 /* ==========================================================================
    TOOLBOX — Mind
 
-   Personal Knowledge Graph & Mind Palace.  Every block arrives with
-   motion: titles rise word by word, cards lift with perspective tilt,
-   orbit rings draw in, map nodes pop, connection lines stroke in,
-   numbers count up, the cursor spotlight follows the pointer and
-   cards lean toward it.
+   Motion explains the place (js/lib/mind-motion.js): going in zooms
+   toward the card you tapped and it grows into the page; going back
+   zooms out and the page shrinks into its card; Space, Map and Sense
+   slide side by side; edits move only what changed. Entrances use the
+   shared reveal kinds in css/motion.css, as the Cosmetics Database does.
 
-   Only transform, opacity and clip-path move; nothing loops.
+   Only transform and opacity move; nothing loops.
    Reduced motion shows everything at once.
    ========================================================================== */
 
@@ -25,101 +25,8 @@
   overflow: hidden;
 }
 
-/* ==========================================================================
-   Reveal motion overrides — make the shared system (motion.css) more
-   dramatic, visible, and smooth within the Mind tool.  Uses Apple-like
-   deceleration throughout: no spring overshoot, no bounce.
-   ========================================================================== */
-.mind .rv-u {
-  transition:
-    opacity .85s var(--mind-ease),
-    transform 1.1s var(--mind-glide),
-    clip-path 1.1s var(--mind-glide) !important;
-  transition-delay: var(--rv-d, 0ms) !important;
-}
-/* Faster quick mode (search results, repaints). */
-.mind .rv-u.is-quick {
-  transition-duration: .5s, .65s, .7s !important;
-}
-/* Card: 3D perspective lift, larger distance. */
-.mind .rv-u[data-rv="card"]:not(.is-in) {
-  transform: perspective(900px) translateY(44px) scale(.92) rotateX(14deg);
-  opacity: 0;
-}
-/* Panel: taller rise. */
-.mind .rv-u[data-rv="panel"]:not(.is-in) {
-  transform: translateY(40px) scale(.96);
-  opacity: 0;
-}
-/* Pop: smooth scale-in, no bounce. */
-.mind .rv-u[data-rv="pop"] {
-  transition-timing-function: var(--mind-ease), var(--mind-glide), linear !important;
-  transition-duration: .6s, .75s, 0s !important;
-}
-.mind .rv-u[data-rv="pop"]:not(.is-in) {
-  transform: scale(.7);
-  opacity: 0;
-}
-/* Up: taller rise. */
-.mind .rv-u[data-rv="up"]:not(.is-in) {
-  transform: translateY(30px);
-  opacity: 0;
-}
-/* Row: longer slide. */
-.mind .rv-u[data-rv="row"]:not(.is-in) {
-  transform: translateX(40px);
-  opacity: 0;
-}
-/* Li: longer slide. */
-.mind .rv-u[data-rv="li"]:not(.is-in) {
-  transform: translateX(-28px);
-  opacity: 0;
-}
-/* Fade: longer, smoother. */
-.mind .rv-u[data-rv="fade"] {
-  transition-duration: 1.1s, 0s, 0s !important;
-}
-.mind .rv-u[data-rv="fade"]:not(.is-in) {
-  opacity: 0;
-}
-/* Widget (children cascade): smooth, no bounce. */
-.mind .rv-u[data-rv="widget"] > * {
-  transition: opacity .55s var(--mind-ease), transform .75s var(--mind-glide);
-  transition-delay: calc(var(--rv-d, 0ms) + var(--k, 0) * 55ms);
-}
-.mind .rv-u[data-rv="widget"]:not(.is-in) > * {
-  opacity: 0; transform: translateY(14px) scale(.88);
-}
-/* Title: word-by-word mask rise — slow, visible stagger. */
-.mind .rv-w > span {
-  transition: transform 1.3s var(--mind-glide) !important;
-  transition-delay: calc(var(--rv-d, 0ms) + var(--wi, 0) * 90ms) !important;
-}
-.mind .rv-u[data-rv="title"]:not(.is-in) .rv-w > span {
-  transform: translateY(115%) rotate(3deg);
-}
-/* Rule: smooth wipe. */
-.mind .rv-u[data-rv="rule"] {
-  clip-path: inset(-6px -4px -6px -4px);
-}
-.mind .rv-u[data-rv="rule"]:not(.is-in) {
-  clip-path: inset(-6px 100% -6px -4px); opacity: .15;
-}
-/* Wipe. */
-.mind .rv-u[data-rv="wipe"] {
-  clip-path: inset(0 0 0 0 round 14px);
-}
-.mind .rv-u[data-rv="wipe"]:not(.is-in) {
-  clip-path: inset(0 100% 0 0 round 14px); opacity: .2;
-}
-/* Flip: top-axis, no bounce. */
-.mind .rv-u[data-rv="flip"] {
-  transform-origin: 50% 0;
-}
-.mind .rv-u[data-rv="flip"]:not(.is-in) {
-  transform: perspective(700px) rotateX(-35deg) translateY(12px);
-  opacity: 0;
-}
+/* Cards rise without the steep tilt: Mind pages hold many of them. */
+.mind .rv-u[data-rv="card"]:not(.is-in) { transform: perspective(900px) translateY(22px) scale(.96) rotateX(8deg); }
 
 /* ==========================================================================
    Layout & structure
@@ -183,20 +90,6 @@
 
 /* ---------- Scene & directional page slides ---------- */
 .mind-scene { max-width: 1300px; min-height: 560px; margin: auto; position: relative; }
-
-/* Directional page slides — smooth Apple-like. */
-.mind-scene[data-rv-enter="forward"] { animation: mind-in-fwd .7s var(--mind-glide); }
-.mind-scene[data-rv-enter="back"]    { animation: mind-in-back .7s var(--mind-glide); }
-.mind-scene[data-rv-enter="up"]      { animation: mind-in-up .65s var(--mind-glide); }
-@keyframes mind-in-fwd  { from { opacity: 0; transform: translateX(50px); } }
-@keyframes mind-in-back { from { opacity: 0; transform: translateX(-50px); } }
-@keyframes mind-in-up   { from { opacity: 0; transform: translateY(24px); } }
-
-/* Bidirectional exit slides. */
-.mind-scene.mind-out-l { animation: mind-out-l .2s var(--mind-ease) both; }
-.mind-scene.mind-out-r { animation: mind-out-r .2s var(--mind-ease) both; }
-@keyframes mind-out-l { to { opacity: 0; transform: translateX(-24px); } }
-@keyframes mind-out-r { to { opacity: 0; transform: translateX(24px); } }
 
 /* ---------- Scene heading ---------- */
 .mind-scene-heading { text-align: center; margin: 56px auto 34px; max-width: 780px; }
@@ -268,15 +161,13 @@
 }
 .mind-object:hover::before { opacity: 1; }
 
-/* Sweep sheen on arrival. */
-.mind-object.mind-swept::after {
-  content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
-  transform: translateX(-110%);
-  background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--accent) 16%, transparent) 50%, transparent 70%);
-  animation: mind-sweep 1.5s var(--mind-ease) forwards;
-  animation-delay: calc(var(--rv-d, 0ms) + 300ms);
+/* An arrow says "this opens": it slides in when the card is pointed at. */
+.mind-object::after {
+  content: '→'; position: absolute; top: 16px; right: 18px; color: var(--accent); font-size: 17px; line-height: 1;
+  opacity: 0; transform: translateX(-8px); pointer-events: none;
+  transition: opacity .25s var(--mind-ease), transform .4s var(--mind-glide);
 }
-@keyframes mind-sweep { to { transform: translateX(110%); } }
+.mind-object:hover::after, .mind-object:focus-visible::after { opacity: 1; transform: none; }
 
 /* 3D tilt on hover (after arrival) — smooth, no bounce. */
 .mind-object.rv-arrived {
@@ -307,7 +198,6 @@
 .mind-room {
   position: absolute; width: clamp(160px, 18vw, 230px); min-height: 130px;
   left: calc(50% + var(--x) - clamp(80px, 9vw, 115px)); top: calc(50% + var(--y) - 65px);
-  view-transition-name: mind-room;
 }
 .mind-room::before {
   content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; opacity: 0;
@@ -315,7 +205,6 @@
   transition: opacity .4s var(--mind-ease);
 }
 .mind-room:hover::before { opacity: 1; }
-.mind-room:nth-of-type(n+2) { view-transition-name: none; }
 
 /* ---------- Empty state ---------- */
 .mind-empty { color: var(--text-2); text-align: center; padding: 36px; }
@@ -391,7 +280,8 @@
 
 /* Map nodes. */
 .mind-map-node {
-  position: absolute; left: var(--x); top: var(--y); transform: translate(-50%, -50%);
+  /* Centred with `translate`, so entrance and hover transforms never shift it. */
+  position: absolute; left: var(--x); top: var(--y); translate: -50% -50%;
   display: flex; flex-direction: column; gap: 3px; padding: 10px 13px;
   border: 1px solid var(--line); border-radius: 13px;
   background: var(--surface); color: var(--text); box-shadow: var(--shadow-1); text-align: left;
@@ -400,16 +290,17 @@
 .mind-map-node small { color: var(--accent); font-size: 9px; }
 .mind-map-node strong { font-size: 12px; white-space: nowrap; }
 .mind-map-node.active {
-  transform: translate(-50%, -50%) scale(1.18);
+  transform: scale(1.18);
   border-color: var(--accent); z-index: 2;
   box-shadow: 0 0 0 6px var(--mind-accent-soft), var(--shadow-1);
 }
 .mind-map-node.far { opacity: .32; }
+.mind-map-node.active:hover { transform: translateY(-3px) scale(1.2); }
 .mind-map-node:hover {
-  transform: translate(-50%, -50%) translateY(-3px) scale(1.05);
+  transform: translateY(-3px) scale(1.05);
   box-shadow: 0 16px 36px -18px rgba(0,0,0,.3);
 }
-.mind-map-node:active { transform: translate(-50%, -50%) scale(.96); transition-duration: .1s; }
+.mind-map-node:active { transform: scale(.96); transition-duration: .1s; }
 
 /* Cursor spotlight on map nodes. */
 .mind-map-node::before {
@@ -467,19 +358,6 @@
 .mind-sense-constellation.bridges .mind-object { border-color: color-mix(in srgb, var(--accent) 34%, var(--line)); }
 .mind-sense-constellation.edges .mind-object { opacity: .65; border-style: dashed; }
 
-/* Scroll-driven chapter entrance. */
-@supports (animation-timeline: view()) {
-  .mind-sense-chapter {
-    animation: mind-chapter-in linear both;
-    animation-timeline: view();
-    animation-range: entry 0% cover 30%;
-  }
-}
-@keyframes mind-chapter-in {
-  from { opacity: .08; transform: translateY(40px); clip-path: inset(0 0 18% 0); }
-  to   { opacity: 1;   transform: none;             clip-path: inset(0); }
-}
-
 /* Scroll progress bar under header. */
 @supports (animation-timeline: scroll()) {
   .mind-subhead::after {
@@ -493,18 +371,22 @@
   @keyframes mind-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 }
 
-/* ---------- Search results staggered entrance ---------- */
-.mind-results .mind-object {
-  animation: mind-dd-in .55s var(--mind-glide) both;
-  animation-delay: calc(min(var(--order, 0), 14) * 35ms);
+/* ---------- Map: the newly centred thing announces itself once ---------- */
+.mind-map-node::after {
+  content: ''; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+  border: 1px solid var(--accent); opacity: 0;
 }
-@keyframes mind-dd-in { from { opacity: 0; transform: translateY(-10px) scale(.98); } }
+.mind-map-node.is-centred::after { animation: mind-centred .9s var(--mind-ease) .35s both; }
+@keyframes mind-centred { from { opacity: .7; transform: scale(1); } to { opacity: 0; transform: scale(1.6); } }
 
-/* ---------- View transitions ---------- */
-::view-transition-old(mind-focus) { animation: .4s var(--mind-ease) both mind-vt-out; }
-::view-transition-new(mind-focus) { animation: .55s var(--mind-ease) both mind-vt-in; }
-@keyframes mind-vt-out { to { opacity: 0; transform: scale(.85); } }
-@keyframes mind-vt-in { from { opacity: 0; transform: scale(1.1); } }
+/* ---------- Save confirms in place ---------- */
+.mind-editor-actions .btn.is-saved { animation: mind-saved .5s var(--mind-glide); }
+@keyframes mind-saved { 40% { transform: scale(1.06); } }
+
+/* ---------- Ghosts: copies of a card carried between views ---------- */
+.mind-layer { position: fixed; inset: 0; z-index: 60; pointer-events: none; overflow: hidden; }
+.mind-layer .mind-ghost { font: inherit; text-align: left; overflow: hidden; }
+.mind-layer .mind-ghost::after, .mind-layer .mind-ghost::before { display: none; }
 
 /* ---------- Stat count-up ---------- */
 .mind-count {
@@ -578,9 +460,6 @@
     transform: none !important;
   }
   .mind-self::after { display: none; }
-  .mind-object.mind-swept::after { display: none; }
-  ::view-transition-old(mind-focus),
-  ::view-transition-new(mind-focus) { animation: none !important; }
-  .mind-scene[data-rv-enter] { animation: none !important; }
   .mind-pill { transition: none !important; }
+  .mind-layer { display: none; }
 }
