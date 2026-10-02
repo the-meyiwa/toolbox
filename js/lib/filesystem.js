@@ -359,10 +359,26 @@ export class ToolboxFilesystem {
       }
     }
 
-    // 2. Synchronize legacy artifacts from artifacts.js
+    // 2. Synchronize legacy artifacts from artifacts.js. Text files written here are also
+    //    mirrored into artifacts under the same id; those mirrors are the files themselves, so
+    //    they must not be copied into Documents (that made every saved file reappear in Home).
     try {
+      const metas = await dbDriver.listAllMeta();
+      const byId = new Map();
+      for (const m of metas) if (m.id && !m.isDirectory) (byId.get(m.id) || byId.set(m.id, []).get(m.id)).push(m);
+      // Remove copies an earlier version made: same id, in Documents, identical to the real file.
+      for (const [, records] of byId) {
+        if (records.length < 2) continue;
+        const real = records.find(r => r.parentPath !== '/Documents');
+        if (!real) continue;
+        for (const copy of records.filter(r => r !== real && r.parentPath === '/Documents')) {
+          const [a, b] = await Promise.all([dbDriver.get(real.path), dbDriver.get(copy.path)]);
+          if (a && b && !a.binaryData && !b.binaryData && a.content === b.content) await dbDriver.delete(copy.path);
+        }
+      }
       const legacyList = legacyArtifacts.list ? legacyArtifacts.list() : [];
       for (const item of legacyList) {
+        if (byId.has(item.id) || item.from === 'filesystem') continue;
         const destPath = `/Documents/${item.name}`;
         const existing = await dbDriver.get(destPath);
         if (!existing) {
@@ -401,6 +417,7 @@ export class ToolboxFilesystem {
     try {
       const legacy = legacyArtifacts.list ? legacyArtifacts.list() : [];
       for (const item of legacy) {
+        if (item.from === 'filesystem') continue;   // a mirror of a file listed at its real path
         if (!all.some(m => m.name === item.name || m.id === item.id)) {
           all.push({
             id: item.id,

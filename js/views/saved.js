@@ -24,7 +24,7 @@ import { kindFromFilename } from '../registry/kinds.js';
 import { hasRichPreview, editorFor, docFamily, mimeFor } from '../lib/docs/formats.js';
 import { askAssistant, ASK_ICON } from '../lib/ask-assistant.js';
 import { BY_ID, toolsAccepting } from '../registry/index.js';
-import { getFileTypeIcon, detectFileCategory } from '../lib/file-icons.js';
+import { getFileTypeIcon, getFileTypeColor, detectFileCategory } from '../lib/file-icons.js';
 import { getCurrentUser } from '../lib/supabase.js';
 import { attachSegmentedSlider } from '../lib/segmented-slider.js';
 import { openAccountModal } from './account-modal.js';
@@ -716,11 +716,10 @@ function renderGridIcon(item) {
   const thumb = !item.isDirectory && isImageName(item.name)
     ? `<img class="sv-thumb-img" alt="" data-thumb-path="${escapeHtml(item.path)}" hidden>`
     : '';
-  const marker = item.isDirectory ? 'FOLDER' : (extOf(item.name).toUpperCase() || kindOf(item).toUpperCase()).slice(0, 8);
-  const title = item.name.replace(/\.[^.]+$/, '').slice(0, 45);
+  const tint = getFileTypeColor(item.name, item.isDirectory ? 'folder' : item.kind);
   return `
     <div ${itemAttrs(item).replace('__CLS__', 'sv-grid-icon')} title="${escapeHtml(item.name)}">
-      <div class="sv-grid-thumb ${item.isDirectory ? 'is-folder' : ''}">${thumb}<span class="sv-grid-paper"><span class="sv-grid-paper-title">${escapeHtml(title)}</span><span class="sv-grid-paper-type">${escapeHtml(marker)}</span></span></div>
+      <div class="sv-grid-thumb ${item.isDirectory ? 'is-folder' : ''}" style="--tint:${tint}">${thumb}<span class="sv-grid-glyph">${getFileTypeIcon(item.name, item.isDirectory ? 'folder' : item.kind, 56)}</span></div>
       <div class="sv-grid-name">${escapeHtml(item.name)}</div>
       <div class="sv-grid-meta">${escapeHtml(kindOf(item))} · ${loc ? escapeHtml(loc) : itemMeta(item)}</div>
       ${renderTagDots(item.tags)}
@@ -733,7 +732,7 @@ function renderListRow(item) {
   return `
     <div ${itemAttrs(item).replace('__CLS__', 'sv-row')}>
       <div class="sv-cell sv-col-name">
-        <span class="sv-item-icon">${getFileTypeIcon(item.name, item.isDirectory ? 'folder' : item.kind, 18)}</span>
+        <span class="sv-item-icon">${getFileTypeIcon(item.name, item.isDirectory ? 'folder' : item.kind, 20)}</span>
         <span class="sv-item-text">
           <span class="sv-item-name">${escapeHtml(item.name)}</span>
           ${loc ? `<span class="sv-item-loc">in ${escapeHtml(loc)}</span>` : ''}
@@ -752,7 +751,7 @@ function renderSplitItem(item) {
   const meta = [loc ? `in ${loc}` : itemMeta(item), !item.isDirectory && item.updatedAt ? when(item.updatedAt) : ''].filter(Boolean).join(' · ');
   return `
     <div ${itemAttrs(item).replace('__CLS__', 'sv-split-item')}>
-      <span class="sv-item-icon">${getFileTypeIcon(item.name, item.isDirectory ? 'folder' : item.kind, 18)}</span>
+      <span class="sv-item-icon">${getFileTypeIcon(item.name, item.isDirectory ? 'folder' : item.kind, 20)}</span>
       <span class="sv-item-text">
         <span class="sv-item-name">${escapeHtml(item.name)}</span>
         <span class="sv-item-meta">${escapeHtml(meta)}</span>
