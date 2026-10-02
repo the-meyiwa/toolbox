@@ -17,6 +17,7 @@ import { getSetting } from './lib/settings.js';
 import { quickDeviceLookup, openQuickResult, quickResultHint, quickResultTitle } from './lib/devices/quick-search.js';
 import { renderSaved } from './views/saved.js';
 import { kindLabel } from './registry/kinds.js';
+import { getFileTypeIcon, getFileTypeColor } from './lib/file-icons.js';
 import { copyText, showToast } from './utils.js';
 import { initTheme } from './lib/theme.js';
 import { installSettingsUI, openSettings } from './lib/settings-ui.js';
@@ -875,7 +876,8 @@ const homeHeroSubmitBtn = $('home-hero-submit-btn');
 function updateSearchPlaceholder() {
   if (!homeHeroInput) return;
   const user = getCurrentUser();
-  homeHeroInput.placeholder = user ? 'Ask anything, or search tools…' : 'Ask anything, or search: compress a photo, merge PDFs…';
+  const narrow = window.innerWidth <= 560;
+  homeHeroInput.placeholder = user || narrow ? 'Ask anything, or search tools…' : 'Ask anything, or search: compress a photo, merge PDFs…';
   if (/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '')) document.querySelectorAll('#home-search-keys .k-mod').forEach(k => { k.textContent = '⌘'; });
 }
 
@@ -891,13 +893,14 @@ export function renderHomeAssistantBanner() {
   const btnText = user ? 'Open Assistant' : 'Sign in';
 
   bannerEl.innerHTML = `
-    <div class="home-assistant-card">
-      <div class="home-assistant-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 3v4M21 5h-4"/></svg></div>
-      <div class="home-assistant-text">
+    <div class="lp-head" style="--hue:262">
+      <span class="lp-head-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 3v4M21 5h-4"/></svg></span>
+      <div class="lp-head-text">
+        <small>Assistant</small>
         <h3 class="home-assistant-title">${titleText}</h3>
         <p class="home-assistant-desc">${descText}</p>
       </div>
-      <button type="button" class="btn btn-primary" id="btn-open-assistant">${btnText}</button>
+      <button type="button" class="lp-btn lp-btn-primary" id="btn-open-assistant">${btnText}</button>
     </div>
   `;
 
@@ -1118,31 +1121,67 @@ function renderQuickRow() {
   quickRow.innerHTML = popular(8)
     .filter(t => t.id !== 'assistant' && visible.some(v => v.id === t.id))
     .slice(0, 6)
-    .map(t => `
-      <a class="home-quick-item" href="#${t.id}">
+    .map((t, i) => `
+      <a class="home-quick-item lp-chip" href="#${t.id}" style="--k:${i}">
         <span class="home-quick-icon">${t.icon}</span>
         <span>${escapeHtml(t.name)}</span>
       </a>`).join('');
 }
 renderQuickRow();
 
+/* Each area of Toolbox has its own colour and emblem, used on its orbit tile and its card. */
+const TASK_LOOK = {
+  files: [214, '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-9 9"/>'],
+  numbers: [152, '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'],
+  writing: [32, '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>'],
+  lookup: [188, '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>'],
+  everyday: [42, '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'],
+  design: [292, '<circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.3"/><circle cx="12" cy="7.5" r="1.3"/><circle cx="15.5" cy="10" r="1.3"/><path d="M12 21a3 3 0 0 1 0-6h1.5a2.5 2.5 0 0 0 0-5"/>'],
+  law: [6, '<path d="M12 3v18M5 21h14M6 7h12M6 7l-3 7a3 3 0 0 0 6 0zM18 7l-3 7a3 3 0 0 0 6 0z"/>'],
+  science: [262, '<path d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7.5 15h9"/>'],
+  code: [230, '<path d="m8 8-5 4 5 4M16 8l5 4-5 4M13.5 5l-3 14"/>'],
+};
+const taskLook = (id) => TASK_LOOK[id] || [214, '<circle cx="12" cy="12" r="8"/>'];
+const taskIcon = (id, size = 18) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${taskLook(id)[1]}</svg>`;
+const homeTasks = byTask(TOOLS);
+
+/* Hero: the areas orbit the question, joined to it by tethers (motion in js/home-scroll.js). */
+(function renderHomeOrbit() {
+  const orbit = document.querySelector('.lp-orbit');
+  const tethers = document.querySelector('.lp-tethers');
+  if (!orbit || !tethers) return;
+  const n = homeTasks.length;
+  const spots = homeTasks.map((task, i) => {
+    // Start just right of the top and go round; the ellipse keeps tiles clear of the centre.
+    const theta = (i / n) * Math.PI * 2 - Math.PI / 2 + Math.PI / n;
+    return { task, x: +(Math.cos(theta) * 41).toFixed(2), y: +(Math.sin(theta) * 40).toFixed(2) };
+  });
+  tethers.innerHTML = spots.map(({ task, x, y }) => `<line x1="50" y1="50" x2="${50 + x}" y2="${50 + y}" style="--hue:${taskLook(task.id)[0]}"/>`).join('');
+  orbit.innerHTML = spots.map(({ task, x, y }, i) => `
+    <a class="lp-tile" href="#home-task-${task.id}" data-task="${task.id}" style="--x:${x}%;--y:${y}%;--hue:${taskLook(task.id)[0]};--order:${i}">
+      <span class="lp-ico">${taskIcon(task.id, 16)}</span>
+      <strong>${escapeHtml(task.label)}</strong>
+      <span class="lp-meta"><b class="lp-count" data-count="${task.tools.length}">${task.tools.length}</b> tools</span>
+    </a>`).join('');
+})();
+
 /* The task lens. Categories answer "what subject is this?"; the home page
    has to answer "what am I trying to do?", which is a different question
    and the only one a first-time visitor is actually asking. */
 const taskGrid = $('home-tasks');
 if (taskGrid) {
-  taskGrid.innerHTML = byTask(TOOLS).map(task => `
-    <section class="home-task">
-      <h2 class="home-task-label">${escapeHtml(task.label)}</h2>
-      <p class="home-task-blurb">${escapeHtml(task.blurb)}</p>
-      <div class="home-task-tools">
+  taskGrid.innerHTML = homeTasks.map((task, i) => `
+    <section class="lp-card" id="home-task-${task.id}" style="--hue:${taskLook(task.id)[0]};--order:${i}">
+      <div class="lp-card-top"><span class="lp-ico">${taskIcon(task.id, 17)}</span><h3 class="lp-card-label">${escapeHtml(task.label)}</h3><span class="lp-pill"><b class="lp-count" data-count="${task.tools.length}">${task.tools.length}</b></span></div>
+      <p class="lp-card-blurb">${escapeHtml(task.blurb)}</p>
+      <div class="lp-card-tools">
         ${task.tools.slice(0, 6).map(t => `
-          <a class="home-task-tool" href="#${t.id}">
-            <span class="home-task-icon">${t.icon}</span>
+          <a class="lp-tool" href="#${t.id}">
+            <span class="lp-tool-icon">${t.icon}</span>
             <span>${escapeHtml(t.name)}</span>
           </a>`).join('')}
       </div>
-      <a class="home-task-more" href="#tools">All ${task.tools.length} ${uiIcon('chevron-right')}</a>
+      <a class="lp-card-more" href="#tools">All ${task.tools.length} ${uiIcon('chevron-right')}</a>
     </section>`).join('');
 }
 
@@ -1160,12 +1199,12 @@ function reflectSavedWork() {
   const list = $('home-saved-list');
   if (list) {
     list.innerHTML = items.length
-      ? items.slice(0, 5).map(m => `
-          <a class="home-file-row" href="#saved/${m.id}">
-            <span class="home-file-name">${escapeHtml(m.name)}</span>
-            <span class="home-file-kind">${escapeHtml(kindLabel(m.kind))}</span>
+      ? items.slice(0, 6).map((m, i) => `
+          <a class="lp-file" href="#saved/${m.id}" style="--tint:${getFileTypeColor(m.name, m.kind)};--order:${i}">
+            <span class="lp-file-icon">${getFileTypeIcon(m.name, m.kind, 40)}</span>
+            <span class="lp-file-text"><strong>${escapeHtml(m.name)}</strong><small>${escapeHtml(kindLabel(m.kind))}</small></span>
           </a>`).join('')
-      : `<div class="empty-state">
+      : `<div class="empty-state lp-empty">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
           <strong>Nothing saved yet</strong>
           <span>Converted files and exports you keep will show up here.</span>
@@ -1175,6 +1214,19 @@ function reflectSavedWork() {
 
 artifacts.onChange(reflectSavedWork);
 reflectSavedWork();
+
+/* At a glance: counted from the registry and storage, never typed in. */
+function renderHomeStats() {
+  const el = document.querySelector('.lp-stats');
+  if (!el) return;
+  const stat = (n, label, hint, hue) => `<div class="lp-stat" style="--hue:${hue}"><strong class="lp-count" data-count="${n}">${n}</strong><span>${label}</span><small>${hint}</small></div>`;
+  el.innerHTML = stat(TOOLS.length, 'Tools', 'One place for the small jobs', 214)
+    + stat(OFFLINE_TOOLS.length, 'Work offline', 'Nothing leaves your browser', 152)
+    + stat(homeTasks.length, 'Areas', 'From files to law to code', 262)
+    + stat(artifacts.list().length, 'Saved files', 'Kept in this browser', 32);
+}
+renderHomeStats();
+artifacts.onChange(renderHomeStats);
 
 
 // Right-click menus for tool links, the open tool and the page (js/lib/global-menus.js).

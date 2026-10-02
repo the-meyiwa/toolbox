@@ -38,6 +38,7 @@
 @import url("./assistant-popup.css");
 @import url("./glass.css");
 @import url("./text-actions.css");
+@import url("./landing.css");
 
 .messages-typing { display: flex; align-items: center; gap: 8px; padding: 4px 16px 12px; color: var(--text-secondary); font-size: 0.8rem; }
 .messages-typing[hidden] { display: none !important; }
