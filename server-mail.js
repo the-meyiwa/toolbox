@@ -29,6 +29,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { isLocalDevelopmentRequest, isAllowedRequestOrigin, sessionCacheKey } from './server-security.js';
+import { isTestAccountEmail, TEST_ACCOUNT_MESSAGE } from './js/lib/account-policy.js';
 
 const GMAIL = 'https://gmail.googleapis.com/gmail/v1/users/me';
 const GRAPH = 'https://graph.microsoft.com/v1.0/me';
@@ -401,6 +402,7 @@ async function authenticate(request) {
   if (!res.ok) throw new MailError('Your Toolbox session has expired. Sign in again.', 401, 'signin');
   const user = await res.json();
   if (!user?.id) throw new MailError('A signed-in Toolbox account is required.', 401, 'signin');
+  if (isTestAccountEmail(user.email)) throw new MailError(TEST_ACCOUNT_MESSAGE, 403, 'signin');
   if (authCache.size > 500) authCache.clear();
   authCache.set(cacheKey, { user, exp: Date.now() + 60_000 });
   return user;

@@ -23,7 +23,8 @@ import { initTheme } from './lib/theme.js';
 import { installSettingsUI, openSettings } from './lib/settings-ui.js';
 import { hasToolSettings } from './lib/tool-settings.js';
 import { installHeaderMenu } from './lib/header-menu.js';
-import { getCurrentUser, parseAuthRedirect } from './lib/supabase.js';
+import { getCurrentUser, parseAuthRedirect, validateSession } from './lib/supabase.js';
+import { isTestAccountEmail, isIssuedAccessToken, TEST_ACCOUNT_MESSAGE } from './lib/account-policy.js';
 import { openAccountModal } from './views/account-modal.js';
 import { initWorkspace } from './lib/workspace.js';
 import { initScrollNarrative } from './about-scroll.js';
@@ -47,6 +48,9 @@ import { startAutomationClock } from './lib/automations.js';
 import { icon as uiIcon } from './lib/icons.js';
 
 installSessionKeeper();
+// Check the stored session with the auth provider once the page has settled. Sessions it never
+// issued (old simulated or test accounts) are signed out; a real one keeps the provider's identity.
+(window.requestIdleCallback || ((f) => setTimeout(f, 1200)))(() => { validateSession().catch(() => {}); });
 
 /* --------------- state --------------- */
 
@@ -616,14 +620,21 @@ function handleHash() {
         window.history.replaceState(null, '', window.location.pathname + '#home');
       } catch {}
 
+      // Only a token the auth provider issued, for a real person's address, becomes a session.
+      if (!isIssuedAccessToken(redirect.accessToken) || !redirect.userId || isTestAccountEmail(redirect.email)) {
+        showToast(isTestAccountEmail(redirect.email) ? TEST_ACCOUNT_MESSAGE : 'That sign-in link is not valid. Please sign in again.', 'error', 6000);
+        showPage('home');
+        return;
+      }
+
       const isOwner = (redirect.email && ['meyigbenee@gmail.com', 'meyigbenee@icloud.com', 'laoluwaabiodun1@gmail.com'].includes(redirect.email.toLowerCase()));
       const meta = redirect.userMetadata || {};
       const rawUsername = meta.user_name || meta.preferred_username || meta.username || (redirect.email ? redirect.email.split('@')[0].replace(/[^a-z0-9_-]/gi, '').toLowerCase() : 'user');
       const rawDisplayName = meta.full_name || meta.name || meta.display_name || (redirect.email ? redirect.email.split('@')[0] : 'Toolbox User');
 
       const userSession = {
-        id: redirect.userId || `usr_${Date.now()}`,
-        email: redirect.email || 'user@toolbox.app',
+        id: redirect.userId,
+        email: String(redirect.email || '').toLowerCase(),
         token: redirect.accessToken,
         refreshToken: redirect.refreshToken || '',
         username: isOwner ? 'madselkie' : rawUsername,
@@ -634,6 +645,8 @@ function handleHash() {
       localStorage.setItem('toolbox_supabase_session', JSON.stringify(userSession));
       localStorage.setItem('supabase_auth_session', JSON.stringify(userSession));
       window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
+      // Confirm the identity with the auth provider; anything that does not check out is signed out.
+      validateSession().catch(() => {});
 
       const successMsg = redirect.type === 'email_change'
         ? 'Email address confirmed and updated successfully.'

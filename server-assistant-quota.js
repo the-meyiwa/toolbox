@@ -144,7 +144,7 @@ export function createSharedAssistantQuotaStore({ env = process.env, authorizati
 
 const development = createMemoryAssistantQuotaStore();
 function storeFor(user, request) {
-  if (user.id === 'local-development' && !process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL && process.env.NODE_ENV !== 'production') return development;
+  if (user.id === 'local-development' && process.env.TOOLBOX_LOCAL_DEV_USER === '1' && !process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL && process.env.NODE_ENV !== 'production') return development;
   return createSharedAssistantQuotaStore({ authorization: request?.headers?.authorization });
 }
 export const assistantQuotaSummary = (user, request) => storeFor(user, request).summary(user);

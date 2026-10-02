@@ -32,6 +32,7 @@
    ============================================================ */
 
 import { isLocalDevelopmentRequest, sessionCacheKey, safeProviderError } from './server-security.js';
+import { isTestAccountEmail } from './js/lib/account-policy.js';
 import { assistantQuotaSummary, reserveAssistantTurn, releaseAssistantTurn, commitAssistantTurn } from './server-assistant-quota.js';
 
 const PROVIDERS = [
@@ -168,7 +169,11 @@ export function assistantProviders() {
 export async function authenticatedUser(request) {
   const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
   const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !supabaseKey) return isLocalDevelopmentRequest(request) ? { id: 'local-development', email: '' } : null;
+  // Without sign-in configured there are no accounts. A local stand-in exists only when a developer
+  // turns it on explicitly (TOOLBOX_LOCAL_DEV_USER=1), only off production, and only from this machine.
+  if (!supabaseUrl || !supabaseKey) {
+    return process.env.TOOLBOX_LOCAL_DEV_USER === '1' && isLocalDevelopmentRequest(request) ? { id: 'local-development', email: '' } : null;
+  }
   const header = request.headers.authorization || '';
   if (!/^Bearer [\w.-]+$/.test(header)) return null;
   const now = Date.now();
@@ -179,6 +184,8 @@ export async function authenticatedUser(request) {
   if (!who.ok) return null;
   const user = await who.json();
   if (!user?.id) return null;
+  // Test, placeholder and throwaway accounts are not allowed (js/lib/account-policy.js).
+  if (isTestAccountEmail(user.email)) return null;
   const expiry = (() => { try { return JSON.parse(Buffer.from(header.slice(7).split('.')[1], 'base64url')).exp * 1000; } catch { return 0; } })();
   const verified = { id: String(user.id), email: String(user.email || '').toLowerCase().trim() };
   authCache.set(cacheKey, { user: verified, until: Math.min(now + 60_000, expiry || now) });

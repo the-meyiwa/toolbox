@@ -128,45 +128,75 @@ test('Passkeys: detection and credentials lifecycle', async () => {
     }
   };
 
+  const originalFetch = globalThis.fetch;
+  const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+  let refreshes = 0;
+  globalThis.fetch = async (url, options = {}) => {
+    const body = options.body ? JSON.parse(options.body) : {};
+    if (String(url).includes('grant_type=refresh_token')) {
+      refreshes++;
+      assert.equal(body.refresh_token, refreshes === 1 ? 'refresh-1' : 'refresh-2');
+      return json({ access_token: 'aaa.bbb.ccc2', refresh_token: 'refresh-2', user: { id: 'usr_passkey_test', email: 'ada.obi@toolbox.app' } });
+    }
+    if (String(url).includes('grant_type=password')) {
+      return body.password === 'validPassword123' ? json({ access_token: 'aaa.bbb.ddd' }) : json({ error: 'invalid_grant', error_description: 'Password is incorrect.' }, 400);
+    }
+    return json({});
+  };
+
   try {
     assert.equal(isPasskeySupported(), true);
 
-    const mockUser = {
+    // A session the auth provider never issued cannot add a passkey.
+    const fake = await registerPasskey({ id: 'usr_fake', email: 'ada.obi@toolbox.app', token: 'tok_active_123' }, 'Fake');
+    assert.equal(fake.success, false);
+
+    const realUser = {
       id: 'usr_passkey_test',
-      email: 'passkey.user@toolbox.app',
-      token: 'tok_active_123'
+      email: 'ada.obi@toolbox.app',
+      token: 'aaa.bbb.ccc',
+      refreshToken: 'refresh-1'
     };
 
     // Register passkey
-    const regRes = await registerPasskey(mockUser, 'Test MacBook Touch ID');
+    const regRes = await registerPasskey(realUser, 'Test MacBook Touch ID');
     assert.equal(regRes.success, true);
     assert.equal(regRes.passkey.id, mockCredId);
     assert.equal(regRes.passkey.name, 'Test MacBook Touch ID');
 
     // List registered passkeys
-    const passkeys = getRegisteredPasskeys(mockUser);
+    const passkeys = getRegisteredPasskeys(realUser);
     assert.ok(passkeys.length >= 1);
     assert.equal(passkeys[passkeys.length - 1].id, mockCredId);
 
-    // Authenticate with passkey
-    const authRes = await authenticateWithPasskey('passkey.user@toolbox.app');
-    assert.equal(authRes.success, true);
-    assert.equal(authRes.user.email, 'passkey.user@toolbox.app');
-    assert.equal(authRes.user.authProvider, 'passkey');
+    // A typed address with no passkey on this device is never turned into an account.
+    const stranger = await authenticateWithPasskey('meyigbenee@gmail.com');
+    assert.equal(stranger.success, false);
 
-    // Remove passkey with incorrect/short password fails
-    const failRemove = await removeRegisteredPasskey(mockUser, mockCredId, '123');
+    // Unlocking exchanges the stored refresh token for a real session from the provider.
+    const authRes = await authenticateWithPasskey('ada.obi@toolbox.app');
+    assert.equal(authRes.success, true);
+    assert.equal(authRes.user.email, 'ada.obi@toolbox.app');
+    assert.equal(authRes.user.token, 'aaa.bbb.ccc2');
+    assert.equal(authRes.user.authProvider, 'passkey');
+    assert.equal(refreshes, 1);
+
+    // Remove passkey with an incorrect password fails
+    const failRemove = await removeRegisteredPasskey(authRes.user, mockCredId, '123');
     assert.equal(failRemove.success, false);
     assert.ok(failRemove.error.includes('Password'));
 
     // Remove passkey with verified password succeeds
-    const removeRes = await removeRegisteredPasskey(mockUser, mockCredId, 'validPassword123');
+    const removeRes = await removeRegisteredPasskey(authRes.user, mockCredId, 'validPassword123');
     assert.equal(removeRes.success, true);
-    const updatedPasskeys = getRegisteredPasskeys(mockUser);
+    const updatedPasskeys = getRegisteredPasskeys(realUser);
     assert.equal(updatedPasskeys.some(k => k.id === mockCredId), false);
+    assert.equal(localStorage.getItem('toolbox_passkey_unlock'), '{}');
   } finally {
+    globalThis.fetch = originalFetch;
     navigator.credentials = originalCredentials;
     window.PublicKeyCredential = originalPKC;
+    signOut();
   }
 });
 
@@ -200,8 +230,16 @@ test('Account Modal: renders verification pending state and passkey options', as
 test('Account Modal: passkey deletion requires password confirmation in UI', async () => {
   const mockUser = {
     id: 'usr_secure_del',
-    email: 'secure.user@example.com',
-    token: 'tok_sec_123'
+    email: 'secure.user@toolbox.app',
+    token: 'aaa.bbb.sec'
+  };
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options = {}) => {
+    const body = options.body ? JSON.parse(options.body) : {};
+    if (String(url).includes('grant_type=password')) {
+      return new Response(JSON.stringify(body.password === 'myValidPassword123' ? { access_token: 'aaa.bbb.ok' } : { error: 'invalid_grant', error_description: 'Password is incorrect.' }), { status: body.password === 'myValidPassword123' ? 200 : 400 });
+    }
+    return new Response('{}', { status: 200 });
   };
 
   localStorage.setItem('toolbox_supabase_session', JSON.stringify(mockUser));
@@ -251,6 +289,7 @@ test('Account Modal: passkey deletion requires password confirmation in UI', asy
   const remainingKeys = getRegisteredPasskeys(mockUser);
   assert.equal(remainingKeys.some(k => k.id === credId), false);
 
+  globalThis.fetch = originalFetch;
   closeAccountModal();
   signOut();
 });

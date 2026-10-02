@@ -4,6 +4,8 @@
    PostgreSQL database operations, and persistent online storage.
    ============================================================ */
 
+import { isTestAccountEmail, isIssuedAccessToken, TEST_ACCOUNT_MESSAGE } from './account-policy.js';
+
 const STORAGE_MODE_KEY = 'toolbox_storage_mode'; // 'local' | 'supabase'
 const SUPABASE_SESSION_KEY = 'toolbox_supabase_session';
 const SUPABASE_CUSTOM_URL_KEY = 'toolbox_supabase_url';
@@ -422,6 +424,7 @@ export function signInWithOAuth(provider) {
 export async function signInWithEmail(email, password) {
   const cleanEmail = (email || '').trim().toLowerCase();
   const config = getSupabaseConfig();
+  if (isTestAccountEmail(cleanEmail)) return { success: false, error: TEST_ACCOUNT_MESSAGE };
   try {
     if (config.url && config.anonKey) {
       const res = await fetch(`${config.url}/auth/v1/token?grant_type=password`, {
@@ -442,6 +445,7 @@ export async function signInWithEmail(email, password) {
       }
 
       const verifiedEmail = String(data.user.email).toLowerCase().trim();
+      if (isTestAccountEmail(verifiedEmail)) throw new Error(TEST_ACCOUNT_MESSAGE);
       const isOwner = MADSELKIE_EMAILS.includes(verifiedEmail);
       const userSession = {
         id: data.user.id,
@@ -454,25 +458,14 @@ export async function signInWithEmail(email, password) {
       };
       localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
       localStorage.setItem('supabase_auth_session', JSON.stringify(userSession));
+      rememberForPasskey(userSession);
       window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
       queueMicrotask(() => updateUserProfile({ username: userSession.username, displayName: userSession.displayName }));
       return { success: true, user: userSession };
     }
 
-    // Local / Dev Account simulation when no external Supabase URL is set
-    const isOwner = MADSELKIE_EMAILS.includes(cleanEmail);
-    const userSession = {
-      id: `usr_${btoa(cleanEmail).slice(0, 10)}`,
-      email: cleanEmail,
-      token: `tok_${Date.now()}`,
-      username: isOwner ? 'madselkie' : cleanEmail.split('@')[0].replace(/[^a-z0-9_-]/gi, '').toLowerCase(),
-      displayName: isOwner ? 'madselkie' : cleanEmail.split('@')[0],
-      createdAt: new Date().toISOString()
-    };
-    localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
-    localStorage.setItem('supabase_auth_session', JSON.stringify(userSession));
-    window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
-    return { success: true, user: userSession };
+    // There are no local or simulated accounts: every account is a real one from the auth provider.
+    throw new Error('Accounts are not available right now. Please try again later.');
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -527,6 +520,7 @@ async function refreshUserSessionOnce() {
         email: data.user?.email || current.email
       };
       localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(updated));
+      rememberForPasskey(updated);
       window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: updated } }));
       return updated;
     }
@@ -542,35 +536,46 @@ async function refreshUserSessionOnce() {
  */
 export async function validateSession() {
   const current = getCurrentUser();
-  const config = getSupabaseConfig();
-  if (!current || !config.url || !config.anonKey) {
-    return current;
+  if (!current) return null;
+  // Sessions the auth provider never issued (old simulated or test accounts) are not kept.
+  if (!isIssuedAccessToken(current.token) || isTestAccountEmail(current.email)) {
+    signOut();
+    return null;
   }
-
-  // Real Supabase access token validation
-  if (current.token && !current.token.startsWith('tok_')) {
-    try {
-      const res = await fetch(`${config.url}/auth/v1/user`, {
-        headers: {
-          'apikey': config.anonKey,
-          'Authorization': `Bearer ${current.token}`
-        }
-      });
-      if (res.ok) {
-        return current;
+  const config = getSupabaseConfig();
+  if (!config.url || !config.anonKey) return current;
+  try {
+    const res = await fetch(`${config.url}/auth/v1/user`, {
+      headers: {
+        'apikey': config.anonKey,
+        'Authorization': `Bearer ${current.token}`
       }
-      if (res.status === 401 || res.status === 403) {
-        if (current.refreshToken) {
-          const refreshed = await refreshUserSession();
-          if (refreshed) return refreshed;
-        }
-        signOut();
-        return null;
+    });
+    if (res.ok) {
+      const who = await res.json().catch(() => null);
+      const email = String(who?.email || '').toLowerCase().trim();
+      if (!who?.id || isTestAccountEmail(email)) { signOut(); return null; }
+      // The provider's identity wins over whatever was stored in the browser.
+      const latest = getCurrentUser();
+      if (latest && latest.token === current.token && (latest.id !== who.id || (latest.email || '').toLowerCase() !== email)) {
+        const isOwner = MADSELKIE_EMAILS.includes(email);
+        const fixed = { ...latest, id: String(who.id), email, ...(isOwner ? { username: 'madselkie', displayName: 'madselkie' } : {}) };
+        localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(fixed));
+        window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: fixed } }));
+        return fixed;
       }
-    } catch {
-      // Keep offline/network degraded session
-      return current;
+      return latest || current;
     }
+    if (res.status === 401 || res.status === 403) {
+      if (current.refreshToken) {
+        const refreshed = await refreshUserSession();
+        if (refreshed && refreshed.token !== current.token) return refreshed;
+      }
+      signOut();
+      return null;
+    }
+  } catch {
+    // Offline or the provider is unreachable: keep the session until it can be checked.
   }
   return current;
 }
@@ -581,6 +586,7 @@ export async function validateSession() {
 export async function signUpWithEmail(email, password) {
   const cleanEmail = (email || '').trim().toLowerCase();
   const config = getSupabaseConfig();
+  if (isTestAccountEmail(cleanEmail)) return { success: false, error: TEST_ACCOUNT_MESSAGE };
   try {
     if (config.url && config.anonKey) {
       const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/` : undefined;
@@ -608,6 +614,7 @@ export async function signUpWithEmail(email, password) {
           throw new Error('The sign-up response was incomplete. Please try again.');
         }
         const verifiedEmail = String(data.user.email).toLowerCase().trim();
+        if (isTestAccountEmail(verifiedEmail)) throw new Error(TEST_ACCOUNT_MESSAGE);
         const isOwner = MADSELKIE_EMAILS.includes(verifiedEmail);
         const userSession = {
           id: data.user.id,
@@ -629,20 +636,7 @@ export async function signUpWithEmail(email, password) {
       return { success: true, requiresConfirmation: true };
     }
 
-    // Dev Account simulation
-    const isOwner = MADSELKIE_EMAILS.includes(cleanEmail);
-    const userSession = {
-      id: `usr_${btoa(cleanEmail).slice(0, 10)}`,
-      email: cleanEmail,
-      token: `tok_${Date.now()}`,
-      username: isOwner ? 'madselkie' : cleanEmail.split('@')[0].replace(/[^a-z0-9_-]/gi, '').toLowerCase(),
-      displayName: isOwner ? 'madselkie' : cleanEmail.split('@')[0],
-      createdAt: new Date().toISOString()
-    };
-    localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
-    localStorage.setItem('supabase_auth_session', JSON.stringify(userSession));
-    window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));
-    return { success: true, user: userSession };
+    throw new Error('Accounts are not available right now. Please try again later.');
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -1138,15 +1132,7 @@ export async function updateUserPassword(newPassword, customToken = null) {
     }
   }
 
-  // Local / Simulation Mode
-  if (activeUser) {
-    activeUser.passwordUpdated = new Date().toISOString();
-    localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(activeUser));
-    localStorage.setItem('supabase_auth_session', JSON.stringify(activeUser));
-    return { success: true, user: activeUser };
-  }
-
-  return { success: true, user: { email: 'user@local.dev' } };
+  return { success: false, error: 'Accounts are not available right now. Please try again later.' };
 }
 
 /**
@@ -1287,6 +1273,23 @@ export async function resendConfirmationEmail(email) {
    ============================================================ */
 
 const PASSKEYS_STORAGE_KEY = 'toolbox_passkeys';
+// A passkey on this device unlocks the account's real session: the latest refresh token from
+// the auth provider is kept for each account with a passkey here, and exchanged on unlock.
+// Nothing is ever invented locally: no token from the provider, no session.
+const PASSKEY_UNLOCK_KEY = 'toolbox_passkey_unlock';
+function readUnlocks() {
+  try { const v = JSON.parse(localStorage.getItem(PASSKEY_UNLOCK_KEY) || '{}'); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; } catch { return {}; }
+}
+function writeUnlock(userId, refreshToken) {
+  if (typeof localStorage === 'undefined' || !userId) return;
+  const all = readUnlocks();
+  if (refreshToken) all[userId] = refreshToken; else delete all[userId];
+  try { localStorage.setItem(PASSKEY_UNLOCK_KEY, JSON.stringify(all)); } catch { /* storage full or blocked */ }
+}
+/** Keeps a passkey's unlock in step when the account signs in again or its session refreshes. */
+function rememberForPasskey(session) {
+  if (session?.id && session.refreshToken && Object.prototype.hasOwnProperty.call(readUnlocks(), session.id)) writeUnlock(session.id, session.refreshToken);
+}
 
 function bufferToBase64Url(buffer) {
   const bytes = new Uint8Array(buffer);
@@ -1352,6 +1355,9 @@ export async function registerPasskey(user = null, deviceName = null) {
   const activeUser = user || getCurrentUser();
   if (!activeUser) {
     return { success: false, error: 'You must be signed in to register a passkey.' };
+  }
+  if (!isIssuedAccessToken(activeUser.token) || !activeUser.refreshToken || isTestAccountEmail(activeUser.email)) {
+    return { success: false, error: 'Sign in with your password first, then add a passkey.' };
   }
   if (!isPasskeySupported()) {
     return { success: false, error: 'Passkeys and WebAuthn are not supported on this device or browser.' };
@@ -1421,6 +1427,7 @@ export async function registerPasskey(user = null, deviceName = null) {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(PASSKEYS_STORAGE_KEY, JSON.stringify(updated));
     }
+    writeUnlock(activeUser.id, activeUser.refreshToken);
 
     // Synchronize to Supabase user_metadata if cloud session exists
     const config = getSupabaseConfig();
@@ -1464,7 +1471,7 @@ export async function verifyUserPassword(password, user = null) {
   }
 
   const config = getSupabaseConfig();
-  if (config.url && config.anonKey && activeUser.token && !activeUser.token.startsWith('tok_')) {
+  if (config.url && config.anonKey && isIssuedAccessToken(activeUser.token)) {
     try {
       const res = await fetch(`${config.url}/auth/v1/token?grant_type=password`, {
         method: 'POST',
@@ -1485,11 +1492,8 @@ export async function verifyUserPassword(password, user = null) {
     }
   }
 
-  // Local / simulated verification fallback
-  if (password.length < 6) {
-    return { success: false, error: 'Password must be at least 6 characters.' };
-  }
-  return { success: true };
+  // No simulated checks: without a real session there is nothing to verify against.
+  return { success: false, error: 'Sign in again to confirm your password.' };
 }
 
 /**
@@ -1507,10 +1511,12 @@ export async function removeRegisteredPasskey(user = null, passkeyId, password =
   }
 
   const existing = getRegisteredPasskeys();
+  const removed = existing.find(k => k.id === passkeyId);
   const updated = existing.filter(k => k.id !== passkeyId);
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem(PASSKEYS_STORAGE_KEY, JSON.stringify(updated));
   }
+  if (removed?.userId && !updated.some(k => k.userId === removed.userId)) writeUnlock(removed.userId, null);
 
   const config = getSupabaseConfig();
   if (activeUser && config.url && config.anonKey && activeUser.token) {
@@ -1552,6 +1558,9 @@ export async function authenticateWithPasskey(emailHint = null) {
     const candidateKeys = cleanHint
       ? registered.filter(k => k.userEmail === cleanHint)
       : registered;
+    if (!candidateKeys.length) {
+      return { success: false, error: 'There is no passkey for that account on this device. Sign in with your password.' };
+    }
 
     const allowCredentials = candidateKeys.map(k => ({
       id: base64UrlToBuffer(k.id),
@@ -1562,7 +1571,7 @@ export async function authenticateWithPasskey(emailHint = null) {
     const getOptions = {
       challenge,
       rpId,
-      userVerification: 'preferred',
+      userVerification: 'required',
       timeout: 60000,
       ...(allowCredentials.length > 0 ? { allowCredentials } : {})
     };
@@ -1577,24 +1586,43 @@ export async function authenticateWithPasskey(emailHint = null) {
 
     const matchedKeyId = assertion.id || bufferToBase64Url(assertion.rawId);
     const matchedRecord = registered.find(k => k.id === matchedKeyId);
-
-    const email = matchedRecord?.userEmail || cleanHint || 'passkey-user@toolbox.app';
-    const userId = matchedRecord?.userId || `usr_${Date.now()}`;
-    const isOwner = MADSELKIE_EMAILS.includes(email.toLowerCase());
+    if (!matchedRecord?.userId) {
+      throw new Error('That passkey is not set up on this device. Sign in with your password.');
+    }
+    const refreshToken = readUnlocks()[matchedRecord.userId];
+    const config = getSupabaseConfig();
+    if (!refreshToken || !config.url || !config.anonKey) {
+      throw new Error('Sign in with your password once on this device to use your passkey again.');
+    }
+    const res = await fetch(`${config.url}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': config.anonKey },
+      body: JSON.stringify({ refresh_token: refreshToken })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.access_token || !data.user?.id || !data.user?.email) {
+      if (res.status === 400 || res.status === 401 || res.status === 403) writeUnlock(matchedRecord.userId, null);
+      throw new Error('Your passkey sign-in has expired. Sign in with your password to use it again.');
+    }
+    const email = String(data.user.email).toLowerCase().trim();
+    if (isTestAccountEmail(email)) { writeUnlock(matchedRecord.userId, null); throw new Error(TEST_ACCOUNT_MESSAGE); }
+    const isOwner = MADSELKIE_EMAILS.includes(email);
 
     const userSession = {
-      id: userId,
+      id: String(data.user.id),
       email,
-      token: `passkey_${Date.now()}`,
-      refreshToken: '',
+      token: data.access_token,
+      refreshToken: data.refresh_token || '',
       authProvider: 'passkey',
-      username: isOwner ? 'madselkie' : email.split('@')[0].replace(/[^a-z0-9_-]/gi, '').toLowerCase(),
-      displayName: isOwner ? 'madselkie' : email.split('@')[0],
-      createdAt: new Date().toISOString()
+      username: isOwner ? 'madselkie' : (data.user.user_metadata?.username || email.split('@')[0].replace(/[^a-z0-9_-]/gi, '').toLowerCase()),
+      displayName: isOwner ? 'madselkie' : (data.user.user_metadata?.display_name || email.split('@')[0]),
+      createdAt: data.user.created_at || new Date().toISOString()
     };
+    writeUnlock(userSession.id, userSession.refreshToken);
 
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(userSession));
+      localStorage.setItem('supabase_auth_session', JSON.stringify(userSession));
     }
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('toolbox:authchange', { detail: { user: userSession } }));

@@ -71,7 +71,7 @@ test('expired token cannot read or change supporter state', async () => {
 test('signed-in contribution creation binds account and amount server-side', async () => {
   let inserted;
   const handler=createSupporterHandler({ env, fetcher:async (url,options) => {
-    if (url.endsWith('/auth/v1/user')) return json({ id:'account-a', email:'test@example.invalid' });
+    if (url.endsWith('/auth/v1/user')) return json({ id:'account-a', email:'ada.obi@toolbox.app' });
     assert.ok(url.endsWith('/rest/v1/toolbox_contributions'));
     inserted=JSON.parse(options.body); return json([inserted]);
   } });
@@ -80,12 +80,12 @@ test('signed-in contribution creation binds account and amount server-side', asy
   assert.equal(inserted.user_id,'account-a');
   assert.equal(inserted.supporter_threshold,5000);
   assert.match(inserted.tx_ref,/^TBX-/);
-  assert.equal(result.data.customer.email,'test@example.invalid');
+  assert.equal(result.data.customer.email,'ada.obi@toolbox.app');
 });
 
 test('invalid amounts cannot create checkout intents', async () => {
   const handler=createSupporterHandler({ env, fetcher:async url => {
-    assert.ok(url.endsWith('/auth/v1/user')); return json({ id:'account-a',email:'test@example.invalid' });
+    assert.ok(url.endsWith('/auth/v1/user')); return json({ id:'account-a',email:'ada.obi@toolbox.app' });
   } });
   for (const amount of [-1,0,0.001,100.123]) {
     assert.equal((await request(handler,'intent',{ amount,currency:'NGN',email:'test@example.invalid' })).status,400);
@@ -117,7 +117,7 @@ test('verified payment calls the atomic grant function, failed payments never do
 test('a verified guest contribution can be claimed only by an authenticated account', async () => {
   let claimBody;
   const handler=createSupporterHandler({ env, fetcher:async (url,options) => {
-    if (url.endsWith('/auth/v1/user')) return json({ id:'account-a',email:'a@example.invalid' });
+    if (url.endsWith('/auth/v1/user')) return json({ id:'account-a',email:'ada.obi@toolbox.app' });
     assert.ok(url.endsWith('/rpc/claim_toolbox_contribution'));
     claimBody=JSON.parse(options.body); return json(null);
   } });
@@ -128,7 +128,7 @@ test('a verified guest contribution can be claimed only by an authenticated acco
 
 test('non-supporters cannot save styles or enroll in previews', async () => {
   const handler=createSupporterHandler({ env, fetcher:async url => {
-    if (url.endsWith('/auth/v1/user')) return json({ id:'account-a',email:'a@example.invalid' });
+    if (url.endsWith('/auth/v1/user')) return json({ id:'account-a',email:'ada.obi@toolbox.app' });
     assert.ok(url.includes('toolbox_supporters?user_id=eq.account-a')); return json([]);
   } });
   assert.equal((await request(handler,'preferences',{ profileStyle:'halo',earlyAccess:true })).status,403);
@@ -299,4 +299,11 @@ test('upstream failures say which setting or step to fix', async () => {
     assert.match(await intentFor(async () => fail(401,'{"status":"error","message":"Invalid authorization key"}'),'USD'),/FLUTTERWAVE_SECRET_KEY/);
     assert.match(await intentFor(async () => json({ status:'error', message:'Transfers not enabled' }),'USD'),/USD to NGN rate is not available/);
   } finally { console.error=quiet; }
+});
+
+test('test and placeholder accounts cannot contribute while signed in', async () => {
+  const handler=createSupporterHandler({ env, fetcher:async url => {
+    assert.ok(url.endsWith('/auth/v1/user')); return json({ id:'account-t', email:'test@example.com' });
+  } });
+  assert.equal((await request(handler,'intent',{ amount:5000,currency:'NGN' })).status,403);
 });

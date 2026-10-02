@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { createFlutterwaveClient, FlutterwaveError } from './server-flutterwave.js';
+import { isTestAccountEmail, TEST_ACCOUNT_MESSAGE } from './js/lib/account-policy.js';
 
 export const SUPPORTER_THRESHOLD_NGN = 5000;
 export const PROFILE_STYLES = ['classic', 'etched', 'halo', 'orbit'];
@@ -152,6 +153,7 @@ export function createSupporterHandler({ env = process.env, fetcher = fetch, now
     if (!response.ok) throw new RequestError(401, 'Your session has expired. Please sign in again.');
     const user = await response.json();
     if (!user.id || !user.email) throw new RequestError(401, 'A verified Toolbox account is required.');
+    if (isTestAccountEmail(user.email)) throw new RequestError(403, TEST_ACCOUNT_MESSAGE);
     return user;
   }
   async function optionalUser(request) {
