@@ -36,17 +36,21 @@ const cssEscape = s => (globalThis.CSS?.escape ? CSS.escape(s) : String(s).repla
 /* [selector, kind]. First match wins. Kinds are styled in css/motion.css. */
 const UNITS = [
   ['.mind-scene-heading h2', 'title'],
+  ['.mind-badge', 'pop'],
   ['.mind-self', 'widget'],
   ['.mind-object', 'card'],
-  ['.mind-sense-bars button', 'pop'],
+  ['.mind-bubbles button', 'pop'],
   ['.mind-map-node', 'pop'],
-  ['.mind-editor label, .mind-editor-actions', 'up'],
-  ['.mind-related button', 'row'],
+  ['.mind-stat', 'up'],
+  ['.mind-capture', 'up'],
+  ['.mind-editor .mind-field, .mind-editor-actions, .mind-more', 'up'],
+  ['.mind-link-row, .mind-chip', 'row'],
+  ['.mind-panel', 'panel'],
   ['.mind-scene-actions', 'up'],
-  ['.mind-scene-heading small, .mind-related h3, .mind-sense-chapter > small', 'fade'],
-  ['.mind-scene-heading p, .mind-sense-chapter > h3, .mind-empty, .mind-related > p, .mind-map-foot, .mind-suggestion', 'up'],
+  ['.mind-scene-heading small, .mind-section-head', 'fade'],
+  ['.mind-scene-heading p, .mind-empty, .mind-hint, .mind-map-foot, .mind-suggestion, .mind-legend, .mind-filters', 'up'],
 ];
-const ATOMIC = '.mind-object, .mind-self, .mind-sense-bars button, .mind-editor label, .mind-related button, .mind-map-node, .mind-scene-actions, .mind-editor-actions, .mind-suggestion';
+const ATOMIC = '.mind-object, .mind-self, .mind-bubbles button, .mind-editor .mind-field, .mind-link-row, .mind-chip, .mind-map-node, .mind-scene-actions, .mind-editor-actions, .mind-suggestion, .mind-stat, .mind-capture, .mind-more, .mind-badge';
 
 /* How the outgoing and incoming views move for each kind of travel. */
 const LEAVE = {
@@ -128,7 +132,7 @@ export class MindMotion {
     let target = null;
     if (kind === 'out' && back) {
       const id = cssEscape(back);
-      target = scene.querySelector(`.mind-object[data-open-room="${id}"], .mind-object[data-open-entity="${id}"], .mind-related [data-open-entity="${id}"], .mind-map-node[data-map-focus="${id}"], .mind-sense-bars [data-open-room="${id}"]`);
+      target = scene.querySelector(`.mind-object[data-open-room="${id}"], .mind-object[data-open-entity="${id}"], .mind-related [data-open-entity="${id}"], .mind-map-node[data-map-focus="${id}"], .mind-bubbles [data-open-room="${id}"]`);
       if (target) {
         const r = target.getBoundingClientRect();
         if (r.bottom < 0 || r.top > innerHeight) target.scrollIntoView({ block: 'center', behavior: 'auto' });
@@ -213,7 +217,7 @@ export class MindMotion {
 
   /** Map lines draw outward from the focused thing, nearest first. */
   lines(scene, now) {
-    const lines = scene.querySelectorAll('.mind-map-field line');
+    const lines = scene.querySelectorAll('.mind-map-field line, .mind-tethers line');
     if (now) { lines.forEach(l => l.classList.add('drawn')); return; }
     lines.forEach((l, i) => this.later(() => l.classList.add('drawn'), 260 + Math.min(i, 30) * 28));
   }
@@ -373,7 +377,7 @@ export function movePill(group, selector = '.active') {
 /** Cursor-following spotlight & gentle tilt for Mind cards. */
 export function mindPointerLight(root) {
   return pointerLight(root,
-    '.mind-object, .mind-self, .mind-map-node',
+    '.mind-object, .mind-self, .mind-map-node, .mind-panel',
     '.mind-object',
   );
 }

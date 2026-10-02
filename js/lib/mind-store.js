@@ -186,6 +186,26 @@ export function relateMindEntities(from, to, type = 'related', options = {}) {
   const stamp = Date.now(), edge = { id: uid(), from, to, type, properties: options.properties || {}, confidence: score(options.confidence, 1), importance: score(options.importance, .5), status: 'active', sourceIds: options.sourceIds || [], createdAt: stamp, updatedAt: stamp };
   graph.relationships.push(edge); writeMind(graph); return edge;
 }
+/** Ends a connection. Its history stays (status 'removed') so nothing silently disappears from sources. */
+export function removeMindRelationship(relationshipId) {
+  const graph = readMind(), edge = graph.relationships.find(r => r.id === relationshipId && r.status === 'active');
+  if (!edge) return false;
+  edge.status = 'removed'; edge.updatedAt = Date.now();
+  writeMind(graph); return true;
+}
+/** Takes a thing out of a room (and off any desk there). The thing itself stays in Mind. */
+export function removeMindMembership(roomId, entityId) {
+  const graph = readMind();
+  const before = graph.memberships.length;
+  graph.memberships = graph.memberships.filter(m => !(m.roomId === roomId && m.entityId === entityId));
+  if (graph.memberships.length === before) return false;
+  // A desk in this room no longer holds it either.
+  const desksHere = new Set(graph.memberships.filter(m => m.roomId === roomId).map(m => m.entityId));
+  for (const r of graph.relationships) {
+    if (r.status === 'active' && r.type === 'contains' && r.to === entityId && desksHere.has(r.from)) { r.status = 'removed'; r.updatedAt = Date.now(); }
+  }
+  writeMind(graph); return true;
+}
 export function supersedeMindEntity(oldId, replacementId = null) {
   const graph = readMind(), old = graph.entities.find(e => e.id === oldId);
   if (!old) throw new Error('Memory not found.');

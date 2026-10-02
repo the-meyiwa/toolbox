@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setupDOMEnvironment } from '../helpers/dom-env.js';
-import { readMind, addMindRoom, removeMindRoom, upsertMindEntity, addMindMembership, addMindSource, addMindSuggestion, reviewMindSuggestion, roomEntities, relateMindEntities, compiledMind, recallMind, supersedeMindEntity, forgetMindEntity } from '../../js/lib/mind-store.js';
+import { readMind, addMindRoom, removeMindRoom, upsertMindEntity, addMindMembership, addMindSource, addMindSuggestion, reviewMindSuggestion, roomEntities, relateMindEntities, compiledMind, recallMind, supersedeMindEntity, forgetMindEntity, removeMindRelationship, removeMindMembership } from '../../js/lib/mind-store.js';
 
 setupDOMEnvironment();
 const KEY = 'toolbox_mind_v1';
@@ -126,4 +126,24 @@ test('Assistant Mind updates reject unknown entities without leaving orphaned so
   const { executeExtraTool } = await import('../../js/lib/assistant/extra-tools.js');
   await assert.rejects(executeExtraTool('mind', { action: 'update', entityId: 'missing', name: 'Missing entity' }), /not found/);
   assert.equal(readMind().sources.length, 0);
+});
+
+test('connections can be removed and things taken out of a room without deleting them', () => {
+  reset();
+  const room = addMindRoom('Studio');
+  const desk = upsertMindEntity({ name: 'Mixing desk', type: 'Desk' });
+  const song = upsertMindEntity({ name: 'Night Drive', type: 'Song' });
+  const idea = upsertMindEntity({ name: 'Use more space', type: 'Idea' });
+  addMindMembership(room.id, desk.id);
+  addMindMembership(room.id, song.id, desk.id);
+  relateMindEntities(desk.id, song.id, 'contains');
+  const edge = relateMindEntities(song.id, idea.id, 'inspired by');
+  assert.equal(removeMindRelationship(edge.id), true);
+  assert.equal(removeMindRelationship(edge.id), false);
+  assert.equal(readMind().relationships.filter(r => r.status === 'active' && r.type === 'inspired by').length, 0);
+  assert.equal(removeMindMembership(room.id, song.id), true);
+  const graph = readMind();
+  assert.equal(roomEntities(graph, graph.rooms[0]).some(e => e.id === song.id), false);
+  assert.equal(graph.entities.find(e => e.id === song.id).status, 'active');
+  assert.equal(graph.relationships.some(r => r.status === 'active' && r.type === 'contains' && r.to === song.id), false);
 });
