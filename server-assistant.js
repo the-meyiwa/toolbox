@@ -33,6 +33,7 @@
 
 import { isLocalDevelopmentRequest, sessionCacheKey, safeProviderError } from './server-security.js';
 import { isTestAccountEmail } from './js/lib/account-policy.js';
+import { isLightPrompt, LIGHT_MAX_TOKENS } from './js/lib/assistant/light-turn.js';
 import { assistantQuotaSummary, reserveAssistantTurn, releaseAssistantTurn, commitAssistantTurn } from './server-assistant-quota.js';
 
 const PROVIDERS = [
@@ -42,6 +43,7 @@ const PROVIDERS = [
     key: () => process.env.GEMINI_API_KEY,
     url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
     models: () => [process.env.ASSISTANT_GEMINI_MODEL, 'gemini-flash-latest', 'gemini-3.6-flash', 'gemini-flash-lite-latest'].filter(Boolean),
+    lightModels: () => ['gemini-flash-lite-latest'],
     vision: true,
   },
   {
@@ -50,6 +52,7 @@ const PROVIDERS = [
     key: () => process.env.OPENAI_API_KEY,
     url: 'https://api.openai.com/v1/chat/completions',
     models: () => [process.env.ASSISTANT_OPENAI_MODEL, 'gpt-5-mini', 'gpt-4.1-mini'].filter(Boolean),
+    lightModels: () => ['gpt-4.1-nano'],
     vision: true,
   },
   {
@@ -66,6 +69,9 @@ const PROVIDERS = [
     key: () => process.env.GROQ_API_KEY,
     url: 'https://api.groq.com/openai/v1/chat/completions',
     models: () => [process.env.ASSISTANT_GROQ_MODEL, 'openai/gpt-oss-120b', 'openai/gpt-oss-20b'].filter(Boolean),
+    // Small talk: the 8B model answers in well under a second and has by far the largest free
+    // daily allowance (about 14,400 requests and 500K tokens, against 1,000 and 200K for gpt-oss).
+    lightModels: () => ['llama-3.1-8b-instant', 'openai/gpt-oss-20b'],
     vision: false,
   },
   {
@@ -81,6 +87,8 @@ const PROVIDERS = [
 
 // Which provider to try first for each kind of job.
 const ORDER = {
+  // Greetings and small talk: smallest, fastest models only, no tools, short replies.
+  light: ['groq', 'gemini', 'openrouter', 'deepseek', 'openai'],
   // Groq leads everyday chat: it is the fastest and its free tier is the most generous.
   fast: ['groq', 'gemini', 'openrouter', 'openai', 'deepseek'],
   auto: ['groq', 'gemini', 'openrouter', 'openai', 'deepseek'],
@@ -89,10 +97,10 @@ const ORDER = {
   code: ['gemini', 'openrouter', 'openai', 'groq', 'deepseek'],
 };
 // How long the first model gets to start answering before a second one is started alongside it.
-const HEDGE_MS = { fast: 3500, auto: 5000, reasoning: 9000, code: 8000 };
+const HEDGE_MS = { light: 4000, fast: 3500, auto: 5000, reasoning: 9000, code: 8000 };
 const HEDGE_MAX_BYTES = 24_000;
 // How long any one model gets to start answering at all.
-const FIRST_TOKEN_TIMEOUT_MS = { fast: 25_000, auto: 40_000, reasoning: 90_000, code: 90_000 };
+const FIRST_TOKEN_TIMEOUT_MS = { light: 15_000, fast: 25_000, auto: 40_000, reasoning: 90_000, code: 90_000 };
 
 const MAX_BODY = 12_000_000;           // images arrive as data URLs
 const authCache = new Map();           // hashed token → verified user and expiry
@@ -207,6 +215,11 @@ function providerBody(provider, model, { messages, tools, mode }, plain = false,
   if (Array.isArray(tools) && tools.length) {
     body.tools = tools;
     body.tool_choice = 'auto';
+  }
+  if (mode === 'light') {
+    // A reply to small talk is short by design; the cap also bounds what a light turn can cost.
+    body.max_tokens = LIGHT_MAX_TOKENS;
+    return body;
   }
   if (plain) return body;
   if (provider.id === 'gemini') {
@@ -391,7 +404,8 @@ function candidatesFor(payload, bytes) {
     const provider = PROVIDERS.find(p => p.id === id);
     if (!provider?.key()) continue;
     if (needsVision && !provider.vision) continue;
-    for (const model of [...new Set(provider.models())]) {
+    const models = mode === 'light' && provider.lightModels ? provider.lightModels() : provider.models();
+    for (const model of [...new Set(models)]) {
       const why = cooling(provider, model, tools, bytes);
       (why ? skipped : all).push({ provider, model, why });
     }
@@ -540,6 +554,15 @@ export async function handleAssistantGateway(request, response, url) {
   }
   if (!payload.messages.some(message => message.role === 'user' && (typeof message.content === 'string' ? message.content.trim() : Array.isArray(message.content) && message.content.length))) return fail(400, 'A user message is required.');
   if (!PROVIDERS.some(p => p.key())) return fail(503, 'No Assistant model provider is configured on this server.');
+  // A light turn is honoured only when the server agrees the latest message is small talk, and
+  // then it carries no tools and gets a capped reply: it can never be a cheap way to run real work.
+  if (payload.mode === 'light') {
+    const lastUser = [...payload.messages].reverse().find(m => m.role === 'user');
+    if (typeof lastUser?.content === 'string' && isLightPrompt(lastUser.content) && !hasImages(payload.messages)) {
+      payload.tools = undefined;
+      payload.light = true;
+    } else payload.mode = 'auto';
+  }
   const mode = ORDER[payload.mode] ? payload.mode : 'auto';
   const bytes = raw.length;
   const { list, skipped } = candidatesFor(payload, bytes);

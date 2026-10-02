@@ -56,3 +56,13 @@
   .tb-menu-horizontal .finder-menu-item:hover .finder-menu-label,
   .tb-menu-horizontal .finder-menu-item:focus-visible .finder-menu-label { max-width: none; padding: 4px 8px; opacity: 1; transform: translate(-50%, 0) scale(1); }
 }
+
+/* ---------- Touch screens (js/lib/touch-selection.js) ----------
+   No browser selection, callouts or long-press previews outside fields; Toolbox selects text
+   itself on a press-and-hold. Fields and editors keep native editing. */
+html.tb-touch, html.tb-touch body * { -webkit-user-select: none !important; user-select: none !important; -webkit-touch-callout: none !important; }
+html.tb-touch :is(input, textarea, [contenteditable]:not([contenteditable="false"]), [contenteditable]:not([contenteditable="false"]) *, .cm-editor, .cm-editor *, .monaco-editor, .monaco-editor *, [data-native-selection], [data-native-selection] *) {
+  -webkit-user-select: text !important; user-select: text !important; -webkit-touch-callout: default !important;
+}
+html.tb-touch { -webkit-tap-highlight-color: transparent; }
+html.tb-touch img, html.tb-touch a { -webkit-user-drag: none; }

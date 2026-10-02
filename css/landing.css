@@ -69,17 +69,13 @@
 .lp .lp-assistant::before { top: -46px; height: 34px; }
 .lp .home-quick:empty::before { display: none; }
 
-.lp-chip.home-quick-item, .lp-chip-edit {
+.lp-chip.home-quick-item {
   height: 34px; padding: 0 12px 0 10px; gap: 8px;
   border: 1px solid transparent; border-radius: 12px; background: transparent;
   font-size: 13.5px; font-weight: 500; color: var(--text-2);
   transition: color .18s ease, background-color .18s ease, transform .12s ease;
 }
 .lp-chip.home-quick-item:hover { color: var(--text); background: var(--tint); transform: none; }
-.lp-chip.home-quick-item:active, .lp-chip-edit:active { transform: scale(.96); }
-.lp-chip-edit { display: inline-flex; align-items: center; cursor: pointer; color: var(--text-3); border-style: dashed; border-color: var(--line-strong); font-family: inherit; }
-.lp-chip-edit svg { width: 14px; height: 14px; }
-.lp-chip-edit:hover { color: var(--text); border-color: var(--line-control); }
 
 .lp-ask { display: flex; align-items: center; gap: 16px; text-align: left; padding: 6px 0; }
 .lp-ask-mark {

@@ -199,7 +199,20 @@ export const PROFILE_PICTURES = [
 export function getProfilePictureSrc(id) {
   if (!id || id === 'default') return null;
   const found = PROFILE_PICTURES.find(p => p.id === id);
-  return found?.src || `/profile-pictures/${id}`;
+  const src = found?.src || `/profile-pictures/${id}`;
+  // Presets are shown at avatar sizes, so they are served as small WebP files (a few KB each)
+  // rather than the ~1 MB originals.
+  const m = /^\/profile-pictures\/([^/]+)\.(?:jpe?g|png)$/i.exec(src);
+  return m ? `/profile-pictures/small/${m[1]}.webp` : src;
+}
+
+let warmed = false;
+/** Fetch every preset in the background once, so the avatar gallery opens with them ready. */
+export function warmProfilePictures() {
+  if (warmed || typeof Image === 'undefined') return;
+  warmed = true;
+  const go = () => PROFILE_PICTURES.forEach(p => { const src = getProfilePictureSrc(p.id); if (src) { const img = new Image(); img.decoding = 'async'; img.src = src; } });
+  (window.requestIdleCallback || ((f) => setTimeout(f, 1500)))(go);
 }
 
 /**

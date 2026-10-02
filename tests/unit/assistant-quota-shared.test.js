@@ -18,10 +18,10 @@ test('Two gateway instances share one atomic burst quota', async () => {
   const user = await createQuotaUser(db);
   const clients = [quotaClient(db,user),quotaClient(db,user)];
   const attempts = await Promise.all(Array.from({ length:24 }, (_,i) => clients[i%2].reserve(user,prompt(i))));
-  assert.equal(attempts.filter(r => r.allowed).length,10);
-  assert.equal(attempts.filter(r => r.status===429).length,14);
-  assert.equal((await clients[0].summary()).messagesUsed,10);
-  assert.equal((await clients[1].summary()).messagesUsed,10);
+  assert.equal(attempts.filter(r => r.allowed).length,8);
+  assert.equal(attempts.filter(r => r.status===429).length,16);
+  assert.equal((await clients[0].summary()).messagesUsed,8);
+  assert.equal((await clients[1].summary()).messagesUsed,8);
 });
 
 test('Concurrent steps stay one message when the first step fails and another succeeds', async () => {
@@ -103,7 +103,7 @@ test('A refund from yesterday cannot subtract from today and burst windows span 
   await client.release(user,old);
   assert.equal((await client.summary()).messagesUsed,1);
   const other=await createQuotaUser(db); const more=quotaClient(db,other);
-  for(let i=0;i<10;i++) await more.commit(other,await more.reserve(other,prompt(`midnight_${i}`)));
+  for(let i=0;i<8;i++) await more.commit(other,await more.reserve(other,prompt(`midnight_${i}`)));
   await db.query("update toolbox_private.assistant_quota_turns set usage_day=usage_day-1 where user_id=$1",[other.id]);
   await db.query("update toolbox_private.assistant_quota_accounts set usage_day=usage_day-1 where user_id=$1",[other.id]);
   assert.equal((await more.reserve(other,prompt('midnight_extra'))).status,429);
@@ -112,18 +112,18 @@ test('A refund from yesterday cannot subtract from today and burst windows span 
 
 test('Daily, turn and work limits remain enforced across gateway instances', async () => {
   const user=await createQuotaUser(db); const client=quotaClient(db,user);
-  for(let i=0;i<32;i++) await client.commit(user,await client.reserve(user,prompt('steps')));
+  for(let i=0;i<16;i++) await client.commit(user,await client.reserve(user,prompt('steps')));
   assert.match((await client.reserve(user,prompt('steps'))).reason,/available steps/);
   for(let i=0;i<8;i++) await client.commit(user,await client.reserve(user,prompt('othersteps')));
   assert.match((await quotaClient(db,user).reserve(user,prompt('work'))).reason,/too many steps/);
   const daily=await createQuotaUser(db); const another=quotaClient(db,daily);
-  for(let i=0;i<50;i++) {
+  for(let i=0;i<40;i++) {
     assert.equal(await another.commit(daily,await another.reserve(daily,prompt(`daily_${i}`))),true);
     await db.query("update toolbox_private.assistant_quota_turns set started_at=clock_timestamp()-interval '2 minutes' where user_id=$1",[daily.id]);
     await db.query("update toolbox_private.assistant_quota_reservations set created_at=clock_timestamp()-interval '2 minutes' where user_id=$1",[daily.id]);
   }
   assert.match((await quotaClient(db,daily).reserve(daily,prompt('daily_extra'))).reason,/message limit/);
-  await db.query('update toolbox_private.assistant_quota_accounts set requests_count=400 where user_id=$1',[daily.id]);
+  await db.query('update toolbox_private.assistant_quota_accounts set requests_count=150 where user_id=$1',[daily.id]);
   assert.match((await another.reserve(daily,prompt('daily_49'))).reason,/work limit/);
 });
 
@@ -139,9 +139,9 @@ test('The confirmed owner can run one task past the per-task step cap', async ()
 
 test('Failed provider attempts refund messages but cannot bypass the work rate limit', async () => {
   const user=await createQuotaUser(db); const client=quotaClient(db,user);
-  for(let i=0;i<40;i++) await client.release(user,await client.reserve(user,prompt(`failed_${i}`)));
+  for(let i=0;i<20;i++) await client.release(user,await client.reserve(user,prompt(`failed_${i}`)));
   assert.equal((await client.summary()).messagesUsed,0);
-  assert.equal((await client.summary()).requestsUsed,40);
+  assert.equal((await client.summary()).requestsUsed,20);
   assert.match((await client.reserve(user,prompt('retry_more'))).reason,/too many steps/);
 });
 

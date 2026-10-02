@@ -34,10 +34,10 @@ test('Legacy Assistant API shares the authenticated burst quota', async () => {
     return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'Okay.' }] } }] }), { status: 200 });
   };
   try {
-    for (let i = 0; i < 10; i++) assert.equal((await chat()).status, 200);
+    for (let i = 0; i < 8; i++) assert.equal((await chat()).status, 200);
     const blocked = await chat();
     assert.equal(blocked.status, 429);
-    assert.equal(providerCalls, 10);
+    assert.equal(providerCalls, 8);
   } finally { globalThis.fetch = original; }
 });
 

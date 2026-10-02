@@ -223,6 +223,15 @@ function emptyEditorItems(field) {
   ];
 }
 
+/** Opens the selection bar for a snapshot Toolbox made itself (touch selection on phones):
+    above the selection when there is room, so a thumb never covers it. */
+export function openSelectionBar(snapshot) {
+  if (!snapshot?.text?.trim()) return;
+  const r = snapshot.rect;
+  const above = r.top > 120;
+  openContextMenu({ x: Math.max(10, r.left), y: above ? Math.max(10, r.top - 56) : Math.min(window.innerHeight - 60, r.bottom + 12), items: textSelectionItems(snapshot), presentation: 'horizontal', label: 'Selected text actions', className: 'tb-selection-menu' });
+}
+
 export function installTextActions() {
   if (window.__toolboxTextActions) return;
   window.__toolboxTextActions = true;

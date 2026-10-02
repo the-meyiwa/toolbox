@@ -25,6 +25,7 @@ async function publishDataUrl(result) {
   publish({ name: result.filename, kind: kindOf(result.filename, blob.type), blob, from: 'assistant' });
 }
 import { KNOWLEDGE_TOOL_DECLARATIONS, KNOWLEDGE_TOOL_NAMES, executeKnowledgeTool, entityHints } from './assistant/knowledge-tools.js';
+import { isLightPrompt, LIGHT_SYSTEM } from './assistant/light-turn.js';
 import { CORE_TOOLS, TOOL_GROUPS, LOAD_TOOLS_DECLARATION, selectGroups, groupOfTool } from './assistant/tool-groups.js';
 import { packDeclarations, packVersion, isPackTool, executePackTool } from './assistant/tool-packs.js';
 import './assistant/life-tools.js';
@@ -841,8 +842,13 @@ export async function streamChatCompletion({
   const guidance = MODE_GUIDANCE[selectedMode] ? `\nMode: ${AI_MODES[selectedMode].name}. ${MODE_GUIDANCE[selectedMode]}\n` : '';
   // Name the compounds and elements in the message up front, so the model looks them up instead of guessing a tool.
   const lastUserText = [...history].reverse().find(m => m.role === 'user')?.content;
+  // Small talk ("hello", "thanks") is a light turn: short prompt, no tools, one capped step on
+  // the fastest, cheapest models (the server re-checks the text before honouring it).
+  const lastUserMsg = [...history].reverse().find(m => m.role === 'user');
+  const light = scope === 'global' && !toolDeclarations && !currentFile?.base64 && !lastUserMsg?.fileData && !lastUserMsg?.moreFiles?.length
+    && selectedMode !== 'reasoning' && isLightPrompt(lastUserText);
   let entities = null;
-  if (scope === 'global' && typeof lastUserText === 'string') {
+  if (scope === 'global' && typeof lastUserText === 'string' && !light) {
     // Hints are a nicety: the first message of a session must not wait for the compound table
     // to download. If it is not ready in time, this message goes without and it keeps loading.
     try { entities = await withinMs(entityHints(lastUserText), HINT_BUDGET_MS); } catch { entities = null; }
@@ -984,6 +990,21 @@ export async function streamChatCompletion({
     onToolCallResult(name, result, id);
     return result;
   };
+
+  if (light) {
+    onStatus({ type: 'thinking', step: 0 });
+    // Only the recent conversation, as plain text: enough to stay in context, nothing more.
+    const recent = history.filter(m => (m.role === 'user' || m.role === 'assistant' || m.role === 'model') && typeof (m.displayText ?? m.content) === 'string')
+      .slice(-6).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: String(m.role === 'user' ? m.content : (m.displayText ?? m.content)).slice(0, 1500) }));
+    const lightSystem = `${LIGHT_SYSTEM}\n${environment}${lifeBlock}${persona}`;
+    await modelStep({ messages: [{ role: 'system', content: lightSystem }, ...recent], mode: 'light', provider: chosenProvider, turnId, idempotencyKey }, {
+      onText: (t) => { fullText += t; onToken(t); },
+      onThinking: (t) => { fullThinking += t; onThinking(t); },
+      onProvider: (p) => { providerInfo = p; onProvider(p); },
+    });
+    onStatus({ type: 'done' });
+    return { fixes: [], text: fullText, thinking: fullThinking, taskState, toolResults: [], provider: providerInfo?.label || providerInfo?.provider || null, model: providerInfo?.model || null };
+  }
 
   for (let step = 0; step < limit; step++) {
     if (signal?.aborted) break;

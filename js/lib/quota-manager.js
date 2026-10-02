@@ -4,7 +4,7 @@ import { getCurrentUser } from './supabase.js';
 import { authHeader } from './model-gateway.js';
 
 const LIMITS = Object.freeze({
-  DAILY_MESSAGES: 50, BURST_PER_MINUTE: 10, MAX_OUTPUT_TOKENS: 4000,
+  DAILY_MESSAGES: 40, BURST_PER_MINUTE: 8, MAX_OUTPUT_TOKENS: 4000,
   HEAVY_TASKS_DAILY: 25, LARGE_FILES_DAILY: 20,
 });
 const serverQuota = new Map();

@@ -11,9 +11,9 @@
      hover, or when the arrow keys reach a suggestion.
    - Typing into an empty field makes the web burst out of the field:
      a fast spread that slows to a sharp, settled stop.
-   - When the suggestions change, the ones that leave spin away and fade
-     in a spiral around the field while the new ones burst out; any that
-     stay glide to their new place.
+   - When the suggestions change, the ones that no longer fit run back
+     along their traces into the field while the new ones burst out; any
+     that stay glide to their new place.
    - Arrow keys move through the suggestions in rank order (the field
      keeps focus and points at the active one for screen readers); Enter
      picks it; Escape folds the web back into the field.
@@ -26,7 +26,7 @@
 
 const SPREAD = 'cubic-bezier(.12, .86, .14, 1)';   // fast spread, slow sharp stop
 const GLIDE = 'cubic-bezier(.22, 1, .36, 1)';
-const SPIRAL = 'cubic-bezier(.45, 0, .8, .4)';
+const RETRACT = 'cubic-bezier(.5, 0, .2, 1)';     // eases off, then draws smoothly home
 const NS = 'http://www.w3.org/2000/svg';
 let uid = 0;
 
@@ -142,9 +142,9 @@ export function createSuggestionWeb({ host, field, input, avoid = () => [], abov
       const ideal = ideals[rank % ideals.length];
       const angDist = (a) => { const d = Math.abs(a - ideal) % 360; return d > 180 ? 360 - d : d; };
       // Directions near the ideal first; directions another bubble already took come last.
-      const dirs = allowed.slice().sort((a, b) => (angDist(a) + (used.some(u => Math.abs(u - a) < 9) ? 400 : 0)) - (angDist(b) + (used.some(u => Math.abs(u - b) < 9) ? 400 : 0)));
-      const start = 24 + rank * 24;
-      for (let gap = start; gap <= start + 170; gap += 10) {
+      const dirs = allowed.slice().sort((a, b) => (angDist(a) + (used.some(u => Math.abs(u - a) < 14) ? 400 : 0)) - (angDist(b) + (used.some(u => Math.abs(u - b) < 14) ? 400 : 0)));
+      const start = 26 + rank * 28;
+      for (let gap = start; gap <= start + 200; gap += 10) {
         for (const deg of dirs) {
           if (angDist(deg) > 70 && gap < start + 40) continue;
           const s = ray(F, deg);
@@ -152,7 +152,7 @@ export function createSuggestionWeb({ host, field, input, avoid = () => [], abov
           const x = s.ex + s.nx * (gap + ext), y = s.ey + s.ny * (gap + ext);
           const box = { l: x - w / 2, t: y - h / 2, r: x + w / 2, b: y + h / 2 };
           if (box.l < bounds.l || box.r > bounds.r || box.t < bounds.t || box.b > bounds.b) continue;
-          if (taken.some(t => overlaps(inflate(box, 8), t))) continue;
+          if (taken.some(t => overlaps(inflate(box, 16), t))) continue;   // room to breathe between bubbles
           // Keep the web legible: no trace runs under another bubble or across another trace.
           const a = { x: s.ex, y: s.ey }, c = { x, y };
           if (bubbles.some(r => crossesBox(a.x, a.y, c.x, c.y, inflate(r, 3)))) continue;
@@ -228,25 +228,27 @@ export function createSuggestionWeb({ host, field, input, avoid = () => [], abov
     drawTrace(rec.path, 460, 0, GLIDE);
   }
 
-  /** Leaves in a spiral around the field: turning, drawing in and fading as it goes. */
-  function spiralOut(rec, center, i) {
+  /** A suggestion that no longer fits runs back along its trace into the field, and the
+      trace draws back in behind it. */
+  function retract(rec, i) {
     const el = rec.el, path = rec.path;
     el.classList.add('is-leaving');
     el.removeAttribute('id');
     el.setAttribute('aria-hidden', 'true');
     const done = () => { el.remove(); path.remove(); };
     if (reduced() || !el.animate) { done(); return; }
-    const vx = rec.x - center.x, vy = rec.y - center.y;
-    const r0 = Math.hypot(vx, vy) || 1, a0 = Math.atan2(vy, vx);
-    const turn = (vx >= 0 ? 1 : -1) * 0.95;
-    const frames = [];
-    for (let k = 0; k <= 6; k++) {
-      const t = k / 6, a = a0 + turn * t, r = r0 * (1 - 0.5 * t);
-      const px = center.x + Math.cos(a) * r - rec.x, py = center.y + Math.sin(a) * r - rec.y;
-      frames.push({ transform: `translate(${px.toFixed(1)}px, ${py.toFixed(1)}px) rotate(${(turn * 40 * t).toFixed(1)}deg) scale(${(1 - 0.6 * t).toFixed(3)})`, opacity: 1 - t, offset: t });
-    }
-    el.animate(frames, { duration: 440, delay: i * 18, easing: SPIRAL, fill: 'forwards' }).finished.then(done, done);
-    path.animate?.([{ opacity: 1 }, { opacity: 0 }], { duration: 220, fill: 'forwards' });
+    const dx = rec.ex - rec.x, dy = rec.ey - rec.y;
+    el.animate([
+      { transform: 'none', opacity: 1 },
+      { transform: `translate(${(dx * 0.55).toFixed(1)}px, ${(dy * 0.55).toFixed(1)}px) scale(.8)`, opacity: 0.85, offset: 0.55 },
+      { transform: `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) scale(.2)`, opacity: 0 },
+    ], { duration: 420, delay: Math.min(i, 6) * 22, easing: RETRACT, fill: 'forwards' }).finished.then(done, done);
+    let len = 0;
+    try { len = path.getTotalLength(); } catch { /* not laid out */ }
+    if (len && path.animate) {
+      path.animate([{ strokeDasharray: `${len} ${len}`, strokeDashoffset: 0 }, { strokeDasharray: `${len} ${len}`, strokeDashoffset: len }],
+        { duration: 420, delay: Math.min(i, 6) * 22, easing: RETRACT, fill: 'forwards' });
+    } else path.animate?.([{ opacity: 1 }, { opacity: 0 }], { duration: 220, fill: 'forwards' });
   }
 
   /** Folds back into the field. */
@@ -307,7 +309,6 @@ export function createSuggestionWeb({ host, field, input, avoid = () => [], abov
   /* ---------------- render ---------------- */
 
   function paint(items) {
-    const { center } = layout([]);
     const keys = new Set(items.map(it => it.key));
     // Measure every bubble at its natural size before deciding where any of them go.
     const fresh = [];
@@ -333,7 +334,7 @@ export function createSuggestionWeb({ host, field, input, avoid = () => [], abov
     // Leaving: anything not in the new set, or that no longer fits.
     let leaving = 0;
     for (const [key, rec] of live) {
-      if (!keys.has(key) || !spots.has(key)) { spiralOut(rec, center, leaving++); live.delete(key); }
+      if (!keys.has(key) || !spots.has(key)) { retract(rec, leaving++); live.delete(key); }
     }
     const next = new Map();
     let born = 0;

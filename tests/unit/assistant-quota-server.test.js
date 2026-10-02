@@ -45,8 +45,9 @@ test('Assistant quota enforces burst and daily limits by verified user identity'
     assert.equal(receipt.allowed, true);
     commitAssistantTurn(user, receipt, at);
   }
-  assert.equal(assistantQuotaSummary(user, base + 49 * 61_000).messagesUsed, 50);
-  assert.equal(reserveAssistantTurn(user, prompt('turn_limit_extra'), base + 50 * 61_000).status, 429);
+  const n = ASSISTANT_QUOTA_LIMITS.daily;
+  assert.equal(assistantQuotaSummary(user, base + (n - 1) * 61_000).messagesUsed, n);
+  assert.equal(reserveAssistantTurn(user, prompt('turn_limit_extra'), base + n * 61_000).status, 429);
 });
 
 test('Provider failure refunds the reserved message and a verified owner has unlimited access', () => {
@@ -82,9 +83,9 @@ test('Many model steps still have an account-wide work budget', () => {
   clearAssistantQuotaForTests();
   for (let i = 0; i < ASSISTANT_QUOTA_LIMITS.requestsDaily; i++) {
     const turnId = `turn_work_${Math.floor(i / ASSISTANT_QUOTA_LIMITS.maxStepsPerTurn)}`;
-    const receipt = reserveAssistantTurn(user, prompt(turnId), base + i * 2000);
+    const receipt = reserveAssistantTurn(user, prompt(turnId), base + i * 3100);
     assert.equal(receipt.allowed, true);
-    commitAssistantTurn(user, receipt, base + i * 2000);
+    commitAssistantTurn(user, receipt, base + i * 3100);
   }
-  assert.equal(reserveAssistantTurn(user, prompt('turn_work_extra'), base + ASSISTANT_QUOTA_LIMITS.requestsDaily * 2000).status, 429);
+  assert.equal(reserveAssistantTurn(user, prompt('turn_work_extra'), base + ASSISTANT_QUOTA_LIMITS.requestsDaily * 3100).status, 429);
 });

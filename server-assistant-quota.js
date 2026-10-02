@@ -1,9 +1,14 @@
 import crypto from 'node:crypto';
 
+/* Sized against the providers' shared free allowances (late 2026: Groq gpt-oss about 1,000
+   requests and 200K tokens a day per model, llama-3.1-8b-instant about 14,400 and 500K; Gemini
+   Flash about 250 a day, Flash-Lite about 1,000), so a handful of heavy users cannot spend
+   everyone's day. A model step with tools is the expensive unit; small talk is light and
+   counted separately. The same numbers live in supabase/assistant-quotas.sql. */
 export const ASSISTANT_QUOTA_LIMITS = Object.freeze({
-  daily: 50, burst: 10, burstWindowMs: 60_000,
-  requestsDaily: 400, requestsPerMinute: 40,
-  turnWindowMs: 30 * 60_000, maxStepsPerTurn: 32, reservationMs: 15 * 60_000,
+  daily: 40, burst: 8, burstWindowMs: 60_000,
+  requestsDaily: 150, requestsPerMinute: 20, lightDaily: 120,
+  turnWindowMs: 30 * 60_000, maxStepsPerTurn: 16, reservationMs: 15 * 60_000,
 });
 
 export function assistantTurnKey(payload) {
@@ -34,7 +39,7 @@ export function createMemoryAssistantQuotaStore() {
     const day = new Date(now).toISOString().slice(0, 10);
     let state = usage.get(user.id);
     if (!state) { state = { day, count: 0, requests: 0, turns: new Map(), receipts: new Map() }; usage.set(user.id, state); }
-    if (state.day !== day) { state.day = day; state.count = 0; state.requests = 0; }
+    if (state.day !== day) { state.day = day; state.count = 0; state.requests = 0; state.light = 0; }
     for (const [id, receipt] of state.receipts) {
       if (receipt.status === 'pending' && now - receipt.at >= limits.reservationMs) settle(state, receipt, false);
       if (now - receipt.at > 2 * 86_400_000) state.receipts.delete(id);
@@ -51,6 +56,7 @@ export function createMemoryAssistantQuotaStore() {
       messagesRemaining: free ? null : Math.max(0, limits.daily - state.count),
       burstRemaining: free ? null : Math.max(0, limits.burst - recent.length),
       requestsUsed: state.requests, requestsRemaining: free ? null : Math.max(0, limits.requestsDaily - state.requests),
+      lightRemaining: free ? null : Math.max(0, limits.lightDaily - (state.light || 0)),
       resetsAt: new Date(Date.parse(state.day + 'T00:00:00Z') + 86_400_000).toISOString(), storage: 'development',
     };
   }
@@ -66,6 +72,17 @@ export function createMemoryAssistantQuotaStore() {
       const requests = [...state.receipts.values()].filter(receipt => now - receipt.at < limits.burstWindowMs);
       const untilMidnight = Math.ceil((Date.parse(state.day + 'T00:00:00Z') + 86_400_000 - now) / 1000);
       const denied = (reason, retryAfter = 0) => ({ allowed: false, status: 429, reason, retryAfter });
+      // Light turn: one cheap step on its own allowance, still inside the per-minute step limit.
+      if (payload.light === true) {
+        if (!free && (state.light || 0) >= limits.lightDaily) return denied('Daily small-talk limit reached. Ask the Assistant to do something, or come back tomorrow.', untilMidnight);
+        if (!free && requests.length >= limits.requestsPerMinute) return denied('The Assistant is handling too many steps. Please wait a minute and try again.', Math.ceil((Math.min(...requests.map(r => r.at)) + limits.burstWindowMs - now) / 1000));
+        const turn = { id: crypto.randomUUID(), day: state.day, key, at: now, lastAt: now, steps: 1, counted: false };
+        state.turns.set(turn.id, turn);
+        state.light = (state.light || 0) + 1;
+        const receipt = { reservationId: crypto.randomUUID(), turnId: turn.id, at: now, status: 'pending', charged: false };
+        state.receipts.set(receipt.reservationId, receipt);
+        return { allowed: true, charged: false, reservationId: receipt.reservationId, summary: summary(user, now) };
+      }
       if (!free && state.requests >= limits.requestsDaily) return denied('Daily Assistant work limit reached. It resets at midnight UTC.', untilMidnight);
       if (!free && requests.length >= limits.requestsPerMinute) return denied('The Assistant is handling too many steps. Please wait a minute and try again.', Math.ceil((Math.min(...requests.map(r => r.at)) + limits.burstWindowMs - now) / 1000));
       // The owner has no limits at all; for everyone else one task cannot run forever on one charge.
@@ -133,7 +150,14 @@ export function createSharedAssistantQuotaStore({ env = process.env, authorizati
     },
     async reserve(_user, payload) {
       const reservationId = crypto.randomUUID();
-      const value = await rpc('toolbox_assistant_quota', { p_action: 'reserve', p_reservation_id: reservationId, p_turn_key: assistantTurnKey(payload) });
+      const args = { p_action: 'reserve', p_reservation_id: reservationId, p_turn_key: assistantTurnKey(payload) };
+      let value;
+      if (payload.light === true) {
+        // A database that predates light turns has no p_light parameter: fall back to an
+        // ordinary reservation rather than failing the message.
+        try { value = await rpc('toolbox_assistant_quota', { ...args, p_light: true }); }
+        catch (error) { if (error.status === 401) throw error; value = await rpc('toolbox_assistant_quota', args); }
+      } else value = await rpc('toolbox_assistant_quota', args);
       if (typeof value?.allowed !== 'boolean' || value.allowed && value.reservationId !== reservationId || !value.allowed && value.status !== 429) throw new AssistantQuotaError();
       return value;
     },

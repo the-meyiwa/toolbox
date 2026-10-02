@@ -1132,8 +1132,6 @@
 .sv-grid-name, .sv-grid-meta, .sv-grid-icon .sv-tags-dots { margin-left: 9px; margin-right: 9px; }
 .sv-grid-name { -webkit-line-clamp: 2; font-size: 13px; }
 .sv-grid-meta { margin-bottom: 10px; }
-.sv-body { animation: sv-settle .32s cubic-bezier(.2,.76,.22,1); }
-@keyframes sv-settle { from { opacity: .65; transform: translateY(6px); } }
 @media (max-width: 720px) {
   #saved-view:not(.hidden) { height: auto; max-height: none; overflow: visible; display: block; }
   .sv { gap: 10px; }
@@ -1152,4 +1150,4 @@
   .sv-grid-thumb { height: 104px; }
   .sv-grid-glyph svg { width: 48px; height: 48px; }
 }
-@media (prefers-reduced-motion: reduce) { .sv-body { animation: none; } .sv-grid-icon { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .sv-grid-icon { transition: none; } }

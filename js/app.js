@@ -20,6 +20,7 @@ import { homeShortcutTools } from './lib/home-shortcuts.js';
 import { createSuggestionWeb, webSuits } from './lib/suggestion-web.js';
 import { openHeaderSearch } from './lib/header-search.js';
 import { installSquircleSelection } from './lib/squircle-selection.js';
+import { installTouchSelection } from './lib/touch-selection.js';
 import { animateToolGrid, installChipIndicator, installToolCardLight } from './tools-motion.js';
 import { copyText, showToast } from './utils.js';
 import { initTheme } from './lib/theme.js';
@@ -120,7 +121,8 @@ function toolCard(tool, { compact = false, index = 0 } = {}) {
         <div class="tool-card-name">${escapeHtml(tool.name)}</div>
         <div class="tool-card-desc">${escapeHtml(tool.description)}</div>
       </div>
-      ${tool.badge === 'Beta' ? '<span class="tool-card-badge beta-badge">Beta</span>' : tool.badge ? `<span class="tool-card-badge">${escapeHtml(tool.badge)}</span>`
+      ${tool.external ? '<svg class="tool-card-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Opens in a new tab"><path d="M7 17 17 7M8 7h9v9"/></svg>'
+        : tool.badge === 'Beta' ? '<span class="tool-card-badge beta-badge">Beta</span>' : tool.badge ? `<span class="tool-card-badge">${escapeHtml(tool.badge)}</span>`
         : tool.offline === false ? '<span class="tool-card-flag" title="Needs an internet connection">Online</span>' : ''}
     </a>`;
 }
@@ -365,6 +367,21 @@ function renderRelated(tool) {
 }
 
 
+/* Opening a tool: the heading (crumbs, title, description) settles in, then the workspace rises
+   into place once the tool has rendered. Transform and opacity only; reduced motion skips it. */
+const TOOL_GLIDE = 'cubic-bezier(.22, 1, .36, 1)';
+const motionOk = () => typeof Element.prototype.animate === 'function' && !matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+function animateToolHeader(viewport) {
+  if (!motionOk()) return;
+  viewport.querySelectorAll(':scope .viewport-crumbs, :scope .viewport-header').forEach((el, i) => {
+    el.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 420, delay: i * 50, easing: TOOL_GLIDE, fill: 'backwards' });
+  });
+}
+function animateToolBody(el) {
+  if (!motionOk() || !el?.isConnected) return;
+  el.animate([{ opacity: 0, transform: 'translateY(14px) scale(.992)' }, { opacity: 1, transform: 'none' }], { duration: 520, easing: TOOL_GLIDE });
+}
+
 /* --------------- routing --------------- */
 
 function showPage(page) {
@@ -403,6 +420,8 @@ function showPage(page) {
   document.body.classList.remove('tool-fit-screen');
   document.body.classList.remove('tool-bare', 'tool-wide', 'tool-fill');
   document.body.classList.toggle('in-files', page === 'saved' || page === 'files');
+  // Home has its own search in the middle of the page, so the corner one steps aside there.
+  document.body.classList.toggle('on-home', page === 'home');
   for (const link of navLinks) {
     link.classList.toggle('active', link.dataset.page === page || (page === 'about' && link.dataset.page === 'support') || (page === 'support' && link.dataset.page === 'about'));
   }
@@ -533,6 +552,8 @@ async function openTool(id, routeState = {}) {
   const prefsBtn = $('tool-prefs-btn');
   if (prefsBtn) prefsBtn.hidden = !hasToolSettings(id);
   viewport.classList.remove('hidden');
+  // The tool arrives rather than appears: its heading settles first, then its workspace rises in.
+  animateToolHeader(viewport);
 
   for (const link of navLinks) link.classList.toggle('active', link.dataset.page === 'tools');
   requestAnimationFrame(updateMobileNavIndicator);
@@ -566,6 +587,7 @@ async function openTool(id, routeState = {}) {
     currentToolInstance = module.default;
     await currentToolInstance.render(viewportContent, { ...routeState, analytics: session, tool, artifact: incoming });
     if (toolNavigationVersion !== navigationVersion) return;
+    animateToolBody(viewportContent);
 
     /* The artifact layer wraps the tool rather than living inside it: a tool
        that declares neither hook gets nothing, sees nothing, and is
@@ -748,7 +770,9 @@ let searchTimer = null;
 let lastLoggedQuery = '';
 
 function runSearch() {
-  const q = searchInput.value.trim();
+  // The Tools page has no filter box of its own any more (the header search finds tools);
+  // the grid is filtered only when something sets a query.
+  const q = searchInput?.value.trim() || '';
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
   const filteredTools = getVisibleTools({ isMobile });
 
@@ -840,7 +864,7 @@ installPalette();
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    if (document.activeElement === searchInput) {
+    if (searchInput && document.activeElement === searchInput) {
       searchInput.blur();
       if (searchInput.value) { searchInput.value = ''; runSearch(); }
     } else if (currentPage === 'tool') {
@@ -849,10 +873,10 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-searchInput.addEventListener('input', runSearch);
+searchInput?.addEventListener('input', runSearch);
 grid.addEventListener('click', (e) => {
   const card = e.target.closest('.tool-card');
-  if (card && searchInput.value.trim()) {
+  if (card && searchInput?.value.trim()) {
     track('search_selected', { query: searchInput.value.trim(), resultTop: card.id.replace(/^card-/, '') });
   }
 });
@@ -882,6 +906,15 @@ logo.addEventListener('click', (e) => { e.preventDefault(); window.location.hash
 // a hover ripple doesn't replay the entrance (shell.css .logo.is-entering).
 setTimeout(() => logo.classList.remove('is-entering'), 1100);
 window.addEventListener('hashchange', handleHash);
+// Tools that live on another site (KoreLearn) open there in a new tab, straight from the click.
+document.addEventListener('click', (e) => {
+  if (e.defaultPrevented || e.button !== 0) return;
+  const a = e.target.closest?.('a[href^="#"]');
+  const tool = a && BY_ID.get(a.getAttribute('href').slice(1));
+  if (!tool?.external) return;
+  e.preventDefault();
+  window.open(tool.external, '_blank', 'noopener');
+}, true);
 // Plain clicks on Assistant links open it in a new tab straight from the click,
 // so popup blockers see a user gesture. Signed out, the normal route shows sign-in.
 document.addEventListener('click', (e) => {
@@ -990,6 +1023,7 @@ if (homeHeroInput && homeHeroDropdown) {
     if (item.tool) {
       track('search_selected', { query: homeHeroInput.value.trim(), resultTop: item.tool.id });
       closeSuggestions();
+      if (item.tool.external) { window.open(item.tool.external, '_blank', 'noopener'); return; }
       window.location.hash = `#${item.tool.id}`;
     }
   }
@@ -1211,16 +1245,9 @@ function renderQuickRow() {
       <a class="home-quick-item lp-chip" href="#${t.id}" style="--k:${i}">
         <span class="home-quick-icon">${t.icon}</span>
         <span>${escapeHtml(t.name)}</span>
-      </a>`).join('')
-    + `<button type="button" class="lp-chip lp-chip-edit" id="home-quick-edit" style="--k:${tools.length}" aria-label="Choose your shortcuts" title="Choose your shortcuts">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>
-        <span>${tools.length ? 'Edit' : 'Add shortcuts'}</span>
-      </button>`;
+      </a>`).join('');
 }
 renderQuickRow();
-$('home-quick')?.addEventListener('click', (e) => {
-  if (e.target.closest('#home-quick-edit')) openSettings('shortcuts');
-});
 onSettingsChange((next, prev) => { if (next.homeShortcuts !== prev?.homeShortcuts) renderQuickRow(); });
 
 /* Files stay reachable from the primary navigation at all times. */
@@ -1237,6 +1264,7 @@ installFileSurface();
 installGlobalMenus({ getTool: () => (currentPage === 'tool' && currentToolObj ? { tool: currentToolObj, instance: currentToolInstance } : null) });
 installTextActions();
 installSquircleSelection();
+installTouchSelection();
 installAssistantShortcut();
 
 initTheme();

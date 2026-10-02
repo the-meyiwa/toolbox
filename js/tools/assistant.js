@@ -784,6 +784,7 @@ function mountAssistant(container, state) {
 
   function renderThread() {
     thread.innerHTML = '';
+    root.querySelector('.ast-kl')?.remove();   // the study banner belongs to the chat it was offered in
     if (!getCurrentUser()) { thread.appendChild(signInView()); updateComposerState(); return; }
     if (!messages.length) { thread.appendChild(emptyView()); updateComposerState(); return; }
     for (const m of messages) {
@@ -1642,7 +1643,30 @@ function mountAssistant(container, state) {
     renderConvList();
     scrollToBottom(true);
     liftFromComposer(sentEl, from);
+    offerKoreLearn(text);
     runTurn();
+  }
+
+  /* Study and learning requests get a pointer to KoreLearn: a small banner above the composer,
+     once per chat, that can be closed. It is never sent to the model. */
+  const LEARNING = /\b(stud(y|ying|ies)|learn(ing)?|revis(e|ion)|exams?|homework|assignments?|tutor(ing)?|teach me|lessons?|lectures?|courses?|syllabus|curriculum|quiz(zes)?|flash ?cards?|past questions?|practice questions?|waec|jamb|neco|gce|gcse|sat|ielts|toefl|semester|coursework|thesis|dissertation|explain (it |this |that )?(to me|simply|like i'?m)|help me understand)\b/i;
+  const offeredFor = new Set();
+  function offerKoreLearn(text) {
+    if (!text || !LEARNING.test(text) || !conv || offeredFor.has(conv.id)) return;
+    offeredFor.add(conv.id);
+    root.querySelector('.ast-kl')?.remove();
+    const el = document.createElement('div');
+    el.className = 'ast-kl';
+    el.setAttribute('role', 'note');
+    el.innerHTML = `<span class="ast-kl-mark" aria-hidden="true">${icon('book', 16)}</span>
+      <span class="ast-kl-text"><strong>Studying?</strong> KoreLearn has courses, practice and study plans built for learning.</span>
+      <a class="ast-kl-link" href="https://korelearn.com/?ref=toolbox-assistant" target="_blank" rel="noopener">Open KoreLearn</a>
+      <button type="button" class="ast-kl-x" aria-label="Close">${icon('x', 14, 2)}</button>`;
+    el.querySelector('.ast-kl-x').addEventListener('click', () => {
+      if (reduceMotion() || !el.animate) { el.remove(); return; }
+      el.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(6px) scale(.98)' }], { duration: 180, easing: 'ease-in', fill: 'forwards' }).finished.then(() => el.remove(), () => el.remove());
+    });
+    form.parentNode.insertBefore(el, form);
   }
 
   /** The message rises out of the composer into its place in the thread. */

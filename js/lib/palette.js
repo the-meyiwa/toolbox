@@ -184,7 +184,8 @@ function collect(query) {
     badge: t.badge || '',
     hint: t.description,
     icon: t.icon,
-    go: () => { window.location.hash = `#${t.id}`; },
+    // A tool on another site (KoreLearn) opens there, from the same keypress or click.
+    go: () => { if (t.external) window.open(t.external, '_blank', 'noopener'); else window.location.hash = `#${t.id}`; },
   }));
 
   const cmdRows = COMMANDS

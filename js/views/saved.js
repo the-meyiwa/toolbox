@@ -15,6 +15,7 @@
    Strictly zero emojis.
    ============================================================ */
 
+import { morphHtml } from '../lib/dom-morph.js';
 import { tbConfirm, tbPrompt, tbAlert } from '../lib/dialog.js';
 import { openContextMenu, closeContextMenu } from '../lib/context-menu.js';
 import { fs, normalizePath, getParentPath, getBaseName } from '../lib/filesystem.js';
@@ -341,10 +342,16 @@ export function renderSaved(host, selectedId = null) {
       }
       ui.focusItem = false;
     };
-    const animate = ui.animateNext && typeof document.startViewTransition === 'function' && !window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    const animate = ui.animateNext && typeof Element.prototype.animate === 'function' && !window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
     ui.animateNext = false;
-    if (animate) document.startViewTransition(update);
-    else update();
+    // Measure where every item is now, change the window in place, then move each item from
+    // where it was to where it is (FLIP). Only transform and opacity animate, on the real
+    // elements, so nothing stretches and every item lands exactly.
+    const before = animate ? snapshotItems(host) : null;
+    const from = { layout: lastLayout, path: lastPath };
+    update();
+    lastLayout = currentLayout; lastPath = currentPath;
+    if (animate) playFilesMotion(host, before, from);
   };
 
   const authHandler = () => {
@@ -374,6 +381,50 @@ export function renderSaved(host, selectedId = null) {
     document.getElementById('sv-properties-modal')?.remove();
     if (document.getElementById('toolbox-context-menu')) closeContextMenu();
   };
+}
+
+/* ---------- Files motion: precise FLIP between views, a cascade on a new folder ---------- */
+let lastLayout = null;
+let lastPath = null;
+const FILES_GLIDE = 'cubic-bezier(.22, 1, .36, 1)';
+
+function snapshotItems(host) {
+  const map = new Map();
+  host.querySelectorAll('[data-context-target][data-path]').forEach(el => map.set(el.dataset.path, el.getBoundingClientRect()));
+  return map;
+}
+
+function playFilesMotion(host, before, from) {
+  const items = [...host.querySelectorAll('[data-context-target][data-path]')];
+  const folderChanged = from.path !== currentPath;
+  const layoutChanged = from.layout !== currentLayout;
+  const vh = window.innerHeight;
+  if (folderChanged || !before?.size) {
+    // A different folder: its items arrive in a short cascade, nearest first.
+    items.forEach((el, i) => {
+      if (el.getBoundingClientRect().top > vh) return;
+      el.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 340, delay: Math.min(i, 14) * 16, easing: FILES_GLIDE, fill: 'backwards' });
+    });
+    return;
+  }
+  if (layoutChanged) {
+    items.forEach((el, i) => {
+      const was = before.get(el.dataset.path);
+      const now = el.getBoundingClientRect();
+      if (now.top > vh || now.bottom < 0) return;
+      if (!was) {
+        el.animate([{ opacity: 0, transform: 'scale(.96)' }, { opacity: 1, transform: 'none' }], { duration: 320, delay: 80 + Math.min(i, 14) * 12, easing: FILES_GLIDE, fill: 'backwards' });
+        return;
+      }
+      const dx = was.left - now.left, dy = was.top - now.top;
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+      el.animate([{ transform: `translate(${dx}px, ${dy}px)`, opacity: 0.6 }, { transform: 'none', opacity: 1 }], { duration: 440, delay: Math.min(i, 14) * 10, easing: FILES_GLIDE });
+    });
+    // Entering the preview view, the preview pane slides in beside the list.
+    if (currentLayout === 'split') {
+      host.querySelector('.sv-detail-scroll')?.animate([{ opacity: 0, transform: 'translateX(16px)' }, { opacity: 1, transform: 'none' }], { duration: 420, delay: 60, easing: FILES_GLIDE, fill: 'backwards' });
+    }
+  }
 }
 
 function paint(host, state, refresh, ui) {
@@ -419,7 +470,9 @@ function paint(host, state, refresh, ui) {
   const single = selItems.length === 1 ? withBody(selItems[0]) : null;
 
   const ctx = { user, items, inDir, byPath, selItems, single };
-  host.innerHTML = full(ctx);
+  // Patch the window in place: icons, thumbnails and previews that did not change stay put
+  // instead of being rebuilt (and re-animated) on every refresh.
+  morphHtml(host, full(ctx));
   return wire(host, ctx, refresh, ui);
 }
 
@@ -686,8 +739,7 @@ function renderExplorerBody(ctx, driveIsEmpty) {
 function itemAttrs(item) {
   const selected = selectedPaths.has(item.path);
   const isCut = fileClipboard.op === 'cut' && fileClipboard.paths.includes(item.path);
-  const visualId = [...item.path].reduce((hash, char) => (Math.imul(hash, 33) ^ char.charCodeAt(0)) >>> 0, 5381).toString(36);
-  return `class="__CLS__ sv-item ${selected ? 'is-selected' : ''} ${isCut ? 'is-cut' : ''}" style="view-transition-name:sv-${visualId}"
+  return `class="__CLS__ sv-item ${selected ? 'is-selected' : ''} ${isCut ? 'is-cut' : ''}"
     data-context-target="true" data-path="${escapeHtml(item.path)}" data-is-dir="${item.isDirectory ? 'true' : 'false'}"
     draggable="true" role="option" aria-selected="${selected}" tabindex="${item.path === cursorPath ? '0' : '-1'}"`;
 }

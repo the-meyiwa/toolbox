@@ -52,8 +52,9 @@ async function run(history, steps, opts = {}) {
 test('Efficiency: a greeting is a small request', async () => {
   const { requests: r } = await run([{ role: 'user', content: 'hi' }], [{ text: 'Hello!' }]);
   assert.equal(r.length, 1);
-  assert.ok(kb(r[0]) < 10, `"hi" request is ${kb(r[0]).toFixed(1)} KB (budget 10 KB)`);
-  assert.ok(r[0].tools.length <= 8, `${r[0].tools.length} tools sent for "hi"`);
+  assert.ok(kb(r[0]) < 4, `"hi" request is ${kb(r[0]).toFixed(1)} KB (budget 4 KB)`);
+  assert.equal(r[0].tools, undefined, 'small talk carries no tool definitions');
+  assert.equal(r[0].mode, 'light', 'small talk goes out as a light turn');
 });
 
 test('Efficiency: a website is built in one tool step', async () => {

@@ -1,3 +1,4 @@
+import fs from 'fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { getSettings, getSetting, updateSettings, resetSettings, importSettings, DEFAULT_SETTINGS } from '../../js/lib/settings.js';
@@ -65,7 +66,8 @@ test('Profile Pictures: registry includes minimal silhouette and all picture opt
     const found = PROFILE_PICTURES.find(p => p.id === id);
     assert.ok(found, `Profile picture "${id}" must exist in registry`);
     assert.equal(found.src, `/profile-pictures/${id}`);
-    assert.equal(getProfilePictureSrc(id), `/profile-pictures/${id}`);
+    assert.equal(getProfilePictureSrc(id), `/profile-pictures/small/${id.replace(/\.jpg$/, '.webp')}`);
+    assert.ok(fs.existsSync(`public/profile-pictures/small/${id.replace(/\.jpg$/, '.webp')}`), `small version of ${id} must exist`);
   }
 });
 
@@ -76,7 +78,7 @@ test('Profile Pictures: getUserAvatarHtml renders SVG for default and img for pi
 
   const laraHtml = getUserAvatarHtml('Lara.jpg', 48);
   assert.ok(laraHtml.includes('<img'), 'Image id must render <img> tag');
-  assert.ok(laraHtml.includes('/profile-pictures/Lara.jpg'));
+  assert.ok(laraHtml.includes('/profile-pictures/small/Lara.webp'), 'presets are served as small WebP files');
 
   // Zero emojis in avatar html
   const emojiRegex = /[\u{1F300}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F1E0}-\u{1F1FF}]/u;

@@ -21,6 +21,9 @@ create table if not exists toolbox_private.assistant_quota_turns (
   steps integer not null default 1 check (steps >= 0),
   counted boolean not null default true
 );
+-- Small talk ("hello", "thanks") runs on the cheapest models with no tools and is counted on
+-- its own allowance, so it never uses up a person's daily messages.
+alter table toolbox_private.assistant_quota_accounts add column if not exists light_count integer not null default 0 check (light_count >= 0);
 create index if not exists assistant_quota_turn_lookup
   on toolbox_private.assistant_quota_turns(user_id, usage_day, turn_key, last_at);
 create index if not exists assistant_quota_turn_burst
@@ -57,18 +60,20 @@ create or replace function toolbox_private.assistant_quota_summary(p_user uuid, 
 returns jsonb language sql set search_path = '' as $$
   select jsonb_build_object(
     'isUnlimited', p_unlimited, 'messagesUsed', a.messages_count,
-    'messagesLimit', case when p_unlimited then null else 50 end,
-    'messagesRemaining', case when p_unlimited then null else greatest(0, 50-a.messages_count) end,
-    'burstRemaining', case when p_unlimited then null else greatest(0, 10-(select count(*) from toolbox_private.assistant_quota_turns t where t.user_id=p_user and t.counted and t.started_at>p_now-interval '1 minute')) end,
+    'messagesLimit', case when p_unlimited then null else 40 end,
+    'messagesRemaining', case when p_unlimited then null else greatest(0, 40-a.messages_count) end,
+    'lightRemaining', case when p_unlimited then null else greatest(0, 120-a.light_count) end,
+    'burstRemaining', case when p_unlimited then null else greatest(0, 8-(select count(*) from toolbox_private.assistant_quota_turns t where t.user_id=p_user and t.counted and t.started_at>p_now-interval '1 minute')) end,
     'requestsUsed', a.requests_count,
-    'requestsRemaining', case when p_unlimited then null else greatest(0, 400-a.requests_count) end,
+    'requestsRemaining', case when p_unlimited then null else greatest(0, 150-a.requests_count) end,
     'resetsAt', to_char((a.usage_day+1)::timestamp, 'YYYY-MM-DD"T"HH24:MI:SS".000Z"'),
     'storage', 'shared'
   ) from toolbox_private.assistant_quota_accounts a where a.user_id=p_user;
 $$;
 
+drop function if exists public.toolbox_assistant_quota(text, uuid, text);
 create or replace function public.toolbox_assistant_quota(
-  p_action text, p_reservation_id uuid default null, p_turn_key text default null
+  p_action text, p_reservation_id uuid default null, p_turn_key text default null, p_light boolean default false
 ) returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
   v_user uuid := auth.uid(); v_now timestamptz; v_day date; v_unlimited boolean;
@@ -89,7 +94,7 @@ begin
   select * into v_account from toolbox_private.assistant_quota_accounts where user_id=v_user for update;
   v_now := clock_timestamp(); v_day := (v_now at time zone 'UTC')::date;
   if v_account.usage_day <> v_day then
-    update toolbox_private.assistant_quota_accounts set usage_day=v_day,messages_count=0,requests_count=0 where user_id=v_user;
+    update toolbox_private.assistant_quota_accounts set usage_day=v_day,messages_count=0,requests_count=0,light_count=0 where user_id=v_user;
   end if;
   select exists(select 1 from auth.users u where u.id=v_user and u.email_confirmed_at is not null and lower(u.email) in ('meyigbenee@gmail.com','meyigbenee@icloud.com'))
     or exists(select 1 from toolbox_private.assistant_quota_exemptions where user_id=v_user) into v_unlimited;
@@ -115,26 +120,41 @@ begin
     if v_turn.turn_key is distinct from p_turn_key then raise exception 'Reservation does not match this task'; end if;
     return jsonb_build_object('allowed',true,'charged',v_receipt.charged,'reservationId',v_receipt.id,'summary',toolbox_private.assistant_quota_summary(v_user,v_now,v_unlimited));
   end if;
+  -- Light turn: one cheap step, its own daily allowance, still inside the per-minute step limit.
+  if coalesce(p_light,false) then
+    select count(*),min(created_at) into v_recent,v_oldest from toolbox_private.assistant_quota_reservations where user_id=v_user and created_at>v_now-interval '1 minute';
+    if not v_unlimited and v_account.light_count>=120 then
+      return jsonb_build_object('allowed',false,'status',429,'reason','Daily small-talk limit reached. Ask the Assistant to do something, or come back tomorrow.','retryAfter',greatest(0,ceil(extract(epoch from ((v_day+1)::timestamp at time zone 'UTC')-v_now))));
+    elsif not v_unlimited and v_recent>=20 then
+      return jsonb_build_object('allowed',false,'status',429,'reason','The Assistant is handling too many steps. Please wait a minute and try again.','retryAfter',greatest(0,ceil(extract(epoch from v_oldest+interval '1 minute'-v_now))));
+    end if;
+    insert into toolbox_private.assistant_quota_turns(user_id,usage_day,turn_key,started_at,last_at,counted)
+      values(v_user,v_day,p_turn_key,v_now,v_now,false) returning * into v_turn;
+    update toolbox_private.assistant_quota_accounts set light_count=light_count+1 where user_id=v_user;
+    insert into toolbox_private.assistant_quota_reservations(id,user_id,turn_id,created_at,expires_at,charged)
+      values(p_reservation_id,v_user,v_turn.id,v_now,v_now+interval '15 minutes',false);
+    return jsonb_build_object('allowed',true,'charged',false,'reservationId',p_reservation_id,'summary',toolbox_private.assistant_quota_summary(v_user,v_now,v_unlimited));
+  end if;
   if p_turn_key is not null then
     select * into v_turn from toolbox_private.assistant_quota_turns where user_id=v_user and usage_day=v_day and turn_key=p_turn_key and counted
       and last_at>v_now-interval '30 minutes' order by last_at desc limit 1;
   end if;
-  if not v_unlimited and v_account.requests_count>=400 then
+  if not v_unlimited and v_account.requests_count>=150 then
     v_reason := 'Daily Assistant work limit reached. It resets at midnight UTC.';
     v_retry := ceil(extract(epoch from ((v_day+1)::timestamp at time zone 'UTC')-v_now));
   else
     select count(*),min(created_at) into v_recent,v_oldest from toolbox_private.assistant_quota_reservations where user_id=v_user and created_at>v_now-interval '1 minute';
-    if not v_unlimited and v_recent>=40 then
+    if not v_unlimited and v_recent>=20 then
       v_reason := 'The Assistant is handling too many steps. Please wait a minute and try again.';
       v_retry := ceil(extract(epoch from v_oldest+interval '1 minute'-v_now));
-    elsif not v_unlimited and v_turn.id is not null and v_turn.steps>=32 then
+    elsif not v_unlimited and v_turn.id is not null and v_turn.steps>=16 then
       v_reason := 'This Assistant task has used its available steps. Start a new message.';
-    elsif v_turn.id is null and not v_unlimited and v_account.messages_count>=50 then
+    elsif v_turn.id is null and not v_unlimited and v_account.messages_count>=40 then
       v_reason := 'Daily Assistant message limit reached. It resets at midnight UTC.';
       v_retry := ceil(extract(epoch from ((v_day+1)::timestamp at time zone 'UTC')-v_now));
     elsif v_turn.id is null and not v_unlimited then
       select count(*),min(started_at) into v_recent,v_oldest from toolbox_private.assistant_quota_turns where user_id=v_user and counted and started_at>v_now-interval '1 minute';
-      if v_recent>=10 then
+      if v_recent>=8 then
         v_reason := 'Too many Assistant messages in one minute. Please wait and try again.';
         v_retry := ceil(extract(epoch from v_oldest+interval '1 minute'-v_now));
       end if;
@@ -189,8 +209,8 @@ end;
 $$;
 
 revoke all on function toolbox_private.assistant_quota_summary(uuid,timestamptz,boolean) from public,anon,authenticated;
-revoke all on function public.toolbox_assistant_quota(text,uuid,text) from public,anon,authenticated;
-grant execute on function public.toolbox_assistant_quota(text,uuid,text) to authenticated;
+revoke all on function public.toolbox_assistant_quota(text,uuid,text,boolean) from public,anon,authenticated;
+grant execute on function public.toolbox_assistant_quota(text,uuid,text,boolean) to authenticated;
 revoke all on function public.toolbox_assistant_quota_settle(uuid,boolean) from public,anon,authenticated;
 grant execute on function public.toolbox_assistant_quota_settle(uuid,boolean) to anon,authenticated;
 

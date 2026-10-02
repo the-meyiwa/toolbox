@@ -85,6 +85,7 @@ body.is-scrolled #app-header, body.in-tool #app-header { border-bottom-color: va
    open Spotlight. Phones: the button opens Spotlight. */
 .header-search-btn { width: 200px; }
 .header-search-btn.is-searching { visibility: hidden; }
+body.on-home:not(.in-tool) .header-search-btn { display: none; }
 
 .header-avatar-btn { position: relative; overflow: hidden; }
 .header-avatar-btn img { width: 28px !important; height: 28px !important; border-radius: 50%; object-fit: cover; }

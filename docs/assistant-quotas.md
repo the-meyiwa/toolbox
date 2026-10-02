@@ -26,9 +26,19 @@ account begins the new ledger on its first request. No old user content is delet
 
 ## Accounting and recovery
 
-- 50 user messages per UTC day; 10 new messages per rolling minute.
-- 400 gateway work attempts per UTC day; 40 per rolling minute.
-- One logical task costs one message, with at most 32 model steps. A turn id is bound
+- 40 user messages per UTC day; 8 new messages per rolling minute.
+- 150 gateway work attempts (model steps) per UTC day; 20 per rolling minute.
+- One logical task costs one message, with at most 16 model steps.
+- Small talk ("hello", "thanks", "how are you?") is a *light turn*: the server re-checks the text,
+  strips tools, caps the reply at 320 tokens and uses the cheapest fast models
+  (Groq `llama-3.1-8b-instant`, Gemini Flash-Lite, …). Light turns do not use daily messages;
+  they have their own allowance of 120 a day and still count toward the per-minute step limit.
+
+Why these numbers: the providers' free allowances are shared by every user. In late 2026 Groq
+gives about 1,000 requests and 200K tokens a day per gpt-oss model and about 14,400 requests and
+500K tokens for `llama-3.1-8b-instant`; Gemini Flash about 250 requests a day and Flash-Lite about
+1,000. A model step with the tool list costs several thousand tokens, so steps are the unit that
+is capped; small talk is moved onto the model with by far the largest allowance. A turn id is bound
   to the latest user message's fingerprint, independent of older tool history.
 - A failed or interrupted model reply refunds the message if no successful or
   pending steps remain in that task. Repeating a refund is harmless. Work attempts

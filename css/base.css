@@ -558,8 +558,10 @@ kbd {
 .notif-preferences-link button:hover { background: var(--surface-2); color: var(--text); }
 
 /* ---------- Toasts (utils.showToast) ---------- */
+/* Desktop: notices drop in at the top, under the header. Phones: they rise from the bottom,
+   above the tab bar, where the thumb is (see the 768px block below). */
 #toolbox-toast-container {
-  position: fixed; left: 50%; bottom: var(--space-6); z-index: 99999;
+  position: fixed; left: 50%; top: calc(var(--header-h, 60px) + 12px); bottom: auto; z-index: 99999;
   transform: translateX(-50%);
   display: flex; flex-direction: column; align-items: center; gap: var(--space-2);
   width: max-content; max-width: calc(100vw - 32px);
@@ -577,8 +579,10 @@ kbd {
 }
 .toolbox-toast.is-leaving { animation: tb-toast-out var(--dur-2) ease forwards; }
 .toolbox-toast-icon { width: 16px; height: 16px; flex-shrink: 0; }
-@keyframes tb-toast-in { from { opacity: 0; transform: translateY(12px) scale(.96); } to { opacity: 1; transform: none; } }
-@keyframes tb-toast-out { to { opacity: 0; transform: translateY(8px) scale(.98); } }
+@keyframes tb-toast-in { from { opacity: 0; transform: translateY(-14px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes tb-toast-out { to { opacity: 0; transform: translateY(-10px) scale(.98); } }
+@keyframes tb-toast-in-up { from { opacity: 0; transform: translateY(12px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes tb-toast-out-down { to { opacity: 0; transform: translateY(8px) scale(.98); } }
 
 @media (max-width: 768px) {
   .hide-mobile { display: none !important; }
@@ -586,7 +590,9 @@ kbd {
   .btn, .tool-input, .tool-select { min-height: 44px; }
   .btn-sm { min-height: 36px; }
   .fz { min-height: 180px; padding: var(--space-6) var(--space-4); }
-  #toolbox-toast-container { bottom: calc(76px + env(safe-area-inset-bottom)); }
+  #toolbox-toast-container { top: auto; bottom: calc(76px + env(safe-area-inset-bottom)); flex-direction: column-reverse; }
+  .toolbox-toast { animation-name: tb-toast-in-up; }
+  .toolbox-toast.is-leaving { animation-name: tb-toast-out-down; }
 }
 .tool-controls .tool-select, .tool-row .tool-select, .tool-controls .tool-input:not([type="range"]) { width: auto; flex: 0 1 auto; }
 .tool-controls > .tool-label { margin: 0 !important; }

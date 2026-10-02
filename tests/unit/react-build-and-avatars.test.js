@@ -27,7 +27,7 @@ test('Avatars: getUserAvatarHtml renders valid SVG / image markup without emojis
   assert.ok(defaultHtml.includes('svg'), 'Default avatar must include an SVG silhouette icon');
 
   const namedHtml = getUserAvatarHtml('Lara.jpg', 60);
-  assert.ok(namedHtml.includes('img') && namedHtml.includes('Lara.jpg'), 'Named avatar must render an img element');
+  assert.ok(namedHtml.includes('img') && namedHtml.includes('/profile-pictures/small/Lara.webp'), 'Named avatar must render an img element (small WebP)');
 
   const emojiRegex = /[\u{1F300}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F1E0}-\u{1F1FF}]/u;
   assert.equal(emojiRegex.test(defaultHtml), false, 'Avatar HTML must not contain emojis');

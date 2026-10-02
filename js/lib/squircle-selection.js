@@ -24,11 +24,12 @@ let layer = null;
 let pool = [];
 let raf = 0;
 let active = false;
+let virtual = null;    // a range Toolbox selected itself (touch selection), drawn instead of the browser's
 
 const fine = () => typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches;
 
 /** Rectangles a text node's selected part occupies, clipped to what can actually be seen. */
-function textRects(range) {
+function textRects(range, own = false) {
   const out = [];
   const root = range.commonAncestorContainer.nodeType === 1 ? range.commonAncestorContainer : range.commonAncestorContainer.parentNode;
   if (!root) return out;
@@ -59,7 +60,8 @@ function textRects(range) {
     const pr = parent.getBoundingClientRect();
     if (pr.bottom < 0 || pr.top > vh || !pr.width) continue;   // off screen or not rendered
     const cs = getComputedStyle(parent);
-    if (cs.userSelect === 'none' || cs.visibility === 'hidden') continue;
+    // Touch screens turn off browser selection everywhere; Toolbox's own ranges still draw there.
+    if ((!own && cs.userSelect === 'none') || cs.visibility === 'hidden') continue;
     sub.setStart(n, n === range.startContainer ? range.startOffset : 0);
     sub.setEnd(n, n === range.endContainer ? range.endOffset : n.nodeValue.length);
     if (sub.collapsed) continue;
@@ -110,15 +112,18 @@ function hide() {
 
 function paint() {
   raf = 0;
-  const sel = document.getSelection();
-  if (!sel || sel.isCollapsed || !sel.rangeCount) { hide(); return; }
-  const range = sel.getRangeAt(0);
+  let range = virtual;
+  if (!range) {
+    const sel = document.getSelection();
+    if (!active || !sel || sel.isCollapsed || !sel.rangeCount) { hide(); return; }
+    range = sel.getRangeAt(0);
+  }
   const anchor = range.commonAncestorContainer;
   const host = anchor.nodeType === 1 ? anchor : anchor.parentElement;
   const focused = document.activeElement;
   // Fields and editors keep their own (native) selection.
-  if (!host || host.closest(NATIVE) || focused?.matches?.('input, textarea')) { hide(); return; }
-  const lines = mergeLines(textRects(range));
+  if (!host || (!virtual && (host.closest(NATIVE) || focused?.matches?.('input, textarea')))) { hide(); return; }
+  const lines = mergeLines(textRects(range, range === virtual));
   if (!lines.length) {
     // Nothing we could measure (shadow DOM, a replaced element…): show the native highlight.
     hide();
@@ -145,21 +150,35 @@ function paint() {
   });
 }
 
-const schedule = () => { if (active && !raf) raf = requestAnimationFrame(paint); };
+const schedule = () => { if ((active || virtual) && layer && !raf) raf = requestAnimationFrame(paint); };
 
-export function installSquircleSelection() {
-  if (active || typeof document === 'undefined' || !fine() || typeof Range === 'undefined' || !Range.prototype.getClientRects) return;
-  active = true;
+function ensureLayer() {
+  if (layer) return;
   layer = document.createElement('div');
   layer.className = 'sq-sel';
   layer.setAttribute('aria-hidden', 'true');
   document.body.appendChild(layer);
-  document.documentElement.classList.add('sq-sel-on');
-  document.addEventListener('selectionchange', schedule);
   window.addEventListener('scroll', schedule, { capture: true, passive: true });
   window.addEventListener('resize', schedule, { passive: true });
   // Content that reflows under a selection (fonts loading, panels opening) moves it.
   if (typeof ResizeObserver === 'function') new ResizeObserver(schedule).observe(document.body);
+}
+
+/** Draw a range Toolbox selected itself (null clears it). Used by touch selection. */
+export function showRange(range) {
+  if (typeof document === 'undefined') return;
+  ensureLayer();
+  virtual = range && !range.collapsed ? range : null;
+  if (!virtual) hide();
+  schedule();
+}
+
+export function installSquircleSelection() {
+  if (active || typeof document === 'undefined' || !fine() || typeof Range === 'undefined' || !Range.prototype.getClientRects) return;
+  active = true;
+  ensureLayer();
+  document.documentElement.classList.add('sq-sel-on');
+  document.addEventListener('selectionchange', schedule);
   // A touch on a device that also has a mouse switches it back to the system highlight.
   window.matchMedia?.('(hover: hover) and (pointer: fine)').addEventListener?.('change', (e) => {
     document.documentElement.classList.toggle('sq-sel-on', e.matches);

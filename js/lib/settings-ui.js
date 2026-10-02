@@ -21,7 +21,7 @@ import { THEMES, getStoredTheme, applyTheme } from './theme.js';
 import { QuotaManager } from './quota-manager.js';
 import { getCurrentUser, updateUserProfile, persistUserProfile, claimUsername, getUsernameChangeStatus, signOut, MADSELKIE_EMAILS } from './supabase.js';
 import { getSettings, updateSettings, exportSettings, importSettings } from './settings.js';
-import { PROFILE_PICTURES, getProfilePictureSrc, getUserAvatarHtml } from './profile-pictures.js';
+import { PROFILE_PICTURES, getProfilePictureSrc, getUserAvatarHtml, warmProfilePictures } from './profile-pictures.js';
 import { personaChoices as PERSONA_CHOICES } from './assistant/personas.js';
 import { openAccountModal } from '../views/account-modal.js';
 import { NotificationEngine, prepareNotificationSound } from './notifications.js';
@@ -435,7 +435,7 @@ function renderAvatarGallery() {
     return `
       <button type="button" class="avatar-story-card stg-avatar${isSelected ? ' is-active' : ''}" data-avatar-id="${escapeHtml(pic.id)}" aria-pressed="${isSelected}" style="--i:${Math.min(i, 14)}">
         <span class="avatar-story-header">
-          <span class="avatar-story-avatar-wrap">${src ? `<img src="${src}" alt="">` : icon('profile', 26)}</span>
+          <span class="avatar-story-avatar-wrap">${src ? `<img src="${src}" alt="" width="48" height="48" decoding="async" fetchpriority="${i < 8 ? 'high' : 'auto'}">` : icon('profile', 26)}</span>
           <span><span class="avatar-story-name">${escapeHtml(pic.name)}</span>${isSelected ? '<span class="avatar-story-badge">Current</span>' : ''}</span>
         </span>
         <span class="avatar-story-bio">${escapeHtml(pic.story || 'A profile avatar for Toolbox.')}</span>
@@ -872,6 +872,7 @@ export function closeSettings() {
 }
 
 export function installSettingsUI() {
+  warmProfilePictures();
   window.addEventListener('toolbox:authchange', () => { if (isOpen) openSettings(currentPage); });
   document.getElementById('settings-btn')?.addEventListener('click', () => openSettings());
   window.addEventListener('keydown', (e) => {
