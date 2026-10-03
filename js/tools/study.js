@@ -21,7 +21,8 @@
 
 import { createStudyStore, progressOf } from '../lib/study/store.js';
 import { generateQuiz, examine } from '../lib/study/quiz.js';
-import { readFileText } from '../lib/study/extract.js';
+import { readNote } from '../lib/study/extract.js';
+import { NotesUI } from '../lib/study/notes-ui.js';
 import { studyBridge, OPEN_SESSION_KEY } from '../lib/study/assistant.js';
 import { getToolSettings, onToolSettings } from '../lib/tool-settings.js';
 import { getCurrentUser } from '../lib/supabase.js';
@@ -29,7 +30,7 @@ import { tbConfirm, tbPrompt } from '../lib/dialog.js';
 import { showToast } from '../utils.js';
 
 const GLIDE = 'cubic-bezier(.22, 1, .36, 1)';
-const SPRING = 'cubic-bezier(.34, 1.4, .64, 1)';
+const SPRING = 'cubic-bezier(.22, 1, .36, 1)';
 // No motion where the person asked for less, or where the page cannot animate at all.
 const reduced = () => typeof document === 'undefined' || typeof document.body?.animate !== 'function'
   || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -76,7 +77,7 @@ const sessionScore = (s) => {
 };
 
 /** Elements rise into place, a step apart. */
-function cascade(els, { y = 10, step = 40, dur = 240, delay = 0, scale = 1 } = {}) {
+function cascade(els, { y = 12, step = 56, dur = 420, delay = 0, scale = 1 } = {}) {
   if (reduced()) return [];
   return [...els].filter(Boolean).map((el, i) => el.animate(
     [{ opacity: 0, transform: `translateY(${y}px)${scale !== 1 ? ` scale(${scale})` : ''}` }, { opacity: 1, transform: 'none' }],
@@ -127,11 +128,12 @@ export default {
               <span class="st-modes-pill" aria-hidden="true"></span>
               <button type="button" role="tab" class="st-mode" data-mode="mcq">${ico(I.list, 16)}<span>Multiple choice</span></button>
               <button type="button" role="tab" class="st-mode" data-mode="live">${ico(I.chat, 16)}<span>Assistant quiz</span></button>
+              <button type="button" role="tab" class="st-mode" data-mode="notes">${ico(I.note, 16)}<span>Notes</span></button>
             </div>
           </header>
           <div class="st-view"></div>
         </main>
-        <input type="file" class="st-file-input" multiple hidden accept=".pdf,.txt,.md,.markdown,.docx,.pptx,.csv,.json,.html,.htm,.tex,.rtf,text/*,application/pdf">
+        <input type="file" class="st-file-input" multiple hidden accept=".pdf,.txt,.md,.markdown,.docx,.pptx,.csv,.json,.html,.htm,.tex,.rtf,.png,.jpg,.jpeg,.webp,.gif,text/*,application/pdf,image/*">
       </div>`;
     this.el = container.querySelector('.st');
     this.viewEl = container.querySelector('.st-view');
@@ -215,13 +217,13 @@ export default {
       </li>`;
     }).join('') || '<li class="st-sess-empty">Your sessions appear here.</li>';
     if (reduced()) return;
-    if (first) { cascade(this.listEl.children, { y: 6, step: 22, delay: 60 }); return; }
+    if (first) { cascade(this.listEl.children, { y: 6, step: 31, delay: 60 }); return; }
     // Rows that moved glide to their new place; a new one slides in from the top.
     for (const li of this.listEl.children) {
       const was = before.get(li.dataset.id);
-      if (was == null) { if (li.dataset.id === added || before.size) li.animate([{ opacity: 0, transform: 'translateY(-8px) scale(.98)' }, { opacity: 1, transform: 'none' }], { duration: 240, easing: GLIDE, tempo: false }); continue; }
+      if (was == null) { if (li.dataset.id === added || before.size) li.animate([{ opacity: 0, transform: 'translateY(-8px) scale(.98)' }, { opacity: 1, transform: 'none' }], { duration: 370, easing: GLIDE, tempo: false }); continue; }
       const dy = was - li.getBoundingClientRect().top;
-      if (Math.abs(dy) > 0.5) li.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 240, easing: GLIDE, tempo: false });
+      if (Math.abs(dy) > 0.5) li.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 370, easing: GLIDE, tempo: false });
     }
   },
 
@@ -251,10 +253,10 @@ export default {
     next.innerHTML = html;
     if (!old || reduced() || first) { this.viewEl.innerHTML = ''; this.viewEl.appendChild(next); return next; }
     old.classList.add('is-leaving');
-    old.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: `translateX(${dir * -16}px)` }], { duration: 140, easing: 'ease-in', fill: 'forwards', tempo: false })
+    old.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: `translateX(${dir * -16}px)` }], { duration: 220, easing: 'ease-in', fill: 'forwards', tempo: false })
       .finished.then(() => old.remove(), () => old.remove());
     this.viewEl.appendChild(next);
-    next.animate([{ opacity: 0, transform: `translateX(${dir * 18}px)` }, { opacity: 1, transform: 'none' }], { duration: 240, delay: 60, easing: GLIDE, fill: 'backwards', tempo: false });
+    next.animate([{ opacity: 0, transform: `translateX(${dir * 18}px)` }, { opacity: 1, transform: 'none' }], { duration: 370, delay: 60, easing: GLIDE, fill: 'backwards', tempo: false });
     return next;
   },
 
@@ -300,10 +302,10 @@ export default {
       </div>`, { dir: -1, first });
     this.paintList();
     if (reduced()) { page.querySelectorAll('[data-n]').forEach(el => { if (el.textContent !== '—') el.textContent = `${el.dataset.n}${el.dataset.suffix || ''}`; }); return; }
-    cascade(page.querySelectorAll('.st-prog-head, .st-stat, .st-panel'), { step: 40, delay: first ? 80 : 120 });
+    cascade(page.querySelectorAll('.st-prog-head, .st-stat, .st-panel'), { step: 56, delay: first ? 80 : 120 });
     page.querySelectorAll('[data-n]').forEach(el => { if (el.textContent !== '—') countUp(el, el.dataset.n, { suffix: el.dataset.suffix || '' }); });
-    page.querySelectorAll('.st-day i').forEach((b, i) => b.animate([{ transform: 'scaleY(0)' }, { transform: 'none' }], { duration: 360, delay: 260 + (i % 30) * 9, easing: GLIDE, fill: 'backwards', tempo: false }));
-    page.querySelectorAll('.st-topic-bar i').forEach((b, i) => b.animate([{ transform: 'scaleX(0)' }, { transform: 'none' }], { duration: 420, delay: 360 + i * 60, easing: GLIDE, fill: 'backwards', tempo: false }));
+    page.querySelectorAll('.st-day i').forEach((b, i) => b.animate([{ transform: 'scaleY(0)' }, { transform: 'none' }], { duration: 560, delay: 260 + (i % 30) * 9, easing: GLIDE, fill: 'backwards', tempo: false }));
+    page.querySelectorAll('.st-topic-bar i').forEach((b, i) => b.animate([{ transform: 'scaleX(0)' }, { transform: 'none' }], { duration: 650, delay: 360 + i * 60, easing: GLIDE, fill: 'backwards', tempo: false }));
   },
 
   openSession(session, { first = false, quiz = null } = {}) {
@@ -347,6 +349,7 @@ export default {
   setMode(mode, { quiet = false } = {}) {
     if (!this.session) return;
     const changed = this.session.mode !== mode;
+    this.prevMode = this.session.mode;
     this.session.mode = mode;
     this.el.querySelectorAll('.st-mode').forEach(b => b.setAttribute('aria-selected', String(b.dataset.mode === mode)));
     this.placeModePill(quiet);
@@ -355,7 +358,8 @@ export default {
     if (!quiet && changed) {
       this.abort?.abort();
       this.busy = false;
-      this.paintStage({ dir: mode === 'live' ? 1 : -1 });
+      const order = ['mcq', 'live', 'notes'];
+      this.paintStage({ dir: Math.sign(order.indexOf(mode) - order.indexOf(this.prevMode || 'mcq')) || 1 });
       if (this.sessions.some(s => s.id === this.session.id)) this.store.save(this.session, { quiet: true });
     }
   },
@@ -372,6 +376,7 @@ export default {
 
   placeholder() {
     const narrow = window.innerWidth <= 760;
+    if (this.session?.mode === 'notes') return (this.session.files || []).length ? 'Ask about your notes…' : 'Add notes above to read and study them';
     if (narrow && this.session?.mode !== 'live') return 'Ask for a quiz…';
     if (this.session?.mode === 'live') {
       const last = this.session.live?.turns?.at(-1);
@@ -383,6 +388,7 @@ export default {
   paintComposerChips() {
     const box = this.el?.querySelector('.st-comp-chips');
     if (!box || !this.session) return;
+    if (this.session.mode === 'notes') { box.innerHTML = ''; return; }
     if (this.session.mode === 'live') {
       const last = this.session.live?.turns?.at(-1);
       box.innerHTML = last?.role === 'ask' ? `<button type="button" class="st-chip" data-act="live-quick" data-text="I don't know">I don't know</button><button type="button" class="st-chip" data-act="live-quick" data-text="Can I have a hint?">Hint</button>` : '';
@@ -417,7 +423,7 @@ export default {
       ${files.length ? '' : '<span class="st-files-hint">Optional. Quizzes then come from your material.</span>'}`;
     if (added && !reduced()) {
       const chip = this.filesEl.querySelector(`[data-id="${CSS.escape(added)}"]`);
-      chip?.animate([{ opacity: 0, transform: 'scale(.85)' }, { opacity: 1, transform: 'none' }], { duration: 240, easing: SPRING, tempo: false });
+      chip?.animate([{ opacity: 0, transform: 'scale(.85)' }, { opacity: 1, transform: 'none' }], { duration: 370, easing: SPRING, tempo: false });
     }
   },
 
@@ -425,12 +431,13 @@ export default {
     if (!list?.length || !this.session) return;
     for (const file of list.slice(0, 12)) {
       try {
-        const text = await readFileText(file);
-        const meta = await this.store.addFile(this.session, { name: file.name || 'Notes', type: file.type, size: file.size || text.length, text });
+        const { text, images } = await readNote(file);
+        const meta = await this.store.addFile(this.session, { name: file.name || 'Notes', type: file.type, size: file.size || text.length, text, images });
         if (!this.sessions.some(s => s.id === this.session.id)) await this.commit();
         else { this.sessions = [this.session, ...this.sessions.filter(x => x.id !== this.session.id)]; this.paintList(); }
         this.paintFiles({ added: meta.id });
-        if (!text) showToast(`No readable text in ${file.name}. A scanned PDF needs text recognition first.`, 'info', 5000);
+        if (!text && !images.length) showToast(`No readable text in ${file.name}. A scanned PDF needs text recognition first.`, 'info', 5000);
+        if (this.session.mode === 'notes') { this.noteId = meta.id; this.paintStage(); }
       } catch (err) {
         showToast(`Could not read ${file.name}: ${err?.message || err}`, 'error', 5000);
       }
@@ -454,7 +461,7 @@ export default {
 
   async pickFromToolboxFiles(anchor) {
     const { fs } = await import('../lib/filesystem.js');
-    const metas = (await fs.listAllMeta().catch(() => [])).filter(f => !f.isDirectory && /\.(pdf|txt|md|markdown|docx|pptx|csv|json|html?|tex|rtf)$/i.test(f.name || ''));
+    const metas = (await fs.listAllMeta().catch(() => [])).filter(f => !f.isDirectory && /\.(pdf|txt|md|markdown|docx|pptx|csv|json|html?|tex|rtf|png|jpe?g|webp|gif)$/i.test(f.name || ''));
     const pop = anchor.closest('.st-file-add').querySelector('.st-pop');
     pop.innerHTML = metas.length
       ? `<span class="st-pop-label">Toolbox Files</span>${metas.slice(0, 40).map(f => `<button type="button" role="menuitem" data-act="pick-path" data-path="${esc(f.path)}">${ico(I.file, 15)}<span>${esc(f.name)}</span></button>`).join('')}`
@@ -471,7 +478,7 @@ export default {
 
   async removeFile(id) {
     const chip = this.filesEl.querySelector(`[data-id="${CSS.escape(id)}"]`);
-    if (chip && !reduced()) await chip.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(.85)' }], { duration: 140, easing: 'ease-in', fill: 'forwards', tempo: false }).finished.catch(() => {});
+    if (chip && !reduced()) await chip.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(.85)' }], { duration: 220, easing: 'ease-in', fill: 'forwards', tempo: false }).finished.catch(() => {});
     await this.store.removeFile(this.session, id);
     this.paintFiles();
     if (this.input) this.input.placeholder = this.placeholder();
@@ -491,19 +498,21 @@ export default {
     const box = this.stage?.closest('.st-session');
     if (!box) return;
     const qz = this.currentQuiz();
-    box.dataset.stage = this.session.mode === 'live' ? 'live' : !qz ? 'empty' : this.qIndex >= qz.questions.length ? 'results' : 'quiz';
+    box.dataset.stage = this.session.mode === 'live' ? 'live' : this.session.mode === 'notes' ? 'notes' : !qz ? 'empty' : this.qIndex >= qz.questions.length ? 'results' : 'quiz';
   },
 
   paintStage({ first = false, dir = 0 } = {}) {
     if (!this.stage) return;
-    const html = this.session.mode === 'live' ? this.liveHtml() : this.mcqHtml();
+    const mode = this.session.mode;
+    const html = mode === 'live' ? this.liveHtml() : mode === 'notes' ? this.notesHtml() : this.mcqHtml();
     this.stage.innerHTML = html;
     this.markStage();
+    if (mode === 'notes') this.mountNotes({ first: true });
     if (this.input) this.input.placeholder = this.placeholder();
     this.paintComposerChips();
     if (reduced()) return;
-    if (dir) this.stage.firstElementChild?.animate([{ opacity: 0, transform: `translateX(${dir * 16}px)` }, { opacity: 1, transform: 'none' }], { duration: 240, easing: GLIDE, tempo: false });
-    else cascade(this.stage.querySelectorAll('.st-empty > *, .st-quizbar, .st-q, .st-results > *'), { step: 34, delay: first ? 100 : 0 });
+    if (dir) this.stage.firstElementChild?.animate([{ opacity: 0, transform: `translateX(${dir * 16}px)` }, { opacity: 1, transform: 'none' }], { duration: 370, easing: GLIDE, tempo: false });
+    else cascade(this.stage.querySelectorAll('.st-empty > *, .st-quizbar, .st-q, .st-results > *'), { step: 48, delay: first ? 100 : 0 });
     if (this.session.mode === 'live') this.scrollLive(true);
   },
 
@@ -616,7 +625,7 @@ export default {
     const qb = this.stage.querySelector('.st-quizbar');
     this.stage.innerHTML = `${qb ? qb.outerHTML : ''}${this.composingHtml(0, count)}`;
     const card = this.stage.querySelector('.st-composing');
-    if (!reduced()) card.animate([{ opacity: 0, transform: 'translateY(12px) scale(.97)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: GLIDE, tempo: false });
+    if (!reduced()) card.animate([{ opacity: 0, transform: 'translateY(12px) scale(.97)' }, { opacity: 1, transform: 'none' }], { duration: 400, easing: GLIDE, tempo: false });
     this.setSending(true);
     try {
       const files = await this.store.fileTexts(this.session);
@@ -653,7 +662,7 @@ export default {
     this.quizId = qz.id;
     this.qIndex = 0;
     card = card || this.stage.querySelector('.st-composing');
-    if (card && !reduced()) await card.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-10px) scale(.97)' }], { duration: 160, easing: 'ease-in', fill: 'forwards', tempo: false }).finished.catch(() => {});
+    if (card && !reduced()) await card.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-10px) scale(.97)' }], { duration: 250, easing: 'ease-in', fill: 'forwards', tempo: false }).finished.catch(() => {});
     this.stage.innerHTML = this.mcqHtml();
     this.stage.scrollTop = 0;
     this.markStage();
@@ -666,12 +675,12 @@ export default {
     if (reduced()) return;
     const s = this.stage;
     const tab = s.querySelector('.st-qtab.is-on');
-    tab?.animate([{ opacity: 0, transform: 'translateY(-6px) scale(.9)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: SPRING, tempo: false });
-    cascade([s.querySelector('.st-quiz-head h3'), s.querySelector('.st-quiz-count')], { y: 8, step: 50, delay: 40 });
-    s.querySelector('.st-track')?.animate([{ transform: 'scaleX(0)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 360, delay: 90, easing: GLIDE, fill: 'backwards', tempo: false });
-    s.querySelector('.st-q')?.animate([{ opacity: 0, transform: 'translateY(16px) scale(.98)' }, { opacity: 1, transform: 'none' }], { duration: 300, delay: 140, easing: GLIDE, fill: 'backwards', tempo: false });
-    cascade(s.querySelectorAll('.st-topic, .st-q-text'), { y: 6, step: 40, delay: 200 });
-    cascade(s.querySelectorAll('.st-choice'), { y: 10, step: 45, delay: 260 });
+    tab?.animate([{ opacity: 0, transform: 'translateY(-6px) scale(.9)' }, { opacity: 1, transform: 'none' }], { duration: 400, easing: SPRING, tempo: false });
+    cascade([s.querySelector('.st-quiz-head h3'), s.querySelector('.st-quiz-count')], { y: 8, step: 70, delay: 40 });
+    s.querySelector('.st-track')?.animate([{ transform: 'scaleX(0)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 560, delay: 90, easing: GLIDE, fill: 'backwards', tempo: false });
+    s.querySelector('.st-q')?.animate([{ opacity: 0, transform: 'translateY(16px) scale(.98)' }, { opacity: 1, transform: 'none' }], { duration: 460, delay: 140, easing: GLIDE, fill: 'backwards', tempo: false });
+    cascade(s.querySelectorAll('.st-topic, .st-q-text'), { y: 6, step: 56, delay: 200 });
+    cascade(s.querySelectorAll('.st-choice'), { y: 10, step: 63, delay: 260 });
   },
 
   /* ---------- answering ---------- */
@@ -693,12 +702,12 @@ export default {
     if (reduced()) return;
     const picked = next.querySelector(`.st-choice[data-i="${i}"]`);
     const right = next.querySelector('.st-choice.is-answer');
-    if (correct) picked.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.025)' }, { transform: 'none' }], { duration: 300, easing: SPRING, tempo: false });
-    else picked.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(5px)' }, { transform: 'translateX(-2px)' }, { transform: 'none' }], { duration: 320, easing: 'ease-out', tempo: false });
-    next.querySelectorAll('.st-choice-mark svg').forEach(m => m.animate([{ transform: 'scale(0) rotate(-30deg)' }, { transform: 'none' }], { duration: 280, delay: 60, easing: SPRING, fill: 'backwards', tempo: false }));
+    if (correct) picked.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.025)' }, { transform: 'none' }], { duration: 460, easing: SPRING, tempo: false });
+    else picked.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(5px)' }, { transform: 'translateX(-2px)' }, { transform: 'none' }], { duration: 500, easing: 'ease-out', tempo: false });
+    next.querySelectorAll('.st-choice-mark svg').forEach(m => m.animate([{ transform: 'scale(0) rotate(-30deg)' }, { transform: 'none' }], { duration: 430, delay: 60, easing: SPRING, fill: 'backwards', tempo: false }));
     right?.querySelector('.st-fill')?.remove();
     const why = next.querySelector('.st-why:not([hidden])');
-    cascade([why, next.querySelector('.st-q-foot')], { y: 8, step: 60, delay: 120 });
+    cascade([why, next.querySelector('.st-q-foot')], { y: 8, step: 84, delay: 120 });
     next.querySelector('.st-next')?.focus({ preventScroll: true });
     this.reveal(next.querySelector('.st-q-foot'));
   },
@@ -729,7 +738,7 @@ export default {
     const old = this.stage.querySelector('.st-q');
     this.qIndex++;
     const done = this.qIndex >= qz.questions.length;
-    if (!reduced() && old) await old.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(-28px)' }], { duration: 150, easing: 'ease-in', fill: 'forwards', tempo: false }).finished.catch(() => {});
+    if (!reduced() && old) await old.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(-28px)' }], { duration: 230, easing: 'ease-in', fill: 'forwards', tempo: false }).finished.catch(() => {});
     if (done) { this.stage.innerHTML = this.mcqHtml(); this.stage.scrollTop = 0; this.markStage(); this.arriveResults(); return; }
     const wrap = this.stage.querySelector('.st-qwrap');
     wrap.innerHTML = this.questionHtml(qz, qz.questions[this.qIndex]);
@@ -739,9 +748,9 @@ export default {
     const bar = this.stage.querySelector('.st-track i');
     if (bar) bar.style.transform = `scaleX(${(this.qIndex / n).toFixed(4)})`;
     if (reduced()) return;
-    this.stage.querySelector('.st-quiz-count b')?.animate([{ transform: 'translateY(8px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 220, easing: GLIDE, tempo: false });
-    wrap.firstElementChild.animate([{ opacity: 0, transform: 'translateX(32px)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: GLIDE, tempo: false });
-    cascade(wrap.querySelectorAll('.st-choice'), { y: 8, step: 35, delay: 90 });
+    this.stage.querySelector('.st-quiz-count b')?.animate([{ transform: 'translateY(8px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 340, easing: GLIDE, tempo: false });
+    wrap.firstElementChild.animate([{ opacity: 0, transform: 'translateX(32px)' }, { opacity: 1, transform: 'none' }], { duration: 400, easing: GLIDE, tempo: false });
+    cascade(wrap.querySelectorAll('.st-choice'), { y: 8, step: 49, delay: 90 });
   },
 
   arriveResults() {
@@ -751,11 +760,11 @@ export default {
     const fg = r.querySelector('.st-ring-fg');
     const ring = r.querySelector('.st-ring');
     const C = parseFloat(ring.style.getPropertyValue('--c')), p = parseFloat(ring.style.getPropertyValue('--p'));
-    fg.animate([{ strokeDashoffset: C }, { strokeDashoffset: C * (1 - p) }], { duration: 900, delay: 120, easing: GLIDE, fill: 'backwards', tempo: false });
+    fg.animate([{ strokeDashoffset: C }, { strokeDashoffset: C * (1 - p) }], { duration: 1400, delay: 120, easing: GLIDE, fill: 'backwards', tempo: false });
     countUp(r.querySelector('.st-ring strong'), r.querySelector('.st-ring strong').dataset.n, { suffix: '%', dur: 900 });
-    ring.animate([{ opacity: 0, transform: 'scale(.85)' }, { opacity: 1, transform: 'none' }], { duration: 320, easing: SPRING, tempo: false });
-    cascade([...r.children].slice(1), { step: 50, delay: 160 });
-    r.querySelectorAll('.st-topic-bar i').forEach((b, i) => b.animate([{ transform: 'scaleX(0)' }, { transform: 'none' }], { duration: 420, delay: 420 + i * 60, easing: GLIDE, fill: 'backwards', tempo: false }));
+    ring.animate([{ opacity: 0, transform: 'scale(.85)' }, { opacity: 1, transform: 'none' }], { duration: 500, easing: SPRING, tempo: false });
+    cascade([...r.children].slice(1), { step: 70, delay: 160 });
+    r.querySelectorAll('.st-topic-bar i').forEach((b, i) => b.animate([{ transform: 'scaleX(0)' }, { transform: 'none' }], { duration: 650, delay: 420 + i * 60, easing: GLIDE, fill: 'backwards', tempo: false }));
   },
 
   retryMissed() {
@@ -783,7 +792,7 @@ export default {
     }).join('');
     const sec = this.stage.querySelector('.st-missed') || this.stage.querySelector('.st-results').appendChild(Object.assign(document.createElement('section'), { className: 'st-missed' }));
     sec.innerHTML = `<h4>Every answer</h4>${body}`;
-    cascade(sec.querySelectorAll('.st-miss'), { step: 25 });
+    cascade(sec.querySelectorAll('.st-miss'), { step: 35 });
     sec.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' });
   },
 
@@ -833,7 +842,7 @@ export default {
     const live = this.session.live || (this.session.live = { turns: [], asked: 0, correct: 0 });
     if (!live.turns.length && !this.stage.querySelector('.st-live')) {
       this.stage.innerHTML = `<div class="st-live"><div class="st-live-bar"><span><b>0</b> asked</span><span><b>0</b> right</span></div><ol class="st-thread" role="log" aria-live="polite"></ol></div>`;
-      if (!reduced()) this.stage.firstElementChild.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, tempo: false });
+      if (!reduced()) this.stage.firstElementChild.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 310, tempo: false });
     }
     const thread = this.stage.querySelector('.st-thread');
     thread.querySelectorAll('.st-ask-choices').forEach(c => c.remove());
@@ -841,12 +850,12 @@ export default {
       live.turns.push({ role: 'answer', text: answer, at: Date.now() });
       thread.insertAdjacentHTML('beforeend', this.turnHtml(live.turns.at(-1), false));
       const li = thread.lastElementChild;
-      if (!reduced()) li.animate([{ opacity: 0, transform: 'translateY(14px) scale(.97)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: GLIDE, tempo: false });
+      if (!reduced()) li.animate([{ opacity: 0, transform: 'translateY(14px) scale(.97)' }, { opacity: 1, transform: 'none' }], { duration: 400, easing: GLIDE, tempo: false });
     }
     if (request) live.request = request;
     thread.insertAdjacentHTML('beforeend', '<li class="st-turn st-thinking" aria-label="The Assistant is thinking"><i></i><i></i><i></i></li>');
     const dots = thread.lastElementChild;
-    if (!reduced()) dots.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: GLIDE, tempo: false });
+    if (!reduced()) dots.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 310, easing: GLIDE, tempo: false });
     this.scrollLive();
     this.busy = true;
     this.abort = new AbortController();
@@ -872,9 +881,9 @@ export default {
         thread.insertAdjacentHTML('beforeend', this.turnHtml(t, i === added.length - 1));
         const li = thread.lastElementChild;
         if (reduced()) return;
-        li.animate([{ opacity: 0, transform: 'translateY(16px) scale(.98)' }, { opacity: 1, transform: 'none' }], { duration: 300, delay: i * 140, easing: GLIDE, fill: 'backwards', tempo: false });
-        li.querySelectorAll('.st-grade-mark svg').forEach(m => m.animate([{ transform: 'scale(0) rotate(-30deg)' }, { transform: 'none' }], { duration: 300, delay: i * 140 + 80, easing: SPRING, fill: 'backwards', tempo: false }));
-        cascade(li.querySelectorAll('.st-choice'), { y: 8, step: 40, delay: i * 140 + 160 });
+        li.animate([{ opacity: 0, transform: 'translateY(16px) scale(.98)' }, { opacity: 1, transform: 'none' }], { duration: 460, delay: i * 140, easing: GLIDE, fill: 'backwards', tempo: false });
+        li.querySelectorAll('.st-grade-mark svg').forEach(m => m.animate([{ transform: 'scale(0) rotate(-30deg)' }, { transform: 'none' }], { duration: 460, delay: i * 140 + 80, easing: SPRING, fill: 'backwards', tempo: false }));
+        cascade(li.querySelectorAll('.st-choice'), { y: 8, step: 56, delay: i * 140 + 160 });
       });
       this.paintLiveBar();
       this.paintComposerChips();
@@ -913,6 +922,12 @@ export default {
     if (this.busy) { this.abort?.abort(); this.busy = false; this.setSending(false); this.paintStage(); return; }
     const text = (this.input?.value || '').trim();
     if (!getCurrentUser()) { showToast('Sign in to use the Assistant.', 'info'); return; }
+    if (this.session.mode === 'notes') {
+      if (!text || !(this.session.files || []).length) { this.input?.focus(); return; }
+      this.input.value = ''; this.grow(this.input);
+      this.askNotes(text);
+      return;
+    }
     if (this.session.mode === 'live') {
       const last = this.session.live?.turns?.at(-1);
       if (!text && last?.role === 'ask') return;
@@ -986,7 +1001,7 @@ export default {
       case 'delete': {
         const s = this.sessions.find(x => x.id === li.dataset.id);
         if (!(await tbConfirm(`Delete “${s.title}”, its files and its answers? This cannot be undone.`, { title: 'Delete session', confirmText: 'Delete', destructive: true }))) return;
-        if (!reduced()) await li.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(-16px)' }], { duration: 160, easing: 'ease-in', fill: 'forwards', tempo: false }).finished.catch(() => {});
+        if (!reduced()) await li.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(-16px)' }], { duration: 250, easing: 'ease-in', fill: 'forwards', tempo: false }).finished.catch(() => {});
         await this.store.remove(s.id);
         this.sessions = this.sessions.filter(x => x.id !== s.id);
         if (this.session?.id === s.id) this.openSession(this.store.blank());
@@ -1002,7 +1017,7 @@ export default {
         const p2 = this.filesEl.querySelector('.st-pop');
         p2.hidden = !p2.hidden;
         this.filesEl.querySelector('.st-file-addbtn').setAttribute('aria-expanded', String(!p2.hidden));
-        if (!p2.hidden && !reduced()) p2.animate([{ opacity: 0, transform: 'translateY(-4px) scale(.97)' }, { opacity: 1, transform: 'none' }], { duration: 180, easing: GLIDE, tempo: false });
+        if (!p2.hidden && !reduced()) p2.animate([{ opacity: 0, transform: 'translateY(-4px) scale(.97)' }, { opacity: 1, transform: 'none' }], { duration: 280, easing: GLIDE, tempo: false });
         return;
       }
       case 'from-files': this.pickFromToolboxFiles(t); return;
@@ -1027,6 +1042,22 @@ export default {
       case 'retry-missed': this.retryMissed(); return;
       case 'review': this.review(); return;
       case 'again': { const qz = this.currentQuiz(); this.makeQuiz(qz?.prompt && !/^Retry of|Made by/.test(qz.prompt) ? qz.prompt : `Another quiz like "${qz?.title}", different questions`); return; }
+      case 'note': {
+        if (t.dataset.id === this.noteId) return;
+        this.noteId = t.dataset.id;
+        this.stage.querySelectorAll('.st-note-tab').forEach(b => b.classList.toggle('is-on', b === t));
+        const reader = this.stage.querySelector('.st-reader');
+        if (reader && !reduced()) await reader.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-6px)' }], { duration: 200, easing: 'cubic-bezier(.4, 0, 1, 1)', fill: 'forwards' }).finished.catch(() => {});
+        reader?.getAnimations().forEach(a => a.cancel());
+        this.mountNotes();
+        return;
+      }
+      case 'note-summarize': this.noteActions('summarize', t); return;
+      case 'note-simplify': this.noteActions('simplify', t); return;
+      case 'note-explain-menu': this.noteActions('explain-menu', t); return;
+      case 'insight-remove': this.removeInsight(t.closest('.st-ins')); return;
+      case 'insights-close': this.closeInsights(); return;
+      case 'insights-open': this.openInsights(); return;
       case 'live-start': this.liveTurn({ request: t.dataset.text || '' }); return;
       case 'live-choice': this.liveTurn({ answer: t.dataset.text }); return;
       case 'live-quick': this.liveTurn({ answer: t.dataset.text }); return;
@@ -1042,6 +1073,8 @@ export default {
       default:
     }
   },
+
+  ...NotesUI,
 
   key(e) {
     if (this.dead || this.view !== 'session' || this.session?.mode !== 'mcq') return;

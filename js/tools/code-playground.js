@@ -169,6 +169,7 @@ export default {
 </div>`;
 
     const root = container.querySelector('#cpg-landing');
+    landingArrive(root);
     root.addEventListener('click', (e) => this.onLandingClick(e));
     root.querySelector('#cpg-ws-filter')?.addEventListener('input', (e) => {
       const q = e.target.value.toLowerCase();
@@ -453,3 +454,16 @@ export default {
     this.disposeIde();
   },
 };
+
+/* The landing arrives like Home: the title, then each section, then its cards one after another. */
+function landingArrive(root) {
+  if (!root?.animate || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+  const GLIDE = 'cubic-bezier(.22, 1, .36, 1)';
+  const rise = (el, delay, y = 12, duration = 620) => el?.animate([{ opacity: 0, transform: `translateY(${y}px)` }, { opacity: 1, transform: 'none' }], { duration, delay, easing: GLIDE, fill: 'backwards' });
+  rise(root.querySelector('.cpg-landing-head h1'), 40, 14, 720);
+  rise(root.querySelector('.cpg-landing-head p'), 120);
+  rise(root.querySelector('.cpg-landing-actions'), 160);
+  root.querySelectorAll('.cpg-section-head').forEach((h, i) => rise(h, 220 + i * 260));
+  [...root.querySelectorAll('.cpg-tpl-card')].slice(0, 16).forEach((c, i) => rise(c, 280 + i * 40, 14, 640));
+  [...root.querySelectorAll('.cpg-ws-card')].slice(0, 12).forEach((c, i) => rise(c, 520 + i * 45, 12, 600));
+}

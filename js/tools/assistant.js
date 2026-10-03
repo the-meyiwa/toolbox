@@ -1501,7 +1501,7 @@ function mountAssistant(container, state) {
     usingRow.innerHTML = `<span class="ast-using-chip${contextSent ? ' is-sent' : ''}" title="${esc(workContext.summary || '')}">
       <span class="ast-using-dot" aria-hidden="true"></span><span class="ast-using-text">${contextSent ? 'Knows about' : 'With'} <strong>${esc(workContext.label || 'this page')}</strong></span>
       <button type="button" class="ast-using-x" data-act="drop-context" aria-label="Leave ${esc(workContext.label || 'this page')} out">${icon('x', 12, 2)}</button></span>`;
-    if (fresh && !reduceMotion()) usingRow.firstElementChild.animate([{ opacity: 0, transform: 'translateY(6px) scale(.94)' }, { opacity: 1, transform: 'none' }], { duration: 240, easing: 'cubic-bezier(.34, 1.4, .64, 1)' });
+    if (fresh && !reduceMotion()) usingRow.firstElementChild.animate([{ opacity: 0, transform: 'translateY(6px) scale(.94)' }, { opacity: 1, transform: 'none' }], { duration: 240, easing: 'cubic-bezier(.22, 1, .36, 1)' });
   }
   function setWorkContext(ctx) {
     const same = ctx && workContext && ctx.toolId === workContext.toolId && ctx.label === workContext.label && ctx.text === workContext.text && ctx.summary === workContext.summary;
@@ -1716,7 +1716,7 @@ function mountAssistant(container, state) {
       { opacity: 1, offset: 0.45 },
       { transform: 'none', opacity: 1, transformOrigin: '100% 100%' },
     ], { duration: 460, easing: 'cubic-bezier(.16, 1, .3, 1)' });
-    sendBtn.animate?.([{ transform: 'translateY(0)' }, { transform: 'translateY(-4px) scale(.94)' }, { transform: 'none' }], { duration: 320, easing: 'cubic-bezier(.34, 1.4, .64, 1)' });
+    sendBtn.animate?.([{ transform: 'translateY(0)' }, { transform: 'translateY(-4px) scale(.94)' }, { transform: 'none' }], { duration: 320, easing: 'cubic-bezier(.22, 1, .36, 1)' });
   }
 
   async function runTurn() {

@@ -62,7 +62,7 @@ export function createStudyStore(accountId = 'local') {
 
     blank(title = 'New session') {
       const now = Date.now();
-      return { id: uid('ses'), title, createdAt: now, updatedAt: now, mode: 'mcq', files: [], quizzes: [], live: { turns: [], asked: 0, correct: 0 } };
+      return { id: uid('ses'), title, createdAt: now, updatedAt: now, mode: 'mcq', files: [], quizzes: [], insights: [], live: { turns: [], asked: 0, correct: 0 } };
     },
 
     async remove(id) {
@@ -76,11 +76,11 @@ export function createStudyStore(accountId = 'local') {
       emit();
     },
 
-    async addFile(session, { name, type, size, text }) {
-      const meta = { id: uid('f'), name, type, size, chars: text.length };
+    async addFile(session, { name, type, size, text, images = [] }) {
+      const meta = { id: uid('f'), name, type, size, chars: text.length, images: images.length };
       const d = await db();
       const tx = d.transaction('files', 'readwrite');
-      tx.objectStore('files').put({ id: meta.id, sessionId: session.id, text });
+      tx.objectStore('files').put({ id: meta.id, sessionId: session.id, text, images });
       await done(tx);
       session.files = [...(session.files || []), meta];
       await this.save(session);
@@ -93,6 +93,11 @@ export function createStudyStore(accountId = 'local') {
       await done(tx);
       session.files = (session.files || []).filter(f => f.id !== fileId);
       await this.save(session);
+    },
+    /** One note in full: its text and the images found in it. */
+    async readFile(fileId) {
+      const d = await db();
+      return (await result(d.transaction('files').objectStore('files').get(fileId))) || null;
     },
     async fileTexts(session) {
       const d = await db();

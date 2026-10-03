@@ -35,24 +35,35 @@ body.is-scrolled #app-header, body.in-tool #app-header { border-bottom-color: va
    load, and ripple on hover for fine pointers only. */
 .logo-mark { display: block; flex: none; width: 24px; height: 20px; fill: currentColor; overflow: visible; }
 .logo-mark rect { transform-box: fill-box; transform-origin: center; }
+/* The mark assembles pixel by pixel, then the word writes itself in beside it: one
+   unhurried gesture (about two seconds), settling with no overshoot. */
 @keyframes logo-px-in {
-  0%   { opacity: 0; transform: translateY(-4px) scale(.2); }
-  60%  { opacity: 1; transform: translateY(.5px) scale(1.12); }
+  0%   { opacity: 0; transform: translateY(-5px) scale(.15); }
   100% { opacity: 1; transform: none; }
+}
+@keyframes logo-letter-in {
+  0%   { opacity: 0; transform: translateY(.55em); filter: blur(3px); }
+  100% { opacity: 1; transform: none; filter: blur(0); }
 }
 @keyframes logo-px-wave {
   0%, 100% { opacity: 1; transform: none; }
   45% { opacity: .35; transform: translateY(-1.5px) scale(.55); }
 }
+.logo-word { display: inline-flex; }
+.logo-word > span { display: inline-block; white-space: pre; }
 @media (prefers-reduced-motion: no-preference) {
   .logo.is-entering .logo-mark rect {
-    animation: logo-px-in 230ms cubic-bezier(.2,.8,.2,1) both;
-    animation-delay: calc(var(--i) * 8ms + 28ms);
+    animation: logo-px-in 680ms cubic-bezier(.22, 1, .36, 1) both;
+    animation-delay: calc(var(--i) * 40ms + 120ms);
+  }
+  .logo.is-entering .logo-word > span {
+    animation: logo-letter-in 760ms cubic-bezier(.22, 1, .36, 1) both;
+    animation-delay: calc(var(--l) * 70ms + 620ms);
   }
   @media (hover: hover) and (pointer: fine) {
     .logo:hover .logo-mark rect {
-      animation: logo-px-wave 247ms cubic-bezier(.4,0,.2,1) both;
-      animation-delay: calc(var(--i) * 8ms);
+      animation: logo-px-wave 520ms cubic-bezier(.4,0,.2,1) both;
+      animation-delay: calc(var(--i) * 26ms);
     }
   }
 }
@@ -497,7 +508,7 @@ body.standalone-mode .viewport-crumbs { display: none !important; }
 
 /* ---------- Theme switching ---------- */
 html.theme-transition, html.theme-transition *, html.theme-transition *::before, html.theme-transition *::after {
-  transition: background-color 208ms ease, border-color 208ms ease, color 186ms ease, fill 208ms ease, box-shadow 208ms ease !important;
+  transition: background-color 280ms ease, border-color 280ms ease, color 200ms ease, fill 280ms ease, box-shadow 280ms ease !important;
 }
 .theme-choice { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
 .theme-option {
@@ -532,7 +543,7 @@ html.theme-transition, html.theme-transition *, html.theme-transition *::before,
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md);
   padding: var(--space-4) var(--space-5) var(--space-2);
   scroll-margin-top: var(--space-4);
-  transition: box-shadow .214s ease, border-color .214s ease;
+  transition: box-shadow .3s ease, border-color .3s ease;
 }
 .tp-card.is-focused { border-color: var(--line-control); box-shadow: 0 0 0 4px var(--tint); }
 .tp-card-head { display: flex; align-items: center; gap: var(--space-3); padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); }

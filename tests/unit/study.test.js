@@ -97,3 +97,25 @@ test("Study's Assistant tools are offered only to people who can open Study", ()
   assert.ok(selectGroups({ history: ask }).has('study'));
   setGroupGate(() => false);
 });
+
+import { pieces, prompt as notePrompt, parseExplain, explainedSoFar } from '../../js/lib/study/notes.js';
+
+test('notes are split word by word, phrase by phrase or sentence by sentence', () => {
+  const t = 'Glycolysis happens in the cytoplasm, and it makes ATP. The Krebs cycle follows!';
+  assert.deepEqual(pieces(t, 'sentence'), ['Glycolysis happens in the cytoplasm, and it makes ATP.', 'The Krebs cycle follows!']);
+  assert.ok(pieces(t, 'word').includes('cytoplasm'));
+  assert.equal(new Set(pieces('the the the', 'word')).size, 1);
+  assert.ok(pieces(t, 'phrase').length >= 3);
+  assert.deepEqual(pieces('', 'word'), []);
+});
+
+test('explain answers are read in order, even half-streamed', () => {
+  const p = notePrompt('explain', { text: 'One. Two.', unit: 'sentence' });
+  assert.deepEqual(p.list, ['One.', 'Two.']);
+  assert.match(p.system, /JSON only/);
+  const reply = '{"items":[{"piece":"One.","explanation":"First."},{"piece":"Two.","explanation":"Second."}]}';
+  assert.deepEqual(parseExplain(reply, p.list).map(x => x.explanation), ['First.', 'Second.']);
+  assert.equal(explainedSoFar('{"items":[{"piece":"One.","explanation":"First."},{"piece":"Tw'), 1);
+  assert.match(notePrompt('summarize', { text: 'x', whole: true, title: 'Bio' }).user, /the note "Bio"/);
+  assert.throws(() => notePrompt('nope', {}));
+});

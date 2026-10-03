@@ -15,7 +15,8 @@ const ASSISTANT_CLOUD_CONVERSATIONS_KEY = 'toolbox_cloud_assistant_conversations
 
 export const MADSELKIE_EMAILS = Object.freeze([
   'meyigbenee@gmail.com',
-  'meyigbenee@icloud.com'
+  'meyigbenee@icloud.com',
+  'laoluwaabiodun1@gmail.com'
 ]);
 
 /**

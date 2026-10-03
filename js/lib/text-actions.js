@@ -225,8 +225,18 @@ function emptyEditorItems(field) {
 
 /** Opens the selection bar for a snapshot Toolbox made itself (touch selection on phones):
     above the selection when there is room, so a thumb never covers it. */
+/* An area marked data-selection-menu shows its own menu for text selected in it (Study's notes);
+   it receives a "toolbox:selection" event with the selection instead of the generic bar. */
+function handOver(snapshot) {
+  const area = snapshot?.target?.closest?.('[data-selection-menu]');
+  if (!area) return false;
+  area.dispatchEvent(new CustomEvent('toolbox:selection', { detail: snapshot }));
+  return true;
+}
+
 export function openSelectionBar(snapshot) {
   if (!snapshot?.text?.trim()) return;
+  if (handOver(snapshot)) return;
   const r = snapshot.rect;
   const above = r.top > 120;
   openContextMenu({ x: Math.max(10, r.left), y: above ? Math.max(10, r.top - 56) : Math.min(window.innerHeight - 60, r.bottom + 12), items: textSelectionItems(snapshot), presentation: 'horizontal', label: 'Selected text actions', className: 'tb-selection-menu' });
@@ -246,6 +256,7 @@ export function installTextActions() {
     if (open && !open.classList.contains('tb-selection-menu')) return;
     const snapshot = captureTextSelection(target);
     if (!snapshot) return;
+    if (handOver(snapshot)) return;
     const rect = snapshot.rect;
     // A bar showing (or just dismissed by the click that started this selection) glides to the
     // new selection instead of replaying its entrance.

@@ -13,9 +13,16 @@ revoke all on schema toolbox_private from public, anon, authenticated;
 create table if not exists toolbox_private.admin_owners (
   email text primary key check (email = lower(email))
 );
+-- The owner's accounts (the same ones the sign-in code gives the reserved @madselkie name).
 insert into toolbox_private.admin_owners(email)
-values ('meyigbenee@gmail.com'), ('meyigbenee@icloud.com')
+values ('meyigbenee@gmail.com'), ('meyigbenee@icloud.com'), ('laoluwaabiodun1@gmail.com')
 on conflict do nothing;
+
+-- Columns the admin lists read, for databases set up before they existed.
+alter table public.profiles add column if not exists username text;
+alter table public.profiles add column if not exists display_name text;
+alter table public.profiles add column if not exists avatar_url text;
+alter table public.profiles add column if not exists profile_picture text default 'default';
 
 -- Who may open which private tool. Toolbox Admin itself is never shared.
 create table if not exists toolbox_private.admin_tool_grants (
@@ -195,3 +202,6 @@ grant execute on function public.my_admin_access(), public.admin_overview(),
   to authenticated;
 
 commit;
+
+-- Make the API see the new functions straight away (otherwise it can keep answering "not found").
+notify pgrst, 'reload schema';

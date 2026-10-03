@@ -111,11 +111,11 @@ function animateDetails(d, summary) {
     if (!d.open) {
       d.open = true;
       const anims = parts.map((n, i) => n.animate([{ opacity: 0, transform: 'translateY(-6px)' }, { opacity: 1, transform: 'none' }],
-        { duration: 200, delay: Math.min(i, 4) * 18, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'backwards', tempo: false }));
+        { duration: 360, delay: Math.min(i, 4) * 40, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'backwards', tempo: false }));
       Promise.all(anims.map(a => a.finished)).then(done, done);
     } else {
       const anims = parts.map(n => n.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-4px)' }],
-        { duration: 130, easing: 'cubic-bezier(.4, 0, 1, 1)', fill: 'forwards', tempo: false }));
+        { duration: 220, easing: 'cubic-bezier(.4, 0, 1, 1)', fill: 'forwards', tempo: false }));
       const close = () => { d.open = false; anims.forEach(a => a.cancel()); done(); };
       Promise.all(anims.map(a => a.finished)).then(close, close);
     }

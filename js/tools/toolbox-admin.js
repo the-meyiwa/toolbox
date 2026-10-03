@@ -62,10 +62,10 @@ function avatar(u, size = 36) {
 }
 
 /** Rows arrive in a short cascade; already-visible rows are left alone. */
-function arrive(els, { y = 8, step = 14, max = 12 } = {}) {
+function arrive(els, { y = 10, step = 34, max = 12 } = {}) {
   if (reduced()) return;
   [...els].forEach((el, i) => el.animate?.([{ opacity: 0, transform: `translateY(${y}px)` }, { opacity: 1, transform: 'none' }],
-    { duration: 220, delay: Math.min(i, max) * step, easing: GLIDE, fill: 'backwards', tempo: false }));
+    { duration: 440, delay: Math.min(i, max) * step, easing: GLIDE, fill: 'backwards', tempo: false }));
 }
 
 /** A number counts up to its value (text only: no layout beyond the tile). */
@@ -153,10 +153,10 @@ export default {
     const paint = (html) => {
       if (this.dead || this.tab !== tab) return;
       this.panel.innerHTML = html;
-      if (!reduced()) this.panel.animate([{ opacity: 0, transform: `translateX(${dir * 14}px)` }, { opacity: 1, transform: 'none' }], { duration: 220, easing: GLIDE, tempo: false });
+      if (!reduced()) this.panel.animate([{ opacity: 0, transform: `translateX(${dir * 14}px)` }, { opacity: 1, transform: 'none' }], { duration: 340, easing: GLIDE, tempo: false });
     };
     if (!first && !reduced()) {
-      await this.panel.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: `translateX(${-dir * 10}px)` }], { duration: 110, easing: 'ease-in', fill: 'forwards', tempo: false }).finished.catch(() => {});
+      await this.panel.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: `translateX(${-dir * 10}px)` }], { duration: 170, easing: 'ease-in', fill: 'forwards', tempo: false }).finished.catch(() => {});
       this.panel.getAnimations().forEach(a => a.cancel());
     }
     if (tab === 'overview') return this.overview(paint);
@@ -196,8 +196,8 @@ export default {
       </div>
       ${this.privateSummary()}`);
     this.panel.querySelectorAll('[data-count]').forEach(el => countUp(el, el.dataset.count));
-    arrive(this.panel.querySelectorAll('.adm-stat, .adm-card'), { step: 24 });
-    if (!reduced()) this.panel.querySelectorAll('.adm-bars i').forEach((b, i) => b.animate([{ transform: 'scaleY(0)' }, { transform: 'none' }], { duration: 320, delay: 120 + i * 10, easing: GLIDE, fill: 'backwards', tempo: false }));
+    arrive(this.panel.querySelectorAll('.adm-stat, .adm-card'), { step: 34 });
+    if (!reduced()) this.panel.querySelectorAll('.adm-bars i').forEach((b, i) => b.animate([{ transform: 'scaleY(0)' }, { transform: 'none' }], { duration: 500, delay: 120 + i * 10, easing: GLIDE, fill: 'backwards', tempo: false }));
   },
 
   privateSummary() {
@@ -288,7 +288,7 @@ export default {
     for (const g of grants || []) { if (!byTool.has(g.tool_id)) byTool.set(g.tool_id, []); byTool.get(g.tool_id).push(g); }
     paint(`<p class="adm-lead">Private tools are yours alone until you give someone access. They must already have a Toolbox account with a verified email.</p>
       <div class="adm-tools">${privateTools().map(t => this.toolCard(t, byTool.get(t.id) || [], grants !== null)).join('')}</div>`);
-    arrive(this.panel.querySelectorAll('.adm-tool'), { step: 30 });
+    arrive(this.panel.querySelectorAll('.adm-tool'), { step: 42 });
   },
 
   toolCard(t, people, ready) {
@@ -328,14 +328,14 @@ export default {
       if (g && !list.querySelector(`[data-user="${CSS.escape(g.user_id)}"]`)) {
         list.insertAdjacentHTML('beforeend', this.grantChip(g));
         const chip = list.lastElementChild;
-        if (!reduced()) chip.animate([{ opacity: 0, transform: 'scale(.8)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing: 'cubic-bezier(.34, 1.4, .64, 1)', tempo: false });
+        if (!reduced()) chip.animate([{ opacity: 0, transform: 'scale(.8)' }, { opacity: 1, transform: 'none' }], { duration: 340, easing: 'cubic-bezier(.22, 1, .36, 1)', tempo: false });
       }
       card.querySelector('.adm-access-label').textContent = 'Who else can open it';
       input.value = '';
       showToast(`${g?.username ? `@${g.username}` : who} can now open ${BY_ID.get(tool)?.name || tool}.`, 'success');
     } catch (err) {
       showToast(err.message, 'error', 5000);
-      if (!reduced()) form.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-5px)' }, { transform: 'translateX(4px)' }, { transform: 'none' }], { duration: 260, easing: 'ease-out', tempo: false });
+      if (!reduced()) form.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-5px)' }, { transform: 'translateX(4px)' }, { transform: 'none' }], { duration: 400, easing: 'ease-out', tempo: false });
     } finally { btn.disabled = false; }
   },
 
@@ -348,10 +348,10 @@ export default {
       const list = chip.parentElement;
       const sibs = [...list.children].filter(c => c !== chip);
       const before = new Map(sibs.map(s => [s, s.getBoundingClientRect().left]));
-      const out = reduced() ? null : chip.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(.85)' }], { duration: 150, easing: 'ease-in', fill: 'forwards', tempo: false });
+      const out = reduced() ? null : chip.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(.85)' }], { duration: 230, easing: 'ease-in', fill: 'forwards', tempo: false });
       await out?.finished.catch(() => {});
       chip.remove();
-      if (!reduced()) sibs.forEach(s => { const dx = before.get(s) - s.getBoundingClientRect().left; if (Math.abs(dx) > 0.5) s.animate([{ transform: `translateX(${dx}px)` }, { transform: 'none' }], { duration: 200, easing: GLIDE, tempo: false }); });
+      if (!reduced()) sibs.forEach(s => { const dx = before.get(s) - s.getBoundingClientRect().left; if (Math.abs(dx) > 0.5) s.animate([{ transform: `translateX(${dx}px)` }, { transform: 'none' }], { duration: 310, easing: GLIDE, tempo: false }); });
       if (!list.children.length) card.querySelector('.adm-access-label').textContent = 'Only you can open it';
     } catch (err) {
       chip.style.pointerEvents = '';

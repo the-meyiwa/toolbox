@@ -85,7 +85,7 @@ body::before {
   background: var(--glass-bg);
   border-color: var(--glass-border);
   box-shadow: var(--glass-edge), var(--shadow-1);
-  transition: border-color .186s ease, box-shadow .2s ease, transform .2s var(--ease-out);
+  transition: border-color .2s ease, box-shadow .25s ease, transform .25s var(--ease-out);
 }
 .tool-card:hover { transform: translateY(-2px); box-shadow: var(--glass-edge), var(--glass-shadow); }
 .astc { background: var(--glass-bg); border-color: var(--glass-border); box-shadow: var(--glass-edge), var(--shadow-1); }

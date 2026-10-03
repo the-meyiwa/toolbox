@@ -45,16 +45,16 @@
   height: 58px !important; border-radius: 20px !important;
   background: var(--surface) !important; border: 1px solid var(--line-strong) !important;
   box-shadow: 0 1px 2px #0000000a, 0 22px 44px -32px #00000059 !important;
-  transition: border-color .186s ease, box-shadow .242s var(--lp-glide) !important;
+  transition: border-color .2s ease, box-shadow .4s var(--lp-glide) !important;
 }
 .lp .home-search-input:hover { border-color: var(--line-control) !important; }
 .lp .home-search-input:focus { border-color: var(--line-control) !important; box-shadow: 0 0 0 6px color-mix(in srgb, var(--ink) 6%, transparent), 0 22px 44px -30px #00000066 !important; }
-.lp .home-search-submit { border-radius: 14px; transition: transform .214s cubic-bezier(.34, 1.4, .64, 1); }
+.lp .home-search-submit { border-radius: 14px; transition: transform .3s cubic-bezier(.22, 1, .36, 1); }
 .lp .home-search-submit:hover { transform: translateX(2px); }
-.lp .home-search-keys { margin-top: 12px; transition: opacity .214s ease; }
+.lp .home-search-keys { margin-top: 12px; transition: opacity .3s ease; }
 
 /* ---------- below the search: one thread through shortcuts and the Assistant ---------- */
-.lp-below { display: flex; flex-direction: column; align-items: center; width: min(680px, 100%); transition: opacity .228s var(--lp-ease), filter .228s var(--lp-ease); }
+.lp-below { display: flex; flex-direction: column; align-items: center; width: min(680px, 100%); transition: opacity .35s var(--lp-ease), filter .35s var(--lp-ease); }
 .lp .home-quick, .lp .lp-assistant { position: relative; }
 .lp .home-quick { justify-content: center; gap: 4px; margin-top: 40px; }
 .lp .lp-assistant { width: 100%; max-width: none; margin: 52px 0 0; animation: none; }
@@ -62,7 +62,7 @@
   content: ''; position: absolute; left: 50%; width: 1px; pointer-events: none;
   background: linear-gradient(var(--lp-thread), color-mix(in srgb, var(--ink) 4%, transparent));
   transform-origin: 50% 0;
-  transition: transform .298s var(--lp-glide);
+  transition: transform .6s var(--lp-glide);
 }
 .lp .lp-undrawn::before { transform: scaleY(0); transition: none; }
 .lp .home-quick::before { top: -34px; height: 26px; }

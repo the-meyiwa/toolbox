@@ -149,7 +149,7 @@ body.standalone-mode #cpg-root { height: 100%; min-height: 0; border-radius: 0; 
   font-size: 12.5px;
   font-weight: 500;
   white-space: nowrap;
-  transition: background .12s, border-color .12s;
+  transition: background 0.12s, border-color 0.12s;
 }
 .cpg-btn:hover { background: var(--cpg-bg-hover) !important; }
 .cpg-btn:disabled { opacity: 0.5; cursor: default; }
@@ -633,7 +633,7 @@ textarea.cpg-input { height: auto; resize: vertical; line-height: 1.4; }
 .cm-s-toolbox .CodeMirror-foldmarker { color: var(--cpg-accent); text-shadow: none; font-family: inherit; }
 .cm-s-toolbox .CodeMirror-foldgutter-open, .cm-s-toolbox .CodeMirror-foldgutter-folded { color: var(--cpg-muted); }
 .cm-s-toolbox .CodeMirror-guttermarker-subtle { color: var(--cpg-muted); }
-.pge-flash { background: rgba(227, 179, 65, 0.22) !important; transition: background .298s; }
+.pge-flash { background: rgba(227, 179, 65, 0.22) !important; transition: background 0.6s; }
 .cm-s-toolbox .cm-searching { background: rgba(227, 179, 65, 0.35); }
 
 /* dark tokens (One Dark–like) */
@@ -1424,7 +1424,7 @@ li.CodeMirror-hint-active { background: #2f5ea8 !important; color: #fff !importa
   border: 1px solid var(--cpg-border) !important;
   background: var(--cpg-bg-2) !important;
   text-align: left;
-  transition: border-color .12s, transform .12s, background .12s;
+  transition: border-color 0.12s, transform 0.12s, background 0.12s;
   color: var(--cpg-text) !important;
   height: auto;
 }
@@ -1498,3 +1498,64 @@ li.CodeMirror-hint-active { background: #2f5ea8 !important; color: #fff !importa
 .cpg-tree-more .tb-i { width: 15px; height: 15px; }
 .cpg-status-btn .tb-i { width: 12px; height: 12px; vertical-align: -2px; }
 .cpg-bc-sep .tb-i { width: 11px; height: 11px; vertical-align: -1px; }
+
+/* ============================================================
+   Makeover: the landing in Home's language, the workspace chrome softened.
+   - An editorial title, sections divided by hairlines instead of boxes.
+   - Template and workspace cards are open until you reach for them; their
+     badges turn ink on hover. Quiet pill buttons.
+   - The workspace keeps its layout; corners, borders and hover states match
+     the rest of Toolbox.
+   Motion is set from JS (arrival cascades); here only hover transitions,
+   all smooth, none bouncy.
+   ============================================================ */
+.cpg-landing {
+  --mk-glide: cubic-bezier(.22, 1, .36, 1);
+  border: 0; border-radius: 22px; padding: clamp(24px, 4vw, 44px) clamp(18px, 4vw, 44px) 28px;
+  background: var(--cpg-bg);
+}
+.cpg-landing h1 { font-size: clamp(30px, 3.8vw, 44px); line-height: 1.06; font-weight: 650; letter-spacing: -0.035em; margin-bottom: 10px; }
+.cpg-landing-head p { font-size: 15.5px; max-width: 640px; }
+.cpg-landing-head { margin-bottom: 34px; }
+.cpg-landing-section { margin-bottom: 36px; }
+.cpg-section-head { padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px solid var(--cpg-border); }
+.cpg-landing h2 { font-size: 17px; font-weight: 650; letter-spacing: -0.015em; }
+.cpg-landing .cpg-btn {
+  height: 34px; padding: 0 14px; border-radius: 999px !important;
+  border: 1px solid var(--cpg-border-strong) !important; background: transparent !important;
+  font-weight: 500; transition: background-color .3s var(--mk-glide), border-color .3s var(--mk-glide), transform .2s ease;
+}
+.cpg-landing .cpg-btn:hover { background: var(--cpg-bg-3) !important; border-color: var(--cpg-text-2) !important; }
+.cpg-landing .cpg-btn:active { transform: scale(.97); }
+.cpg-tpl-grid { gap: 6px; }
+.cpg-tpl-card {
+  padding: 14px !important; border-radius: 18px; border-color: transparent !important; background: transparent !important;
+  transition: background-color .35s var(--mk-glide), border-color .35s var(--mk-glide), box-shadow .4s var(--mk-glide), transform .4s var(--mk-glide);
+}
+.cpg-tpl-card:hover { background: var(--cpg-bg-2) !important; border-color: var(--cpg-border) !important; box-shadow: 0 18px 36px -26px rgba(0, 0, 0, .45); transform: translateY(-2px); }
+.cpg-tpl-card:active { transform: scale(.985); transition-duration: .15s; }
+.cpg-tpl-badge { width: 42px; height: 42px; border-radius: 13px; background: transparent; border: 1px solid var(--cpg-border-strong); color: var(--cpg-text); transition: background-color .35s var(--mk-glide), color .35s var(--mk-glide), border-color .35s var(--mk-glide); }
+.cpg-tpl-card:hover .cpg-tpl-badge, .cpg-ws-card:hover .cpg-tpl-badge { background: var(--cpg-text); border-color: var(--cpg-text); color: var(--cpg-bg); }
+.cpg-tpl-text b { font-size: 14.5px; }
+.cpg-tpl-text span { font-size: 12.5px; }
+.cpg-ws-list { gap: 6px; }
+.cpg-ws-card { padding: 8px 10px 8px 8px; border-radius: 16px; border-color: transparent; background: transparent; transition: background-color .35s var(--mk-glide), border-color .35s var(--mk-glide); }
+.cpg-ws-card:hover { background: var(--cpg-bg-2); border-color: var(--cpg-border); }
+.cpg-ws-actions { opacity: 0; transition: opacity .3s var(--mk-glide); }
+.cpg-ws-card:hover .cpg-ws-actions, .cpg-ws-card:focus-within .cpg-ws-actions { opacity: 1; }
+.cpg-landing .cpg-empty { border-radius: 18px; }
+.cpg-landing .cpg-ws-filter, .cpg-landing input[type="search"], .cpg-landing input[type="text"] { border-radius: 12px !important; }
+@media (hover: none) { .cpg-ws-actions { opacity: 1; } }
+
+/* The workspace: one rounded surface with Toolbox's hairlines. */
+#cpg-root.ide-root { border-radius: 18px; overflow: hidden; }
+#cpg-root .cpg-activity { border-radius: 10px; transition: background-color .3s ease, color .3s ease; }
+#cpg-root .cpg-btn, #cpg-root .cpg-icon-btn { border-radius: 9px; transition: background-color .25s ease, color .25s ease, border-color .25s ease; }
+#cpg-root .cpg-dropdown-menu { border-radius: 14px; }
+#cpg-root .cpg-dropdown-item { border-radius: 8px; }
+@media (max-width: 760px) {
+  .cpg-landing { border-radius: 18px; }
+  .cpg-landing-head { flex-direction: column; }
+}
+/* The landing has its own title; the generic tool heading would repeat it. */
+body[data-tool-id="code-playground"] .viewport-header { display: none; }

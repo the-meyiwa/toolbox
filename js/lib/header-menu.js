@@ -483,7 +483,7 @@ function leave(el, delay = 0, { close = true } = {}) {
   const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduce || !el.animate) return Promise.resolve();
   return el.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(28px)' }],
-    { duration: 190, delay, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'forwards', tempo: false })
+    { duration: 300, delay, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'forwards', tempo: false })
     .finished.then(() => (close ? closeGap(el) : null)).catch(() => {});
 }
 
@@ -498,7 +498,7 @@ function closeGap(el) {
   if (prev?.classList.contains('notif-group') && (!next || next.classList.contains('notif-group'))) prev.remove();
   const moves = rows.filter(n => n.isConnected).map(n => {
     const dy = before.get(n) - n.getBoundingClientRect().top;
-    return Math.abs(dy) > 0.5 ? n.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 220, easing: 'cubic-bezier(.22, 1, .36, 1)', tempo: false }).finished : null;
+    return Math.abs(dy) > 0.5 ? n.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 380, easing: 'cubic-bezier(.22, 1, .36, 1)', tempo: false }).finished : null;
   }).filter(Boolean);
   return Promise.all(moves).catch(() => {});
 }

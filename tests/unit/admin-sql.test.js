@@ -110,5 +110,5 @@ test('the migration can be run again', async () => {
   const db = await database();
   await db.exec(await read('admin.sql'));
   const rows = (await db.query('select count(*)::int as n from toolbox_private.admin_owners')).rows;
-  assert.equal(rows[0].n, 2);
+  assert.equal(rows[0].n, 3);
 });

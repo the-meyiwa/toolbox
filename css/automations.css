@@ -82,7 +82,7 @@
   padding: 6px 14px;
   border-radius: 999px;
   cursor: pointer;
-  transition: background .186s var(--ease-out), color .186s var(--ease-out), box-shadow .186s var(--ease-out);
+  transition: background 0.2s var(--ease-out), color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
 }
 .au-tab:hover {
   color: var(--text);
@@ -157,7 +157,7 @@
   color: var(--text);
   font: inherit;
   font-size: 13px;
-  transition: border-color .186s, box-shadow .186s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 .au-search-input:focus {
   border-color: var(--accent);
@@ -181,7 +181,7 @@
   font-size: 12.5px;
   font-weight: 500;
   cursor: pointer;
-  transition: background .15s, color .15s, border-color .15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .au-pill:hover {
   background: var(--surface-2);
@@ -210,7 +210,7 @@
   background: var(--surface);
   padding: 18px;
   box-shadow: var(--shadow-1);
-  transition: transform .2s cubic-bezier(.25, .1, .25, 1), box-shadow .2s cubic-bezier(.25, .1, .25, 1), border-color .186s;
+  transition: transform 0.25s cubic-bezier(.25, .1, .25, 1), box-shadow 0.25s cubic-bezier(.25, .1, .25, 1), border-color 0.2s;
   overflow: hidden;
 }
 .au-tile::before {
@@ -262,7 +262,7 @@
   background: var(--tile-soft, var(--surface-2));
   color: var(--tile-accent, var(--text));
   border: 1px solid color-mix(in srgb, var(--tile-accent) 25%, transparent);
-  transition: transform .186s var(--ease-out);
+  transition: transform 0.2s var(--ease-out);
 }
 .au-tile:hover .au-tile-icon-badge {
   transform: scale(1.05);
@@ -285,7 +285,7 @@
   place-items: center;
   cursor: pointer;
   box-shadow: 0 4px 12px color-mix(in srgb, var(--tile-accent) 35%, transparent);
-  transition: transform .186s cubic-bezier(.25, .1, .25, 1), box-shadow .186s;
+  transition: transform 0.2s cubic-bezier(.25, .1, .25, 1), box-shadow 0.2s;
 }
 .au-run-btn:hover:not(:disabled) {
   transform: scale(1.1);
@@ -399,7 +399,7 @@
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition: background .15s, color .15s;
+  transition: background 0.15s, color 0.15s;
 }
 .au-icon-btn:hover {
   background: var(--surface-2);
@@ -462,7 +462,7 @@
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition: transform .186s, box-shadow .186s;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 .au-icon-picker-anchor:hover {
   transform: scale(1.05);
@@ -529,7 +529,7 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  transition: border-color .2s, box-shadow .2s, transform .186s;
+  transition: border-color 0.25s, box-shadow 0.25s, transform 0.2s;
 }
 .au-block.is-live-running {
   border-color: var(--accent);
@@ -607,7 +607,7 @@
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition: background .15s, color .15s;
+  transition: background 0.15s, color 0.15s;
 }
 .au-control-btn:hover:not(:disabled) {
   background: var(--surface);
@@ -670,7 +670,7 @@
   padding: 2px 7px;
   font: 500 11.5px/1.4 var(--font-mono, monospace);
   cursor: pointer;
-  transition: background .15s, border-color .15s, color .15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 .au-var-chip:hover {
   background: color-mix(in srgb, var(--accent) 12%, var(--surface));
@@ -709,7 +709,7 @@
   place-items: center;
   cursor: pointer;
   opacity: 0.6;
-  transition: opacity .186s, transform .186s;
+  transition: opacity 0.2s, transform 0.2s;
 }
 .au-joint-add-btn:hover {
   opacity: 1;
@@ -811,7 +811,7 @@
   flex-direction: column;
   justify-content: space-between;
   gap: 12px;
-  transition: transform .2s, box-shadow .2s;
+  transition: transform 0.25s, box-shadow 0.25s;
 }
 .au-gallery-card:hover {
   transform: translateY(-3px);
@@ -1002,7 +1002,7 @@
   display: grid;
   place-items: center;
   padding: 16px;
-  animation: au-fade-in .186s var(--ease-out);
+  animation: au-fade-in 0.2s var(--ease-out);
 }
 @keyframes au-fade-in {
   from { opacity: 0; }
@@ -1055,7 +1055,7 @@
   border-radius: 999px;
   white-space: nowrap;
   cursor: pointer;
-  transition: background .15s, color .15s;
+  transition: background 0.15s, color 0.15s;
 }
 .au-picker-cat-btn:hover {
   background: var(--surface);
@@ -1084,7 +1084,7 @@
   color: var(--text);
   text-align: left;
   cursor: pointer;
-  transition: background .15s;
+  transition: background 0.15s;
 }
 .au-picker-item:hover {
   background: var(--surface-2);
@@ -1142,7 +1142,7 @@
   border-radius: 50%;
   border: 2px solid transparent;
   cursor: pointer;
-  transition: transform .15s;
+  transition: transform 0.15s;
 }
 .au-color-swatch:hover {
   transform: scale(1.15);
@@ -1175,7 +1175,7 @@
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition: background .15s, transform .15s, border-color .15s;
+  transition: background 0.15s, transform 0.15s, border-color 0.15s;
 }
 .au-glyph-btn:hover {
   background: var(--surface);
@@ -1250,6 +1250,6 @@
     animation: none !important;
   }
   .au-spinner {
-    animation-duration: 0ms !important;
+    animation-duration: 0.01ms !important;
   }
 }

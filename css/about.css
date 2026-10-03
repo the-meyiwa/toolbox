@@ -56,21 +56,21 @@
 [data-split] .w > span {
   display: inline-block;
   transform: translateY(105%) rotate(4deg); transform-origin: 0 100%;
-  transition: transform 382ms var(--ease-out);
-  transition-delay: calc(var(--wi) * 19ms);
+  transition: transform 900ms var(--ease-out);
+  transition-delay: calc(var(--wi) * 55ms);
 }
 .about-lead { font-size: 20px; line-height: 30px; font-weight: 500; letter-spacing: -0.01em; color: var(--text); margin-bottom: var(--space-4); }
 .about-text { font-size: 16px; line-height: 26px; color: var(--text-2); margin-bottom: var(--space-3); max-width: 46ch; }
 .about-lead, .about-text, .about-quote, .about-stats, .about-copy > .btn {
   opacity: 0; transform: translateY(14px);
-  transition: opacity 326ms var(--ease-out), transform 326ms var(--ease-out);
-  transition-delay: calc(105ms + var(--li, 0) * 31ms);
+  transition: opacity 700ms var(--ease-out), transform 700ms var(--ease-out);
+  transition-delay: calc(300ms + var(--li, 0) * 90ms);
 }
 .about-quote {
   position: relative; margin-top: var(--space-6); padding-left: var(--space-5);
   font-size: 26px; line-height: 34px; font-weight: 600; letter-spacing: -0.02em; color: var(--text);
 }
-.about-quote::before { content: ""; position: absolute; left: 0; top: 4px; bottom: 4px; width: 3px; border-radius: 2px; background: var(--ink); transform-origin: top; transform: scaleY(0); transition: transform 326ms var(--ease-out) 220ms; }
+.about-quote::before { content: ""; position: absolute; left: 0; top: 4px; bottom: 4px; width: 3px; border-radius: 2px; background: var(--ink); transform-origin: top; transform: scaleY(0); transition: transform 700ms var(--ease-out) 700ms; }
 
 /* A chapter "is-in" once its stage is on screen */
 .about-chapter.is-in .about-eyebrow,
@@ -195,7 +195,7 @@
 .about-maker {
   --m: 0;
   justify-self: center;
-  transition: opacity 382ms var(--ease-out) 140ms, transform 382ms var(--ease-out) 140ms; width: min(380px, 100%);
+  transition: opacity 900ms var(--ease-out) 400ms, transform 900ms var(--ease-out) 400ms; width: min(380px, 100%);
   padding: var(--space-8);
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-2);
   opacity: var(--m); transform: translateY(calc((1 - var(--m)) * 60px)) rotate(calc((1 - var(--m)) * 3deg));
@@ -362,7 +362,7 @@
 .about-showcase.is-in .about-eyebrow, .about-principles.is-in .about-eyebrow, .about-day.is-in .about-eyebrow { opacity: 1; transform: none; }
 .about-show-title { margin: var(--space-4) 0 var(--space-4); font-size: clamp(36px, 5.2vw, 72px); line-height: 1; font-weight: 650; letter-spacing: -0.045em; text-wrap: balance; }
 .about-grad { background: linear-gradient(100deg, #4f7cff, #a855f7 45%, #14b8a6); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.about-show-lead { font-size: 19px; line-height: 1.55; color: var(--text-2); opacity: 0; transform: translateY(18px); transition: opacity 354ms var(--ease-out), transform 354ms var(--ease-out); transition-delay: calc(147ms + var(--li, 0) * 31ms); }
+.about-show-lead { font-size: 19px; line-height: 1.55; color: var(--text-2); opacity: 0; transform: translateY(18px); transition: opacity 800ms var(--ease-out), transform 800ms var(--ease-out); transition-delay: calc(420ms + var(--li, 0) * 90ms); }
 .about-showcase.is-in .about-show-title, .about-showcase.is-in .about-show-lead { opacity: 1; transform: none; }
 
 .about-bento { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; perspective: 1200px; }
@@ -377,14 +377,14 @@
   box-shadow: 0 1px 0 color-mix(in srgb, #fff 55%, transparent) inset, 0 24px 60px -30px rgba(0, 0, 0, .28);
   transform: translateY(40px) scale(.97) rotateX(var(--rx)) rotateY(var(--ry));
   opacity: 0;
-  transition: opacity 354ms var(--ease-out), transform 354ms var(--ease-out);
-  transition-delay: calc(var(--i) * 31ms);
+  transition: opacity 800ms var(--ease-out), transform 800ms var(--ease-out);
+  transition-delay: calc(var(--i) * 90ms);
 }
-.bento-card::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .214s;
+.bento-card::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .3s;
   background: radial-gradient(420px circle at var(--gx) var(--gy), color-mix(in srgb, #fff 26%, transparent), transparent 60%); }
 .bento-card:hover::after { opacity: 1; }
 .about-showcase.is-in .bento-card { opacity: 1; transform: translateY(0) scale(1) rotateX(var(--rx)) rotateY(var(--ry)); }
-.about-showcase.is-in .bento-card:hover { transition: transform 160ms linear, opacity 354ms var(--ease-out); transition-delay: 0s; }
+.about-showcase.is-in .bento-card:hover { transition: transform 160ms linear, opacity 800ms var(--ease-out); transition-delay: 0s; }
 .bento-xl { grid-row: span 2; }
 .bento-wide { grid-column: span 2; }
 .bento-full { grid-column: 1 / -1; }
@@ -403,11 +403,11 @@
 .bento-chat .bc-r { max-width: 92%; padding: 10px 14px; border-radius: 18px 18px 18px 4px; font-size: 13.5px; line-height: 1.45;
   background: color-mix(in srgb, var(--text) 7%, transparent); opacity: 0; transform: translateY(6px); display: none; }
 .bento-chat .bc-r em { font-style: normal; color: var(--text-2); }
-.about-showcase.is-in .bento-chat .bc-a b { animation: typing .438s ease-in-out 3; }
+.about-showcase.is-in .bento-chat .bc-a b { animation: typing 1.1s ease-in-out 3; }
 .about-showcase.is-in .bento-chat .bc-a b:nth-child(2) { animation-delay: .15s; }
 .about-showcase.is-in .bento-chat .bc-a b:nth-child(3) { animation-delay: .3s; }
-.about-showcase.is-in .bento-chat .bc-a { animation: bc-hide 0s linear .22s forwards; }
-.about-showcase.is-in .bento-chat .bc-r { display: block; animation: bc-show .27s var(--ease-out) .22s forwards; }
+.about-showcase.is-in .bento-chat .bc-a { animation: bc-hide 0s linear 4.2s forwards; }
+.about-showcase.is-in .bento-chat .bc-r { display: block; animation: bc-show .5s var(--ease-out) 4.2s forwards; }
 @keyframes bc-hide { to { visibility: hidden; height: 0; padding: 0; margin: 0; } }
 @keyframes bc-show { to { opacity: 1; transform: none; } }
 @keyframes typing { 0%, 60%, 100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-5px); opacity: 1; } }
@@ -420,7 +420,7 @@
   background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 55%, #0b3b3a 100%);
   box-shadow: 0 40px 90px -40px rgba(30, 27, 75, .7);
   transform: translateY(36px) rotateX(var(--rx)) rotateY(var(--ry)); opacity: 0;
-  transition: opacity 382ms var(--ease-out), transform 382ms var(--ease-out);
+  transition: opacity 900ms var(--ease-out), transform 900ms var(--ease-out);
 }
 .about-friends.is-in .korelearn-card { opacity: 1; transform: translateY(0) rotateX(var(--rx)) rotateY(var(--ry)); }
 .about-friends.is-in .korelearn-card:hover { transition: transform 160ms linear; }
@@ -431,7 +431,7 @@
 @keyframes kl-drift { from { transform: translate3d(-6%, 5%, 0) scale(.95); } to { transform: translate3d(8%, -6%, 0) scale(1.1); } }
 .korelearn-kicker { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: rgba(255, 255, 255, .7); }
 .korelearn-kicker svg { width: 15px; height: 15px; }
-.korelearn-kicker, .korelearn-card > p, .korelearn-cta { --d: calc(480ms + var(--li, 0) * 110ms); opacity: 0; translate: 0 14px; transition: opacity 326ms var(--ease-out) var(--d), translate 326ms var(--ease-out) var(--d); }
+.korelearn-kicker, .korelearn-card > p, .korelearn-cta { --d: calc(480ms + var(--li, 0) * 110ms); opacity: 0; translate: 0 14px; transition: opacity 700ms var(--ease-out) var(--d), translate 700ms var(--ease-out) var(--d); }
 .korelearn-kicker { --d: 200ms; }
 .about-friends.is-in .korelearn-kicker, .about-friends.is-in .korelearn-card > p, .about-friends.is-in .korelearn-cta { opacity: 1; translate: 0 0; }
 .korelearn-card h2 { margin: 12px 0 14px; font-size: clamp(32px, 4.6vw, 60px); line-height: 1.02; letter-spacing: -0.04em; font-weight: 650; }
@@ -439,7 +439,7 @@
 .korelearn-card p { max-width: 620px; margin: 0 0 26px; font-size: 18px; line-height: 1.55; color: rgba(255, 255, 255, .82); }
 .korelearn-cta { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px; font-weight: 600; font-size: 15px;
   background: color-mix(in srgb, #fff 14%, transparent); border: 1px solid color-mix(in srgb, #fff 25%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
-  transition: opacity 326ms var(--ease-out) var(--d), translate 326ms var(--ease-out) var(--d), background .186s, transform .186s; }
+  transition: opacity 700ms var(--ease-out) var(--d), translate 700ms var(--ease-out) var(--d), background .2s, transform .2s; }
 .korelearn-card:hover .korelearn-cta { background: rgba(255, 255, 255, .24); transform: translateX(3px); }
 .korelearn-cta svg { width: 16px; height: 16px; }
 .korelearn-card:focus-visible { outline: 3px solid #a5b4fc; outline-offset: 4px; }
@@ -468,15 +468,15 @@
   background: color-mix(in srgb, var(--surface) 76%, transparent);
   border: 1px solid color-mix(in srgb, var(--text) 9%, transparent);
   opacity: 0; transform: translateY(28px);
-  transition: opacity 326ms var(--ease-out), transform 326ms var(--ease-out);
-  transition-delay: calc(var(--i) * 38ms);
+  transition: opacity 700ms var(--ease-out), transform 700ms var(--ease-out);
+  transition-delay: calc(var(--i) * 110ms);
 }
 .about-principles.is-in .principle { opacity: 1; transform: none; }
 .principle-icon { display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; margin-bottom: 16px;
   background: linear-gradient(135deg, color-mix(in srgb, #4f7cff 18%, transparent), color-mix(in srgb, #a855f7 18%, transparent)); color: var(--text); }
 .principle-icon svg { width: 22px; height: 22px; }
 /* The icon draws itself once when the card arrives. */
-.principle-icon svg * { stroke-dasharray: 80; stroke-dashoffset: 80; transition: stroke-dashoffset .438s var(--ease-out); transition-delay: calc(var(--i) * 38ms + 88ms); }
+.principle-icon svg * { stroke-dasharray: 80; stroke-dashoffset: 80; transition: stroke-dashoffset 1.1s var(--ease-out); transition-delay: calc(var(--i) * 110ms + 250ms); }
 .about-principles.is-in .principle-icon svg * { stroke-dashoffset: 0; }
 .principle h3 { margin: 0 0 8px; font-size: 22px; letter-spacing: -0.02em; font-weight: 650; }
 .principle p { margin: 0; color: var(--text-2); font-size: 15px; line-height: 1.55; }
@@ -492,7 +492,7 @@
   .day-line::after { transition: none; animation: day-draw linear both; animation-timeline: view(); animation-range: entry 40% cover 55%; }
 }
 @keyframes day-draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-.day-line li { position: relative; min-width: 0; opacity: 0; transform: translateY(20px); transition: opacity 326ms var(--ease-out), transform 326ms var(--ease-out); transition-delay: calc(var(--i) * 49ms + 70ms); }
+.day-line li { position: relative; min-width: 0; opacity: 0; transform: translateY(20px); transition: opacity 700ms var(--ease-out), transform 700ms var(--ease-out); transition-delay: calc(var(--i) * 140ms + 200ms); }
 .about-day.is-in .day-line li { opacity: 1; transform: none; }
 .day-line li::before { content: ""; position: absolute; left: 0; top: -30px; width: 14px; height: 14px; border-radius: 50%; background: var(--surface); border: 2px solid #7c6cf6; box-shadow: 0 0 0 4px color-mix(in srgb, #7c6cf6 18%, transparent); }
 .day-line time { display: block; font-size: 13px; font-weight: 600; color: var(--text-3); font-variant-numeric: tabular-nums; margin-bottom: 6px; }
@@ -588,3 +588,59 @@
 @keyframes ab-clock { 0% { opacity: 0; transform: translateY(50px); } 18%, 78% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-50px); } }
 @keyframes ab-clock-last { 0% { opacity: 0; transform: translateY(50px); } 40%, 100% { opacity: 1; transform: none; } }
 @keyframes ab-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* ==========================================================================
+   About, renovated: the same story with a finer hand.
+   - Headlines: each word rises out of its mask and comes into focus.
+   - Text and cards settle out of a soft blur; cards open with a clip reveal and
+     their contents follow one after another.
+   - Where the browser has scroll timelines, titles and cards drift a little as
+     they pass (the `translate` property, so it never fights the tilt, which is
+     `transform`). All compositor work, at the display's refresh rate.
+   ========================================================================== */
+@media (prefers-reduced-motion: no-preference) {
+  [data-split] .w > span {
+    opacity: .15; filter: blur(6px);
+    transition: transform 1100ms cubic-bezier(.16, 1, .3, 1), opacity 900ms cubic-bezier(.16, 1, .3, 1), filter 900ms cubic-bezier(.16, 1, .3, 1);
+    transition-delay: calc(var(--wi) * 60ms);
+  }
+  .is-in [data-split] .w > span { opacity: 1; filter: blur(0); }
+
+  .about-lead, .about-text, .about-quote, .about-stats, .about-copy > .btn, .about-show-lead {
+    filter: blur(4px);
+    transition-property: opacity, transform, filter;
+    transition-duration: 900ms;
+    transition-timing-function: cubic-bezier(.16, 1, .3, 1);
+  }
+  .about-chapter.is-in :is(.about-lead, .about-text, .about-quote, .about-stats, .about-copy > .btn),
+  .about-showcase.is-in .about-show-lead, .about-day.is-in .about-show-lead { filter: blur(0); }
+
+  .bento-card {
+    clip-path: inset(18% 0 0 0 round 26px);
+    transition: opacity 1000ms cubic-bezier(.16, 1, .3, 1), transform 1000ms cubic-bezier(.16, 1, .3, 1), clip-path 1100ms cubic-bezier(.16, 1, .3, 1);
+    transition-delay: calc(var(--i) * 110ms);
+  }
+  .about-showcase.is-in .bento-card { clip-path: inset(0 0 0 0 round 26px); }
+  .bento-card > * { opacity: 0; translate: 0 12px; transition: opacity 800ms cubic-bezier(.16, 1, .3, 1), translate 800ms cubic-bezier(.16, 1, .3, 1); }
+  .about-showcase.is-in .bento-card > * { opacity: 1; translate: 0 0; }
+  .about-showcase.is-in .bento-card > :nth-child(1) { transition-delay: calc(var(--i) * 110ms + 260ms); }
+  .about-showcase.is-in .bento-card > :nth-child(2) { transition-delay: calc(var(--i) * 110ms + 340ms); }
+  .about-showcase.is-in .bento-card > :nth-child(3) { transition-delay: calc(var(--i) * 110ms + 420ms); }
+  .about-showcase.is-in .bento-card > :nth-child(n+4) { transition-delay: calc(var(--i) * 110ms + 500ms); }
+
+  .principle { filter: blur(3px); transition-property: opacity, transform, filter; transition-duration: 900ms; transition-timing-function: cubic-bezier(.16, 1, .3, 1); }
+  .about-principles.is-in .principle { filter: blur(0); }
+
+  @supports (animation-timeline: view()) {
+    .about-show-title, .about-show-lead, .bento-card, .principle, .korelearn-card {
+      animation: ab-drift linear both;
+      animation-timeline: view();
+      animation-range: cover 0% cover 100%;
+    }
+    .bento-card:nth-child(3n + 2) { animation-name: ab-drift-slow; }
+    .about-show-title { animation-name: ab-title; animation-range: entry 0% cover 45%; }
+  }
+}
+@keyframes ab-drift { from { translate: 0 28px; } to { translate: 0 -28px; } }
+@keyframes ab-drift-slow { from { translate: 0 44px; } to { translate: 0 -44px; } }
+@keyframes ab-title { from { scale: .94; translate: 0 34px; } to { scale: 1; translate: 0 0; } }

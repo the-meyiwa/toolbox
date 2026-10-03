@@ -144,12 +144,15 @@ export function normaliseTurn(raw) {
 
 /* ---------- model calls ---------- */
 
-async function ask({ system, messages, signal, onToken }) {
+async function ask({ system, messages, signal, onToken, image = null, mode = 'fast' }) {
   const { streamChatCompletion } = await import('../ai-provider.js');
   let text = '';
   const history = messages.map(m => ({ role: m.role, content: m.content }));
+  // A picture goes with the last message, so a model that can see reads it.
+  const currentFile = image ? { name: image.name || 'picture.jpg', type: image.type || 'image/jpeg', base64: image.base64 } : null;
+  if (currentFile) history[history.length - 1].fileData = currentFile;
   const res = await streamChatCompletion({
-    mode: 'fast', scope: 'study', systemInstruction: system, history, toolDeclarations: [], maxSteps: 1, signal,
+    mode, scope: 'study', systemInstruction: system, history, toolDeclarations: [], maxSteps: 1, signal, currentFile,
     onToken: (t) => { text += t; onToken?.(text); },
   });
   return res?.text || text;

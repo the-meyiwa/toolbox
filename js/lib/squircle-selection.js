@@ -146,7 +146,8 @@ function paint() {
     el.style.transform = `translate(${(L.l - PAD_X).toFixed(1)}px, ${(L.t - PAD_Y).toFixed(1)}px)`;
     el.style.width = `${(L.r - L.l + PAD_X * 2).toFixed(1)}px`;
     el.style.height = `${h.toFixed(1)}px`;
-    el.style.borderRadius = `${Math.min(10, h * 0.42).toFixed(1)}px`;
+    // Nearly square: just enough rounding to soften the corners.
+    el.style.borderRadius = `${Math.min(4, h * 0.18).toFixed(1)}px`;
   });
 }
 

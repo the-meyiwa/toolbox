@@ -77,7 +77,7 @@
 .kit-progress { display: flex; flex-direction: column; gap: 6px; }
 .kit-progress[hidden] { display: none; }
 .kit-bar { height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
-.kit-bar > i { display: block; height: 100%; width: 0; background: var(--ink); transition: width .186s ease; }
+.kit-bar > i { display: block; height: 100%; width: 0; background: var(--ink); transition: width 0.2s ease; }
 .kit-progress p { margin: 0; font-size: 12.5px; color: var(--text-3); }
 .kit-result { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-lg, 12px); background: var(--surface-2); }
 .kit-result[hidden] { display: none; }
@@ -107,11 +107,11 @@ audio.kit-media { background: transparent; max-height: none; }
 .io-sources { margin-top: calc(var(--space-2) * -1); }
 .io-sources[hidden], .fz[hidden] + .io-sources { display: none; }
 .io-pick { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; padding: var(--space-4); }
-.io-pick-scrim { position: absolute; inset: 0; background: var(--scrim); opacity: 0; transition: opacity 186ms var(--ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)); }
+.io-pick-scrim { position: absolute; inset: 0; background: var(--scrim); opacity: 0; transition: opacity 200ms var(--ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)); }
 .io-pick-card {
   position: relative; width: min(560px, 100%); max-height: min(640px, calc(100vh - 32px)); display: flex; flex-direction: column; gap: var(--space-3);
   padding: var(--space-5); border-radius: var(--radius-lg, 20px); background: var(--overlay); border: 1px solid var(--line); box-shadow: var(--shadow-3);
-  opacity: 0; transform: translateY(8px) scale(0.98); transition: opacity 186ms var(--ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)), transform 202ms var(--ease-out, cubic-bezier(0.2, 0.8, 0.2, 1));
+  opacity: 0; transform: translateY(8px) scale(0.98); transition: opacity 200ms var(--ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)), transform 260ms var(--ease-out, cubic-bezier(0.2, 0.8, 0.2, 1));
 }
 .io-pick.is-open .io-pick-scrim { opacity: 1; }
 .io-pick.is-open .io-pick-card { opacity: 1; transform: none; }
@@ -133,9 +133,9 @@ audio.kit-media { background: transparent; max-height: none; }
   position: fixed; z-index: 60; top: var(--header-h, 64px); right: 0; bottom: 0; width: var(--beside-w);
   display: flex; flex-direction: column; background: var(--bg); border-left: 1px solid var(--line); box-shadow: var(--shadow-2);
   transform: translateX(calc(100% + 24px)); opacity: 0; visibility: hidden;
-  transition: transform var(--dur-4, 247ms) var(--ease-out), opacity var(--dur-3, 202ms) var(--ease-out), visibility 0s linear var(--dur-4, 147ms);
+  transition: transform var(--dur-4, 420ms) var(--ease-out), opacity var(--dur-3, 260ms) var(--ease-out), visibility 0s linear var(--dur-4, 420ms);
 }
-.beside.is-open { transform: none; opacity: 1; visibility: visible; transition: transform var(--dur-4, 247ms) var(--ease-out), opacity var(--dur-2, 180ms) var(--ease-out), visibility 0s; }
+.beside.is-open { transform: none; opacity: 1; visibility: visible; transition: transform var(--dur-4, 420ms) var(--ease-out), opacity var(--dur-2, 180ms) var(--ease-out), visibility 0s; }
 body:not(.in-tool) .beside { display: none; }
 body.in-tool.has-beside #tool-viewport { margin-right: var(--beside-w); }
 body.is-resizing-beside, body.is-resizing-beside * { cursor: col-resize !important; user-select: none; }

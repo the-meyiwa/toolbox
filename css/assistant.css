@@ -99,7 +99,7 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
 .ast-conv { position: relative; display: flex; align-items: center; border-radius: var(--radius-sm); transition: background-color var(--dur-1) ease; }
 .ast-conv:hover { background: var(--tint); }
 .ast-conv.is-active { background: color-mix(in srgb, var(--ink) 8%, transparent); }
-.ast-conv::before { content: ''; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: var(--ink); transform: scaleY(0); transition: transform .228s var(--ast-spring, ease); }
+.ast-conv::before { content: ''; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: var(--ink); transform: scaleY(0); transition: transform .35s var(--ast-spring, ease); }
 .ast-conv.is-active::before { transform: scaleY(1); }
 .ast-conv-open {
   flex: 1; min-width: 0; height: 36px;
@@ -421,9 +421,9 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
   border: 1px dashed color-mix(in srgb, var(--ink) 13%, transparent);
   left: 50%; top: 50%; width: 560px; height: 560px; margin: -280px 0 0 -280px;
   transform: scale(.2); opacity: 0;
-  transition: transform .522s var(--ast-glide), opacity .41s ease;
+  transition: transform 1.4s var(--ast-glide), opacity 1s ease;
 }
-.ast-stage::after { width: 340px; height: 340px; margin: -170px 0 0 -170px; border-style: solid; border-color: color-mix(in srgb, var(--ink) 7%, transparent); transition-delay: .063s; }
+.ast-stage::after { width: 340px; height: 340px; margin: -170px 0 0 -170px; border-style: solid; border-color: color-mix(in srgb, var(--ink) 7%, transparent); transition-delay: .18s; }
 .ast-stage.is-drawn::before, .ast-stage.is-drawn::after { transform: scale(1); opacity: 1; }
 .ast-tethers { display: none; }
 
@@ -452,12 +452,12 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
   background: linear-gradient(160deg, var(--c-soft, var(--surface)), var(--surface) 72%);
   color: var(--text); box-shadow: 0 1px 2px #0000000a;
   transform: perspective(800px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
-  transition: transform .2s ease-out, border-color .186s ease, box-shadow .214s ease;
+  transition: transform .25s ease-out, border-color .2s ease, box-shadow .3s ease;
 }
 /* The coloured edge and the light that follows the pointer. */
-.ast-sug::after { content: ''; position: absolute; left: 0; top: 11px; bottom: 11px; width: 3px; border-radius: 0 3px 3px 0; background: var(--c, var(--ink)); transition: top .214s var(--ast-glide), bottom .214s var(--ast-glide); }
+.ast-sug::after { content: ''; position: absolute; left: 0; top: 11px; bottom: 11px; width: 3px; border-radius: 0 3px 3px 0; background: var(--c, var(--ink)); transition: top .3s var(--ast-glide), bottom .3s var(--ast-glide); }
 .ast-sug::before {
-  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0; transition: opacity .214s ease;
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0; transition: opacity .3s ease;
   background: radial-gradient(220px circle at var(--gx, 50%) var(--gy, 50%), var(--c-soft, var(--tint)), transparent 65%);
 }
 .ast-sug { z-index: 0; }
@@ -470,7 +470,7 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
   display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 11px;
   background: var(--surface); color: var(--c, var(--text));
   box-shadow: inset 0 0 0 1px var(--c-line, var(--line));
-  transition: transform .228s var(--ast-spring);
+  transition: transform .35s var(--ast-spring);
 }
 .ast-sug:hover .ast-sug-icon { transform: scale(1.08) rotate(-4deg); }
 .ast-sug-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -488,7 +488,7 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
     background: radial-gradient(closest-side, var(--surface) 60%, color-mix(in srgb, var(--surface) 70%, transparent) 80%, transparent);
   }
   .ast-stage.has-orbit .ast-tethers { display: block; position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
-  .ast-tethers line { stroke: hsl(var(--hue) 62% var(--ast-l)); stroke-width: 1.4; stroke-dasharray: 4 5; vector-effect: non-scaling-stroke; opacity: 0; transition: opacity .382s ease; }
+  .ast-tethers line { stroke: hsl(var(--hue) 62% var(--ast-l)); stroke-width: 1.4; stroke-dasharray: 4 5; vector-effect: non-scaling-stroke; opacity: 0; transition: opacity .9s ease; }
   .ast-tethers line.drawn { opacity: .5; }
   .ast-stage.has-orbit::before { width: 76%; height: 80%; left: 12%; top: 10%; margin: 0; }
   .ast-stage.has-orbit::after { width: 44%; height: 60%; left: 28%; top: 20%; margin: 0; }
@@ -797,7 +797,7 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
 }
 .astc-board-wrap { display: flex; gap: var(--space-2); min-width: 0; }
 .astc-evalbar { position: relative; flex: none; width: 10px; overflow: hidden; border-radius: 5px; background: #262626; box-shadow: 0 0 0 1px var(--line-strong); }
-.astc-evalbar i { position: absolute; left: 0; right: 0; bottom: 0; background: #f5f5f3; transition: height .326s var(--ease-out); }
+.astc-evalbar i { position: absolute; left: 0; right: 0; bottom: 0; background: #f5f5f3; transition: height .7s var(--ease-out); }
 .astc-board { position: relative; flex: 1; min-width: 0; aspect-ratio: 1; overflow: hidden; border-radius: var(--radius-sm); box-shadow: 0 0 0 1px var(--line-strong); }
 .astc-squares { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); }
 .astc-sq { position: relative; }
@@ -1004,7 +1004,7 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
 /* ---------- arrival: what is new moves, what was already there stays still ----------
    Live activity only (a reply being written, a file just attached, a chat just made);
    reopening an old chat shows it at rest. */
-.ast { --ast-glide: cubic-bezier(.16, 1, .3, 1); --ast-spring: cubic-bezier(.34, 1.4, .64, 1); }
+.ast { --ast-glide: cubic-bezier(.16, 1, .3, 1); --ast-spring: cubic-bezier(.22, 1, .36, 1); }
 @keyframes ast-in-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes ast-in-left { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
 @keyframes ast-card-in { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }
@@ -1013,40 +1013,40 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
 @keyframes ast-glyph-in { from { opacity: 0; transform: scale(.4) rotate(-90deg); } to { opacity: 1; transform: none; } }
 
 /* The reply's first sign of life: the glyph spins up, the label slides in beside it. */
-.ast-turn-ai.is-arriving .ast-live .ast-glyph { animation: ast-glyph-in .27s var(--ast-spring) both; }
-.ast-turn-ai.is-arriving .ast-live .ast-shimmer { animation: ast-shimmer 2.4s linear infinite, ast-in-left .242s var(--ast-glide) both; }
+.ast-turn-ai.is-arriving .ast-live .ast-glyph { animation: ast-glyph-in .5s var(--ast-spring) both; }
+.ast-turn-ai.is-arriving .ast-live .ast-shimmer { animation: ast-shimmer 2.4s linear infinite, ast-in-left .4s var(--ast-glide) both; }
 /* Streamed Markdown: each new block fades up as it begins. */
-.ast-md > .md-enter { animation: ast-in-up .247s var(--ast-glide) both; }
+.ast-md > .md-enter { animation: ast-in-up .42s var(--ast-glide) both; }
 /* Thinking, the plan and errors arrive like the text around them. */
-.ast-turn-ai.is-live .ast-think { animation: ast-in-up .23s var(--ast-glide) both; }
-.ast-plan.is-new, .ast-turn-ai .ast-error { animation: ast-card-in .264s var(--ast-glide) both; }
+.ast-turn-ai.is-live .ast-think { animation: ast-in-up .36s var(--ast-glide) both; }
+.ast-plan.is-new, .ast-turn-ai .ast-error { animation: ast-card-in .48s var(--ast-glide) both; }
 /* Tool steps: each one slides in on the timeline, and the line to it draws down. */
-.ast-step.is-new { animation: ast-in-left .236s var(--ast-glide) both; }
-.ast-step.is-new .ast-step-node { animation: ast-chip-in .253s var(--ast-spring) both; }
-.ast-turn-ai.is-live .ast-step:not(:last-child)::before { transform-origin: 50% 0; animation: ast-line-draw .23s var(--ast-glide) both; }
-.ast-step[data-status="done"] .ast-step-node, .ast-step[data-status="error"] .ast-step-node { transition: border-color var(--dur-2) ease, color var(--dur-2) ease, transform .214s var(--ast-spring); }
+.ast-step.is-new { animation: ast-in-left .38s var(--ast-glide) both; }
+.ast-step.is-new .ast-step-node { animation: ast-chip-in .44s var(--ast-spring) both; }
+.ast-turn-ai.is-live .ast-step:not(:last-child)::before { transform-origin: 50% 0; animation: ast-line-draw .36s var(--ast-glide) both; }
+.ast-step[data-status="done"] .ast-step-node, .ast-step[data-status="error"] .ast-step-node { transition: border-color var(--dur-2) ease, color var(--dur-2) ease, transform .3s var(--ast-spring); }
 /* Result cards rise into place under their step. */
-.ast-card.is-new { animation: ast-card-in .284s var(--ast-glide) both; }
+.ast-card.is-new { animation: ast-card-in .55s var(--ast-glide) both; }
 /* The reply's actions appear once it is finished. */
-.ast-foot.is-revealed > * { animation: ast-in-up .23s var(--ast-glide) both; }
-.ast-foot.is-revealed > :nth-child(2) { animation-delay: 14ms; }
-.ast-foot.is-revealed > :nth-child(3) { animation-delay: 28ms; }
-.ast-foot.is-revealed > :nth-child(4) { animation-delay: 42ms; }
+.ast-foot.is-revealed > * { animation: ast-in-up .36s var(--ast-glide) both; }
+.ast-foot.is-revealed > :nth-child(2) { animation-delay: 40ms; }
+.ast-foot.is-revealed > :nth-child(3) { animation-delay: 80ms; }
+.ast-foot.is-revealed > :nth-child(4) { animation-delay: 120ms; }
 /* Composer: attachments pop in; the send button turns into stop with a small spring. */
-.ast-file.is-new { animation: ast-chip-in .242s var(--ast-spring) both; }
-.ast-composer { transition: box-shadow .214s var(--ast-glide), border-color .186s ease; }
+.ast-file.is-new { animation: ast-chip-in .4s var(--ast-spring) both; }
+.ast-composer { transition: box-shadow .3s var(--ast-glide), border-color .2s ease; }
 .ast-composer:focus-within { box-shadow: 0 0 0 4px color-mix(in srgb, var(--ink) 6%, transparent), var(--shadow-2); }
-.ast-jump:not([hidden]) { animation: ast-chip-in .219s var(--ast-spring) both; }
+.ast-jump:not([hidden]) { animation: ast-chip-in .32s var(--ast-spring) both; }
 /* Chats list: a new chat slides into its group. */
-.ast-conv.is-new { animation: ast-in-left .247s var(--ast-glide) both; }
+.ast-conv.is-new { animation: ast-in-left .42s var(--ast-glide) both; }
 /* Empty state: the mark lands, the greeting rises, then the orbit emerges (js: emerge()). */
-.ast-empty-mark { animation: ast-glyph-in .298s var(--ast-spring) both; }
-.ast-empty-kicker { animation: ast-fade .27s ease .035s both; }
-.ast-empty-title { animation: ast-in-up .298s var(--ast-glide) .042s both; }
-.ast-empty-sub { animation: ast-in-up .298s var(--ast-glide) .07s both; }
-.ast-signin .btn { animation: ast-in-up .298s var(--ast-glide) .098s both; }
+.ast-empty-mark { animation: ast-glyph-in .6s var(--ast-spring) both; }
+.ast-empty-kicker { animation: ast-fade .5s ease .1s both; }
+.ast-empty-title { animation: ast-in-up .6s var(--ast-glide) .12s both; }
+.ast-empty-sub { animation: ast-in-up .6s var(--ast-glide) .2s both; }
+.ast-signin .btn { animation: ast-in-up .6s var(--ast-glide) .28s both; }
 /* The composer takes in a chosen suggestion with a brief glow in its colour. */
-.ast-composer.is-receiving { animation: ast-receive .41s var(--ast-glide); }
+.ast-composer.is-receiving { animation: ast-receive 1s var(--ast-glide); }
 @keyframes ast-receive {
   0% { border-color: var(--line-strong); }
   30% { border-color: var(--c, var(--line-control)); box-shadow: 0 0 0 5px color-mix(in srgb, var(--c, var(--ink)) 16%, transparent), var(--shadow-2); }
@@ -1062,7 +1062,7 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
 .ast-md .md-img-hold:hover, .ast-md .md-img-hold:focus-visible { background: var(--tint); color: var(--text); border-style: solid; }
 .ast-md .md-img-hold-ico { width: 14px; height: 11px; border: 1.5px solid currentColor; border-radius: 3px; position: relative; }
 .ast-md .md-img-hold-ico::after { content: ""; position: absolute; left: 2px; right: 2px; bottom: 2px; height: 4px; background: linear-gradient(135deg, transparent 45%, currentColor 46% 54%, transparent 55%); }
-.ast-md img.md-img-shown { max-width: 100%; border-radius: var(--radius-sm); animation: ast-card-in .256s var(--ast-glide) both; }
+.ast-md img.md-img-shown { max-width: 100%; border-radius: var(--radius-sm); animation: ast-card-in .45s var(--ast-glide) both; }
 
 @media (prefers-reduced-motion: reduce) {
   .ast *, .ast *::before, .ast *::after, .astc, .ast-modal, .ast-modal-card { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
@@ -1354,7 +1354,7 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
 .astc-btn.astc-btn-primary:hover { background: var(--ink); opacity: .9; }
 .astc-lab-swatches { gap: 6px; padding: 4px 6px; border-radius: 999px; background: color-mix(in srgb, var(--surface) 86%, transparent); backdrop-filter: blur(12px); pointer-events: auto; }
 .astc-lab-swatches[hidden] { display: none; }
-.astc-lab-sw { width: 20px; height: 20px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .15); transition: transform .2s cubic-bezier(.34, 1.4, .64, 1), box-shadow .186s ease; }
+.astc-lab-sw { width: 20px; height: 20px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .15); transition: transform .25s cubic-bezier(.22, 1, .36, 1), box-shadow .2s ease; }
 .astc-lab-sw:hover { transform: scale(1.15); }
 .astc-lab-sw[aria-pressed="true"] { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .15), 0 0 0 2px var(--surface), 0 0 0 3.5px var(--ink); }
 /* Custom chat tools inherit the same controls and spacing as Assistant cards. */
@@ -1377,7 +1377,7 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
   display: flex; align-items: center; gap: 10px; max-width: 760px; margin: 0 auto 8px; padding: 8px 8px 8px 10px;
   border: 1px solid var(--line-strong); border-radius: 16px; background: var(--surface);
   box-shadow: 0 10px 26px -20px #00000059; font-size: 13.5px; line-height: 19px;
-  animation: ast-card-in .256s var(--ast-glide) both;
+  animation: ast-card-in .45s var(--ast-glide) both;
 }
 .ast-kl-mark { display: grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 10px; background: var(--surface-2); color: var(--text); }
 .ast-kl-text { flex: 1; min-width: 0; color: var(--text-2); }

@@ -395,9 +395,46 @@ function animateToolBody(el) {
   el.animate([{ opacity: 0, transform: 'translateY(14px) scale(.992)' }, { opacity: 1, transform: 'none' }], { duration: 520, easing: TOOL_GLIDE });
 }
 
+/* --------------- page transitions ---------------
+   Every move between pages has the same two halves, so Toolbox reads as one place:
+   the page being left lifts away (a still copy of it, so the real one can be cleared
+   at once) while the next settles in on the same curve. Pages with their own
+   choreography (Home, Tools, an opening tool) add theirs on top. Transform and
+   opacity only. */
+const PAGE_OUT = 'cubic-bezier(.4, 0, .2, 1)';
+let lastDeparture = 0;
+function departView(next) {
+  if (!motionOk()) return;
+  const leaving = [...new Set(Object.values(VIEWS))].find(v => v && !v.classList.contains('hidden'));
+  if (!leaving || leaving === next) return;
+  const now = performance.now();
+  if (now - lastDeparture < 120) return;   // a redirect straight after a move is one move
+  lastDeparture = now;
+  const box = leaving.getBoundingClientRect();
+  if (!box.width || !box.height) return;
+  const ghost = leaving.cloneNode(true);
+  ghost.removeAttribute('id');
+  ghost.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+  ghost.querySelectorAll('video, audio, iframe').forEach(n => n.remove());
+  ghost.setAttribute('aria-hidden', 'true');
+  ghost.inert = true;
+  ghost.classList.add('page-ghost');
+  ghost.style.cssText = `position:fixed;left:${box.left}px;top:${box.top}px;width:${box.width}px;height:${Math.min(box.height, window.innerHeight - box.top + 40)}px;margin:0;overflow:hidden;pointer-events:none;z-index:5;`;
+  document.body.appendChild(ghost);
+  ghost.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-10px) scale(.994)' }], { duration: 280, easing: PAGE_OUT, fill: 'forwards' })
+    .finished.then(() => ghost.remove(), () => ghost.remove());
+}
+function arriveView(view, page) {
+  if (!motionOk() || !view) return;
+  // Home and Tools choreograph their own entrance; the rest settle in.
+  if (page === 'home' || page === 'tools') return;
+  view.animate([{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'none' }], { duration: 560, delay: 60, easing: TOOL_GLIDE, fill: 'backwards' });
+}
+
 /* --------------- routing --------------- */
 
 function showPage(page) {
+  if (page !== currentPage) departView(VIEWS[page]);
   teardownTool();
 
   if (page !== 'saved' && page !== 'files') {
@@ -414,6 +451,7 @@ function showPage(page) {
   if (view) {
     view.classList.remove('hidden');
     void view.offsetWidth;
+    if (page !== currentPage) arriveView(view, page);
   }
 
   // Route & Scroll Restoration: always start at the top
@@ -543,6 +581,8 @@ async function openTool(id, routeState = {}) {
     }
   }
 
+  // Leaving a page (or another tool) for this tool: the old one lifts away as this one arrives.
+  if (currentPage !== 'tool' || currentToolId !== id) departView(viewport);
   teardownTool();
 
   const navigationVersion = toolNavigationVersion;
@@ -865,7 +905,7 @@ $('tool-prefs-btn')?.addEventListener('click', () => { if (currentToolId) openSe
 logo.addEventListener('click', (e) => { e.preventDefault(); window.location.hash = '#home'; });
 // The pixel mark assembles once on entry; drop the class afterwards so ending
 // a hover ripple doesn't replay the entrance (shell.css .logo.is-entering).
-setTimeout(() => logo.classList.remove('is-entering'), 1100);
+setTimeout(() => logo.classList.remove('is-entering'), 2400);
 window.addEventListener('hashchange', handleHash);
 // Tools that live on another site (KoreLearn) open there in a new tab, straight from the click.
 document.addEventListener('click', (e) => {

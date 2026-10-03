@@ -539,6 +539,7 @@ export class PlaygroundIDE {
   <input type="file" id="cpg-upload-zip" accept=".zip,application/zip" hidden>
 </div>`;
     this.root = this.$('#cpg-root');
+    arrive(this.root);
   }
 
   menuModel() {
@@ -2475,4 +2476,19 @@ function exampleFor(path) {
   if (lang === 'jsx') return TEMPLATES['vite-react'].files()['src/App.jsx'];
   if (lang === 'css') return TEMPLATES.web.files()['style.css'];
   return null;
+}
+
+/* A workspace opens part by part: the top bar settles, the side rails slide in from the
+   left, the editor rises, the preview comes in from the right, the status bar last.
+   Transform and opacity only, on one soft curve with no overshoot. */
+function arrive(root) {
+  if (!root?.animate || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+  const GLIDE = 'cubic-bezier(.22, 1, .36, 1)';
+  const go = (sel, from, delay, duration = 620) => root.querySelectorAll(sel).forEach((el) => el.animate([{ opacity: 0, transform: from }, { opacity: 1, transform: 'none' }], { duration, delay, easing: GLIDE, fill: 'backwards' }));
+  go('.cpg-header', 'translateY(-8px)', 0, 520);
+  go('.cpg-activitybar', 'translateX(-10px)', 80);
+  go('.cpg-sidebar', 'translateX(-16px)', 140);
+  go('.cpg-editor-col', 'translateY(14px)', 200, 680);
+  go('.cpg-preview-pane:not([hidden])', 'translateX(18px)', 260, 680);
+  go('.cpg-status', 'translateY(8px)', 320, 520);
 }
