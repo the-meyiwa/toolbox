@@ -1,6 +1,6 @@
 # Assistant evaluation harness
 
-Runs a suite of real prompts (`cases.js`, 134 cases) through the Assistant engine
+Runs a suite of real prompts (`cases.js`, 148 cases) through the Assistant engine
 (`streamChatCompletion` in `js/lib/ai-provider.js`), with no chat UI, and scores each reply:
 which tools it called, with which arguments, whether the numbers are right, and timings.
 It uses the live model gateway (`/api/assistant/v2/chat`), so run it on the production site
@@ -19,7 +19,7 @@ copy(JSON.stringify(r, null, 1))                          // full JSON report to
 The last report is also kept in `window.__toolboxEvalLast`.
 Opening the site with `?assistant-eval` in the URL also sets `window.toolboxEval = { run, cases }`.
 
-Everything: `await m.run()` (134 cases, about 10–20 minutes at the default pace).
+Everything: `await m.run()` (148 cases, about 10–20 minutes at the default pace).
 List what exists: `m.categories`, `m.cases.filter(c => c.category === 'chess')`.
 
 ### Options
@@ -40,7 +40,7 @@ List what exists: `m.categories`, `m.cases.filter(c => c.category === 'chess')`.
 
 ## What each result holds
 
-`id, category, prompt, passed, reasons[], checks[], provider, model, ttftMs` (start → first token
+`id, category, prompt, passed, reasons[], checks[], provider, model, lane, laneTrail, ttftMs` (start → first token
 or tool call), `totalMs, tools[] ({name, args, status, error}), toolErrors[], declined[], fixes[]`
 (figures the engine corrected), `requests` (model round trips), `requestKB, toolsSent, attempts, text`.
 
@@ -49,6 +49,7 @@ or tool call), `totalMs, tools[] ({name, args, status, error}), toolErrors[], de
 ```js
 { id, category, prompt, history?, mode?, expect: {
   tools, anyTool, noTools, notTools, args: { tool: 'regex' }, minTools,
+  lane: 'quick' | ['focused', 'agent'], // the lane (or one of the lanes) the turn must have run in
   textIncludes, textExcludes,          // regex strings, case-insensitive
   numbers: [187500, { value: 98.08, tol: 0.05 }],   // must appear in the text
   declined: ['send_space_message'],    // attempted and auto-declined
@@ -56,7 +57,7 @@ or tool call), `totalMs, tools[] ({name, args, status, error}), toolErrors[], de
 ```
 
 Numbers are read from the text tolerating `1,234.5`, `1 234`, LaTeX `1{,}234` and `8.8 million`.
-`noTools` ignores `load_tools`. `update_memory` and `load_tools` are detected from the requests
+`noTools` ignores `load_tools`. An instant-lane answer (computed locally) counts as a `calculate_math` call. The summary's `byLane` gives pass rate and first-word / total time per starting lane (see `docs/assistant-lanes.md`). `update_memory` and `load_tools` are detected from the requests
 the engine sends, since the engine handles them without the tool callbacks.
 
 ## Side effects while a run is active

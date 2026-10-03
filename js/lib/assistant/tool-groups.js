@@ -20,12 +20,12 @@ export const TOOL_GROUPS = {
   web: {
     label: 'Web research: read pages, crawl sites, find images',
     tools: ['browse_web', 'browser_navigate', 'browser_scrape', 'browser_extract_images', 'browser_crawl', 'search_images', 'save_scraped_images', 'knowledge_library'],
-    match: /\b(search|google|look ?up|research|online|internet|news|latest|today|current|price[sd]?|review|url|https?:|www\.|\.com|\.ng|scrape|crawl|source|cite|article|image[s]? of|picture[s]? of|photo[s]? of|what does .* look like)\b/i,
+    match: /\b(search|google|look ?up|research|online|internet|news|latest|today|current|price[sd]?|review|url|https?:|www\.|\.com|\.ng|scrape|crawl|source|cite|article|image[s]? of|picture[s]? of|photo[s]? of|what does .* look like)\b|https?:\/\/|\bwww\./i,
   },
   math: {
     label: 'Maths: algebra, calculus, equations, matrices, statistics, units',
     tools: ['calculate_math', 'query_math_knowledge', 'evaluate_math_expression', 'unit_converter'],
-    match: /\b(calculat|compute|solve|equation|integral|integrate|derivative|differentiat|limit|matrix|eigen|determinant|factor|prime|probability|statistic|mean|median|variance|regression|convert|units?|km|miles|kg|pounds|celsius|fahrenheit|percent|%|sqrt|log|sin|cos|tan|theorem|proof|formula)\b|[\d)]\s*[-+*/^×÷]\s*[\d(]/i,
+    match: /\b(?:calculat\w*|comput\w*|solv\w*|equations?|integra\w*|derivativ\w*|differentiat\w*|limits?|matri(?:x|ces)|eigen\w*|determinants?|factor\w*|primes?|probabilit\w*|statistic\w*|mean|median|variance|regression|convert\w*|units?|km|miles|kg|pounds|celsius|fahrenheit|percent|%|sqrt|log|sin|cos|tan|theorems?|proofs?|formulas?)\b|[\d)]\s*[-+*/^×÷]\s*[\d(]/i,
   },
   finance: {
     label: 'Business & Finance: VAT, margin/markup, break-even, loans, compound interest, NPV/IRR, depreciation, cap tables, runway, unit economics, payroll cost, salary conversion, meeting cost, leave, subscriptions, budgets, debts, bank statements, invoices and quotes',

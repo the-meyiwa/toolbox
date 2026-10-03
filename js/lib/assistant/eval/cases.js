@@ -206,6 +206,24 @@ export const CASES = [
   c('fmt-no-entities', 'formatting', 'Write the inequality x less than or equal to 5 and the degrees symbol for 30 degrees', { textExcludes: [HTML_ENTITY] }),
   c('fmt-code-block', 'formatting', 'Show a JavaScript function that adds VAT at 7.5% (just the code, no need to run it)', { textIncludes: ['```(js|javascript)'] }),
   c('fmt-short', 'formatting', 'In under 30 words: why use a container for a site office?', { noTools: true, textExcludes: [NO_EMOJI] }),
+
+  /* ---------------- lanes: each message takes the lightest lane that can do the job ---------------- */
+  c('lane-instant-sum', 'lanes', 'What is 4,250 × 18?', { lane: 'instant', numbers: [76500], maxMs: 500 }),
+  c('lane-instant-vat', 'lanes', 'Add 7.5% VAT to ₦80,000', { lane: 'instant', numbers: [6000, 86000], maxMs: 500 }),
+  c('lane-instant-units', 'lanes', 'Convert 5 miles to km', { lane: 'instant', numbers: [{ value: 8.047, tol: 0.01 }], maxMs: 500 }),
+  c('lane-instant-clock', 'lanes', 'What time is it?', { lane: 'instant', textIncludes: ['(AM|PM)'], maxMs: 500 }),
+  c('lane-light-hello', 'lanes', 'hey there', { lane: 'light', noTools: true }),
+  c('lane-quick-explain', 'lanes', 'Explain what a load-bearing wall is in two sentences.', { lane: 'quick', noTools: true, textIncludes: ['(wall|load)'], maxMs: 8000 }),
+  c('lane-quick-write', 'lanes', 'Write a two-line thank-you note to a client who paid early.', { lane: 'quick', noTools: true, textExcludes: [NO_EMOJI], maxMs: 8000 }),
+  c('lane-quick-rewrite', 'lanes', 'Rewrite more formally: "pls send the invoice asap, we need to pay today"', { lane: 'quick', noTools: true, textIncludes: ['invoice'], maxMs: 8000 }),
+  c('lane-quick-followup', 'lanes', 'Make it shorter.', { lane: 'quick', noTools: true, maxMs: 8000 }, {
+    history: [{ role: 'user', content: 'Write a polite reminder about an unpaid invoice.' }, { role: 'assistant', content: 'Dear Client, I hope you are well. This is a gentle reminder that invoice 104 is now overdue. Kindly arrange payment at your earliest convenience. Thank you.' }],
+  }),
+  c('lane-focused-chem', 'lanes', 'Molar mass of NaCl', { lane: 'focused', anyTool: ['calculate_chemistry', 'lookup_compound'], numbers: [{ value: 58.44, tol: 0.05 }] }),
+  c('lane-focused-scripture', 'lanes', 'Read Psalm 100', { lane: 'focused', anyTool: ['bible_quran_lookup'] }),
+  c('lane-focused-web', 'lanes', 'What is the latest news on the naira exchange rate?', { lane: ['focused', 'agent'], anyTool: ['browse_web', 'browser_navigate', 'currency_exchange'] }),
+  c('lane-agent-build', 'lanes', 'Design a 20ft container site office for 2 staff with a small pantry.', { lane: 'agent', anyTool: ['design_container'] }),
+  c('lane-agent-note', 'lanes', 'Create a note titled "[eval] Lane check" with: one, two, three', { lane: ['focused', 'agent'], tools: ['create_note'] }),
 ];
 
 export const CATEGORIES = [...new Set(CASES.map(x => x.category))];

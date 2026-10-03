@@ -130,6 +130,10 @@ export function scoreCase(testCase, run) {
     const hit = e.anyTool.find(t => names.includes(t));
     add(`anyTool:${e.anyTool.join('|')}`, hit, hit ? hit : `none called (called: ${counted.join(', ') || 'none'})`);
   }
+  if (e.lane) {
+    const wanted = [].concat(e.lane);
+    add(`lane:${wanted.join('|')}`, wanted.includes(run.lane), `ran in the ${run.lane || 'unknown'} lane`);
+  }
   if (e.noTools) add('noTools', counted.length === 0, counted.length ? `called ${counted.join(', ')}` : '');
   if (e.notTools) for (const t of e.notTools) add(`notTool:${t}`, !names.includes(t), names.includes(t) ? 'was called' : '');
   if (e.minTools) {
@@ -207,6 +211,7 @@ async function runOnce(testCase, opts, attempt) {
         onToolCallStart: (name, args, id) => { mark(); const key = id || `${name}_${order.length}`; started_.set(key, { name, args }); order.push(key); },
         onToolCallResult: (name, result, id) => { results.set(id || `${name}_${order.length - 1}`, result); },
         onProvider: (p) => { run.provider = p?.label || p?.provider || null; run.model = p?.model || null; },
+        onStatus: (st) => { if (st?.type === 'lane') run.lane = st.lane; },
       }),
       // A hung tool can outlive the abort; give it 5 s more, then give up.
       timeout.then(() => sleep(5000)).then(() => ({ __timeout: true })),
@@ -217,6 +222,8 @@ async function runOnce(testCase, opts, attempt) {
       run.fixes = res.fixes || [];
       run.provider = res.provider || run.provider;
       run.model = res.model || run.model;
+      run.lane = res.lane || run.lane;
+      run.laneTrail = res.laneTrail || null;
     } else {
       run.text = streamedText;
     }
@@ -246,6 +253,8 @@ async function runOnce(testCase, opts, attempt) {
     if (dup) continue;
     tools.push({ name: call.name, args: call.args, status: 'handled in engine', error: null });
   }
+  // The instant lane computes sums and conversions itself: count it as the calculator it replaces.
+  if (run.lane === 'instant' && !tools.length) tools.push({ name: 'calculate_math', args: { instant: true }, status: 'success', error: null });
   run.tools = tools;
   run.toolErrors = tools.filter(t => t.error).map(t => ({ name: t.name, error: String(t.error).slice(0, 300) }));
   run.declined = tools.filter(t => t.status === 'cancelled').map(t => t.name);
@@ -277,6 +286,8 @@ async function runCase(testCase, opts) {
     attempts,
     provider: run.provider,
     model: run.model,
+    lane: run.lane || null,
+    laneTrail: run.laneTrail || null,
     ttftMs: run.ttftMs,
     totalMs: run.totalMs,
     timedOut: run.timedOut,
@@ -305,6 +316,7 @@ export function summarize(results, extra = {}) {
   const ms = results.map(r => r.totalMs).filter(Number.isFinite);
   const ttft = results.map(r => r.ttftMs).filter(Number.isFinite);
   const byCategory = {};
+  const byLane = {};
   const providers = {};
   const models = {};
   for (const r of results) {
@@ -314,7 +326,14 @@ export function summarize(results, extra = {}) {
     const p = r.provider || (r.error ? 'error' : 'unknown');
     providers[p] = (providers[p] || 0) + 1;
     if (r.model) models[r.model] = (models[r.model] || 0) + 1;
+    const l = byLane[r.lane || 'unknown'] || (byLane[r.lane || 'unknown'] = { turns: 0, passed: 0, ttft: [], total: [], moved: 0 });
+    l.turns++; if (r.passed) l.passed++;
+    if (Number.isFinite(r.ttftMs)) l.ttft.push(r.ttftMs);
+    if (Number.isFinite(r.totalMs)) l.total.push(r.totalMs);
+    if ((r.laneTrail?.length || 0) > 1) l.moved++;
   }
+  // Per starting lane: how many turns, how many passed, time to first word and to finish.
+  for (const [k, l] of Object.entries(byLane)) byLane[k] = { turns: l.turns, passed: l.passed, moved: l.moved, ttftP50: pct(l.ttft, 50), ttftP90: pct(l.ttft, 90), totalP50: pct(l.total, 50), totalP90: pct(l.total, 90) };
   for (const c of Object.values(byCategory)) { c.avgMs = Math.round(c.avgMs / c.total); c.passRate = +(c.passed / c.total * 100).toFixed(1); }
   const passed = results.filter(r => r.passed).length;
   return {
@@ -333,6 +352,7 @@ export function summarize(results, extra = {}) {
     avgTtftMs: ttft.length ? Math.round(ttft.reduce((a, b) => a + b, 0) / ttft.length) : null,
     p90TtftMs: pct(ttft, 90),
     byCategory,
+    byLane,
     providers,
     models,
     ...extra,
@@ -342,7 +362,7 @@ export function summarize(results, extra = {}) {
 /** Rows for console.table. */
 export function table(report) {
   return (report?.results || []).map(r => ({
-    id: r.id, cat: r.category, pass: r.passed ? 'PASS' : 'FAIL', ms: r.totalMs, ttft: r.ttftMs,
+    id: r.id, cat: r.category, lane: (r.laneTrail || [r.lane]).join('>'), pass: r.passed ? 'PASS' : 'FAIL', ms: r.totalMs, ttft: r.ttftMs,
     provider: r.provider, tools: r.toolNames.join(','), why: r.reasons.join(' | ').slice(0, 160),
   }));
 }

@@ -33,6 +33,7 @@ import { fileAttrs } from '../lib/file-surface.js';
 import { tempoDelay } from '../lib/tempo.js';
 import { pointerLight } from '../lib/reveal-motion.js';
 import { contextForModel } from '../lib/assistant-context.js';
+import { laneLabel } from '../lib/assistant/lanes.js';
 
 /* Files from Toolbox Files arrive as raw bytes. */
 function bytesToBase64(bytes) {
@@ -1347,7 +1348,11 @@ function mountAssistant(container, state) {
     paintFoot() {
       const m = this.msg;
       const hasText = Boolean(String(m.content || '').trim());
-      const model = [m.providerLabel || m.provider, m.model].filter(Boolean).join(' · ');
+      // An instant answer used no model: say so, it is the reason it appeared at once.
+      const instant = m.lane === 'instant';
+      const model = instant ? 'Instant · computed on your device' : [m.providerLabel || m.provider, m.model].filter(Boolean).join(' · ');
+      const modelTitle = instant ? 'No AI model was used: this was computed exactly in your browser.'
+        : `Answered by ${model}${m.lane ? ` (${laneLabel(m.lane)} lane${m.laneMoved ? ', moved up from a lighter one' : ''})` : ''}`;
       let errorHtml = '';
       if (m.status === 'failed' || (m.error && m.status !== 'stopped')) {
         const needsSignIn = m.errorCode === 401 || /sign in/i.test(m.error || '');
@@ -1365,7 +1370,7 @@ function mountAssistant(container, state) {
         ${hasText ? `<button type="button" class="ast-act" data-act="copy-ai" aria-label="Copy reply" title="Copy">${icon('copy', 15)}</button>` : ''}
         <button type="button" class="ast-act" data-act="regenerate" aria-label="Regenerate reply" title="Regenerate">${icon('retry', 15)}</button>
         ${m.status === 'stopped' ? '<span class="ast-tag">Stopped</span>' : ''}
-        ${model ? `<span class="ast-model" title="Answered by ${esc(model)}">${esc(model)}</span>` : ''}`;
+        ${model ? `<span class="ast-model" title="${esc(modelTitle)}">${esc(model)}</span>` : ''}`;
     }
     dispose() { this.timers.forEach(clearInterval); clearInterval(this.waitTimer); if (this.raf) cancelAnimationFrame(this.raf); }
   }
@@ -1770,7 +1775,8 @@ function mountAssistant(container, state) {
         onToolCallResult: (name, res, id) => { bump(); view.toolResult(name, res, id); },
         onStatus: (s) => {
           bump();
-          if (s?.type === 'continuing') { view.endThinking(); view.setWaiting(true); }
+          if (s?.type === 'lane') { msg.lane = s.lane; if (s.escalated) msg.laneMoved = true; }
+          else if (s?.type === 'continuing') { view.endThinking(); view.setWaiting(true); }
           else if (s?.type === 'retrying') { view.endThinking(); view.setWaiting(true, 'Reconnecting'); }
         },
         onProvider: (p) => { bump(); msg.provider = p?.provider || null; msg.providerLabel = p?.label || p?.provider || null; msg.model = p?.model || null; },
@@ -1778,6 +1784,8 @@ function mountAssistant(container, state) {
       if (!String(msg.content || '').trim() && result?.text) view.text(result.text);
       msg.model = msg.model || result?.model || null;
       msg.providerLabel = msg.providerLabel || result?.provider || null;
+      msg.lane = result?.lane || msg.lane || null;
+      msg.laneMoved = (result?.laneTrail?.length || 0) > 1;
       msg.status = abort.signal.aborted ? 'stopped' : 'success';
       // Figures the model mistyped from a tool result are put right (see checkFigures).
       if (result?.fixes?.length) {

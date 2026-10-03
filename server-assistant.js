@@ -34,6 +34,12 @@
 import { isLocalDevelopmentRequest, sessionCacheKey, safeProviderError } from './server-security.js';
 import { isTestAccountEmail } from './js/lib/account-policy.js';
 import { isLightPrompt, LIGHT_MAX_TOKENS } from './js/lib/assistant/light-turn.js';
+
+// The most a quick-lane reply may run to (about 900 words).
+const QUICK_MAX_TOKENS = 1600;
+// A quick request is a short chat; anything bigger is real work and takes the normal lane.
+const QUICK_MAX_MESSAGES = 18;
+const QUICK_MAX_BYTES = 40_000;
 import { assistantQuotaSummary, reserveAssistantTurn, releaseAssistantTurn, commitAssistantTurn } from './server-assistant-quota.js';
 
 const PROVIDERS = [
@@ -44,6 +50,8 @@ const PROVIDERS = [
     url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
     models: () => [process.env.ASSISTANT_GEMINI_MODEL, 'gemini-flash-latest', 'gemini-3.6-flash', 'gemini-flash-lite-latest'].filter(Boolean),
     lightModels: () => ['gemini-flash-lite-latest'],
+    // Plain questions and writing: a quick model is plenty, and answers in a fraction of the time.
+    quickModels: () => [process.env.ASSISTANT_GEMINI_QUICK_MODEL, 'gemini-flash-lite-latest', 'gemini-flash-latest'].filter(Boolean),
     vision: true,
   },
   {
@@ -53,6 +61,7 @@ const PROVIDERS = [
     url: 'https://api.openai.com/v1/chat/completions',
     models: () => [process.env.ASSISTANT_OPENAI_MODEL, 'gpt-5-mini', 'gpt-4.1-mini'].filter(Boolean),
     lightModels: () => ['gpt-4.1-nano'],
+    quickModels: () => [process.env.ASSISTANT_OPENAI_QUICK_MODEL, 'gpt-4.1-mini', 'gpt-4.1-nano'].filter(Boolean),
     vision: true,
   },
   {
@@ -72,6 +81,8 @@ const PROVIDERS = [
     // Small talk: the 8B model answers in well under a second and has by far the largest free
     // daily allowance (about 14,400 requests and 500K tokens, against 1,000 and 200K for gpt-oss).
     lightModels: () => ['llama-3.1-8b-instant', 'openai/gpt-oss-20b'],
+    // gpt-oss-20b follows instructions far better than the 8B model and is still very fast.
+    quickModels: () => [process.env.ASSISTANT_GROQ_QUICK_MODEL, 'openai/gpt-oss-20b', 'openai/gpt-oss-120b'].filter(Boolean),
     vision: false,
   },
   {
@@ -89,6 +100,8 @@ const PROVIDERS = [
 const ORDER = {
   // Greetings and small talk: smallest, fastest models only, no tools, short replies.
   light: ['groq', 'gemini', 'openrouter', 'deepseek', 'openai'],
+  // Plain questions and writing from knowledge: no tools, short replies, quick models first.
+  quick: ['groq', 'gemini', 'openrouter', 'openai', 'deepseek'],
   // Groq leads everyday chat: it is the fastest and its free tier is the most generous.
   fast: ['groq', 'gemini', 'openrouter', 'openai', 'deepseek'],
   auto: ['groq', 'gemini', 'openrouter', 'openai', 'deepseek'],
@@ -97,10 +110,10 @@ const ORDER = {
   code: ['gemini', 'openrouter', 'openai', 'groq', 'deepseek'],
 };
 // How long the first model gets to start answering before a second one is started alongside it.
-const HEDGE_MS = { light: 4000, fast: 3500, auto: 5000, reasoning: 9000, code: 8000 };
+const HEDGE_MS = { light: 4000, quick: 2500, fast: 3500, auto: 5000, reasoning: 9000, code: 8000 };
 const HEDGE_MAX_BYTES = 24_000;
 // How long any one model gets to start answering at all.
-const FIRST_TOKEN_TIMEOUT_MS = { light: 15_000, fast: 25_000, auto: 40_000, reasoning: 90_000, code: 90_000 };
+const FIRST_TOKEN_TIMEOUT_MS = { light: 15_000, quick: 20_000, fast: 25_000, auto: 40_000, reasoning: 90_000, code: 90_000 };
 
 const MAX_BODY = 12_000_000;           // images arrive as data URLs
 const authCache = new Map();           // hashed token → verified user and expiry
@@ -208,7 +221,7 @@ const hasImages = (messages) => messages.some(m => Array.isArray(m.content) && m
 // "fast" asks Gemini not to think at all, which gets the first token out sooner. Models that
 // reject "none" step down to "low" (remembered per model), never straight to no options.
 const noneRejected = new Set();       // provider:model that refused reasoning_effort "none"
-const wantsNone = (provider, mode) => provider.id === 'gemini' && mode === 'fast';
+const wantsNone = (provider, mode) => provider.id === 'gemini' && (mode === 'fast' || mode === 'quick');
 
 function providerBody(provider, model, { messages, tools, mode }, plain = false, low = false) {
   const body = { model, messages, stream: true };
@@ -221,12 +234,17 @@ function providerBody(provider, model, { messages, tools, mode }, plain = false,
     body.max_tokens = LIGHT_MAX_TOKENS;
     return body;
   }
+  if (mode === 'quick') {
+    // A knowledge answer is bounded: long enough for a good explanation or a page of writing,
+    // short enough that this lane cannot stand in for real work.
+    body.max_tokens = QUICK_MAX_TOKENS;
+  }
   if (plain) return body;
   if (provider.id === 'gemini') {
     // Gemini takes either reasoning_effort or a thinking_config, not both.
     body.reasoning_effort = mode === 'reasoning' ? 'high' : (wantsNone(provider, mode) && !low ? 'none' : 'low');
   } else if (provider.id === 'openai') {
-    body.reasoning_effort = mode === 'reasoning' ? 'high' : mode === 'fast' ? 'minimal' : 'low';
+    body.reasoning_effort = mode === 'reasoning' ? 'high' : (mode === 'fast' || mode === 'quick') ? 'minimal' : 'low';
   } else if (provider.id === 'groq' && /gpt-oss/.test(model)) {
     body.reasoning_effort = mode === 'reasoning' ? 'high' : 'low';
   } else if (provider.id === 'openrouter') {
@@ -404,7 +422,8 @@ function candidatesFor(payload, bytes) {
     const provider = PROVIDERS.find(p => p.id === id);
     if (!provider?.key()) continue;
     if (needsVision && !provider.vision) continue;
-    const models = mode === 'light' && provider.lightModels ? provider.lightModels() : provider.models();
+    const models = mode === 'light' && provider.lightModels ? provider.lightModels()
+      : mode === 'quick' && provider.quickModels ? [...provider.quickModels(), ...provider.models()] : provider.models();
     for (const model of [...new Set(models)]) {
       const why = cooling(provider, model, tools, bytes);
       (why ? skipped : all).push({ provider, model, why });
@@ -562,6 +581,14 @@ export async function handleAssistantGateway(request, response, url) {
       payload.tools = undefined;
       payload.light = true;
     } else payload.mode = 'auto';
+  }
+  // The quick lane has no tools and a capped reply. It is honoured only for a short plain chat, so
+  // it can never be a cheap way to run real work: anything else takes the normal lane.
+  if (payload.mode === 'quick') {
+    const plainChat = payload.messages.length <= QUICK_MAX_MESSAGES && raw.length <= QUICK_MAX_BYTES && !hasImages(payload.messages)
+      && payload.messages.every(message => message.role !== 'tool' && !message.tool_calls);
+    if (plainChat) payload.tools = undefined;
+    else payload.mode = 'auto';
   }
   const mode = ORDER[payload.mode] ? payload.mode : 'auto';
   const bytes = raw.length;

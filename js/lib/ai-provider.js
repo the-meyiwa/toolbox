@@ -25,7 +25,10 @@ async function publishDataUrl(result) {
   publish({ name: result.filename, kind: kindOf(result.filename, blob.type), blob, from: 'assistant' });
 }
 import { KNOWLEDGE_TOOL_DECLARATIONS, KNOWLEDGE_TOOL_NAMES, executeKnowledgeTool, entityHints } from './assistant/knowledge-tools.js';
-import { isLightPrompt, LIGHT_SYSTEM } from './assistant/light-turn.js';
+import { LIGHT_SYSTEM } from './assistant/light-turn.js';
+import { routeTurn, LANES, escalateFrom } from './assistant/lanes.js';
+import { QUICK_SYSTEM, FOCUSED_CORE, leanPromptFor, createEscalationGate } from './assistant/lane-prompts.js';
+import { recordLane } from './assistant/lane-log.js';
 import { CORE_TOOLS, TOOL_GROUPS, LOAD_TOOLS_DECLARATION, selectGroups, groupOfTool, setGroupGate, groupAllowed } from './assistant/tool-groups.js';
 import { packDeclarations, packVersion, isPackTool, executePackTool } from './assistant/tool-packs.js';
 import './assistant/life-tools.js';
@@ -806,6 +809,14 @@ export function prewarmAssistant() {
   entityHints('aspirin').catch(() => {});
 }
 
+/** The recent conversation as plain text turns: what the no-tool lanes send instead of the full history. */
+function plainRecent(history, n) {
+  return history
+    .filter(m => (m.role === 'user' || m.role === 'assistant' || m.role === 'model') && typeof (m.displayText ?? m.content) === 'string')
+    .slice(-n)
+    .map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: String(m.role === 'user' ? m.content : (m.displayText ?? m.content)).slice(0, m.role === 'user' ? 4000 : 1500) }));
+}
+
 export async function streamChatCompletion({
   mode = null,
   history = [],
@@ -838,6 +849,30 @@ export async function streamChatCompletion({
 
   const now = new Date();
   const environment = `\nCurrent environment\n- Date and time: ${now.toLocaleString()} (${Intl.DateTimeFormat().resolvedOptions().timeZone})\n- App: ${window.location.origin}\n- Active tool: ${taskState?.activeToolId || 'Home'}\n`;
+
+  // Every message takes the lightest lane that can do the job (see assistant/lanes.js).
+  const startedAt = Date.now();
+  let firstTokenMs = null;
+  const emit = (t) => { if (firstTokenMs == null && t) firstTokenMs = Date.now() - startedAt; onToken(t); };
+  const lastUserMsg = [...history].reverse().find(m => m.role === 'user');
+  const hasFile = Boolean(currentFile?.base64 || lastUserMsg?.fileData?.base64 || lastUserMsg?.moreFiles?.length);
+  const route = routeTurn({
+    text: typeof lastUserMsg?.content === 'string' ? lastUserMsg.content : '',
+    history, hasFile,
+    fileType: currentFile?.type || lastUserMsg?.fileData?.type || '',
+    mode: selectedMode, scope, custom: Boolean(toolDeclarations), now,
+  });
+  let lane = route.lane;
+  const laneTrail = [lane];
+  onStatus({ type: 'lane', lane, why: route.why });
+
+  // Sums, percentages, VAT, unit conversions and the date or time have one exact answer: no model.
+  if (lane === 'instant') {
+    emit(route.answer.text);
+    onStatus({ type: 'done' });
+    recordLane({ lane, trail: laneTrail, firstMs: 0, totalMs: Date.now() - startedAt, steps: 0, tools: 0, provider: 'Toolbox', model: 'instant' });
+    return { fixes: [], text: route.answer.text, thinking: '', taskState, toolResults: [], provider: 'Toolbox', model: 'instant', lane, laneTrail };
+  }
   const memoryBlock = '';
   let mindBlock = '';
   if (scope === 'global') {
@@ -845,12 +880,10 @@ export async function streamChatCompletion({
   }
   const guidance = MODE_GUIDANCE[selectedMode] ? `\nMode: ${AI_MODES[selectedMode].name}. ${MODE_GUIDANCE[selectedMode]}\n` : '';
   // Name the compounds and elements in the message up front, so the model looks them up instead of guessing a tool.
-  const lastUserText = [...history].reverse().find(m => m.role === 'user')?.content;
+  const lastUserText = lastUserMsg?.content;
   // Small talk ("hello", "thanks") is a light turn: short prompt, no tools, one capped step on
   // the fastest, cheapest models (the server re-checks the text before honouring it).
-  const lastUserMsg = [...history].reverse().find(m => m.role === 'user');
-  const light = scope === 'global' && !toolDeclarations && !currentFile?.base64 && !lastUserMsg?.fileData && !lastUserMsg?.moreFiles?.length
-    && selectedMode !== 'reasoning' && isLightPrompt(lastUserText);
+  const light = lane === 'light';
   let entities = null;
   if (scope === 'global' && typeof lastUserText === 'string' && !light) {
     // Hints are a nicety: the first message of a session must not wait for the compound table
@@ -858,6 +891,17 @@ export async function streamChatCompletion({
     try { entities = await withinMs(entityHints(lastUserText), HINT_BUDGET_MS); } catch { entities = null; }
   }
   const hintBlock = entities?.hint ? `\n${entities.hint}\n` : '';
+  const escalate = (to, why) => {
+    if (!to || to === lane) return false;
+    lane = to; laneSteps = 0; laneErrors = 0;
+    laneTrail.push(to);
+    onStatus({ type: 'lane', lane, escalated: true, why });
+    return true;
+  };
+  let laneSteps = 0;
+  let laneErrors = 0;
+  // A drug, compound or element in a plain question is looked up, not recalled.
+  if (lane === 'quick' && entities?.hint) { route.groups.add('science'); escalate('focused', 'names a compound or element'); }
   // A greeting or "what can you do" gets a snapshot of their things, so the answer is about them.
   let lifeBlock = '';
   if (scope === 'global' && typeof lastUserText === 'string' && INTRO_PATTERN.test(lastUserText)) {
@@ -866,11 +910,13 @@ export async function streamChatCompletion({
   // Tools: a caller-supplied list as is; otherwise the core set plus the groups this conversation needs.
   const fullList = toolDeclarations ? buildToolList(toolDeclarations) : defaultToolList();
   const byName = new Map(fullList.map(t => [t.function.name, t]));
-  const activeGroups = toolDeclarations ? null : selectGroups({ history, hasFile: Boolean(currentFile?.base64 || history.at(-1)?.fileData?.base64), fileType: currentFile?.type || history.at(-1)?.fileData?.type || '' });
+  const activeGroups = toolDeclarations ? null : scope === 'global' ? route.groups
+    : selectGroups({ history, hasFile: Boolean(currentFile?.base64 || history.at(-1)?.fileData?.base64), fileType: currentFile?.type || history.at(-1)?.fileData?.type || '' });
   if (entities?.hint) activeGroups?.add('science');
   const toolsForStep = () => {
     if (!activeGroups) return fullList;
-    const names = new Set(CORE_TOOLS);
+    // The focused lane carries only what its groups need; the agent keeps the full core.
+    const names = new Set(lane === 'focused' ? FOCUSED_CORE : CORE_TOOLS);
     for (const g of activeGroups) if (groupAllowed(g)) for (const t of TOOL_GROUPS[g]?.tools || []) names.add(t);
     // Providers accept at most 128 tools per request.
     return [...names].map(n => byName.get(n)).filter(Boolean).slice(0, 128);
@@ -878,7 +924,10 @@ export async function streamChatCompletion({
   let persona = '';
   try { persona = scope === 'global' ? personaInstruction(getSettings().assistantPersona) : ''; } catch { persona = ''; }
   const tail = `\n${environment}${memoryBlock}${mindBlock}${lifeBlock}${guidance}${hintBlock}${persona}${systemInstruction ? `\n${systemInstruction}` : ''}`;
-  const systemFor = () => (scope === 'global' ? `${systemPromptFor(activeGroups || [])}${tail}` : `${systemInstruction || ''}\n${environment}`);
+  const deepNote = `\nMode: Deep thinking. ${MODE_GUIDANCE.reasoning}\n`;
+  const systemFor = () => (scope === 'global'
+    ? `${lane === 'focused' ? leanPromptFor(activeGroups || [], GROUP_PROMPTS) : systemPromptFor(activeGroups || [])}${tail}${lane === 'deep' && selectedMode !== 'reasoning' ? deepNote : ''}`
+    : `${systemInstruction || ''}\n${environment}`);
   const system = systemFor();
   // Read attached PDFs (last two user messages) before building the request.
   const recentFiles = [currentFile, ...history.filter(m => m.role === 'user').slice(-2).flatMap(m => [m.fileData, ...(Array.isArray(m.moreFiles) ? m.moreFiles : [])])].filter(Boolean);
@@ -890,6 +939,8 @@ export async function streamChatCompletion({
   // without limits get room for long jobs; everyone else stays inside the server's per-task cap.
   const unlimited = QuotaManager.isUserUnlimited?.() === true;
   const limit = maxSteps || (unlimited ? 60 : selectedMode === 'fast' ? 8 : selectedMode === 'auto' || selectedMode === 'files' ? 20 : 30);
+  // What the gateway is asked for: the focused lane runs on the fast models, deep on the strongest.
+  const gatewayMode = () => (lane === 'focused' ? 'fast' : lane === 'deep' ? 'reasoning' : (MODE_EFFORT[selectedMode] || 'auto'));
 
   // A dropped connection or a briefly unavailable model should not end the reply. A step is
   // retried only while nothing from it has been shown, so text is never repeated.
@@ -995,23 +1046,54 @@ export async function streamChatCompletion({
     return result;
   };
 
+  let recorded = false;
+  let modelSteps = 0;
+  const finish = (extra = {}) => {
+    if (scope === 'global') recordLane({ lane, trail: laneTrail, firstMs: firstTokenMs, totalMs: Date.now() - startedAt, steps: modelSteps, tools: executed.length, provider: providerInfo?.provider, model: providerInfo?.model });
+    return { fixes: [], text: fullText, thinking: fullThinking, taskState, toolResults: executed, provider: providerInfo?.label || providerInfo?.provider || null, model: providerInfo?.model || null, lane, laneTrail, ...extra };
+  };
+
   if (light) {
     onStatus({ type: 'thinking', step: 0 });
     // Only the recent conversation, as plain text: enough to stay in context, nothing more.
-    const recent = history.filter(m => (m.role === 'user' || m.role === 'assistant' || m.role === 'model') && typeof (m.displayText ?? m.content) === 'string')
-      .slice(-6).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: String(m.role === 'user' ? m.content : (m.displayText ?? m.content)).slice(0, 1500) }));
     const lightSystem = `${LIGHT_SYSTEM}\n${environment}${lifeBlock}${persona}`;
-    await modelStep({ messages: [{ role: 'system', content: lightSystem }, ...recent], mode: 'light', provider: chosenProvider, turnId, idempotencyKey }, {
-      onText: (t) => { fullText += t; onToken(t); },
+    await modelStep({ messages: [{ role: 'system', content: lightSystem }, ...plainRecent(history, 6)], mode: 'light', provider: chosenProvider, turnId, idempotencyKey }, {
+      onText: (t) => { fullText += t; emit(t); },
       onThinking: (t) => { fullThinking += t; onThinking(t); },
       onProvider: (p) => { providerInfo = p; onProvider(p); },
     });
+    modelSteps = 1;
     onStatus({ type: 'done' });
-    return { fixes: [], text: fullText, thinking: fullThinking, taskState, toolResults: [], provider: providerInfo?.label || providerInfo?.provider || null, model: providerInfo?.model || null };
+    return finish();
+  }
+
+  // Plain questions and writing: no tools, a short prompt, a quick model. If the model says it
+  // needs more than it knows (live data, their own things, an action), the message moves up a
+  // lane and carries on below; nothing of the quick attempt is shown.
+  if (lane === 'quick') {
+    onStatus({ type: 'thinking', step: 0 });
+    const quickSystem = `${QUICK_SYSTEM}\n${environment}${mindBlock}${lifeBlock}${persona}${systemInstruction ? `\n${systemInstruction}` : ''}`;
+    const gate = createEscalationGate((t) => { fullText += t; emit(t); });
+    await modelStep({ messages: [{ role: 'system', content: quickSystem }, ...plainRecent(history, 8)], mode: 'quick', provider: chosenProvider, turnId, idempotencyKey }, {
+      onText: (t) => gate.push(t),
+      onThinking: (t) => { fullThinking += t; onThinking(t); },
+      onProvider: (p) => { providerInfo = p; onProvider(p); },
+    });
+    gate.end();
+    modelSteps = 1;
+    if (!gate.escalated) {
+      QuotaManager.recordMessage?.();
+      onStatus({ type: 'done' });
+      return finish();
+    }
+    escalate(escalateFrom('quick', route.groups), 'needs more than it knows');
+    if (providerInfo?.provider) sticky = providerInfo.provider;
   }
 
   for (let step = 0; step < limit; step++) {
     if (signal?.aborted) break;
+    // The focused lane is for short jobs: when it runs out of steps the agent takes over.
+    if (lane === 'focused' && laneSteps >= LANES.focused.steps) escalate('agent', 'needed more steps');
     onStatus({ type: step === 0 ? 'thinking' : 'continuing', step });
     const tools = toolsForStep();
     messages[0].content = systemFor();
@@ -1019,16 +1101,17 @@ export async function streamChatCompletion({
     const turn = await modelStep({
       messages,
       tools: tools.length ? tools : undefined,
-      mode: MODE_EFFORT[selectedMode] || 'auto',
+      mode: gatewayMode(),
       provider: chosenProvider,
       preferredProvider: sticky,
       turnId, idempotencyKey,
     }, {
-      onText: (t) => { fullText += t; onToken(t); },
+      onText: (t) => { fullText += t; emit(t); },
       onThinking: (t) => { fullThinking += t; onThinking(t); },
       onProvider: (p) => { providerInfo = p; onProvider(p); },
     });
-    if (step === 0) QuotaManager.recordMessage?.();
+    laneSteps++; modelSteps++;
+    if (!recorded) { recorded = true; QuotaManager.recordMessage?.(); }
     // Later steps of this reply stay with the model that answered (keeps its context and signatures).
     if (providerInfo?.provider) sticky = providerInfo.provider;
 
@@ -1040,7 +1123,7 @@ export async function streamChatCompletion({
       content: turn.text || null,
       tool_calls: turn.toolCalls.map(c => ({ id: c.id, type: 'function', function: { name: c.function.name, arguments: c.function.arguments || '{}' }, ...(c.extra_content ? { extra_content: c.extra_content } : {}) })),
     });
-    if (turn.text && !/\s$/.test(fullText)) { fullText += '\n\n'; onToken('\n\n'); }
+    if (turn.text && !/\s$/.test(fullText)) { fullText += '\n\n'; emit('\n\n'); }
 
     // Independent calls from one step run at the same time; results go back in the model's order.
     const results = await Promise.all(turn.toolCalls.map(call => (signal?.aborted
@@ -1049,12 +1132,17 @@ export async function streamChatCompletion({
     turn.toolCalls.forEach((call, i) => {
       messages.push({ role: 'tool', tool_call_id: call.id, content: toolResultText(results[i]) });
     });
+    if (lane === 'focused') {
+      laneErrors += results.filter(r => r && (r.status === 'error' || r.success === false) && r.error !== 'unknown_tool').length;
+      if (laneErrors >= 2) escalate('agent', 'its tools kept failing');
+      else if (turn.toolCalls.some(c => c.function.name === 'update_plan')) escalate('agent', 'needs a plan');
+    }
 
     if (step === limit - 1 && !signal?.aborted) {
       // Out of steps: ask for a final answer without tools.
       messages[0].content += '\nYou have used the available tool steps. Summarise what you did and give your final answer now, without calling more tools.';
-      await modelStep({ messages, mode: MODE_EFFORT[selectedMode] || 'auto', provider: chosenProvider, preferredProvider: providerInfo?.provider, turnId, idempotencyKey }, {
-        onText: (t) => { fullText += t; onToken(t); },
+      await modelStep({ messages, mode: gatewayMode(), provider: chosenProvider, preferredProvider: providerInfo?.provider, turnId, idempotencyKey }, {
+        onText: (t) => { fullText += t; emit(t); },
         onThinking: (t) => { fullThinking += t; onThinking(t); },
         onProvider: () => {},
       });
@@ -1066,22 +1154,14 @@ export async function streamChatCompletion({
     const ok = executed.filter(r => !failed.includes(r));
     const lines = [...ok.map(r => r.message).filter(Boolean), ...failed.map(r => `Could not finish: ${r.error || r.message}`)];
     fullText = lines.join('\n') || 'Done.';
-    onToken(fullText);
+    emit(fullText);
   }
 
   const fixes = executed.length ? checkFigures(fullText, executed) : [];
   for (const f of fixes) fullText = fullText.split(f.from).join(f.to);
 
   onStatus({ type: 'done' });
-  return {
-    fixes,
-    text: fullText,
-    thinking: fullThinking,
-    taskState,
-    toolResults: executed,
-    provider: providerInfo?.label || providerInfo?.provider || null,
-    model: providerInfo?.model || null,
-  };
+  return finish({ fixes, toolResults: executed });
 }
 
 /** Checks the server gateway and lists the model providers it can use. */
