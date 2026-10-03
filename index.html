@@ -16,6 +16,9 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Toolbox">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <meta name="format-detection" content="telephone=no">
   <title>Toolbox — Practical Tools for Everyday Problems</title>
   <meta name="description" content="Toolbox: 170+ pro-grade tools and an AI assistant that uses all of them, in one fast, private web app. PDFs, media, code, finance, law, science, maps, mail and automations. Created by Meyiwa-Meyigbene Nifemi Edun.">
@@ -24,6 +27,17 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Pixelify+Sans:wght@500&family=VT323&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230a0a0a'/><path fill='%23fafafa' d='M9 8h14v4h-5v13h-4V12H9z'/></svg>">
+  <script>
+    /* Installed (home screen, Dock, Start menu) or in a plain tab? Known before first paint, so the
+       layout that suits each never flashes the other (js/lib/web-app.js keeps it in step). */
+    (function () {
+      var app = false;
+      try {
+        app = navigator.standalone === true || ['standalone', 'fullscreen', 'minimal-ui', 'window-controls-overlay'].some(function (m) { return matchMedia('(display-mode: ' + m + ')').matches; });
+      } catch (e) {}
+      if (app) document.documentElement.classList.add('webapp');
+    })();
+  </script>
   <script>
     /* Resolve the theme before first paint so nothing flashes. */
     (function () {
@@ -102,6 +116,9 @@
             </div>
           </div>
         </section>
+
+        <!-- Add to home screen: only in a plain browser tab (js/lib/install-app.js) -->
+        <section class="lp-install" id="install-banner" hidden aria-label="Install Toolbox"></section>
 
         <footer class="home-footer">
           <div class="home-footer-brand"><span class="logo" aria-hidden="true">Toolbox</span><span>&copy; 2026 · built by madselkie</span></div>

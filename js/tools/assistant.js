@@ -449,6 +449,17 @@ function watchThread(node) {
 
 let active = null;
 
+/* Replies that are still being written, and replies finished while the person was elsewhere.
+   A new Assistant page (the person left and came back, or a notification was opened) continues
+   in that chat instead of starting an empty one, so a reply is never stranded. */
+const inflightChats = new Map();           // conversation id → started at
+const UNSEEN_KEY = 'toolbox_assistant_unseen';
+function markUnseen(convId) { try { sessionStorage.setItem(UNSEEN_KEY, JSON.stringify({ convId, at: Date.now() })); } catch { /* storage blocked */ } }
+function clearUnseen() { try { sessionStorage.removeItem(UNSEEN_KEY); } catch { /* storage blocked */ } }
+function readUnseen() {
+  try { const v = JSON.parse(sessionStorage.getItem(UNSEEN_KEY) || 'null'); return v && Date.now() - v.at < 6 * 3600_000 ? v.convId : null; } catch { return null; }
+}
+
 export default {
   render(container, state = {}) {
     // The full-page view can adopt the popup's live DOM and controller. A
@@ -1748,6 +1759,7 @@ function mountAssistant(container, state) {
     const view = new TurnView(msg, { live: true });
     const abort = new AbortController();
     running = { conv: targetConv, msg, view, abort };
+    inflightChats.set(targetConv.id, Date.now());
     targetMessages.push(msg);
     if (conv === targetConv) { thread.appendChild(view.el); scrollToBottom(true); }
     updateComposerState();
@@ -1813,8 +1825,11 @@ function mountAssistant(container, state) {
       if (getCurrentUser()?.id === turnOwner && store.key === storeKey) persist(targetConv, targetMessages);
       if (conv === targetConv) { updateComposerState(); onContent(); }
       renderConvList();
+      inflightChats.delete(targetConv.id);
       // Long replies often finish while the person is elsewhere: tell them it is ready.
       const away = document.hidden || !root.isConnected || conv !== targetConv;
+      if (away) markUnseen(targetConv.id); else clearUnseen();
+      window.dispatchEvent(new CustomEvent('toolbox:assistant-turn-done', { detail: { convId: targetConv.id, ownerId: turnOwner } }));
       if (away && getCurrentUser()?.id === turnOwner && msg.status !== 'stopped' && msg.ms > 4000) {
         const preview = String(msg.content || msg.error || '').replace(/[#*_`>\[\]()]/g, '').replace(/\s+/g, ' ').trim().slice(0, 140);
         import('../lib/notifications.js').then(({ NotificationEngine }) => NotificationEngine.addNotification(
@@ -1997,8 +2012,13 @@ function mountAssistant(container, state) {
     else if (files.length) addFiles(files);
   });
   on(window, 'toolbox:aimodechange', (e) => { mode = e.detail?.mode || getActiveAiMode(); renderModeButton(); });
+  let ownerId = getCurrentUser()?.id || null;
   on(window, 'toolbox:authchange', async () => {
     if (dead) return;
+    // A refreshed token or an edited profile is not a different person: the chat carries on.
+    const nextId = getCurrentUser()?.id || null;
+    if (nextId === ownerId) return;
+    ownerId = nextId;
     running?.abort.abort();
     attachments = [];
     taskState = { activeToolId: ctxToolId(), attachedFiles: [] };
@@ -2009,6 +2029,19 @@ function mountAssistant(container, state) {
     store.pullCloud().then(changed => { if (changed && !dead) renderConvList(); });
   });
   disposers.push(store.onChange(() => { if (!dead) renderConvList(); }));
+  // A reply that finished in an earlier page of the Assistant appears here, in the chat it belongs to.
+  on(window, 'toolbox:assistant-turn-done', async (e) => {
+    if (dead || running || !conv || e.detail?.convId !== conv.id) return;
+    // The other page saved through its own store: read what is on disk, not this page's copy.
+    const saved = (await new ConversationStore().load()).conversations.find(c => c.id === e.detail.convId);
+    root.querySelector('.ast-finishing')?.remove();
+    if (dead || running || !saved || conv.id !== saved.id || (saved.messages?.length || 0) <= messages.length) return;
+    store.conversations = store.conversations.filter(c => c.id !== saved.id);
+    store.conversations.unshift(saved);
+    conv = saved; messages = saved.messages.map(m => ({ ...m }));
+    renderThread(); renderConvList(); scrollToBottom(true);
+    clearUnseen();
+  });
 
   /* ---------------- boot ---------------- */
 
@@ -2040,13 +2073,23 @@ function mountAssistant(container, state) {
     if (dead) return;
     // A fresh chat every time, unless Settings → Assistant says pick up the last one.
     const resume = getSetting('assistantOpenTo') === 'last';
-    const last = resume && !pendingAsk && store.active && store.active.messages?.length ? store.active : null;
-    if (last) { conv = last; messages = last.messages.map(m => ({ ...m })); }
+    // A reply being written, or finished while the person was elsewhere, comes first.
+    const waitingId = [...inflightChats.keys()].pop() || readUnseen();
+    const waiting = !pendingAsk && waitingId ? store.conversations.find(c => c.id === waitingId && c.messages?.length) : null;
+    const last = waiting || (resume && !pendingAsk && store.active && store.active.messages?.length ? store.active : null);
+    if (last) { conv = last; messages = last.messages.map(m => ({ ...m })); if (waiting) { store.select?.(last.id); if (!inflightChats.has(last.id)) clearUnseen(); } }
     else { conv = { id: newId(), title: 'New chat', createdAt: Date.now(), updatedAt: Date.now(), messages: [] }; store.activeId = conv.id; }
     renderThread();
     renderConvList();
     renderTitle();
     scrollToBottom(true);
+    // The reply is still being written by the page the person left: say so, and it lands here when done.
+    if (conv && inflightChats.has(conv.id) && !running) {
+      const note = document.createElement('p');
+      note.className = 'ast-muted-line ast-finishing';
+      note.textContent = 'Finishing your last reply…';
+      thread.appendChild(note);
+    }
     if (pendingAsk) ask(pendingAsk);
     else if (!state.compact) {
       // Opened in a new tab by "Ask Assistant" with the pop-up off: fetch the question.

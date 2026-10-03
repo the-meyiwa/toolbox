@@ -9,6 +9,7 @@
    webp" finds the same thing in both places.
    ============================================================ */
 
+import { pushBack } from './back-stack.js';
 import { TOOLS, CATEGORY_LABELS, BY_ID, popular } from '../registry/index.js';
 import { search } from './search.js';
 import * as store from './artifacts.js';
@@ -331,8 +332,10 @@ function onKeys(e) {
 
 /* ---------------- open / close ---------------- */
 
+let offBack = null;
 export function openPalette(prefill = '', { data = null } = {}) {
   if (!root) build();
+  if (!open) { offBack?.(); offBack = pushBack(() => close()); }
   open = true;
   clearTimeout(root._closeTimer);
   root.classList.remove('is-closing');
@@ -347,6 +350,7 @@ export function openPalette(prefill = '', { data = null } = {}) {
 export function close() {
   if (!root || !open) return;
   open = false;
+  offBack?.(); offBack = null;
   web?.clear();
   // Fade out, then hide; reopening during the fade cancels it.
   root.classList.add('is-closing');

@@ -32,6 +32,8 @@ import { animateSettingsPanel } from './settings-motion.js';
 import { TOOLS } from '../registry/tools.js';
 import { search as searchTools } from './search.js';
 import { MAX_SHORTCUTS, isCustomShortcuts, editableShortcutIds, setShortcutIds } from './home-shortcuts.js';
+import { isWebApp } from './web-app.js';
+import { pushBack } from './back-stack.js';
 
 let modalEl = null;
 let isOpen = false;
@@ -39,6 +41,7 @@ let closeTimer = 0;
 let currentPage = null;
 let savedTimer = 0;
 let cancelPanelMotion = () => {};
+let offBack = null;      // removes Settings from the back stack (the system Back closes it first)
 const LAST_PAGE = 'toolbox_settings_page';
 const NARROW = '(max-width: 760px)';
 
@@ -307,6 +310,12 @@ function setHeading(title, sub) {
   modalEl.querySelector('#stg-sub').textContent = sub || '';
 }
 
+/** Nothing in the list is "current" while the list itself is showing. */
+function clearActive() {
+  modalEl?.querySelectorAll('.stg-link').forEach(l => { l.classList.remove('is-active'); l.removeAttribute('aria-current'); });
+  modalEl?.querySelector('.stg-me')?.classList.remove('is-active');
+}
+
 function goBack() {
   if (window.__returnToAccount) {
     closeSettings();
@@ -318,7 +327,7 @@ function goBack() {
   if (isNarrow()) {
     modalEl.querySelector('.stg').dataset.view = 'home';
     currentPage = null;
-    modalEl.querySelectorAll('.stg-link').forEach(l => l.classList.remove('is-active'));
+    clearActive();
   }
 }
 
@@ -405,7 +414,7 @@ export function showMainView() {
 function goHome() {
   currentPage = null;
   modalEl.querySelector('.stg').dataset.view = 'home';
-  modalEl.querySelectorAll('.stg-link').forEach(l => l.classList.remove('is-active'));
+  clearActive();
 }
 
 export function showAvatarView() {
@@ -593,7 +602,17 @@ function renderPreferencesSettings() {
     ${section('Feedback', '', `<div class="stg-card">
       ${row({ title: 'Haptics', hint: 'A light vibration on phones when you tap controls and switch views', forId: 'pref-opt-audio', control: switchInput('pref-opt-audio', s.hapticAudio !== false) })}
     </div>`)}
-    ${section('Home shortcuts', `The tools under the search on Home. Pick up to ${MAX_SHORTCUTS}, in your order.`, '<div class="stg-card stg-shortcuts" id="stg-home-shortcuts"></div>', ' id="stg-shortcuts-section"')}`;
+    ${section('Home shortcuts', `The tools under the search on Home. Pick up to ${MAX_SHORTCUTS}, in your order.`, `<div class="stg-card">
+      ${row({ title: 'Style', hint: 'Show each shortcut as a large icon on its own, or with its name', tag: 'div', control: `
+        <span class="stg-seg" role="radiogroup" aria-label="Shortcut style">
+          <input type="radio" name="pref-sc-style" id="pref-sc-text" value="text" ${s.homeShortcutStyle !== 'icons' ? 'checked' : ''}><label for="pref-sc-text">Icon and name</label>
+          <input type="radio" name="pref-sc-style" id="pref-sc-icons" value="icons" ${s.homeShortcutStyle === 'icons' ? 'checked' : ''}><label for="pref-sc-icons">Large icons</label>
+        </span>` })}
+    </div><div class="stg-card stg-shortcuts" id="stg-home-shortcuts"></div>`, ' id="stg-shortcuts-section"')}
+    ${section('Gestures', '', `<div class="stg-card">
+      ${row({ title: 'Swipe gestures', hint: 'On phones: swipe in from the left edge to go back or leave a tool, and swipe sideways to move between Home, Tools and Files', forId: 'pref-opt-swipe', control: switchInput('pref-opt-swipe', s.swipeGestures !== false) })}
+    </div>`)}
+    ${installRow()}`;
   renderShortcutEditor(container.querySelector('#stg-home-shortcuts'));
 
   container.querySelector('#pref-opt-autosave')?.addEventListener('change', (e) => updateSettings({ autoSave: e.target.checked }));
@@ -601,6 +620,17 @@ function renderPreferencesSettings() {
   container.querySelector('#pref-opt-wrap')?.addEventListener('change', (e) => updateSettings({ editorWrap: e.target.checked }));
   container.querySelector('#pref-opt-fontsize')?.addEventListener('change', (e) => updateSettings({ editorFontSize: parseInt(e.target.value, 10) }));
   container.querySelector('#pref-opt-audio')?.addEventListener('change', (e) => updateSettings({ hapticAudio: e.target.checked }));
+  container.querySelectorAll('input[name="pref-sc-style"]').forEach(r => r.addEventListener('change', (e) => { if (e.target.checked) { updateSettings({ homeShortcutStyle: e.target.value }); flashSaved(); } }));
+  container.querySelector('#pref-opt-swipe')?.addEventListener('change', (e) => updateSettings({ swipeGestures: e.target.checked }));
+  container.querySelector('#btn-install-app')?.addEventListener('click', () => { import('./install-app.js').then(m => m.openInstallGuide()); });
+}
+
+/** "Install Toolbox": only in a plain browser tab (installed, there is nothing left to do). */
+function installRow() {
+  if (isWebApp()) return '';
+  return section('App', '', `<div class="stg-card"><button type="button" class="stg-row stg-row-link" id="btn-install-app">
+    <span class="stg-row-copy"><span class="stg-row-title">Install Toolbox</span><span class="stg-row-hint">Add it to your home screen, Dock or Start menu, with animated steps for your device</span></span>
+    <span class="stg-row-control">${icon('download', 17)}</span></button></div>`);
 }
 
 /** Home shortcuts: the chosen tools in order (move, remove), a finder to add more, and a way back to automatic. */
@@ -845,6 +875,7 @@ export function openSettings(targetSection = null) {
   const alias = { preferences: 'general', storage: 'general', ai: 'assistant', contribution: 'support', shortcuts: 'general' };
   const target = toolFocus ? 'tools' : targetSection ? (alias[targetSection] || targetSection) : null;
   currentPage = null;
+  clearActive();
   if (target === 'avatars') showAvatarView();
   else if (target && PAGE_BY_ID.has(target)) showPage(target, { instant: true });
   else if (isNarrow()) goHome();
@@ -860,10 +891,12 @@ export function openSettings(targetSection = null) {
     if (!isNarrow() && !target) input.focus({ preventScroll: true });
   });
   isOpen = true;
+  if (!offBack) offBack = pushBack(() => { if (isNarrow() && modalEl.querySelector('.stg')?.dataset.view === 'page') goBack(); else closeSettings(); });
 }
 
 export function closeSettings() {
   if (!modalEl || !isOpen) return;
+  offBack?.(); offBack = null;
   cancelPanelMotion();
   clearTimeout(savedTimer);
   modalEl.classList.remove('is-open');
@@ -873,7 +906,15 @@ export function closeSettings() {
 
 export function installSettingsUI() {
   warmProfilePictures();
-  window.addEventListener('toolbox:authchange', () => { if (isOpen) openSettings(currentPage); });
+  // Only a different person (sign in, sign out) rebuilds the window; a refreshed token must not
+  // throw away the page, or what is half typed on it.
+  let shownFor = getCurrentUser()?.id || null;
+  window.addEventListener('toolbox:authchange', () => {
+    const now = getCurrentUser()?.id || null;
+    if (now === shownFor) { if (isOpen) renderMe(); return; }
+    shownFor = now;
+    if (isOpen) openSettings(currentPage);
+  });
   document.getElementById('settings-btn')?.addEventListener('click', () => openSettings());
   window.addEventListener('keydown', (e) => {
     if (!isOpen) return;

@@ -1052,6 +1052,7 @@ export default {
         this.mountNotes();
         return;
       }
+      case 'note-teach': this.noteActions('teach', t); return;
       case 'note-summarize': this.noteActions('summarize', t); return;
       case 'note-simplify': this.noteActions('simplify', t); return;
       case 'note-explain-menu': this.noteActions('explain-menu', t); return;

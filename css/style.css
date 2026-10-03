@@ -45,6 +45,7 @@
 @import url("./tool-kit.css");
 @import url("./admin.css");
 @import url("./study.css");
+@import url("./install-app.css");
 
 .messages-typing { display: flex; align-items: center; gap: 8px; padding: 4px 16px 12px; color: var(--text-secondary); font-size: 0.8rem; }
 .messages-typing[hidden] { display: none !important; }

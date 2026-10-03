@@ -34,6 +34,7 @@ const I = {
   simplify: svg('<path d="M4 7h16M7 12h10M10 17h4"/>'),
   summary: svg('<path d="M5 5h14M5 10h14M5 15h9"/><path d="M17 15l2 2 3-3"/>'),
   define: svg('<path d="M4 5h6a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H4z"/><path d="M20 5h-4a3 3 0 0 0-3 3"/>'),
+  teach: svg('<path d="M3 9.5 12 5l9 4.5-9 4.5z"/><path d="M7 12v4.2c0 1.2 2.2 2.3 5 2.3s5-1.1 5-2.3V12"/><path d="M21 9.5v5"/>'),
   quiz: svg('<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>'),
   ask: svg('<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/>'),
   copy: svg('<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>'),
@@ -44,7 +45,7 @@ const I = {
   x: svg('<path d="M6 6l12 12M18 6 6 18"/>', 13),
   pin: svg('<path d="M12 21s-6-5.3-6-10a6 6 0 1 1 12 0c0 4.7-6 10-6 10z"/><circle cx="12" cy="11" r="2"/>', 13),
 };
-const KIND = { summarize: 'Summary', simplify: 'In simpler words', explain: 'Explained', define: 'Definition', ask: 'Answer', picture: 'Picture explained' };
+const KIND = { teach: 'Lesson', summarize: 'Summary', simplify: 'In simpler words', explain: 'Explained', define: 'Definition', ask: 'Answer', picture: 'Picture explained' };
 const reduced = () => typeof document === 'undefined' || typeof document.body?.animate !== 'function' || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
 const SHOW_CHARS = 60000;
 
@@ -57,7 +58,7 @@ export const NotesUI = {
       return `<div class="st-empty">
         <span class="st-empty-mark">${svg('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/>', 26)}</span>
         <h3>Read and work through your notes</h3>
-        <p>Add a PDF, Word or PowerPoint file, an image or pasted notes above. Select any part of it to have it explained word by word, phrase by phrase or sentence by sentence, simplified or summarized. Pictures in your notes can be selected too.</p>
+        <p>Add a PDF, Word or PowerPoint file, an image or pasted notes above. <b>Teach me</b> turns a note into a lesson on what it is about, leaving out the school name, course code and learning objectives. Select any part of it to have it explained word by word, phrase by phrase or sentence by sentence, simplified or summarized. Pictures in your notes can be selected too.</p>
       </div>`;
     }
     if (!files.some(f => f.id === this.noteId)) this.noteId = files[0].id;
@@ -65,6 +66,7 @@ export const NotesUI = {
       <section class="st-reader-col">
         <nav class="st-note-tabs" aria-label="Notes">${files.map(f => `<button type="button" class="st-note-tab${f.id === this.noteId ? ' is-on' : ''}" data-act="note" data-id="${esc(f.id)}" title="${esc(f.name)}"><span>${esc(f.name)}</span></button>`).join('')}<button type="button" class="st-note-tab st-note-add" data-act="attach" aria-label="Add notes">${svg('<path d="M12 5v14M5 12h14"/>', 15)}</button></nav>
         <div class="st-note-tools">
+          <button type="button" class="st-tool st-tool-main" data-act="note-teach">${I.teach}<span>Teach me</span></button>
           <button type="button" class="st-tool" data-act="note-summarize">${I.summary}<span>Summarize</span></button>
           <button type="button" class="st-tool" data-act="note-simplify">${I.simplify}<span>Simplify</span></button>
           <span class="st-tool-wrap"><button type="button" class="st-tool" data-act="note-explain-menu" aria-haspopup="menu">${I.explain}<span>Explain</span></button></span>
@@ -219,6 +221,7 @@ export const NotesUI = {
         { label: UNITS.sentence, icon: I.sentence, action: () => explain('sentence') },
       ] },
       { label: 'Simplify', icon: I.simplify, action: () => this.act('simplify', { text, excerpt: text }) },
+      ...(words > 12 ? [{ label: 'Teach me', icon: I.teach, action: () => this.act('teach', { text, excerpt: text }) }] : []),
       ...(words > 25 ? [{ label: 'Summarize', icon: I.summary, action: () => this.act('summarize', { text, excerpt: text }) }] : []),
       { label: 'Quiz me', icon: I.quiz, action: () => this.quizFrom(`this passage from my notes: "${text.slice(0, 1500)}"`) },
       { label: 'Ask', icon: I.ask, action: () => this.askAbout(text) },

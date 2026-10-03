@@ -46,6 +46,10 @@ import { deliverToFileInput } from './lib/interop.js';
 import { installGlobalMenus, installLongPress } from './lib/global-menus.js';
 import { installTextActions } from './lib/text-actions.js';
 import { installAssistantShortcut } from './lib/assistant-shortcut.js';
+import { installWebAppMode } from './lib/web-app.js';
+import { installGestures } from './lib/gestures.js';
+import { popBack } from './lib/back-stack.js';
+import { mountInstallBanner } from './lib/install-app.js';
 import { setContextSource } from './lib/assistant-context.js';
 import { installFileSurface } from './lib/file-surface.js';
 import { installMotion } from './lib/motion.js';
@@ -421,11 +425,17 @@ function departView(next) {
   ghost.classList.add('page-ghost');
   ghost.style.cssText = `position:fixed;left:${box.left}px;top:${box.top}px;width:${box.width}px;height:${Math.min(box.height, window.innerHeight - box.top + 40)}px;margin:0;overflow:hidden;pointer-events:none;z-index:5;`;
   document.body.appendChild(ghost);
-  ghost.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-10px) scale(.994)' }], { duration: 280, easing: PAGE_OUT, fill: 'forwards' })
+  // A sideways swipe between Home, Tools and Files carries the page off the way the finger went.
+  const away = swipeDir ? `translateX(${-swipeDir * 44}px)` : 'translateY(-10px) scale(.994)';
+  ghost.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: away }], { duration: 280, easing: PAGE_OUT, fill: 'forwards' })
     .finished.then(() => ghost.remove(), () => ghost.remove());
 }
 function arriveView(view, page) {
   if (!motionOk() || !view) return;
+  if (swipeDir) {
+    view.animate([{ opacity: 0, transform: `translateX(${swipeDir * 44}px)` }, { opacity: 1, transform: 'none' }], { duration: 520, easing: TOOL_GLIDE, fill: 'backwards' });
+    return;
+  }
   // Home and Tools choreograph their own entrance; the rest settle in.
   if (page === 'home' || page === 'tools') return;
   view.animate([{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'none' }], { duration: 560, delay: 60, easing: TOOL_GLIDE, fill: 'backwards' });
@@ -696,7 +706,51 @@ async function openTool(id, routeState = {}) {
 }
 
 let lastRoutedHash = null;
+
+/* In-app history depth. Every entry the app creates is stamped with how deep it is, so "Back" can
+   tell a page it came from (go back to it) from the front door (go to Tools instead). */
+let navIdx = 0;
+let replacingEntry = false;
+function stampHistory() {
+  try {
+    const st = window.history.state;
+    if (st && Number.isInteger(st.tbIdx)) { navIdx = st.tbIdx; return; }
+    // A swipe between the main pages replaces the entry (they are tabs, not steps): same depth.
+    const idx = lastRoutedHash === null ? 0 : (replacingEntry ? navIdx : navIdx + 1);
+    replacingEntry = false;
+    window.history.replaceState({ ...(st || {}), tbIdx: idx }, '');
+    navIdx = idx;
+  } catch { /* sandboxed frame */ }
+}
+
+/** Leaves the open tool: back to where the person came from, or to Tools when they opened it directly. */
+export function leaveTool() {
+  if (navIdx > 0 && window.history.length > 1) { window.history.back(); return; }
+  window.location.hash = '#tools';
+}
+
+/** The back gesture: close the sheet that is open, else leave the tool, else step back through pages. */
+function backGesture() {
+  if (popBack()) return true;
+  if (currentPage === 'tool') { leaveTool(); return true; }
+  if (currentPage && currentPage !== 'home') {
+    if (navIdx > 0 && window.history.length > 1) window.history.back(); else window.location.hash = '#home';
+    return true;
+  }
+  return false;
+}
+
+let swipeDir = 0;
+const MAIN_PAGE = { home: 'home', tools: 'tools', saved: 'saved', files: 'saved' };
+function goMainPage(name, dir) {
+  swipeDir = dir;
+  setTimeout(() => { swipeDir = 0; }, 900);
+  replacingEntry = true;
+  window.location.replace(`#${name}`);
+}
+
 function handleHash() {
+  stampHistory();
   // Check for auth recovery, email confirmation, or redirect parameters
   const redirect = parseAuthRedirect();
   if (redirect) {
@@ -868,6 +922,8 @@ document.addEventListener('keydown', (e) => {
     if (searchInput && document.activeElement === searchInput) {
       searchInput.blur();
       if (searchInput.value) { searchInput.value = ''; runSearch(); }
+    } else if (popBack()) {
+      /* a sheet was open: it closed */
     } else if (currentPage === 'tool') {
       window.location.hash = '#tools';
     }
@@ -882,7 +938,7 @@ grid.addEventListener('click', (e) => {
   }
 });
 backBtn.addEventListener('click', () => { window.location.hash = '#tools'; });
-$('back-btn-mobile')?.addEventListener('click', () => { window.location.hash = '#tools'; });
+$('back-btn-mobile')?.addEventListener('click', () => leaveTool());
 $('header-search-btn')?.addEventListener('click', (e) => {
   // Desktop away from Home: search right there in the corner. Home and phones: the usual search.
   const onHome = !$('home-view')?.classList.contains('hidden');
@@ -975,8 +1031,15 @@ export function renderHomeAssistantBanner() {
 
 updateSearchPlaceholder();
 renderHomeAssistantBanner();
+// authchange also fires when a session token is refreshed or a profile detail is saved. Those
+// must not rebuild the page: a refresh in the middle of a reply used to reopen the Assistant on
+// a new chat, and the reply then arrived only as a notification.
+let authUserId = getCurrentUser()?.id || null;
 window.addEventListener('toolbox:authchange', () => {
   updateSearchPlaceholder();
+  const nextId = getCurrentUser()?.id || null;
+  if (nextId === authUserId) return;
+  authUserId = nextId;
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
   renderGrid(getVisibleTools({ isMobile }));
   renderHomeAssistantBanner();
@@ -1226,14 +1289,23 @@ function renderQuickRow() {
   if (!quickRow) return;
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
   const tools = homeShortcutTools(getVisibleTools({ isMobile }));
-  quickRow.innerHTML = tools.map((t, i) => `
-      <a class="home-quick-item lp-chip" href="#${t.id}" style="--k:${i}">
+  // Large icons only (Settings → General): the name stays for screen readers, hover and long-press.
+  const iconsOnly = getSetting('homeShortcutStyle') === 'icons';
+  quickRow.dataset.style = iconsOnly ? 'icons' : 'text';
+  // Even rows: 5 or 6 icons make 3 and 3 on a phone, 7 or 8 make 4 and 4.
+  const n = tools.length;
+  quickRow.style.setProperty('--qcols', String(isMobile ? (n <= 4 ? n : n <= 6 ? 3 : 4) : (n <= 6 ? n : 4)));
+  quickRow.innerHTML = tools.map((t, i) => iconsOnly
+    ? `<a class="home-quick-item lp-chip" href="#${t.id}" style="--k:${i}" aria-label="${escapeHtml(t.name)}" data-label="${escapeHtml(t.name)}">
+        <span class="home-quick-icon">${t.icon}</span>
+      </a>`
+    : `<a class="home-quick-item lp-chip" href="#${t.id}" style="--k:${i}">
         <span class="home-quick-icon">${t.icon}</span>
         <span>${escapeHtml(t.name)}</span>
       </a>`).join('');
 }
 renderQuickRow();
-onSettingsChange((next, prev) => { if (next.homeShortcuts !== prev?.homeShortcuts) renderQuickRow(); });
+onSettingsChange((next, prev) => { if (next.homeShortcuts !== prev?.homeShortcuts || next.homeShortcutStyle !== prev?.homeShortcutStyle) renderQuickRow(); });
 // Private tools given or taken away: the grid and shortcuts follow, and an open one that is no
 // longer allowed closes.
 window.addEventListener('toolbox:admin-access', () => {
@@ -1284,6 +1356,13 @@ const isStandalone = new URLSearchParams(window.location.search).get('standalone
 if (isStandalone) {
   document.body.classList.add('standalone-mode');
 }
+
+// Installed or in a tab? (html.webapp, and the browser's own install prompt for the banner.)
+installWebAppMode();
+mountInstallBanner($('install-banner'));
+
+// Swipe from the left edge to go back; swipe sideways between Home, Tools and Files (Settings → General).
+installGestures({ back: backGesture, main: () => MAIN_PAGE[currentPage] || null, goMain: goMainPage });
 
 const isMobileInit = typeof window !== 'undefined' && window.innerWidth <= 768;
 renderGrid(getVisibleTools({ isMobile: isMobileInit }));

@@ -12,6 +12,7 @@
      artifact — { from: 'ask-assistant', file, prompt } to attach a file
    ============================================================ */
 
+import { pushBack } from './back-stack.js';
 import { getCurrentUser } from './supabase.js';
 import { getSetting } from './settings.js';
 
@@ -105,6 +106,7 @@ export function openAssistantTab() {
   return true;
 }
 
+let offBack = null;
 export const isAssistantOpen = () => !!panel && !panel.hidden;
 
 function popupEnabled() {
@@ -171,7 +173,7 @@ export async function openAssistant({ prompt = '', artifact = null, send = true,
   // A prior popup chat may have moved into the full-page viewport.
   if (mounted && !body.querySelector('.ast')) mounted = false;
   const wasOpen = isAssistantOpen();
-  if (!wasOpen) lastFocus = document.activeElement;
+  if (!wasOpen) { lastFocus = document.activeElement; offBack?.(); offBack = pushBack(() => closeAssistant()); }
   panel.hidden = false;
   document.body.classList.add('has-assistant-popup');
   requestAnimationFrame(() => panel.classList.add('is-open'));
@@ -197,6 +199,7 @@ export async function openAssistant({ prompt = '', artifact = null, send = true,
 
 export function closeAssistant({ restoreFocus = true } = {}) {
   if (!panel || panel.hidden) return;
+  offBack?.(); offBack = null;
   panel.classList.remove('is-open');
   panel.hidden = true;
   document.body.classList.remove('has-assistant-popup');

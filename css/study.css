@@ -311,6 +311,8 @@
 .st-tool { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 13px; border: 1px solid var(--line-strong); border-radius: 11px; background: transparent; color: var(--text); font: 500 13px var(--font-sans); cursor: pointer; transition: background-color .3s ease, border-color .3s ease, transform .2s ease; }
 .st-tool:hover { background: var(--tint); border-color: var(--line-control); }
 .st-tool:active { transform: scale(.97); }
+.st-tool-main { background: var(--ink); border-color: var(--ink); color: var(--text-inverse); }
+.st-tool-main:hover { background: var(--ink-hover); border-color: var(--ink-hover); color: var(--text-inverse); }
 .st-note-hint { margin-left: auto; font-size: 12px; color: var(--text-3); }
 .st-note-add { display: grid; place-items: center; width: 32px; padding: 0; color: var(--text-3); }
 .st-ins-open { display: none; }

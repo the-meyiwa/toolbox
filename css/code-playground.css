@@ -1558,4 +1558,6 @@ li.CodeMirror-hint-active { background: #2f5ea8 !important; color: #fff !importa
   .cpg-landing-head { flex-direction: column; }
 }
 /* The landing has its own title; the generic tool heading would repeat it. */
-body[data-tool-id="code-playground"] .viewport-header { display: none; }
+@media (min-width: 769px) {
+  body[data-tool-id="code-playground"] .viewport-header { display: none; }
+}

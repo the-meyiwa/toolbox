@@ -609,3 +609,21 @@ html.theme-transition, html.theme-transition *, html.theme-transition *::before,
   #header-about-link { padding-left: var(--space-2); padding-right: var(--space-2); }
   #header-search-btn, #theme-toggle, #header-notif-btn, #header-menu-btn { width: 36px; min-width: 36px; }
 }
+
+/* ---------- Touch: the browser's own gestures, where a page may set them ----------
+   A page cannot turn off a phone's system edge swipe or its home gesture, but it can stop the
+   browser's sideways overscroll navigation, remove the double-tap delay and keep chrome from being
+   selected or popping a callout. Installed, it also stops pull-to-refresh from firing mid-scroll. */
+html { overscroll-behavior-x: none; }
+html.webapp { overscroll-behavior-y: none; }
+a, button, [role="button"], summary, label, input, select, textarea { touch-action: manipulation; }
+:where(#app-header, #mobile-nav, .viewport-header, .home-quick, .category-chip-bar, .logo) { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+:where(a, button, img, svg) { -webkit-tap-highlight-color: transparent; }
+
+/* The round arrow that follows a finger swiping in from the left edge (js/lib/gestures.js). */
+.tb-edge-swipe {
+  position: fixed; left: 0; top: 0; z-index: 3000; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%;
+  background: var(--ink); color: var(--text-inverse); pointer-events: none; opacity: 0; will-change: transform, opacity;
+  box-shadow: 0 10px 24px -8px #0000008c; transform: translate(-48px, 0);
+}
+.tb-edge-swipe.is-ready { box-shadow: 0 0 0 6px color-mix(in srgb, var(--ink) 14%, transparent), 0 10px 24px -8px #0000008c; }

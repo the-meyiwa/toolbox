@@ -121,3 +121,16 @@
 .related-list .tool-card:hover { background: var(--surface); border-color: var(--line); box-shadow: 0 16px 34px -26px #00000059; transform: translateY(-2px); }
 .related-list .tool-card-icon { background: transparent; border: 1px solid var(--line-strong); border-radius: 12px; }
 .related-list .tool-card:hover .tool-card-icon { background: var(--ink); border-color: var(--ink); color: var(--text-inverse); }
+
+/* ---------- phones: a short tool sits in the middle, not hung from the top ----------
+   The lower half of the screen used to be left empty under a short tool. The space is now shared
+   above and below it (a touch more below, which is where the eye expects the centre to be).
+   A tall tool fills the screen and scrolls as before: the two spacers simply shrink to nothing.
+   Bare tools (their own full-screen surfaces) are left alone. */
+@media (max-width: 768px) {
+  body.in-tool:not(.tool-bare) #viewport-content { display: flex; flex-direction: column; }
+  body.in-tool:not(.tool-bare) #viewport-content::before,
+  body.in-tool:not(.tool-bare) #viewport-content::after { content: ''; flex: 1 1 0; min-height: 0; pointer-events: none; }
+  body.in-tool:not(.tool-bare) #viewport-content::after { flex-grow: 1.4; }
+  body.in-tool:not(.tool-bare) #viewport-content > * { flex-shrink: 0; }
+}

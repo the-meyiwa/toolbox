@@ -11,16 +11,20 @@
    tests; generate()/examine() call the model.
    ============================================================ */
 
+import { distill, SUBJECT_RULES } from './distill.js';
+
 export const CONTEXT_LIMIT = 48000;   // characters of context sent with a request
 
 /** The session's files as one block, trimmed fairly so every file is represented. */
 export function contextBlock(files = []) {
-  const usable = files.filter(f => f.text && f.text.trim());
+  // The paperwork (school, course code, week, learning objectives…) is taken out first: the
+  // Assistant sees only the subject, and its budget is spent on it.
+  const usable = files.map(f => ({ name: f.name, ...distill(f.text || '') })).filter(f => f.text && f.text.trim());
   if (!usable.length) return '';
   const share = Math.floor(CONTEXT_LIMIT / usable.length);
   return usable.map(f => {
     const t = f.text.trim();
-    return `### ${f.name}\n${t.length > share ? `${t.slice(0, share)}\n[…trimmed]` : t}`;
+    return `### ${f.name}\n${f.brief ? `(${f.brief})\n` : ''}${t.length > share ? `${t.slice(0, share)}\n[…trimmed]` : t}`;
   }).join('\n\n');
 }
 
@@ -34,7 +38,7 @@ export function quizSystem({ count = 10, difficulty = 'mixed', hasFiles = false 
   return [
     'You write multiple-choice study quizzes.',
     hasFiles
-      ? 'Base every question on the study material provided; do not test facts that are not in it. Quote terms exactly as the material uses them.'
+      ? `Base every question on the study material provided; do not test facts that are not in it. Quote terms exactly as the material uses them. ${SUBJECT_RULES} Aim at the core points a student must understand to master the subject, not trivia.`
       : 'There is no study material: use accurate, well-established knowledge of the topic.',
     `Write exactly ${count} questions. ${DIFFICULTY[difficulty] || DIFFICULTY.mixed}`,
     'Each question has 4 choices with exactly one correct answer. Make wrong choices plausible and similar in length to the right one. Vary the position of the correct answer.',
@@ -98,7 +102,7 @@ export const questionsSoFar = (text) => (String(text).match(/"explanation"\s*:/g
 export function examinerSystem({ hasFiles = false, difficulty = 'mixed' } = {}) {
   return [
     'You are a patient, sharp examiner running a live oral-style quiz, one question at a time.',
-    hasFiles ? 'Ask only about the study material provided.' : 'Ask about the topic the student names, using accurate knowledge.',
+    hasFiles ? `Ask only about the study material provided. ${SUBJECT_RULES}` : 'Ask about the topic the student names, using accurate knowledge.',
     `Pitch: ${DIFFICULTY[difficulty] || DIFFICULTY.mixed} Adapt: after two right answers in a row go harder; after a wrong one, probe the same idea from another angle.`,
     'Questions can be open (short written answer) or multiple choice (give 3–4 choices). Prefer open questions; use choices for fine distinctions.',
     'When the student answers, mark it fairly: accept answers that show the idea even if worded differently; give partial credit as correct=false with what was missing.',

@@ -10,8 +10,11 @@
 .adm { --adm-glide: cubic-bezier(.22, 1, .36, 1); display: flex; flex-direction: column; gap: 18px; max-width: 1100px; margin: 0 auto; }
 .adm h2, .adm h3, .adm p { margin: 0; }
 /* The page is the tool: its own title bar replaces the generic one. */
-body[data-tool-id="toolbox-admin"] .viewport-header { display: none; }
-body[data-tool-id="toolbox-admin"] #tool-viewport { padding-top: 12px; }
+/* On a phone the shared top bar (with Back) stays: it is the way out of every tool. */
+@media (min-width: 769px) {
+  body[data-tool-id="toolbox-admin"] .viewport-header { display: none; }
+  body[data-tool-id="toolbox-admin"] #tool-viewport { padding-top: 12px; }
+}
 .adm-muted { color: var(--text-3); }
 
 .adm-head { display: flex; align-items: center; gap: 12px; }
@@ -121,6 +124,11 @@ body[data-tool-id="toolbox-admin"] #tool-viewport { padding-top: 12px; }
 .adm-skel span:nth-child(2n) { animation-delay: .15s; }
 @keyframes adm-breathe { 50% { opacity: .5; } }
 
+@media (max-width: 768px) {
+  /* The top bar already says "Toolbox Admin"; keep the line under it and the refresh button. */
+  .adm-mark, .adm-title h2 { display: none; }
+  .adm-title p { font-size: 13.5px; }
+}
 @media (max-width: 760px) {
   .adm { gap: 14px; }
   .adm-cols { grid-template-columns: 1fr; }

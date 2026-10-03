@@ -26,6 +26,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   assistantResponseAnimation: true,
   assistantAnimationStyle: 'color rave', // 'color rave' | 'glow' | 'Plain Fade' | 'Pop In'
   homeShortcuts: [],    // tool ids under the Home search, in order ([] = automatic: most used)
+  homeShortcutStyle: 'text',   // 'text': icon and name | 'icons': large icons only
+  swipeGestures: true,         // phones: swipe from the left edge to go back, swipe between Home, Tools and Files
   displayName: '',
   profilePicture: 'default', // 'default' | '<image_file_name>'
   tools: {},            // per-tool preferences, see lib/tool-settings.js
