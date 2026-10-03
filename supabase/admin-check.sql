@@ -25,7 +25,12 @@ begin
   if to_regclass('toolbox_private.admin_owners') is not null and to_regclass('toolbox_private.admin_tool_grants') is not null then
     status := 'OK'; detail := 'toolbox_private.admin_owners and admin_tool_grants exist'; fix := null;
   else
-    status := 'FAIL'; detail := 'The admin tables are missing, so admin.sql did not finish';
+    status := 'FAIL';
+    detail := 'The admin tables are missing, so admin.sql did not finish. Schema toolbox_private '
+      || coalesce((select 'exists (owner ' || pg_get_userbyid(nspowner) || '), tables in it: '
+                   || coalesce((select string_agg(relname, ', ' order by relname) from pg_class where relnamespace = n.oid and relkind = 'r'), 'none')
+                   from pg_namespace n where nspname = 'toolbox_private'), 'does not exist')
+      || '. Running as ' || current_user;
     fix := 'Run the whole of supabase/admin.sql again and read the error at the bottom of the results';
   end if;
   return next;
