@@ -577,6 +577,17 @@ body:has(.ast) .viewport-header { margin-bottom: var(--space-4); }
 .ast-files { display: flex; gap: var(--space-2); overflow-x: auto; padding: var(--space-2) var(--space-2) var(--space-2) 0; scrollbar-width: none; }
 .ast-files::-webkit-scrollbar { display: none; }
 .ast-files[hidden] { display: none; }
+/* What the Assistant was opened over (Ctrl/Cmd+K): a chip above the message box. */
+.ast-using { display: flex; padding: 8px 0 2px; }
+.ast-using[hidden] { display: none; }
+.ast-using-chip { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; height: 30px; padding: 0 4px 0 10px; border: 1px solid var(--line-strong); border-radius: 999px; font-size: 12.5px; color: var(--text-2); }
+.ast-using-chip strong { color: var(--text); font-weight: 600; }
+.ast-using-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ast-using-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--ink); }
+.ast-using-chip.is-sent .ast-using-dot { background: transparent; box-shadow: inset 0 0 0 1.5px var(--text-3); }
+.ast-using-x { display: grid; place-items: center; width: 22px; height: 22px; flex: none; border: 0; border-radius: 50%; background: transparent; color: var(--text-3); cursor: pointer; }
+.ast-using-x:hover { background: var(--tint); color: var(--text); }
+.ast-user-ctx { align-self: flex-end; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 4px; font-size: 11.5px; color: var(--text-3); }
 .ast-file {
   position: relative; flex: none;
   display: flex; align-items: center; gap: 10px;

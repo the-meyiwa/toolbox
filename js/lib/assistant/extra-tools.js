@@ -13,9 +13,10 @@
    ============================================================ */
 
 import { toolboxHelp, TOOLBOX_HELP_DECLARATION } from './toolbox-guide.js';
+import { STUDY_TOOL_DECLARATIONS, STUDY_TOOL_NAMES, executeStudyTool } from '../study/assistant.js';
 import { GENERATORS as STRUCTURE_GENERATORS } from '../structure-model.js';
 import { LAB3D_TOOL_DECLARATIONS, create3dObject, search3dModels } from '../lab3d/assistant-tools.js';
-import { TOOLS } from '../../registry/index.js';
+import { TOOLS as ALL_TOOLS, canUseTool } from '../../registry/index.js';
 import * as CE from '../construction/estimate.js';
 import { DOMAIN_TOOL_DECLARATIONS, executeDomainTool } from './domain-tools.js';
 import { CATEGORY_ORDER as DEVICE_CATEGORIES } from '../devices/schema.js';
@@ -27,6 +28,7 @@ const lower = (v) => String(v ?? '').toLowerCase().trim();
 
 export const EXTRA_TOOL_DECLARATIONS = [
   TOOLBOX_HELP_DECLARATION,
+  ...STUDY_TOOL_DECLARATIONS,
   {
     name: 'update_plan',
     description: 'Show the user a live checklist for a multi-step task. Call it at the start of any task that needs 3+ steps or several tools, then again as steps finish (mark them done), so the user can follow progress. Keep step titles short.',
@@ -886,9 +888,12 @@ export function sanitizeSvg(svg) {
 
 /* ---------------- Toolbox tools ---------------- */
 
+// Private tools exist only for the people allowed to open them.
+const usableTools = () => ALL_TOOLS.filter(canUseTool);
+
 function findTools(query) {
   const terms = lower(query).split(/\s+/).filter(Boolean);
-  const scored = TOOLS.map(t => {
+  const scored = usableTools().map(t => {
     const hay = lower([t.id, t.name, t.description, ...(t.keywords || []), ...(t.synonyms || []), ...(t.intents || [])].join(' '));
     const s = terms.reduce((a, w) => a + (hay.includes(w) ? 1 : 0) + (lower(t.name).includes(w) ? 1 : 0), 0);
     return { t, s };
@@ -962,7 +967,7 @@ async function runTool({ tool_id: id, input = '', options = {} }, ctx = {}) {
   // Models occasionally pass the discovery function name instead of a result id.
   // Recover in place so a single malformed call cannot derail a whole task.
   if (id === 'find_toolbox_tools') return input || options?.query ? findTools(input || options.query) : { status: 'success', message: 'find_toolbox_tools is a discovery function, not a Toolbox tool id. Call search_places_nearby for nearby businesses, get_directions for routes, or call find_toolbox_tools with the task as query to get a real id.' };
-  const tool = TOOLS.find(t => t.id === id || t.id === String(id).replace(/_/g, '-'));
+  const tool = usableTools().find(t => t.id === id || t.id === String(id).replace(/_/g, '-'));
   if (!tool) return { ...findTools(input || id), note: `"${id}" is not a Toolbox tool id. Choose an id from these results, or use a dedicated Assistant capability such as search_places_nearby and get_directions.` };
   try {
     const modules = typeof import.meta.glob === 'function' ? import.meta.glob('../../tools/*.js') : {};
@@ -1257,6 +1262,7 @@ EXTRA_TOOL_DECLARATIONS.push({
 export const EXTRA_TOOL_NAMES = new Set(EXTRA_TOOL_DECLARATIONS.map(d => d.name));
 
 export async function executeExtraTool(name, args = {}, ctx = {}) {
+  if (STUDY_TOOL_NAMES.has(name)) return executeStudyTool(name, args);
   switch (name) {
     case 'toolbox_help': return toolboxHelp(args.topic || '');
     case 'mind': {
@@ -1318,7 +1324,7 @@ export async function executeExtraTool(name, args = {}, ctx = {}) {
     case 'run_toolbox_tool': return runTool(args, ctx);
     case 'estimate_construction': return estimateConstruction(args);
     case 'open_toolbox_tool': {
-      const tool = TOOLS.find(t => t.id === args.tool_id || t.id === String(args.tool_id).replace(/_/g, '-'));
+      const tool = usableTools().find(t => t.id === args.tool_id || t.id === String(args.tool_id).replace(/_/g, '-'));
       if (!tool) return { status: 'error', message: `No tool "${args.tool_id}".` };
       window.location.hash = `#${tool.id}`;
       return { status: 'success', openedToolId: tool.id, message: `Opened ${tool.name}.` };

@@ -2531,6 +2531,35 @@ export const TOOLS = [
     offline: false,
     icon: svg('<path d="M2 12h2M6 8v8M10 5v14M14 9v6M18 7v10M22 12h-2"/><path d="M12 2v20" opacity=".4"/>'),
   },
+
+  /* ---------- Private tools (owner, and people given access in Toolbox Admin) ---------- */
+  {
+    id: 'toolbox-admin',
+    name: 'Toolbox Admin',
+    description: 'Everyone on Toolbox, every contribution, and who can use your private tools',
+    category: 'private',
+    admin: true,
+    offline: false,
+    keywords: ['admin', 'administration', 'users', 'members', 'accounts', 'contributions', 'supporters', 'payments', 'access', 'permissions', 'private tools', 'dashboard'],
+    intents: ['see all users', 'see contributions', 'give someone access to a tool', 'who can use my tools'],
+    related: ['study'],
+    weight: 60,
+    icon: svg('<path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"/><circle cx="12" cy="10" r="2.2"/><path d="M8.5 16c.8-1.6 2-2.4 3.5-2.4s2.7.8 3.5 2.4"/>'),
+  },
+  {
+    id: 'study',
+    name: 'Study',
+    description: 'Study sessions with your own notes: quizzes, the Assistant as your examiner, and progress you can see',
+    category: 'private',
+    admin: true,
+    offline: false,
+    keywords: ['study', 'studying', 'revise', 'revision', 'exam', 'quiz', 'quizzes', 'multiple choice', 'mcq', 'flashcards', 'practice', 'test me', 'learn', 'tutor', 'examiner', 'progress'],
+    intents: ['quiz me', 'make a quiz from my notes', 'test me on this', 'study for an exam', 'practice questions', 'revise a chapter'],
+    accepts: ['text', 'markdown', 'pdf'],
+    related: ['notes', 'toolbox-admin'],
+    weight: 62,
+    icon: svg('<path d="M3 7.5 12 4l9 3.5-9 3.5z"/><path d="M7 9.3v4.4c0 1.4 2.2 2.8 5 2.8s5-1.4 5-2.8V9.3"/><path d="M21 7.5v5"/>'),
+  },
 ];
 
 export default TOOLS;

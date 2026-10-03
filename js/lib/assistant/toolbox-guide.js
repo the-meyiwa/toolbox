@@ -28,7 +28,7 @@ export const GUIDE = [
     id: 'spotlight',
     title: 'Spotlight and the corner search',
     keys: 'spotlight ctrl k cmd k slash shortcut corner header search jump anywhere palette',
-    text: `Press / or Ctrl+K (Cmd+K on a Mac) anywhere to open Spotlight: it searches tools, saved work and places in Toolbox (on Home, these keys go to the Home search instead). Pasting a token, JSON, a certificate or similar data anywhere outside a tool opens Spotlight with the tools that can read it. On desktop the "Search tools" box in the top corner (shown on every page except Home) opens in place with a compact list of results. On phones the search icon in the header opens Spotlight.`,
+    text: `Press / anywhere (outside a text field) to open Spotlight: it searches tools, saved work and places in Toolbox (on Home, / goes to the Home search instead). Pasting a token, JSON, a certificate or similar data anywhere outside a tool opens Spotlight with the tools that can read it. On desktop the "Search tools" box in the top corner (shown on every page except Home) opens in place with a compact list of results. On phones the search icon in the header opens Spotlight.`,
   },
   {
     id: 'tools',
@@ -46,7 +46,7 @@ export const GUIDE = [
     id: 'assistant',
     title: 'The Assistant',
     keys: 'assistant ai chat ask modes auto fast deep thinking attach files pop up chats history sync limits quota usage messages small talk',
-    text: `The Assistant (sign in required) chats and does real work with Toolbox's tools: maths, documents, PDFs, images, research on the web, code in the Code Playground, calendar, notes, files and more. Open it from the Assistant card on Home, from Spotlight, or "Ask Assistant" in menus; it opens as a pop-up over the page or as the full Assistant page (choose in Settings → Assistant). Modes: Auto (default), Fast, and Deep thinking for harder problems. Attach files with the + button or by dropping them. Chats are kept in the sidebar (search, pin, rename, duplicate, download as Markdown, delete) and sync across devices. Usage limits per account (resetting at midnight UTC): 40 messages a day and 150 model steps a day; quick small talk like "hello" or "thanks" does not use your messages (it has its own allowance of 120). Usage is shown in Settings → Assistant.`,
+    text: `The Assistant (sign in required) chats and does real work with Toolbox's tools: maths, documents, PDFs, images, research on the web, code in the Code Playground, calendar, notes, files and more. Open it anywhere with Ctrl+K (Cmd+K on a Mac): it always opens as a pop-up over the page and brings along what you have open (the tool, its inputs and results, the Files folder, or your Study session), shown as a chip above the message box that you can remove; press Ctrl/Cmd+K again to close it. Alt+X also opens it. It also opens from the Assistant card on Home, from Spotlight, or "Ask Assistant" in menus, as a pop-up or as the full Assistant page (choose in Settings → Assistant). Modes: Auto (default), Fast, and Deep thinking for harder problems. Attach files with the + button or by dropping them. Chats are kept in the sidebar (search, pin, rename, duplicate, download as Markdown, delete) and sync across devices. Usage limits per account (resetting at midnight UTC): 40 messages a day and 150 model steps a day; quick small talk like "hello" or "thanks" does not use your messages (it has its own allowance of 120). Usage is shown in Settings → Assistant.`,
   },
   {
     id: 'selection',
@@ -94,7 +94,7 @@ export const GUIDE = [
     id: 'shortcuts',
     title: 'Keyboard shortcuts',
     keys: 'keyboard shortcuts keys hotkeys',
-    text: `/ or Ctrl/Cmd+K: search (Spotlight, or the Home search on Home). Escape: close menus and search, or leave a tool for the Tools page. In Files: Space Quick Look, Enter open, F2 rename, Delete delete, Ctrl/Cmd+A select all, Ctrl/Cmd+C / X / V copy, cut and paste, arrow keys move. In the Home search: arrow keys choose a suggestion, Enter opens it or asks the Assistant, Ctrl/Cmd+Enter opens the first tool.`,
+    text: `Ctrl/Cmd+K: the Assistant, as a pop-up that knows what you have open (press again to close). /: search (Spotlight, or the Home search on Home). In Notes and Scribe, Ctrl/Cmd+Shift+K inserts a link. Escape: close menus and search, or leave a tool for the Tools page. In Files: Space Quick Look, Enter open, F2 rename, Delete delete, Ctrl/Cmd+A select all, Ctrl/Cmd+C / X / V copy, cut and paste, arrow keys move. In the Home search: arrow keys choose a suggestion, Enter opens it or asks the Assistant, Ctrl/Cmd+Enter opens the first tool.`,
   },
   {
     id: 'support',

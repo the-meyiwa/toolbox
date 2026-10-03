@@ -44,6 +44,10 @@ body::before {
   backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
   border-bottom-color: var(--glass-border);
 }
+/* Phones: solid enough that the page scrolling underneath never reads through the header. */
+@media (max-width: 768px) {
+  #app-header { background: color-mix(in srgb, var(--bg) 96%, transparent); }
+}
 
 /* Floating chrome */
 .header-dropdown-menu,

@@ -1787,7 +1787,8 @@ export default {
       if (modKey && e.shiftKey && e.code === 'Period') { e.preventDefault(); runCommand('quote'); return; }
       if (modKey && e.altKey && /^Digit[0-3]$/.test(e.code)) { e.preventDefault(); runCommand(e.code === 'Digit0' ? 'p' : `h${e.code.slice(-1)}`); return; }
       if (modKey && e.altKey && e.code === 'KeyC') { e.preventDefault(); runCommand('pre'); return; }
-      if (modKey && !e.shiftKey && e.code === 'KeyK') { e.preventDefault(); runCommand('link'); return; }
+      // Ctrl/Cmd+K is Toolbox's Assistant everywhere; links take the Shift variant.
+      if (modKey && e.shiftKey && e.code === 'KeyK') { e.preventDefault(); runCommand('link'); return; }
       if (modKey && e.key === 'Enter') {
         const li = closestIn(s.anchorNode, 'li');
         if (li && closestIn(li, 'ul')?.dataset.type === 'check') { e.preventDefault(); li.dataset.checked = String(li.dataset.checked !== 'true'); markDirty(); }

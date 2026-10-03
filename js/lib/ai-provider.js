@@ -26,7 +26,7 @@ async function publishDataUrl(result) {
 }
 import { KNOWLEDGE_TOOL_DECLARATIONS, KNOWLEDGE_TOOL_NAMES, executeKnowledgeTool, entityHints } from './assistant/knowledge-tools.js';
 import { isLightPrompt, LIGHT_SYSTEM } from './assistant/light-turn.js';
-import { CORE_TOOLS, TOOL_GROUPS, LOAD_TOOLS_DECLARATION, selectGroups, groupOfTool } from './assistant/tool-groups.js';
+import { CORE_TOOLS, TOOL_GROUPS, LOAD_TOOLS_DECLARATION, selectGroups, groupOfTool, setGroupGate, groupAllowed } from './assistant/tool-groups.js';
 import { packDeclarations, packVersion, isPackTool, executePackTool } from './assistant/tool-packs.js';
 import './assistant/life-tools.js';
 import './assistant/automation-tools.js';
@@ -38,7 +38,10 @@ import { gatherLifeContext, contextBlock, rememberPlace, INTRO_PATTERN, INTRO_VO
 import { QuotaManager } from './quota-manager.js';
 import { tbConfirm } from './dialog.js';
 import { authHeader, openGateway, readTurn } from './model-gateway.js';
-import { TOOLS } from '../registry/index.js';
+import { TOOLS, BY_ID, canUseTool } from '../registry/index.js';
+
+// Tool groups that belong to a private tool (Study) are offered only to people who can open it.
+setGroupGate((toolId) => canUseTool(BY_ID.get(toolId)));
 import { mindProfile, readMind, upsertMindEntity, forgetMindEntity, addMindSource, isAssistantMemoryEntity } from './mind-store.js';
 
 export const STORAGE_GEMINI_KEY = 'toolbox_assistant_api_key';
@@ -868,7 +871,7 @@ export async function streamChatCompletion({
   const toolsForStep = () => {
     if (!activeGroups) return fullList;
     const names = new Set(CORE_TOOLS);
-    for (const g of activeGroups) for (const t of TOOL_GROUPS[g]?.tools || []) names.add(t);
+    for (const g of activeGroups) if (groupAllowed(g)) for (const t of TOOL_GROUPS[g]?.tools || []) names.add(t);
     // Providers accept at most 128 tools per request.
     return [...names].map(n => byName.get(n)).filter(Boolean).slice(0, 128);
   };
@@ -939,7 +942,7 @@ export async function streamChatCompletion({
       return res;
     }
     if (name === 'load_tools') {
-      const wanted = (Array.isArray(args?.groups) ? args.groups : [args?.groups]).map(String).filter(g => TOOL_GROUPS[g]);
+      const wanted = (Array.isArray(args?.groups) ? args.groups : [args?.groups]).map(String).filter(g => TOOL_GROUPS[g] && groupAllowed(g));
       wanted.forEach(g => activeGroups?.add(g));
       const loaded = wanted.flatMap(g => TOOL_GROUPS[g].tools).filter(n => byName.has(n));
       const res = { status: 'success', silent: true, loaded: wanted, tools: loaded, message: wanted.length ? `Loaded: ${loaded.join(', ')}.` : `Unknown group. Groups: ${Object.keys(TOOL_GROUPS).join(', ')}.` };

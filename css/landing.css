@@ -95,22 +95,23 @@
 .lp .home-hero-dropdown {
   position: relative; top: auto; left: auto; right: auto; z-index: 1;
   margin-top: 10px; padding: 0 0 4px; background: transparent; border: 0; border-radius: 0; box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
   animation: none;
 }
-.lp .home-hero-dropdown::before {
-  content: ''; position: absolute; left: 27px; top: -10px; bottom: 22px; width: 1px;
+/* The field sits over the list, so rows slide out from (and back into) underneath it. */
+.lp .home-search-wrap .home-search-field { z-index: 2; }
+.lp .hero-dd-thread {
+  position: absolute; left: 27px; top: -10px; bottom: 22px; width: 1px; pointer-events: none;
   background: linear-gradient(var(--lp-thread), color-mix(in srgb, var(--ink) 5%, transparent));
+  transform-origin: 50% 0;
 }
-.lp .home-hero-dropdown.is-fresh::before { animation: lp-thread-draw .27s var(--lp-glide) both; transform-origin: 50% 0; }
-.lp .hero-dd-row { position: relative; gap: 12px; padding: 8px 10px; border-radius: 14px; }
+.lp .hero-dd-row { position: relative; z-index: 1; gap: 12px; padding: 8px 10px; border-radius: 14px; }
+.lp .hero-dd-row.is-ghost { position: absolute; left: 0; right: 0; z-index: 0; pointer-events: none; }
 .lp .hero-dd-icon { position: relative; z-index: 1; width: 34px; height: 34px; border-radius: 11px; background: var(--surface); border: 1px solid var(--line-strong); }
 .lp .hero-dd-ai .hero-dd-icon { background: var(--ink); border-color: var(--ink); }
 .lp .hero-dd-device .hero-dd-icon { background: var(--surface); color: var(--text); }
-.lp .home-hero-dropdown.is-fresh .hero-dd-row { animation: lp-row-in .247s var(--lp-glide) both; animation-delay: calc(var(--i, 0) * 13ms + 21ms); }
 .lp .home-search-wrap:has(.home-hero-dropdown:not([hidden])) .home-search-keys { display: none; }
 .lp .home-search-wrap:has(.home-hero-dropdown:not([hidden])) ~ .lp-below { display: none; }
-@keyframes lp-thread-draw { from { transform: scaleY(0); } to { transform: scaleY(1); } }
-@keyframes lp-row-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 /* ---------- responsive ---------- */
 @media (max-width: 760px) {

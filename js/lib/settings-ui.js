@@ -151,7 +151,7 @@ function createModal() {
                 <span class="stg-link-chev">${icon('chevron', 16)}</span></button>`).join('')}</div>`).join('')}
           </nav>
         </div>
-        <p class="stg-nav-foot">Changes save as you make them.</p>
+        <p class="stg-nav-foot">Changes save as you make them. <a href="#about" class="stg-about" data-stg="close">About Toolbox</a></p>
       </aside>
 
       <section class="stg-main" aria-live="off">

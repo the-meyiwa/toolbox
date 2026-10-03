@@ -362,7 +362,7 @@
   position: absolute; left: 0; right: 0; bottom: 0; z-index: 12;
   max-height: 62%; border-left: 0; border-top: 1px solid var(--line);
   border-radius: 16px 16px 0 0; box-shadow: var(--shadow-3);
-  transform: translateY(100%); transition: transform var(--dur-3) var(--ease-out), max-height var(--dur-3) var(--ease-out);
+  transform: translateY(100%); transition: transform var(--dur-3) var(--ease-out);
 }
 .cb[data-narrow="true"][data-insp="open"] .cb-insp { transform: none; }
 .cb[data-narrow="true"][data-insp="peek"] .cb-insp { transform: translateY(calc(100% - 118px)); }

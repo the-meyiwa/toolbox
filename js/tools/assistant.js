@@ -32,6 +32,7 @@ import { gatherLifeContext, introText, lifeSuggestions } from '../lib/assistant/
 import { fileAttrs } from '../lib/file-surface.js';
 import { tempoDelay } from '../lib/tempo.js';
 import { pointerLight } from '../lib/reveal-motion.js';
+import { contextForModel } from '../lib/assistant-context.js';
 
 /* Files from Toolbox Files arrive as raw bytes. */
 function bytesToBase64(bytes) {
@@ -468,7 +469,12 @@ function mountAssistant(container, state) {
 
   const integration = new ConversationIntegrationManager({ history: [], keepContext: true, audioManager: AssistantAudioManager });
   const store = new ConversationStore();
-  let taskState = { activeToolId: state.tool?.id || null, attachedFiles: [] };
+  // What the person had open when they called the Assistant over it (Ctrl/Cmd+K): shown as a chip,
+  // sent once with the next message of each chat (js/lib/assistant-context.js).
+  let workContext = state.context || null;
+  let contextSent = false;
+  const ctxToolId = () => workContext?.toolId || state.tool?.id || null;
+  let taskState = { activeToolId: ctxToolId(), attachedFiles: [] };
 
   let conv = null;          // active conversation
   let messages = [];        // its messages
@@ -502,6 +508,7 @@ function mountAssistant(container, state) {
         <div class="ast-dock">
           <button type="button" class="ast-jump" data-act="jump" aria-label="Scroll to latest" hidden>${icon('down', 16, 2)}</button>
           <form class="ast-composer" autocomplete="off">
+            <div class="ast-using" hidden></div>
             <div class="ast-files" hidden></div>
             <textarea class="ast-input" rows="1" placeholder="Message Assistant" aria-label="Message Assistant"></textarea>
             <div class="ast-bar">
@@ -547,6 +554,7 @@ function mountAssistant(container, state) {
   input.addEventListener('focus', warmGateway);
   input.addEventListener('input', warmGateway, { passive: true });
   const filesRow = $('.ast-files');
+  const usingRow = $('.ast-using');
   const sendBtn = $('.ast-send');
   const fileInput = $('.ast-file-input');
   const attachPop = $('.ast-attach-pop');
@@ -739,10 +747,12 @@ function mountAssistant(container, state) {
 
   function startNewChat() {
     if (!guardSwitch()) return;
-    taskState = { activeToolId: state.tool?.id || null, attachedFiles: [] };
+    taskState = { activeToolId: ctxToolId(), attachedFiles: [] };
     conv = { id: newId(), title: 'New chat', createdAt: Date.now(), updatedAt: Date.now(), messages: [] };
     store.activeId = conv.id;
     messages = [];
+    contextSent = false;
+    renderUsing();
     renderThread();
     settleThread();
     renderConvList();
@@ -756,7 +766,7 @@ function mountAssistant(container, state) {
     if (!guardSwitch()) return;
     const c = store.conversations.find(x => x.id === id);
     if (!c) return;
-    taskState = { activeToolId: state.tool?.id || null, attachedFiles: [] };
+    taskState = { activeToolId: ctxToolId(), attachedFiles: [] };
     conv = c;
     messages = (c.messages || []).map(m => ({ ...m }));
     store.select(c.id);
@@ -949,6 +959,7 @@ function mountAssistant(container, state) {
     const atts = m.attachments?.length ? m.attachments : (m.filePreview ? [{ name: m.filePreview.name, size: m.filePreview.size }] : []);
     el.innerHTML = `
       <div class="ast-user">
+        ${m.contextLabel ? `<span class="ast-user-ctx">${icon('spark', 12)}${esc(m.contextLabel)}</span>` : ''}
         ${atts.length ? `<div class="ast-user-files">${atts.map(a => attachmentChip(a)).join('')}</div>` : ''}
         ${text ? `<div class="ast-bubble">${esc(text)}</div>` : ''}
         <div class="ast-acts">
@@ -1482,6 +1493,25 @@ function mountAssistant(container, state) {
     updateComposerState();
   }
 
+  /** The context chip: "Using Study · Biology", with a way to leave it out. */
+  function renderUsing({ fresh = false } = {}) {
+    if (!usingRow) return;
+    usingRow.hidden = !workContext;
+    if (!workContext) { usingRow.innerHTML = ''; return; }
+    usingRow.innerHTML = `<span class="ast-using-chip${contextSent ? ' is-sent' : ''}" title="${esc(workContext.summary || '')}">
+      <span class="ast-using-dot" aria-hidden="true"></span><span class="ast-using-text">${contextSent ? 'Knows about' : 'With'} <strong>${esc(workContext.label || 'this page')}</strong></span>
+      <button type="button" class="ast-using-x" data-act="drop-context" aria-label="Leave ${esc(workContext.label || 'this page')} out">${icon('x', 12, 2)}</button></span>`;
+    if (fresh && !reduceMotion()) usingRow.firstElementChild.animate([{ opacity: 0, transform: 'translateY(6px) scale(.94)' }, { opacity: 1, transform: 'none' }], { duration: 240, easing: 'cubic-bezier(.34, 1.4, .64, 1)' });
+  }
+  function setWorkContext(ctx) {
+    const same = ctx && workContext && ctx.toolId === workContext.toolId && ctx.label === workContext.label && ctx.text === workContext.text && ctx.summary === workContext.summary;
+    if (same) return;
+    workContext = ctx || null;
+    contextSent = false;
+    taskState.activeToolId = ctxToolId();
+    renderUsing({ fresh: true });
+  }
+
   async function addFiles(fileList) {
     const files = [...(fileList || [])];
     for (const file of files) {
@@ -1621,6 +1651,8 @@ function mountAssistant(container, state) {
     const asFile = (a) => ({ name: a.name, type: a.type, size: a.size, base64: a.base64, text: a.text || null });
     let modelContent = text || (binaries.length > 1 ? `Please look at the attached files: ${binaries.map(a => `"${a.name}"`).join(', ')}.` : primary ? `Please look at the attached file "${primary.name}".` : '');
     for (const a of inlined) modelContent += `\n\nAttached file "${a.name}":\n\`\`\`\n${String(a.text || '').slice(0, 60000)}\n\`\`\``;
+    const withContext = workContext && !contextSent ? workContext : null;
+    if (withContext) modelContent += contextForModel(withContext);
 
     if (!conv) startNewChat();
     const turnId = `turn_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -1629,8 +1661,10 @@ function mountAssistant(container, state) {
       fileData: primary ? asFile(primary) : null,
       moreFiles: binaries.slice(1).map(asFile),
       attachments: attachments.map(a => ({ name: a.name, size: a.size, type: a.type, thumb: a.thumb || null })),
+      ...(withContext ? { contextLabel: withContext.label || withContext.toolId } : {}),
       timestamp: Date.now(),
     };
+    if (withContext) { contextSent = true; renderUsing(); }
     const from = form.getBoundingClientRect();
     if (!messages.length) thread.innerHTML = '';
     messages.push(msg);
@@ -1887,6 +1921,7 @@ function mountAssistant(container, state) {
       case 'copy-ai': if (msg) copyWithFeedback(msg.content || '', t); break;
       case 'regenerate':
       case 'retry': if (msg) regenerate(msg.id); break;
+      case 'drop-context': workContext = null; contextSent = false; taskState.activeToolId = ctxToolId(); renderUsing(); input.focus({ preventScroll: true }); break;
       default: break;
     }
   });
@@ -1958,7 +1993,7 @@ function mountAssistant(container, state) {
     if (dead) return;
     running?.abort.abort();
     attachments = [];
-    taskState = { activeToolId: state.tool?.id || null, attachedFiles: [] };
+    taskState = { activeToolId: ctxToolId(), attachedFiles: [] };
     renderFiles();
     await store.load();
     conv = null; messages = [];
@@ -1971,6 +2006,7 @@ function mountAssistant(container, state) {
 
   renderModeButton();
   renderFiles();
+  renderUsing({ fresh: !!workContext });
   /* "Ask Assistant" from anywhere: a question (sent straight away) and/or a file
      (attached, with the question left in the composer). */
   async function ask({ prompt = '', artifact = null, send = true } = {}) {
@@ -1982,7 +2018,8 @@ function mountAssistant(container, state) {
     if (send && text && !artifact?.file && getCurrentUser()) handleSubmit();
     else input.focus({ preventScroll: true });
   }
-  on(window, 'toolbox:assistant-ask', (e) => { ask(e.detail || {}); });
+  on(window, 'toolbox:assistant-ask', (e) => { if (e.detail?.context !== undefined) setWorkContext(e.detail.context); ask(e.detail || {}); });
+  on(window, 'toolbox:assistant-context', (e) => { if (!dead) setWorkContext(e.detail?.context || null); });
   on(window, 'toolbox:assistant-reopened', () => { if (!dead && !running && messages.length && getSetting('assistantOpenTo') !== 'last') startNewChat(); });
   // "Ask Assistant" with the pop-up turned off queues the question for this page.
   const queued = window.__toolboxQueuedAsk && Date.now() - window.__toolboxQueuedAsk.at < 60_000 ? window.__toolboxQueuedAsk : null;

@@ -152,12 +152,24 @@ export const TOOL_GROUPS = {
     tools: ['create_chat_tool', 'list_chat_tools', 'run_chat_tool'],
     match: /\b((build|create|make|custom|own|mini|reuse|reusable|interactive|chat)[ -]+(\w+\s+){0,4}tools?|calculator|transformer|template|run (it|that|the tool)|this chat)\b/i,
   },
+  study: {
+    label: 'Study: make a multiple-choice quiz in Study and read the open study session',
+    tools: ['study_create_quiz', 'study_session_info'],
+    match: /\b(quiz(z?es)?|test me|study(ing)?|revis(e|ion)|exams?|flash ?cards?|practice questions?|mcq|multiple[- ]choice|examine me)\b/i,
+    private: 'study',
+  },
   modelling: {
     label: '3D: create 3D objects (phones, furniture, props, vehicles, shapes) to view, export and open in the 3D Lab; realistic 3D models of structures (trusses, frames, towers, bridges, domes, buildings, landmarks)',
     tools: ['create_3d_object', 'search_3d_models', 'model_3d', 'knowledge_library'],
     match: /\b(3-?d|model(l?ing)?|render(ing)?|visuali[sz]e|sculpt\w*|mesh|glb|gltf|stl|obj|usdz|fbx|3d ?print\w*|cad|blender|prop|replica|truss(es)?|space ?frame|tower|bridge|dome|pavilion|stadium|skyscraper|landmark|monument|cathedral|pagoda|pyramid|structure|torus|klein|m(o|ö)bius|menger|fractal|polyhedr\w*)\b/i,
   },
 };
+
+/* Groups that belong to a private tool (`private: '<tool id>'`) exist only for the people who
+   can open that tool; js/lib/ai-provider.js sets the gate. */
+let groupGate = () => false;
+export function setGroupGate(fn) { groupGate = typeof fn === 'function' ? fn : () => false; }
+export const groupAllowed = (id) => { const g = TOOL_GROUPS[id]; return !!g && (!g.private || groupGate(g.private) === true); };
 
 const GROUP_OF = new Map();
 for (const [id, g] of Object.entries(TOOL_GROUPS)) for (const t of g.tools) if (!GROUP_OF.has(t)) GROUP_OF.set(t, id);
@@ -180,12 +192,12 @@ export function addToolGroup(id, { label, tools = [], match } = {}) {
 export const LOAD_TOOLS_DECLARATION = {
   name: 'load_tools',
   get description() {
-    return `Loads more tools. Only a core set is loaded; call this with the groups you need first. Groups: ${Object.entries(TOOL_GROUPS).map(([id, g]) => `${id} (${g.label.split(':')[0]})`).join(', ')}.`;
+    return `Loads more tools. Only a core set is loaded; call this with the groups you need first. Groups: ${Object.entries(TOOL_GROUPS).filter(([id]) => groupAllowed(id)).map(([id, g]) => `${id} (${g.label.split(':')[0]})`).join(', ')}.`;
   },
   get parameters() {
     return {
       type: 'object',
-      properties: { groups: { type: 'array', items: { type: 'string', enum: Object.keys(TOOL_GROUPS) }, description: 'Group names to load.' } },
+      properties: { groups: { type: 'array', items: { type: 'string', enum: Object.keys(TOOL_GROUPS).filter(groupAllowed) }, description: 'Group names to load.' } },
       required: ['groups'],
     };
   },
@@ -198,7 +210,7 @@ export function selectGroups({ history = [], hasFile = false, fileType = '' } = 
   // everything ("build", "page", "data"…) and used to pull in most groups on every follow-up.
   const recent = history.filter(m => m.role === 'user').slice(-2);
   const text = recent.map(m => (typeof m.content === 'string' ? m.content : '')).join('\n');
-  for (const [id, g] of Object.entries(TOOL_GROUPS)) if (g.match.test(text)) picked.add(id);
+  for (const [id, g] of Object.entries(TOOL_GROUPS)) if (groupAllowed(id) && g.match.test(text)) picked.add(id);
   // Keep groups whose tools this chat already used, so follow-ups ("now make it red") still work.
   for (const m of history.slice(-6)) {
     for (const r of m.toolResults || []) {

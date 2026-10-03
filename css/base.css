@@ -313,6 +313,8 @@ svg { flex-shrink: 0; }
   white-space: pre-wrap; word-break: break-word;
 }
 .tool-output > .copy-btn, .result-hero > .copy-btn { position: absolute; top: var(--space-3); right: var(--space-3); }
+/* The Copy button sits in the corner; text never runs underneath it. */
+.tool-output:has(> .copy-btn) { padding-right: 84px !important; }
 .copy-btn {
   display: inline-flex; align-items: center; gap: var(--space-1);
   height: 28px; padding: 0 var(--space-3);

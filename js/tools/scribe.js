@@ -45,7 +45,7 @@ const TOOLBAR = `
   </select>
   <div class="dx-tgroup">${btn('bold', 'Bold (Ctrl+B)', I.bold, ' data-state="bold"')}${btn('italic', 'Italic (Ctrl+I)', I.italic, ' data-state="italic"')}${btn('underline', 'Underline (Ctrl+U)', I.underline, ' data-state="underline"')}${btn('strikeThrough', 'Strikethrough', I.strike, ' data-state="strikeThrough"')}
     <label class="dx-tbtn dx-color" title="Text colour"><span class="dx-color-a" aria-hidden="true">A</span><input type="color" data-color value="#c0392b" aria-label="Text colour"></label>
-    ${btn('link', 'Link (Ctrl+K)', I.link)}${btn('removeFormat', 'Clear formatting', I.clear)}</div>
+    ${btn('link', 'Link (Ctrl+Shift+K)', I.link)}${btn('removeFormat', 'Clear formatting', I.clear)}</div>
   <div class="dx-tgroup">${btn('insertUnorderedList', 'Bulleted list', I.ul, ' data-state="insertUnorderedList"')}${btn('insertOrderedList', 'Numbered list', I.ol, ' data-state="insertOrderedList"')}${btn('outdent', 'Decrease indent', I.outdent)}${btn('indent', 'Increase indent', I.indent)}</div>
   <div class="dx-tgroup">${btn('justifyLeft', 'Align left', I.left, ' data-state="justifyLeft"')}${btn('justifyCenter', 'Centre', I.center, ' data-state="justifyCenter"')}${btn('justifyRight', 'Align right', I.right, ' data-state="justifyRight"')}${btn('justifyFull', 'Justify', I.justify, ' data-state="justifyFull"')}</div>
   <div class="dx-tgroup">${btn('table', 'Insert table', I.table)}<label class="dx-tbtn" title="Insert picture" aria-label="Insert picture">${icon(I.image)}<input type="file" accept="image/png,image/jpeg,image/gif" data-image hidden></label>${btn('rule', 'Horizontal line', I.rule)}${btn('pagebreak', 'Page break', I.pagebreak)}</div>
@@ -193,7 +193,8 @@ export default {
     page.addEventListener('keyup', refreshState);
     page.addEventListener('mouseup', refreshState);
     page.addEventListener('keydown', (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); shell.root.querySelector('[data-cmd="link"]').click(); }
+      // Ctrl/Cmd+K is Toolbox's Assistant everywhere; links take the Shift variant.
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'k') { e.preventDefault(); shell.root.querySelector('[data-cmd="link"]').click(); }
       if (e.key === 'Tab' && !e.ctrlKey && !e.metaKey) {
         const inList = e.target.closest?.('li') || window.getSelection?.()?.anchorNode?.parentElement?.closest?.('li');
         if (inList) { e.preventDefault(); exec(e.shiftKey ? 'outdent' : 'indent'); }

@@ -14,6 +14,21 @@ export { TOOLS, CATEGORIES, ALIASES, TASKS, byTask, taskOf };
 /** @type {Map<string, import('./schema.js').Tool>} */
 export const BY_ID = new Map(TOOLS.map(t => [t.id, t]));
 
+/* Private tools (`admin: true`) exist only for the people allowed to open them
+   (js/lib/admin-access.js sets the gate once it knows who is signed in). Until
+   then, and for everyone else, they count as hidden everywhere `hidden` is read. */
+let gate = () => false;
+export function setToolGate(fn) { gate = typeof fn === 'function' ? fn : () => false; }
+/** True when this tool may be shown and opened by the person signed in now. */
+export const canUseTool = (tool) => !!tool && (!tool.admin || gate(tool.id) === true);
+for (const t of TOOLS) {
+  if (!t.admin) continue;
+  const base = !!t.hidden;
+  Object.defineProperty(t, 'hidden', { get: () => base || !canUseTool(t), enumerable: true, configurable: true });
+}
+/** The public catalogue: what counts and listings for everyone are built from. */
+export const PUBLIC_TOOLS = TOOLS.filter(t => !t.admin);
+
 /** Category id → display label, for search scoring and headings. */
 export const CATEGORY_LABELS = Object.fromEntries(CATEGORIES.map(c => [c.id, c.label]));
 
@@ -66,7 +81,7 @@ export function resolveRoute(raw) {
 }
 
 /** Tools that never touch the network — the ones safe to use offline. */
-export const OFFLINE_TOOLS = TOOLS.filter(t => t.offline !== false);
+export const OFFLINE_TOOLS = TOOLS.filter(t => t.offline !== false && !t.admin);
 
 /* ---------------- capability index ----------------
 

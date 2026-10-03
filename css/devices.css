@@ -395,8 +395,8 @@
    ========================================================================== */
 .dv { overflow-x: clip; }
 .dv-top { display: flex; flex-direction: column; gap: var(--space-4); }
-.dv-qs.home-search-wrap { margin: 0 auto; max-width: 100%; transition: max-width .326s var(--rv-glide, ease); }
-.dv-qs-global .home-search-input { transition: height .27s var(--rv-glide, ease), border-color var(--dur-2) ease, box-shadow var(--dur-2) ease; }
+.dv-qs.home-search-wrap { margin: 0 auto; max-width: 100%; }
+.dv-qs-global .home-search-input { transition: border-color var(--dur-2) ease, box-shadow var(--dur-2) ease; }
 .dv:not(.is-home) .dv-qs-global .home-search-input { height: 48px !important; font-size: 15px !important; }
 .dv:not(.is-home) .dv-qs-keys { display: none; }
 .dv.is-home { min-height: min(62vh, 560px); justify-content: center; }

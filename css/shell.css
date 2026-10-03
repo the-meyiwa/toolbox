@@ -584,7 +584,14 @@ html.theme-transition, html.theme-transition *, html.theme-transition *::before,
 .uo-footer .btn { min-width: 140px; }
 @media (max-width: 480px) { .uo-footer .btn { width: 100%; } }
 
-/* Small phones (360px and under): five header controls must fit beside the wordmark. */
+/* Phones: the header keeps only what is used every visit (search, notifications, account).
+   About lives in Settings' footer and the theme in Settings → Appearance. */
+@media (max-width: 560px) {
+  #header-about-link, #header-actions > #theme-toggle { display: none; }
+  .header-actions { gap: 2px; }
+}
+
+/* Small phones (360px and under): the header controls must fit beside the wordmark. */
 @media (max-width: 380px) {
   #app-header { padding: 0 var(--space-3); }
   .header-actions { gap: 0; }

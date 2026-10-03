@@ -61,6 +61,12 @@ export function installChipIndicator(bar) {
   };
   bar._placeIndicator = place;
   requestAnimationFrame(() => place(true));
+  // The bar may be laid out while the page is still hidden (opened straight to #tools): place
+  // the indicator again whenever the bar gets its real size, so the active chip is never blank.
+  if (!bar._indRO && typeof ResizeObserver === 'function') {
+    bar._indRO = new ResizeObserver(() => bar._placeIndicator?.(true));
+    bar._indRO.observe(bar);
+  }
 
   if (!bar.dataset.indBound) {
     bar.dataset.indBound = '1';

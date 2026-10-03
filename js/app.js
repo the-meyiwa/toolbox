@@ -7,7 +7,8 @@
    ============================================================ */
 
 import './lib/tempo.js';   // one animation speed for the whole app (first, before anything animates)
-import { TOOLS, CATEGORY_LABELS, OFFLINE_TOOLS, categorised, popular, resolveRoute, BY_ID } from './registry/index.js';
+import { TOOLS, PUBLIC_TOOLS, CATEGORY_LABELS, OFFLINE_TOOLS, categorised, popular, resolveRoute, BY_ID, canUseTool } from './registry/index.js';
+import { installAdminAccess, refreshAdminAccess } from './lib/admin-access.js';
 import { search, relatedTools } from './lib/search.js';
 import { track, toolSession } from './lib/analytics.js';
 import * as artifacts from './lib/artifacts.js';
@@ -19,6 +20,7 @@ import { quickDeviceLookup, openQuickResult, quickResultHint, quickResultTitle }
 import { renderSaved } from './views/saved.js';
 import { homeShortcutTools } from './lib/home-shortcuts.js';
 import { createSuggestionWeb, webSuits } from './lib/suggestion-web.js';
+import { createSuggestionThread } from './lib/suggestion-thread.js';
 import { openHeaderSearch } from './lib/header-search.js';
 import { installSquircleSelection } from './lib/squircle-selection.js';
 import { installTouchSelection } from './lib/touch-selection.js';
@@ -44,6 +46,7 @@ import { deliverToFileInput } from './lib/interop.js';
 import { installGlobalMenus, installLongPress } from './lib/global-menus.js';
 import { installTextActions } from './lib/text-actions.js';
 import { installAssistantShortcut } from './lib/assistant-shortcut.js';
+import { setContextSource } from './lib/assistant-context.js';
 import { installFileSurface } from './lib/file-surface.js';
 import { installMotion } from './lib/motion.js';
 import { initMessageNotifications } from './lib/message-notifications.js';
@@ -52,6 +55,8 @@ import { startReminderClock } from './lib/reminders.js';
 import { startAutomationClock } from './lib/automations.js';
 
 installSessionKeeper();
+// Private tools: known before anything renders, so the right tools are on screen at once.
+installAdminAccess();
 // Check the stored session with the auth provider once the page has settled. Sessions it never
 // issued (old simulated or test accounts) are signed out; a real one keeps the provider's identity.
 (window.requestIdleCallback || ((f) => setTimeout(f, 1200)))(() => { validateSession().catch(() => {}); });
@@ -142,7 +147,7 @@ export const LONG_CONTENT_TOOL_IDS = new Set([
 /* Tools that bring their own full-screen chrome: no panel around them. */
 const BARE_TOOL_IDS = new Set([
   'assistant', 'code-playground', 'container-planner', 'mail', 'messaging', 'calendar',
-  'notes', 'browser', 'automobile-guide', 'anatomy-explorer', 'interactive-map', 'spotify', '3d-lab', 'mind',
+  'notes', 'browser', 'automobile-guide', 'anatomy-explorer', 'interactive-map', 'spotify', '3d-lab', 'mind', 'study',
 ]);
 /* Tools that need the whole width of the window. */
 const WIDE_TOOL_IDS = new Set([
@@ -151,13 +156,13 @@ const WIDE_TOOL_IDS = new Set([
   'watermark-remover', 'math-utility', 'periodic-table', 'data-bot', 'financial-analyzer', 'wiki',
   'video-player', 'file-drop', 'compound-database', 'diseases-database', 'calculator', 'case-digest',
   'case-comparator', 'legal-research', 'text-diff', 'tech-device-comparisons', 'sound-effects', 'chess',
-  'scribe', 'ledger', 'podium', 'cosmetics-database',
+  'scribe', 'ledger', 'podium', 'cosmetics-database', 'toolbox-admin',
 ]);
 /* Tools whose content should stretch to fill the panel's height. */
 const FILL_TOOL_IDS = new Set([
   'flowchart', 'architecture-editor', 'uml-diagram', 'logic-lab', 'algorithm-lab', 'pdf-editor',
   'watermark-remover', 'data-bot', 'video-player', 'calculator', 'timer',
-  'assistant', 'container-planner', 'scribe', 'ledger', 'podium', '3d-lab',
+  'assistant', 'container-planner', 'scribe', 'ledger', 'podium', '3d-lab', 'study',
 ]);
 
 export function isFitScreenTool(id) {
@@ -526,6 +531,18 @@ async function openTool(id, routeState = {}) {
 
   if (!tool) return showPage('home');
 
+  // Private tools open only for the owner and the people given them; for anyone else the link
+  // goes nowhere. A person given access on another device is asked about once before that.
+  if (tool.admin && !canUseTool(tool)) {
+    if (getCurrentUser()) await refreshAdminAccess();
+    if (!canUseTool(tool)) {
+      if (window.location.hash.slice(1).split('?')[0] === id) window.location.hash = '#home';
+      showPage('home');
+      if (!getCurrentUser()) openAccountModal();
+      return;
+    }
+  }
+
   teardownTool();
 
   const navigationVersion = toolNavigationVersion;
@@ -802,9 +819,8 @@ function runSearch() {
 
 /* --------------- bindings --------------- */
 
-/* `/` and ⌘K both open the palette, which is the one way in from anywhere.
-   The Tools page keeps its own filter box: that one narrows a grid you are
-   already looking at, which is a different job from going somewhere. */
+/* `/` opens the palette, the one way in from anywhere. Ctrl/Cmd+K opens the
+   Assistant over whatever is open (js/lib/assistant-shortcut.js). */
 installPalette();
 
 document.addEventListener('keydown', (e) => {
@@ -950,6 +966,8 @@ if (homeHeroInput && homeHeroDropdown) {
     onPick: (item) => pick(item),
   });
   const setWebbing = (on) => homeView?.classList.toggle('is-webbing', on);
+  // Phones: the rows slide out from under the field and fold up into each other as the query narrows.
+  const thread = createSuggestionThread({ list: homeHeroDropdown, field: homeHeroInput.closest('.home-search-field') });
 
   function suggestionItems(q) {
     const items = [];
@@ -975,7 +993,7 @@ if (homeHeroInput && homeHeroDropdown) {
 
   function deviceRowHtml(hit) {
     return `
-      <div class="hero-dd-row hero-dd-device" role="option" tabindex="-1">
+      <div class="hero-dd-row hero-dd-device" role="option" tabindex="-1" data-key="device">
         <span class="hero-dd-icon">${DEVICE_ICON}</span>
         <span class="hero-dd-text">
           <span class="hero-dd-name">${escapeHtml(quickResultTitle(hit))}</span>
@@ -989,7 +1007,7 @@ if (homeHeroInput && homeHeroDropdown) {
     const isMobile = window.innerWidth <= 768;
     let html = heroDevice ? deviceRowHtml(heroDevice) : '';
     html += heroTools.map((t, i) => `
-        <a href="#${t.id}" class="hero-dd-row" role="option" style="--i:${i + (heroDevice ? 1 : 0)}">
+        <a href="#${t.id}" class="hero-dd-row" role="option" data-key="tool:${t.id}">
           <span class="hero-dd-icon">${t.icon}</span>
           <span class="hero-dd-text">
             <span class="hero-dd-name">${escapeHtml(t.name)}</span>
@@ -998,17 +1016,14 @@ if (homeHeroInput && homeHeroDropdown) {
           ${i === 0 && !isMobile ? `<kbd>${firstKey}</kbd>` : ''}
         </a>`).join('');
     html += `
-      <div class="hero-dd-row hero-dd-ai" role="option" tabindex="-1" data-ai-prompt="${escapeHtml(q)}" style="--i:${heroTools.length + (heroDevice ? 1 : 0)}">
+      <div class="hero-dd-row hero-dd-ai" role="option" tabindex="-1" data-key="ask" data-ai-prompt="${escapeHtml(q)}">
         <span class="hero-dd-icon">${ASK_ICON}</span>
         <span class="hero-dd-text">
           <span class="hero-dd-name">Ask Assistant</span>
           <span class="hero-dd-desc">“${escapeHtml(q)}”</span>
         </span>
       </div>`;
-    const wasOpen = !homeHeroDropdown.hidden;
-    homeHeroDropdown.innerHTML = html;
-    homeHeroDropdown.classList.toggle('is-fresh', !wasOpen);
-    homeHeroDropdown.hidden = false;
+    thread.paint(html);
     homeHeroInput.setAttribute('aria-expanded', 'true');
   }
 
@@ -1016,7 +1031,7 @@ if (homeHeroInput && homeHeroDropdown) {
     const q = homeHeroInput.value.trim();
     if (!q) { closeSuggestions(); return; }
     if (webSuits()) {
-      homeHeroDropdown.hidden = true;
+      thread.clear();
       setWebbing(true);
       web.update(suggestionItems(q));
     } else {
@@ -1030,7 +1045,7 @@ if (homeHeroInput && homeHeroDropdown) {
     const q = homeHeroInput.value.trim();
     const gen = ++heroGen;
     heroDevice = null;
-    if (!q) { heroTools = []; closeSuggestions(); return; }
+    if (!q) { heroTools = []; closeSuggestions({ retract: true }); return; }
     const isMobile = window.innerWidth <= 768;
     heroTools = search(q, getVisibleTools({ isMobile }), { labels: CATEGORY_LABELS }).results.map(r => r.tool).slice(0, 6);
     paintSuggestions();
@@ -1046,10 +1061,10 @@ if (homeHeroInput && homeHeroDropdown) {
     }
   }
 
-  function closeSuggestions() {
+  function closeSuggestions({ retract = false } = {}) {
     web.clear();
     setWebbing(false);
-    homeHeroDropdown.hidden = true;
+    if (retract) thread.retract(); else thread.clear();
     homeHeroInput.setAttribute('aria-expanded', 'false');
   }
 
@@ -1089,7 +1104,7 @@ if (homeHeroInput && homeHeroDropdown) {
   homeHeroInput.addEventListener('focus', () => { if (homeHeroInput.value.trim()) renderHomeHeroResults(); });
   homeHeroInput.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      if (web.isOpen() || !homeHeroDropdown.hidden) { e.preventDefault(); closeSuggestions(); }
+      if (web.isOpen() || !homeHeroDropdown.hidden) { e.preventDefault(); closeSuggestions({ retract: true }); }
       return;
     }
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -1157,13 +1172,13 @@ document.addEventListener('click', (e) => {
 // so the number on the page can never drift from the number of tools.
 for (const id of ['home-tool-count']) {
   const el = $(id);
-  if (el) el.textContent = `${TOOLS.length}`;
+  if (el) el.textContent = `${PUBLIC_TOOLS.length}`;
 }
 
 // The privacy claim is counted, not asserted: mark one more tool `offline:
 // false` and the sentence on the home page corrects itself.
 const onlineCount = $('home-online-count');
-if (onlineCount) onlineCount.textContent = `${TOOLS.length - OFFLINE_TOOLS.length}`;
+if (onlineCount) onlineCount.textContent = `${PUBLIC_TOOLS.length - OFFLINE_TOOLS.length}`;
 
 /* Shortcuts under the Home search: the person's own choice from Settings, or the most used. */
 function renderQuickRow() {
@@ -1179,6 +1194,13 @@ function renderQuickRow() {
 }
 renderQuickRow();
 onSettingsChange((next, prev) => { if (next.homeShortcuts !== prev?.homeShortcuts) renderQuickRow(); });
+// Private tools given or taken away: the grid and shortcuts follow, and an open one that is no
+// longer allowed closes.
+window.addEventListener('toolbox:admin-access', () => {
+  runSearch();
+  renderQuickRow();
+  if (currentPage === 'tool' && currentToolObj?.admin && !canUseTool(currentToolObj)) window.location.hash = '#home';
+});
 
 /* Files stay reachable from the primary navigation at all times. */
 function reflectSavedWork() {
@@ -1196,6 +1218,8 @@ installTextActions();
 installSquircleSelection();
 installTouchSelection();
 installAssistantShortcut();
+// What Ctrl/Cmd+K brings into the Assistant: the open tool (or Files) as it is right now.
+setContextSource(() => ({ page: currentPage === 'files' ? 'saved' : currentPage, tool: currentToolObj, instance: currentToolInstance, root: viewportContent }));
 
 initTheme();
 installMotion();

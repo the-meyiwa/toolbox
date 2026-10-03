@@ -5,7 +5,9 @@
    Strictly enforces file safety: NO delete operations allowed.
    ============================================================ */
 
-import { TOOLS } from '../registry/index.js';
+import { TOOLS as ALL_TOOLS, canUseTool } from '../registry/index.js';
+// Private tools only for the people allowed to open them (js/lib/admin-access.js).
+const TOOLS = { find: (fn) => ALL_TOOLS.find(t => canUseTool(t) && fn(t)), filter: (fn) => ALL_TOOLS.filter(t => canUseTool(t) && fn(t)), get length() { return ALL_TOOLS.filter(t => !t.admin).length; } };
 import { cleanText } from '../utils.js';
 import { proxyFetch } from './model-gateway.js';
 import { LANGUAGES, makeWorker } from './code-runtimes.js';

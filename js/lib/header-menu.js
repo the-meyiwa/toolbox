@@ -437,7 +437,7 @@ async function renderNotificationPanel() {
   if (btnClear) btnClear.addEventListener('click', async () => {
     // Everything sweeps away together, then the empty state settles in.
     const items = [...notifPanelEl.querySelectorAll('.notif-item')];
-    await Promise.all(items.slice(0, 12).map((el, i) => leave(el, i * 18)));
+    await Promise.all(items.slice(0, 12).map((el, i) => leave(el, i * 18, { close: false })));
     await NotificationEngine.clearAll();
     renderNotificationPanel();
   });
@@ -477,17 +477,30 @@ function dayGroup(date) {
   const diff = Math.round((start(today) - start(d)) / 86400000);
   return diff <= 0 ? 'Today' : diff === 1 ? 'Yesterday' : 'Earlier';
 }
-/** An item slides out and its space closes up. */
-function leave(el, delay = 0) {
+/** An item slides out, then its space closes up: the rows below glide up into it.
+    Transform and opacity only; the one layout happens when the item is taken out. */
+function leave(el, delay = 0, { close = true } = {}) {
   const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduce || !el.animate) return Promise.resolve();
-  const h = el.offsetHeight;
-  el.style.overflow = 'hidden';
-  return el.animate([
-    { opacity: 1, transform: 'none', height: `${h}px` },
-    { opacity: 0, transform: 'translateX(24px)', height: `${h}px`, offset: 0.55 },
-    { opacity: 0, transform: 'translateX(24px)', height: '0px', paddingTop: '0px', paddingBottom: '0px' },
-  ], { duration: 340, delay, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'forwards' }).finished.catch(() => {});
+  return el.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(28px)' }],
+    { duration: 190, delay, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'forwards', tempo: false })
+    .finished.then(() => (close ? closeGap(el) : null)).catch(() => {});
+}
+
+function closeGap(el) {
+  const list = el.closest('.notif-list');
+  if (!list) { el.remove(); return null; }
+  const rows = [...list.querySelectorAll('.notif-item, .notif-group')].filter(n => n !== el);
+  const before = new Map(rows.map(n => [n, n.getBoundingClientRect().top]));
+  // A day heading left with nothing under it goes too.
+  const prev = el.previousElementSibling, next = el.nextElementSibling;
+  el.remove();
+  if (prev?.classList.contains('notif-group') && (!next || next.classList.contains('notif-group'))) prev.remove();
+  const moves = rows.filter(n => n.isConnected).map(n => {
+    const dy = before.get(n) - n.getBoundingClientRect().top;
+    return Math.abs(dy) > 0.5 ? n.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 220, easing: 'cubic-bezier(.22, 1, .36, 1)', tempo: false }).finished : null;
+  }).filter(Boolean);
+  return Promise.all(moves).catch(() => {});
 }
 
 function toggleNotificationPanel() {

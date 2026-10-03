@@ -6,7 +6,7 @@
    those two signals into every movement on the page.
    ============================================================ */
 
-import { TOOLS, categorised } from './registry/index.js';
+import { PUBLIC_TOOLS as TOOLS, categorised } from './registry/index.js';
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 

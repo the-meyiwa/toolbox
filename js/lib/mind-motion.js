@@ -160,28 +160,31 @@ export class MindMotion {
     return target;
   }
 
-  /** In: the tapped card grows into the new page's heading, then dissolves into it. */
+  /** In: the tapped card grows into the new page's heading, then dissolves into it.
+      Moved and sized with a transform from its own box, so no frame needs a layout. */
   grow({ ghost, rect }, to) {
     [...ghost.children].forEach(c => c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' }));
-    const box = r => ({ left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+    ghost.style.transformOrigin = '0 0';
+    const at = fit(rect, to);
     const a = ghost.animate([
-      { ...box(rect), opacity: 1 },
-      { ...box(to), opacity: 0.9, offset: 0.72 },
-      { ...box(to), opacity: 0 },
+      { transform: 'none', opacity: 1 },
+      { transform: at, opacity: 0.9, offset: 0.72 },
+      { transform: at, opacity: 0 },
     ], { duration: 560, easing: GLIDE, fill: 'forwards' });
     this.retire(ghost, a);
   }
 
-  /** Out: the page shrinks back into the card it was opened from. */
+  /** Out: the page shrinks back into the card it was opened from. The ghost is the card's own
+      size, so it ends unscaled and its contents fade in undistorted. */
   shrink(from, target, to) {
     const ghost = this.ghost(target, to);
     target.style.opacity = '0'; // not visibility: it keeps keyboard focus meanwhile
-    const box = r => ({ left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+    ghost.style.transformOrigin = '0 0';
     [...ghost.children].forEach(c => c.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260, delay: 200, easing: 'ease-out', fill: 'backwards' }));
     const a = ghost.animate([
-      { ...box(from), opacity: 0 },
+      { transform: fit(to, from), opacity: 0 },
       { opacity: 1, offset: 0.3 },
-      { ...box(to), opacity: 1 },
+      { transform: 'none', opacity: 1 },
     ], { duration: 520, easing: GLIDE, fill: 'forwards' });
     const show = () => { target.style.opacity = ''; };
     a.finished.then(show, show);
@@ -354,6 +357,12 @@ export class MindMotion {
  * Slides the pill behind the active mode button. The bar stays on screen
  * between views, so the pill glides from the old mode to the new one.
  */
+/** The transform that lays a box drawn at `a` over the box `b` (origin top left). */
+function fit(a, b) {
+  const sx = a.width ? b.width / a.width : 1, sy = a.height ? b.height / a.height : 1;
+  return `translate(${b.left - a.left}px, ${b.top - a.top}px) scale(${sx}, ${sy})`;
+}
+
 export function movePill(group, selector = '.active') {
   if (!group) return;
   let pill = group.querySelector(':scope > .mind-pill');

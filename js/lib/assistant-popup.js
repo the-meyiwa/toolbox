@@ -146,14 +146,16 @@ export function claimHandoff() {
   });
 }
 
-export async function openAssistant({ prompt = '', artifact = null, send = true } = {}) {
+export async function openAssistant({ prompt = '', artifact = null, send = true, context = null, forcePopup = false } = {}) {
   // Already on the Assistant page: hand the question to it.
   if (onAssistantPage()) {
-    window.dispatchEvent(new CustomEvent('toolbox:assistant-ask', { detail: { prompt, artifact, send } }));
+    if (prompt || artifact) window.dispatchEvent(new CustomEvent('toolbox:assistant-ask', { detail: { prompt, artifact, send } }));
+    else document.querySelector('.ast-input')?.focus({ preventScroll: true });
     return;
   }
   // Settings → Assistant → pop-up off: use this tab unless the person chose a new tab.
-  if (!popupEnabled()) {
+  // Ctrl/Cmd+K is always the pop-up, so the page underneath (its context) stays.
+  if (!popupEnabled() && !forcePopup) {
     if (getCurrentUser()) {
       if (getSetting('assistantNewTab')) {
         const handoff = prompt || artifact ? handOff({ prompt, artifact, send }) : null;
@@ -176,9 +178,14 @@ export async function openAssistant({ prompt = '', artifact = null, send = true 
   mod = mod || (await import('../tools/assistant.js')).default;
   if (!mounted) {
     mounted = true;
-    mod.render(body, { compact: true, prompt, send, artifact });
+    mod.render(body, { compact: true, prompt, send, artifact, context });
   } else if (prompt || artifact) {
-    window.dispatchEvent(new CustomEvent('toolbox:assistant-ask', { detail: { prompt, artifact, send } }));
+    window.dispatchEvent(new CustomEvent('toolbox:assistant-ask', { detail: { prompt, artifact, send, context } }));
+  } else if (context !== null || forcePopup) {
+    // Opened over a tool: the chat continues (or starts fresh, per Settings) with the tool as context.
+    if (!wasOpen) window.dispatchEvent(new CustomEvent('toolbox:assistant-reopened'));
+    window.dispatchEvent(new CustomEvent('toolbox:assistant-context', { detail: { context } }));
+    body.querySelector('.ast-input')?.focus({ preventScroll: true });
   } else if (!wasOpen) {
     // Reopened: the Assistant decides (per Settings) whether to start fresh.
     window.dispatchEvent(new CustomEvent('toolbox:assistant-reopened'));

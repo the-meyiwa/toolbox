@@ -375,7 +375,7 @@
 .mind-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--text-2); }
 .mind-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .mind-map-field {
-  position: relative; height: min(66vw, 620px); min-height: 440px; overflow: hidden;
+  position: relative; container-type: size; height: min(66vw, 620px); min-height: 440px; overflow: hidden;
   border: 1px solid var(--line); border-radius: 26px;
   background: radial-gradient(circle at 50% 50%, var(--surface-2), var(--surface) 72%);
   background-image: radial-gradient(color-mix(in srgb, var(--ink) 9%, transparent) 1px, transparent 1.4px), radial-gradient(circle at 50% 50%, var(--surface-2), var(--surface) 72%);
@@ -391,12 +391,13 @@
 .mind-map-field line.drawn.near { stroke: var(--ink); opacity: .6; stroke-width: 1.6; }
 .mind-map-field line.drawn.far { opacity: .12; }
 .mind-map-node {
-  /* Centred with `translate`, so entrance and hover transforms never shift it. */
-  position: absolute; left: var(--x); top: var(--y); translate: -50% -50%;
+  /* Placed and centred with `translate` alone (the field is a size container), so moving between
+     layouts never needs a layout pass, and entrance and hover transforms never shift it. */
+  position: absolute; left: 0; top: 0; translate: calc(var(--mx) * 1cqw - 50%) calc(var(--my) * 1cqh - 50%);
   display: inline-flex; align-items: center; gap: 7px; max-width: 180px; padding: 5px 11px 5px 5px;
   border: 1px solid var(--c-line); border-radius: 999px; background: var(--surface); color: var(--text);
   box-shadow: var(--shadow-1); text-align: left;
-  transition: left .326s var(--mind-glide), top .326s var(--mind-glide), opacity .27s var(--mind-ease), transform .27s var(--mind-glide), box-shadow .214s ease;
+  transition: translate .326s var(--mind-glide), opacity .27s var(--mind-ease), transform .27s var(--mind-glide), box-shadow .214s ease;
 }
 .mind-map-node .mind-type-ico { width: 24px; height: 24px; border-radius: 50%; }
 .mind-map-node strong { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

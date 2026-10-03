@@ -128,6 +128,12 @@ export const TASKS = [
     categories: ['science'],
   },
   {
+    id: 'private',
+    label: 'Private',
+    blurb: 'Tools only you, and the people given access, can see.',
+    categories: ['private'],
+  },
+  {
     id: 'code',
     label: 'Code & data',
     blurb: 'Formatters, encoders, diagrams and a place to run code.',

@@ -384,11 +384,7 @@ export function installPalette() {
     const inField = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName)
       || document.activeElement?.isContentEditable;
 
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-      e.preventDefault();
-      if (open) close(); else openSearch();
-      return;
-    }
+    // Ctrl/Cmd+K belongs to the Assistant (js/lib/assistant-shortcut.js); `/` is the way into search.
     // A bare slash is the quick way in, but only when not already typing.
     if (e.key === '/' && !e.metaKey && !e.ctrlKey && !inField && !open) {
       e.preventDefault();

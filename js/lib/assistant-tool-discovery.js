@@ -305,6 +305,8 @@ export class ToolDiscoveryManager {
    */
   initialize() {
     TOOLS.forEach(tool => {
+      // Private tools are reached through open_toolbox_tool, which checks who is asking.
+      if (tool.admin) return;
       const helper = new ToolInvocationHelper(tool);
       if (helper.isAssistantCompatible()) {
         this.tools.set(tool.id, helper);

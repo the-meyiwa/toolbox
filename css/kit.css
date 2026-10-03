@@ -138,12 +138,11 @@ audio.kit-media { background: transparent; max-height: none; }
 .beside.is-open { transform: none; opacity: 1; visibility: visible; transition: transform var(--dur-4, 247ms) var(--ease-out), opacity var(--dur-2, 180ms) var(--ease-out), visibility 0s; }
 body:not(.in-tool) .beside { display: none; }
 body.in-tool.has-beside #tool-viewport { margin-right: var(--beside-w); }
-#tool-viewport { transition: margin-right var(--dur-4, 247ms) var(--ease-out); }
 body.is-resizing-beside, body.is-resizing-beside * { cursor: col-resize !important; user-select: none; }
-body.is-resizing-beside .beside, body.is-resizing-beside #tool-viewport { transition: none; }
+body.is-resizing-beside .beside { transition: none; }
 .beside-grip { position: absolute; left: -5px; top: 0; bottom: 0; width: 10px; cursor: col-resize; z-index: 2; }
-.beside-grip::after { content: ""; position: absolute; left: 4px; top: 50%; width: 2px; height: 40px; margin-top: -20px; border-radius: 2px; background: var(--line-strong); opacity: 0; transition: opacity var(--dur-2) ease, height var(--dur-3) var(--ease-out), margin-top var(--dur-3) var(--ease-out); }
-.beside-grip:hover::after, .beside-grip:focus-visible::after, body.is-resizing-beside .beside-grip::after { opacity: 1; height: 72px; margin-top: -36px; background: var(--ink); }
+.beside-grip::after { content: ""; position: absolute; left: 4px; top: 50%; width: 2px; height: 72px; margin-top: -36px; border-radius: 2px; background: var(--line-strong); opacity: 0; transform: scaleY(.56); transition: opacity var(--dur-2) ease, transform var(--dur-3) var(--ease-out), background-color var(--dur-2) ease; }
+.beside-grip:hover::after, .beside-grip:focus-visible::after, body.is-resizing-beside .beside-grip::after { opacity: 1; transform: none; background: var(--ink); }
 .beside-head { display: flex; align-items: center; gap: var(--space-2); padding: 10px var(--space-3) 10px var(--space-4); border-bottom: 1px solid var(--line); background: var(--surface); }
 .beside-title { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-2); padding: 6px 10px; border-radius: 10px; font-size: 14px; font-weight: 600; color: var(--text); text-align: left; transition: background-color var(--dur-1) ease; }
 .beside-title:hover, .beside-title[aria-expanded="true"] { background: var(--tint); }

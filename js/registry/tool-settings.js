@@ -17,6 +17,23 @@ const QURAN_API = 'https://api.quran.com/api/v4';
 let quranTranslations = null, quranReciters = null;
 
 export const TOOL_SETTINGS = {
+  study: {
+    title: 'Study',
+    hint: 'Where Study opens, quiz length and feedback',
+    groups: [{
+      title: 'Study',
+      fields: [
+        { key: 'openTo', label: 'When Study opens', help: 'Start fresh, carry on where you left off, or see how you are doing.', type: 'segmented', default: 'new',
+          options: [opt('new', 'New session'), opt('last', 'Last session'), opt('progress', 'Progress')] },
+        { key: 'quizLength', label: 'Questions per quiz', type: 'segmented', default: '10',
+          options: [opt('5', '5'), opt('10', '10'), opt('15', '15'), opt('20', '20')] },
+        { key: 'difficulty', label: 'Difficulty', type: 'segmented', default: 'mixed',
+          options: [opt('easy', 'Easy'), opt('mixed', 'Mixed'), opt('hard', 'Hard')] },
+        { key: 'explain', label: 'Explain each answer straight away', help: 'Off: explanations wait until the end of the quiz.', type: 'toggle', default: true },
+      ],
+    }],
+  },
+
   'case-digest': {
     title: 'Case Digest',
     hint: 'Page references, exports and the court authorities are weighed for',

@@ -13,7 +13,7 @@
 
 /**
  * @typedef {'text'|'developer'|'images-files'|'pdf'|'media'|'numbers'|'business'|'design'
- *          |'security'|'networking'|'modeling'|'reference'|'music'|'everyday'|'law'|'science'} CategoryId
+ *          |'security'|'networking'|'modeling'|'reference'|'music'|'everyday'|'law'|'science'|'private'} CategoryId
  *
  * @typedef {import('./kinds.js').ArtifactKind} ArtifactKind
  *
@@ -33,6 +33,8 @@
  * @property {number}       [weight]      Search/popularity bias, 0–100. Default 50.
  * @property {boolean}      [offline]     True when it never touches the network. Default true.
  * @property {boolean}      [hidden]      True if reserved or hidden from public browsing.
+ * @property {boolean}      [admin]       Private: only the owner and the people given it in Toolbox Admin see it.
+ * @property {string}       [external]    Lives on another site; opens there in a new tab.
  * @property {string}       icon          Inline SVG markup.
  *
  * @typedef {object} Category
@@ -62,6 +64,7 @@ export const CATEGORIES = /** @type {Category[]} */ ([
   { id: 'reference',    label: 'Reference',      order: 14, blurb: 'Look something up — words, scripture, and the sum of human knowledge.' },
   { id: 'music',        label: 'Music',          order: 15, blurb: 'Keep time, find the note, and work out what fits.' },
   { id: 'everyday',     label: 'Everyday',       order: 16, blurb: 'Small things worth a bookmark.' },
+  { id: 'private',      label: 'Private',        order: 0,  blurb: 'Not public. Only you, and the people given access, can see these.' },
 ]);
 
 export const CATEGORY_IDS = new Set(CATEGORIES.map(c => c.id));
@@ -121,6 +124,9 @@ export function validateRegistry(tools) {
     }
 
     if (t.weight != null && (t.weight < 0 || t.weight > 100)) problems.push(`${where}: weight out of range`);
+    // Private tools live together, and only private tools live there.
+    if (t.admin && t.category !== 'private') problems.push(`${where}: a private (admin) tool must be in the "private" category`);
+    if (!t.admin && t.category === 'private') problems.push(`${where}: only private (admin) tools belong in the "private" category`);
   }
 
   return problems;

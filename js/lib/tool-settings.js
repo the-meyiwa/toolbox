@@ -9,6 +9,7 @@
 
 import { getSetting, updateSettings, onSettingsChange } from './settings.js';
 import { TOOL_SETTINGS } from '../registry/tool-settings.js';
+import { BY_ID, canUseTool } from '../registry/index.js';
 
 const EVENT = 'toolbox:toolsettings';
 
@@ -21,7 +22,8 @@ function fieldsOf(id) {
 export function hasToolSettings(id) { return Boolean(TOOL_SETTINGS[id]); }
 export function getToolSettingsSchema(id) { return TOOL_SETTINGS[id] || null; }
 export function listToolSettings() {
-  return Object.entries(TOOL_SETTINGS).map(([id, schema]) => ({ id, ...schema }));
+  // A private tool's preferences are listed only for the people who can open it.
+  return Object.entries(TOOL_SETTINGS).filter(([id]) => !BY_ID.get(id)?.admin || canUseTool(BY_ID.get(id))).map(([id, schema]) => ({ id, ...schema }));
 }
 
 export function toolDefaults(id) {

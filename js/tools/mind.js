@@ -487,7 +487,7 @@ export default {
         }).join('')}</svg>
         ${nodes.map(e => {
           const p = positions.get(e.id), m = metaOf(e.type);
-          return `<button class="mind-map-node ${role(e.id)}" style="--x:${p.x}%;--y:${p.y}%;--hue:${m.hue}" data-map-focus="${e.id}" aria-pressed="${e.id === focus}"><span class="mind-type-ico">${icon(m.icon, 13, 2)}</span><strong>${esc(e.name)}</strong></button>`;
+          return `<button class="mind-map-node ${role(e.id)}" style="--x:${p.x}%;--y:${p.y}%;--mx:${p.x};--my:${p.y};--hue:${m.hue}" data-map-focus="${e.id}" aria-pressed="${e.id === focus}"><span class="mind-type-ico">${icon(m.icon, 13, 2)}</span><strong>${esc(e.name)}</strong></button>`;
         }).join('')}${!nodes.length ? `<div class="mind-map-empty"><p>Connections appear here as your Mind grows.</p>${this.button('new-room', 'Create a room', 'room', { primary: true })}</div>` : ''}
       </div>
       <div class="mind-map-foot">${this.mapFoot(graph, focus)}</div>

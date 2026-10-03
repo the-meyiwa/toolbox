@@ -98,18 +98,27 @@ function fillRange(r) {
 
 /* ---------- details ---------- */
 
+/* Opening snaps the section open (one layout) and its contents settle in; closing lets them
+   lift away first. Only transform and opacity animate, so a long page never re-lays out per frame. */
 function animateDetails(d, summary) {
   summary.addEventListener('click', (e) => {
     if (reduced() || typeof d.animate !== 'function') return;
     e.preventDefault();
     if (d.classList.contains('mo-animating')) return;
-    const start = d.offsetHeight;
+    const parts = [...d.children].filter(n => n !== summary);
     d.classList.add('mo-animating');
-    const opening = !d.open;
-    if (opening) d.open = true;
-    const end = opening ? d.scrollHeight : summary.offsetHeight;
-    const anim = d.animate({ height: [`${start}px`, `${end}px`] }, { duration: Math.min(360, 160 + Math.abs(end - start) * 0.25), easing: 'cubic-bezier(.2,.8,.2,1)' });
-    anim.onfinish = anim.oncancel = () => { if (!opening) d.open = false; d.classList.remove('mo-animating'); };
+    const done = () => d.classList.remove('mo-animating');
+    if (!d.open) {
+      d.open = true;
+      const anims = parts.map((n, i) => n.animate([{ opacity: 0, transform: 'translateY(-6px)' }, { opacity: 1, transform: 'none' }],
+        { duration: 200, delay: Math.min(i, 4) * 18, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'backwards', tempo: false }));
+      Promise.all(anims.map(a => a.finished)).then(done, done);
+    } else {
+      const anims = parts.map(n => n.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-4px)' }],
+        { duration: 130, easing: 'cubic-bezier(.4, 0, 1, 1)', fill: 'forwards', tempo: false }));
+      const close = () => { d.open = false; anims.forEach(a => a.cancel()); done(); };
+      Promise.all(anims.map(a => a.finished)).then(close, close);
+    }
   });
 }
 
